@@ -974,8 +974,10 @@ def _cmd_render(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     # Force a non-interactive backend before cleopatra/matplotlib is imported so
-    # a headless CLI/CI run never pops a blocking GUI window.
-    os.environ.setdefault("MPLBACKEND", "Agg")
+    # a headless CLI/CI run never pops a blocking GUI window. Assigned (not
+    # setdefault) so a pre-exported interactive MPLBACKEND (e.g. TkAgg) cannot
+    # win and block on a popup (L3).
+    os.environ["MPLBACKEND"] = "Agg"
     ds = Dataset.read_file(args.file)
     glyph = ds.plot(band=args.band, title=args.title)
     glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")

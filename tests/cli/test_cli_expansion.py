@@ -295,3 +295,12 @@ class TestRender:
         out = str(tmp_path / "exists.png")
         main(["render", cli_raster, out])
         assert main(["render", cli_raster, out]) == 1
+
+    def test_forces_agg_backend(self, cli_raster, tmp_path, monkeypatch):
+        """render forces MPLBACKEND=Agg even when an interactive one is pre-set (L3)."""
+        monkeypatch.setenv("MPLBACKEND", "TkAgg")
+        out = str(tmp_path / "forced.png")
+        assert main(["render", cli_raster, out]) == 0
+        assert os.environ["MPLBACKEND"] == "Agg", (
+            "a pre-exported interactive backend must not win over the forced Agg"
+        )
