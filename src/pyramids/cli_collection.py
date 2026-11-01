@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids.base.crs import crs_spec
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.collection import DatasetCollection
@@ -82,9 +83,15 @@ def _cmd_collection_stats(args: argparse.Namespace) -> int:
     # (bands, rows, cols), the layout from_array expects).
     array = getattr(coll, args.reduce)(skipna=True)
     base = coll.base
+    # crs_spec (not `base.epsg or base.crs`): the `or` idiom prefers an EPSG code
+    # even when pyproj cannot resolve it (#943) and leaks an empty CRS string as
+    # "Invalid projection: ''"; crs_spec falls back to WKT (M2). Carry the base
+    # no-data so skipna-NaN gaps stay flagged rather than taking from_array's
+    # -9999 default that no cell matches (L2).
     Dataset.from_array(
         array,
-        geo_ref=GeoReference(geo=base.geotransform, epsg=base.epsg or base.crs),
+        no_data_value=base.no_data_value[0],
+        geo_ref=GeoReference(geo=base.geotransform, epsg=crs_spec(base.epsg, base.crs)),
     ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
