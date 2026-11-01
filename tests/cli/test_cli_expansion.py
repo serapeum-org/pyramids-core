@@ -20,6 +20,7 @@ from osgeo import gdal
 
 import pyramids
 from pyramids import __version__
+from pyramids import cli as cli_mod
 from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
@@ -244,7 +245,6 @@ class TestEditInfoDriverGuard:
 
     def test_non_updatable_driver_clear_message(self, cli_raster, monkeypatch, capsys):
         """An update-only open failure yields the CLI-level message (read-only works)."""
-        import pyramids.cli as cli_mod
 
         def fake(_path, *args, read_only=True, **kwargs):
             if not read_only:
@@ -259,7 +259,6 @@ class TestEditInfoDriverGuard:
 
     def test_corrupt_file_keeps_original_error(self, cli_raster, monkeypatch, capsys):
         """When a read-only open also fails, the original error is not mislabeled (L1)."""
-        import pyramids.cli as cli_mod
 
         def boom(_path, *args, **kwargs):
             raise RuntimeError("TIFFReadDirectory: Failed to read directory")
@@ -313,10 +312,17 @@ class TestRender:
         assert main(["render", cli_raster, out]) == 1
 
     def test_forces_agg_backend(self, cli_raster, tmp_path, monkeypatch):
-        """render forces MPLBACKEND=Agg even when an interactive one is pre-set (L3)."""
+        """render forces MPLBACKEND=Agg even when an interactive one is pre-set (L3).
+
+        It both forces the env var over a pre-set TkAgg and still renders headlessly
+        (a non-empty PNG), so the assertion is not satisfied by the env write alone.
+        """
         monkeypatch.setenv("MPLBACKEND", "TkAgg")
         out = str(tmp_path / "forced.png")
         assert main(["render", cli_raster, out]) == 0
         assert os.environ["MPLBACKEND"] == "Agg", (
             "a pre-exported interactive backend must not win over the forced Agg"
+        )
+        assert os.path.exists(out) and os.path.getsize(out) > 0, (
+            "render must still produce the PNG headlessly"
         )
