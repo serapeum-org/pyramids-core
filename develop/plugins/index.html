@@ -7466,6 +7466,13 @@ import coupling</strong>: pyramids never imports a plugin, and a bare install be
 <p>This page is the <strong>catalog</strong> of known plugins. Each one is maintained in its own repository and ships its own
 documentation site — follow the <strong>Docs</strong> link for its full API and examples. To learn how to <em>write</em> one, see
 <a href="../extending-pyramids/">Extending pyramids</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Not everything in the family is a plugin</p>
+<p>A sibling package such as <a href="https://serapeum-org.github.io/pointclouds"><code>pointclouds</code></a> — the GDAL-free
+point-cloud engine — is <strong>not</strong> a plugin: it does not register into any hook, and pyramids does not depend
+on it. It is a standalone engine that can hand its output <em>to</em> pyramids through its own optional <code>[gis]</code>
+extra. Such companions live in the <a href="../ecosystem/">Ecosystem</a> page, not here.</p>
+</div>
 <table>
 <thead>
 <tr>
