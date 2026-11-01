@@ -82,23 +82,21 @@ resolves out of the box — **no `system-requirements` entry is needed**
 0.68.1 this repo pins in CI, share the same baseline; rasterio's 2_28
 wheels resolve the same way).
 
-Two situations still need a declared baseline in the **consuming
+One situation still needs a declared baseline in the **consuming
 project's** `pyproject.toml` (or `pixi.toml`):
-
-- **You pin one of the older releases that shipped `manylinux_2_39`
-  wheels (0.2x–0.39.x)** — those wheels are tagged
-  `manylinux_2_39` and exceed the default baseline, so pixi silently
-  falls back to the GDAL-less sdist (→ `ModuleNotFoundError: No module
-  named 'osgeo'` at runtime). Declare:
-
-  ```toml
-  [tool.pixi.system-requirements]
-  libc = "2.39"
-  ```
 
 - **You run an older pixi** whose default Linux baseline predates the
   2.28 floor — declare `libc = "2.28"` (satisfied by Ubuntu 20.04+,
-  Debian 11+, RHEL 8+, Amazon Linux 2023).
+  Debian 11+, RHEL 8+, Amazon Linux 2023):
+
+  ```toml
+  [tool.pixi.system-requirements]
+  libc = "2.28"
+  ```
+
+Every `pyramids-core` release ships `manylinux_2_28` wheels (glibc) and
+`musllinux_1_2` wheels (Alpine/musl); none is tagged `manylinux_2_39`, so no
+`libc = "2.39"` pin is ever needed.
 
 It only affects Linux; macOS and Windows are unaffected. If you'd rather
 avoid the topic entirely, install pyramids-core from conda-forge instead
