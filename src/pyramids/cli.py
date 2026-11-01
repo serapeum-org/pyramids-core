@@ -124,6 +124,46 @@ _HELP_INSPECT_RASTER = "raster path to inspect"
 _HELP_JSON = "emit JSON"
 
 
+def _report_cog_create(args: argparse.Namespace, out: object) -> int:
+    """Report a `cog create` outcome (text or `--json`) and return the exit code.
+
+    Split out of :func:`_cmd_create` so the write path and the result-reporting
+    (which has the `--no-validate` / `--json` / valid / invalid branches) are each
+    below the cognitive-complexity threshold.
+
+    Args:
+        args: Parsed arguments (reads `no_validate` and the optional `json`).
+        out: The written COG path returned by `to_cog`.
+
+    Returns:
+        int: `0` on success / valid, `1` when post-write validation fails.
+    """
+    emit_json = getattr(args, "json", False)
+    if args.no_validate:
+        if emit_json:
+            print(json.dumps({"output": str(out), "validated": False}))
+        else:
+            info_print(args, f"wrote {out}")
+        return 0
+    report = validate(str(out))
+    if emit_json:
+        payload = {
+            "output": str(out),
+            "is_valid": report.is_valid,
+            "errors": list(report.errors),
+        }
+        print(json.dumps(payload))
+        return 0 if report.is_valid else 1
+    info_print(args, f"wrote {out}")
+    if report.is_valid:
+        info_print(args, "valid COG")
+        return 0
+    print("INVALID COG:", file=sys.stderr)
+    for err in report.errors:
+        print(f"  - {err}", file=sys.stderr)
+    return 1
+
+
 def _cmd_create(args: argparse.Namespace) -> int:
     """Handle `pyramids cog create`.
 
@@ -156,33 +196,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
     if args.blocksize:
         kwargs["layout"] = Layout(blocksize=args.blocksize)
     out = ds.to_cog(args.output, **kwargs)
-    emit_json = getattr(args, "json", False)
-    if args.no_validate:
-        if emit_json:
-            print(json.dumps({"output": str(out), "validated": False}))
-        else:
-            info_print(args, f"wrote {out}")
-        return 0
-    report = validate(str(out))
-    if emit_json:
-        print(
-            json.dumps(
-                {
-                    "output": str(out),
-                    "is_valid": report.is_valid,
-                    "errors": list(report.errors),
-                }
-            )
-        )
-        return 0 if report.is_valid else 1
-    info_print(args, f"wrote {out}")
-    if report.is_valid:
-        info_print(args, "valid COG")
-        return 0
-    print("INVALID COG:", file=sys.stderr)
-    for err in report.errors:
-        print(f"  - {err}", file=sys.stderr)
-    return 1
+    return _report_cog_create(args, out)
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
