@@ -25,6 +25,12 @@ pyramids is a high-level, object-oriented layer over these; you rarely call them
 | hpc-utils (`hpc.indexing`) | pixel/index lookup utilities used by point sampling and extraction. |
 | [serapeum-org](https://github.com/serapeum-org) | the umbrella org — pyramids, cleopatra, and shared CI/tooling live here. |
 
+!!! tip "Plugins extend the core through entry points"
+    Beyond the companion libraries above, pyramids has a plugin system: packages such as `pyramids-eo`,
+    `pyramids-mesh`, `digitalearth` and `pyramids-citymodels` register new formats, sources and renderers into
+    the core through entry-point hooks. See the [Plugins & extensions catalog](plugins.md) for the full list,
+    and [Extending pyramids](extending-pyramids.md) to write your own.
+
 ## Peers — and when to pick them
 
 pyramids is a **GDAL/GIS-first** raster **+** vector **+** datacube toolkit. The array-first stack overlaps on
