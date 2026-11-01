@@ -1,12 +1,31 @@
 """CLI smoke tests for the processing subcommands (tools / tool / run)."""
 
 import geopandas as gpd
+import numpy as np
 import pytest
+import yaml
 from shapely.geometry import Point
 
+from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
+from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 from pyramids.processing import Pipeline
+
+
+@pytest.fixture
+def dem_raster(tmp_path):
+    """An 8x8 float32 ramp GeoTIFF on EPSG:4326 (a stand-in elevation model).
+
+    Returns:
+        str: Path to the written raster.
+    """
+    path = str(tmp_path / "dem.tif")
+    Dataset.from_array(
+        np.arange(64, dtype="float32").reshape(8, 8),
+        geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
+    ).to_file(path)
+    return path
 
 
 @pytest.fixture
@@ -108,3 +127,163 @@ class TestProcessingCli:
         out = capsys.readouterr().out
         assert rc == 1, out
         assert "FAILED" in out, out
+
+
+def _interp_pipeline(tmp_path):
+    """Write a one-step interpolate_to_raster pipeline YAML; return its path."""
+    yaml_path = tmp_path / "pipe.yaml"
+    Pipeline(
+        [("interpolate_to_raster", {"column": "elevation", "cell_size": 1.0})]
+    ).to_yaml(str(yaml_path))
+    return str(yaml_path)
+
+
+class TestApply:
+    """`pyramids apply` — run one registered tool over a single input (F-1)."""
+
+    def test_apply_slope_writes_output(self, dem_raster, tmp_path):
+        """apply runs a single Array-output tool and writes a georeferenced raster."""
+        out = str(tmp_path / "slope.tif")
+        rc = main(["apply", "slope", dem_raster, out, "--set", "units=degrees"])
+        assert rc == 0, "apply must exit 0"
+        assert Dataset.read_file(out).band_count >= 1
+
+    def test_unknown_tool_errors(self, dem_raster, tmp_path, capsys):
+        """An unknown tool exits 1 naming the registry."""
+        rc = main(["apply", "nope", dem_raster, str(tmp_path / "o.tif")])
+        assert rc == 1
+        assert "unknown tool" in capsys.readouterr().err
+
+    def test_unknown_param_errors(self, dem_raster, tmp_path, capsys):
+        """An unknown --set parameter exits 1 with a schema-driven message."""
+        rc = main(
+            ["apply", "slope", dem_raster, str(tmp_path / "o.tif"), "--set", "bogus=1"]
+        )
+        assert rc == 1
+        assert "unknown parameter" in capsys.readouterr().err
+
+    def test_bad_value_errors(self, dem_raster, tmp_path, capsys):
+        """A value outside an OptionList's choices exits 1."""
+        rc = main(
+            [
+                "apply",
+                "slope",
+                dem_raster,
+                str(tmp_path / "o.tif"),
+                "--set",
+                "units=parsecs",
+            ]
+        )
+        assert rc == 1
+
+    def test_missing_required_param_errors(self, points_geojson, tmp_path, capsys):
+        """Omitting a required parameter fails at pipeline construction."""
+        rc = main(
+            ["apply", "interpolate_to_raster", points_geojson, str(tmp_path / "o.tif")]
+        )
+        assert rc == 1
+        assert "missing required parameter" in capsys.readouterr().err
+
+    def test_refuses_existing(self, dem_raster, tmp_path):
+        """A second apply without --overwrite is refused."""
+        out = str(tmp_path / "s.tif")
+        assert main(["apply", "slope", dem_raster, out]) == 0
+        assert main(["apply", "slope", dem_raster, out]) == 1
+
+
+class TestRunManifest:
+    """`pyramids run --manifest` persists provenance (F-2)."""
+
+    def test_manifest_written_and_reloadable(self, points_geojson, tmp_path):
+        """--manifest writes a recipe that round-trips through Pipeline.from_dict."""
+        yaml_path = _interp_pipeline(tmp_path)
+        out_dir = tmp_path / "out"
+        manifest = tmp_path / "manifest.yaml"
+        rc = main(
+            [
+                "run",
+                yaml_path,
+                "--inputs",
+                points_geojson,
+                "--out",
+                str(out_dir),
+                "--manifest",
+                str(manifest),
+            ]
+        )
+        assert rc == 0
+        data = yaml.safe_load(manifest.read_text())
+        assert data["runs"][0]["source"].endswith(".geojson")
+        assert data["runs"][0]["total_seconds"] >= 0.0
+        reloaded = Pipeline.from_dict({"pipeline": data["pipeline"]})
+        assert len(reloaded) == 1
+
+
+class TestRunMultiInput:
+    """`pyramids run --inputs a b` processes an explicit file list (B-2)."""
+
+    def test_two_explicit_inputs(self, points_geojson, tmp_path):
+        """Both listed inputs produce an output."""
+        second = tmp_path / "pts2.geojson"
+        FeatureCollection.read_file(points_geojson).to_file(str(second))
+        yaml_path = _interp_pipeline(tmp_path)
+        out_dir = tmp_path / "out"
+        rc = main(
+            [
+                "run",
+                yaml_path,
+                "--inputs",
+                points_geojson,
+                str(second),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        assert rc == 0
+        assert len(list(out_dir.glob("*.tif"))) == 2
+
+
+class TestRunParallel:
+    """`pyramids run --parallel` end to end (F-3 / T-3)."""
+
+    def test_parallel_writes_outputs(self, points_geojson, tmp_path):
+        """A parallel batch runs across a process pool and writes both outputs."""
+        second = tmp_path / "pts2.geojson"
+        FeatureCollection.read_file(points_geojson).to_file(str(second))
+        yaml_path = _interp_pipeline(tmp_path)
+        out_dir = tmp_path / "out"
+        rc = main(
+            [
+                "run",
+                yaml_path,
+                "--inputs",
+                points_geojson,
+                str(second),
+                "--out",
+                str(out_dir),
+                "--parallel",
+                "--max-workers",
+                "2",
+            ]
+        )
+        assert rc == 0, "a parallel batch must succeed"
+        assert len(list(out_dir.glob("*.tif"))) == 2
+
+    def test_bad_max_workers_errors(self, points_geojson, tmp_path, capsys):
+        """--max-workers 0 is rejected with a one-line error."""
+        yaml_path = _interp_pipeline(tmp_path)
+        rc = main(
+            [
+                "run",
+                yaml_path,
+                "--inputs",
+                points_geojson,
+                "--out",
+                str(tmp_path / "o"),
+                "--parallel",
+                "--max-workers",
+                "0",
+            ]
+        )
+        assert rc == 1
+        assert "max_workers must be >= 1" in capsys.readouterr().err

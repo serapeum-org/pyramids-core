@@ -24,10 +24,19 @@ standard-library :mod:`argparse` (no extra dependency):
 - `pyramids shapes SRC DST [--geometry polygon|point]` — vectorize a raster
 - `pyramids rasterize SRC DST (--cell-size S | --like RASTER) [--column C]` —
   burn a vector into a raster
-- `pyramids run PIPELINE.yaml --inputs GLOB --out DIR` — run a processing
-  pipeline (batched) over inputs
-- `pyramids tools` — list the registered processing tools
-- `pyramids tool NAME` — print a processing tool's parameter schema
+- `pyramids render FILE OUT.png` — quick-look PNG via cleopatra (headless)
+- `pyramids run PIPELINE.yaml --inputs GLOB... --out DIR [--manifest M]` — run a
+  processing pipeline (batched) over inputs
+- `pyramids apply NAME SRC DST [--set K=V...]` — run one registered tool
+- `pyramids tools` / `pyramids tool NAME` — list / describe the processing tools
+- `pyramids vector info|bounds|convert|warp|clip ...` — vector (FeatureCollection) ops
+- `pyramids nc list-vars|extract ...` — NetCDF variable listing / extraction
+- `pyramids collection info|stats ...` — temporal raster-stack summary / reduction
+- `pyramids stac search|download ...` — STAC search / asset download (`[stac]` extra)
+- `pyramids fetch wms|wcs|wfs ...` — pull an OGC web-service window to a file
+
+The top-level `--version`/`-V` prints the version, and global `--quiet`/`-q`
+(before the command) suppresses informational output.
 
 Every command maps 1:1 onto an existing library call — no business logic lives
 here. Expected user errors (missing file, bad CRS, unknown driver) exit
@@ -41,7 +50,6 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import math
 import operator
 import os
 import sys
@@ -53,10 +61,25 @@ import numpy as np
 from osgeo import osr
 from pandas import DataFrame
 
+from pyramids import __version__
+from pyramids._cli_shared import (
+    info_print,
+)
+from pyramids._cli_shared import (
+    json_safe as _json_safe,
+)
+from pyramids._cli_shared import (
+    refuse_existing as _refuse_existing,
+)
 from pyramids.base._errors import AlignmentError, _PyramidsError
 from pyramids.base._utils import DEFAULT_RESAMPLING, carry_packing
 from pyramids.base.crs import crs_spec, sr_from_user_input, sr_from_wkt
 from pyramids.base.georeference import GeoReference
+from pyramids.cli_collection import add_collection_commands
+from pyramids.cli_netcdf import add_netcdf_commands
+from pyramids.cli_ogc import add_ogc_commands
+from pyramids.cli_stac import add_stac_commands
+from pyramids.cli_vector import add_vector_commands
 from pyramids.dataset import Dataset
 from pyramids.dataset._gcp import GroundControlPoint
 from pyramids.dataset.abstract_dataset import OVERVIEW_LEVELS
@@ -65,45 +88,20 @@ from pyramids.dataset.merge import merge_rasters
 from pyramids.feature import FeatureCollection
 from pyramids.processing.cli import add_processing_commands
 
-
-def _json_safe(value: float | None) -> float | None:
-    """Map non-finite floats to `None` so the JSON output stays parseable.
-
-    `json.dumps` serializes NaN/Infinity as bare `NaN` / `Infinity`,
-    which is not valid JSON and breaks strict consumers (e.g. `jq`).
-
-    Args:
-        value: A float (possibly NaN/infinite) or `None`.
-
-    Returns:
-        float | None: `value` unchanged, or `None` when it is not finite.
-    """
-    result: float | None = value
-    if isinstance(value, float) and not math.isfinite(value):
-        result = None
-    return result
+try:
+    # Optional shell-completion hook (E-5): enabled only if the user installs
+    # argcomplete themselves. pyramids declares no dependency on it, and its
+    # absence is a silent no-op — so this adds a convenience without a new
+    # required package.
+    import argcomplete
+except ImportError:  # pragma: no cover - argcomplete is an optional convenience
+    argcomplete = None  # type: ignore[assignment]
 
 
 _HELP_SRC_RASTER = "source raster path"
 _HELP_DST_RASTER = "destination raster path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_RESAMPLING = "resampling method"
-
-
-def _refuse_existing(path: str, overwrite: bool) -> None:
-    """Raise if ``path`` exists and ``--overwrite`` was not passed.
-
-    Args:
-        path: Destination path the command is about to write.
-        overwrite: Whether the user passed ``--overwrite``.
-
-    Raises:
-        ValueError: ``path`` already exists and ``overwrite`` is ``False``.
-    """
-    if not overwrite and os.path.exists(path):
-        raise ValueError(
-            f"output {path!r} already exists; pass --overwrite to replace it."
-        )
 
 
 def _bbox_disjoint(a, b) -> bool:
@@ -158,12 +156,28 @@ def _cmd_create(args: argparse.Namespace) -> int:
     if args.blocksize:
         kwargs["layout"] = Layout(blocksize=args.blocksize)
     out = ds.to_cog(args.output, **kwargs)
-    print(f"wrote {out}")
+    emit_json = getattr(args, "json", False)
     if args.no_validate:
+        if emit_json:
+            print(json.dumps({"output": str(out), "validated": False}))
+        else:
+            info_print(args, f"wrote {out}")
         return 0
     report = validate(str(out))
+    if emit_json:
+        print(
+            json.dumps(
+                {
+                    "output": str(out),
+                    "is_valid": report.is_valid,
+                    "errors": list(report.errors),
+                }
+            )
+        )
+        return 0 if report.is_valid else 1
+    info_print(args, f"wrote {out}")
     if report.is_valid:
-        print("valid COG")
+        info_print(args, "valid COG")
         return 0
     print("INVALID COG:", file=sys.stderr)
     for err in report.errors:
@@ -181,6 +195,18 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         int: `0` when the file is a valid COG, `1` otherwise.
     """
     report = validate(args.file, strict=args.strict)
+    if getattr(args, "json", False):
+        print(
+            json.dumps(
+                {
+                    "file": args.file,
+                    "is_valid": report.is_valid,
+                    "errors": list(report.errors),
+                    "warnings": list(report.warnings),
+                }
+            )
+        )
+        return 0 if report.is_valid else 1
     if report.is_valid:
         print(f"{args.file}: valid COG")
         return 0
@@ -343,7 +369,7 @@ def _cmd_clip(args: argparse.Namespace) -> int:
         # than hand-wrapping the bbox in a FeatureCollection.
         clipped = ds.crop(bbox=clip_bbox)
     clipped.to_file(args.output)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -360,7 +386,7 @@ def _cmd_warp(args: argparse.Namespace) -> int:
     ds = Dataset.read_file(args.input)
     warped = ds.to_crs(args.crs, method=args.resampling)
     warped.to_file(args.output)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -409,7 +435,7 @@ def _cmd_georeference(args: argparse.Namespace) -> int:
         order=args.order,
     )
     out.to_file(args.output)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -432,7 +458,7 @@ def _cmd_orthorectify(args: argparse.Namespace) -> int:
         method=args.resampling,
     )
     out.to_file(args.output)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -592,21 +618,21 @@ def _cmd_calc(args: argparse.Namespace) -> int:
         # `pyramids warp`, which cannot warp a raster that has no source CRS.
         # `compare_crs=False` is the same predicate with that one clause off, so
         # the two questions cannot drift apart.
-        if not ds.crs:
-            # The carve-out assumes the untagged input is in the template's CRS.
-            # That is what `calc` did before the grid check existed, but it is an
-            # assumption, so say so rather than letting a raster that really is
-            # in another CRS be stamped with the template's in silence.
-            print(
-                f"note: {path!r} declares no CRS; assuming it is on "
-                f"{inputs[0]!r}'s grid and CRS",
-                file=sys.stderr,
-            )
         if not template.same_grid(ds, compare_crs=bool(ds.crs)):
             raise AlignmentError(
                 f"{path!r} does not share the grid/CRS of {inputs[0]!r}, so the "
                 "expression cannot be evaluated cell by cell; align the inputs "
                 "first (`pyramids warp`) and re-run"
+            )
+        if not ds.crs:
+            # Only now, once the grid matched, is it honest to say we are assuming
+            # the untagged input's CRS matches too. Emitting this before the grid
+            # check could print a reassuring note immediately contradicted by the
+            # AlignmentError above (B-1).
+            print(
+                f"note: {path!r} declares no CRS; assuming it is on "
+                f"{inputs[0]!r}'s grid and CRS",
+                file=sys.stderr,
             )
     names = [chr(ord("A") + index) for index in range(len(datasets))]
     # `squeeze=True` keeps the classic `(bands, rows, cols)` raster layout the cell-wise
@@ -630,7 +656,7 @@ def _cmd_calc(args: argparse.Namespace) -> int:
             geo=template.geotransform, epsg=crs_spec(template.epsg, template.crs)
         ),
     ).to_file(output)
-    print(f"wrote {output}")
+    info_print(args, f"wrote {output}")
     return 0
 
 
@@ -668,7 +694,7 @@ def _cmd_shapes(args: argparse.Namespace) -> int:
         )
     gdf = ds.to_geodataframe(geometry=args.geometry)
     FeatureCollection(gdf).to_file(args.output, driver=args.driver)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -702,8 +728,42 @@ def _cmd_rasterize(args: argparse.Namespace) -> int:
         column_name=args.column,
     )
     out.to_file(args.output)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
+
+
+def _apply_nodata(ds: Dataset, raw: str) -> None:
+    """Apply an ``edit-info --nodata`` token to ``ds`` in place.
+
+    Accepts a number, ``nan``, or ``none``/``unset`` (which clears the sentinel
+    on every band via GDAL's ``DeleteNoDataValue``). The setter only accepts a
+    number/``nan``, so unsetting goes through the band handle directly (B-3).
+
+    Args:
+        ds: The open (update-mode) dataset to edit.
+        raw: The raw ``--nodata`` string.
+
+    Raises:
+        ValueError: ``raw`` is not a number, ``nan``, nor ``none``/``unset``.
+    """
+    token = raw.strip().lower()
+    if token in {"none", "unset"}:
+        for index in range(ds.band_count):
+            ds.raster.GetRasterBand(index + 1).DeleteNoDataValue()
+    else:
+        # `sentinel` is typed Any because the no_data_value setter's declared
+        # union does not include a bare ``float`` (the numeric tower is not real
+        # subtyping to mypy); the original CLI assigned the Namespace's Any value.
+        if token == "nan":
+            sentinel: Any = float("nan")
+        else:
+            try:
+                sentinel = float(raw)
+            except ValueError:
+                raise ValueError(
+                    f"--nodata {raw!r} is not a number, 'nan', or 'none'"
+                ) from None
+        ds.no_data_value = sentinel
 
 
 def _cmd_edit_info(args: argparse.Namespace) -> int:
@@ -714,8 +774,22 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
 
     Returns:
         int: `0` on success (a no-edit call prints a notice and still exits 0).
+
+    Raises:
+        ValueError: The input's format cannot be opened in update mode (B-4), an
+            invalid CRS is given, or `--nodata` is not a number / `nan` /
+            `none` (B-3).
     """
-    ds = Dataset.read_file(args.input, read_only=False)
+    try:
+        ds = Dataset.read_file(args.input, read_only=False)
+    except (RuntimeError, OSError) as exc:
+        # GDAL refused an update-mode open: name the format and point at a fix
+        # instead of surfacing GDAL's low-level wording (B-4).
+        raise ValueError(
+            f"cannot edit {args.input!r} in place — its format does not support "
+            f"update-mode writes. Re-save it to a writable format first "
+            f"(`pyramids convert {args.input} out.tif`) and edit that."
+        ) from exc
     edited = False
     if args.crs is not None:
         # Resolve any accepted CRS form (EPSG int, "EPSG:3857", WKT, PROJ4) to WKT
@@ -725,7 +799,7 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
         ds.set_crs(crs=wkt)
         edited = True
     if args.nodata is not None:
-        ds.no_data_value = args.nodata
+        _apply_nodata(ds, args.nodata)
         edited = True
     for tag in args.tag or []:
         key, _, value = tag.partition("=")
@@ -733,9 +807,11 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
         edited = True
     if edited:
         ds.raster.FlushCache()
-        print(f"edited {args.input}")
+        info_print(args, f"edited {args.input}")
     else:
-        print("edit-info: no edits requested (pass --crs / --nodata / --tag)")
+        info_print(
+            args, "edit-info: no edits requested (pass --crs / --nodata / --tag)"
+        )
     return 0
 
 
@@ -769,8 +845,18 @@ def _cmd_merge(args: argparse.Namespace) -> int:
         bbox=tuple(args.bbox) if args.bbox else None,
         bbox_crs=args.bbox_crs,
     )
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
     return 0
+
+
+# Map the warp-family resampling spellings onto GDAL's overview vocabulary so a
+# single set of names works across `warp` / `merge` / `overview` (E-3). Names
+# that already match the overview table (nearest, bilinear, cubic, average,
+# mode, lanczos, gauss, rms) need no entry.
+_OVERVIEW_RESAMPLING_ALIASES = {
+    DEFAULT_RESAMPLING: "nearest",  # "nearest neighbor" -> "nearest"
+    "cubic_spline": "cubicspline",
+}
 
 
 def _cmd_overview(args: argparse.Namespace) -> int:
@@ -793,15 +879,18 @@ def _cmd_overview(args: argparse.Namespace) -> int:
             )
     ds = Dataset.read_file(args.file, read_only=False)
     # create_overviews validates against GDAL's overview RESAMPLING_METHODS
-    # ("nearest", "average", "gauss", "cubic", ...). Accept the warp-family
-    # "nearest neighbor" spelling too, so the resampling vocabulary is
-    # consistent with `warp` / `merge` across subcommands (L9).
-    resampling = args.resampling
-    if resampling.strip().lower() == DEFAULT_RESAMPLING:
-        resampling = "nearest"
+    # ("nearest", "average", "gauss", "cubic", ...). Map the warp-family
+    # spellings onto their overview equivalents so one resampling vocabulary
+    # works across `warp` / `merge` / `overview` (E-3; extends the original L9
+    # "nearest neighbor" alias to the other names that differ).
+    resampling = _OVERVIEW_RESAMPLING_ALIASES.get(
+        args.resampling.strip().lower(), args.resampling
+    )
     ds.create_overviews(resampling_method=resampling, overview_levels=args.levels)
     counts = ds.overview_count
-    print(f"built {counts[0] if counts else 0} overview level(s) for {args.file}")
+    info_print(
+        args, f"built {counts[0] if counts else 0} overview level(s) for {args.file}"
+    )
     return 0
 
 
@@ -865,7 +954,32 @@ def _cmd_convert(args: argparse.Namespace) -> int:
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     ds.to_file(args.output, driver=args.driver)
-    print(f"wrote {args.output}")
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
+    """Handle `pyramids render` — save a quick-look PNG via cleopatra (headless).
+
+    All plotting goes through cleopatra (`Dataset.plot`), never raw matplotlib;
+    the Agg backend is forced before any plot import so no GUI window blocks the
+    CLI (M-7).
+
+    Args:
+        args: Parsed args with `file`, `output`, `band`, `title`, `dpi`,
+            `overwrite`.
+
+    Returns:
+        int: `0` on success.
+    """
+    _refuse_existing(args.output, args.overwrite)
+    # Force a non-interactive backend before cleopatra/matplotlib is imported so
+    # a headless CLI/CI run never pops a blocking GUI window.
+    os.environ.setdefault("MPLBACKEND", "Agg")
+    ds = Dataset.read_file(args.file)
+    glyph = ds.plot(band=args.band, title=args.title)
+    glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -881,6 +995,19 @@ def _build_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         prog="pyramids", description="pyramids GIS toolkit"
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=f"pyramids {__version__}",
+    )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="suppress informational output, e.g. 'wrote ...' (errors still print); "
+        "place it before the command, e.g. `pyramids --quiet warp ...`",
     )
     sub = parser.add_subparsers(dest="group", required=True)
 
@@ -903,11 +1030,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-validate", action="store_true", help="skip post-write validation"
     )
     create.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    create.add_argument(
+        "--json", action="store_true", help="emit a JSON result instead of text"
+    )
     create.set_defaults(func=_cmd_create)
 
     val = cog_sub.add_parser("validate", help="validate a COG")
     val.add_argument("file", help="raster path to validate")
     val.add_argument("--strict", action="store_true", help="treat warnings as errors")
+    val.add_argument(
+        "--json", action="store_true", help="emit a JSON validation result"
+    )
     val.set_defaults(func=_cmd_validate)
 
     info = cog_sub.add_parser("info", help="print structured COG metadata")
@@ -1056,7 +1189,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     edit_info.add_argument("input", help="raster path to edit in place")
     edit_info.add_argument("--crs", help="set the CRS (EPSG code, WKT, PROJ4)")
-    edit_info.add_argument("--nodata", type=float, help="set the no-data value")
+    edit_info.add_argument(
+        "--nodata",
+        help="set the no-data value; 'none'/'unset' removes it, 'nan' sets NaN",
+    )
     edit_info.add_argument(
         "--tag",
         action="append",
@@ -1119,6 +1255,24 @@ def _build_parser() -> argparse.ArgumentParser:
     rasterize.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     rasterize.set_defaults(func=_cmd_rasterize)
 
+    render = sub.add_parser("render", help="save a quick-look PNG of a raster")
+    render.add_argument("file", help=_HELP_INSPECT_RASTER)
+    render.add_argument("output", help="destination image path (e.g. out.png)")
+    render.add_argument(
+        "--band", type=int, default=None, help="band index to render (default: auto)"
+    )
+    render.add_argument("--title", help="plot title")
+    render.add_argument(
+        "--dpi", type=int, default=150, help="output DPI (default: 150)"
+    )
+    render.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    render.set_defaults(func=_cmd_render)
+
+    add_vector_commands(sub)
+    add_netcdf_commands(sub)
+    add_collection_commands(sub)
+    add_stac_commands(sub)
+    add_ogc_commands(sub)
     add_processing_commands(sub)
 
     return parser
@@ -1143,6 +1297,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             ```
     """
     parser = _build_parser()
+    if argcomplete is not None:  # pragma: no cover - optional convenience
+        argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
     try:
         result: int = args.func(args)

@@ -6,9 +6,13 @@ writing Python. Every command has `-h/--help`:
 ```bash
 pyramids --help                 # list all commands
 pyramids <command> --help       # options for one command
+pyramids --version              # print the installed version
+python -m pyramids info x.tif   # the module form, equivalent to the `pyramids` script
 ```
 
-Commands that write a file refuse to clobber an existing output unless you pass **`--overwrite`**. A handful take
+Place the global **`--quiet`** (`-q`) before the command (`pyramids --quiet warp …`) to suppress the `wrote …`
+chatter; errors still print. Commands that write a file refuse to clobber an existing output unless you pass
+**`--overwrite`**. A handful take
 spatial options: `bounds`, `warp`, `georeference`, `orthorectify`, and `edit-info` accept a CRS as an EPSG code,
 WKT, or PROJ string; `warp`, `overview`, `georeference`, and `orthorectify` accept a `--resampling` method
 (`nearest`, `bilinear`, `cubic`, `average`, `mode`, …).
@@ -104,6 +108,80 @@ pyramids sample dem.tif --points "440000,510000;450000,505000" --json          #
 - **`shapes`** — vectorize a raster to a vector file, one feature per cell (`--geometry polygon|point`,
   `--driver`); guarded for huge rasters — pass `--allow-large` to override the ~4M-cell safety limit.
 - **`sample`** — read band values at `--points` (`'x,y'` pairs separated by `;`); `--json` for JSON output.
+
+## Quick-look render
+
+```bash
+pyramids render dem.tif quicklook.png --band 0 --title "DEM" --dpi 150   # headless PNG via cleopatra
+```
+
+- **`render`** — save a PNG preview of a raster. Plotting goes through
+  [cleopatra](https://github.com/serapeum-org/cleopatra) (the Agg backend is forced, so it is headless); reach for
+  `Dataset.plot` in Python for anything beyond a quick look.
+
+## Vector
+
+```bash
+pyramids vector info parcels.shp --json                      # feature count, geometry, CRS, columns, bounds
+pyramids vector bounds parcels.shp --crs 3857                # bounding box (optionally reprojected)
+pyramids vector convert parcels.shp parcels.gpkg             # driver inferred from the extension, or --driver
+pyramids vector warp parcels.shp parcels_3857.gpkg --crs 3857   # reproject
+pyramids vector clip parcels.shp aoi.gpkg --bbox 4.1 51.9 4.6 52.2   # or --mask mask.gpkg
+```
+
+- The vector group mirrors the raster single-shot commands on a `FeatureCollection`: `info` / `bounds` (with
+  `--json`), `convert`, `warp` (reproject), and `clip` by `--bbox` (reads only the window) or a `--mask` polygon
+  layer. `--layer` selects a layer in a multi-layer source.
+
+## NetCDF
+
+```bash
+pyramids nc list-vars climate.nc --json                      # variables GDAL can expose as rasters
+pyramids nc extract climate.nc t2m.tif --var temperature     # one variable -> a georeferenced raster
+```
+
+## Raster stacks
+
+```bash
+pyramids collection info "tiles/*.tif" --json                # count, CRS, grid of a co-registered stack
+pyramids collection stats "tiles/*.tif" mean.tif --reduce mean   # time reduction (mean|sum|min|max|std|var)
+```
+
+## STAC
+
+```bash
+pyramids stac search https://earth-search.aws.element84.com/v1 \
+    --collections sentinel-2-l2a --bbox 4.1 51.9 4.6 52.2 --datetime 2023-06-01/2023-06-30 --json
+pyramids stac download <stac-url> --collections sentinel-2-l2a --bbox 4.1 51.9 4.6 52.2 \
+    --assets red nir --out ./scenes
+```
+
+`stac` needs the `[stac]` extra (`pystac-client`, `stac-asset`); it reports a clear install hint if missing.
+
+## Remote / OGC services
+
+```bash
+pyramids fetch wms https://example/wms scene.tif --layers topo --bbox 4.1 51.9 4.6 52.2 --crs 4326
+pyramids fetch wcs https://example/wcs dem.tif --coverage elevation --bbox 4.1 51.9 4.6 52.2
+pyramids fetch wfs https://example/ows roads.geojson --typename topp:roads --bbox 4.1 51.9 4.6 52.2
+```
+
+- **`fetch`** pulls a bounding-box window from an OGC web service to a local file — `wms` / `wcs` (raster) and
+  `wfs` (vector), via GDAL's native drivers.
+
+## Run one tool, or a pipeline
+
+```bash
+pyramids tools                                               # list the registered processing tools
+pyramids tool slope                                          # one tool's parameter schema
+pyramids apply slope dem.tif slope.tif --set units=degrees   # run a single tool, no YAML needed
+pyramids run pipeline.yaml --inputs a.tif b.tif --out ./out --manifest run.yaml   # batch + provenance
+```
+
+- **`apply`** runs one registered tool over a single input into an explicit output, taking typed `--set KEY=VALUE`
+  parameters (discover them with `pyramids tool NAME`).
+- **`run`** batches a pipeline YAML over one or more `--inputs` (paths or a glob) into `--out`; `--manifest` writes a
+  reproducible recipe plus per-input timings, and `--parallel` runs the batch across a process pool.
 
 !!! tip "The CLI mirrors the API"
     Each command maps to a `Dataset` / `FeatureCollection` method — e.g. `warp` → `to_crs`, `clip` → `crop`,
