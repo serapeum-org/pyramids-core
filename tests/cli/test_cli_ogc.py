@@ -25,9 +25,13 @@ class _FakeDataset:
 
 
 class _FakeFeatureCollection:
-    """A stand-in vector whose ``to_file`` just touches the output path."""
+    """A stand-in vector that records the driver and touches the output path."""
+
+    def __init__(self):
+        self.received_driver = None
 
     def to_file(self, path, driver=None):
+        self.received_driver = driver
         with open(path, "wb"):
             pass
 
@@ -226,3 +230,46 @@ class TestFetchWfs:
         assert rc == 0
         assert captured["typename"] == "T"
         assert captured["bbox"] == (0.0, 0.0, 1.0, 1.0)
+
+    def test_driver_inferred_from_extension(self, monkeypatch, tmp_path):
+        """fetch wfs infers the OGR driver from the output extension (L1)."""
+        sink = _FakeFeatureCollection()
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.FeatureCollection.from_wfs",
+            staticmethod(lambda url, **kwargs: sink),
+        )
+        rc = main(
+            [
+                "fetch",
+                "wfs",
+                "https://x",
+                str(tmp_path / "roads.gpkg"),
+                "--typename",
+                "T",
+            ]
+        )
+        assert rc == 0
+        assert sink.received_driver == "gpkg", (
+            "a .gpkg output must not silently default to GeoJSON"
+        )
+
+    def test_unknown_extension_without_driver_errors(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """An unknown output extension with no --driver exits 1 (L1)."""
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.FeatureCollection.from_wfs",
+            staticmethod(lambda url, **kwargs: _FakeFeatureCollection()),
+        )
+        rc = main(
+            [
+                "fetch",
+                "wfs",
+                "https://x",
+                str(tmp_path / "roads.weird"),
+                "--typename",
+                "T",
+            ]
+        )
+        assert rc == 1
+        assert "cannot infer a vector driver" in capsys.readouterr().err

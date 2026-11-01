@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 
 from pyramids._cli_shared import info_print, refuse_existing
+from pyramids.cli_vector import _resolve_vector_driver
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 
@@ -53,7 +54,7 @@ def _cmd_fetch_wcs(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    kwargs = {"coverage": args.coverage, "bbox": tuple(args.bbox)}
+    kwargs: dict = {"coverage": args.coverage, "bbox": tuple(args.bbox)}
     if args.crs:
         kwargs["crs"] = args.crs
     ds = Dataset.from_wcs(args.url, **kwargs)
@@ -77,7 +78,9 @@ def _cmd_fetch_wfs(args: argparse.Namespace) -> int:
     if args.bbox:
         kwargs["bbox"] = tuple(args.bbox)
     fc = FeatureCollection.from_wfs(args.url, **kwargs)
-    fc.to_file(args.output, driver=args.driver or "geojson")
+    # Infer the OGR driver from the output extension (same rule as the vector
+    # group) instead of silently defaulting to GeoJSON for any extension (L1).
+    fc.to_file(args.output, driver=_resolve_vector_driver(args.output, args.driver))
     info_print(args, f"wrote {args.output}")
     return 0
 
