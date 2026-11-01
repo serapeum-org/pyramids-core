@@ -243,17 +243,33 @@ class TestEditInfoDriverGuard:
     """edit-info on a non-updatable driver (B-4)."""
 
     def test_non_updatable_driver_clear_message(self, cli_raster, monkeypatch, capsys):
-        """An update-mode open failure yields a CLI-level message, not raw GDAL text."""
+        """An update-only open failure yields the CLI-level message (read-only works)."""
+        import pyramids.cli as cli_mod
+
+        def fake(_path, *args, read_only=True, **kwargs):
+            if not read_only:
+                raise RuntimeError("driver X does not support update access")
+            return object()  # a read-only open succeeds -> genuine update-mode limit
+
+        monkeypatch.setattr(cli_mod.Dataset, "read_file", staticmethod(fake))
+        rc = main(["edit-info", cli_raster, "--nodata", "0"])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "update-mode" in err and "pyramids convert" in err
+
+    def test_corrupt_file_keeps_original_error(self, cli_raster, monkeypatch, capsys):
+        """When a read-only open also fails, the original error is not mislabeled (L1)."""
         import pyramids.cli as cli_mod
 
         def boom(_path, *args, **kwargs):
-            raise RuntimeError("driver X does not support update access")
+            raise RuntimeError("TIFFReadDirectory: Failed to read directory")
 
         monkeypatch.setattr(cli_mod.Dataset, "read_file", staticmethod(boom))
         rc = main(["edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1
-        assert "update-mode" in err and "pyramids convert" in err
+        assert "Failed to read directory" in err, "the real error must surface"
+        assert "update-mode" not in err, "a corrupt file must not be mislabeled"
 
 
 class TestCogJson:

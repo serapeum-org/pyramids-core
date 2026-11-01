@@ -783,8 +783,14 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
     try:
         ds = Dataset.read_file(args.input, read_only=False)
     except (RuntimeError, OSError) as exc:
-        # GDAL refused an update-mode open: name the format and point at a fix
-        # instead of surfacing GDAL's low-level wording (B-4).
+        # Distinguish "the driver cannot open for update" from "the file is
+        # corrupt / unreadable": only the former is an update-mode limitation.
+        # If a read-only open also fails, it is not about update support, so
+        # re-raise the original error rather than mislabel it (B-4 / L1).
+        try:
+            Dataset.read_file(args.input, read_only=True)
+        except (RuntimeError, OSError):
+            raise exc
         raise ValueError(
             f"cannot edit {args.input!r} in place — its format does not support "
             f"update-mode writes. Re-save it to a writable format first "
