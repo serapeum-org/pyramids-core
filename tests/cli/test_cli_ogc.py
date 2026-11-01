@@ -98,6 +98,40 @@ class TestFetchWms:
         assert rc == 0
         assert captured["layers"] == "L"
 
+    def test_size_and_crs_forwarded(self, monkeypatch, tmp_path):
+        """--size and --crs are forwarded to Dataset.from_wms when given."""
+        captured: dict = {}
+
+        def fake(url, **kwargs):
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr("pyramids.cli_ogc.Dataset.from_wms", staticmethod(fake))
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "wms",
+                "https://x",
+                out,
+                "--layers",
+                "L",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--crs",
+                "4326",
+                "--size",
+                "256",
+                "128",
+            ]
+        )
+        assert rc == 0
+        assert captured["crs"] == "4326"
+        assert captured["size"] == (256, 128)
+
 
 class TestFetchWfs:
     """`pyramids fetch wfs`."""

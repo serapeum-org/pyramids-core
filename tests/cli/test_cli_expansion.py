@@ -8,6 +8,7 @@ B-4 (`edit-info` driver guard), and M-7 (`render`).
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import subprocess
@@ -253,6 +254,30 @@ class TestEditInfoDriverGuard:
         err = capsys.readouterr().err
         assert rc == 1
         assert "update-mode" in err and "pyramids convert" in err
+
+
+class TestCogJson:
+    """`cog create --json` / `cog validate --json` (E-4)."""
+
+    def test_cog_create_json_result(self, cli_raster, tmp_path, capsys):
+        """cog create --json emits a parseable result with the validity flag."""
+        out = str(tmp_path / "out.cog.tif")
+        rc = main(["cog", "create", cli_raster, out, "--json"])
+        payload = json.loads(capsys.readouterr().out)
+        assert rc == 0, "a valid COG must exit 0"
+        assert payload["is_valid"] is True
+        assert payload["output"].endswith(".cog.tif")
+
+    def test_cog_validate_json_result(self, cli_raster, tmp_path, capsys):
+        """cog validate --json emits is_valid / errors / warnings as JSON."""
+        out = str(tmp_path / "out.cog.tif")
+        assert main(["cog", "create", cli_raster, out]) == 0
+        capsys.readouterr()
+        rc = main(["cog", "validate", out, "--json"])
+        payload = json.loads(capsys.readouterr().out)
+        assert rc == 0
+        assert payload["is_valid"] is True
+        assert payload["errors"] == []
 
 
 @pytest.mark.plot
