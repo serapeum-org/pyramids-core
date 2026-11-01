@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7866,7 +7866,7 @@ See the <a href="../cog/cli/">COG CLI reference</a> for the full option set.</p>
 </code></pre></div>
 <p><code>stac</code> needs the <code>[stac]</code> extra (<code>pystac-client</code>, <code>stac-asset</code>); it reports a clear install hint if missing.</p>
 <h2 id="remote-ogc-services"><a class="toclink" href="#remote-ogc-services">Remote / OGC services</a><a class="headerlink" href="#remote-ogc-services" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wms<span class="w"> </span>https://example/wms<span class="w"> </span>scene.tif<span class="w"> </span>--layers<span class="w"> </span>topo<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--crs<span class="w"> </span><span class="m">4326</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wms<span class="w"> </span>https://example/wms<span class="w"> </span>scene.tif<span class="w"> </span>--layers<span class="w"> </span>topo<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--crs<span class="w"> </span><span class="m">4326</span><span class="w"> </span>--size<span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="m">1024</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wcs<span class="w"> </span>https://example/wcs<span class="w"> </span>dem.tif<span class="w"> </span>--coverage<span class="w"> </span>elevation<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wfs<span class="w"> </span>https://example/ows<span class="w"> </span>roads.geojson<span class="w"> </span>--typename<span class="w"> </span>topp:roads<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
 </code></pre></div>
