@@ -16,6 +16,8 @@ from pyramids.cli_vector import _resolve_vector_driver
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 
+_HELP_OVERWRITE = "replace the output if it exists"
+
 
 def _cmd_fetch_wms(args: argparse.Namespace) -> int:
     """Handle ``pyramids fetch wms`` — render a WMS window to a local raster.
@@ -121,9 +123,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
     wms_grid.add_argument(
         "--resolution", type=float, help="output cell size in CRS units"
     )
-    wms.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    wms.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     wms.set_defaults(func=_cmd_fetch_wms)
 
     wcs = fsub.add_parser("wcs", help="pull a WCS coverage window to a raster")
@@ -132,9 +132,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
     wcs.add_argument("--coverage", required=True, help="coverage identifier")
     _add_bbox(wcs, required=True)
     wcs.add_argument("--crs", help="bbox CRS (default: the service default)")
-    wcs.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    wcs.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     wcs.set_defaults(func=_cmd_fetch_wcs)
 
     wfs = fsub.add_parser("wfs", help="pull WFS features to a vector file")
@@ -143,7 +141,5 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
     wfs.add_argument("--typename", required=True, help="feature type name")
     _add_bbox(wfs, required=False)
     wfs.add_argument("--driver", help="OGR driver (default: geojson)")
-    wfs.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    wfs.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     wfs.set_defaults(func=_cmd_fetch_wfs)

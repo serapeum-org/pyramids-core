@@ -30,6 +30,13 @@ _VECTOR_DRIVER_BY_EXT = {
 }
 
 
+_HELP_SRC_VECTOR = "source vector path"
+_HELP_DST_VECTOR = "destination vector path"
+_HELP_LAYER = "layer name/index"
+_HELP_DRIVER = "OGR driver (default: inferred from extension)"
+_HELP_OVERWRITE = "replace the output if it exists"
+
+
 def _resolve_vector_driver(path: str, explicit: str | None) -> str:
     """Return the OGR driver for ``path``: ``explicit`` if given, else by extension.
 
@@ -192,46 +199,38 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     vsub = vector.add_subparsers(dest="command", required=True)
 
     v_info = vsub.add_parser("info", help="print vector metadata")
-    v_info.add_argument("src", help="source vector path")
+    v_info.add_argument("src", help=_HELP_SRC_VECTOR)
     v_info.add_argument("--layer", help="layer name/index for multi-layer sources")
     v_info.add_argument("--json", action="store_true", help="emit JSON")
     v_info.set_defaults(func=_cmd_vector_info)
 
     v_bounds = vsub.add_parser("bounds", help="print the vector bounding box")
-    v_bounds.add_argument("src", help="source vector path")
-    v_bounds.add_argument("--layer", help="layer name/index")
+    v_bounds.add_argument("src", help=_HELP_SRC_VECTOR)
+    v_bounds.add_argument("--layer", help=_HELP_LAYER)
     v_bounds.add_argument("--crs", help="reproject bounds to this CRS first")
     v_bounds.add_argument("--json", action="store_true", help="emit JSON")
     v_bounds.set_defaults(func=_cmd_vector_bounds)
 
     v_conv = vsub.add_parser("convert", help="re-save a vector in another format")
-    v_conv.add_argument("src", help="source vector path")
-    v_conv.add_argument("dst", help="destination vector path")
-    v_conv.add_argument(
-        "--driver", help="OGR driver (default: inferred from extension)"
-    )
-    v_conv.add_argument("--layer", help="layer name/index")
-    v_conv.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    v_conv.add_argument("src", help=_HELP_SRC_VECTOR)
+    v_conv.add_argument("dst", help=_HELP_DST_VECTOR)
+    v_conv.add_argument("--driver", help=_HELP_DRIVER)
+    v_conv.add_argument("--layer", help=_HELP_LAYER)
+    v_conv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_conv.set_defaults(func=_cmd_vector_convert)
 
     v_warp = vsub.add_parser("warp", help="reproject a vector")
-    v_warp.add_argument("src", help="source vector path")
-    v_warp.add_argument("dst", help="destination vector path")
+    v_warp.add_argument("src", help=_HELP_SRC_VECTOR)
+    v_warp.add_argument("dst", help=_HELP_DST_VECTOR)
     v_warp.add_argument("--crs", required=True, help="target CRS (EPSG, WKT, PROJ4)")
-    v_warp.add_argument(
-        "--driver", help="OGR driver (default: inferred from extension)"
-    )
-    v_warp.add_argument("--layer", help="layer name/index")
-    v_warp.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    v_warp.add_argument("--driver", help=_HELP_DRIVER)
+    v_warp.add_argument("--layer", help=_HELP_LAYER)
+    v_warp.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_warp.set_defaults(func=_cmd_vector_warp)
 
     v_clip = vsub.add_parser("clip", help="spatially subset a vector")
-    v_clip.add_argument("src", help="source vector path")
-    v_clip.add_argument("dst", help="destination vector path")
+    v_clip.add_argument("src", help=_HELP_SRC_VECTOR)
+    v_clip.add_argument("dst", help=_HELP_DST_VECTOR)
     v_clip_how = v_clip.add_mutually_exclusive_group(required=True)
     v_clip_how.add_argument(
         "--bbox",
@@ -241,11 +240,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
         help="keep features intersecting this window (source CRS)",
     )
     v_clip_how.add_argument("--mask", help="vector file whose polygons clip the source")
-    v_clip.add_argument(
-        "--driver", help="OGR driver (default: inferred from extension)"
-    )
-    v_clip.add_argument("--layer", help="layer name/index")
-    v_clip.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
-    )
+    v_clip.add_argument("--driver", help=_HELP_DRIVER)
+    v_clip.add_argument("--layer", help=_HELP_LAYER)
+    v_clip.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_clip.set_defaults(func=_cmd_vector_clip)
