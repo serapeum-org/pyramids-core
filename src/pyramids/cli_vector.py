@@ -167,6 +167,9 @@ def _cmd_vector_clip(args: argparse.Namespace) -> int:
     if args.mask:
         fc = FeatureCollection.read_file(args.src, layer=args.layer)
         mask = FeatureCollection.read_file(args.mask)
+        # Reproject the mask only when both layers carry a CRS and they differ.
+        # If the source is CRS-less we cannot know its projection, so we clip in
+        # the source's raw coordinate space rather than guess a reprojection (N1).
         if mask.crs is not None and fc.crs is not None and mask.epsg != fc.epsg:
             mask = mask.to_crs(fc.epsg)
         clipped = FeatureCollection(fc.clip(mask))
