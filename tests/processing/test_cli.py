@@ -243,6 +243,48 @@ class TestRunMultiInput:
         assert len(list(out_dir.glob("*.tif"))) == 2
 
 
+class TestRunQuiet:
+    """`pyramids --quiet run` output gating (L4)."""
+
+    def test_quiet_suppresses_summary(self, points_geojson, tmp_path, capsys):
+        """--quiet silences the 'N succeeded' summary chatter."""
+        yaml_path = _interp_pipeline(tmp_path)
+        out_dir = tmp_path / "out"
+        rc = main(
+            [
+                "--quiet",
+                "run",
+                yaml_path,
+                "--inputs",
+                points_geojson,
+                "--out",
+                str(out_dir),
+            ]
+        )
+        assert rc == 0
+        assert "succeeded" not in capsys.readouterr().out
+
+    def test_quiet_still_reports_failures(self, tmp_path, capsys):
+        """A FAILED line is error reporting and prints even under --quiet."""
+        yaml_path = tmp_path / "pipe.yaml"
+        Pipeline([("slope", {})]).to_yaml(str(yaml_path))
+        rc = main(
+            [
+                "--quiet",
+                "run",
+                str(yaml_path),
+                "--inputs",
+                "C:/no/such.tif",
+                "--out",
+                str(tmp_path / "o"),
+            ]
+        )
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert "FAILED" in out, "failures must still be reported under --quiet"
+        assert "succeeded" not in out, "the summary chatter stays silenced"
+
+
 class TestRunParallel:
     """`pyramids run --parallel` end to end (F-3 / T-3)."""
 

@@ -75,7 +75,10 @@ def _cmd_run(args: argparse.Namespace) -> int:
         with open(args.manifest, "w", encoding="utf-8") as handle:
             yaml.safe_dump(_manifest_payload(result), handle, sort_keys=False)
         info_print(args, f"wrote manifest {args.manifest}")
-    print(f"{len(result.outputs)} succeeded, {len(result.failures)} failed")
+    # The count is informational chatter (the real outputs are the written files
+    # + exit code), so --quiet silences it; the per-failure lines are error
+    # reporting and always print (L4).
+    info_print(args, f"{len(result.outputs)} succeeded, {len(result.failures)} failed")
     for source, exc in result.failures:
         print(f"  FAILED {source}: {exc}")
     return 0 if result.ok else 1
