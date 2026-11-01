@@ -141,17 +141,6 @@ To install the latest release from PyPI:
 pip install pyramids-core
 ```
 
-### Linux + pixi: no glibc pin needed
-
-pyramids-core ships Linux wheels for both glibc (`manylinux_2_28` — glibc ≥ 2.28, i.e. Ubuntu 20.04+ /
-Debian 11+ / RHEL 8+ / AL2023) and musl (`musllinux_1_2` — Alpine). GDAL and its native stack are compiled from
-source with the manylinux/musllinux toolchain. pixi's default Linux baseline is glibc 2.28, so the manylinux wheel
-resolves out of the box — **no `[tool.pixi.system-requirements]` entry is required**.
-
-On Linux with glibc < 2.28, install from conda-forge instead. See the full
-[installation guide](docs/installation.md) and [troubleshooting](docs/troubleshooting.md) for the details.
-
-
 ## Optional extras
 
 ```
