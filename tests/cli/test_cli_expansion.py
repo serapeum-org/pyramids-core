@@ -255,7 +255,8 @@ class TestEditInfoDriverGuard:
         rc = main(["edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1
-        assert "update-mode" in err and "pyramids convert" in err
+        assert "update-mode" in err
+        assert "pyramids convert" in err
 
     def test_corrupt_file_keeps_original_error(self, cli_raster, monkeypatch, capsys):
         """When a read-only open also fails, the original error is not mislabeled (L1)."""
@@ -303,7 +304,8 @@ class TestRender:
         """render saves a non-empty PNG headlessly."""
         out = str(tmp_path / "ql.png")
         assert main(["render", cli_raster, out]) == 0
-        assert os.path.exists(out) and os.path.getsize(out) > 0
+        assert os.path.exists(out)
+        assert os.path.getsize(out) > 0
 
     def test_refuses_existing(self, cli_raster, tmp_path):
         """render refuses an existing output without --overwrite."""
@@ -323,6 +325,5 @@ class TestRender:
         assert os.environ["MPLBACKEND"] == "Agg", (
             "a pre-exported interactive backend must not win over the forced Agg"
         )
-        assert os.path.exists(out) and os.path.getsize(out) > 0, (
-            "render must still produce the PNG headlessly"
-        )
+        assert os.path.exists(out), "render must still produce the PNG headlessly"
+        assert os.path.getsize(out) > 0, "the rendered PNG must not be empty"
