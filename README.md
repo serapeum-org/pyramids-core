@@ -221,6 +221,30 @@ print(cube.time_length, cube.shape)
 mean = cube.mean()                       # nan-aware by default
 ```
 
+Ecosystem & plugins
+===================
+
+pyramids is the GIS engine at the centre of a small family of packages. There are three ways other packages
+relate to it:
+
+- **Plugins** extend the core through entry-point hooks (`pyramids.raster_drivers`, `pyramids.vector_drivers`,
+  `pyramids.mesh_drivers`, `pyramids.plot_backends`) — install one and pyramids discovers it automatically, no
+  code change. Current plugins: [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) (Earth-observation
+  raster sources), [`pyramids-mesh`](https://github.com/serapeum-org/pyramids-mesh) (hydraulic/simulation mesh
+  formats), [`pyramids-citymodels`](https://github.com/serapeum-org/pyramids-citymodels) (CityJSON / CityGML / 3D
+  Tiles), and [`digitalearth`](https://github.com/serapeum-org/Digital-Earth) (interactive / 3-D / web plot
+  backends). See the [plugins catalog](docs/plugins.md) and
+  [Extending pyramids](docs/extending-pyramids.md) to write your own.
+- **Sibling engines** are standalone and interop *toward* pyramids rather than depending on it being installed —
+  e.g. [`pointclouds`](https://github.com/serapeum-org/pointclouds), the GDAL-free point-cloud engine, which can
+  grid or export a cloud into a pyramids `Dataset` / `FeatureCollection` through its own optional `[gis]` extra.
+- **Integrations** wrap pyramids for a host application — e.g.
+  [`pyramids-qgis`](https://github.com/serapeum-org/pyramids-qgis), which exposes pyramids as a QGIS Processing
+  provider (see [Using pyramids in QGIS](docs/integrations/qgis.md)).
+
+The full map, with the libraries pyramids builds on and the peers you might reach for alongside it, is in the
+[Ecosystem](docs/ecosystem.md) guide.
+
 Testing
 =======
 
