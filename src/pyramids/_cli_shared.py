@@ -26,6 +26,29 @@ def json_safe(value: float | None) -> float | None:
 
     Returns:
         float | None: ``value`` unchanged, or ``None`` when it is not finite.
+
+    Examples:
+        - A finite float passes through unchanged:
+            ```python
+            >>> from pyramids._cli_shared import json_safe
+            >>> json_safe(3.5)
+            3.5
+
+            ```
+        - Non-finite floats become ``None`` so ``json.dumps`` stays valid:
+            ```python
+            >>> json_safe(float("inf")) is None
+            True
+            >>> json_safe(float("nan")) is None
+            True
+
+            ```
+        - ``None`` passes straight through:
+            ```python
+            >>> json_safe(None) is None
+            True
+
+            ```
     """
     result: float | None = value
     if isinstance(value, float) and not math.isfinite(value):
@@ -42,6 +65,25 @@ def refuse_existing(path: str, overwrite: bool) -> None:
 
     Raises:
         ValueError: ``path`` already exists and ``overwrite`` is ``False``.
+
+    Examples:
+        - A path that does not exist is allowed (returns ``None``):
+            ```python
+            >>> from pyramids._cli_shared import refuse_existing
+            >>> refuse_existing("no_such_file_8f3a1c.tif", overwrite=False) is None
+            True
+
+            ```
+        - ``overwrite=True`` never refuses, even for a path that exists:
+            ```python
+            >>> import os, tempfile
+            >>> handle = tempfile.NamedTemporaryFile(delete=False)
+            >>> _ = handle.close()
+            >>> refuse_existing(handle.name, overwrite=True) is None
+            True
+            >>> os.unlink(handle.name)
+
+            ```
     """
     if not overwrite and os.path.exists(path):
         raise ValueError(
