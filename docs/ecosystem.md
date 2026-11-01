@@ -32,6 +32,15 @@ pyramids is a high-level, object-oriented layer over these; you rarely call them
     the core through entry-point hooks. See the [Plugins & extensions catalog](plugins.md) for the full list,
     and [Extending pyramids](extending-pyramids.md) to write your own.
 
+## Integrations
+
+Packages that wrap pyramids for a **host application** — they depend on `pyramids-core` and adapt it to another
+tool, rather than registering into a pyramids hook.
+
+| Integration | What it is |
+|-------------|-----------|
+| [pyramids-qgis](https://github.com/serapeum-org/pyramids-qgis) | a QGIS plugin that exposes pyramids as a QGIS **Processing provider** (toolbox, modeler, batch, `processing.run`). A thin adapter over the pyramids CLI; see [Using pyramids in QGIS](integrations/qgis.md). Experimental. |
+
 ## Peers — and when to pick them
 
 pyramids is a **GDAL/GIS-first** raster **+** vector **+** datacube toolkit. The array-first stack overlaps on

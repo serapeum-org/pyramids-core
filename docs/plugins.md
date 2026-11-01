@@ -16,6 +16,10 @@ documentation site — follow the **Docs** link for its full API and examples. T
     on it. It is a standalone engine that can hand its output *to* pyramids through its own optional `[gis]`
     extra. Such companions live in the [Ecosystem](ecosystem.md) page, not here.
 
+    Likewise, an **integration** such as [`pyramids-qgis`](integrations/qgis.md) (which exposes pyramids inside
+    QGIS) wraps pyramids for a host application rather than extending it through a hook — see
+    [Using pyramids in QGIS](integrations/qgis.md).
+
 | Plugin | Hook group | What it adds | Docs |
 |--------|-----------|--------------|------|
 | [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) | `pyramids.raster_drivers` | Remote-sensing / Earth-observation tier — raster drivers for Google Earth Engine, Sentinel-2, SEVIRI and EUMETSAT FCI sources | [serapeum-org.github.io/pyramids-eo](https://serapeum-org.github.io/pyramids-eo) |

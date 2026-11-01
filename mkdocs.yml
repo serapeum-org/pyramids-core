@@ -287,6 +287,8 @@ nav:
   - Plugins:
     - Plugins & extensions: plugins.md
     - Extending pyramids: extending-pyramids.md
+  - Integrations:
+    - pyramids in QGIS: integrations/qgis.md
   - Overview:
     - Codebase Map: overview/codebase-map.md
     - How it works: overview/how-it-works.md
