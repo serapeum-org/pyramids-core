@@ -760,15 +760,15 @@ def _apply_nodata(ds: Dataset, raw: str) -> None:
     Raises:
         ValueError: ``raw`` is not a number, ``nan``, nor ``none``/``unset``.
     """
-    token = raw.strip().lower()
-    if token in {"none", "unset"}:
+    spec = raw.strip().lower()
+    if spec in {"none", "unset"}:
         for index in range(ds.band_count):
             ds.raster.GetRasterBand(index + 1).DeleteNoDataValue()
     else:
         # `sentinel` is typed Any because the no_data_value setter's declared
         # union does not include a bare ``float`` (the numeric tower is not real
         # subtyping to mypy); the original CLI assigned the Namespace's Any value.
-        if token == "nan":
+        if spec == "nan":
             sentinel: Any = float("nan")
         else:
             try:
