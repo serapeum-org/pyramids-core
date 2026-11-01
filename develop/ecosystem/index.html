@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7602,7 +7602,7 @@
 </tr>
 <tr>
 <td><a href="https://github.com/serapeum-org/pointclouds">pointclouds</a></td>
-<td>the <strong>point-cloud engine</strong> (LAS/LAZ/COPC — read, filter, decimate, grid). A standalone, GDAL-free sibling, <strong>not</strong> a pyramids plugin: pyramids does not depend on it. The link runs the other way — <code>pointclouds</code> grids or exports a cloud <strong>into</strong> pyramids through its own optional <code>[gis]</code> extra (<code>pointclouds.convert.to_dataset</code> → <code>Dataset</code>, <code>to_feature_collection</code> → <code>FeatureCollection</code>).</td>
+<td>the <strong>point-cloud engine</strong> (LAS/LAZ/COPC — read, filter, decimate, grid). A standalone, GDAL-free sibling, <strong>not</strong> a pyramids plugin: pyramids does not depend on it. The link runs the other way — <code>pointclouds</code> declares an optional <code>[gis]</code> extra (which pulls in <code>pyramids-core</code>) as its seam for raster/vector interop with pyramids.</td>
 </tr>
 <tr>
 <td><a href="https://github.com/serapeum-org">serapeum-org</a></td>

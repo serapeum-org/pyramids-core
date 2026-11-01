@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7575,8 +7575,8 @@ documentation site — follow the <strong>Docs</strong> link for its full API an
 <p class="admonition-title">Not everything in the family is a plugin</p>
 <p>A sibling package such as <a href="https://serapeum-org.github.io/pointclouds"><code>pointclouds</code></a> — the GDAL-free
 point-cloud engine — is <strong>not</strong> a plugin: it does not register into any hook, and pyramids does not depend
-on it. It is a standalone engine that can hand its output <em>to</em> pyramids through its own optional <code>[gis]</code>
-extra. Such companions live in the <a href="../ecosystem/">Ecosystem</a> page, not here.</p>
+on it. It is a standalone engine that declares an optional <code>[gis]</code> extra (on <code>pyramids-core</code>) as its seam for
+interop toward pyramids. Such companions live in the <a href="../ecosystem/">Ecosystem</a> page, not here.</p>
 <p>Likewise, an <strong>integration</strong> such as <a href="../integrations/qgis/"><code>pyramids-qgis</code></a> (which exposes pyramids inside
 QGIS) wraps pyramids for a host application rather than extending it through a hook — see
 <a href="../integrations/qgis/">Using pyramids in QGIS</a>.</p>
@@ -7620,7 +7620,9 @@ QGIS) wraps pyramids for a host application rather than extending it through a h
 <h2 id="pyramids-eo-earth-observation-raster-sources"><a class="toclink" href="#pyramids-eo-earth-observation-raster-sources">pyramids-eo — Earth-observation raster sources</a><a class="headerlink" href="#pyramids-eo-earth-observation-raster-sources" title="Permanent link">#</a></h2>
 <p><code>pyramids-eo</code> adds an EO tier on top of pyramids and registers raster drivers for sources GDAL cannot open on its
 own: an Earth Engine asset id (<code>ee://…</code>), a Sentinel-2 <code>.SAFE</code> product, a SEVIRI granule, a EUMETSAT FCI <code>.nat</code>
-file. Once it is installed, <code>Dataset.read_file</code> routes those sources through the plugin automatically.</p>
+file. Once it is installed, scheme- and suffix-based sources route through the plugin automatically (e.g. an
+<code>ee://</code> asset id). A Sentinel-2 <code>.SAFE</code> product needs an explicit <code>driver="s2"</code>, because GDAL's own <code>SENTINEL2</code>
+driver claims the bare path first.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyramids-eo
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
@@ -7629,9 +7631,9 @@ file. Once it is installed, <code>Dataset.read_file</code> routes those sources 
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">scene</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"ee://COPERNICUS/S2_SR_HARMONIZED/20200701T..."</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="pyramids-mesh-hydraulic-simulation-mesh-formats"><a class="toclink" href="#pyramids-mesh-hydraulic-simulation-mesh-formats">pyramids-mesh — hydraulic &amp; simulation mesh formats</a><a class="headerlink" href="#pyramids-mesh-hydraulic-simulation-mesh-formats" title="Permanent link">#</a></h2>
-<p><code>pyramids-mesh</code> registers UGRID mesh drivers for ~19 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
-Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, …). <code>UgridDataset.read_file</code>
-picks the right driver from the file.</p>
+<p><code>pyramids-mesh</code> registers UGRID mesh drivers for 48 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
+Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, VTK, MODFLOW 6, FVCOM, …).
+<code>UgridDataset.read_file</code> picks the right driver from the file.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyramids-mesh
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
