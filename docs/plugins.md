@@ -10,6 +10,12 @@ This page is the **catalog** of known plugins. Each one is maintained in its own
 documentation site — follow the **Docs** link for its full API and examples. To learn how to *write* one, see
 [Extending pyramids](extending-pyramids.md).
 
+!!! note "Not everything in the family is a plugin"
+    A sibling package such as [`pointclouds`](https://serapeum-org.github.io/pointclouds) — the GDAL-free
+    point-cloud engine — is **not** a plugin: it does not register into any hook, and pyramids does not depend
+    on it. It is a standalone engine that can hand its output *to* pyramids through its own optional `[gis]`
+    extra. Such companions live in the [Ecosystem](ecosystem.md) page, not here.
+
 | Plugin | Hook group | What it adds | Docs |
 |--------|-----------|--------------|------|
 | [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) | `pyramids.raster_drivers` | Remote-sensing / Earth-observation tier — raster drivers for Google Earth Engine, Sentinel-2, SEVIRI and EUMETSAT FCI sources | [serapeum-org.github.io/pyramids-eo](https://serapeum-org.github.io/pyramids-eo) |
