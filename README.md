@@ -62,7 +62,7 @@ graph LR
         FeatureCollection
         subgraph Engines["Dataset engines (ds.io · ds.spatial · ds.bands · ds.analysis · ds.cell · ds.vectorize · ds.cog)"]
         end
-        subgraph Plotting["Plotting layer — _plot_helpers.render_array · mesh_render · NetCDFPlot · Selectors / ColourOpts / FacetSpec · basemap"]
+        subgraph Plotting["Plotting layer — _plot_helpers.render_array · mesh_render · NetCDFPlot · Selectors / FacetSpec / CoordinateSpec · basemap"]
         end
     end
     Dataset -->|crop · reproject · align| Dataset
@@ -89,8 +89,8 @@ Main Features
   short form working — `ds.crop(mask)` and `ds.spatial.crop(mask)` are equivalent.
 - **NetCDF** - Extends Dataset for NetCDF files with time/variable dimensions and CF conventions metadata.
   Optional labeled-array interoperability. `NetCDF.plot` exposes a labeled-array-style plotting API
-  (`variable=` + grouped `Selectors` / `ColourOpts` / `FacetSpec` dataclasses, curvilinear `coords=`,
-  `kind=`, `animate=`, lazy `chunks=`).
+  (`variable=` + grouped `Selectors` / `FacetSpec` dataclasses, loose colour kwargs (`cmap`, `robust`, …),
+  curvilinear coordinates via `axes=CoordinateSpec(...)`, `kind=`, `animate=`, lazy `chunks=`).
 - **UgridDataset** - Read and visualize UGRID-1.0 unstructured meshes (triangles, quads, mixed).
   Supports mesh-to-raster interpolation and mesh-to-vector export.
 - **DatasetCollection** - Manage time-series of co-registered rasters as a lazy temporal stack
@@ -141,25 +141,6 @@ To install the latest release from PyPI:
 pip install pyramids-core
 ```
 
-### Linux + pixi: no glibc pin needed anymore
-
-pyramids-core ships its Linux wheels tagged `manylinux_2_28` (GDAL and its native stack are compiled from source with
-the manylinux toolchain). pixi's default Linux baseline is glibc 2.28 (it tracks conda-forge's floor), so the wheel
-resolves out of the box — no `[tool.pixi.system-requirements]` entry required (verified with pixi 0.65 defaults;
-newer versions, including the 0.68.1 this repo pins in CI, share the same baseline).
-
-Two cases still need a pin in the **consuming project's** `pyproject.toml` / `pixi.toml`:
-
-```toml
-[tool.pixi.system-requirements]
-libc = "2.39"    # only for the older releases that shipped manylinux_2_39 wheels (0.2x-0.39.x)
-```
-
-or `libc = "2.28"` if you run a pixi version old enough that its default baseline is still below 2.28. On Linux with
-glibc < 2.28, install from conda-forge instead. See the full
-[installation guide](docs/installation.md) and [troubleshooting](docs/troubleshooting.md) for the other cases.
-
-
 ## Optional extras
 
 ```
@@ -188,16 +169,15 @@ reprojected = src.to_crs(to_epsg=3857)  # same as src.spatial.to_crs(...)
 ```
 
 ```python
-from pyramids.netcdf import NetCDF
-from pyramids import Selectors, ColourOpts, FacetSpec   # grouped plot options
+from pyramids.netcdf import NetCDF, Selectors, FacetSpec   # grouped plot options
 
 # Open a NetCDF file
 nc = NetCDF.read_file("path/to/data.nc")
 print(nc.variables)
 
-# labeled-array-style plotting (needs the [viz] extra)
+# labeled-array-style plotting (needs the [viz] extra); colour knobs are loose kwargs
 nc.plot("t2m", selectors=Selectors(time="2020-07-01", level=850),
-        colour=ColourOpts(cmap="coolwarm", robust=True))
+        cmap="coolwarm", robust=True)
 nc.plot("t2m", facet=FacetSpec(col="time", col_wrap=4))   # small multiples
 nc.plot("t2m", animate="time", chunks={"time": 1})        # lazy per-frame animation
 ```
@@ -221,6 +201,30 @@ print(cube.time_length, cube.shape)
 # Reductions over the time axis use dask under the hood
 mean = cube.mean()                       # nan-aware by default
 ```
+
+Ecosystem & plugins
+===================
+
+pyramids is the GIS engine at the centre of a small family of packages. There are three ways other packages
+relate to it:
+
+- **Plugins** extend the core through entry-point hooks (`pyramids.raster_drivers`, `pyramids.vector_drivers`,
+  `pyramids.mesh_drivers`, `pyramids.plot_backends`) — install one and pyramids discovers it automatically, no
+  code change. Current plugins: [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) (Earth-observation
+  raster sources), [`pyramids-mesh`](https://github.com/serapeum-org/pyramids-mesh) (hydraulic/simulation mesh
+  formats), [`pyramids-citymodels`](https://github.com/serapeum-org/pyramids-citymodels) (CityJSON / CityGML / 3D
+  Tiles), and [`digitalearth`](https://github.com/serapeum-org/Digital-Earth) (interactive / 3-D / web plot
+  backends). See the [plugins catalog](docs/plugins.md) and
+  [Extending pyramids](docs/extending-pyramids.md) to write your own.
+- **Sibling engines** are standalone and interop *toward* pyramids rather than depending on it being installed —
+  e.g. [`pointclouds`](https://github.com/serapeum-org/pointclouds), the GDAL-free point-cloud engine, which
+  declares an optional `[gis]` extra (on `pyramids-core`) as its seam for interop toward pyramids.
+- **Integrations** wrap pyramids for a host application — e.g.
+  [`pyramids-qgis`](https://github.com/serapeum-org/pyramids-qgis), which exposes pyramids as a QGIS Processing
+  provider (see [Using pyramids in QGIS](docs/integrations/qgis.md)).
+
+The full map, with the libraries pyramids builds on and the peers you might reach for alongside it, is in the
+[Ecosystem](docs/ecosystem.md) guide.
 
 Testing
 =======
