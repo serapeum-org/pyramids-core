@@ -161,7 +161,7 @@ pyramids stac download <stac-url> --collections sentinel-2-l2a --bbox 4.1 51.9 4
 ## Remote / OGC services
 
 ```bash
-pyramids fetch wms https://example/wms scene.tif --layers topo --bbox 4.1 51.9 4.6 52.2 --crs 4326
+pyramids fetch wms https://example/wms scene.tif --layers topo --bbox 4.1 51.9 4.6 52.2 --crs 4326 --size 1024 1024
 pyramids fetch wcs https://example/wcs dem.tif --coverage elevation --bbox 4.1 51.9 4.6 52.2
 pyramids fetch wfs https://example/ows roads.geojson --typename topp:roads --bbox 4.1 51.9 4.6 52.2
 ```

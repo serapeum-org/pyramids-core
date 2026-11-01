@@ -20,18 +20,22 @@ def _cmd_fetch_wms(args: argparse.Namespace) -> int:
     """Handle ``pyramids fetch wms`` — render a WMS window to a local raster.
 
     Args:
-        args: Parsed args with ``url``, ``layers``, ``bbox``, ``crs``, ``size``,
-            ``output``, ``overwrite``.
+        args: Parsed args with ``url``, ``layers``, ``bbox``, ``crs``, ``size`` or
+            ``resolution``, ``output``, ``overwrite``.
 
     Returns:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    kwargs = {"layers": args.layers, "bbox": tuple(args.bbox)}
+    kwargs: dict = {"layers": args.layers, "bbox": tuple(args.bbox)}
     if args.crs:
         kwargs["crs"] = args.crs
+    # from_wms requires exactly one of size/resolution; the parser's required
+    # mutually-exclusive group guarantees exactly one of these is set (M1).
     if args.size:
         kwargs["size"] = tuple(args.size)
+    else:
+        kwargs["resolution"] = args.resolution
     ds = Dataset.from_wms(args.url, **kwargs)
     ds.to_file(args.output)
     info_print(args, f"wrote {args.output}")
@@ -105,8 +109,14 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
     wms.add_argument("--layers", required=True, help="WMS layer name")
     _add_bbox(wms, required=True)
     wms.add_argument("--crs", help="request CRS (default: the service default)")
-    wms.add_argument(
+    # from_wms needs exactly one of size/resolution — mirror that as a required
+    # mutually-exclusive group so the CLI contract matches the library (M1).
+    wms_grid = wms.add_mutually_exclusive_group(required=True)
+    wms_grid.add_argument(
         "--size", nargs=2, type=int, metavar=("W", "H"), help="output pixel size"
+    )
+    wms_grid.add_argument(
+        "--resolution", type=float, help="output cell size in CRS units"
     )
     wms.add_argument(
         "--overwrite", action="store_true", help="replace the output if it exists"

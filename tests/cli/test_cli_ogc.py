@@ -71,7 +71,7 @@ class TestFetchWms:
     """`pyramids fetch wms`."""
 
     def test_forwards_kwargs(self, monkeypatch, tmp_path):
-        """The layer and bbox reach Dataset.from_wms."""
+        """The layer, bbox, and size reach Dataset.from_wms."""
         captured: dict = {}
 
         def fake(url, **kwargs):
@@ -93,10 +93,70 @@ class TestFetchWms:
                 "0",
                 "1",
                 "1",
+                "--size",
+                "256",
+                "256",
             ]
         )
         assert rc == 0
         assert captured["layers"] == "L"
+
+    def test_requires_size_or_resolution(self, monkeypatch, tmp_path):
+        """Neither --size nor --resolution is rejected by argparse (M1).
+
+        from_wms needs exactly one of size/resolution, so the CLI must not let a
+        no-grid call through to a runtime ValueError.
+        """
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.Dataset.from_wms",
+            staticmethod(lambda *a, **k: _FakeDataset()),
+        )
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "fetch",
+                    "wms",
+                    "https://x",
+                    str(tmp_path / "o.tif"),
+                    "--layers",
+                    "L",
+                    "--bbox",
+                    "0",
+                    "0",
+                    "1",
+                    "1",
+                ]
+            )
+
+    def test_resolution_forwarded(self, monkeypatch, tmp_path):
+        """--resolution is forwarded to Dataset.from_wms as an alternative to --size."""
+        captured: dict = {}
+
+        def fake(url, **kwargs):
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr("pyramids.cli_ogc.Dataset.from_wms", staticmethod(fake))
+        rc = main(
+            [
+                "fetch",
+                "wms",
+                "https://x",
+                str(tmp_path / "o.tif"),
+                "--layers",
+                "L",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--resolution",
+                "10",
+            ]
+        )
+        assert rc == 0
+        assert captured["resolution"] == 10.0
+        assert "size" not in captured
 
     def test_size_and_crs_forwarded(self, monkeypatch, tmp_path):
         """--size and --crs are forwarded to Dataset.from_wms when given."""
