@@ -10,6 +10,7 @@ the registry, never hand-written.
 from __future__ import annotations
 
 import argparse
+import sys
 from typing import Any
 
 import yaml
@@ -80,7 +81,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
     # reporting and always print (L4).
     info_print(args, f"{len(result.outputs)} succeeded, {len(result.failures)} failed")
     for source, exc in result.failures:
-        print(f"  FAILED {source}: {exc}")
+        # Diagnostics go to stderr like every other CLI error, so a script
+        # capturing stdout gets clean results and `2>/dev/null` can mute them (L2).
+        print(f"  FAILED {source}: {exc}", file=sys.stderr)
     return 0 if result.ok else 1
 
 

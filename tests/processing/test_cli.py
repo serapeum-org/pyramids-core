@@ -124,9 +124,9 @@ class TestProcessingCli:
         rc = main(
             ["run", str(yaml_path), "--inputs", "C:/no/such.tif", "--out", str(out_dir)]
         )
-        out = capsys.readouterr().out
-        assert rc == 1, out
-        assert "FAILED" in out, out
+        captured = capsys.readouterr()
+        assert rc == 1, captured.err
+        assert "FAILED" in captured.err, captured.err
 
 
 def _interp_pipeline(tmp_path):
@@ -279,10 +279,12 @@ class TestRunQuiet:
                 str(tmp_path / "o"),
             ]
         )
-        out = capsys.readouterr().out
+        captured = capsys.readouterr()
         assert rc == 1
-        assert "FAILED" in out, "failures must still be reported under --quiet"
-        assert "succeeded" not in out, "the summary chatter stays silenced"
+        assert "FAILED" in captured.err, (
+            "failures must still be reported (stderr) under --quiet"
+        )
+        assert "succeeded" not in captured.out, "the summary chatter stays silenced"
 
 
 class TestRunParallel:
