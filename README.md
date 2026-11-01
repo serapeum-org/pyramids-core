@@ -228,8 +228,8 @@ relate to it:
   backends). See the [plugins catalog](docs/plugins.md) and
   [Extending pyramids](docs/extending-pyramids.md) to write your own.
 - **Sibling engines** are standalone and interop *toward* pyramids rather than depending on it being installed —
-  e.g. [`pointclouds`](https://github.com/serapeum-org/pointclouds), the GDAL-free point-cloud engine, which can
-  grid or export a cloud into a pyramids `Dataset` / `FeatureCollection` through its own optional `[gis]` extra.
+  e.g. [`pointclouds`](https://github.com/serapeum-org/pointclouds), the GDAL-free point-cloud engine, which
+  declares an optional `[gis]` extra (on `pyramids-core`) as its seam for interop toward pyramids.
 - **Integrations** wrap pyramids for a host application — e.g.
   [`pyramids-qgis`](https://github.com/serapeum-org/pyramids-qgis), which exposes pyramids as a QGIS Processing
   provider (see [Using pyramids in QGIS](docs/integrations/qgis.md)).

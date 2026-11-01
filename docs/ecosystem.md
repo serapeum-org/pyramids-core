@@ -23,7 +23,7 @@ pyramids is a high-level, object-oriented layer over these; you rarely call them
 |---------|--------------|
 | [cleopatra](https://github.com/serapeum-org/cleopatra) | **all plotting.** Every `plot*` method builds a cleopatra glyph — array rendering, basemaps, RGB, vector fields. Install via the `[viz]` extra. |
 | hpc-utils (`hpc.indexing`) | pixel/index lookup utilities used by point sampling and extraction. |
-| [pointclouds](https://github.com/serapeum-org/pointclouds) | the **point-cloud engine** (LAS/LAZ/COPC — read, filter, decimate, grid). A standalone, GDAL-free sibling, **not** a pyramids plugin: pyramids does not depend on it. The link runs the other way — `pointclouds` grids or exports a cloud **into** pyramids through its own optional `[gis]` extra (`pointclouds.convert.to_dataset` → `Dataset`, `to_feature_collection` → `FeatureCollection`). |
+| [pointclouds](https://github.com/serapeum-org/pointclouds) | the **point-cloud engine** (LAS/LAZ/COPC — read, filter, decimate, grid). A standalone, GDAL-free sibling, **not** a pyramids plugin: pyramids does not depend on it. The link runs the other way — `pointclouds` declares an optional `[gis]` extra (which pulls in `pyramids-core`) as its seam for raster/vector interop with pyramids. |
 | [serapeum-org](https://github.com/serapeum-org) | the umbrella org — pyramids, cleopatra, and shared CI/tooling live here. |
 
 !!! tip "Plugins extend the core through entry points"

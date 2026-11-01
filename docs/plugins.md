@@ -13,8 +13,8 @@ documentation site — follow the **Docs** link for its full API and examples. T
 !!! note "Not everything in the family is a plugin"
     A sibling package such as [`pointclouds`](https://serapeum-org.github.io/pointclouds) — the GDAL-free
     point-cloud engine — is **not** a plugin: it does not register into any hook, and pyramids does not depend
-    on it. It is a standalone engine that can hand its output *to* pyramids through its own optional `[gis]`
-    extra. Such companions live in the [Ecosystem](ecosystem.md) page, not here.
+    on it. It is a standalone engine that declares an optional `[gis]` extra (on `pyramids-core`) as its seam for
+    interop toward pyramids. Such companions live in the [Ecosystem](ecosystem.md) page, not here.
 
     Likewise, an **integration** such as [`pyramids-qgis`](integrations/qgis.md) (which exposes pyramids inside
     QGIS) wraps pyramids for a host application rather than extending it through a hook — see
@@ -31,7 +31,9 @@ documentation site — follow the **Docs** link for its full API and examples. T
 
 `pyramids-eo` adds an EO tier on top of pyramids and registers raster drivers for sources GDAL cannot open on its
 own: an Earth Engine asset id (`ee://…`), a Sentinel-2 `.SAFE` product, a SEVIRI granule, a EUMETSAT FCI `.nat`
-file. Once it is installed, `Dataset.read_file` routes those sources through the plugin automatically.
+file. Once it is installed, scheme- and suffix-based sources route through the plugin automatically (e.g. an
+`ee://` asset id). A Sentinel-2 `.SAFE` product needs an explicit `driver="s2"`, because GDAL's own `SENTINEL2`
+driver claims the bare path first.
 
 ```bash
 pip install pyramids-eo
@@ -46,9 +48,9 @@ scene = Dataset.read_file("ee://COPERNICUS/S2_SR_HARMONIZED/20200701T...")
 
 ## pyramids-mesh — hydraulic & simulation mesh formats
 
-`pyramids-mesh` registers UGRID mesh drivers for ~19 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
-Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, …). `UgridDataset.read_file`
-picks the right driver from the file.
+`pyramids-mesh` registers UGRID mesh drivers for 48 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
+Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, VTK, MODFLOW 6, FVCOM, …).
+`UgridDataset.read_file` picks the right driver from the file.
 
 ```bash
 pip install pyramids-mesh
