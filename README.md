@@ -62,7 +62,7 @@ graph LR
         FeatureCollection
         subgraph Engines["Dataset engines (ds.io · ds.spatial · ds.bands · ds.analysis · ds.cell · ds.vectorize · ds.cog)"]
         end
-        subgraph Plotting["Plotting layer — _plot_helpers.render_array · mesh_render · NetCDFPlot · Selectors / ColourOpts / FacetSpec · basemap"]
+        subgraph Plotting["Plotting layer — _plot_helpers.render_array · mesh_render · NetCDFPlot · Selectors / FacetSpec / CoordinateSpec · basemap"]
         end
     end
     Dataset -->|crop · reproject · align| Dataset
@@ -89,8 +89,8 @@ Main Features
   short form working — `ds.crop(mask)` and `ds.spatial.crop(mask)` are equivalent.
 - **NetCDF** - Extends Dataset for NetCDF files with time/variable dimensions and CF conventions metadata.
   Optional labeled-array interoperability. `NetCDF.plot` exposes a labeled-array-style plotting API
-  (`variable=` + grouped `Selectors` / `ColourOpts` / `FacetSpec` dataclasses, curvilinear `coords=`,
-  `kind=`, `animate=`, lazy `chunks=`).
+  (`variable=` + grouped `Selectors` / `FacetSpec` dataclasses, loose colour kwargs (`cmap`, `robust`, …),
+  curvilinear coordinates via `axes=CoordinateSpec(...)`, `kind=`, `animate=`, lazy `chunks=`).
 - **UgridDataset** - Read and visualize UGRID-1.0 unstructured meshes (triangles, quads, mixed).
   Supports mesh-to-raster interpolation and mesh-to-vector export.
 - **DatasetCollection** - Manage time-series of co-registered rasters as a lazy temporal stack
@@ -188,16 +188,15 @@ reprojected = src.to_crs(to_epsg=3857)  # same as src.spatial.to_crs(...)
 ```
 
 ```python
-from pyramids.netcdf import NetCDF
-from pyramids import Selectors, ColourOpts, FacetSpec   # grouped plot options
+from pyramids.netcdf import NetCDF, Selectors, FacetSpec   # grouped plot options
 
 # Open a NetCDF file
 nc = NetCDF.read_file("path/to/data.nc")
 print(nc.variables)
 
-# labeled-array-style plotting (needs the [viz] extra)
+# labeled-array-style plotting (needs the [viz] extra); colour knobs are loose kwargs
 nc.plot("t2m", selectors=Selectors(time="2020-07-01", level=850),
-        colour=ColourOpts(cmap="coolwarm", robust=True))
+        cmap="coolwarm", robust=True)
 nc.plot("t2m", facet=FacetSpec(col="time", col_wrap=4))   # small multiples
 nc.plot("t2m", animate="time", chunks={"time": 1})        # lazy per-frame animation
 ```

@@ -193,6 +193,7 @@ nav:
       - Basemap:
           - Basemap example: examples/basemap/basemap-example.ipynb
       - NetCDF:
+          - The NetCDF class — anatomy: examples/netcdf/netcdf-anatomy.ipynb
           - Plotting NetCDF data: tutorials/netcdf-plotting.md
           - Plotting gallery: examples/netcdf/plotting-gallery.ipynb
           - Editing dimensions & variables (rename, restamp, drop, update): examples/netcdf/editing-dimensions-and-variables.ipynb
@@ -201,6 +202,15 @@ nav:
           - Fitting, smoothing and dicts: examples/netcdf/fitting-smoothing-and-dicts.ipynb
           - Dask (ERA5 on AWS): examples/netcdf/dask-lazy-netcdf.ipynb
           - Dask — NetCDF (complete cookbook): examples/netcdf/lazy-netcdf-complete.ipynb
+          - Exploring NetCDF file types:
+              - Gridded CF: examples/netcdf/explore/01-gridded-cf.ipynb
+              - Gridded COARDS: examples/netcdf/explore/02-gridded-coards.ipynb
+              - Packed (scale/offset): examples/netcdf/explore/03-packed-int16.ipynb
+              - Curvilinear grids: examples/netcdf/explore/04-curvilinear.ipynb
+              - Staggered grids (WRF): examples/netcdf/explore/05-staggered-wrf.ipynb
+              - Structural / grouped / netCDF-4: examples/netcdf/explore/06-structural-groups-nc4.ipynb
+              - UGRID unstructured mesh: examples/netcdf/explore/07-ugrid-mesh.ipynb
+              - Y-axis orientation (north-up reads): examples/netcdf/explore/08-y-axis-orientation.ipynb
           - UGRID:
               - Mesh exploration: examples/netcdf/ugrid/ugrid-mesh-exploration.ipynb
               - Plotting gallery: examples/netcdf/ugrid/plotting-gallery.ipynb
@@ -279,6 +289,7 @@ nav:
     - How it works: overview/how-it-works.md
     - Architecture: overview/architecture.md
     - Detailed diagrams (UML & sequences): overview/diagrams.md
+    - STAC functional overview: overview/stac-overview.md
   - How-to:
       - Dev Container: how-to/devcontainer.md
       - Docker & GHCR: how-to/docker.md
