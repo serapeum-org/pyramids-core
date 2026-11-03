@@ -19,8 +19,7 @@ import pytest
 from osgeo import gdal
 
 import pyramids
-from pyramids import __version__
-from pyramids import cli as cli_mod
+from pyramids import __version__, cli_dataset
 from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
@@ -71,7 +70,16 @@ class TestTopLevelHelp:
             main(["--help"])
         assert exc.value.code == 0
         out = capsys.readouterr().out
-        for token in ("cog", "vector", "nc", "collection", "stac", "fetch", "apply"):
+        for token in (
+            "cog",
+            "vector",
+            "nc",
+            "collection",
+            "stac",
+            "fetch",
+            "mesh",
+            "apply",
+        ):
             assert token in out, f"top-level help should list {token!r}"
 
     def test_no_args_errors_cleanly(self, capsys):
@@ -121,6 +129,10 @@ _HELP_ARGVS = [
     ["fetch", "--help"],
     ["fetch", "wcs", "--help"],
     ["fetch", "wfs", "--help"],
+    ["mesh", "--help"],
+    ["mesh", "info", "--help"],
+    ["mesh", "extract", "--help"],
+    ["mesh", "convert", "--help"],
 ]
 
 
@@ -251,7 +263,7 @@ class TestEditInfoDriverGuard:
                 raise RuntimeError("driver X does not support update access")
             return object()  # a read-only open succeeds -> genuine update-mode limit
 
-        monkeypatch.setattr(cli_mod.Dataset, "read_file", staticmethod(fake))
+        monkeypatch.setattr(cli_dataset.Dataset, "read_file", staticmethod(fake))
         rc = main(["edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1
@@ -264,7 +276,7 @@ class TestEditInfoDriverGuard:
         def boom(_path, *args, **kwargs):
             raise RuntimeError("TIFFReadDirectory: Failed to read directory")
 
-        monkeypatch.setattr(cli_mod.Dataset, "read_file", staticmethod(boom))
+        monkeypatch.setattr(cli_dataset.Dataset, "read_file", staticmethod(boom))
         rc = main(["edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1

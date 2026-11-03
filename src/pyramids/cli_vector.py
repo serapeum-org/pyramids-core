@@ -11,55 +11,22 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 
-from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_safe,
+    refuse_existing,
+)
+from pyramids._cli_shared import (
+    resolve_vector_driver as _resolve_vector_driver,
+)
 from pyramids.feature import FeatureCollection
-
-# Output-extension -> OGR driver (alias or literal GDAL name, both accepted by
-# FeatureCollection.to_file via its Catalog). FeatureCollection.to_file defaults
-# to GeoJSON regardless of extension, so the CLI resolves the driver itself.
-_VECTOR_DRIVER_BY_EXT = {
-    ".geojson": "geojson",
-    ".json": "geojson",
-    ".shp": "ESRI Shapefile",
-    ".gpkg": "gpkg",
-    ".fgb": "FlatGeobuf",
-    ".gml": "GML",
-    ".kml": "KML",
-}
-
 
 _HELP_SRC_VECTOR = "source vector path"
 _HELP_DST_VECTOR = "destination vector path"
 _HELP_LAYER = "layer name/index"
 _HELP_DRIVER = "OGR driver (default: inferred from extension)"
 _HELP_OVERWRITE = "replace the output if it exists"
-
-
-def _resolve_vector_driver(path: str, explicit: str | None) -> str:
-    """Return the OGR driver for ``path``: ``explicit`` if given, else by extension.
-
-    Args:
-        path: The destination vector path.
-        explicit: The value of ``--driver`` (``None`` if not passed).
-
-    Returns:
-        str: A driver alias or literal GDAL name for ``FeatureCollection.to_file``.
-
-    Raises:
-        ValueError: No ``--driver`` and the extension is not a known vector one.
-    """
-    if explicit:
-        return explicit
-    ext = os.path.splitext(path)[1].lower()
-    driver = _VECTOR_DRIVER_BY_EXT.get(ext)
-    if driver is None:
-        raise ValueError(
-            f"cannot infer a vector driver from {path!r}; pass --driver "
-            f"(known extensions: {sorted(_VECTOR_DRIVER_BY_EXT)})"
-        )
-    return driver
 
 
 def _cmd_vector_info(args: argparse.Namespace) -> int:

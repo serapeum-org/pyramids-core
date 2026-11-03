@@ -147,6 +147,19 @@ pyramids collection info "tiles/*.tif" --json                # count, CRS, grid 
 pyramids collection stats "tiles/*.tif" mean.tif --reduce mean   # time reduction (mean|sum|min|max|std|var)
 ```
 
+## UGRID mesh
+
+```bash
+pyramids mesh info mesh.nc --json                            # node/face/edge counts, CRS, bounds, variables
+pyramids mesh extract mesh.nc z.tif --like grid.tif --var mesh2d_node_z   # rasterize a variable onto a grid
+pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z --location node  # mesh -> vector
+```
+
+- **`mesh info`** — summarise a UGRID mesh (`--json` for a machine-readable dump).
+- **`mesh extract`** — rasterize a mesh variable onto the `--like` template raster's grid/CRS.
+- **`mesh convert`** — write the mesh as a vector file (`--location face|node|edge`; driver inferred from the
+  extension or `--driver`).
+
 ## STAC
 
 ```bash
