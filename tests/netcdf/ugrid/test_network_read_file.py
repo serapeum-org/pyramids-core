@@ -90,7 +90,7 @@ class SurfaceNetcdfDriver(NetworkNetcdfDriver):
         Returns:
             UgridDataset: A two-triangle surface mesh.
         """
-        from tests.ugrid.conftest import make_two_triangle_ds
+        from tests.netcdf.ugrid.conftest import make_two_triangle_ds
 
         self.read_calls.append((path, mesh_name))
         return make_two_triangle_ds()

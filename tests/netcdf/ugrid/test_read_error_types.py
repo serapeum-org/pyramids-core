@@ -81,7 +81,7 @@ class TestValidFileWithoutATopology:
             what fires.
         """
         cf_file = (
-            Path(__file__).parents[1] / "data" / "netcdf" / "cf__5v__1d4-4d1__y-asc.nc"
+            Path("tests/data/netcdf/cf__5v__1d4-4d1__y-asc.nc")
         )
 
         with pytest.raises(ValueError, match="No UGRID mesh topology"):

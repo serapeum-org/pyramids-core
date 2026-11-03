@@ -10,7 +10,7 @@ import pytest
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 from pyramids.netcdf.ugrid.analysis import plot_histogram
-from tests.ugrid.conftest import make_square_ds as _make_ds
+from tests.netcdf.ugrid.conftest import make_square_ds as _make_ds
 
 pytestmark = [pytest.mark.core, pytest.mark.plot]
 

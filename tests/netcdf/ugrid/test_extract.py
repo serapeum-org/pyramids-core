@@ -12,7 +12,7 @@ from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.dataset import UgridDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
-from tests.ugrid.conftest import make_two_triangle_ds as _make_ds
+from tests.netcdf.ugrid.conftest import make_two_triangle_ds as _make_ds
 
 pytestmark = pytest.mark.core
 

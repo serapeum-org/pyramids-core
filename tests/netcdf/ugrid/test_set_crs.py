@@ -9,7 +9,7 @@ from pyproj import CRS
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.dataset import UgridDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
-from tests.ugrid.conftest import make_single_triangle_ds as _crs_less_dataset
+from tests.netcdf.ugrid.conftest import make_single_triangle_ds as _crs_less_dataset
 
 pytestmark = pytest.mark.core
 

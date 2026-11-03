@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from tests.ugrid.conftest import make_two_triangle_ds as _make_ds
+from tests.netcdf.ugrid.conftest import make_two_triangle_ds as _make_ds
 
 pytestmark = pytest.mark.core
 

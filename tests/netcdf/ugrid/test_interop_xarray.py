@@ -28,7 +28,7 @@ xr = pytest.importorskip("xarray")
 
 pytestmark = pytest.mark.interop
 
-_SAMPLE_NC = Path(__file__).parents[1] / "data" / "netcdf" / "ugrid" / "ugrid.nc"
+_SAMPLE_NC = Path("tests/data/netcdf/ugrid/ugrid.nc")
 
 
 def _mesh_with_two_variables() -> tuple[Mesh2d, dict[str, MeshVariable]]:

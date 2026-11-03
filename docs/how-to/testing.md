@@ -92,7 +92,7 @@ specific `netcdf4` build string so the HDF5 shared library matches
 | `tests/feature/lazy/` | `parquet` | ✅ (skips) | ✅ `parquet` | `parquet` |
 | `tests/netcdf/` (excl. `lazy/`) | `interop` | ✅ (interop-tests step) | — | `dev` |
 | `tests/netcdf/lazy/` | `lazy` | ✅ (most skip without kerchunk) | ✅ `lazy` | `lazy` |
-| `tests/ugrid/` | `interop` | ✅ | — | `dev` |
+| `tests/netcdf/ugrid/` | `interop` | ✅ | — | `dev` |
 
 "Skips" in the main-package column means the tests are tagged or guarded so
 they self-skip when the extra's headline dep is missing. They *run* fully

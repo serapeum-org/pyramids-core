@@ -16,7 +16,7 @@ from pyramids.base._array_ops import (
     nodata_mask,
 )
 from pyramids.netcdf.ugrid.dataset import UgridDataset
-from tests.ugrid.conftest import make_two_triangle_ds
+from tests.netcdf.ugrid.conftest import make_two_triangle_ds
 
 pytestmark = pytest.mark.core
 
