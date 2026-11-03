@@ -103,3 +103,43 @@ def info_print(args: argparse.Namespace, message: str) -> None:
     """
     if not getattr(args, "quiet", False):
         print(message)
+
+
+# Output-extension -> OGR driver (alias or literal GDAL name, both accepted by
+# FeatureCollection.to_file via its Catalog). FeatureCollection.to_file defaults
+# to GeoJSON regardless of extension, so the CLI resolves the driver itself.
+# Shared by the vector, fetch (OGC), and mesh groups.
+VECTOR_DRIVER_BY_EXT = {
+    ".geojson": "geojson",
+    ".json": "geojson",
+    ".shp": "ESRI Shapefile",
+    ".gpkg": "gpkg",
+    ".fgb": "FlatGeobuf",
+    ".gml": "GML",
+    ".kml": "KML",
+}
+
+
+def resolve_vector_driver(path: str, explicit: str | None) -> str:
+    """Return the OGR driver for ``path``: ``explicit`` if given, else by extension.
+
+    Args:
+        path: The destination vector path.
+        explicit: The value of ``--driver`` (``None`` if not passed).
+
+    Returns:
+        str: A driver alias or literal GDAL name for ``FeatureCollection.to_file``.
+
+    Raises:
+        ValueError: No ``--driver`` and the extension is not a known vector one.
+    """
+    if explicit:
+        return explicit
+    ext = os.path.splitext(path)[1].lower()
+    driver = VECTOR_DRIVER_BY_EXT.get(ext)
+    if driver is None:
+        raise ValueError(
+            f"cannot infer a vector driver from {path!r}; pass --driver "
+            f"(known extensions: {sorted(VECTOR_DRIVER_BY_EXT)})"
+        )
+    return driver

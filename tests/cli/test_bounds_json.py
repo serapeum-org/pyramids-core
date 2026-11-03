@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyramids import cli
+from pyramids import cli_dataset
 from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
@@ -61,7 +61,7 @@ def failing_transform(monkeypatch: pytest.MonkeyPatch):
             failed = (float("inf"), float("inf"), 0.0)
             return [failed] + [(1.0, 2.0, 0.0)] * (len(points) - 1)
 
-    monkeypatch.setattr(cli.osr, "CoordinateTransformation", lambda *a, **k: _Failing())
+    monkeypatch.setattr(cli_dataset.osr, "CoordinateTransformation", lambda *a, **k: _Failing())
 
 
 class TestBoundsJson:
