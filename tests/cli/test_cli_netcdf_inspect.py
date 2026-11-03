@@ -77,6 +77,14 @@ class TestNcTimeValues:
         assert payload["var"] == "time"
         assert "2000-05-16" in payload["values"]
 
+    def test_non_time_var_is_empty(self, capsys):
+        """A --var that is not a time axis yields an empty list and exit 0 (documented)."""
+        assert (
+            main(["nc", "time-values", str(_NC), "--var", "nosuchtime", "--json"]) == 0
+        )
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["values"] == []
+
 
 class TestNcSetAttr:
     """`pyramids nc set-attr`."""

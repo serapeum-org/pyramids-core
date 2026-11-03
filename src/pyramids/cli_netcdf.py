@@ -1,17 +1,15 @@
 """NetCDF / multidim CLI command group — ``pyramids nc …``.
 
 Thin wrappers over :class:`pyramids.netcdf.NetCDF`. This module owns the core
-verbs — summarise a file (`info`), list raster-exposable variables (`list-vars`),
-extract one to a raster (`extract`), select one CF ``time`` step (`sel`), and
-spatially subset (`crop`) — and registers the rest of the group from sibling
-modules via :func:`add_netcdf_commands`: ``cli_netcdf_inspect`` (summary/metadata/
-dim-values/time-values/set-attr/del-attr), ``cli_netcdf_vars`` (variable &
-dimension management), ``cli_netcdf_select`` (isel/thin/head/tail/drop-*/dropna/
-pad), ``cli_netcdf_cftime`` (calendar/time/calculus), ``cli_netcdf_io`` (convert/
-to-dataframe/to-dict/to-zarr), and ``cli_netcdf_plot`` (plot/plot-histogram/
-animate). ``info`` and ``sel`` assume the time axis is the CF-standard one named
-``time``. No multidim logic lives here — reads go through GDAL as the ``NetCDF``
-class already does (never xarray).
+verbs — ``info``, ``list-vars``, ``extract``, ``sel``, ``crop`` — and registers the
+rest of the group from sibling modules via :func:`add_netcdf_commands`, each of
+which documents its own commands: ``cli_netcdf_inspect`` (inspection + global
+attributes), ``cli_netcdf_vars`` (variable & dimension management),
+``cli_netcdf_select`` (positional/label selection & subsetting),
+``cli_netcdf_cftime`` (calendar / time / calculus), ``cli_netcdf_io`` (export), and
+``cli_netcdf_plot`` (headless plotting). ``info`` and ``sel`` assume the time axis
+is the CF-standard one named ``time``. No multidim logic lives here — reads go
+through GDAL as the ``NetCDF`` class already does (never xarray).
 """
 
 from __future__ import annotations
@@ -197,9 +195,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_ex.add_argument(
         "--var", required=True, help="variable name (supports 'group/var')"
     )
-    nc_ex.add_argument(
-        "--overwrite", action="store_true", help=_HELP_OVERWRITE
-    )
+    nc_ex.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_ex.set_defaults(func=_cmd_nc_extract)
 
     nc_sel = ncsub.add_parser("sel", help="select along time into a new NetCDF")
@@ -212,9 +208,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         "('nc info' shows the step count and endpoints)",
     )
     nc_sel.add_argument("--var", help="narrow to one variable before selecting")
-    nc_sel.add_argument(
-        "--overwrite", action="store_true", help=_HELP_OVERWRITE
-    )
+    nc_sel.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_sel.set_defaults(func=_cmd_nc_sel)
 
     nc_crop = ncsub.add_parser("crop", help="spatially subset to a bbox")
@@ -228,9 +222,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         metavar=("MINX", "MINY", "MAXX", "MAXY"),
         help="crop window in the file's CRS",
     )
-    nc_crop.add_argument(
-        "--overwrite", action="store_true", help=_HELP_OVERWRITE
-    )
+    nc_crop.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_crop.set_defaults(func=_cmd_nc_crop)
 
     add_nc_inspect_commands(ncsub)

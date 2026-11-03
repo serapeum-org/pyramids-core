@@ -187,7 +187,11 @@ def add_nc_inspect_commands(ncsub: argparse._SubParsersAction) -> None:
 
     nc_time = ncsub.add_parser("time-values", help="the formatted time-axis labels")
     nc_time.add_argument("file", help=_HELP_NC_FILE)
-    nc_time.add_argument("--var", default="time", help="time variable name")
+    nc_time.add_argument(
+        "--var",
+        default="time",
+        help="time variable name (empty result if it is not a time axis)",
+    )
     nc_time.add_argument(
         "--format", default="%Y-%m-%d", help="strftime format for the labels"
     )
