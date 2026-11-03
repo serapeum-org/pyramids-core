@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyramids._cli_shared import json_sanitize
+from pyramids._cli_shared import json_sanitize, map_lookup_errors
 from pyramids.cli import main
 from pyramids.cli_netcdf_inspect import _metadata_payload
 from pyramids.netcdf import NetCDF
@@ -38,15 +38,31 @@ class TestMetadataPayload:
         assert _metadata_payload(42) == "42"
 
 
+class TestMapLookupErrors:
+    """`map_lookup_errors` remaps KeyError/IndexError to a caught ValueError."""
+
+    def test_keyerror_message_preserved(self):
+        """A KeyError's argument is carried into the ValueError message."""
+        with pytest.raises(ValueError, match="missing"):
+            with map_lookup_errors():
+                raise KeyError("missing")
+
+    def test_argless_error_falls_back_to_str(self):
+        """An argless IndexError still remaps (the str(exc) fallback branch)."""
+        with pytest.raises(ValueError):
+            with map_lookup_errors():
+                raise IndexError()
+
+
 class TestJsonSanitize:
     """`json_sanitize` makes non-finite / numpy values strict-JSON-safe (M1)."""
 
     def test_non_finite_floats_become_null(self):
-        """NaN and +/-Infinity (nested) are replaced with None."""
+        """NaN and +/-Infinity (nested) are replaced with None; bools are kept."""
         result = json_sanitize(
-            {"a": float("nan"), "b": float("inf"), "c": [1.0, float("-inf")]}
+            {"a": float("nan"), "b": float("inf"), "c": [1.0, float("-inf")], "d": True}
         )
-        assert result == {"a": None, "b": None, "c": [1.0, None]}
+        assert result == {"a": None, "b": None, "c": [1.0, None], "d": True}
         json.loads(json.dumps(result), parse_constant=_reject_non_finite)
 
     def test_numpy_scalars_and_arrays(self):

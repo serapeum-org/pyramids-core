@@ -34,7 +34,7 @@ def json_sanitize(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [json_sanitize(value) for value in obj]
     if isinstance(obj, bool):
-        return obj
+        return obj  # bool is an int subclass; keep it as-is, never scrub
     if isinstance(obj, float):
         return json_safe(obj)
     if type(obj).__module__ == "numpy" and hasattr(obj, "tolist"):
