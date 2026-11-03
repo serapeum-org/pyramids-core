@@ -34,6 +34,7 @@ from shapely.geometry import Polygon
 
 # isort: on
 from tests._marks import EXTRA_MARKERS
+from tests._skip_guard import is_unexpected_dependency_skip, skip_reason
 
 # The dataset/ and feature/ conftests auto-provide their fixtures to tests under
 # their own directories. The only cross-directory use is tests/base/test_dtype_conversions.py,
@@ -99,16 +100,16 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_live)
 
 
-# --- No-silent-skip guard (see docs/how-to/testing.md) -------------------------------------------
-# A skip for a missing optional dependency is normally invisible: it is folded into "N skipped",
-# CI stays green, and a whole marker can run nowhere for months unnoticed (this happened to the
-# stac suite). The per-extra CI jobs run in an environment that HAS the extra, so there a
-# dependency-skip is never legitimate — it means the test was mis-routed or mis-marked. Passing
-# `--strict-extra-skips` turns such a skip into a hard failure, so the silent gap becomes loud in
-# the exact job that was supposed to execute the test. It is a CLI flag (not an env var, per the
-# project's marker-only convention) and is off by default, so ordinary/local runs still skip
-# cleanly on a partial install.
-_DEP_SKIP_REASON = re.compile(r"not installed", re.IGNORECASE)
+# No-silent-skip guard (see docs/how-to/testing.md). A skip for a missing optional dependency is
+# normally invisible: it is folded into "N skipped", CI stays green, and a whole marker can run
+# nowhere for months unnoticed (this happened to the stac suite's real-dependency tests). The
+# per-extra CI jobs run in an environment that HAS the extra, so there a dependency-skip is never
+# legitimate — it means the test was mis-routed or mis-marked. Passing `--strict-extra-skips` turns
+# such a skip into a hard failure, so the silent gap becomes loud in the exact job that was
+# supposed to execute the test. It is a CLI flag (not an env var, per the project's marker-only
+# convention) and is off by default, so ordinary/local runs still skip cleanly on a partial
+# install. The reason-matching (and the xfail exclusion) lives in tests/_skip_guard.py so it is
+# unit-testable; see tests/guards/test_skip_guard_plugin.py.
 _strict_extra_skips: list[str] = []
 
 
@@ -125,14 +126,9 @@ def pytest_addoption(parser):
 
 
 def pytest_runtest_logreport(report):
-    """Record any skip whose reason says a dependency is 'not installed'."""
-    if not report.skipped:
-        return
-    longrepr = getattr(report, "longrepr", None)
-    # A skip's longrepr is a (path, lineno, "Skipped: <reason>") tuple.
-    reason = longrepr[2] if isinstance(longrepr, tuple) and len(longrepr) == 3 else str(longrepr)
-    if _DEP_SKIP_REASON.search(reason or ""):
-        _strict_extra_skips.append(f"{report.nodeid} -> {reason}")
+    """Record a genuine missing-dependency skip (xfail and non-dependency skips are ignored)."""
+    if is_unexpected_dependency_skip(report):
+        _strict_extra_skips.append(f"{report.nodeid} -> {skip_reason(report)}")
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -143,8 +139,13 @@ def pytest_sessionfinish(session, exitstatus):
 
 def pytest_terminal_summary(terminalreporter):
     """Report the offending dependency-skips so the failure is actionable."""
-    if terminalreporter.config.getoption("--strict-extra-skips") and _strict_extra_skips:
-        terminalreporter.write_sep("=", "strict-extra-skips: dependency-skips in a job that owns the dep")
+    if (
+        terminalreporter.config.getoption("--strict-extra-skips")
+        and _strict_extra_skips
+    ):
+        terminalreporter.write_sep(
+            "=", "strict-extra-skips: dependency-skips in a job that owns the dep"
+        )
         for line in _strict_extra_skips:
             terminalreporter.write_line(f"  {line}")
         terminalreporter.write_line(
