@@ -132,6 +132,31 @@ def resolve_vector_driver(path: str, explicit: str | None) -> str:
 
     Raises:
         ValueError: No ``--driver`` and the extension is not a known vector one.
+
+    Examples:
+        - An explicit driver wins and is returned unchanged:
+            ```python
+            >>> from pyramids._cli_shared import resolve_vector_driver
+            >>> resolve_vector_driver("out.weird", "GPKG")
+            'GPKG'
+
+            ```
+        - A known extension maps to its OGR driver:
+            ```python
+            >>> resolve_vector_driver("roads.gpkg", None)
+            'gpkg'
+            >>> resolve_vector_driver("pts.shp", None)
+            'ESRI Shapefile'
+
+            ```
+        - An unknown extension with no explicit driver is refused:
+            ```python
+            >>> resolve_vector_driver("out.weird", None)  # doctest: +ELLIPSIS
+            Traceback (most recent call last):
+                ...
+            ValueError: cannot infer a vector driver from 'out.weird'; pass --driver ...
+
+            ```
     """
     if explicit:
         return explicit
