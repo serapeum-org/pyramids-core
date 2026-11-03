@@ -83,21 +83,23 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         target:
-          # ``dir`` is the subdirectory that exercises the extra's code
-          # paths. Keeping CI subdir-scoped avoids re-running the full
-          # suite in every extras env while still covering the code
-          # that each extra activates.
-          - { name: netcdf_lazy,  env: lazy,         dir: tests/netcdf/lazy }
-          - { name: parquet_lazy, env: parquet,      dir: tests/feature/lazy }
-          # to_dask_dataframe needs dask.dataframe (pyarrow), which ships in the parquet
-          # extra rather than lazy; run its tests under the parquet env so they execute
-          # instead of skipping (the lazy env has no pyarrow).
-          - { name: netcdf_parquet, env: parquet,    dir: tests/netcdf/lazy/test_to_dask_dataframe.py }
-          # STAC (pystac-client / stac-asset) is pure-Python — no native driver — but no
-          # main-matrix env installs it, so tests/stac + tests/dataset/stac (~25 files, 1000+
-          # assertions) skipped in every CI job and a STAC regression would merge green. Run
-          # them in the `dev` env, which carries the stac feature, so they actually execute.
-          - { name: stac, env: dev, dir: "tests/stac tests/dataset/stac" }
+          # Each target runs in an env that HAS its extra and selects its tests (by marker, or by
+          # path where an env-specific routing is needed), so they EXECUTE here instead of skipping
+          # in the main matrix (whose envs omit these extras). `markexpr` becomes the single -m
+          # expression; `paths` scopes collection ("" = whole tree, then filtered by the marker).
+          - { name: netcdf_lazy,    env: lazy,    paths: tests/netcdf/lazy,  markexpr: "not live" }
+          - { name: parquet_lazy,   env: parquet, paths: tests/feature/lazy, markexpr: "not live" }
+          # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
+          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute
+          # rather than skip. (A pure marker split can't express "this netcdf_lazy file in parquet".)
+          - { name: netcdf_parquet, env: parquet, paths: tests/netcdf/lazy/test_to_dask_dataframe.py, markexpr: "not live" }
+          # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
+          # stac/test_geoparquet*) live outside the dirs above, so they ran in NO CI job. Select them
+          # by marker in the parquet env so they execute.
+          - { name: parquet,        env: parquet, paths: "", markexpr: "parquet and not live" }
+          # STAC is pure-Python but no main-matrix env installs it; run the whole stac suite (the
+          # mock-client and real-client tests alike) in the dev env, which carries the stac feature.
+          - { name: stac,           env: dev,     paths: "tests/stac tests/dataset/stac", markexpr: "not live" }
 
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
@@ -118,7 +120,7 @@ jobs:
         # job at Codecov.
         run: >-
           pixi run -e ${{ matrix.target.env }}
-          pytest -vvv ${{ matrix.target.dir }} -m 'not live'
+          pytest -vvv ${{ matrix.target.paths }} -m "${{ matrix.target.markexpr }}"
           --cov=src/pyramids --cov-report=xml --cov-report=term-missing
           --cov-fail-under=0
 
