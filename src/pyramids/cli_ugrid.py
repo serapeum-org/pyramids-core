@@ -21,6 +21,28 @@ from pyramids.dataset import Dataset
 from pyramids.netcdf.ugrid import UgridDataset
 
 
+def _validate_variable(mesh: UgridDataset, var: str | None) -> None:
+    """Raise a clean ``ValueError`` when ``var`` is not a data variable of ``mesh``.
+
+    ``rasterize_like`` / ``to_feature_collection`` raise ``KeyError`` for an unknown
+    variable, which ``main()`` reports as an "unexpected failure" rather than a clean
+    user error (the project intentionally maps global ``KeyError`` to that). Validating
+    here keeps a typo'd ``--var`` in the expected-error class and gives one consistent
+    message across ``extract`` and ``convert`` (M1).
+
+    Args:
+        mesh: The opened mesh.
+        var: The requested variable name, or ``None``.
+
+    Raises:
+        ValueError: ``var`` is given but is not among the mesh's data variables.
+    """
+    if var is not None and var not in mesh.data_variable_names:
+        raise ValueError(
+            f"unknown mesh variable {var!r}; available: {list(mesh.data_variable_names)}"
+        )
+
+
 def _cmd_mesh_info(args: argparse.Namespace) -> int:
     """Handle ``pyramids mesh info`` — print node/face/edge counts, CRS, bounds.
 
@@ -65,6 +87,7 @@ def _cmd_mesh_extract(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = UgridDataset.read_file(args.file)
+    _validate_variable(mesh, args.var)
     template = Dataset.read_file(args.like)
     raster = mesh.rasterize_like(template, variable_name=args.var, method=args.method)
     raster.to_file(args.output)
@@ -85,6 +108,7 @@ def _cmd_mesh_convert(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     driver = resolve_vector_driver(args.output, args.driver)
     mesh = UgridDataset.read_file(args.file)
+    _validate_variable(mesh, args.var)
     fc = mesh.to_feature_collection(variable_name=args.var, location=args.location)
     fc.to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")

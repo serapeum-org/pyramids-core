@@ -100,6 +100,24 @@ class TestMeshConvert:
         assert rc == 0
         assert len(FeatureCollection.read_file(out)) > 0
 
+    def test_unknown_variable_errors(self, tmp_path, capsys):
+        """convert with an unknown --var is a clean expected error (M1)."""
+        rc = main(
+            [
+                "mesh",
+                "convert",
+                str(_MESH),
+                str(tmp_path / "o.geojson"),
+                "--var",
+                "nope",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "unknown mesh variable 'nope'" in err
+        assert "unexpected failure" not in err
+        assert "Traceback" not in err
+
 
 class TestMeshExtract:
     """`pyramids mesh extract`."""
@@ -167,7 +185,7 @@ class TestMeshExtract:
         )
 
     def test_unknown_variable_errors(self, tmp_path, capsys):
-        """An unknown --var exits 1 with a one-line error, not a traceback."""
+        """An unknown --var is a clean expected error, not an 'unexpected failure' (M1)."""
         rc = main(
             [
                 "mesh",
@@ -182,7 +200,9 @@ class TestMeshExtract:
         )
         err = capsys.readouterr().err
         assert rc == 1
-        assert err.startswith("error: ")
+        assert "unknown mesh variable 'does_not_exist'" in err
+        assert "available:" in err
+        assert "unexpected failure" not in err, "typo'd --var must be an expected error"
         assert "Traceback" not in err
 
     def test_multi_variable_mesh_requires_var(self, tmp_path, capsys):
