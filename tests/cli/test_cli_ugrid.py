@@ -51,6 +51,7 @@ class TestMeshConvert:
         assert main(["mesh", "convert", str(_MESH), out]) == 0
         fc = FeatureCollection.read_file(out)
         assert len(fc) > 0
+        assert set(fc.geometry.geom_type) == {"Polygon"}, "faces must be polygons"
 
     def test_refuses_existing(self, tmp_path):
         """A second convert without --overwrite is refused."""
@@ -80,7 +81,9 @@ class TestMeshConvert:
             ]
         )
         assert rc == 0
-        assert len(FeatureCollection.read_file(out)) > 0
+        fc = FeatureCollection.read_file(out)
+        assert len(fc) > 0
+        assert set(fc.geometry.geom_type) == {"Point"}, "node geometries must be points"
 
     def test_location_edge(self, tmp_path):
         """--location edge converts the edge-located geometries (N1)."""
@@ -98,7 +101,9 @@ class TestMeshConvert:
             ]
         )
         assert rc == 0
-        assert len(FeatureCollection.read_file(out)) > 0
+        fc = FeatureCollection.read_file(out)
+        assert len(fc) > 0
+        assert set(fc.geometry.geom_type) == {"LineString"}, "edges must be linestrings"
 
     def test_unknown_variable_errors(self, tmp_path, capsys):
         """convert with an unknown --var is a clean expected error (M1)."""
