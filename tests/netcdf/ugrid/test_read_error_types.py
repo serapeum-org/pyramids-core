@@ -80,9 +80,7 @@ class TestValidFileWithoutATopology:
             plain CF gridded file opens fine, so GDAL raises nothing and the topology check is
             what fires.
         """
-        cf_file = (
-            Path("tests/data/netcdf/cf__5v__1d4-4d1__y-asc.nc")
-        )
+        cf_file = Path("tests/data/netcdf/cf__5v__1d4-4d1__y-asc.nc")
 
         with pytest.raises(ValueError, match="No UGRID mesh topology"):
             UgridDataset.read_file(str(cf_file))
