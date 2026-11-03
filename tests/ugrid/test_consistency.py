@@ -130,6 +130,53 @@ class TestModuleExports:
             obj = getattr(ugrid, old)
         assert obj is getattr(ugrid, new), f"{old} must alias {new}"
 
+    def test_the_old_network_attribute_on_the_package_warns(self):
+        """`ugrid.network` (attribute access) warns and returns the renamed `mesh1d` module."""
+        import importlib
+
+        from pyramids.netcdf.ugrid import mesh1d as mesh1d_module
+
+        with pytest.warns(DeprecationWarning, match="mesh1d"):
+            returned = ugrid.network
+        assert returned is mesh1d_module, (
+            "ugrid.network must resolve to the mesh1d module"
+        )
+
+    @pytest.mark.parametrize(
+        "modname, old, new_attr",
+        [
+            ("pyramids.netcdf.ugrid.dataset", "UgridDataset", "MeshDataset"),
+            ("pyramids.netcdf.ugrid.models", "UgridMetadata", "MeshMetadata"),
+        ],
+    )
+    def test_the_old_name_on_the_submodule_warns(self, modname, old, new_attr):
+        """Direct submodule access to a renamed name warns and resolves to the new class."""
+        import importlib
+
+        mod = importlib.import_module(modname)
+        with pytest.warns(DeprecationWarning, match=new_attr):
+            obj = getattr(mod, old)
+        assert obj is getattr(mod, new_attr), f"{modname}.{old} must alias {new_attr}"
+
+    @pytest.mark.parametrize(
+        "modname",
+        [
+            "pyramids.netcdf.ugrid",
+            "pyramids.netcdf.ugrid.dataset",
+            "pyramids.netcdf.ugrid.models",
+            "pyramids.netcdf.ugrid.network",
+        ],
+    )
+    def test_an_unknown_attribute_still_raises_attributeerror(self, modname):
+        """The deprecation hook must not swallow genuinely unknown names."""
+        import importlib
+
+        mod = importlib.import_module(modname)
+        with pytest.raises(
+            AttributeError, match="no attribute 'definitely_not_a_name'"
+        ):
+            getattr(mod, "definitely_not_a_name")
+
     def test_the_old_network_submodule_path_still_works(self):
         """`pyramids.netcdf.ugrid.network.Network1d` resolves to `Mesh1d`, warning once."""
         import importlib
