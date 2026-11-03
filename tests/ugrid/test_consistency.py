@@ -131,13 +131,21 @@ class TestModuleExports:
         assert obj is getattr(ugrid, new), f"{old} must alias {new}"
 
     def test_the_old_network_attribute_on_the_package_warns(self):
-        """`ugrid.network` attribute access warns and still resolves `Network1d` (R1 M2).
+        """`ugrid.network` attribute access warns and still resolves `Network1d` (R1 M2, R2 M3).
 
         Test scenario:
             The attribute must return the `network.py` shim, not the bare `mesh1d` module, so
             the historical `from pyramids.netcdf.ugrid import network; network.Network1d`
-            pattern keeps working (warns -> `Mesh1d`) instead of raising `AttributeError`.
+            pattern keeps working (warns -> `Mesh1d`). Importing the submodule binds `network`
+            as a real attribute on the package, which bypasses `__getattr__` and suppresses the
+            warning -- so this clears the cached attribute and the `sys.modules` entry first,
+            making the assertion independent of whether an earlier test imported the submodule.
         """
+        import sys
+
+        ugrid.__dict__.pop("network", None)
+        sys.modules.pop("pyramids.netcdf.ugrid.network", None)
+
         with pytest.warns(DeprecationWarning, match="mesh1d"):
             returned = ugrid.network
         with pytest.warns(DeprecationWarning, match="Mesh1d"):
