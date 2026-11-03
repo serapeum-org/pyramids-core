@@ -73,6 +73,18 @@ class TestMemoryFile:
             read_vsi_bytes(path)
 
     def test_bad_data_type_raises(self):
-        """Non-bytes data raises TypeError."""
+        """Non-bytes data to the constructor raises TypeError."""
         with pytest.raises(TypeError):
             MemoryFile("not bytes")
+
+    def test_write_bad_type_raises(self):
+        """Non-bytes data to write() raises TypeError."""
+        with MemoryFile() as mf:
+            with pytest.raises(TypeError):
+                mf.write("not bytes")
+
+    def test_read_before_write_raises(self):
+        """read() on an empty handle (nothing written) raises FileNotFoundError/OSError."""
+        with MemoryFile() as mf:
+            with pytest.raises((FileNotFoundError, OSError)):
+                mf.read()
