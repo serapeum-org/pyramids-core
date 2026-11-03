@@ -8,9 +8,28 @@ from pathlib import Path
 import pytest
 
 from pyramids.cli import main
+from pyramids.cli_netcdf_inspect import _metadata_payload
 from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
+
+
+class TestMetadataPayload:
+    """`_metadata_payload` fallbacks for non-dataclass inputs."""
+
+    def test_object_with_dict_uses_vars(self):
+        """An object exposing __dict__ is converted via vars()."""
+
+        class Record:
+            def __init__(self):
+                self.a = 1
+
+        assert _metadata_payload(Record()) == {"a": 1}
+
+    def test_plain_value_falls_back_to_str(self):
+        """A value with no __dict__ falls back to its string form."""
+        assert _metadata_payload(42) == "42"
+
 
 _DATA = Path(__file__).parents[1] / "data" / "netcdf"
 _NC = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
@@ -49,6 +68,11 @@ class TestNcMetadata:
         payload = json.loads(capsys.readouterr().out)
         assert "variables" in payload
 
+    def test_plain_metadata(self, capsys):
+        """The plain form prints the metadata record to stdout."""
+        assert main(["nc", "metadata", str(_NC)]) == 0
+        assert capsys.readouterr().out.strip() != ""
+
 
 class TestNcDimValues:
     """`pyramids nc dim-values`."""
@@ -65,6 +89,16 @@ class TestNcDimValues:
         assert main(["nc", "dim-values", str(_NC), "--dim", "nope", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["values"] == []
+
+    def test_plain_existing(self, capsys):
+        """The plain form prints the dimension name and its values."""
+        assert main(["nc", "dim-values", str(_NC), "--dim", "lat"]) == 0
+        assert "lat:" in capsys.readouterr().out
+
+    def test_plain_missing(self, capsys):
+        """The plain form reports a dimension with no coordinate values."""
+        assert main(["nc", "dim-values", str(_NC), "--dim", "nope"]) == 0
+        assert "no coordinate values" in capsys.readouterr().out
 
 
 class TestNcTimeValues:
@@ -84,6 +118,11 @@ class TestNcTimeValues:
         )
         payload = json.loads(capsys.readouterr().out)
         assert payload["values"] == []
+
+    def test_plain_time_values(self, capsys):
+        """The plain form prints the variable name and its labels."""
+        assert main(["nc", "time-values", str(_NC)]) == 0
+        assert "time:" in capsys.readouterr().out
 
 
 class TestNcSetAttr:

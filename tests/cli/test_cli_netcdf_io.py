@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from pyramids import cli_netcdf_io
 from pyramids.cli import main
 from pyramids.dataset import Dataset
 
@@ -51,6 +52,11 @@ class TestNcToDict:
         assert "data_vars" in payload
         assert "coords" in payload
 
+    def test_plain_structure(self, capsys):
+        """The plain form prints key: value lines for the structure."""
+        assert main(["nc", "to-dict", str(_NC)]) == 0
+        assert "data_vars:" in capsys.readouterr().out
+
 
 class TestNcToZarr:
     """`pyramids nc to-zarr` (needs the [lazy] extra for zarr)."""
@@ -72,3 +78,15 @@ class TestNcToZarr:
         assert rc == 1
         assert "unexpected failure" not in err
         assert "Traceback" not in err
+
+    @pytest.mark.lazy
+    def test_non_raster_variable_errors(self, tmp_path, monkeypatch, capsys):
+        """A variable with no .to_zarr (a labeled array) exits 1 with a clear message."""
+        monkeypatch.setattr(
+            cli_netcdf_io.NetCDF, "get_variable", lambda self, *a, **k: object()
+        )
+        rc = main(["nc", "to-zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "tas"])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "not exposable as a raster plane" in err
+        assert "unexpected failure" not in err
