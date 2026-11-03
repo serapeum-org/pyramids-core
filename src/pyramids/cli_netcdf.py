@@ -100,11 +100,13 @@ def _cmd_nc_extract(args: argparse.Namespace) -> int:
 def _cmd_nc_sel(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc sel`` — select one ``time`` step into a new NetCDF.
 
-    Selects exactly by the ``time`` label (as printed by ``nc info``); ``--var``
-    optionally narrows to one variable first (group-qualified names like
-    ``group/var`` are accepted, as in ``extract``). Writes the selection to
-    ``output`` (a ``.nc`` path keeps it a NetCDF; another extension re-encodes it).
-    The time axis must be the CF-standard one named ``time``.
+    Selects by a ``time`` date label; matching is by date, so on a sub-daily axis
+    one date can match several steps. ``nc info`` shows the step count and the first
+    and last labels (not every interior label). ``--var`` optionally narrows to one
+    variable first (group-qualified names like ``group/var`` are accepted, as in
+    ``extract``). Writes the selection to ``output`` (a ``.nc`` path keeps it a
+    NetCDF; another extension re-encodes it). The time axis must be the CF-standard
+    one named ``time``.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``time``, ``var``, ``overwrite``.
@@ -190,7 +192,10 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_sel.add_argument("file", help=_HELP_NC_FILE)
     nc_sel.add_argument("output", help="destination path (.nc keeps it a NetCDF)")
     nc_sel.add_argument(
-        "--time", required=True, help="time label to select (see 'nc info')"
+        "--time",
+        required=True,
+        help="a date label on the time axis, e.g. 2020-06-15 "
+        "('nc info' shows the step count and endpoints)",
     )
     nc_sel.add_argument("--var", help="narrow to one variable before selecting")
     nc_sel.add_argument(
