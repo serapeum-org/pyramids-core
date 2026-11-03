@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from pyramids import cli_netcdf
 from pyramids.cli import main
 from pyramids.dataset import Dataset
 from pyramids.netcdf import NetCDF
@@ -59,6 +60,56 @@ class TestNcExtract:
         assert "Traceback" not in err
 
 
+class TestNcNonRasterGuards:
+    """The defensive guards for variables GDAL exposes as labeled (non-raster) arrays."""
+
+    def test_extract_non_raster_variable(self, tmp_path, monkeypatch, capsys):
+        """extract reports a clear error when get_variable yields a non-raster array."""
+        monkeypatch.setattr(
+            cli_netcdf.NetCDF, "get_variable", lambda self, *a, **k: object()
+        )
+        rc = main(
+            ["nc", "extract", str(_NC), str(tmp_path / "o.tif"), "--var", "Band1"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "not exposable as a raster plane" in err
+        assert "Traceback" not in err
+
+    def test_sel_var_not_selectable(self, tmp_path, monkeypatch, capsys):
+        """sel --var reports a clear error when the variable has no .sel method."""
+        monkeypatch.setattr(
+            cli_netcdf.NetCDF, "get_variable", lambda self, *a, **k: object()
+        )
+        rc = main(
+            [
+                "nc",
+                "sel",
+                str(_NC_TIME),
+                str(tmp_path / "o.nc"),
+                "--time",
+                "2000-05-16",
+                "--var",
+                "tas",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "not a selectable raster variable" in err
+        assert "Traceback" not in err
+
+    def test_sel_selection_not_writable(self, tmp_path, monkeypatch, capsys):
+        """sel reports a clear error when the selection cannot be written to a file."""
+        monkeypatch.setattr(cli_netcdf.NetCDF, "sel", lambda self, **k: object())
+        rc = main(
+            ["nc", "sel", str(_NC_TIME), str(tmp_path / "o.nc"), "--time", "2000-05-16"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "cannot be written to" in err
+        assert "Traceback" not in err
+
+
 class TestNcInfo:
     """`pyramids nc info`."""
 
@@ -70,6 +121,8 @@ class TestNcInfo:
         assert isinstance(payload["dimensions"], dict) and payload["dimensions"]
         assert payload["epsg"] == 4326
         assert len(payload["bounds"]) == 4
+        assert payload["time_steps"] == 0, "a file without a time axis reports 0 steps"
+        assert payload["time_start"] is None and payload["time_end"] is None
 
     def test_plain_lists_keys(self, capsys):
         """The human form prints key: value lines."""
@@ -92,6 +145,39 @@ class TestNcSel:
         out = str(tmp_path / "sel.nc")
         assert main(["nc", "sel", str(_NC_TIME), out, "--time", "2000-05-16"]) == 0
         assert Dataset.read_file(out) is not None
+
+    def test_var_narrows_before_selecting(self, tmp_path):
+        """--var narrows to one variable before the time selection and still writes."""
+        out = str(tmp_path / "tas.nc")
+        rc = main(
+            ["nc", "sel", str(_NC_TIME), out, "--time", "2000-05-16", "--var", "tas"]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out) is not None
+
+    def test_method_on_date_label_errors_cleanly(self, tmp_path, capsys):
+        """--method with a date label is forwarded and fails with a clean error.
+
+        ``--method nearest`` needs a numeric selector; a date label such as
+        ``2000-05-16`` is not one, so ``NetCDF.sel`` raises and the CLI reports it as
+        a one-line error rather than a traceback (the method is passed through).
+        """
+        rc = main(
+            [
+                "nc",
+                "sel",
+                str(_NC_TIME),
+                str(tmp_path / "o.nc"),
+                "--time",
+                "2000-05-16",
+                "--method",
+                "nearest",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert err.startswith("error: ")
+        assert "Traceback" not in err
 
     def test_refuses_existing(self, tmp_path):
         """A second sel without --overwrite is refused."""
@@ -135,6 +221,13 @@ class TestNcCrop:
         bbox = [str(v) for v in self._centered_bbox()]
         assert main(["nc", "crop", str(_NC), out, "--bbox", *bbox]) == 0
         assert Dataset.read_file(out) is not None
+
+    def test_refuses_existing(self, tmp_path):
+        """A second crop without --overwrite is refused."""
+        out = str(tmp_path / "crop.nc")
+        bbox = [str(v) for v in self._centered_bbox()]
+        assert main(["nc", "crop", str(_NC), out, "--bbox", *bbox]) == 0
+        assert main(["nc", "crop", str(_NC), out, "--bbox", *bbox]) == 1
 
     def test_disjoint_bbox_errors(self, tmp_path, capsys):
         """A bbox outside the data exits 1 with a clean error, not a traceback."""
