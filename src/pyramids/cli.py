@@ -12,7 +12,14 @@ Command groups:
   `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
   `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
 - vector (`pyramids.cli_vector`) — `vector info|bounds|convert|warp|clip`
-- NetCDF (`pyramids.cli_netcdf`) — `nc info|list-vars|extract|sel|crop`
+- NetCDF (`pyramids.cli_netcdf` + `cli_netcdf_{inspect,vars,select,cftime,io,plot}`) —
+  the full `nc` surface: inspect (`info`/`summary`/`metadata`/`list-vars`/`dim-values`/`time-values`),
+  variables & dims (`extract`/`rename-var`/`remove-var`/`reproject-var`/`resample-var`/`rename-dims`/`drop-dims`/
+  `set-coords`/`reset-coords`/`squeeze`), select/subset (`sel`/`isel`/`crop`/`thin`/`head`/`tail`/`drop-sel`/
+  `drop-isel`/`drop-duplicates`/`dropna`/`pad`), CF/time/calculus (`convert-calendar`/`interp-calendar`/
+  `groupby-bins`/`rolling`/`rolling-exp`/`shift`/`integrate`/`cumulative-integrate`/`differentiate`/`polyfit`/
+  `interp`/`interpolate-na`/`reduce`), I/O (`convert`/`to-dataframe`/`to-dict`/`to-zarr`), plot
+  (`plot`/`plot-histogram`/`animate`)
 - collection (`pyramids.cli_collection`) — `collection info|stats`
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`

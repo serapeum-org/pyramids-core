@@ -135,20 +135,90 @@ pyramids vector clip parcels.shp aoi.gpkg --bbox 4.1 51.9 4.6 52.2   # or --mask
 
 ## NetCDF
 
+The `nc` group wraps the NetCDF-specific surface of `NetCDF`. Every command is a thin 1:1 wrapper over a `NetCDF`
+method; reads go through GDAL's multidim driver (never xarray). Commands that write a file refuse to clobber an
+existing output unless you pass `--overwrite`.
+
+**Inspect**
+
 ```bash
-pyramids nc info climate.nc --json                           # variables, dimensions, CRS, bounds, time axis
-pyramids nc list-vars climate.nc --json                      # variables GDAL can expose as rasters
-pyramids nc extract climate.nc t2m.tif --var temperature     # one variable -> a georeferenced raster
-pyramids nc sel climate.nc 2020.nc --time 2020-06-15 --var tas   # select a time step into a new NetCDF
-pyramids nc crop climate.nc aoi.nc --bbox 4.1 51.9 4.6 52.2  # spatially subset into a new NetCDF
+pyramids nc info climate.nc --json              # variables, dimensions, CRS, bounds, time axis
+pyramids nc summary climate.nc --vars tas pr    # per-variable statistics (count/min/max/mean/std)
+pyramids nc metadata climate.nc --json          # the full metadata record
+pyramids nc list-vars climate.nc                # variables GDAL can expose as rasters
+pyramids nc dim-values climate.nc --dim lat     # a dimension's coordinate values
+pyramids nc time-values climate.nc --json       # the formatted time-axis labels
 ```
 
-- **`nc info`** — summarise a file (variables, dimensions, CRS, bounds, time steps); `--json` for a dump.
-- **`nc sel`** — select one step by a `--time` date label; `--var` narrows to one variable first. A `.nc` output
-  keeps it a NetCDF. Matching is by date, so a sub-daily axis may match several steps; `nc info` shows the step
-  count and the first/last labels. `info`/`sel` assume the CF-standard time axis named `time`.
-- **`nc crop`** — spatially subset to `--bbox MINX MINY MAXX MAXY` (file CRS); errors cleanly if the window
-  overlaps no valid data.
+**Select & subset** (each writes a new NetCDF)
+
+```bash
+pyramids nc sel climate.nc out.nc --time 2020-06-15 --var tas   # one time step (exact date label)
+pyramids nc isel climate.nc out.nc --index time=0              # select by integer position
+pyramids nc crop climate.nc out.nc --bbox 4.1 51.9 4.6 52.2    # spatial subset (file CRS)
+pyramids nc thin climate.nc out.nc --step time=2               # keep every Nth step
+pyramids nc head climate.nc out.nc --count time=3              # first N along a dimension (also: tail)
+pyramids nc drop-sel climate.nc out.nc --label time=2020-06-15 # drop by label (also: drop-isel by index)
+pyramids nc drop-duplicates climate.nc out.nc --dim time       # drop duplicate coordinates
+pyramids nc dropna climate.nc out.nc --dim time --how all      # drop empty slices
+pyramids nc pad climate.nc out.nc --width time=2 --mode constant --value 0
+```
+
+- **`nc sel`** matches by a `--time` date label (sub-daily axes may match several steps); `info`/`sel` assume the
+  CF-standard time axis named `time`. `nc info` shows the step count and the first/last labels.
+
+**Variables, dimensions & coordinates** (each writes a new NetCDF)
+
+```bash
+pyramids nc extract climate.nc t2m.tif --var tas          # one variable -> a georeferenced raster
+pyramids nc rename-var climate.nc out.nc --old tas --new t2m
+pyramids nc remove-var climate.nc out.nc --var msk_rgn
+pyramids nc reproject-var climate.nc out.nc --var tas --epsg 3857
+pyramids nc resample-var climate.nc out.nc --var tas --cell-size 1.0
+pyramids nc rename-dims climate.nc out.nc --map lat=y lon=x
+pyramids nc drop-dims climate.nc out.nc --dims bnds
+pyramids nc set-coords climate.nc out.nc --names lat lon    # also: reset-coords
+pyramids nc squeeze climate.nc out.nc --dim time            # drop length-one dimensions
+```
+
+**CF / time / calendar / calculus** (each writes a new NetCDF)
+
+```bash
+pyramids nc convert-calendar climate.nc out.nc --calendar noleap
+pyramids nc interp-calendar climate.nc out.nc --target other.nc
+pyramids nc groupby-bins climate.nc out.nc --dim time --bins 4 --how mean
+pyramids nc rolling climate.nc out.nc --dim time --window 3 --how mean   # also: rolling-exp --alpha
+pyramids nc shift climate.nc out.nc --dim time --periods 1
+pyramids nc integrate climate.nc out.nc --dim time          # also: cumulative-integrate, differentiate
+pyramids nc polyfit climate.nc out.nc --dim time --deg 2
+pyramids nc interp climate.nc out.nc --coord plev=50000 --method linear
+pyramids nc interpolate-na climate.nc out.nc --dim time
+pyramids nc reduce climate.nc out.nc --dim time --how mean
+```
+
+**I/O export**
+
+```bash
+pyramids nc convert climate.nc out.nc           # re-write as a NetCDF
+pyramids nc to-dataframe climate.nc out.csv --vars tas
+pyramids nc to-dict climate.nc --json           # structure (add --data for the arrays)
+pyramids nc to-zarr climate.nc out.zarr --var tas   # per-variable Zarr store (needs the [lazy] extra)
+```
+
+**Plot** (headless PNG/animation via cleopatra; the Agg backend is forced)
+
+```bash
+pyramids nc plot climate.nc map.png --var tas --kind contour
+pyramids nc plot-histogram climate.nc hist.png --var tas
+pyramids nc animate climate.nc anim.gif --var tas --dim time --fps 4
+```
+
+Not exposed as one-shot CLI verbs (use Python): `where`/`isin` (boolean-array conditions), `subset` (slice/tuple
+arguments), `expand-dims`/`open-subdataset` (no container-level target on the shipped files), `interp-like`/
+`convert-units` (operate per gridded variable, which this group selects by other means), `curvefit`/`weighted`/
+`cumulative` (need a Python callable or weights array), and the array/arithmetic methods inherited from `Dataset`
+(reachable via the top-level raster commands once a variable is `extract`ed). Generic raster ops on a NetCDF plane
+(warp, slope, COG, …) are the top-level raster commands, not duplicated here.
 
 ## Raster stacks
 

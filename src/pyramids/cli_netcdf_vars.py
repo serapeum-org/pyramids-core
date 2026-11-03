@@ -1,0 +1,368 @@
+"""NetCDF variable- and dimension-management commands for the ``pyramids nc`` group.
+
+Thin wrappers over :class:`pyramids.netcdf.NetCDF`: rename or remove a variable
+(`rename-var`/`remove-var`), reproject or resample one variable in place
+(`reproject-var`/`resample-var`), and the xarray-style dimension/coordinate verbs —
+rename band dimensions (`rename-dims`), drop them (`drop-dims`), promote or demote CF
+auxiliary coordinates (`set-coords`/`reset-coords`) and drop length-one band
+dimensions (`squeeze`). Every command writes a new file and never touches the source:
+the variable mutators (`rename-var`/`remove-var`/`reproject-var`/`resample-var`)
+mutate a read-only read's in-memory copy and write it out, while the dimension verbs
+return a new cube that is written out. No xarray is imported here — reads go through
+the ``NetCDF`` class.
+"""
+
+from __future__ import annotations
+
+import argparse
+
+from pyramids._cli_shared import info_print, refuse_existing
+from pyramids.netcdf import NetCDF
+
+_HELP_NC_FILE = "NetCDF path"
+_HELP_OUTPUT = "destination NetCDF path"
+_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_VAR = "variable name"
+_HELP_METHOD = "resampling method (default: nearest neighbor)"
+
+
+def _parse_pairs(items: list[str]) -> dict[str, str]:
+    """Parse ``KEY=VALUE`` tokens into a mapping, splitting on the first ``=``.
+
+    Args:
+        items: Tokens such as ``["time=t", "plev=level"]``.
+
+    Returns:
+        dict[str, str]: The ``{key: value}`` mapping, order preserved.
+
+    Raises:
+        ValueError: A token carries no ``=`` separator.
+    """
+    pairs: dict[str, str] = {}
+    for item in items:
+        key, sep, value = item.partition("=")
+        if not sep:
+            raise ValueError(f"expected KEY=VALUE, got {item!r}")
+        pairs[key] = value
+    return pairs
+
+
+def _cmd_nc_rename_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc rename-var`` — rename a variable into a new file.
+
+    The source is read read-only; the rename mutates an in-memory copy (the class
+    makes one), which is then written to ``output``, so the source is never modified.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``old``, ``new``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--old`` does not resolve to a variable (raised by
+            ``rename_variable``), or ``--new`` already exists.
+    """
+    refuse_existing(args.output, args.overwrite)
+    nc = NetCDF.read_file(args.file)
+    nc.rename_variable(args.old, args.new)
+    nc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_remove_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc remove-var`` — remove a variable into a new file.
+
+    The source is read read-only; the removal mutates an in-memory copy, which is
+    then written to ``output``, so the source is never modified.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is not found in the container (raised by
+            ``remove_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    nc = NetCDF.read_file(args.file)
+    nc.remove_variable(args.var)
+    nc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_reproject_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc reproject-var`` — reproject one variable into a new file.
+
+    ``reproject_variable`` warps the variable and stores the result back on the same
+    container, returning it; that container is written to ``output``. The source is
+    read read-only and left untouched.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``epsg``, ``method``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is not a valid variable name (raised by
+            ``reproject_variable`` via ``get_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).reproject_variable(
+        args.var, args.epsg, method=args.method
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_resample_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc resample-var`` — resample one variable into a new file.
+
+    ``resample_variable`` resamples the variable and stores the result back on the
+    same container, returning it; that container is written to ``output``. The source
+    is read read-only and left untouched.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``cell_size``,
+            ``method``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is not a valid variable name (raised by
+            ``resample_variable`` via ``get_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).resample_variable(
+        args.var, args.cell_size, method=args.method
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_rename_dims(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc rename-dims`` — rename band dimensions into a new file.
+
+    ``rename_dims`` is non-mutating and returns a new cube with the band dimensions
+    re-labelled; that cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``map``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: A ``--map`` token is malformed (raised by :func:`_parse_pairs`),
+            or an ``old`` name is not a band dimension (raised by ``rename_dims``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).rename_dims(_parse_pairs(args.map))
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_drop_dims(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc drop-dims`` — drop band dimensions into a new file.
+
+    ``drop_dims`` is non-mutating and returns a new cube without the named band
+    dimensions; that cube is written to ``output``. ``--errors ignore`` makes an
+    unknown dimension a no-op instead of an error.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``dims``, ``errors``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: A dimension is not present and ``--errors`` is ``raise`` (raised
+            by ``drop_dims``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).drop_dims(args.dims, errors=args.errors)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_set_coords(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc set-coords`` — promote variables to CF aux coordinates.
+
+    ``set_coords`` is non-mutating and returns a new cube in which the named
+    variables are CF auxiliary coordinates (so they leave ``variable_names``); that
+    cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``names``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: A name is not a variable of the container, or names a dimension
+            (raised by ``set_coords``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).set_coords(args.names)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_reset_coords(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc reset-coords`` — demote CF aux coordinates to variables.
+
+    ``reset_coords`` is non-mutating and returns a new cube in which the named
+    auxiliary coordinates (or all of them when ``--names`` is omitted) are data
+    variables again; that cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``names``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: A name is not an auxiliary coordinate of the container (raised by
+            ``reset_coords``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).reset_coords(args.names)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_squeeze(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc squeeze`` — drop length-one band dimensions into a file.
+
+    ``squeeze`` is non-mutating and returns a new cube with the length-one band
+    dimensions removed (one named dimension with ``--dim``, or every length-one band
+    dimension otherwise); that cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``dim``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--dim`` is not a band dimension, or is longer than one (raised
+            by ``squeeze``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).squeeze(args.dim)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
+    """Register the ``nc`` variable- and dimension-management commands on ``ncsub``.
+
+    Args:
+        ncsub: The ``nc`` group's ``add_subparsers`` action.
+    """
+    nc_rnv = ncsub.add_parser("rename-var", help="rename a variable")
+    nc_rnv.add_argument("file", help=_HELP_NC_FILE)
+    nc_rnv.add_argument("output", help=_HELP_OUTPUT)
+    nc_rnv.add_argument("--old", required=True, help="current variable name")
+    nc_rnv.add_argument("--new", required=True, help="new variable name")
+    nc_rnv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rnv.set_defaults(func=_cmd_nc_rename_var)
+
+    nc_rmv = ncsub.add_parser("remove-var", help="remove a variable")
+    nc_rmv.add_argument("file", help=_HELP_NC_FILE)
+    nc_rmv.add_argument("output", help=_HELP_OUTPUT)
+    nc_rmv.add_argument("--var", required=True, help=_HELP_VAR)
+    nc_rmv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rmv.set_defaults(func=_cmd_nc_remove_var)
+
+    nc_rpv = ncsub.add_parser("reproject-var", help="reproject one variable")
+    nc_rpv.add_argument("file", help=_HELP_NC_FILE)
+    nc_rpv.add_argument("output", help=_HELP_OUTPUT)
+    nc_rpv.add_argument("--var", required=True, help=_HELP_VAR)
+    nc_rpv.add_argument("--epsg", type=int, required=True, help="target EPSG code")
+    nc_rpv.add_argument("--method", default="nearest neighbor", help=_HELP_METHOD)
+    nc_rpv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rpv.set_defaults(func=_cmd_nc_reproject_var)
+
+    nc_rsv = ncsub.add_parser("resample-var", help="resample one variable")
+    nc_rsv.add_argument("file", help=_HELP_NC_FILE)
+    nc_rsv.add_argument("output", help=_HELP_OUTPUT)
+    nc_rsv.add_argument("--var", required=True, help=_HELP_VAR)
+    nc_rsv.add_argument("--cell-size", type=float, required=True, help="new cell size")
+    nc_rsv.add_argument("--method", default="nearest neighbor", help=_HELP_METHOD)
+    nc_rsv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rsv.set_defaults(func=_cmd_nc_resample_var)
+
+    nc_rnd = ncsub.add_parser("rename-dims", help="rename band dimensions")
+    nc_rnd.add_argument("file", help=_HELP_NC_FILE)
+    nc_rnd.add_argument("output", help=_HELP_OUTPUT)
+    nc_rnd.add_argument(
+        "--map",
+        nargs="+",
+        required=True,
+        metavar="OLD=NEW",
+        help="one or more OLD=NEW dimension renames",
+    )
+    nc_rnd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rnd.set_defaults(func=_cmd_nc_rename_dims)
+
+    nc_drd = ncsub.add_parser("drop-dims", help="drop band dimensions")
+    nc_drd.add_argument("file", help=_HELP_NC_FILE)
+    nc_drd.add_argument("output", help=_HELP_OUTPUT)
+    nc_drd.add_argument(
+        "--dims", nargs="+", required=True, help="band dimensions to drop"
+    )
+    nc_drd.add_argument(
+        "--errors",
+        choices=("raise", "ignore"),
+        default="raise",
+        help="how to treat an unknown dimension (default: raise)",
+    )
+    nc_drd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_drd.set_defaults(func=_cmd_nc_drop_dims)
+
+    nc_stc = ncsub.add_parser("set-coords", help="promote variables to aux coordinates")
+    nc_stc.add_argument("file", help=_HELP_NC_FILE)
+    nc_stc.add_argument("output", help=_HELP_OUTPUT)
+    nc_stc.add_argument(
+        "--names", nargs="+", required=True, help="variables to promote"
+    )
+    nc_stc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_stc.set_defaults(func=_cmd_nc_set_coords)
+
+    nc_rtc = ncsub.add_parser(
+        "reset-coords", help="demote aux coordinates to variables"
+    )
+    nc_rtc.add_argument("file", help=_HELP_NC_FILE)
+    nc_rtc.add_argument("output", help=_HELP_OUTPUT)
+    nc_rtc.add_argument(
+        "--names", nargs="*", default=None, help="coordinates to demote (default: all)"
+    )
+    nc_rtc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_rtc.set_defaults(func=_cmd_nc_reset_coords)
+
+    nc_sqz = ncsub.add_parser("squeeze", help="drop length-one band dimensions")
+    nc_sqz.add_argument("file", help=_HELP_NC_FILE)
+    nc_sqz.add_argument("output", help=_HELP_OUTPUT)
+    nc_sqz.add_argument(
+        "--dim",
+        default=None,
+        help="the one length-one dimension to drop (default: all)",
+    )
+    nc_sqz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_sqz.set_defaults(func=_cmd_nc_squeeze)

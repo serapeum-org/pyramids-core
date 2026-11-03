@@ -1,11 +1,17 @@
 """NetCDF / multidim CLI command group — ``pyramids nc …``.
 
-Thin wrappers over :class:`pyramids.netcdf.NetCDF`: summarise a file (`info`), list
-the variables GDAL can expose as raster planes (`list-vars`), extract one to a
-raster (`extract`), select one step of the CF ``time`` axis (`sel`), and spatially
-subset (`crop`). ``info`` and ``sel`` assume the time axis is the CF-standard one
-named ``time``. No multidim logic lives here — reads go through GDAL as the
-``NetCDF`` class already does (never xarray).
+Thin wrappers over :class:`pyramids.netcdf.NetCDF`. This module owns the core
+verbs — summarise a file (`info`), list raster-exposable variables (`list-vars`),
+extract one to a raster (`extract`), select one CF ``time`` step (`sel`), and
+spatially subset (`crop`) — and registers the rest of the group from sibling
+modules via :func:`add_netcdf_commands`: ``cli_netcdf_inspect`` (summary/metadata/
+dim-values/time-values/set-attr/del-attr), ``cli_netcdf_vars`` (variable &
+dimension management), ``cli_netcdf_select`` (isel/thin/head/tail/drop-*/dropna/
+pad), ``cli_netcdf_cftime`` (calendar/time/calculus), ``cli_netcdf_io`` (convert/
+to-dataframe/to-dict/to-zarr), and ``cli_netcdf_plot`` (plot/plot-histogram/
+animate). ``info`` and ``sel`` assume the time axis is the CF-standard one named
+``time``. No multidim logic lives here — reads go through GDAL as the ``NetCDF``
+class already does (never xarray).
 """
 
 from __future__ import annotations
@@ -15,9 +21,12 @@ import json
 from typing import Any
 
 from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids.cli_netcdf_cftime import add_nc_cftime_commands
 from pyramids.cli_netcdf_inspect import add_nc_inspect_commands
 from pyramids.cli_netcdf_io import add_nc_io_commands
 from pyramids.cli_netcdf_plot import add_nc_plot_commands
+from pyramids.cli_netcdf_select import add_nc_select_commands
+from pyramids.cli_netcdf_vars import add_nc_vars_commands
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -225,5 +234,8 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_crop.set_defaults(func=_cmd_nc_crop)
 
     add_nc_inspect_commands(ncsub)
+    add_nc_vars_commands(ncsub)
+    add_nc_select_commands(ncsub)
+    add_nc_cftime_commands(ncsub)
     add_nc_io_commands(ncsub)
     add_nc_plot_commands(ncsub)
