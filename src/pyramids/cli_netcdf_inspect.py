@@ -16,6 +16,7 @@ import json
 from pyramids._cli_shared import (
     info_print,
     json_safe,
+    json_sanitize,
     map_lookup_errors,
     refuse_existing,
 )
@@ -55,7 +56,7 @@ def _cmd_nc_summary(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         frame = nc.summary(variables=args.vars or None)
     if args.json:
-        print(json.dumps(frame.to_dict(orient="index"), default=json_safe))
+        print(json.dumps(json_sanitize(frame.to_dict(orient="index"))))
     else:
         print(frame.to_string())
     return 0
@@ -72,7 +73,7 @@ def _cmd_nc_metadata(args: argparse.Namespace) -> int:
     """
     payload = _metadata_payload(NetCDF.read_file(args.file).get_all_metadata())
     if args.json:
-        print(json.dumps(payload, default=json_safe))
+        print(json.dumps(json_sanitize(payload)))
     else:
         print(payload)
     return 0

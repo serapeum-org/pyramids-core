@@ -15,6 +15,31 @@ import contextlib
 import math
 import os
 from collections.abc import Iterator
+from typing import Any
+
+
+def json_sanitize(obj: Any) -> Any:
+    """Recursively convert a structure to strict-JSON-safe values.
+
+    Walks dicts, lists, and tuples; maps non-finite floats (``NaN``/``Infinity``) to
+    ``None`` via :func:`json_safe`; and converts numpy scalars/arrays to Python via
+    ``tolist``. This must run **before** :func:`json.dumps`, because ``dumps`` never
+    calls its ``default=`` hook for floats (``numpy.float64`` is a ``float`` subclass
+    the C encoder serialises directly), so a non-finite float would otherwise be
+    emitted as a bare ``NaN``/``Infinity`` token that strict consumers (e.g. ``jq``)
+    reject.
+    """
+    if isinstance(obj, dict):
+        return {key: json_sanitize(value) for key, value in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [json_sanitize(value) for value in obj]
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, float):
+        return json_safe(obj)
+    if type(obj).__module__ == "numpy" and hasattr(obj, "tolist"):
+        return json_sanitize(obj.tolist())
+    return obj
 
 
 def force_agg_backend() -> None:

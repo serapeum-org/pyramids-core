@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids._cli_shared import info_print, json_sanitize, refuse_existing
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -66,7 +66,7 @@ def _cmd_nc_to_dict(args: argparse.Namespace) -> int:
     nc = NetCDF.read_file(args.file)
     payload = nc.to_dict(data=args.data)
     if args.json:
-        print(json.dumps(payload, default=json_safe))
+        print(json.dumps(json_sanitize(payload)))
     else:
         for key, value in payload.items():
             print(f"{key}: {value}")

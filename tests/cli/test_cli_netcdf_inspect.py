@@ -5,13 +5,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
+from pyramids._cli_shared import json_sanitize
 from pyramids.cli import main
 from pyramids.cli_netcdf_inspect import _metadata_payload
 from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
+
+
+def _reject_non_finite(token):
+    """A `parse_constant` hook that fails on any NaN/Infinity JSON token."""
+    raise AssertionError(f"non-finite JSON token emitted: {token}")
 
 
 class TestMetadataPayload:
@@ -31,6 +38,26 @@ class TestMetadataPayload:
         assert _metadata_payload(42) == "42"
 
 
+class TestJsonSanitize:
+    """`json_sanitize` makes non-finite / numpy values strict-JSON-safe (M1)."""
+
+    def test_non_finite_floats_become_null(self):
+        """NaN and +/-Infinity (nested) are replaced with None."""
+        result = json_sanitize(
+            {"a": float("nan"), "b": float("inf"), "c": [1.0, float("-inf")]}
+        )
+        assert result == {"a": None, "b": None, "c": [1.0, None]}
+        json.loads(json.dumps(result), parse_constant=_reject_non_finite)
+
+    def test_numpy_scalars_and_arrays(self):
+        """numpy ints become ints and numpy NaN (scalar or in an array) becomes None."""
+        result = json_sanitize(
+            {"i": np.int64(5), "f": np.float64("nan"), "a": np.array([1.0, np.nan])}
+        )
+        assert result == {"i": 5, "f": None, "a": [1.0, None]}
+        json.loads(json.dumps(result), parse_constant=_reject_non_finite)
+
+
 _DATA = Path(__file__).parents[1] / "data" / "netcdf"
 _NC = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 
@@ -39,9 +66,9 @@ class TestNcSummary:
     """`pyramids nc summary`."""
 
     def test_json_summary(self, capsys):
-        """--json emits a per-variable statistics mapping."""
+        """--json emits a per-variable statistics mapping, strict-valid JSON."""
         assert main(["nc", "summary", str(_NC), "--vars", "tas", "--json"]) == 0
-        payload = json.loads(capsys.readouterr().out)
+        payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "tas" in payload
 
     def test_plain_summary(self, capsys):
@@ -63,9 +90,9 @@ class TestNcMetadata:
     """`pyramids nc metadata`."""
 
     def test_json_metadata(self, capsys):
-        """--json emits a parseable metadata record naming the variables."""
+        """--json emits a strict-valid metadata record naming the variables."""
         assert main(["nc", "metadata", str(_NC), "--json"]) == 0
-        payload = json.loads(capsys.readouterr().out)
+        payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "variables" in payload
 
     def test_plain_metadata(self, capsys):

@@ -15,6 +15,11 @@ _DATA = Path(__file__).parents[1] / "data" / "netcdf"
 _NC = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 
 
+def _reject_non_finite(token):
+    """A `parse_constant` hook that fails on any NaN/Infinity JSON token."""
+    raise AssertionError(f"non-finite JSON token emitted: {token}")
+
+
 class TestNcConvert:
     """`pyramids nc convert`."""
 
@@ -46,9 +51,9 @@ class TestNcToDict:
     """`pyramids nc to-dict`."""
 
     def test_json_structure(self, capsys):
-        """--json emits the file's structure with the expected top-level keys."""
+        """--json emits the file's structure as strict-valid JSON with the expected keys."""
         assert main(["nc", "to-dict", str(_NC), "--json"]) == 0
-        payload = json.loads(capsys.readouterr().out)
+        payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "data_vars" in payload
         assert "coords" in payload
 
