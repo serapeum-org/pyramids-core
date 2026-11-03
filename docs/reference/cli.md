@@ -24,11 +24,14 @@ pyramids info dem.tif                 # human-readable metadata (add --json for 
 pyramids info dem.tif --json
 pyramids bounds dem.tif               # bounding box; --crs 4326 reprojects the corners; --json for JSON
 pyramids edit-info dem.tif --crs 4326 --nodata -9999 --tag units=m   # edit CRS / nodata / tags in place
+pyramids blocks dem.tif --json        # native block (tile) windows; --band N (0-based, default 0)
 ```
 
 - **`info`** — print raster metadata (`--json` for a machine-readable dump).
 - **`bounds`** — print the bounding box; `--crs` reprojects the corners; `--json` emits JSON.
 - **`edit-info`** — set `--crs`, `--nodata`, and/or repeatable `--tag KEY=VALUE` on a raster **in place**.
+- **`blocks`** — list a raster's native block (tile) windows, each with its pixel window and map bounds;
+  `--band` selects the band whose blocking to report (0-based, default 0); `--json` emits JSON.
 
 ## Convert, warp, clip, merge, overviews
 
