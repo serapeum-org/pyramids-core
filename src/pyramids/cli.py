@@ -12,7 +12,7 @@ Command groups:
   `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
   `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
 - vector (`pyramids.cli_vector`) — `vector info|bounds|convert|warp|clip`
-- NetCDF (`pyramids.cli_netcdf`) — `nc list-vars|extract`
+- NetCDF (`pyramids.cli_netcdf`) — `nc info|list-vars|extract|sel|crop`
 - collection (`pyramids.cli_collection`) — `collection info|stats`
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`

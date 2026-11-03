@@ -136,9 +136,18 @@ pyramids vector clip parcels.shp aoi.gpkg --bbox 4.1 51.9 4.6 52.2   # or --mask
 ## NetCDF
 
 ```bash
+pyramids nc info climate.nc --json                           # variables, dimensions, CRS, bounds, time axis
 pyramids nc list-vars climate.nc --json                      # variables GDAL can expose as rasters
 pyramids nc extract climate.nc t2m.tif --var temperature     # one variable -> a georeferenced raster
+pyramids nc sel climate.nc 2020.nc --time 2020-06-15 --var tas   # select a time step into a new NetCDF
+pyramids nc crop climate.nc aoi.nc --bbox 4.1 51.9 4.6 52.2  # spatially subset into a new NetCDF
 ```
+
+- **`nc info`** — summarise a file (variables, dimensions, CRS, bounds, time steps); `--json` for a dump.
+- **`nc sel`** — select by the `--time` label (as shown by `nc info`); `--var` narrows to one variable,
+  `--method nearest|ffill|bfill` allows an inexact time match. A `.nc` output keeps it a NetCDF.
+- **`nc crop`** — spatially subset to `--bbox MINX MINY MAXX MAXY` (file CRS); errors cleanly if the window
+  overlaps no valid data.
 
 ## Raster stacks
 
