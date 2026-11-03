@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7620,7 +7620,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 
     subgraph NC["pyramids.netcdf"]
       NCD[NetCDF]:::c
-      UG[UgridDataset]:::c
+      UG[MeshDataset]:::c
     end
 
     subgraph Vec["pyramids.feature"]
@@ -7685,7 +7685,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     nc[NetCDF]
     cf[cf]
     lazy[_lazy._apply_unpack]
-    ugds[ugrid.UgridDataset]
+    ugds[ugrid.MeshDataset]
   end
   subgraph PF["pyramids.feature"]
     fc[FeatureCollection]
@@ -7723,7 +7723,7 @@ Hold "Ctrl" to enable pan &amp; zoom
    virtual filesystem paths in <code>pyramids._io</code> /
    <code>pyramids.base.remote</code>.</li>
 <li>Raster inputs become <code>Dataset</code> (GeoTIFF, ASC) / <code>NetCDF</code> (NetCDF, HDF5) /
-   <code>UgridDataset</code> (UGRID NetCDF) instances; vector inputs become
+   <code>MeshDataset</code> (UGRID NetCDF) instances; vector inputs become
    <code>FeatureCollection</code>. Each concrete class composes engines for its
    public-API families (<code>ds.spatial</code>, <code>ds.io</code>, …).</li>
 <li><code>DatasetCollection</code> wraps <code>N</code> co-registered <code>Dataset</code> instances into a

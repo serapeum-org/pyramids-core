@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7481,9 +7481,9 @@
 <h1 id="mesh-to-grid-interpolation"><a class="toclink" href="#mesh-to-grid-interpolation">Mesh-to-Grid Interpolation</a><a class="headerlink" href="#mesh-to-grid-interpolation" title="Permanent link">#</a></h1>
 <p>Converts unstructured mesh data to regular grids using
 nearest-neighbor or linear interpolation. This module
-implements the bridge between <code>UgridDataset</code> and <code>Dataset</code>.</p>
+implements the bridge between <code>MeshDataset</code> and <code>Dataset</code>.</p>
 <p><code>mesh_to_grid</code> takes a <code>Mesh2d</code>, a data array on a given location (node / face / edge) and a target
-cell size, and returns a 2-D array plus its geotransform — the raw material <code>UgridDataset.to_dataset</code>
+cell size, and returns a 2-D array plus its geotransform — the raw material <code>MeshDataset.to_dataset</code>
 wraps into a <code>Dataset</code>:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
@@ -7511,7 +7511,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     <pre class="mermaid"><code>flowchart LR
     M["Mesh2d + data&lt;br/&gt;location = node | face | edge"] --&gt; I["mesh_to_grid(cell_size, method)&lt;br/&gt;nearest | linear"]
     I --&gt; R[("2-D NumPy array&lt;br/&gt;+ geotransform")]
-    R --&gt;|"UgridDataset.to_dataset"| D["Dataset (raster)"]</code></pre> 
+    R --&gt;|"MeshDataset.to_dataset"| D["Dataset (raster)"]</code></pre> 
     
 </div>
 

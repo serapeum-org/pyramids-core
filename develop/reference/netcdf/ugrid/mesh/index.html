@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9041,7 +9041,7 @@ reference to GDAL objects.</p>
 <a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">crs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-160" name="__codelineno-0-160"></a><span class="w">        </span><span class="sd">"""The mesh's coordinate reference system, or ``None``.</span>
 <a id="__codelineno-0-161" name="__codelineno-0-161"></a>
-<a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="sd">        Public counterpart of :attr:`pyramids.netcdf.ugrid.network.Network1d.crs`, so callers</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="sd">        Public counterpart of :attr:`pyramids.netcdf.ugrid.mesh1d.Mesh1d.crs`, so callers</span>
 <a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="sd">        (and the xarray bridge) no longer have to reach for the private attribute.</span>
 <a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="sd">        """</span>
 <a id="__codelineno-0-165" name="__codelineno-0-165"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crs</span>
@@ -9705,7 +9705,7 @@ reference to GDAL objects.</p>
     <div class="doc doc-contents ">
 
         <p>The mesh's coordinate reference system, or <code>None</code>.</p>
-<p>Public counterpart of :attr:<code>pyramids.netcdf.ugrid.network.Network1d.crs</code>, so callers
+<p>Public counterpart of :attr:<code>pyramids.netcdf.ugrid.mesh1d.Mesh1d.crs</code>, so callers
 (and the xarray bridge) no longer have to reach for the private attribute.</p>
 
     </div>
