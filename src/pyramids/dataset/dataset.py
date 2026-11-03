@@ -804,6 +804,14 @@ class Dataset(RasterBase):
             from ``self`` (not pulled from ``new``) so the engines
             point at the live Dataset after the swap.
         """
+        # Flush the prior handle before it is dropped by the dict swap below, so
+        # any buffered writes are committed and the handle is not relied upon to
+        # finalize purely via refcounting (matches `ops/io.py`
+        # `_create_copy_and_reopen`). `prev is not src` skips the no-op case
+        # where the operation handed back the same handle it was given.
+        prev = self._raster
+        if prev is not None and prev is not src:
+            prev.FlushCache()
         new = type(self)(src, access=access or self._access)
         self.__dict__.update(new.__dict__)
         # `update` merges, so a lazily-set cache the fresh instance never
