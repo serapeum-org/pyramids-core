@@ -241,7 +241,9 @@ class TestUpdateInplace:
             "same-handle update should preserve the existing GDAL handle"
         )
 
-    def test_update_inplace_flush_failure_does_not_abort_swap(self, single_band_dataset):
+    def test_update_inplace_flush_failure_does_not_abort_swap(
+        self, single_band_dataset
+    ):
         """A RuntimeError from the prior handle's flush is swallowed; the swap still happens.
 
         Test scenario:
