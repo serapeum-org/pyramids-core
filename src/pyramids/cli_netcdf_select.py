@@ -25,7 +25,7 @@ from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OUTPUT = "destination path (.nc keeps it a NetCDF)"
-_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_OVERWRITE = "replace the output if it already exists"
 _METAVAR_DIM_N = "DIM=N"
 
 

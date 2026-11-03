@@ -19,7 +19,7 @@ from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OUTPUT = "destination path (.nc keeps it a NetCDF)"
-_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_DIM = "the dimension to operate along"
 _HELP_HOW = "aggregation to apply (mean, sum, min, max, std, median, ...)"
 _HELP_METHOD = "interpolation method (default: linear)"

@@ -23,7 +23,7 @@ from pyramids._cli_shared import (
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
-_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_OVERWRITE = "replace the output if it already exists"
 
 
 def _metadata_payload(metadata: object) -> object:

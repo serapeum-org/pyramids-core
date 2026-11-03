@@ -21,7 +21,7 @@ from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OUTPUT = "destination NetCDF path"
-_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_VAR = "variable name"
 _HELP_METHOD = "resampling method (default: nearest neighbor)"
 

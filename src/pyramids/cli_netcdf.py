@@ -28,7 +28,7 @@ from pyramids.cli_netcdf_vars import add_nc_vars_commands
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
-_HELP_OVERWRITE = "replace the output if it exists"
+_HELP_OVERWRITE = "replace the output if it already exists"
 
 
 def _cmd_nc_info(args: argparse.Namespace) -> int:
