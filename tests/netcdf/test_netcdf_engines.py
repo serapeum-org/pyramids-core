@@ -18,6 +18,7 @@ engine methods.
 from __future__ import annotations
 
 import sys
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -115,6 +116,32 @@ class TestEngineWiring:
         assert isinstance(nc.interop, Interop), "interop engine lost on update"
         # A façade call must still reach the live instance after the swap.
         assert nc.selection._ds.epsg == nc.epsg, "engine back-ref points at stale state"
+
+    def test_update_inplace_flushes_prior_handle(self):
+        """The NetCDF `_update_inplace` override flushes the prior handle (#815).
+
+        Test scenario:
+            The override reimplements the swap without chaining ``super()``, so it
+            must flush the handle it drops just like the base ``Dataset``. With the
+            prior raster replaced by a sentinel and a distinct new source swapped in,
+            ``FlushCache`` must be invoked on the prior handle exactly once.
+        """
+        nc = NetCDF.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0, 2.0, 0, -1.0), epsg=4326),
+            variable_name="data",
+        )
+        src_nc = NetCDF.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0, 2.0, 0, -1.0), epsg=4326),
+            variable_name="data",
+        )
+        prior = mock.MagicMock(name="prior_raster")
+        nc._raster = prior
+
+        nc._update_inplace(src_nc.raster)
+
+        prior.FlushCache.assert_called_once()
 
     def test_facade_delegates_to_engine(self, mdim_container, monkeypatch):
         """The interop export façade forwards to ``self.interop``.

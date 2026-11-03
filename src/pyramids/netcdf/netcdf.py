@@ -61,6 +61,7 @@ from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
 from pyramids.dataset.dataset import (
     _COLLABORATOR_ATTRS,
     _RESERVED_ACCESSOR_NAMES,
+    _flush_prior_handle,
     _invalidate_cached_accessors,
 )
 from pyramids.dataset.engines._read_window import resolve_read_window
@@ -2782,6 +2783,11 @@ class NetCDF(Dataset):
             access=access or self._access,
             open_as_multi_dimensional=self._is_md_array,
         )
+        # Flush the handle about to be dropped by the swap below, same as the base
+        # method -- this override does not chain `super()`, so the call is repeated
+        # here. Best-effort; skipped when `src` is that same handle (the `epsg`
+        # setter / `_store_raster` path). See `Dataset._flush_prior_handle` (#815).
+        _flush_prior_handle(self._raster, src)
         self.__dict__.update(new.__dict__)
         self.__dict__.update(preserved)
         self._restore_stamped_grid()
