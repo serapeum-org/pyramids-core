@@ -10,6 +10,7 @@ Dependency-free (``re`` + ``tomllib`` only) so it runs in the bare-wheel ``-m co
 
 from __future__ import annotations
 
+import ast
 import re
 import tomllib
 from pathlib import Path
@@ -44,7 +45,12 @@ def _extras_targets() -> list[dict[str, str]]:
     Python", "Run ... tests") are not mistaken for targets.
     """
     block = re.search(
-        r"^  extras-package:.*?(?=^\S|\Z)", _workflow_text(), re.MULTILINE | re.DOTALL
+        # End the region at the next key indented <= 2 spaces (a sibling job header like
+        # `  another-job:`, or a column-0 top-level key) or EOF — not only at column 0, so a job
+        # added after extras-package cannot bleed into the parsed region.
+        r"^  extras-package:.*?(?=^\s{0,2}\S|\Z)",
+        _workflow_text(),
+        re.MULTILINE | re.DOTALL,
     )
     region = block.group(0) if block else _workflow_text()
     targets: list[dict[str, str]] = []
@@ -72,16 +78,50 @@ def _markexpr_markers(markexpr: str) -> set[str]:
     }
 
 
+def _mark_name(node: ast.expr) -> str | None:
+    """Return ``<name>`` for a ``pytest.mark.<name>`` (or ``...(...)``) node, else ``None``."""
+    if isinstance(node, ast.Call):
+        node = node.func
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "mark"
+    ):
+        return node.attr
+    return None
+
+
+def _file_markers(path: Path) -> set[str]:
+    """Marker names applied in ``path`` as real decorators or a ``pytestmark`` assignment.
+
+    Uses ``ast`` (like ``test_marker_hygiene``) so a ``pytest.mark.<name>`` that appears only in a
+    comment, docstring, or string literal is not miscounted as an active marker.
+    """
+    names: set[str] = set()
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            for decorator in node.decorator_list:
+                name = _mark_name(decorator)
+                if name:
+                    names.add(name)
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "pytestmark"
+            for target in node.targets
+        ):
+            value = node.value
+            elts = value.elts if isinstance(value, (ast.List, ast.Tuple)) else [value]
+            names.update(name for name in map(_mark_name, elts) if name)
+    return names
+
+
 def _markers_under(paths: str) -> set[str]:
     """Extras markers carried by test files under a target's ``paths`` (what the job runs)."""
     found: set[str] = set()
     for part in paths.split():
         root = _REPO / part
-        files = [root] if root.is_file() else root.rglob("test_*.py")
-        for file in files:
-            found.update(
-                re.findall(r"pytest\.mark\.([a-z_]+)", file.read_text(encoding="utf-8"))
-            )
+        for file in [root] if root.is_file() else root.rglob("test_*.py"):
+            found |= _file_markers(file)
     return found & set(EXTRA_MARKERS)
 
 
