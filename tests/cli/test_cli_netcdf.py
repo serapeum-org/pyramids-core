@@ -223,7 +223,9 @@ class TestNcSel:
 
     def test_file_without_time_axis_errors_cleanly(self, tmp_path, capsys):
         """sel on a file that has no time axis exits 1 with a clean, mapped error."""
-        rc = main(["nc", "sel", str(_NC), str(tmp_path / "o.nc"), "--time", "2000-05-16"])
+        rc = main(
+            ["nc", "sel", str(_NC), str(tmp_path / "o.nc"), "--time", "2000-05-16"]
+        )
         err = capsys.readouterr().err
         assert rc == 1
         assert "non-spatial dimension" in err
