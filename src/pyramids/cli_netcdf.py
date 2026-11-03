@@ -18,6 +18,7 @@ from pyramids._cli_shared import info_print, json_safe, refuse_existing
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
+_HELP_OVERWRITE = "replace the output if it exists"
 
 
 def _cmd_nc_info(args: argparse.Namespace) -> int:
@@ -185,7 +186,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         "--var", required=True, help="variable name (supports 'group/var')"
     )
     nc_ex.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
+        "--overwrite", action="store_true", help=_HELP_OVERWRITE
     )
     nc_ex.set_defaults(func=_cmd_nc_extract)
 
@@ -200,7 +201,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     )
     nc_sel.add_argument("--var", help="narrow to one variable before selecting")
     nc_sel.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
+        "--overwrite", action="store_true", help=_HELP_OVERWRITE
     )
     nc_sel.set_defaults(func=_cmd_nc_sel)
 
@@ -216,6 +217,6 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         help="crop window in the file's CRS",
     )
     nc_crop.add_argument(
-        "--overwrite", action="store_true", help="replace the output if it exists"
+        "--overwrite", action="store_true", help=_HELP_OVERWRITE
     )
     nc_crop.set_defaults(func=_cmd_nc_crop)
