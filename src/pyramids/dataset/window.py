@@ -218,6 +218,12 @@ class Window:
         else:
             min_x, min_y, max_x, max_y = geometry
         bbox = (float(min_x), float(min_y), float(max_x), float(max_y))
+        # An empty geometry / empty GeoDataFrame yields a (nan, nan, nan, nan)
+        # bbox; its NaNs slip past from_bounds' `min >= max` guard (NaN compares
+        # False) and would surface as a cryptic "cannot convert float NaN to
+        # integer". Reject it here with a clear message instead.
+        if any(math.isnan(value) for value in bbox):
+            raise ValueError("geometry is empty: its bounding box is undefined (NaN).")
         return cls.from_bounds(bbox, geotransform)
 
     def to_bounds(

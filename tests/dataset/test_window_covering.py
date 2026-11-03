@@ -2,7 +2,7 @@
 
 import geopandas as gpd
 import pytest
-from shapely.geometry import box
+from shapely.geometry import Polygon, box
 
 from pyramids.dataset.window import Window
 
@@ -45,3 +45,13 @@ class TestWindowCovering:
         """An inverted bounding box raises ValueError (inherited from from_bounds)."""
         with pytest.raises(ValueError):
             Window.covering((3.0, 3.0, 1.0, 1.0), GT)
+
+    def test_empty_geodataframe_raises_clear_error(self):
+        """An empty GeoDataFrame (NaN total_bounds) raises a clear 'empty' ValueError."""
+        with pytest.raises(ValueError, match="empty"):
+            Window.covering(gpd.GeoDataFrame(geometry=[]), GT)
+
+    def test_empty_geometry_raises_clear_error(self):
+        """An empty shapely geometry (NaN bounds) raises a clear 'empty' ValueError."""
+        with pytest.raises(ValueError, match="empty"):
+            Window.covering(Polygon(), GT)
