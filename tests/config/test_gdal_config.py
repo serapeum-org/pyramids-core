@@ -1,13 +1,12 @@
 """Tests for the scoped GDAL-config context manager `pyramids.gdal_config`."""
 
-import pytest
 from osgeo import gdal
 
 from pyramids import gdal_config
 
 
 class TestGdalConfig:
-    """`gdal_config` applies options thread-locally and restores them on exit."""
+    """`gdal_config` applies options process-wide and restores them on exit."""
 
     def test_sets_and_restores(self):
         """An option is visible inside the block and the prior value is restored after."""
@@ -21,11 +20,16 @@ class TestGdalConfig:
         """A process-wide-only option (GDAL_CACHEMAX) is applied without raising.
 
         GDAL consumes GDAL_CACHEMAX specially so GetConfigOption does not echo it;
-        the point is only that the scoped manager accepts it (thread_local=False)
-        rather than rejecting it the way a thread-local scope would.
+        the point is that the scoped manager accepts it (thread_local=False) rather
+        than rejecting it the way a thread-local scope would. A companion echo-able
+        option proves the manager body actually mutates GDAL state (and restores
+        it), so the test is sensitive to the manager body, not just the built dict.
         """
-        with gdal_config(GDAL_CACHEMAX="512") as applied:
+        prior = gdal.GetConfigOption("GDAL_HTTP_TIMEOUT")
+        with gdal_config(GDAL_CACHEMAX="512", GDAL_HTTP_TIMEOUT="77") as applied:
             assert applied["GDAL_CACHEMAX"] == "512"
+            assert gdal.GetConfigOption("GDAL_HTTP_TIMEOUT") == "77"
+        assert gdal.GetConfigOption("GDAL_HTTP_TIMEOUT") == prior
 
     def test_nesting_restores_outer(self):
         """An inner block overrides a key; the outer value returns when it exits."""
