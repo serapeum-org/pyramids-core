@@ -152,7 +152,7 @@ pyramids collection stats "tiles/*.tif" mean.tif --reduce mean   # time reductio
 ```bash
 pyramids mesh info mesh.nc --json                            # node/face/edge counts, CRS, bounds, variables
 pyramids mesh extract mesh.nc z.tif --like grid.tif --var mesh2d_node_z   # rasterize a variable onto a grid
-pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z  # mesh -> vector (face/node/edge geometries)
+pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z --location node  # mesh -> vector
 ```
 
 - **`mesh info`** — summarise a UGRID mesh (`--json` for a machine-readable dump).
