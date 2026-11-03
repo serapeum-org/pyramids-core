@@ -18,9 +18,11 @@ engine methods.
 from __future__ import annotations
 
 import sys
+from unittest import mock
 
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
@@ -115,6 +117,44 @@ class TestEngineWiring:
         assert isinstance(nc.interop, Interop), "interop engine lost on update"
         # A façade call must still reach the live instance after the swap.
         assert nc.selection._ds.epsg == nc.epsg, "engine back-ref points at stale state"
+
+    def test_update_inplace_flushes_prior_handle(self):
+        """The NetCDF `_update_inplace` override flushes the prior handle (#815).
+
+        Test scenario:
+            The override reimplements the swap without chaining ``super()``, so it
+            must flush the handle it drops just like the base ``Dataset``. With the
+            prior raster replaced by a sentinel and a distinct new source swapped in,
+            ``FlushCache`` must be invoked on the prior handle exactly once.
+        """
+        nc = NetCDF.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0, 2.0, 0, -1.0), epsg=4326),
+            variable_name="data",
+        )
+        src_nc = NetCDF.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0, 2.0, 0, -1.0), epsg=4326),
+            variable_name="data",
+        )
+        prior = mock.MagicMock(name="prior_raster")
+        nc._raster = prior
+
+        nc._update_inplace(src_nc.raster)
+
+        prior.FlushCache.assert_called_once()
+        # The flush must not have aborted the override's swap: `_raster` must have
+        # been rebound off the sentinel to a real GDAL handle, and the engines
+        # re-bound to the surviving instance (the override's post-swap work ran).
+        assert nc._raster is not prior, (
+            "swap did not complete; handle still the sentinel"
+        )
+        assert isinstance(nc._raster, gdal.Dataset), (
+            "handle not rebound to a real dataset"
+        )
+        assert nc.selection._ds.epsg == nc.epsg, (
+            "engine back-ref stale after flush+swap"
+        )
 
     def test_facade_delegates_to_engine(self, mdim_container, monkeypatch):
         """The interop export façade forwards to ``self.interop``.
