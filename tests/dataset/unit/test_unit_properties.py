@@ -229,6 +229,9 @@ class TestUpdateInplace:
             handle, and the handle must be preserved across the no-op swap.
         """
         prev = single_band_dataset.raster
+        # This guards the `prev is not src` short-circuit (a future unconditional
+        # flush would regress it). Proof that the flush itself is present lives in
+        # test_update_inplace_flushes_prior_handle, which fails without the fix.
         with mock.patch.object(gdal.Dataset, "FlushCache") as flush:
             single_band_dataset._update_inplace(prev)
             assert flush.call_count == 0, (
@@ -236,6 +239,33 @@ class TestUpdateInplace:
             )
         assert single_band_dataset.raster is prev, (
             "same-handle update should preserve the existing GDAL handle"
+        )
+
+    def test_update_inplace_flush_failure_does_not_abort_swap(self, single_band_dataset):
+        """A RuntimeError from the prior handle's flush is swallowed; the swap still happens.
+
+        Test scenario:
+            The prior handle (a sentinel) raises ``RuntimeError`` from ``FlushCache``.
+            The in-place swap must complete without propagating the error and the new
+            source's dimensions must take effect — a deferred flush failure on the
+            handle being discarded cannot sink an op whose replacement raster is valid.
+        """
+        new_ds = Dataset.from_array(
+            np.ones((5, 6), dtype=np.float32),
+            geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
+        )
+        prior = mock.MagicMock(name="prior_raster")
+        prior.FlushCache.side_effect = RuntimeError("deferred write failed")
+        single_band_dataset._raster = prior
+
+        single_band_dataset._update_inplace(new_ds.raster)
+
+        prior.FlushCache.assert_called_once()
+        assert single_band_dataset.rows == 5, (
+            f"swap must complete despite a raising flush, rows={single_band_dataset.rows}"
+        )
+        assert single_band_dataset.columns == 6, (
+            "columns not updated after a swallowed flush error"
         )
 
 

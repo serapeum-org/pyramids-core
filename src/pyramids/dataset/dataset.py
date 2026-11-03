@@ -192,6 +192,38 @@ def _invalidate_cached_accessors(ds: Any) -> None:
         ds.__dict__.pop(name, None)
 
 
+def _flush_prior_handle(prev: "gdal.Dataset | None", src: "gdal.Dataset") -> None:
+    """Best-effort flush of the GDAL handle an in-place swap is about to drop.
+
+    Called at the top of `_update_inplace` (on both `Dataset` and `NetCDF`),
+    before the `__dict__.update` swap rebinds `self._raster`. It commits any
+    writes buffered on the handle that is about to lose its last reference,
+    instead of leaving that to refcounting/GC to finalize (issue #815).
+
+    The flush is skipped when `prev` is `None` or is the very handle being
+    swapped in (`prev is src`), so the live handle is never flushed and then
+    reused — the latter is the `epsg` setter / NetCDF ``_store_raster`` path,
+    which hands the current raster back as `src`.
+
+    A `RuntimeError` from the flush is swallowed (debug-logged, not raised):
+    the handle is being discarded and the operation's replacement raster is
+    already valid, so a deferred write/commit failure on the dropped handle must
+    not abort an otherwise-successful in-place op. This keeps #815 a no-behaviour
+    -change hardening on CPython, where the same flush previously happened at GC
+    with the error swallowed there.
+    """
+    if prev is None or prev is src:
+        return
+    try:
+        prev.FlushCache()
+    except RuntimeError as exc:
+        logging.getLogger(__name__).debug(
+            "FlushCache on the prior handle failed during an in-place swap; "
+            "the handle is being discarded, so the op continues: %s",
+            exc,
+        )
+
+
 def _accessor_name_conflict(name: str) -> bool:
     """Whether ``name`` would shadow an existing Dataset (or subclass) attribute.
 
@@ -797,7 +829,11 @@ class Dataset(RasterBase):
         ``_create_copy_and_reopen``). The ``prev is not src`` guard
         skips the no-op case where the operation handed back the very
         handle it was given, so the live handle is never flushed and
-        then reused.
+        then reused. The flush is best-effort: a ``RuntimeError`` from
+        it (a deferred write/commit failure on the discarded handle) is
+        debug-logged, not raised, so it cannot abort an in-place op
+        whose replacement raster is already valid — see
+        :func:`_flush_prior_handle`.
 
         after `__dict__.update`, the collaborators on
         `self` came from `new.__dict__` and point at the temporary
@@ -822,14 +858,9 @@ class Dataset(RasterBase):
                 ``None``, which reuses the dataset's current
                 ``self._access``.
         """
-        # Flush the prior handle before it is dropped by the dict swap below, so
-        # any buffered writes are committed and the handle is not relied upon to
-        # finalize purely via refcounting (matches `ops/io.py`
-        # `_create_copy_and_reopen`). `prev is not src` skips the no-op case
-        # where the operation handed back the same handle it was given.
-        prev = self._raster
-        if prev is not None and prev is not src:
-            prev.FlushCache()
+        # Flush the handle about to be dropped by the dict swap below (best-effort;
+        # skipped when src is that same handle). See `_flush_prior_handle`.
+        _flush_prior_handle(self._raster, src)
         new = type(self)(src, access=access or self._access)
         self.__dict__.update(new.__dict__)
         # `update` merges, so a lazily-set cache the fresh instance never
