@@ -27,11 +27,11 @@
 
 ### Feat
 
-- **ugrid**: add a mesh vector field, fix Mesh1d read/sort/n_face, normalise connectivity fills (#1395)
+- **ugrid**: add a mesh vector field, fix Network1d read/sort/n_face, normalise connectivity fills (#1395)
 - **feature**: add a conformance kit for pyramids.vector_drivers plugins (#1399)
 - **feature**: add pyramids.vector_drivers plugin hook for third-party vector readers (#1392)
 - **ugrid**: add CF time decoding, terrain, focal stats and along-time analysis (#1382)
-- **ugrid**: add 17 GIS-parity methods to MeshDataset (#1356)
+- **ugrid**: add 17 GIS-parity methods to UgridDataset (#1356)
 
 ## 0.71.0 (2026-10-20)
 
@@ -109,18 +109,18 @@ errors_as_nodata to tolerance=ReadTolerance(); method and fuse_func to
 fusion=GroupFusion(); rescale and cfg to read=AssetRead(); properties
 and eo_band_names to provenance=CubeProvenance(). A call that passed
 none of these flags is unaffected.
-- MeshDataset.stats is removed; use
+- UgridDataset.stats is removed; use
 summary(variables=[name]).loc[name] instead.
 
 ### Feat
 
 - **dataset**: add a line-transect sampler (Dataset.transect) (#1305)
-- **ugrid**: complete the UGRID parity surface on MeshDataset (#1283)
+- **ugrid**: complete the UGRID parity surface on UgridDataset (#1283)
 - **collection**: add median, mode, percentile and trend to reduce_time (#1304)
 - **stac**: implement the STAC feature backlog (STAC-00 … STAC-18) (#1279)
 - **stac**: enrich Items and widen asset, cube and catalog reads
 - **netcdf,ugrid**: shared summary, weighted quantile, and spline gap-fill (#1278)
-- **ugrid**: add analysis and along-time API to MeshDataset (#1270)
+- **ugrid**: add analysis and along-time API to UgridDataset (#1270)
 
 ## 0.66.0 (2026-10-09)
 
@@ -329,7 +329,7 @@ first input's grid, where it previously let them broadcast.
 
 - `Dataset.create_from_array`, `NetCDF.create_from_array` and
 `DatasetCollection.create_from_array` are renamed to `from_array`, and
-`MeshDataset.create_from_arrays` to `from_arrays`. All three constructors --
+`UgridDataset.create_from_arrays` to `from_arrays`. All three constructors --
 `from_array`, `create` and `create_empty` -- now take a single required
 `geo_ref: GeoReference` in place of the previous `geo`, `epsg`,
 `top_left_corner` and `cell_size` keyword subsets, and `driver_type` is
@@ -746,7 +746,7 @@ tail(0) returns an empty array.
     ugrid class model, conversion bridges, and submodule diagrams
 
   Documentation accuracy & hygiene:
-  - fix the MeshMetadata data_variables edge (it is a dict[str,str]
+  - fix the UgridMetadata data_variables edge (it is a dict[str,str]
     name->location map, not MeshVariable records)
   - clarify the metadata serializers are module-level functions, not
     methods on NetCDFMetadata
