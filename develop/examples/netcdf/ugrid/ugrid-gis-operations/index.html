@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5820,7 +5820,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -6149,14 +6149,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8986,7 +8986,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="ugrid-gis-operations">UGRID GIS Operations<a class="anchor-link" href="#ugrid-gis-operations">¶</a></h1><p>This notebook demonstrates the GIS analysis methods available on
-<code>UgridDataset</code>. These methods follow the kernel + facade pattern:
+<code>MeshDataset</code>. These methods follow the kernel + facade pattern:
 standalone numpy/scipy kernels in focused modules, wired through
 the <code>_UgridFacades</code> mixin.</p>
 <p>We build a small synthetic mesh so every cell runs fast and
@@ -9017,13 +9017,13 @@ the examples are self-contained (no external data files needed).</p>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-1">%matplotlib inline
 
 import numpy as np
 
-from pyramids.netcdf.ugrid import UgridDataset</div>
+from pyramids.netcdf.ugrid import MeshDataset</div>
 </div>
 </div>
 </div>
@@ -9082,7 +9082,7 @@ bathymetry data so every example below has something to work with.</p>
     <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
     <span class="n">node_x</span><span class="o">=</span><span class="n">node_x</span><span class="p">,</span>
     <span class="n">node_y</span><span class="o">=</span><span class="n">node_y</span><span class="p">,</span>
     <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">fnc</span><span class="p">,</span>
@@ -9116,7 +9116,7 @@ depth = np.array(
     dtype=np.float64,
 )
 
-ds = UgridDataset.from_arrays(
+ds = MeshDataset.from_arrays(
     node_x=node_x,
     node_y=node_y,
     face_node_connectivity=fnc,
@@ -9138,7 +9138,7 @@ print(f"Faces: {ds.n_face}, Nodes: {ds.n_node}, CRS: {ds.epsg}")</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>UgridDataset: (in-memory)
+<pre>MeshDataset: (in-memory)
   Mesh: mesh2d
   Nodes: 25, Faces: 16, Edges: 0
   Bounds: (0.0, 0.0, 400.0, 400.0)
@@ -9184,7 +9184,7 @@ declaration without touching the coordinates.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ds_default_crs</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ds_default_crs</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
     <span class="n">node_x</span><span class="o">=</span><span class="n">node_x</span><span class="p">,</span>
     <span class="n">node_y</span><span class="o">=</span><span class="n">node_y</span><span class="p">,</span>
     <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">fnc</span><span class="p">,</span>
@@ -9197,7 +9197,7 @@ declaration without touching the coordinates.</p>
 <span class="n">ds_default_crs</span><span class="o">.</span><span class="n">set_crs</span><span class="p">(</span><span class="n">epsg</span><span class="o">=</span><span class="mi">28992</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After set_crs:    CRS = EPSG:</span><span class="si">{</span><span class="n">ds_default_crs</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">ds_default_crs = UgridDataset.from_arrays(
+<div class="clipboard-copy-txt" id="cell-3">ds_default_crs = MeshDataset.from_arrays(
     node_x=node_x,
     node_y=node_y,
     face_node_connectivity=fnc,
@@ -10309,14 +10309,14 @@ ax.set_ylabel("Count")</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blob</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Serialized size: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
 
-<span class="n">ds_roundtrip</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
+<span class="n">ds_roundtrip</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Round-trip equals: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">ds_roundtrip</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Round-trip CRS:    </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-21">blob = ds.to_bytes()
 print(f"Serialized size: {len(blob)} bytes")
 
-ds_roundtrip = UgridDataset.from_bytes(blob)
+ds_roundtrip = MeshDataset.from_bytes(blob)
 print(f"Round-trip equals: {ds.equals(ds_roundtrip)}")
 print(f"Round-trip CRS:    {ds_roundtrip.epsg}")</div>
 </div>
@@ -10347,7 +10347,7 @@ Round-trip CRS:    28992
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="summary">Summary<a class="anchor-link" href="#summary">¶</a></h2><p>This notebook demonstrated 17 GIS-parity methods added to
-<code>UgridDataset</code>:</p>
+<code>MeshDataset</code>:</p>
 <table>
 <thead>
 <tr>
@@ -10399,7 +10399,7 @@ Round-trip CRS:    28992
 </tbody>
 </table>
 <p>For the complete list of all ~95 methods available on
-<code>UgridDataset</code> (including inherited mixin methods), see the
+<code>MeshDataset</code> (including inherited mixin methods), see the
 <a href="../../../reference/netcdf/ugrid/api-methods.md">Method Reference</a>.</p>
 </div>
 </div>

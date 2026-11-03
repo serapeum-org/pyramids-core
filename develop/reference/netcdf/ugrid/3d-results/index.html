@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://serapeum-org.github.io/pyramids-core/develop/reference/netcdf/ugrid/3d-results/">
       
       
-        <link rel="prev" href="../network/">
+        <link rel="prev" href="../mesh1d/">
       
       
         <link rel="next" href="../models/">
@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5372,7 +5372,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5701,14 +5701,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7546,7 +7546,7 @@
 
 <h1 id="3-d-results-fidelity-active-masks-and-ragged-layers"><a class="toclink" href="#3-d-results-fidelity-active-masks-and-ragged-layers">3-D results fidelity: active masks and ragged layers</a><a class="headerlink" href="#3-d-results-fidelity-active-masks-and-ragged-layers" title="Permanent link">#</a></h1>
 <p>Hydrodynamic mesh results carry two kinds of structure a plain <code>(time, layer, element)</code> block
-cannot represent faithfully. <code>UgridDataset</code> models both, additively — a 2-D mesh or a
+cannot represent faithfully. <code>MeshDataset</code> models both, additively — a 2-D mesh or a
 uniformly-layered one behaves exactly as before, and every accessor below is inert until the
 relevant structure is present.</p>
 <h2 id="per-timestep-active-wetdry-mask"><a class="toclink" href="#per-timestep-active-wetdry-mask">Per-timestep active (wet/dry) mask</a><a class="headerlink" href="#per-timestep-active-wetdry-mask" title="Permanent link">#</a></h2>
@@ -7556,9 +7556,9 @@ from one whose value is genuinely missing, and derived quantities such as a wett
 series are destroyed. pyramids keeps the mask as a first-class field on
 <a href="../models/"><code>MeshVariable</code></a>, separate from <code>nodata</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"flood_map.nc"</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"flood_map.nc"</span><span class="p">)</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># The mask as read — True = active/wet, never applied to the values on its own.</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"water_depth"</span><span class="p">)</span>        <span class="c1"># (n_element,) or (n_time, n_element), or None</span>
@@ -7586,7 +7586,7 @@ channel column may carry ten layers, a shallow one two. That data is ragged — 
 volume axis, and a variable on the new <code>location="volume"</code> is indexed through it.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">VolumeTopology</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"estuary_3d.nc"</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"estuary_3d.nc"</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">ds</span><span class="o">.</span><span class="n">volume_topology</span>          <span class="c1"># VolumeTopology, or None for a 2-D / uniform mesh</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">ds</span><span class="o">.</span><span class="n">n_volume</span>                 <span class="c1"># total volumes, or None</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">ds</span><span class="o">.</span><span class="n">n_layers</span>                 <span class="c1"># the MAX layer count over the columns (documented), for a ragged mesh</span>
@@ -7700,7 +7700,7 @@ and build a <code>VolumeTopology</code> for genuinely 3-D files instead of readi
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../network/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Network1d">
+          <a href="../mesh1d/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Mesh1d">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -7710,7 +7710,7 @@ and build a <code>VolumeTopology</code> for genuinely 3-D files instead of readi
                 Previous
               </span>
               <div class="md-ellipsis">
-                Network1d
+                Mesh1d
               </div>
             </div>
           </a>

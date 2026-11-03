@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5491,7 +5491,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5820,14 +5820,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8328,7 +8328,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="active-masks-and-ragged-3-d-layers-on-a-real-flood-mesh">Active masks and ragged 3-D layers on a real flood mesh<a class="anchor-link" href="#active-masks-and-ragged-3-d-layers-on-a-real-flood-mesh">¶</a></h1><p>Hydrodynamic mesh results carry two kinds of structure a plain <code>(time, layer, element)</code> block
-cannot hold faithfully, and <code>UgridDataset</code> now models both (additively — a 2-D or uniform mesh
+cannot hold faithfully, and <code>MeshDataset</code> now models both (additively — a 2-D or uniform mesh
 behaves exactly as before):</p>
 <ol>
 <li><strong>A per-timestep active (wet/dry) mask</strong> — a cell can be <em>wet</em> at one step and <em>dry</em> at the
@@ -8371,13 +8371,13 @@ rewrote that subset through pyramids' own UGRID writer so the sample is small an
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span><span class="p">,</span> <span class="n">VolumeTopology</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="n">VolumeTopology</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.plot</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColorBar</span>
 
 <span class="c1"># Notebook-relative path (the kernel's working directory is this notebook's folder).</span>
 <span class="n">DATA</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../../../../examples/data/ugrid/manzese_flood_mesh2d.nc"</span><span class="p">)</span>
 
-<span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"mesh :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">mesh_name</span><span class="p">,</span> <span class="s2">"| nodes:"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">n_node</span><span class="p">,</span> <span class="s2">"faces:"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">n_face</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"vars :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="p">)</span>
 <span class="n">depth</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span>
@@ -8399,13 +8399,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pyramids.netcdf.ugrid import UgridDataset, VolumeTopology
+from pyramids.netcdf.ugrid import MeshDataset, VolumeTopology
 from pyramids.plot import ColorBar
 
 # Notebook-relative path (the kernel's working directory is this notebook's folder).
 DATA = Path("../../../../examples/data/ugrid/manzese_flood_mesh2d.nc")
 
-ds = UgridDataset.read_file(DATA)
+ds = MeshDataset.read_file(DATA)
 print("mesh :", ds.mesh_name, "| nodes:", ds.n_node, "faces:", ds.n_face)
 print("vars :", ds.data_variable_names)
 depth = ds["mesh2d_waterdepth"]
@@ -8505,7 +8505,7 @@ plt.show()</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_4260/245703939.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+<pre>/tmp/ipykernel_3955/245703939.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre>
 </div>
@@ -8784,7 +8784,7 @@ the mask as a companion variable — distinct from the fill value — so a read 
 <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"manzese_masked.nc"</span>
     <span class="n">ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
-    <span class="n">back</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">back</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
     <span class="n">rt</span> <span class="o">=</span> <span class="n">back</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s2">"round-trip mask preserved:"</span><span class="p">,</span>
@@ -8805,7 +8805,7 @@ print("after sel_time_range(1, 4): mask -&gt;", rng.active_mask("mesh2d_waterdep
 with tempfile.TemporaryDirectory() as tmp:
     out = Path(tmp) / "manzese_masked.nc"
     ds.to_file(out)
-    back = UgridDataset.read_file(out)
+    back = MeshDataset.read_file(out)
     rt = back.active_mask("mesh2d_waterdepth")
     print(
         "round-trip mask preserved:",
@@ -8895,7 +8895,7 @@ is <em>ragged</em>. (A real 3-D driver populates the same object from the file's
 <span class="n">vol_var</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="s2">"volume"</span>
 <span class="n">vol_var</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"mesh2d_nVolumes"</span><span class="p">,)</span>
 <span class="n">vol_var</span><span class="o">.</span><span class="n">active</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="n">vol3d</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="p">{</span><span class="s2">"salinity"</span><span class="p">:</span> <span class="n">vol_var</span><span class="p">},</span> <span class="p">{},</span> <span class="n">volume_topology</span><span class="o">=</span><span class="n">topology</span><span class="p">)</span>
+<span class="n">vol3d</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="p">{</span><span class="s2">"salinity"</span><span class="p">:</span> <span class="n">vol_var</span><span class="p">},</span> <span class="p">{},</span> <span class="n">volume_topology</span><span class="o">=</span><span class="n">topology</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"n_volume:"</span><span class="p">,</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">n_volume</span><span class="p">,</span> <span class="s2">"| n_layers (max over columns):"</span><span class="p">,</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">n_layers</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7"># Work with the wettest step so the column depths are meaningful; every face gets at least one
@@ -8922,7 +8922,7 @@ vol_var = ds["mesh2d_waterdepth"].with_data(salinity)  # reuse mesh/location plu
 vol_var.location = "volume"
 vol_var.dimensions = ("mesh2d_nVolumes",)
 vol_var.active = None
-vol3d = UgridDataset(ds.mesh, {"salinity": vol_var}, {}, volume_topology=topology)
+vol3d = MeshDataset(ds.mesh, {"salinity": vol_var}, {}, volume_topology=topology)
 print("n_volume:", vol3d.n_volume, "| n_layers (max over columns):", vol3d.n_layers)</div>
 </div>
 </div>
@@ -9068,7 +9068,7 @@ the whole topology round-trips through NetCDF.</p>
 <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"manzese_3d.nc"</span>
     <span class="n">vol3d</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
-    <span class="n">back</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">back</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
     <span class="n">vt</span> <span class="o">=</span> <span class="n">back</span><span class="o">.</span><span class="n">volume_topology</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s2">"round-trip topology preserved:"</span><span class="p">,</span>
@@ -9086,7 +9086,7 @@ print(frame[["variable", "element", "layer", "value"]].head(8).to_string(index=F
 with tempfile.TemporaryDirectory() as tmp:
     out = Path(tmp) / "manzese_3d.nc"
     vol3d.to_file(out)
-    back = UgridDataset.read_file(out)
+    back = MeshDataset.read_file(out)
     vt = back.volume_topology
     print(
         "round-trip topology preserved:",
@@ -9132,7 +9132,7 @@ round-trip topology preserved: True | same layer counts: True | same n_volume: T
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="summary">Summary<a class="anchor-link" href="#summary">¶</a></h2><ul>
-<li>The <strong>active mask</strong> (<code>MeshVariable.active</code>, <code>UgridDataset.active_mask</code> / <code>masked_values</code>) keeps
+<li>The <strong>active mask</strong> (<code>MeshVariable.active</code>, <code>MeshDataset.active_mask</code> / <code>masked_values</code>) keeps
 per-step wet/dry status first-class and separate from <code>nodata</code>, so "dry" never masquerades as
 "missing" and quantities like a wetted-area time series stay recoverable. It rides through the
 shape-preserving selections and round-trips to NetCDF and xarray.</li>

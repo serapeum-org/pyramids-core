@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5363,7 +5363,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5692,14 +5692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7596,7 +7596,7 @@ Hold "Ctrl" to enable pan &amp; zoom
         direction LR
         DS["&lt;b&gt;pyramids.dataset&lt;/b&gt;&lt;br/&gt;Dataset · DatasetCollection · RasterBase&lt;br/&gt;engines · ops · cog · merge"]
         NC["&lt;b&gt;pyramids.netcdf&lt;/b&gt;&lt;br/&gt;NetCDF · CF conventions · kerchunk"]
-        UG["&lt;b&gt;pyramids.netcdf.ugrid&lt;/b&gt;&lt;br/&gt;UgridDataset · Mesh2d"]
+        UG["&lt;b&gt;pyramids.netcdf.ugrid&lt;/b&gt;&lt;br/&gt;MeshDataset · Mesh2d"]
         FC["&lt;b&gt;pyramids.feature&lt;/b&gt;&lt;br/&gt;FeatureCollection · Coords"]
     end
 
@@ -7652,7 +7652,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 <li><code>pyramids.netcdf</code></li>
 <li><code>NetCDF</code> (extends Dataset for NetCDF files, classic + multidimensional),
     plus CF-convention support, kerchunk side-cars, and an MFDataset reader.</li>
-<li><code>pyramids.netcdf.ugrid</code> — <code>UgridDataset</code> (UGRID-1.0 unstructured meshes,
+<li><code>pyramids.netcdf.ugrid</code> — <code>MeshDataset</code> (UGRID-1.0 unstructured meshes,
     triangles / quads / mixed) and an interpolation pathway to <code>Dataset</code>.</li>
 <li><code>pyramids.feature</code></li>
 <li><code>FeatureCollection</code> (GeoPandas + OGR DataSource hybrid) and the
@@ -7679,7 +7679,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 <li><code>pyramids.dataset.Dataset</code></li>
 <li><code>pyramids.dataset.DatasetCollection</code></li>
 <li><code>pyramids.netcdf.NetCDF</code></li>
-<li><code>pyramids.netcdf.ugrid.UgridDataset</code></li>
+<li><code>pyramids.netcdf.ugrid.MeshDataset</code></li>
 <li><code>pyramids.feature.FeatureCollection</code></li>
 </ul>
 <h2 id="representative-public-api"><a class="toclink" href="#representative-public-api">Representative Public API</a><a class="headerlink" href="#representative-public-api" title="Permanent link">#</a></h2>
@@ -7710,7 +7710,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 <ul>
 <li>External data (GeoTIFF / ASC / NetCDF / Vector) → <code>pyramids._io</code> /
   <code>pyramids.base.remote</code> parsers → <code>Dataset</code> / <code>NetCDF</code> / <code>FeatureCollection</code> /
-  <code>UgridDataset</code> instances.</li>
+  <code>MeshDataset</code> instances.</li>
 <li><code>DatasetCollection</code> orchestrates collections of <code>Dataset</code> for temporal
   / spatial ops; the cube is lazy by default (per-timestep gdal handles
   open on demand, dask graph for time-axis ops).</li>
@@ -7771,7 +7771,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     +read_array(band, window, unpack)
     +time_stamp
   }
-  class UgridDataset {
+  class MeshDataset {
     +mesh
     +read_file(path)
     +to_dataset(...)
@@ -7820,7 +7820,7 @@ Hold "Ctrl" to enable pan &amp; zoom
   Dataset *-- "1" Vectorize : ds.vectorize
   Dataset *-- "1" COG : ds.cog
   DatasetCollection o-- "N" Dataset : per-timestep
-  UgridDataset ..&gt; Dataset : interpolate
+  MeshDataset ..&gt; Dataset : interpolate
   FeatureCollection ..&gt; Dataset : rasterize
   Dataset ..&gt; FeatureCollection : vectorize</code></pre> 
     

@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5491,7 +5491,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5820,14 +5820,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8327,7 +8327,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="ugrid-meshes-and-dask">UGRID meshes and Dask<a class="anchor-link" href="#ugrid-meshes-and-dask">¶</a></h1><p><strong><code>UgridDataset</code> has no native <code>dask.array</code> path.</strong> Unstructured meshes are not rasters: the
+<h1 id="ugrid-meshes-and-dask">UGRID meshes and Dask<a class="anchor-link" href="#ugrid-meshes-and-dask">¶</a></h1><p><strong><code>MeshDataset</code> has no native <code>dask.array</code> path.</strong> Unstructured meshes are not rasters: the
 topology (nodes, faces, edges) and the data variables are loaded as eager NumPy arrays,
 because almost every mesh operation needs the whole connectivity at once.</p>
 <p>The way you bring Dask to mesh data is to <strong>bridge to a raster</strong>: interpolate a variable onto
@@ -8427,14 +8427,14 @@ DATA.is_dir()</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
 
-<span class="n">u</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'netcdf'</span> <span class="o">/</span> <span class="s1">'ugrid'</span> <span class="o">/</span> <span class="s1">'ugrid.nc'</span><span class="p">)</span>
+<span class="n">u</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'netcdf'</span> <span class="o">/</span> <span class="s1">'ugrid'</span> <span class="o">/</span> <span class="s1">'ugrid.nc'</span><span class="p">)</span>
 <span class="n">u</span><span class="o">.</span><span class="n">n_node</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_face</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_edge</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">data_variable_names</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-2">from pyramids.netcdf.ugrid.dataset import UgridDataset
+<div class="clipboard-copy-txt" id="cell-2">from pyramids.netcdf.ugrid.dataset import MeshDataset
 
-u = UgridDataset.read_file(DATA / 'netcdf' / 'ugrid' / 'ugrid.nc')
+u = MeshDataset.read_file(DATA / 'netcdf' / 'ugrid' / 'ugrid.nc')
 u.n_node, u.n_face, u.n_edge, u.data_variable_names</div>
 </div>
 </div>
@@ -8624,7 +8624,7 @@ shows what the bridge produced before we hand it to the lazy raster path.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7feac22c4590&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f5133e68590&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

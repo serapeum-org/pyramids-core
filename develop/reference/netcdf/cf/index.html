@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5588,7 +5588,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5917,14 +5917,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../ugrid/network/" class="md-nav__link">
+      <a href="../ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7799,7 +7799,7 @@
 <h1 id="cf-conventions-module"><a class="toclink" href="#cf-conventions-module">CF Conventions Module</a><a class="headerlink" href="#cf-conventions-module" title="Permanent link">#</a></h1>
 <p>The <code>cf</code> module provides shared infrastructure for reading and writing
 CF (Climate and Forecast) convention attributes. It is used by both the
-structured <code>NetCDF</code> class and the unstructured <code>UgridDataset</code> class.</p>
+structured <code>NetCDF</code> class and the unstructured <code>MeshDataset</code> class.</p>
 <h2 id="key-capabilities"><a class="toclink" href="#key-capabilities">Key Capabilities</a><a class="headerlink" href="#key-capabilities" title="Permanent link">#</a></h2>
 <ul>
 <li><strong>Variable classification</strong>: Detect coordinate, data, mesh topology,
@@ -7818,7 +7818,7 @@ structured <code>NetCDF</code> class and the unstructured <code>UgridDataset</co
 </ul>
 <h2 id="capability-map"><a class="toclink" href="#capability-map">Capability map</a><a class="headerlink" href="#capability-map" title="Permanent link">#</a></h2>
 <p>The <code>cf</code> module is a flat collection of helpers (no classes) shared by the structured <code>NetCDF</code> reader
-and the unstructured <code>UgridDataset</code>. They group into five roles — classification, CRS translation,
+and the unstructured <code>MeshDataset</code>. They group into five roles — classification, CRS translation,
 convention parsing, attribute writing, and value decoding/validation:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
@@ -7845,7 +7845,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     </nav>
     <pre class="mermaid"><code>flowchart TB
     NC["NetCDF"] --&gt; CF
-    UG["UgridDataset"] --&gt; CF
+    UG["MeshDataset"] --&gt; CF
     subgraph CF["cf module"]
         direction TB
         CLS["classify_variables()&lt;br/&gt;data · coordinate · grid_mapping · bounds&lt;br/&gt;mesh_topology · connectivity · …"]

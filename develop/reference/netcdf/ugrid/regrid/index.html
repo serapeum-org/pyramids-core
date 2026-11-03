@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5372,7 +5372,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5809,14 +5809,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7639,7 +7639,7 @@ comes back as the declared no-data value.</p>
 <p>This module is the compute kernel behind the UGRID regridding surface. It holds
 pure <code>numpy</code> / <code>scipy</code> / <code>shapely</code> implementations with <strong>no</strong> heavy
 geometry dependency (no numba, no cell-tree), so every function here runs on a
-core install. The :class:<code>~pyramids.netcdf.ugrid.dataset.UgridDataset</code> facades
+core install. The :class:<code>~pyramids.netcdf.ugrid.dataset.MeshDataset</code> facades
 (<code>sample</code> / <code>rasterize_like</code> / <code>regrid</code> / <code>interp_time</code>) are thin
 wrappers that marshal a :class:<code>MeshVariable</code>'s array and location into these
 functions and rewrap the result.</p>
@@ -8941,7 +8941,7 @@ the target reaches beyond the source.</p>
     <div class="doc doc-contents ">
 
         <p>Sample mesh <code>values</code> at arbitrary points.</p>
-<p>The compute kernel the <code>UgridDataset.sample</code> facade wires into. It resolves each
+<p>The compute kernel the <code>MeshDataset.sample</code> facade wires into. It resolves each
 query point to a mesh element and gathers (or interpolates) the value there. It is
 temporal-aware: when <code>values</code> is 2-D <code>(n_time, n_elements)</code> the leading time axis
 is preserved and the result is <code>(n_time, n_points)</code>.</p>
@@ -9226,7 +9226,7 @@ triangular node data, falling back to <code>"nearest"</code> otherwise).</p>
 <a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="w">    </span><span class="sd">"""Sample mesh ``values`` at arbitrary points.</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82"></a>
-<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    The compute kernel the ``UgridDataset.sample`` facade wires into. It resolves each</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    The compute kernel the ``MeshDataset.sample`` facade wires into. It resolves each</span>
 <a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">    query point to a mesh element and gathers (or interpolates) the value there. It is</span>
 <a id="__codelineno-0-85" name="__codelineno-0-85"></a><span class="sd">    temporal-aware: when ``values`` is 2-D ``(n_time, n_elements)`` the leading time axis</span>
 <a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">    is preserved and the result is ``(n_time, n_points)``.</span>
@@ -9338,7 +9338,7 @@ machinery is reused via :func:<code>~pyramids.netcdf.ugrid.interpolation._get_so
             <td>
               <div class="doc-md-description">
                 <p>Data on the mesh. A temporal <code>(n_time, n_elements)</code> array uses the first
-time step, matching <code>UgridDataset.to_dataset</code>.</p>
+time step, matching <code>MeshDataset.to_dataset</code>.</p>
               </div>
             </td>
             <td>
@@ -9675,7 +9675,7 @@ reference raster that declares no CRS to reproject into.</p>
 <a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">        mesh: Source mesh topology.</span>
 <a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="sd">        values: Data on the mesh. A temporal ``(n_time, n_elements)`` array uses the first</span>
-<a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">            time step, matching ``UgridDataset.to_dataset``.</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">            time step, matching ``MeshDataset.to_dataset``.</span>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">        other_grid: Reference raster whose grid the output matches.</span>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">        location: Mesh location the values live on — ``"face"``, ``"node"`` or ``"edge"``.</span>
 <a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="sd">        method: ``"nearest"``, ``"linear"`` or ``"idw"`` (inverse-distance-weighted).</span>
@@ -9820,7 +9820,7 @@ reference raster that declares no CRS to reproject into.</p>
         <p>Interpolate a temporal variable onto new time coordinates.</p>
 <p>Distinct from gap-filling: this blends between existing time steps at requested labels.
 A field that is linear in time is reproduced exactly at any interior label. This is the
-kernel behind the <code>UgridDataset.interp_time</code> facade, which supplies the variable's own
+kernel behind the <code>MeshDataset.interp_time</code> facade, which supplies the variable's own
 time axis as <code>axis</code>.</p>
 
 
@@ -10073,7 +10073,7 @@ time axis as <code>axis</code>.</p>
 <a id="__codelineno-0-434" name="__codelineno-0-434"></a>
 <a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">    Distinct from gap-filling: this blends between existing time steps at requested labels.</span>
 <a id="__codelineno-0-436" name="__codelineno-0-436"></a><span class="sd">    A field that is linear in time is reproduced exactly at any interior label. This is the</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a><span class="sd">    kernel behind the ``UgridDataset.interp_time`` facade, which supplies the variable's own</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a><span class="sd">    kernel behind the ``MeshDataset.interp_time`` facade, which supplies the variable's own</span>
 <a id="__codelineno-0-438" name="__codelineno-0-438"></a><span class="sd">    time axis as ``axis``.</span>
 <a id="__codelineno-0-439" name="__codelineno-0-439"></a>
 <a id="__codelineno-0-440" name="__codelineno-0-440"></a><span class="sd">    Args:</span>

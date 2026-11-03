@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5601,7 +5601,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5930,14 +5930,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8593,8 +8593,8 @@ output covering the UGRID convention NC river estuary in the Netherlands.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MeshDataset</span><span class="p">,</span>
     <span class="n">MeshSpatialIndex</span><span class="p">,</span>
-    <span class="n">UgridDataset</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-1">from pathlib import Path
@@ -8603,8 +8603,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pyramids.netcdf.ugrid import (
+    MeshDataset,
     MeshSpatialIndex,
-    UgridDataset,
 )</div>
 </div>
 </div>
@@ -8618,7 +8618,7 @@ from pyramids.netcdf.ugrid import (
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="1-reading-a-ugrid-netcdf-file">1. Reading a UGRID NetCDF File<a class="anchor-link" href="#1-reading-a-ugrid-netcdf-file">¶</a></h2><p><code>UgridDataset.read_file()</code> automatically detects the mesh topology,
+<h2 id="1-reading-a-ugrid-netcdf-file">1. Reading a UGRID NetCDF File<a class="anchor-link" href="#1-reading-a-ugrid-netcdf-file">¶</a></h2><p><code>MeshDataset.read_file()</code> automatically detects the mesh topology,
 separates data variables from coordinate/connectivity arrays, and
 builds the <code>Mesh2d</code> object.</p>
 </div>
@@ -8644,11 +8644,11 @@ builds the <code>Mesh2d</code> object.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ugrid_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../../../../examples/data/netcdf/ugrid/ugrid.nc"</span><span class="p">)</span>
-<span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">ugrid_path</span><span class="p">)</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">ugrid_path</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">ugrid_path = Path("../../../../examples/data/netcdf/ugrid/ugrid.nc")
-ds = UgridDataset.read_file(ugrid_path)
+ds = MeshDataset.read_file(ugrid_path)
 print(ds)</div>
 </div>
 </div>
@@ -9119,8 +9119,8 @@ print(f"Velocity range: {velocity.min():.2f} to {velocity.max():.2f} m/s")</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Build a UgridDataset with the synthetic data</span>
-<span class="n">synth_ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Build a MeshDataset with the synthetic data</span>
+<span class="n">synth_ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
     <span class="n">node_x</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">node_x</span><span class="p">,</span>
     <span class="n">node_y</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">node_y</span><span class="p">,</span>
     <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">face_node_connectivity</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
@@ -9137,8 +9137,8 @@ print(f"Velocity range: {velocity.min():.2f} to {velocity.max():.2f} m/s")</div>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">synth_ds</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-11"># Build a UgridDataset with the synthetic data
-synth_ds = UgridDataset.from_arrays(
+<div class="clipboard-copy-txt" id="cell-11"># Build a MeshDataset with the synthetic data
+synth_ds = MeshDataset.from_arrays(
     node_x=mesh.node_x,
     node_y=mesh.node_y,
     face_node_connectivity=mesh.face_node_connectivity.data,
@@ -9927,7 +9927,7 @@ print(
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Written to </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">out_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> KB)"</span><span class="p">)</span>
 
 <span class="c1"># Read it back and verify</span>
-<span class="n">ds_roundtrip</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
+<span class="n">ds_roundtrip</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Round-trip verification:"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Nodes: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2"> (expected </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Faces: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> (expected </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
@@ -9939,7 +9939,7 @@ synth_ds.to_file(out_path)
 print(f"Written to {out_path} ({out_path.stat().st_size / 1024:.0f} KB)")
 
 # Read it back and verify
-ds_roundtrip = UgridDataset.read_file(out_path)
+ds_roundtrip = MeshDataset.read_file(out_path)
 print("\nRound-trip verification:")
 print(f"  Nodes: {ds_roundtrip.n_node} (expected {synth_ds.n_node})")
 print(f"  Faces: {ds_roundtrip.n_face} (expected {synth_ds.n_face})")
@@ -10040,8 +10040,8 @@ print(f"Range: [{water_levels.min():.2f}, {water_levels.max():.2f}] m")</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Create a temporal UgridDataset</span>
-<span class="n">temporal_ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Create a temporal MeshDataset</span>
+<span class="n">temporal_ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
     <span class="n">node_x</span><span class="o">=</span><span class="n">subset</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">node_x</span><span class="p">,</span>
     <span class="n">node_y</span><span class="o">=</span><span class="n">subset</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">node_y</span><span class="p">,</span>
     <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">subset</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">face_node_connectivity</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
@@ -10055,8 +10055,8 @@ print(f"Range: [{water_levels.min():.2f}, {water_levels.max():.2f}] m")</div>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Time steps: </span><span class="si">{</span><span class="n">wl_var</span><span class="o">.</span><span class="n">n_time_steps</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Shape: </span><span class="si">{</span><span class="n">wl_var</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-29"># Create a temporal UgridDataset
-temporal_ds = UgridDataset.from_arrays(
+<div class="clipboard-copy-txt" id="cell-29"># Create a temporal MeshDataset
+temporal_ds = MeshDataset.from_arrays(
     node_x=subset.mesh.node_x,
     node_y=subset.mesh.node_y,
     face_node_connectivity=subset.mesh.face_node_connectivity.data,
@@ -10287,7 +10287,7 @@ HTML(anim.to_jshtml())</div>
 <tbody>
 <tr>
 <td>Read</td>
-<td><code>UgridDataset.read_file()</code></td>
+<td><code>MeshDataset.read_file()</code></td>
 <td>Auto-detects UGRID topology</td>
 </tr>
 <tr>

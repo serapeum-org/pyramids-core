@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5441,7 +5441,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5770,14 +5770,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8227,7 +8227,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="ugrid-unstructured-mesh-files">UGRID unstructured-mesh files<a class="anchor-link" href="#ugrid-unstructured-mesh-files">¶</a></h1><p>Unstructured meshes follow the UGRID convention and use the <code>UgridDataset</code> API (nodes, faces, connectivity) rather than the gridded raster API.</p>
+<h1 id="ugrid-unstructured-mesh-files">UGRID unstructured-mesh files<a class="anchor-link" href="#ugrid-unstructured-mesh-files">¶</a></h1><p>Unstructured meshes follow the UGRID convention and use the <code>MeshDataset</code> API (nodes, faces, connectivity) rather than the gridded raster API.</p>
 </div>
 </div>
 </div>
@@ -8255,7 +8255,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">box</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetCDF</span><span class="p">,</span> <span class="n">UgridDataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="n">NetCDF</span>
 
 <span class="n">DATA</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">'../../../../examples/data/netcdf/samples'</span><span class="p">)</span>
 </pre></div>
@@ -8264,7 +8264,7 @@ from pathlib import Path
 
 from shapely.geometry import Polygon, box
 
-from pyramids.netcdf import NetCDF, UgridDataset
+from pyramids.netcdf import MeshDataset, NetCDF
 
 DATA = Path('../../../../examples/data/netcdf/samples')</div>
 </div>
@@ -8279,7 +8279,7 @@ DATA = Path('../../../../examples/data/netcdf/samples')</div>
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Cropping a mesh.</strong> <code>UgridDataset.crop</code> spatially subsets an unstructured mesh: it keeps the faces that fall inside a polygon (<code>mask=</code>) or a bounding box (<code>bbox=</code>) — the mesh analogue of the affine raster crop shown in <code>01</code>–<code>03</code>. Pass <code>touch=True</code> to keep every face that touches the region, or <code>touch=False</code> to keep only the faces fully inside it. The result is a smaller <code>UgridDataset</code> with the surviving nodes/faces (and any face/node data) renumbered.</p>
+<p><strong>Cropping a mesh.</strong> <code>MeshDataset.crop</code> spatially subsets an unstructured mesh: it keeps the faces that fall inside a polygon (<code>mask=</code>) or a bounding box (<code>bbox=</code>) — the mesh analogue of the affine raster crop shown in <code>01</code>–<code>03</code>. Pass <code>touch=True</code> to keep every face that touches the region, or <code>touch=False</code> to keep only the faces fully inside it. The result is a smaller <code>MeshDataset</code> with the surviving nodes/faces (and any face/node data) renumbered.</p>
 </div>
 </div>
 </div>
@@ -8324,10 +8324,10 @@ DATA = Path('../../../../examples/data/netcdf/samples')</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ug</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'ugrid__6v__1d5-2d1.nc'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ug</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'ugrid__6v__1d5-2d1.nc'</span><span class="p">)</span>
 <span class="n">ug</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-2">ug = UgridDataset.read_file(DATA / 'ugrid__6v__1d5-2d1.nc')
+<div class="clipboard-copy-txt" id="cell-2">ug = MeshDataset.read_file(DATA / 'ugrid__6v__1d5-2d1.nc')
 ug</div>
 </div>
 </div>
@@ -8340,7 +8340,7 @@ ug</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[2]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>UgridDataset(mesh='mesh2d', n_node=16, n_face=4, n_edge=0, variables=[])</pre>
+<pre>MeshDataset(mesh='mesh2d', n_node=16, n_face=4, n_edge=0, variables=[])</pre>
 </div>
 </div>
 </div>
@@ -8395,7 +8395,7 @@ print('bounds:', ug.bounds)</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>nodes: 16 | faces: 4 | edges: 0
-mesh: &lt;pyramids.netcdf.ugrid.mesh.Mesh2d object at 0x7fd803b917f0&gt;
+mesh: &lt;pyramids.netcdf.ugrid.mesh.Mesh2d object at 0x7ff5047697f0&gt;
 bounds: (-0.3252372145652771, -0.26931479573249817, 0.38283485174179077, 0.2782424986362457)
 </pre>
 </div>
@@ -8447,7 +8447,7 @@ bounds: (-0.3252372145652771, -0.26931479573249817, 0.38283485174179077, 0.27824
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7fd8037397f0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7ff50430d7f0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8715,7 +8715,7 @@ print('faces before:', ug.n_face, '| faces after crop:', cropped.n_face)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7fd7fb0fbc50&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7ff4fbcefed0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8990,7 +8990,7 @@ print('faces inside the triangle:', triangle_crop.n_face)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[14]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7fd7fafbf750&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7ff4fbbb79d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
