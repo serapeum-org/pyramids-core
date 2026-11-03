@@ -19,11 +19,13 @@ class TestGdalConfig:
     def test_process_wide_option_accepted(self):
         """A process-wide-only option (GDAL_CACHEMAX) is applied without raising.
 
-        GDAL consumes GDAL_CACHEMAX specially so GetConfigOption does not echo it;
-        the point is that the scoped manager accepts it (thread_local=False) rather
-        than rejecting it the way a thread-local scope would. A companion echo-able
-        option proves the manager body actually mutates GDAL state (and restores
-        it), so the test is sensitive to the manager body, not just the built dict.
+        GDAL normalises/caches GDAL_CACHEMAX, so its echoed value is unreliable
+        (setting "256" can still read back "512"); this test deliberately does not
+        assert it. The point is that the scoped manager accepts it
+        (thread_local=False) rather than rejecting it the way a thread-local scope
+        would. A companion echo-able option (GDAL_HTTP_TIMEOUT) proves the manager
+        body actually mutates GDAL state and restores it, so the test is sensitive
+        to the manager body, not just the built dict.
         """
         prior = gdal.GetConfigOption("GDAL_HTTP_TIMEOUT")
         with gdal_config(GDAL_CACHEMAX="512", GDAL_HTTP_TIMEOUT="77") as applied:

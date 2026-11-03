@@ -42,10 +42,11 @@ class TestMemoryFile:
         data = _raster_bytes()
         with MemoryFile(data) as mf:
             back = mf.read()
-        reopened = MemoryFile(back).open()
-        assert np.array_equal(
-            reopened.read_array(), Dataset.from_bytes(data).read_array()
-        )
+        with MemoryFile(back) as mf2:
+            reopened = mf2.open()
+            assert np.array_equal(
+                reopened.read_array(), Dataset.from_bytes(data).read_array()
+            )
 
     def test_close_unlinks_buffer(self):
         """After close() the backing /vsimem/ buffer is gone and the handle is unusable."""

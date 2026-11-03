@@ -1,6 +1,7 @@
 """Tests for `Window.covering` (window covering a geometry's bounding box)."""
 
 import geopandas as gpd
+import numpy as np
 import pytest
 from shapely.geometry import Polygon, box
 
@@ -29,6 +30,16 @@ class TestWindowCovering:
             geometry=[box(1.0, 1.0, 2.0, 2.0), box(2.0, 2.0, 3.0, 3.0)]
         )
         assert Window.covering(gdf, GT) == Window.from_bounds((1.0, 1.0, 3.0, 3.0), GT)
+
+    def test_geoseries_total_bounds(self):
+        """A GeoSeries also routes through total_bounds."""
+        gs = gpd.GeoSeries([box(1.0, 1.0, 2.0, 2.0), box(2.0, 2.0, 3.0, 3.0)])
+        assert Window.covering(gs, GT) == Window.from_bounds((1.0, 1.0, 3.0, 3.0), GT)
+
+    def test_numpy_array_bbox(self):
+        """A numpy array bbox falls through to the plain-sequence branch."""
+        bbox = np.array([1.0, 1.0, 3.0, 3.0])
+        assert Window.covering(bbox, GT) == Window.from_bounds((1.0, 1.0, 3.0, 3.0), GT)
 
     def test_fully_covers(self):
         """A non-aligned bbox is fully contained by the covering window's bounds."""
