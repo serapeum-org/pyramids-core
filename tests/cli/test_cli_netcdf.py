@@ -99,7 +99,7 @@ class TestNcNonRasterGuards:
         )
         err = capsys.readouterr().err
         assert rc == 1
-        assert "not a selectable raster variable" in err
+        assert "not exposable as a raster plane" in err
         assert "Traceback" not in err
 
     def test_sel_selection_not_writable(self, tmp_path, monkeypatch, capsys):

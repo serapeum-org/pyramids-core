@@ -38,7 +38,7 @@ def _cmd_nc_info(args: argparse.Namespace) -> int:
         "dimensions": dict(nc.dimension_sizes),
         "epsg": nc.epsg,
         "bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)],
-        "time_steps": 0 if time_var is None else len(time_var),
+        "time_steps": 0 if not time_var else len(time_var),
         "time_start": None if not time_var else time_var[0],
         "time_end": None if not time_var else time_var[-1],
     }
@@ -116,8 +116,8 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
 
     Raises:
         ValueError: ``--var`` names an unknown variable (raised by ``get_variable``),
-            names one GDAL exposes as a non-selectable labeled array, or the
-            selection cannot be written to ``output``.
+            names one GDAL exposes as a labeled array rather than a raster plane, or
+            the selection cannot be written to ``output``.
     """
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
@@ -128,7 +128,8 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
         obj = nc.get_variable(args.var)
         if not hasattr(obj, "sel"):
             raise ValueError(
-                f"variable {args.var!r} is not a selectable raster variable"
+                f"variable {args.var!r} is not exposable as a raster plane "
+                f"(GDAL returned a labeled array); it cannot be selected."
             )
     selected = obj.sel(time=args.time)
     if not hasattr(selected, "to_file"):
