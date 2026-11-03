@@ -144,8 +144,8 @@ pyramids nc crop climate.nc aoi.nc --bbox 4.1 51.9 4.6 52.2  # spatially subset 
 ```
 
 - **`nc info`** — summarise a file (variables, dimensions, CRS, bounds, time steps); `--json` for a dump.
-- **`nc sel`** — select by the `--time` label (as shown by `nc info`); `--var` narrows to one variable,
-  `--method nearest|ffill|bfill` allows an inexact time match. A `.nc` output keeps it a NetCDF.
+- **`nc sel`** — select one step by its exact `--time` label (as shown by `nc info`); `--var` narrows to one
+  variable first. A `.nc` output keeps it a NetCDF. `info`/`sel` assume the CF-standard time axis named `time`.
 - **`nc crop`** — spatially subset to `--bbox MINX MINY MAXX MAXY` (file CRS); errors cleanly if the window
   overlaps no valid data.
 

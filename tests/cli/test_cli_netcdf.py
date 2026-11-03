@@ -155,30 +155,6 @@ class TestNcSel:
         assert rc == 0
         assert Dataset.read_file(out) is not None
 
-    def test_method_on_date_label_errors_cleanly(self, tmp_path, capsys):
-        """--method with a date label is forwarded and fails with a clean error.
-
-        ``--method nearest`` needs a numeric selector; a date label such as
-        ``2000-05-16`` is not one, so ``NetCDF.sel`` raises and the CLI reports it as
-        a one-line error rather than a traceback (the method is passed through).
-        """
-        rc = main(
-            [
-                "nc",
-                "sel",
-                str(_NC_TIME),
-                str(tmp_path / "o.nc"),
-                "--time",
-                "2000-05-16",
-                "--method",
-                "nearest",
-            ]
-        )
-        err = capsys.readouterr().err
-        assert rc == 1
-        assert err.startswith("error: ")
-        assert "Traceback" not in err
-
     def test_refuses_existing(self, tmp_path):
         """A second sel without --overwrite is refused."""
         out = str(tmp_path / "sel.nc")

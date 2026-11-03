@@ -2,8 +2,9 @@
 
 Thin wrappers over :class:`pyramids.netcdf.NetCDF`: summarise a file (`info`), list
 the variables GDAL can expose as raster planes (`list-vars`), extract one to a
-raster (`extract`), select along a dimension such as time (`sel`), and spatially
-subset (`crop`). No multidim logic lives here — reads go through GDAL as the
+raster (`extract`), select one step of the CF ``time`` axis (`sel`), and spatially
+subset (`crop`). ``info`` and ``sel`` assume the time axis is the CF-standard one
+named ``time``. No multidim logic lives here — reads go through GDAL as the
 ``NetCDF`` class already does (never xarray).
 """
 
@@ -97,15 +98,15 @@ def _cmd_nc_extract(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_sel(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc sel`` — select along time into a new NetCDF.
+    """Handle ``pyramids nc sel`` — select one ``time`` step into a new NetCDF.
 
-    Selects by the ``time`` label (as printed by ``nc info`` / ``list-vars``);
-    ``--var`` optionally narrows to one variable first. Writes the selection to
-    ``output`` (a ``.nc`` path keeps it a NetCDF; another extension re-encodes it).
+    Selects exactly by the ``time`` label (as printed by ``nc info``); ``--var``
+    optionally narrows to one variable first. Writes the selection to ``output``
+    (a ``.nc`` path keeps it a NetCDF; another extension re-encodes it). The time
+    axis must be the CF-standard one named ``time``.
 
     Args:
-        args: Parsed args with ``file``, ``output``, ``time``, ``var``, ``method``,
-            ``overwrite``.
+        args: Parsed args with ``file``, ``output``, ``time``, ``var``, ``overwrite``.
 
     Returns:
         int: ``0`` on success.
@@ -129,7 +130,7 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
             raise ValueError(
                 f"variable {args.var!r} is not a selectable raster variable"
             )
-    selected = obj.sel(time=args.time, method=args.method)
+    selected = obj.sel(time=args.time)
     if not hasattr(selected, "to_file"):
         raise ValueError(
             f"the selection of {args.file!r} cannot be written to {args.output!r}"
@@ -194,11 +195,6 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         "--time", required=True, help="time label to select (see 'nc info')"
     )
     nc_sel.add_argument("--var", help="narrow to one variable before selecting")
-    nc_sel.add_argument(
-        "--method",
-        choices=("nearest", "ffill", "bfill"),
-        help="inexact match for --time (default: exact)",
-    )
     nc_sel.add_argument(
         "--overwrite", action="store_true", help="replace the output if it exists"
     )
