@@ -21,7 +21,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-FIXTURE = Path(__file__).parent / "data" / "netcdf" / "cf__6v__1d2-2d4__geog__y-asc.nc"
+FIXTURE = Path("tests/data") / "netcdf" / "cf__6v__1d2-2d4__geog__y-asc.nc"
 
 
 class TestNetcdfResourcesReachTheNetcdfReader:
@@ -110,7 +110,7 @@ class TestTheContainerReplacesAFlatBandStack:
     change is invisible there; this pins it where it shows.
     """
 
-    FIXTURE = Path(__file__).parent / "data" / "netcdf" / "cf__5v__1d4-4d1__y-asc.nc"
+    FIXTURE = Path("tests/data") / "netcdf" / "cf__5v__1d4-4d1__y-asc.nc"
 
     def test_the_container_names_its_variables(self):
         """The gain: the variables are addressable instead of anonymous bands.
