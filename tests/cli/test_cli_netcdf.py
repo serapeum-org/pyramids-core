@@ -17,8 +17,10 @@ pytestmark = pytest.mark.core
 _DATA = Path(__file__).parents[1] / "data" / "netcdf"
 # A gridded geographic CF file (Band1..; crop-friendly; no time axis).
 _NC = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
-# A CF file that carries a time axis (one step: 2000-05-16).
+# A CF file that carries a time axis (one step: 2000-05-16) and several variables.
 _NC_TIME = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
+# A CF file with a multi-step time axis (24 monthly steps) for selection tests.
+_NC_MULTI = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
 
 
 class TestNcListVars:
@@ -140,20 +142,27 @@ class TestNcInfo:
 class TestNcSel:
     """`pyramids nc sel`."""
 
-    def test_sel_by_time_writes_netcdf(self, tmp_path):
-        """--time selects the step and writes a readable NetCDF."""
+    def test_sel_reduces_time_axis_to_one_step(self, tmp_path):
+        """--time selects a single step: the output's time axis shrinks to it."""
         out = str(tmp_path / "sel.nc")
-        assert main(["nc", "sel", str(_NC_TIME), out, "--time", "2000-05-16"]) == 0
-        assert Dataset.read_file(out) is not None
+        source_steps = len(NetCDF.read_file(str(_NC_MULTI)).get_time_variable())
+        assert source_steps > 1, "fixture must have multiple time steps"
+        assert main(["nc", "sel", str(_NC_MULTI), out, "--time", "2001-02-16"]) == 0
+        out_steps = len(NetCDF.read_file(out).get_time_variable())
+        assert out_steps == 1, f"sel should keep one step, got {out_steps}"
+        assert out_steps < source_steps
 
-    def test_var_narrows_before_selecting(self, tmp_path):
-        """--var narrows to one variable before the time selection and still writes."""
+    def test_var_narrows_to_one_variable(self, tmp_path):
+        """--var narrows the output to a single variable (the source has several)."""
         out = str(tmp_path / "tas.nc")
+        source_vars = len(list(NetCDF.read_file(str(_NC_TIME)).variable_names))
+        assert source_vars > 1, "fixture must have several variables"
         rc = main(
             ["nc", "sel", str(_NC_TIME), out, "--time", "2000-05-16", "--var", "tas"]
         )
         assert rc == 0
-        assert Dataset.read_file(out) is not None
+        out_vars = len(list(NetCDF.read_file(out).variable_names))
+        assert out_vars == 1, f"--var should leave one variable, got {out_vars}"
 
     def test_refuses_existing(self, tmp_path):
         """A second sel without --overwrite is refused."""
@@ -216,12 +225,15 @@ class TestNcCrop:
         dx, dy = (maxx - minx) / 4, (maxy - miny) / 4
         return [cx - dx, cy - dy, cx + dx, cy + dy]
 
-    def test_crop_bbox_writes_netcdf(self, tmp_path):
-        """--bbox subsets the file and writes a readable output."""
+    def test_crop_changes_the_spatial_extent(self, tmp_path):
+        """--bbox produces an output whose bounds differ from the source (not a copy)."""
         out = str(tmp_path / "crop.nc")
+        source_bbox = list(NetCDF.read_file(str(_NC)).bbox)
         bbox = [str(v) for v in self._centered_bbox()]
         assert main(["nc", "crop", str(_NC), out, "--bbox", *bbox]) == 0
-        assert Dataset.read_file(out) is not None
+        assert list(NetCDF.read_file(out).bbox) != source_bbox, (
+            "crop must change the spatial extent, not copy the source"
+        )
 
     def test_refuses_existing(self, tmp_path):
         """A second crop without --overwrite is refused."""
