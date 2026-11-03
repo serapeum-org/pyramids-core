@@ -54,11 +54,13 @@ class TestNcExtract:
         assert main(["nc", "extract", str(_NC), out, "--var", "Band1"]) == 1
 
     def test_unknown_variable_errors(self, tmp_path, capsys):
-        """An unknown variable exits 1 with a one-line error."""
+        """An unknown variable exits 1 with a clean, mapped error (not the catch-all)."""
         rc = main(["nc", "extract", str(_NC), str(tmp_path / "o.tif"), "--var", "Nope"])
         err = capsys.readouterr().err
         assert rc == 1
         assert err.startswith("error: ")
+        assert "not a valid variable name" in err
+        assert "unexpected failure" not in err
         assert "Traceback" not in err
 
 
@@ -260,4 +262,6 @@ class TestNcCrop:
         err = capsys.readouterr().err
         assert rc == 1
         assert err.startswith("error: ")
+        assert "no valid pixels" in err
+        assert "unexpected failure" not in err
         assert "Traceback" not in err
