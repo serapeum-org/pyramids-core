@@ -4107,6 +4107,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ugrid-mesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UGRID mesh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stac" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7673,6 +7684,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ugrid-mesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UGRID mesh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stac" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7858,27 +7880,38 @@ See the <a href="../cog/cli/">COG CLI reference</a> for the full option set.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pyramids<span class="w"> </span>collection<span class="w"> </span>info<span class="w"> </span><span class="s2">"tiles/*.tif"</span><span class="w"> </span>--json<span class="w">                </span><span class="c1"># count, CRS, grid of a co-registered stack</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>pyramids<span class="w"> </span>collection<span class="w"> </span>stats<span class="w"> </span><span class="s2">"tiles/*.tif"</span><span class="w"> </span>mean.tif<span class="w"> </span>--reduce<span class="w"> </span>mean<span class="w">   </span><span class="c1"># time reduction (mean|sum|min|max|std|var)</span>
 </code></pre></div>
+<h2 id="ugrid-mesh"><a class="toclink" href="#ugrid-mesh">UGRID mesh</a><a class="headerlink" href="#ugrid-mesh" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pyramids<span class="w"> </span>mesh<span class="w"> </span>info<span class="w"> </span>mesh.nc<span class="w"> </span>--json<span class="w">                            </span><span class="c1"># node/face/edge counts, CRS, bounds, variables</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>pyramids<span class="w"> </span>mesh<span class="w"> </span>extract<span class="w"> </span>mesh.nc<span class="w"> </span>z.tif<span class="w"> </span>--like<span class="w"> </span>grid.tif<span class="w"> </span>--var<span class="w"> </span>mesh2d_node_z<span class="w">   </span><span class="c1"># rasterize a variable onto a grid</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>pyramids<span class="w"> </span>mesh<span class="w"> </span>convert<span class="w"> </span>mesh.nc<span class="w"> </span>mesh.gpkg<span class="w"> </span>--var<span class="w"> </span>mesh2d_node_z<span class="w"> </span>--location<span class="w"> </span>node<span class="w">  </span><span class="c1"># mesh -&gt; vector</span>
+</code></pre></div>
+<ul>
+<li><strong><code>mesh info</code></strong> — summarise a UGRID mesh (<code>--json</code> for a machine-readable dump).</li>
+<li><strong><code>mesh extract</code></strong> — rasterize a mesh variable onto the <code>--like</code> template raster's grid/CRS.</li>
+<li><strong><code>mesh convert</code></strong> — write the mesh as a vector file (<code>--location face|node|edge</code>; driver inferred from the
+  extension or <code>--driver</code>).</li>
+</ul>
 <h2 id="stac"><a class="toclink" href="#stac">STAC</a><a class="headerlink" href="#stac" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pyramids<span class="w"> </span>stac<span class="w"> </span>search<span class="w"> </span>https://earth-search.aws.element84.com/v1<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span>--collections<span class="w"> </span>sentinel-2-l2a<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--datetime<span class="w"> </span><span class="m">2023</span>-06-01/2023-06-30<span class="w"> </span>--json
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>pyramids<span class="w"> </span>stac<span class="w"> </span>download<span class="w"> </span>&lt;stac-url&gt;<span class="w"> </span>--collections<span class="w"> </span>sentinel-2-l2a<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span>--assets<span class="w"> </span>red<span class="w"> </span>nir<span class="w"> </span>--out<span class="w"> </span>./scenes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pyramids<span class="w"> </span>stac<span class="w"> </span>search<span class="w"> </span>https://earth-search.aws.element84.com/v1<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span>--collections<span class="w"> </span>sentinel-2-l2a<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--datetime<span class="w"> </span><span class="m">2023</span>-06-01/2023-06-30<span class="w"> </span>--json
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>pyramids<span class="w"> </span>stac<span class="w"> </span>download<span class="w"> </span>&lt;stac-url&gt;<span class="w"> </span>--collections<span class="w"> </span>sentinel-2-l2a<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span>--assets<span class="w"> </span>red<span class="w"> </span>nir<span class="w"> </span>--out<span class="w"> </span>./scenes
 </code></pre></div>
 <p><code>stac</code> needs the <code>[stac]</code> extra (<code>pystac-client</code>, <code>stac-asset</code>); it reports a clear install hint if missing.</p>
 <h2 id="remote-ogc-services"><a class="toclink" href="#remote-ogc-services">Remote / OGC services</a><a class="headerlink" href="#remote-ogc-services" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wms<span class="w"> </span>https://example/wms<span class="w"> </span>scene.tif<span class="w"> </span>--layers<span class="w"> </span>topo<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--crs<span class="w"> </span><span class="m">4326</span><span class="w"> </span>--size<span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="m">1024</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wcs<span class="w"> </span>https://example/wcs<span class="w"> </span>dem.tif<span class="w"> </span>--coverage<span class="w"> </span>elevation<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wfs<span class="w"> </span>https://example/ows<span class="w"> </span>roads.geojson<span class="w"> </span>--typename<span class="w"> </span>topp:roads<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wms<span class="w"> </span>https://example/wms<span class="w"> </span>scene.tif<span class="w"> </span>--layers<span class="w"> </span>topo<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2<span class="w"> </span>--crs<span class="w"> </span><span class="m">4326</span><span class="w"> </span>--size<span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="m">1024</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wcs<span class="w"> </span>https://example/wcs<span class="w"> </span>dem.tif<span class="w"> </span>--coverage<span class="w"> </span>elevation<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>pyramids<span class="w"> </span>fetch<span class="w"> </span>wfs<span class="w"> </span>https://example/ows<span class="w"> </span>roads.geojson<span class="w"> </span>--typename<span class="w"> </span>topp:roads<span class="w"> </span>--bbox<span class="w"> </span><span class="m">4</span>.1<span class="w"> </span><span class="m">51</span>.9<span class="w"> </span><span class="m">4</span>.6<span class="w"> </span><span class="m">52</span>.2
 </code></pre></div>
 <ul>
 <li><strong><code>fetch</code></strong> pulls a bounding-box window from an OGC web service to a local file — <code>wms</code> / <code>wcs</code> (raster) and
   <code>wfs</code> (vector), via GDAL's native drivers.</li>
 </ul>
 <h2 id="run-one-tool-or-a-pipeline"><a class="toclink" href="#run-one-tool-or-a-pipeline">Run one tool, or a pipeline</a><a class="headerlink" href="#run-one-tool-or-a-pipeline" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>pyramids<span class="w"> </span>tools<span class="w">                                               </span><span class="c1"># list the registered processing tools</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>pyramids<span class="w"> </span>tool<span class="w"> </span>slope<span class="w">                                          </span><span class="c1"># one tool's parameter schema</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>pyramids<span class="w"> </span>apply<span class="w"> </span>slope<span class="w"> </span>dem.tif<span class="w"> </span>slope.tif<span class="w"> </span>--set<span class="w"> </span><span class="nv">units</span><span class="o">=</span>degrees<span class="w">   </span><span class="c1"># run a single tool, no YAML needed</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>pyramids<span class="w"> </span>run<span class="w"> </span>pipeline.yaml<span class="w"> </span>--inputs<span class="w"> </span>a.tif<span class="w"> </span>b.tif<span class="w"> </span>--out<span class="w"> </span>./out<span class="w"> </span>--manifest<span class="w"> </span>run.yaml<span class="w">   </span><span class="c1"># batch + provenance</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>pyramids<span class="w"> </span>tools<span class="w">                                               </span><span class="c1"># list the registered processing tools</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>pyramids<span class="w"> </span>tool<span class="w"> </span>slope<span class="w">                                          </span><span class="c1"># one tool's parameter schema</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>pyramids<span class="w"> </span>apply<span class="w"> </span>slope<span class="w"> </span>dem.tif<span class="w"> </span>slope.tif<span class="w"> </span>--set<span class="w"> </span><span class="nv">units</span><span class="o">=</span>degrees<span class="w">   </span><span class="c1"># run a single tool, no YAML needed</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>pyramids<span class="w"> </span>run<span class="w"> </span>pipeline.yaml<span class="w"> </span>--inputs<span class="w"> </span>a.tif<span class="w"> </span>b.tif<span class="w"> </span>--out<span class="w"> </span>./out<span class="w"> </span>--manifest<span class="w"> </span>run.yaml<span class="w">   </span><span class="c1"># batch + provenance</span>
 </code></pre></div>
 <ul>
 <li><strong><code>apply</code></strong> runs one registered tool over a single input into an explicit output, taking typed <code>--set KEY=VALUE</code>
