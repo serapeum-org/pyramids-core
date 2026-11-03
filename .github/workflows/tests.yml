@@ -92,7 +92,10 @@ jobs:
           # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
           # pyarrow (the parquet extra), so run that one file in the parquet env where they execute
           # rather than skip. (A pure marker split can't express "this netcdf_lazy file in parquet".)
-          - { name: netcdf_parquet, env: parquet, paths: tests/netcdf/lazy/test_to_dask_dataframe.py, markexpr: "not live" }
+          - name: netcdf_parquet
+            env: parquet
+            paths: tests/netcdf/lazy/test_to_dask_dataframe.py
+            markexpr: "not live"
           # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
           # stac/test_geoparquet*) live outside the dirs above, so they ran in NO CI job. Select them
           # by marker in the parquet env so they execute.
