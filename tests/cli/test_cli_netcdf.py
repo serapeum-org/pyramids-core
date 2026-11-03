@@ -162,7 +162,7 @@ class TestNcSel:
         assert main(["nc", "sel", str(_NC_TIME), out, "--time", "2000-05-16"]) == 1
 
     def test_unknown_var_errors(self, tmp_path, capsys):
-        """--var naming an unknown variable exits 1 listing the available ones."""
+        """--var naming an unknown variable exits 1 with get_variable's clean error."""
         rc = main(
             [
                 "nc",
@@ -177,8 +177,33 @@ class TestNcSel:
         )
         err = capsys.readouterr().err
         assert rc == 1
-        assert "unknown variable 'nope'" in err
+        assert "nope" in err and "not a valid variable name" in err
+        assert "unexpected failure" not in err
         assert "Traceback" not in err
+
+    def test_group_qualified_var_reaches_get_variable(self, tmp_path, capsys):
+        """A group-qualified --var is forwarded to get_variable, not pre-rejected.
+
+        The flat-name pre-check used to refuse any name containing '/'; now sel
+        accepts 'group/var' like extract does. This file has no groups, so the error
+        is get_variable's own 'Group not found', proving the name reached it.
+        """
+        rc = main(
+            [
+                "nc",
+                "sel",
+                str(_NC_TIME),
+                str(tmp_path / "o.nc"),
+                "--time",
+                "2000-05-16",
+                "--var",
+                "forecast/temperature",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "Group" in err and "not found" in err
+        assert "unexpected failure" not in err
 
 
 class TestNcCrop:

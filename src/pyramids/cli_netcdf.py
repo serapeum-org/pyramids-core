@@ -101,9 +101,10 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc sel`` — select one ``time`` step into a new NetCDF.
 
     Selects exactly by the ``time`` label (as printed by ``nc info``); ``--var``
-    optionally narrows to one variable first. Writes the selection to ``output``
-    (a ``.nc`` path keeps it a NetCDF; another extension re-encodes it). The time
-    axis must be the CF-standard one named ``time``.
+    optionally narrows to one variable first (group-qualified names like
+    ``group/var`` are accepted, as in ``extract``). Writes the selection to
+    ``output`` (a ``.nc`` path keeps it a NetCDF; another extension re-encodes it).
+    The time axis must be the CF-standard one named ``time``.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``time``, ``var``, ``overwrite``.
@@ -112,8 +113,9 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
         int: ``0`` on success.
 
     Raises:
-        ValueError: ``--var`` names an unknown variable, or the selection is not
-            writable (a non-raster labeled array).
+        ValueError: ``--var`` names an unknown variable (raised by ``get_variable``),
+            names one GDAL exposes as a non-selectable labeled array, or the
+            selection cannot be written to ``output``.
     """
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
@@ -121,10 +123,6 @@ def _cmd_nc_sel(args: argparse.Namespace) -> int:
     # .sel/.to_file and guarded below, so keep it Any to satisfy the union.
     obj: Any = nc
     if args.var is not None:
-        if args.var not in nc.variable_names:
-            raise ValueError(
-                f"unknown variable {args.var!r}; available: {list(nc.variable_names)}"
-            )
         obj = nc.get_variable(args.var)
         if not hasattr(obj, "sel"):
             raise ValueError(
