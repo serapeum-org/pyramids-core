@@ -82,6 +82,24 @@ class TestMeshConvert:
         assert rc == 0
         assert len(FeatureCollection.read_file(out)) > 0
 
+    def test_location_edge(self, tmp_path):
+        """--location edge converts the edge-located geometries (N1)."""
+        out = str(tmp_path / "edges.geojson")
+        rc = main(
+            [
+                "mesh",
+                "convert",
+                str(_MESH),
+                out,
+                "--var",
+                "mesh2d_edge_type",
+                "--location",
+                "edge",
+            ]
+        )
+        assert rc == 0
+        assert len(FeatureCollection.read_file(out)) > 0
+
 
 class TestMeshExtract:
     """`pyramids mesh extract`."""
