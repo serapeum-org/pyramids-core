@@ -21,6 +21,7 @@ _NC = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
 _NC_TIME = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 # A CF file with a multi-step time axis (24 monthly steps) for selection tests.
 _NC_MULTI = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
+_UNEXPECTED = "unexpected failure"
 
 
 class TestNcListVars:
@@ -60,7 +61,7 @@ class TestNcExtract:
         assert rc == 1
         assert err.startswith("error: ")
         assert "not a valid variable name" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
         assert "Traceback" not in err
 
 
@@ -192,7 +193,7 @@ class TestNcSel:
         assert rc == 1
         assert "nope" in err
         assert "not a valid variable name" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
         assert "Traceback" not in err
 
     def test_group_qualified_var_reaches_get_variable(self, tmp_path, capsys):
@@ -218,7 +219,7 @@ class TestNcSel:
         assert rc == 1
         assert "Group" in err
         assert "not found" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
 
     def test_file_without_time_axis_errors_cleanly(self, tmp_path, capsys):
         """sel on a file that has no time axis exits 1 with a clean, mapped error."""
@@ -226,7 +227,7 @@ class TestNcSel:
         err = capsys.readouterr().err
         assert rc == 1
         assert "non-spatial dimension" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
         assert "Traceback" not in err
 
     def test_absent_time_label_errors_cleanly(self, tmp_path, capsys):
@@ -237,7 +238,7 @@ class TestNcSel:
         err = capsys.readouterr().err
         assert rc == 1
         assert "No bands match" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
         assert "Traceback" not in err
 
 
@@ -287,5 +288,5 @@ class TestNcCrop:
         assert rc == 1
         assert err.startswith("error: ")
         assert "no valid pixels" in err
-        assert "unexpected failure" not in err
+        assert _UNEXPECTED not in err
         assert "Traceback" not in err
