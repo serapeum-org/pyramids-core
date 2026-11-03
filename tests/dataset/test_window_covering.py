@@ -45,8 +45,10 @@ class TestWindowCovering:
         """A non-aligned bbox is fully contained by the covering window's bounds."""
         win = Window.covering((1.3, 1.7, 2.1, 2.4), GT)
         min_x, min_y, max_x, max_y = win.to_bounds(GT)
-        assert min_x <= 1.3 and min_y <= 1.7
-        assert max_x >= 2.1 and max_y >= 2.4
+        assert min_x <= 1.3
+        assert min_y <= 1.7
+        assert max_x >= 2.1
+        assert max_y >= 2.4
 
     def test_read_args(self):
         """The covering window reads as (col_off, row_off, cols, rows)."""
@@ -59,10 +61,12 @@ class TestWindowCovering:
 
     def test_empty_geodataframe_raises_clear_error(self):
         """An empty GeoDataFrame (NaN total_bounds) raises a clear 'empty' ValueError."""
+        empty = gpd.GeoDataFrame(geometry=[])
         with pytest.raises(ValueError, match="empty"):
-            Window.covering(gpd.GeoDataFrame(geometry=[]), GT)
+            Window.covering(empty, GT)
 
     def test_empty_geometry_raises_clear_error(self):
         """An empty shapely geometry (NaN bounds) raises a clear 'empty' ValueError."""
+        empty = Polygon()
         with pytest.raises(ValueError, match="empty"):
-            Window.covering(Polygon(), GT)
+            Window.covering(empty, GT)
