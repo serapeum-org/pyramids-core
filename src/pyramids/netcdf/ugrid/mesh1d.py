@@ -230,7 +230,7 @@ class Mesh1d:
                 its results from one file and defers the latter.
 
         Returns:
-            Mesh1d: The network the driver read.
+            Mesh1d: The 1D mesh the driver read.
 
         Raises:
             FileNotFoundError: The file does not exist.
@@ -371,12 +371,12 @@ class Mesh1d:
 
     @property
     def n_node(self) -> int:
-        """Number of nodes in the network."""
+        """Number of nodes in the mesh."""
         return len(self._node_x)
 
     @property
     def n_edge(self) -> int:
-        """Number of edges in the network."""
+        """Number of edges in the mesh."""
         return self._edge_node_connectivity.n_elements
 
     @property
