@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -26,7 +26,7 @@ class TestCrsHandling:
         Test scenario:
             EPSG 32631 should be recoverable from the dataset.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([500000.0, 500100.0, 500050.0]),
             node_y=np.array([5600000.0, 5600000.0, 5600100.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -41,7 +41,7 @@ class TestCrsHandling:
             Reproject from EPSG:32631 (UTM 31N) to EPSG:4326 (WGS84).
             Coordinates should change to lon/lat range.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([500000.0, 500100.0, 500050.0]),
             node_y=np.array([5600000.0, 5600000.0, 5600100.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -62,7 +62,7 @@ class TestCrsHandling:
         Test scenario:
             Data values should be identical after coordinate reprojection.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([500000.0, 500100.0, 500050.0]),
             node_y=np.array([5600000.0, 5600000.0, 5600100.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -81,7 +81,7 @@ class TestCrsHandling:
         Test scenario:
             n_node, n_face should be unchanged after reprojection.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([500000.0, 500100.0, 500050.0]),
             node_y=np.array([5600000.0, 5600000.0, 5600100.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -108,7 +108,7 @@ class TestCrsHandling:
                 original_start_index=0,
             ),
         )
-        ds = UgridDataset(
+        ds = MeshDataset(
             mesh=mesh,
             data_variables={},
             global_attributes={},
@@ -122,10 +122,10 @@ class TestTimeDimension:
 
     @pytest.fixture
     def temporal_dataset(self):
-        """Create a UgridDataset with temporal data.
+        """Create a MeshDataset with temporal data.
 
         Returns:
-            UgridDataset with 3 time steps, 2 faces.
+            MeshDataset with 3 time steps, 2 faces.
         """
         data_2d = np.array(
             [
@@ -134,7 +134,7 @@ class TestTimeDimension:
                 [5.0, 6.0],
             ]
         )
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5, 1.5]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [1, 3, 2]]),
@@ -179,7 +179,7 @@ class TestTimeDimension:
         Test scenario:
             Dataset with only 1D data should have time_values=None.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -198,7 +198,7 @@ class TestEdgeNodeData:
         Test scenario:
             mesh2d_node_z should be accessible and have node location.
         """
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         var = ds["mesh2d_node_z"]
         assert var.location == "node", f"Expected 'node', got '{var.location}'"
         assert var.n_elements == ds.n_node, (
@@ -211,7 +211,7 @@ class TestEdgeNodeData:
         Test scenario:
             mesh2d_edge_type should be accessible and have edge location.
         """
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         var = ds["mesh2d_edge_type"]
         assert var.location == "edge", f"Expected 'edge', got '{var.location}'"
         assert var.n_elements == ds.n_edge, (
@@ -224,7 +224,7 @@ class TestEdgeNodeData:
         Test scenario:
             Node data on a 3-node mesh should produce 3 Point geometries.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -242,7 +242,7 @@ class TestEdgeNodeData:
         Test scenario:
             Should interpolate node data to a regular grid.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),

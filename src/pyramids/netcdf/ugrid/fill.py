@@ -149,7 +149,7 @@ def _face_adjacency(mesh: Mesh2d) -> sparse.csr_matrix:
 
     Faces are adjacent when they share an edge. The connectivity the mesh already carries is
     used as it is; otherwise the graph is derived through :func:`graph.sparse_adjacency`, which
-    reads the mesh without storing anything on it -- `UgridDataset.copy()` shares its `Mesh2d`,
+    reads the mesh without storing anything on it -- `MeshDataset.copy()` shares its `Mesh2d`,
     so building a table here would mutate the dataset the copy came from.
 
     Args:
@@ -160,7 +160,7 @@ def _face_adjacency(mesh: Mesh2d) -> sparse.csr_matrix:
         self-loops.
     """
     if mesh.face_face_connectivity is None:
-        # Derive without writing to the mesh. `UgridDataset.copy()` shares its Mesh2d, so
+        # Derive without writing to the mesh. `MeshDataset.copy()` shares its Mesh2d, so
         # building the connectivity here would mutate the caller's mesh -- and through the
         # shared reference, the dataset the copy was made from.
         return graph.sparse_adjacency(mesh, kind="face")

@@ -74,7 +74,7 @@ classDiagram
 
 ## UML Class: Plotting layer
 
-`Dataset.plot` / `NetCDF.plot` / `DatasetCollection.plot` / `UgridDataset.plot` are thin facades.
+`Dataset.plot` / `NetCDF.plot` / `DatasetCollection.plot` / `MeshDataset.plot` are thin facades.
 The shared `pyramids.dataset._plot_helpers` module owns the cleopatra dispatch (`render_array` for
 arrays, `mesh_render` for meshes); `pyramids.netcdf._plot.NetCDFPlot` does the NetCDF-specific
 variable/selector/curvilinear/facet/animate resolution and feeds `render_array`; `Selectors` /
@@ -94,7 +94,7 @@ classDiagram
   class DatasetCollection {
     +plot(...)
   }
-  class UgridDataset {
+  class MeshDataset {
     +plot(variable_name, ...)
     +plot_outline(...)
   }
@@ -164,7 +164,7 @@ classDiagram
   NetCDFPlot ..> CoordinateSpec : uses
   NetCDFPlot ..> FacetSpec : uses
   DatasetCollection ..> plot_helpers : render_array(mode="animate")
-  UgridDataset ..> plot_helpers : mesh_render
+  MeshDataset ..> plot_helpers : mesh_render
   plot_helpers ..> ArrayGlyph : builds
   plot_helpers ..> MeshGlyph : builds (mesh_render)
   plot_helpers ..> add_basemap : basemap overlay
@@ -407,8 +407,8 @@ classDiagram
         +plot(variable, *, selectors, facet, axes, kind, animate, chunks, **kwargs)
     }
 
-    %% UgridDataset
-    class ugrid_UgridDataset {
+    %% MeshDataset
+    class ugrid_MeshDataset {
         +__init__(src)
         +mesh · n_face
         +data_variable_names
@@ -548,7 +548,7 @@ classDiagram
 
     %% other relations
     collection_DatasetCollection o-- dataset_Dataset : per-timestep
-    ugrid_UgridDataset ..> dataset_Dataset : interpolate
+    ugrid_MeshDataset ..> dataset_Dataset : interpolate
     feature_FeatureCollection ..> dataset_Dataset : rasterize
     dataset_Dataset ..> feature_FeatureCollection : vectorize
     feature_FeatureCollection ..> feature_Coords : uses
@@ -563,7 +563,7 @@ classDiagram
     netcdf_NetCDFPlot ..> plot_helpers_module : render_array
     engines_Analysis ..> plot_helpers_module : render_array
     collection_DatasetCollection ..> plot_helpers_module : render_array(mode="animate")
-    ugrid_UgridDataset ..> plot_helpers_module : mesh_render
+    ugrid_MeshDataset ..> plot_helpers_module : mesh_render
     feature_FeatureCollection ..> basemap_module : add_basemap
     plot_helpers_module ..> basemap_module : basemap overlay
     plot_helpers_module ..> cleopatra_pkg : ArrayGlyph / MeshGlyph

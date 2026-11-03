@@ -4,8 +4,8 @@ pyramids reads and writes UGRID NetCDF itself. Every other unstructured-mesh for
 Selafin, DFSU, XMDF, PLY and the rest — is read by a separate distribution that registers a
 driver into the ``pyramids.mesh_drivers`` entry-point group. This module is the reading side of
 that contract: it resolves the group, validates what it finds, and hands the drivers to
-:meth:`UgridDataset.read_file`, :meth:`UgridDataset.attach_data` and
-:meth:`UgridDataset.to_file`.
+:meth:`MeshDataset.read_file`, :meth:`MeshDataset.attach_data` and
+:meth:`MeshDataset.to_file`.
 
 The dependency runs one way. A plugin imports pyramids' mesh types and builds them; pyramids
 never imports the plugin, and knows only the group name. So a bare pyramids install behaves
@@ -15,7 +15,7 @@ Three properties matter enough to state outright, because each is load-bearing:
 
 - **Discovery is lazy and cached.** ``importlib.metadata.entry_points`` walks every installed
   distribution, so nothing on the UGRID read path triggers it: a ``.nc`` read, a ``/vsi``
-  path and a plain :meth:`UgridDataset.info` all short-circuit before reaching here, and a
+  path and a plain :meth:`MeshDataset.info` all short-circuit before reaching here, and a
   guard test asserts the cache stays cold through them. It does run when a caller asks for
   it directly -- a non-NetCDF suffix, an explicit ``driver=``, or ``info(drivers=True)`` --
   and the result is then cached for the life of the process.
@@ -40,9 +40,9 @@ from typing import TYPE_CHECKING, Any, Protocol
 from pyramids.base._errors import FileFormatNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle, types only
-    from pyramids.netcdf.ugrid.dataset import UgridDataset
+    from pyramids.netcdf.ugrid.dataset import MeshDataset
+    from pyramids.netcdf.ugrid.mesh1d import Mesh1d
     from pyramids.netcdf.ugrid.models import MeshVariable
-    from pyramids.netcdf.ugrid.network import Network1d
 
 __all__ = [
     "CAPABILITIES",
@@ -85,11 +85,11 @@ RESERVED_NAMES = frozenset({"ugrid", "netcdf"})
 #:
 #: Four tokens **gate behaviour**: ``read_mesh`` and ``needs_mesh`` decide which entry point
 #: reaches the driver (and exactly one is required), ``write_mesh`` gates
-#: :meth:`UgridDataset.to_file`, and ``write_data`` decides whether a frame-only write warns
+#: :meth:`MeshDataset.to_file`, and ``write_data`` decides whether a frame-only write warns
 #: that variables were dropped. Each also requires the method it promises to exist.
 #:
 #: The other three are **declarative**: ``read_data``, ``lazy_data`` and ``multi_mesh`` describe
-#: the driver for :meth:`UgridDataset.info` and for a reader of the plugin's documentation. They
+#: the driver for :meth:`MeshDataset.info` and for a reader of the plugin's documentation. They
 #: are deliberately not dispatch filters -- ``lazy`` is forwarded to every driver regardless, and
 #: ``mesh_names`` asks every driver rather than only multi-mesh ones, because a single-mesh
 #: format answering with a one-item list is the right answer rather than an error.
@@ -120,7 +120,7 @@ class NoMeshTopologyError(ValueError):
 
     Raised by the built-in reader when GDAL opens a file but it carries no UGRID topology at
     all — as a 3Di or TUFLOW FV ``.nc`` result does. Its own subtype rather than a bare
-    ``ValueError`` so :meth:`UgridDataset.read_file` can fall back to a driver claiming the
+    ``ValueError`` so :meth:`MeshDataset.read_file` can fall back to a driver claiming the
     NetCDF suffix on **this** failure alone, without also catching a wrong ``mesh_name`` or a
     GDAL open error. Subclasses :class:`ValueError`, so ``except ValueError`` and the error
     message are both unchanged for callers that never register a driver.
@@ -141,7 +141,7 @@ class MeshDriver(Protocol):
 
     Attributes:
         name: Short unique identifier, and the value accepted by ``driver=``.
-        long_name: Human-readable format name, shown by :meth:`UgridDataset.info`.
+        long_name: Human-readable format name, shown by :meth:`MeshDataset.info`.
         suffixes: Lowercase, dot-prefixed file suffixes this driver claims.
         api_version: Must equal :data:`MESH_DRIVER_API_VERSION`.
         capabilities: A subset of :data:`CAPABILITIES`.
@@ -170,7 +170,7 @@ class MeshDriver(Protocol):
 
     def read(
         self, path: str, *, mesh_name: str | None = None, lazy: bool = True
-    ) -> UgridDataset | Network1d:
+    ) -> MeshDataset | Mesh1d:
         """Read a file that carries its own topology.
 
         Raises for a ``needs_mesh`` format, which has no topology to build a mesh from and is
@@ -182,18 +182,18 @@ class MeshDriver(Protocol):
             lazy: Defer reading variable values until first access.
 
         Returns:
-            A dataset, or a :class:`Network1d` for a file whose topology dimension is 1.
+            A dataset, or a :class:`Mesh1d` for a file whose topology dimension is 1.
         """
         ...  # pragma: no cover - protocol
 
     def read_data(
-        self, path: str, dataset: UgridDataset, *, lazy: bool = True
+        self, path: str, dataset: MeshDataset, *, lazy: bool = True
     ) -> dict[str, MeshVariable]:
         """Read a results-only file's variables, for a mesh supplied by the caller.
 
         Required only when ``needs_mesh`` is in :attr:`capabilities`.
 
-        Return **only the variables read from the file**; :meth:`UgridDataset.attach_data`
+        Return **only the variables read from the file**; :meth:`MeshDataset.attach_data`
         merges them onto the mesh. That division is what makes a name the dataset already
         defines an unambiguous collision, and it means a driver cannot drop the dataset's own
         variables by rebuilding the mapping.
@@ -224,7 +224,7 @@ class MeshDriver(Protocol):
         """
         ...  # pragma: no cover - protocol
 
-    def write(self, dataset: UgridDataset, path: str, **options: Any) -> None:
+    def write(self, dataset: MeshDataset, path: str, **options: Any) -> None:
         """Write a dataset in this driver's format.
 
         Required only when ``write_mesh`` is in :attr:`capabilities`.
@@ -445,7 +445,7 @@ def mesh_drivers() -> dict[str, MeshDriver]:
 
     Discovery walks every installed distribution, so it runs on the first call only. Nothing on
     the UGRID read path calls it: a ``.nc`` read, a ``/vsi`` path and a plain
-    :meth:`UgridDataset.info` all short-circuit first. An explicit ``driver=``, a non-NetCDF
+    :meth:`MeshDataset.info` all short-circuit first. An explicit ``driver=``, a non-NetCDF
     suffix or ``info(drivers=True)`` does reach it.
 
     Returns:
@@ -601,7 +601,7 @@ def clear_driver_cache() -> None:
 
 
 def describe_drivers() -> list[str]:
-    """Render one line per installed driver, for :meth:`UgridDataset.info`.
+    """Render one line per installed driver, for :meth:`MeshDataset.info`.
 
     Returns:
         A line per driver — name, long name, suffixes and capabilities — plus a line for the
@@ -609,7 +609,7 @@ def describe_drivers() -> list[str]:
 
     Examples:
         - The listing leads with the built-in reader and adds one line per plugin, so it is
-          never empty and :meth:`UgridDataset.info` always has something to show:
+          never empty and :meth:`MeshDataset.info` always has something to show:
 
             ```python
             >>> from pyramids.netcdf.ugrid import _drivers

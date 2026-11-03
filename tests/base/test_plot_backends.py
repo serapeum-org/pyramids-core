@@ -33,7 +33,7 @@ from pyramids.dataset.collection import DatasetCollection
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf import FacetSpec, NetCDF
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 from tests._driver_discovery_fixtures import make_publish_entry_points
@@ -468,8 +468,8 @@ def test_feature_plot_default_engine_is_not_rejected(
     assert recorder.backend == "web"
 
 
-def _ugrid_dataset() -> UgridDataset:
-    """A tiny in-memory 2-face triangular UgridDataset for the facade dispatch tests."""
+def _ugrid_dataset() -> MeshDataset:
+    """A tiny in-memory 2-face triangular MeshDataset for the facade dispatch tests."""
     mesh = Mesh2d(
         node_x=np.array([0.0, 1.0, 0.5, 1.5]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
@@ -487,7 +487,7 @@ def _ugrid_dataset() -> UgridDataset:
         shape=(2,),
         _data=np.array([10.0, 20.0]),
     )
-    return UgridDataset(mesh=mesh, data_variables={"depth": var}, global_attributes={})
+    return MeshDataset(mesh=mesh, data_variables={"depth": var}, global_attributes={})
 
 
 def test_ugrid_plot_drops_default_cmap_on_backend(
@@ -528,7 +528,7 @@ def test_ugrid_plot_rejects_render_group_on_backend(
 def test_ugrid_animate_routes_with_animate_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``UgridDataset.animate(backend=…)`` routes to the backend with ``animate=True``."""
+    """``MeshDataset.animate(backend=…)`` routes to the backend with ``animate=True``."""
     recorder = _Recorder()
     monkeypatch.setattr(_plot_backends, "_CACHE", {"web": recorder})
     mesh = _ugrid_dataset()

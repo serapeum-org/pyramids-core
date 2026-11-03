@@ -192,6 +192,40 @@ def _invalidate_cached_accessors(ds: Any) -> None:
         ds.__dict__.pop(name, None)
 
 
+def _flush_prior_handle(prev: gdal.Dataset | None, src: gdal.Dataset) -> None:
+    """Best-effort flush of the GDAL handle an in-place swap is about to drop.
+
+    Called by `_update_inplace` (on both `Dataset` and `NetCDF`) before its
+    `__dict__.update` swap rebinds `self._raster` — first in the base method,
+    and immediately before the swap in the NetCDF override (which builds its
+    replacement and `preserved` snapshot first). It commits any writes buffered
+    on the handle that is about to lose its last reference, instead of leaving
+    that to refcounting/GC to finalize (issue #815).
+
+    The flush is skipped when `prev` is `None` or is the very handle being
+    swapped in (`prev is src`), so the live handle is never flushed and then
+    reused — this is the `epsg` setter path, where the current raster (which is
+    also the NetCDF variable's ``_store_raster``) is handed back as `src`.
+
+    A `RuntimeError` from the flush is swallowed (debug-logged, not raised):
+    the handle is being discarded and the operation's replacement raster is
+    already valid, so a deferred write/commit failure on the dropped handle must
+    not abort an otherwise-successful in-place op. This keeps #815 a no-behaviour
+    -change hardening on CPython, where the same flush previously happened at GC
+    with the error swallowed there.
+    """
+    if prev is None or prev is src:
+        return
+    try:
+        prev.FlushCache()
+    except RuntimeError as exc:
+        logging.getLogger(__name__).debug(
+            "FlushCache on the prior handle failed during an in-place swap; "
+            "the handle is being discarded, so the op continues: %s",
+            exc,
+        )
+
+
 def _accessor_name_conflict(name: str) -> bool:
     """Whether ``name`` would shadow an existing Dataset (or subclass) attribute.
 
@@ -789,6 +823,26 @@ class Dataset(RasterBase):
         state across the swap (e.g. NetCDF's variable-subset
         attributes) override this method.
 
+        Before the swap, the prior handle (``self._raster``) is
+        ``FlushCache``'d when it differs from ``src``, committing any
+        buffered writes rather than relying on refcounting alone to
+        finalize the handle once ``__dict__.update`` drops the last
+        reference. The ``prev is not src`` guard skips the no-op case
+        where the operation handed back the very handle it was given,
+        so the live handle is never flushed and then reused. The flush
+        is best-effort: a ``RuntimeError`` from it (a deferred
+        write/commit failure on the discarded handle) is debug-logged,
+        not raised, so it cannot abort an in-place op whose replacement
+        raster is already valid — see :func:`_flush_prior_handle`.
+
+        This is distinct from the flush in :mod:`pyramids.dataset.ops.io`
+        ``_create_copy_and_reopen``, which flushes the *source* before
+        ``CreateCopy`` so the copy reads committed data — a different
+        purpose from finalizing a handle being dropped. On the
+        ``to_file`` reopen path both run: that source is this method's
+        ``prev`` (``reopened`` is ``src``), so the old handle is flushed
+        there and then again here — an accepted idempotent no-op.
+
         after `__dict__.update`, the collaborators on
         `self` came from `new.__dict__` and point at the temporary
         `new` instance, not at `self`. Re-bind every collaborator's
@@ -803,7 +857,18 @@ class Dataset(RasterBase):
             declared slot stays legal. The proxy is freshly built
             from ``self`` (not pulled from ``new``) so the engines
             point at the live Dataset after the swap.
+
+        Args:
+            src: The new ``gdal.Dataset`` whose state replaces the
+                current one. If it is the same object as the current
+                ``self._raster`` the prior handle is not flushed.
+            access: Access mode for the rebuilt instance. Defaults to
+                ``None``, which reuses the dataset's current
+                ``self._access``.
         """
+        # Flush the handle about to be dropped by the dict swap below (best-effort;
+        # skipped when src is that same handle). See `_flush_prior_handle`.
+        _flush_prior_handle(self._raster, src)
         new = type(self)(src, access=access or self._access)
         self.__dict__.update(new.__dict__)
         # `update` merges, so a lazily-set cache the fresh instance never
@@ -1369,7 +1434,7 @@ class Dataset(RasterBase):
             cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``
             attribute is the :class:`matplotlib.animation.FuncAnimation` — save with
             ``glyph.anim.save("out.gif")``. Note this differs from
-            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two
+            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two
             cleopatra glyph families return different objects and pyramids passes each through
             rather than wrapping one to look like the other. **Keep a reference to it** —
             matplotlib warns and stops an animation held only as a temporary.

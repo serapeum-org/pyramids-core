@@ -20,11 +20,11 @@ pyramids, pyramids knows only the group name.
 ds.plot(backend="interactive")          # an interactive map object
 ds.plot(backend="3d", z_exaggeration=2) # a 3-D scene; extra kwargs pass through to the backend
 collection.plot(backend="web")          # the collection animation, as a web map
-mesh.plot(backend="interactive")        # a UgridDataset mesh, interactively
+mesh.plot(backend="interactive")        # a MeshDataset mesh, interactively
 ```
 
 The `backend=` keyword is available on `Dataset.plot` / `Dataset.animate`, `NetCDF.plot`, `FeatureCollection.plot`,
-`DatasetCollection.plot` / `DatasetCollection.animate`, and `UgridDataset.plot` / `UgridDataset.animate`.
+`DatasetCollection.plot` / `DatasetCollection.animate`, and `MeshDataset.plot` / `MeshDataset.animate`.
 
 ### What carries over, and what does not
 
@@ -41,9 +41,9 @@ show*, with `None`-valued and default ones dropped:
 - **`FeatureCollection.plot`** — `column`, `basemap`, a bool `colorbar`, `title`, a non-default `kind`.
 - **`DatasetCollection.plot` / `.animate`** — a non-default `band`, `exclude_value`, `rgb_options`, `basemap`, a
   bool `colorbar`, `animation_axis_values`, and `animate=True`.
-- **`UgridDataset.plot`** — `variable_name`, a non-default `cmap`, `title`, `basemap`, a bool `colorbar`, a
+- **`MeshDataset.plot`** — `variable_name`, a non-default `cmap`, `title`, `basemap`, a bool `colorbar`, a
   non-default `kind`.
-- **`UgridDataset.animate`** — `variable_name`, a non-default `interval`, and `animate=True`.
+- **`MeshDataset.animate`** — `variable_name`, a non-default `interval`, and `animate=True`.
 
 Any further keyword you pass is forwarded too. Arguments that only mean something on the matplotlib read/render
 path are instead **rejected** with a `ValueError`, so a silently-ignored argument is never mistaken for an applied

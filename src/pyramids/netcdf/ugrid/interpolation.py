@@ -1,6 +1,6 @@
 """Mesh-to-grid interpolation for bridging unstructured and structured data.
 
-Implements the core bridge between UgridDataset (unstructured mesh)
+Implements the core bridge between MeshDataset (unstructured mesh)
 and Dataset (regular grid). Converts mesh data to regular grid arrays
 using nearest-neighbor or linear interpolation.
 

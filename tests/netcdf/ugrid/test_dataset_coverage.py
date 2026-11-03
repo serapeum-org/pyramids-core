@@ -1,4 +1,4 @@
-"""The `UgridDataset` branches the member-by-member suites leave uncovered.
+"""The `MeshDataset` branches the member-by-member suites leave uncovered.
 
 Three families of branch, all reachable from the public API and all previously untested:
 
@@ -28,7 +28,7 @@ import pytest
 from osgeo import gdal
 from shapely.geometry import box
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid import dataset as ugrid_dataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
@@ -50,9 +50,9 @@ def _connectivity(data: np.ndarray, cf_role: str) -> Connectivity:
     )
 
 
-def _unreadable(source: UgridDataset, shape: tuple[int, ...]) -> UgridDataset:
+def _unreadable(source: MeshDataset, shape: tuple[int, ...]) -> MeshDataset:
     """`source`'s mesh carrying one temporal variable with no readable array."""
-    return UgridDataset(
+    return MeshDataset(
         mesh=source.mesh,
         data_variables={
             "v": MeshVariable(
@@ -69,9 +69,9 @@ def _unreadable(source: UgridDataset, shape: tuple[int, ...]) -> UgridDataset:
 
 
 @pytest.fixture
-def mesh() -> UgridDataset:
+def mesh() -> MeshDataset:
     """Two triangles carrying one static face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -80,9 +80,9 @@ def mesh() -> UgridDataset:
 
 
 @pytest.fixture
-def temporal() -> UgridDataset:
+def temporal() -> MeshDataset:
     """Two triangles carrying a two-step temporal face variable with a time coordinate."""
-    out = UgridDataset.from_arrays(
+    out = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -94,9 +94,9 @@ def temporal() -> UgridDataset:
 
 
 @pytest.fixture
-def mixed() -> UgridDataset:
+def mixed() -> MeshDataset:
     """A temporal variable and a static one on the same mesh."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -106,7 +106,7 @@ def mixed() -> UgridDataset:
 
 
 @pytest.fixture
-def unreadable(mesh) -> UgridDataset:
+def unreadable(mesh) -> MeshDataset:
     """A two-step temporal variable whose array cannot be produced."""
     return _unreadable(mesh, (2, 2))
 
@@ -265,7 +265,7 @@ class TestFileWriting:
         assert "Conventions" not in bare.global_attributes
         path = tmp_path / "bare.nc"
         bare.to_file(path)
-        assert UgridDataset.read_file(path).global_attributes["Conventions"] == (
+        assert MeshDataset.read_file(path).global_attributes["Conventions"] == (
             "CF-1.8 UGRID-1.0"
         )
 
@@ -287,7 +287,7 @@ class TestGeoDataFrameLocations:
                 [[0, 1, -1], [1, 2, -1]], "edge_node_connectivity"
             ),
         )
-        ragged = UgridDataset(
+        ragged = MeshDataset(
             mesh=padded,
             data_variables={},
             global_attributes={},
@@ -315,7 +315,7 @@ class TestToCrsRecomputesTheCentres:
             edge_x=np.array([0.5, 1.0]),
             edge_y=np.array([0.0, 0.5]),
         )
-        source = UgridDataset(
+        source = MeshDataset(
             mesh=centred,
             data_variables={},
             global_attributes={},
@@ -331,12 +331,12 @@ class TestMeshNames:
     def test_a_missing_file_is_reported(self):
         """A path that is not a virtual-filesystem name is checked on disk first."""
         with pytest.raises(FileNotFoundError, match="File not found"):
-            UgridDataset.mesh_names("no_such_mesh.nc")
+            MeshDataset.mesh_names("no_such_mesh.nc")
 
     def test_a_file_without_a_topology_is_reported(self):
         """A plain structured NetCDF declares no UGRID topology, which is an error here."""
         with pytest.raises(ValueError, match="No UGRID mesh topology"):
-            UgridDataset.mesh_names(NON_UGRID_NC)
+            MeshDataset.mesh_names(NON_UGRID_NC)
 
     def test_a_virtual_filesystem_path_is_handed_straight_to_gdal(self, mesh, tmp_path):
         """A `/vsimem/` name has no on-disk existence check — GDAL resolves it itself."""
@@ -345,7 +345,7 @@ class TestMeshNames:
         name = f"/vsimem/pyramids_mesh_names_{uuid4().hex}.nc"
         gdal.FileFromMemBuffer(name, path.read_bytes())
         try:
-            assert UgridDataset.mesh_names(name) == ["mesh2d"]
+            assert MeshDataset.mesh_names(name) == ["mesh2d"]
         finally:
             gdal.Unlink(name)
 
@@ -471,9 +471,9 @@ class TestTimeCoordinateGuards:
 
 class TestJoins:
     @staticmethod
-    def _pair(values, stamps=None) -> UgridDataset:
+    def _pair(values, stamps=None) -> MeshDataset:
         """One temporal and one static variable, optionally with a time coordinate."""
-        out = UgridDataset.from_arrays(
+        out = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -536,6 +536,6 @@ class TestZarrRoundTrip:
         pytest.importorskip("zarr")
         store = str(tmp_path / "mesh.zarr")
         mesh.to_zarr(store)
-        back = UgridDataset.from_zarr(store)
+        back = MeshDataset.from_zarr(store)
         assert (back.n_node, back.n_face) == (4, 2)
         assert back["depth"].data.tolist() == [2.0, 4.0]

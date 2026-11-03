@@ -55,7 +55,7 @@ flowchart LR
         NC["NetCDF — variables · time"]
         DC["DatasetCollection — time stack"]
         FC["FeatureCollection — vector"]
-        UG["UgridDataset — mesh"]
+        UG["MeshDataset — mesh"]
     end
 
     RAS -->|read_file| DS

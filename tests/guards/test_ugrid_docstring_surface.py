@@ -1,4 +1,4 @@
-"""Guard meta-test: a `UgridDataset` method documents the parameters it actually takes.
+"""Guard meta-test: a `MeshDataset` method documents the parameters it actually takes.
 
 A parameter added to a signature without a matching `Args:` entry is invisible: the method
 works, every behaviour test passes, and the rendered reference page simply never mentions
@@ -15,7 +15,7 @@ import re
 
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -76,17 +76,17 @@ def _public_callables(cls: type) -> list[tuple[str, object]]:
     return found
 
 
-_CALLABLES = _public_callables(UgridDataset)
+_CALLABLES = _public_callables(MeshDataset)
 
 
 class TestUgridDatasetDocstringSurface:
-    """Every public `UgridDataset` entry point against its own signature."""
+    """Every public `MeshDataset` entry point against its own signature."""
 
     def test_the_sweep_sees_the_whole_surface(self):
         """The sweep below is only as good as the surface it walks.
 
         Test scenario:
-            `UgridDataset` is assembled from a mixin, so a sweep that forgot
+            `MeshDataset` is assembled from a mixin, so a sweep that forgot
             `inspect.getmembers`' inherited members would silently check a fraction of the
             API and pass. Pin a floor and two names that only the mixin supplies.
         """
@@ -104,7 +104,7 @@ class TestUgridDatasetDocstringSurface:
         """A parameter in the signature has an `Args:` entry.
 
         Args:
-            name: The attribute name on `UgridDataset`.
+            name: The attribute name on `MeshDataset`.
             member: The callable itself.
 
         Test scenario:
@@ -117,6 +117,6 @@ class TestUgridDatasetDocstringSurface:
         missing = sorted(_declared_parameters(member) - _documented_parameters(doc))
 
         assert not missing, (
-            f"UgridDataset.{name} takes {missing} but its docstring's Args section does "
+            f"MeshDataset.{name} takes {missing} but its docstring's Args section does "
             f"not list them"
         )

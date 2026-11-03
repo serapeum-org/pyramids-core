@@ -3,7 +3,7 @@
 Standalone, side-effect-free functions that bridge a :class:`~pyramids.netcdf.ugrid.mesh.Mesh2d`
 (plus a per-face value array and/or shapely / geopandas geometry) and ordinary vector geometry.
 None of them mutate their inputs, and none import :mod:`pyramids.netcdf.ugrid.dataset`, so they can
-be driven directly or wrapped by thin ``UgridDataset`` facades:
+be driven directly or wrapped by thin ``MeshDataset`` facades:
 
 - :func:`polygonize` — dissolve adjacent faces that share an (approximately) equal value into merged
   polygons, one row per value group (the mesh analogue of raster ``to_feature_collection``).

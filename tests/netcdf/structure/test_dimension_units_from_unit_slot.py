@@ -34,7 +34,7 @@ from pyramids.netcdf._axis import detect_axis_indices
 from pyramids.netcdf.metadata import MetadataBuilder
 from pyramids.netcdf.models import DimensionInfo
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshTopologyInfo, MeshVariable
 from pyramids.netcdf.utils import _merge_unit, _read_attributes
@@ -398,12 +398,12 @@ class TestOtherCfConsumers:
             standard_name="height",
             _data=np.array([1.0, 2.0, 3.0]),
         )
-        UgridDataset(
+        MeshDataset(
             mesh=mesh,
             data_variables={"h": variable},
             global_attributes={"Conventions": "CF-1.8 UGRID-1.0"},
             topology_info=topology,
         ).to_file(path)
-        assert UgridDataset.read_file(path).get_data("h").units == "m", (
+        assert MeshDataset.read_file(path).get_data("h").units == "m", (
             "the mesh variable's units must survive the round trip"
         )

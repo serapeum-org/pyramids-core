@@ -61,6 +61,7 @@ from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
 from pyramids.dataset.dataset import (
     _COLLABORATOR_ATTRS,
     _RESERVED_ACCESSOR_NAMES,
+    _flush_prior_handle,
     _invalidate_cached_accessors,
 )
 from pyramids.dataset.engines._read_window import resolve_read_window
@@ -2782,6 +2783,12 @@ class NetCDF(Dataset):
             access=access or self._access,
             open_as_multi_dimensional=self._is_md_array,
         )
+        # Flush the handle about to be dropped by the swap below, same as the base
+        # method -- this override does not chain `super()`, so the call is repeated
+        # here. Best-effort; skipped when `src` is that same handle (the `epsg`
+        # setter path, which hands the current raster back as `src`). See
+        # `Dataset._flush_prior_handle` (#815).
+        _flush_prior_handle(self._raster, src)
         self.__dict__.update(new.__dict__)
         self.__dict__.update(preserved)
         self._restore_stamped_grid()
@@ -5182,7 +5189,7 @@ class NetCDF(Dataset):
         `read_array` returns them.
 
         Built on the shared :func:`pyramids.base._summary.variable_summary`, so this answers in the
-        identical shape to :meth:`pyramids.netcdf.ugrid.UgridDataset.summary`.
+        identical shape to :meth:`pyramids.netcdf.ugrid.MeshDataset.summary`.
 
         Args:
             variables: Which variables to summarise, in output-row order. `None` (the default)
@@ -5283,7 +5290,7 @@ class NetCDF(Dataset):
 
         The cube could already animate, but only through ``plot(animate=...)``, where the
         capability is easy to miss. This is the same path under the name the other classes use
-        (:meth:`Dataset.animate`, :meth:`UgridDataset.animate`,
+        (:meth:`Dataset.animate`, :meth:`MeshDataset.animate`,
         :meth:`DatasetCollection.animate`), so one name finds it everywhere.
 
         The signature deliberately replaces the inherited raster one: a cube's frames come
@@ -5301,7 +5308,7 @@ class NetCDF(Dataset):
             cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``
             attribute is the :class:`matplotlib.animation.FuncAnimation` — save with
             ``glyph.anim.save("out.gif")``. Note this differs from
-            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two
+            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two
             cleopatra glyph families return different objects and pyramids passes each through
             rather than wrapping one to look like the other. **Keep a reference to it** —
             matplotlib warns and stops an animation held only as a temporary.
@@ -5317,7 +5324,7 @@ class NetCDF(Dataset):
 
         See Also:
             plot: One frame, or the same animation via ``animate=``.
-            UgridDataset.animate: The unstructured counterpart.
+            MeshDataset.animate: The unstructured counterpart.
         """
         return self.plot(
             variable=variable, animate=dim if dim is not None else True, **kwargs
@@ -12848,6 +12855,12 @@ class NetCDF(Dataset):
         over them. A copying `add_variable` on a weighted result is the route that needs it.
         """
         old = self._raster
+        # Unlike `_update_inplace`, this flush is strict (not routed through the
+        # best-effort `_flush_prior_handle`): the old handle here is *not* dropped
+        # -- it is only flushed, never closed, because a caller may still hold it
+        # or a `get_group()` view of it (#143, see the docstring). A flush failure
+        # on a surviving handle means uncommitted writes a caller can still read,
+        # so it must surface rather than be swallowed.
         if old is not None and old is not new_raster:
             old.FlushCache()
         # RasterBase state

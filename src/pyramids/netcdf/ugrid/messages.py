@@ -1,6 +1,6 @@
-"""Message text shared by the two halves of the UgridDataset API.
+"""Message text shared by the two halves of the MeshDataset API.
 
-`UgridDataset` resolves a variable name in two places — the facade mixin's `_facade_variable`
+`MeshDataset` resolves a variable name in two places — the facade mixin's `_facade_variable`
 and the dataset's own `_require_variable_name` — and they must say the same thing about the
 same mistake. Keeping the wording here is what makes that true by construction rather than by
 two copies happening to agree.

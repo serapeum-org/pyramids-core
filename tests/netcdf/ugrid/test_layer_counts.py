@@ -11,7 +11,7 @@ information available: nothing said a variable in the dataset had 21 layers, so
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -22,7 +22,7 @@ _TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 def _layered(counts):
     """A mesh whose variables carry the layer counts in `counts` (name -> n_layers)."""
-    dataset = UgridDataset.from_arrays(
+    dataset = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,

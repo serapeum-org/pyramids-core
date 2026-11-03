@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.plot_histogram."""
+"""Tests for MeshDataset.plot_histogram."""
 
 from __future__ import annotations
 

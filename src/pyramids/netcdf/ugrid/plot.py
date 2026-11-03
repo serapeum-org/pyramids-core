@@ -145,7 +145,7 @@ def plot_mesh_data(
 
     See Also:
         plot_mesh_outline: Plot mesh edges as a wireframe.
-        UgridDataset.plot: Dataset-level convenience method that
+        MeshDataset.plot: Dataset-level convenience method that
             calls this function.
     """
     glyph = _mesh_to_glyph(mesh)
@@ -311,7 +311,7 @@ def animate_mesh_data(
 
     See Also:
         plot_mesh_data: One frame rather than a sequence.
-        UgridDataset.animate: Dataset-level convenience method.
+        MeshDataset.animate: Dataset-level convenience method.
     """
     glyph = _mesh_to_glyph(mesh)
     return glyph.animate(
@@ -348,7 +348,7 @@ def plot_mesh_outline(
             to `"black"`.
         linewidth: Edge line width in points. Defaults to `0.3`.
         basemap: ``True`` or a web-tile provider name, drawing a tile backdrop under the
-            wireframe exactly as :meth:`UgridDataset.plot` does. ``None`` (default) draws none.
+            wireframe exactly as :meth:`MeshDataset.plot` does. ``None`` (default) draws none.
             Before issue #1354 this fell through to the line collection and raised
             ``LineCollection.set() got an unexpected keyword argument 'basemap'``.
         basemap_epsg: CRS code for the tile fetch. Required whenever ``basemap`` is truthy,
@@ -367,7 +367,7 @@ def plot_mesh_outline(
 
     See Also:
         plot_mesh_data: Plot data values on the mesh.
-        UgridDataset.plot_outline: Dataset-level convenience method.
+        MeshDataset.plot_outline: Dataset-level convenience method.
     """
     if basemap and basemap_epsg is None:
         # Same guard and message as the data path: tiles need a CRS to be placed against.

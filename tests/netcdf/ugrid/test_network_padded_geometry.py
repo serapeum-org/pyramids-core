@@ -1,4 +1,4 @@
-"""A padded edge row must not become a real edge in any of `Network1d`'s geometry members.
+"""A padded edge row must not become a real edge in any of `Mesh1d`'s geometry members.
 
 `topology_subset` was taught to drop the fill before `np.unique` so a padded row could not
 become an edge joining the last node. Every other consumer of the edge table still indexed it
@@ -13,9 +13,9 @@ is a silently wrong answer rather than a crash.
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.network import Network1d
+from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 
 pytestmark = pytest.mark.core
 
@@ -23,7 +23,7 @@ pytestmark = pytest.mark.core
 @pytest.fixture
 def padded_chain():
     """A 4-node chain of 3 edges, plus a fourth row that is all fill."""
-    return Network1d.from_arrays(
+    return Mesh1d.from_arrays(
         np.array([0.0, 1.0, 2.0, 3.0]),
         np.array([0.0, 0.0, 0.0, 0.0]),
         np.array([[0, 1], [1, 2], [2, 3], [-1, -1]]),
@@ -33,7 +33,7 @@ def padded_chain():
 @pytest.fixture
 def clean_chain():
     """The same chain without the padded row, as the reference answer."""
-    return Network1d.from_arrays(
+    return Mesh1d.from_arrays(
         np.array([0.0, 1.0, 2.0, 3.0]),
         np.array([0.0, 0.0, 0.0, 0.0]),
         np.array([[0, 1], [1, 2], [2, 3]]),
@@ -108,7 +108,7 @@ class TestPaddedRowGeometry:
             reading the tree's index as an edge index would name the wrong edge, which is the
             silent-wrong-answer failure mode this whole finding is about.
         """
-        network = Network1d.from_arrays(
+        network = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [-1, -1], [1, 2], [2, 3]]),
@@ -179,7 +179,7 @@ class TestHalfPaddedRow:
     @pytest.fixture
     def half_padded(self):
         """A chain whose second row names one node and pads the other slot."""
-        return Network1d.from_arrays(
+        return Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([[0, 1], [2, -1]]),
@@ -218,7 +218,7 @@ class TestHalfPaddedRow:
 
 
 class TestMeshEdgeLinestringsHalfPaddedRow:
-    """`UgridDataset._edge_linestrings` has the identical fallback and the identical defect."""
+    """`MeshDataset._edge_linestrings` has the identical fallback and the identical defect."""
 
     def test_a_one_node_edge_row_becomes_empty(self):
         """The mesh-side converter must not raise either.
@@ -227,7 +227,7 @@ class TestMeshEdgeLinestringsHalfPaddedRow:
             The two implementations mirror each other, so fixing one and leaving the other is
             the sibling problem this review round keeps finding.
         """
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

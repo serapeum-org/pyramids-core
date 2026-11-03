@@ -20,7 +20,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -31,7 +31,7 @@ _TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 def _mesh(values, nodata=None, offset=0.0):
     """A two-face mesh carrying `values`, optionally declaring `nodata`."""
-    dataset = UgridDataset.from_arrays(
+    dataset = MeshDataset.from_arrays(
         node_x=_NODE_X + offset,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,
@@ -47,7 +47,7 @@ def _round_trip(dataset, tmp_path, name="m.nc"):
     """Write `dataset` to a file and read it back."""
     path = tmp_path / name
     dataset.to_file(str(path))
-    return UgridDataset.read_file(str(path))
+    return MeshDataset.read_file(str(path))
 
 
 class TestDeclaredNodataSurvives:
@@ -183,7 +183,7 @@ class TestNodataSurvivesEveryDtype:
             Only `float64` passed before: the others lost the declaration or, for `int16`,
             read back `0.0`.
         """
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -208,7 +208,7 @@ class TestNodataSurvivesEveryDtype:
             variable data type" -- a denormal read from bytes meant for another type. The
             warning is the symptom that identified this defect, so it is pinned.
         """
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -221,7 +221,7 @@ class TestNodataSurvivesEveryDtype:
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            read_back = UgridDataset.read_file(str(path))
+            read_back = MeshDataset.read_file(str(path))
             declared = read_back["v"].nodata
 
         assert declared == -999.0, f"expected -999.0, got {declared!r}"

@@ -4,7 +4,7 @@ Pure functions that translate between a :class:`~pyramids.netcdf.ugrid.mesh.Mesh
 ``{name: MeshVariable}`` mapping and the UGRID-CF encoding carried by an ``xarray.Dataset`` --
 the in-memory mirror of the on-disk encoding written by
 :mod:`pyramids.netcdf.ugrid.io`. Keeping these functions mesh/variable-shaped (never a
-``UgridDataset``) keeps the module free of the dataset import cycle; the ``UgridDataset`` facade
+``MeshDataset``) keeps the module free of the dataset import cycle; the ``MeshDataset`` facade
 wraps the results.
 
 ``xarray``, ``zarr`` and ``dask`` are **optional** dependencies. None of them is imported at module
@@ -267,7 +267,7 @@ def to_xarray(
     ``start_index`` and file ``_FillValue`` restored to the on-disk convention), optional
     edge connectivity and face-centre coordinates, a CRS grid-mapping variable, and each data variable
     on its ``location`` dimension with ``mesh`` / ``location`` attributes. The result is readable by
-    ecosystem tools such as ``xugrid.UgridDataset.from_dataset`` and round-trips losslessly through
+    ecosystem tools such as ``xugrid.MeshDataset.from_dataset`` and round-trips losslessly through
     :func:`from_xarray`.
 
     ``xarray`` is optional; it is imported through
@@ -347,7 +347,7 @@ def to_xarray(
             np.asarray(mesh.face_y, dtype=np.float64), dims=(f"{mesh_name}_nFaces",)
         )
 
-    # The caller's WKT wins: a UgridDataset keeps its CRS on the dataset (from_arrays stores an
+    # The caller's WKT wins: a MeshDataset keeps its CRS on the dataset (from_arrays stores an
     # epsg there), not on the Mesh2d, so relying on the mesh alone silently dropped the CRS from
     # every export. Fall back to the mesh's own CRS for a bare-Mesh2d caller.
     exported_wkt = crs_wkt if crs_wkt is not None else _mesh_crs_wkt(mesh)

@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from shapely.geometry import Polygon
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.core
 @pytest.fixture
 def mask_with_nodata():
     """A two-face mesh holding a boolean mask that declares a float no-data value."""
-    mesh = UgridDataset.from_arrays(
+    mesh = MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
         node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -68,7 +68,7 @@ class TestMorphologyResultNodata:
             The guard must only drop what cannot be represented. A float variable keeps its
             NaN through a facade that returns floats, so nothing that already worked changes.
         """
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -103,7 +103,7 @@ class TestBurnFillDeclaration:
     @pytest.fixture
     def strip(self):
         """A 1 x 3 strip of unit quads along x."""
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0, 0.0, 1.0, 2.0, 3.0]),
             node_y=np.array([0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6]]),
@@ -155,7 +155,7 @@ class TestInterpTimeDocumentedValues:
     @pytest.fixture
     def timed(self):
         """A two-face mesh with two numeric time steps."""
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

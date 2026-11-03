@@ -80,7 +80,7 @@ paired with a topology loaded from somewhere else. Such a driver declares `needs
 `read` raising, and implements `read_data`:
 
 ```python
-mesh = UgridDataset.read_file("domain.2dm")
+mesh = MeshDataset.read_file("domain.2dm")
 result = mesh.attach_data("velocity.dat")
 ```
 
@@ -101,10 +101,10 @@ Construct pyramids' own types and return them:
 
 ```python
 from pyramids.netcdf.ugrid import (
-    Connectivity, Mesh2d, MeshVariable, Network1d, UgridDataset,
+    Connectivity, Mesh2d, MeshVariable, Mesh1d, MeshDataset,
 )
 
-UgridDataset(
+MeshDataset(
     mesh=Mesh2d(
         node_x, node_y,
         face_node_connectivity=Connectivity(
@@ -125,22 +125,22 @@ UgridDataset(
 ```
 
 A format with no NetCDF variables to name — a 2DM or a Selafin — passes `topology_info=None`,
-which `UgridDataset` documents as the value for a mesh built from arrays. Synthesise
+which `MeshDataset` documents as the value for a mesh built from arrays. Synthesise
 UGRID-conventional names only if you want `to_file()` to write a tidy NetCDF afterwards, and then
 make them match what the writer actually emits.
 
-Return a [`Network1d`][pyramids.netcdf.ugrid.Network1d] for a file whose topology dimension is 1 —
-2DM's `E2L` line elements, or FLO-2D's and 3Di's 1D domains. `UgridDataset.read_file` refuses one
-rather than hand back the wrong type; `Network1d.read_file` is where it is read:
+Return a [`Mesh1d`][pyramids.netcdf.ugrid.Mesh1d] for a file whose topology dimension is 1 —
+2DM's `E2L` line elements, or FLO-2D's and 3Di's 1D domains. `MeshDataset.read_file` refuses one
+rather than hand back the wrong type; `Mesh1d.read_file` is where it is read:
 
 ```python
-from pyramids.netcdf.ugrid import Network1d
+from pyramids.netcdf.ugrid import Mesh1d
 
-network = Network1d.read_file("channels.2dm")
+network = Mesh1d.read_file("channels.2dm")
 ```
 
-A driver may serve both: return a `Network1d` when the file declares `topology_dimension == 1` and
-a `UgridDataset` otherwise. Each entry point checks what it received and names the other one if it
+A driver may serve both: return a `Mesh1d` when the file declares `topology_dimension == 1` and
+a `MeshDataset` otherwise. Each entry point checks what it received and names the other one if it
 is the wrong shape.
 
 ### Five invariants — each fails silently
@@ -174,7 +174,7 @@ returned, and on Windows a captured handle also keeps the file locked.
 
 ## How pyramids dispatches
 
-`UgridDataset.read_file` resolves in this order:
+`MeshDataset.read_file` resolves in this order:
 
 1. `driver=` given — that driver, or `DriverNotExistError`. Never falls back. `driver="ugrid"`
    names pyramids' own reader, which is why `ugrid` is in `RESERVED_NAMES` and a plugin cannot
@@ -192,7 +192,7 @@ returned, and on Windows a captured handle also keeps the file locked.
 pass `driver="selafin"`. `**options` reaches your `write` uninterpreted.
 
 `lazy` is forwarded to `read` and `read_data` from every entry point that takes it —
-`read_file`, `read_all`, `attach_data` and `Network1d.read_file`. The built-in UGRID reader is
+`read_file`, `read_all`, `attach_data` and `Mesh1d.read_file`. The built-in UGRID reader is
 always lazy and raises `TypeError` on `lazy=False` rather than ignoring it.
 
 ## Failure handling

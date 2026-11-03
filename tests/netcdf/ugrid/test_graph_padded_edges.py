@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset, graph
+from pyramids.netcdf.ugrid import MeshDataset, graph
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
@@ -129,7 +129,7 @@ class TestFaceSideIsStillCorrect:
         assert edge_node[2].tolist() == [1, 2]
 
     def test_the_facade_reaches_it_too(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
             face_node_connectivity=FACE_NODES,

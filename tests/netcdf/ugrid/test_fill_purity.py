@@ -1,6 +1,6 @@
 """The fill functions must not write to the mesh they are handed.
 
-`UgridDataset.copy()` shares its `Mesh2d` with the original, so a fill that derives a connectivity
+`MeshDataset.copy()` shares its `Mesh2d` with the original, so a fill that derives a connectivity
 and stores it on the mesh mutates the caller's object — and, through the shared mesh, the dataset
 the copy came from. These tests pin that the mesh arrives unchanged, and that a degenerate mesh
 (no adjacency, or coincident coordinates) neither warns nor returns infinities.
@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset, fill
+from pyramids.netcdf.ugrid import MeshDataset, fill
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
@@ -64,7 +64,7 @@ class TestLaplaceLeavesTheMeshAlone:
 
     def test_filling_a_copy_does_not_touch_the_original(self):
         # copy() shares the Mesh2d, so a mutating fill would reach back into `original`.
-        original = UgridDataset.from_arrays(
+        original = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
             face_node_connectivity=FACE_NODES,

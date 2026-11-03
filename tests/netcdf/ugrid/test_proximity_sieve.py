@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.proximity and UgridDataset.sieve."""
+"""Tests for MeshDataset.proximity and MeshDataset.sieve."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 from tests.netcdf.ugrid.conftest import make_two_triangle_ds as _make_ds
@@ -73,7 +73,7 @@ class TestProximityEdgeCases:
             shape=(2,),
             _data=np.array([10.0, 20.0]),
         )
-        ds = UgridDataset(
+        ds = MeshDataset(
             mesh=mesh,
             data_variables={"depth": var},
             global_attributes={},

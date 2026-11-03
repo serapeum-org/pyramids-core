@@ -1,16 +1,16 @@
-"""A2 — grouped `reduce(groupby=...)` and the `resample` sugar on UgridDataset."""
+"""A2 — grouped `reduce(groupby=...)` and the `resample` sugar on MeshDataset."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
-def _temporal(values: np.ndarray, stamps: list | None = None) -> UgridDataset:
+def _temporal(values: np.ndarray, stamps: list | None = None) -> MeshDataset:
     """A two-face mesh carrying `values` of shape (n_time, 2) along time."""
-    mesh = UgridDataset.from_arrays(
+    mesh = MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

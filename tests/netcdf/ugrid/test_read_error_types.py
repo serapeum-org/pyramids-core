@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -34,12 +34,12 @@ class TestUnopenableFile:
             because `OpenEx` raises first.
         """
         with pytest.raises(RuntimeError, match="not recognized"):
-            UgridDataset.read_file(str(not_a_netcdf))
+            MeshDataset.read_file(str(not_a_netcdf))
 
     def test_mesh_names_raises_runtime_error(self, not_a_netcdf):
         """`mesh_names` surfaces GDAL's own error, as its Raises block says."""
         with pytest.raises(RuntimeError, match="not recognized"):
-            UgridDataset.mesh_names(str(not_a_netcdf))
+            MeshDataset.mesh_names(str(not_a_netcdf))
 
     def test_read_all_raises_runtime_error(self, not_a_netcdf):
         """`read_all` surfaces GDAL's own error.
@@ -49,7 +49,7 @@ class TestUnopenableFile:
             promised for an unopenable file.
         """
         with pytest.raises(RuntimeError, match="not recognized"):
-            UgridDataset.read_all(str(not_a_netcdf))
+            MeshDataset.read_all(str(not_a_netcdf))
 
     def test_from_bytes_raises_runtime_error(self, not_a_netcdf):
         """`from_bytes` surfaces GDAL's own error.
@@ -62,7 +62,7 @@ class TestUnopenableFile:
         payload = not_a_netcdf.read_bytes()
 
         with pytest.raises(RuntimeError, match="not recognized") as exc:
-            UgridDataset.from_bytes(payload)
+            MeshDataset.from_bytes(payload)
 
         assert "/vsimem/" in str(exc.value), (
             f"the message should name the in-memory file it tried to read: {exc.value}"
@@ -83,4 +83,4 @@ class TestValidFileWithoutATopology:
         cf_file = Path("tests/data/netcdf/cf__5v__1d4-4d1__y-asc.nc")
 
         with pytest.raises(ValueError, match="No UGRID mesh topology"):
-            UgridDataset.read_file(str(cf_file))
+            MeshDataset.read_file(str(cf_file))

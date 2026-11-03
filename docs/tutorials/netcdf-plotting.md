@@ -228,6 +228,6 @@ that points at the replacement:
 `NetCDF.plot` is a thin facade over `pyramids.netcdf._plot.NetCDFPlot`, which resolves the variable,
 selectors, curvilinear coordinates, facet stack, and animation axis, then hands a 2-D (or stacked)
 array to the shared `pyramids.dataset._plot_helpers.render_array` core — the same renderer used by
-`Dataset.plot`, `DatasetCollection.plot` (animate mode), and (via `mesh_render`) `UgridDataset.plot`.
+`Dataset.plot`, `DatasetCollection.plot` (animate mode), and (via `mesh_render`) `MeshDataset.plot`.
 That core builds a cleopatra `ArrayGlyph` and dispatches to `plot` / `facet` / `animate`. See the
 [architecture diagrams](../overview/diagrams.md#uml-class-plotting-layer).

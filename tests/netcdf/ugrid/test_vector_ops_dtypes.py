@@ -12,7 +12,7 @@ import pytest
 import shapely
 from shapely.geometry import LineString
 
-from pyramids.netcdf.ugrid import UgridDataset, vector_ops
+from pyramids.netcdf.ugrid import MeshDataset, vector_ops
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
@@ -24,7 +24,7 @@ TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 @pytest.fixture
 def mesh():
     """A unit square split into two triangles."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,

@@ -252,14 +252,14 @@ def clip_mesh(
     to produce a compact, self-consistent mesh.
 
     Args:
-        dataset: Source UgridDataset.
+        dataset: Source MeshDataset.
         mask: Polygon mask (GeoDataFrame, FeatureCollection, or Shapely geometry).
         touch: If True, include faces that touch the mask boundary.
             If False, only include faces fully inside.
 
     Returns:
         tuple: ``(mesh, data_variables)`` for the clipped faces — wrap with
-        :meth:`UgridDataset.clip`, which is the public entry point.
+        :meth:`MeshDataset.clip`, which is the public entry point.
     """
     mesh = dataset.mesh
 
@@ -298,7 +298,7 @@ def subset_by_bounds(
     intersection tests. Uses vectorized numpy comparisons.
 
     Args:
-        dataset: Source UgridDataset.
+        dataset: Source MeshDataset.
         xmin: Minimum x-coordinate.
         ymin: Minimum y-coordinate.
         xmax: Maximum x-coordinate.
@@ -306,7 +306,7 @@ def subset_by_bounds(
 
     Returns:
         tuple: ``(mesh, data_variables)`` for the faces whose centroids fall in the box —
-        wrap with :meth:`UgridDataset.subset_by_bounds`, the public entry point.
+        wrap with :meth:`MeshDataset.subset_by_bounds`, the public entry point.
     """
     mesh = dataset.mesh
     cx, cy = mesh.face_centroids
@@ -328,7 +328,7 @@ def subset_mesh_by_faces(
     same renumbering machinery without a geometry step — this is that entry point.
 
     Args:
-        dataset: Source UgridDataset (read-only).
+        dataset: Source MeshDataset (read-only).
         selected_faces: Face indices to keep, in the order they should appear.
 
     Returns:
@@ -345,12 +345,12 @@ def _subset_mesh_by_face_indices(
 
     Handles node renumbering, edge filtering, coordinate subsetting, and data variable
     slicing. Shared by :func:`clip_mesh` and :func:`subset_by_bounds`. Returns the rebuilt
-    ``(mesh, data_variables)`` rather than a ``UgridDataset`` so this module stays
+    ``(mesh, data_variables)`` rather than a ``MeshDataset`` so this module stays
     independent of ``ugrid.dataset`` (STR-3 — breaks the import cycle); the caller
-    (``UgridDataset.clip`` / ``.subset_by_bounds``) wraps the parts back into a dataset.
+    (``MeshDataset.clip`` / ``.subset_by_bounds``) wraps the parts back into a dataset.
 
     Args:
-        dataset: Source UgridDataset (read-only; its mesh / data variables are sliced).
+        dataset: Source MeshDataset (read-only; its mesh / data variables are sliced).
         selected_faces: List of face indices to keep.
 
     Returns:

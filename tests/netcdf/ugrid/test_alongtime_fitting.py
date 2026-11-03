@@ -8,7 +8,7 @@ called. That is what makes these tests able to catch a plausible-looking wrong a
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -19,7 +19,7 @@ _FACES = np.array([[0, 1, 2], [1, 2, 3]])
 
 def _temporal(values, time_values=None):
     """A two-face mesh carrying ``values`` shaped (n_time, 2)."""
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -69,7 +69,7 @@ class TestPolyfit:
             subject.polyfit(-1)
 
     def test_a_static_dataset_is_refused(self):
-        static = UgridDataset.from_arrays(
+        static = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -234,7 +234,7 @@ class TestCoarsen:
     def test_a_sweep_passes_a_short_variable_through(self):
         """One variable too short for the window must not lose the whole sweep - the choice
         `convert_units` makes for a variable with no units to convert from."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -247,7 +247,7 @@ class TestCoarsen:
 
     def test_naming_a_short_variable_still_raises(self):
         """A named variable is a request, not a sweep."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -291,7 +291,7 @@ class TestInterpLike:
 
     def test_a_different_mesh_is_refused(self):
         source = _temporal(_RAMP)
-        other = UgridDataset.from_arrays(
+        other = MeshDataset.from_arrays(
             node_x=np.array([0.0, 5.0, 5.0]),
             node_y=np.array([0.0, 0.0, 5.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -304,7 +304,7 @@ class TestInterpLike:
 
 def _two_variables():
     """A mesh with two temporal variables, to exercise the `variable_name` selection."""
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -369,7 +369,7 @@ def _ragged():
 
     A per-timestep map variable beside a per-output-interval one is normal D-Flow FM output.
     """
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -427,7 +427,7 @@ class TestPerVariableTimeCoordinate:
         `a` is stamped 0, 1, 2 and `b` is stamped 0, 10, 20 over the same values, so `b`'s
         derivative must be a tenth of `a`'s.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -506,7 +506,7 @@ class TestIntegrateStaticResult:
     def _stamped(active=None):
         from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -576,7 +576,7 @@ class TestRaggedDatasetCannotBeWritten:
 
     @staticmethod
     def _two_equal():
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -612,7 +612,7 @@ class TestRaggedDatasetCannotBeWritten:
         assert path.stat().st_size > 0
 
     def test_a_dataset_with_one_temporal_variable_writes_fine(self, tmp_path):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -635,7 +635,7 @@ class TestUnknownVariableMessageParity:
 
     @staticmethod
     def _single():
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -714,7 +714,7 @@ class TestDerivedResultsDeclareNoSourceSentinel:
 
     @staticmethod
     def _with_sentinel():
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -768,7 +768,7 @@ class TestStaticMaskSurvivesInterpolation:
 
     @staticmethod
     def _masked():
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,

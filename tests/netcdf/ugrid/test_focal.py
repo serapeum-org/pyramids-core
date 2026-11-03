@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.focal import neighbourhood
 
 pytestmark = pytest.mark.core
@@ -24,7 +24,7 @@ _FACES = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5]])
 
 
 def _strip(values, nodata=None, active=None):
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -99,7 +99,7 @@ class TestFocalMean:
         assert ds.focal_mean()[1] == pytest.approx(15.0)
 
     def test_refuses_a_temporal_variable(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -199,7 +199,7 @@ class TestNeighbourhoodCost:
         connectivity = np.array(
             [[index, index + 1, index + 2] for index in range(faces)]
         )
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=node_x,
             node_y=node_y,
             face_node_connectivity=connectivity,

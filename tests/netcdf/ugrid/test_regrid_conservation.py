@@ -17,12 +17,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import Regridder, UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset, Regridder
 
 
-def _quad(node_x: np.ndarray, node_y: np.ndarray, value: float) -> UgridDataset:
+def _quad(node_x: np.ndarray, node_y: np.ndarray, value: float) -> MeshDataset:
     """A single quad face carrying `value`."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=node_x,
         node_y=node_y,
         face_node_connectivity=np.array([[0, 1, 2, 3]]),
@@ -31,7 +31,7 @@ def _quad(node_x: np.ndarray, node_y: np.ndarray, value: float) -> UgridDataset:
 
 
 @pytest.fixture
-def half_covered() -> tuple[UgridDataset, UgridDataset]:
+def half_covered() -> tuple[MeshDataset, MeshDataset]:
     """A unit source quad covering exactly half of a 2x1 target quad."""
     source = _quad(np.array([0.0, 1.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0, 1.0]), 4.0)
     target = _quad(np.array([0.0, 2.0, 2.0, 0.0]), np.array([0.0, 0.0, 1.0, 1.0]), 0.0)
@@ -65,7 +65,7 @@ class TestConservativeConservesTheIntegral:
         source = _quad(
             np.array([0.0, 2.0, 2.0, 0.0]), np.array([0.0, 0.0, 1.0, 1.0]), 3.0
         )
-        target = UgridDataset.from_arrays(
+        target = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -103,7 +103,7 @@ class TestOverlapAveragesInstead:
         assert weights.sum(axis=1).tolist() == pytest.approx([1.0])
 
     def test_overlap_reproduces_a_constant_field(self):
-        source = UgridDataset.from_arrays(
+        source = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -133,7 +133,7 @@ def _unit_grid(n: int, size: float = 1.0):
         for row in range(n)
         for col in range(n)
     ]
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=grid_x.ravel(),
         node_y=grid_y.ravel(),
         face_node_connectivity=np.array(faces),

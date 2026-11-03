@@ -12,16 +12,16 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _dataset(data: dict, locations: dict) -> UgridDataset:
+def _dataset(data: dict, locations: dict) -> MeshDataset:
     """A two-triangle mesh carrying the given variables."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -31,13 +31,13 @@ def _dataset(data: dict, locations: dict) -> UgridDataset:
 
 
 @pytest.fixture
-def node_variable() -> UgridDataset:
+def node_variable() -> MeshDataset:
     """One value per node."""
     return _dataset({"h": np.array([1.0, 2.0, 3.0, 4.0])}, {"h": "node"})
 
 
 @pytest.fixture
-def layered() -> UgridDataset:
+def layered() -> MeshDataset:
     """Three layers over two faces, with named dimensions."""
     dataset = _dataset({"salinity": np.arange(6.0).reshape(3, 2)}, {"salinity": "face"})
     dataset["salinity"].dimensions = ("mesh2d_nLayers", "mesh2d_nFaces")

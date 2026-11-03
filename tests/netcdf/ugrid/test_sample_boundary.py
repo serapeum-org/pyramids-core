@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.regrid import sample
 from pyramids.netcdf.ugrid.spatial import MeshSpatialIndex
 
@@ -23,9 +23,9 @@ TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
 @pytest.fixture
-def mesh() -> UgridDataset:
+def mesh() -> MeshDataset:
     """The two-triangle unit square with one value per face."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,

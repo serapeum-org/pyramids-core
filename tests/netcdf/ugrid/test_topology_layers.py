@@ -7,16 +7,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 FACES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _layered(values: np.ndarray, layer_values: list | None = None) -> UgridDataset:
+def _layered(values: np.ndarray, layer_values: list | None = None) -> MeshDataset:
     """A two-face mesh carrying a layered variable (layer, element)."""
-    mesh = UgridDataset.from_arrays(
+    mesh = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=FACES,
@@ -34,7 +34,7 @@ def _layered(values: np.ndarray, layer_values: list | None = None) -> UgridDatas
 
 class TestMultiTopology:
     def test_mesh_names_lists_the_topology(self, tmp_path: Path):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -42,12 +42,12 @@ class TestMultiTopology:
         )
         path = tmp_path / "one.nc"
         mesh.to_file(path)
-        names = UgridDataset.mesh_names(path)
+        names = MeshDataset.mesh_names(path)
         assert len(names) == 1
         assert names[0] == mesh.mesh_name
 
     def test_read_all_returns_one_dataset_per_topology(self, tmp_path: Path):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -55,13 +55,13 @@ class TestMultiTopology:
         )
         path = tmp_path / "one.nc"
         mesh.to_file(path)
-        everything = UgridDataset.read_all(path)
-        assert set(everything) == set(UgridDataset.mesh_names(path))
+        everything = MeshDataset.read_all(path)
+        assert set(everything) == set(MeshDataset.mesh_names(path))
         only = next(iter(everything.values()))
         assert only["d"].data.tolist() == [1.0, 2.0]
 
     def test_read_file_accepts_the_mesh_name(self, tmp_path: Path):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -69,14 +69,14 @@ class TestMultiTopology:
         )
         path = tmp_path / "one.nc"
         mesh.to_file(path)
-        name = UgridDataset.mesh_names(path)[0]
-        assert UgridDataset.read_file(path, mesh_name=name)["d"].data.tolist() == [
+        name = MeshDataset.mesh_names(path)[0]
+        assert MeshDataset.read_file(path, mesh_name=name)["d"].data.tolist() == [
             1.0,
             2.0,
         ]
 
     def test_unknown_mesh_name_raises(self, tmp_path: Path):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -85,10 +85,10 @@ class TestMultiTopology:
         path = tmp_path / "one.nc"
         mesh.to_file(path)
         with pytest.raises(ValueError, match="No UGRID topology named"):
-            UgridDataset.read_file(path, mesh_name="not_a_mesh")
+            MeshDataset.read_file(path, mesh_name="not_a_mesh")
 
     def test_default_read_is_unchanged(self, tmp_path: Path):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -96,7 +96,7 @@ class TestMultiTopology:
         )
         path = tmp_path / "one.nc"
         mesh.to_file(path)
-        assert isinstance(UgridDataset.read_file(path), UgridDataset)
+        assert isinstance(MeshDataset.read_file(path), MeshDataset)
 
 
 class TestLayerSelection:
@@ -104,7 +104,7 @@ class TestLayerSelection:
         assert _layered(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])).n_layers == 3
 
     def test_n_layers_is_none_without_layers(self):
-        flat = UgridDataset.from_arrays(
+        flat = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,
@@ -129,7 +129,7 @@ class TestLayerSelection:
         assert out["t"].data.shape == (2, 2)
 
     def test_isel_layer_without_layers_raises(self):
-        flat = UgridDataset.from_arrays(
+        flat = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=FACES,

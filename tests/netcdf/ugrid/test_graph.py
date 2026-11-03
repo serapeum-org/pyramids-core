@@ -3,7 +3,7 @@
 Covers the connectivity builders, the sparse adjacency primitive, facet remapping, and the
 graph algorithms (connected components, reverse Cuthill-McKee, binary morphology, Voronoi /
 circumcenters, and the boundary helpers). All fixtures are small hand-built meshes or meshes
-assembled with ``UgridDataset.from_arrays``.
+assembled with ``MeshDataset.from_arrays``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import shapely
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.graph import (
     binary_dilation,
@@ -57,7 +57,7 @@ def _row_mesh(n_quads: int) -> Mesh2d:
     faces = np.array(
         [[k, k + 1, cols + k + 1, cols + k] for k in range(n_quads)], dtype=np.intp
     )
-    return UgridDataset.from_arrays(xs, ys, faces).mesh
+    return MeshDataset.from_arrays(xs, ys, faces).mesh
 
 
 def _grid_quads_with_hole() -> Mesh2d:
@@ -82,7 +82,7 @@ def _grid_quads_with_hole() -> Mesh2d:
                     node_id[r + 1, c],
                 ]
             )
-    return UgridDataset.from_arrays(xs, ys, np.array(faces, dtype=np.intp)).mesh
+    return MeshDataset.from_arrays(xs, ys, np.array(faces, dtype=np.intp)).mesh
 
 
 def _two_disjoint_triangles() -> Mesh2d:
@@ -94,7 +94,7 @@ def _two_disjoint_triangles() -> Mesh2d:
     node_x = np.array([0.0, 1.0, 0.5, 10.0, 11.0, 10.5])
     node_y = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0])
     faces = np.array([[0, 1, 2], [3, 4, 5]], dtype=np.intp)
-    return UgridDataset.from_arrays(node_x, node_y, faces).mesh
+    return MeshDataset.from_arrays(node_x, node_y, faces).mesh
 
 
 class TestConnectivityBuilders:
@@ -331,7 +331,7 @@ class TestVoronoiAndCircumcenters:
             for c in range(2):
                 faces.append([node_id[r, c], node_id[r, c + 1], node_id[r + 1, c + 1]])
                 faces.append([node_id[r, c], node_id[r + 1, c + 1], node_id[r + 1, c]])
-        mesh = UgridDataset.from_arrays(xs, ys, np.array(faces, dtype=np.intp)).mesh
+        mesh = MeshDataset.from_arrays(xs, ys, np.array(faces, dtype=np.intp)).mesh
         vor = voronoi(mesh)
         assert vor.points.shape == (9, 2)
         center_region = vor.regions[vor.point_region[4]]

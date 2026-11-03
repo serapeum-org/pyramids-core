@@ -35,10 +35,10 @@ from pyramids.netcdf.ugrid._drivers import (
     mesh_drivers,
 )
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset, _netcdf_fallback_driver
+from pyramids.netcdf.ugrid.dataset import MeshDataset, _netcdf_fallback_driver
 from pyramids.netcdf.ugrid.mesh import Mesh2d
+from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 from pyramids.netcdf.ugrid.models import MeshVariable
-from pyramids.netcdf.ugrid.network import Network1d
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ def _clean_registry():
     clear_driver_cache()
 
 
-def _square_mesh() -> UgridDataset:
+def _square_mesh() -> MeshDataset:
     """Build the smallest valid dataset a fake driver can return.
 
     Returns:
@@ -78,7 +78,7 @@ def _square_mesh() -> UgridDataset:
         shape=(1,),
         _data=np.array([2.5]),
     )
-    return UgridDataset(
+    return MeshDataset(
         mesh=mesh,
         data_variables={"depth": variable},
         global_attributes={"Conventions": "UGRID-1.0"},
@@ -442,7 +442,7 @@ class TestReadDispatch:
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.whatever"
         target.write_bytes(b"")
-        result = UgridDataset.read_file(target, driver="fake")
+        result = MeshDataset.read_file(target, driver="fake")
         assert result.n_face == 1
         assert driver.read_calls == [(str(target), None)]
 
@@ -451,7 +451,7 @@ class TestReadDispatch:
         driver = registered(VetoDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        UgridDataset.read_file(target, driver="veto")
+        MeshDataset.read_file(target, driver="veto")
         assert driver.sniffed == []
 
     def test_unknown_driver_lists_what_is_installed(self, tmp_path, registered):
@@ -460,7 +460,7 @@ class TestReadDispatch:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(DriverNotExistError, match="fake"):
-            UgridDataset.read_file(target, driver="nope")
+            MeshDataset.read_file(target, driver="nope")
 
     def test_can_open_veto_falls_through_to_gdal(self, tmp_path, registered):
         """A driver claiming the suffix but refusing the file does not capture the read."""
@@ -468,7 +468,7 @@ class TestReadDispatch:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"not a mesh at all")
         with pytest.raises(UnsupportedMeshFormatError):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
         assert driver.sniffed == [str(target)]
 
     def test_unclaimed_suffix_reports_installed_drivers(self, tmp_path, registered):
@@ -477,7 +477,7 @@ class TestReadDispatch:
         target = tmp_path / "model.slf"
         target.write_bytes(b"\x00\x01\x02")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
         message = str(caught.value)
         assert ".slf" in message
         assert "fake (.fake)" in message
@@ -491,7 +491,7 @@ class TestReadDispatch:
         target = tmp_path / "model.slf"
         target.write_bytes(b"\x00")
         with pytest.raises(FileFormatNotSupportedError):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     def test_needs_mesh_driver_points_at_attach_data(self, tmp_path, registered):
         """A results-only file reached through `read_file` must say where to go."""
@@ -499,12 +499,12 @@ class TestReadDispatch:
         target = tmp_path / "velocity.res"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="attach_data"):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     def test_driver_returning_network1d_is_reported(self, tmp_path, registered):
         """A 1D topology is a different class, so handing it back would break the caller."""
         driver = registered(FakeDriver())
-        driver.returns = Network1d(
+        driver.returns = Mesh1d(
             node_x=np.array([0.0, 1.0]),
             node_y=np.array([0.0, 0.0]),
             edge_node_connectivity=Connectivity(
@@ -516,8 +516,8 @@ class TestReadDispatch:
         )
         target = tmp_path / "network.fake"
         target.write_bytes(b"")
-        with pytest.raises(UnsupportedMeshFormatError, match="Network1d"):
-            UgridDataset.read_file(target)
+        with pytest.raises(UnsupportedMeshFormatError, match="Mesh1d"):
+            MeshDataset.read_file(target)
 
     def test_driver_failure_names_the_driver(self, tmp_path, registered):
         """A parse failure is attributed, so the blame is unambiguous."""
@@ -530,7 +530,7 @@ class TestReadDispatch:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="'fake' driver failed"):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     @pytest.mark.parametrize("suffix", [".nc", ".nc4", ".NC", ".cdf"])
     def test_netcdf_read_does_no_discovery(
@@ -542,12 +542,12 @@ class TestReadDispatch:
         """
         target = tmp_path / f"mesh{suffix}"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
-        UgridDataset.read_file(target)
+        MeshDataset.read_file(target)
         assert _drivers._CACHE is None
 
     def test_vsi_path_does_no_discovery(self, ugrid_convention_nc_path):
         """A virtual-filesystem name has no suffix to dispatch on and must stay on GDAL."""
-        UgridDataset.from_bytes(Path(ugrid_convention_nc_path).read_bytes())
+        MeshDataset.from_bytes(Path(ugrid_convention_nc_path).read_bytes())
         assert _drivers._CACHE is None
 
     def test_extensionless_file_does_not_crash(self, tmp_path, registered):
@@ -556,21 +556,21 @@ class TestReadDispatch:
         target = tmp_path / "mesh"
         target.write_bytes(b"\x00")
         with pytest.raises(UnsupportedMeshFormatError, match="no suffix"):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     def test_suffix_match_is_case_insensitive(self, tmp_path, registered):
         """`.FAKE` is a real spelling on Windows."""
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.FAKE"
         target.write_bytes(b"")
-        UgridDataset.read_file(target)
+        MeshDataset.read_file(target)
         assert len(driver.read_calls) == 1
 
     def test_missing_file_still_raises_file_not_found(self, tmp_path, registered):
         """Dispatch must not mask the simplest error of all."""
         registered(FakeDriver())
         with pytest.raises(FileNotFoundError):
-            UgridDataset.read_file(tmp_path / "absent.nc")
+            MeshDataset.read_file(tmp_path / "absent.nc")
 
 
 class TestAttachData:
@@ -660,7 +660,7 @@ class TestWriteDispatch:
         target = tmp_path / "mesh.nc"
         _square_mesh().to_file(target)
         assert target.exists()
-        assert UgridDataset.read_file(target).n_face == 1
+        assert MeshDataset.read_file(target).n_face == 1
 
     def test_driver_write_passes_options_through_verbatim(self, tmp_path, registered):
         """pyramids must not interpret or rename a format's own settings."""
@@ -725,7 +725,7 @@ class TestWriteDispatch:
         target = tmp_path / "mesh.fake"
         _square_mesh().to_file(target)
         assert driver.write_calls == []
-        assert UgridDataset.read_file(target, driver="fake").n_face == 1
+        assert MeshDataset.read_file(target, driver="fake").n_face == 1
 
     def test_options_without_a_driver_are_rejected(self, tmp_path):
         """Dropping them silently would hide a caller's mistake."""
@@ -824,11 +824,11 @@ class TestIntrospection:
         registered(FakeDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        assert UgridDataset.mesh_names(target) == ["first", "second"]
+        assert MeshDataset.mesh_names(target) == ["first", "second"]
 
     def test_mesh_names_on_netcdf_does_no_discovery(self, ugrid_convention_nc_path):
         """The same short-circuit as `read_file`."""
-        UgridDataset.mesh_names(ugrid_convention_nc_path)
+        MeshDataset.mesh_names(ugrid_convention_nc_path)
         assert _drivers._CACHE is None
 
     def test_read_all_routes_through_the_driver(self, tmp_path, registered):
@@ -836,7 +836,7 @@ class TestIntrospection:
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        result = UgridDataset.read_all(target)
+        result = MeshDataset.read_all(target)
         assert sorted(result) == ["first", "second"]
         assert [call[1] for call in driver.read_calls] == ["first", "second"]
 
@@ -859,7 +859,7 @@ class TestBareInstall:
         target = tmp_path / "model.slf"
         target.write_bytes(b"\x00\x01")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
         message = str(caught.value)
         assert "Plugin drivers   : none installed" in message, (
             f"An empty registry should say so explicitly, got: {message}"
@@ -882,7 +882,7 @@ class TestBareInstall:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(DriverNotExistError) as caught:
-            UgridDataset.read_file(target, driver="selafin")
+            MeshDataset.read_file(target, driver="selafin")
         assert "none" in str(caught.value), (
             f"Expected 'none' for an empty registry, got: {caught.value}"
         )
@@ -941,7 +941,7 @@ class TestErrorPassthrough:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
         message = str(caught.value)
         assert message == "this file is version 9, which I cannot read", (
             f"The driver's own message should survive unwrapped, got: {message}"
@@ -1202,7 +1202,7 @@ class TestMissingFileReporting:
         """
         registered(FakeDriver())
         with pytest.raises(FileNotFoundError):
-            UgridDataset.read_file(tmp_path / "typo.fake")
+            MeshDataset.read_file(tmp_path / "typo.fake")
 
     def test_read_file_missing_with_explicit_driver_raises_file_not_found(
         self, tmp_path, registered
@@ -1215,7 +1215,7 @@ class TestMissingFileReporting:
         """
         registered(FakeDriver())
         with pytest.raises(FileNotFoundError):
-            UgridDataset.read_file(tmp_path / "typo.whatever", driver="fake")
+            MeshDataset.read_file(tmp_path / "typo.whatever", driver="fake")
 
     def test_attach_data_missing_file_raises_file_not_found(self, tmp_path, registered):
         """`attach_data` reports a missing results file as missing.
@@ -1238,7 +1238,7 @@ class TestMissingFileReporting:
         """
         registered(FakeDriver())
         with pytest.raises(FileNotFoundError):
-            UgridDataset.mesh_names(tmp_path / "typo.fake")
+            MeshDataset.mesh_names(tmp_path / "typo.fake")
 
     def test_a_driver_raising_file_not_found_is_not_rewritten(
         self, tmp_path, registered
@@ -1263,7 +1263,7 @@ class TestMissingFileReporting:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(FileNotFoundError, match="companion file"):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     def test_a_directory_is_not_reported_as_an_unsupported_format(
         self, tmp_path, registered
@@ -1284,7 +1284,7 @@ class TestMissingFileReporting:
         with pytest.raises(
             (IsADirectoryError, FileNotFoundError, ValueError)
         ) as caught:
-            UgridDataset.read_file(folder)
+            MeshDataset.read_file(folder)
         assert "driver plugin" not in str(caught.value), (
             f"A directory must not be reported as a missing plugin: {caught.value}"
         )
@@ -1339,7 +1339,7 @@ class VariablesOnlyAttachDriver:
 class TestAttachMergeContract:
     """`read_data` returns its own variables; pyramids owns the merge.
 
-    The first contract had the driver return a whole merged `UgridDataset`, and pyramids
+    The first contract had the driver return a whole merged `MeshDataset`, and pyramids
     detected collisions with `attached[name] is not self._data_variables.get(name)`. That
     encoded an undocumented by-reference requirement: a driver rebuilding the dict — which
     is what `dataclasses.replace` produces, and how pyramids' own `rename_variable` builds
@@ -1428,7 +1428,7 @@ class TestAttachMergeContract:
         confusing failure deep in the merge.
 
         Test scenario:
-            `read_data` returns a `UgridDataset`; the error names the driver and the
+            `read_data` returns a `MeshDataset`; the error names the driver and the
             expected shape.
         """
 
@@ -1493,8 +1493,8 @@ class TestLazyForwarding:
         driver = registered(Recording())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        UgridDataset.read_file(target, lazy=False)
-        UgridDataset.read_file(target, lazy=True)
+        MeshDataset.read_file(target, lazy=False)
+        MeshDataset.read_file(target, lazy=True)
         assert driver.lazy_seen == [False, True], (
             f"lazy must be forwarded verbatim, got: {driver.lazy_seen}"
         )
@@ -1518,7 +1518,7 @@ class TestLazyForwarding:
         driver = registered(Recording())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        UgridDataset.read_file(target)
+        MeshDataset.read_file(target)
         assert driver.lazy_seen == [True], (
             f"The default must arrive as True, got: {driver.lazy_seen}"
         )
@@ -1534,7 +1534,7 @@ class TestLazyForwarding:
             doing a lazy read.
         """
         with pytest.raises(TypeError, match="lazy"):
-            UgridDataset.read_file(ugrid_convention_nc_path, lazy=False)
+            MeshDataset.read_file(ugrid_convention_nc_path, lazy=False)
 
 
 class Network1dDriver(FakeDriver):
@@ -1547,7 +1547,7 @@ class Network1dDriver(FakeDriver):
     def read(self, path, *, mesh_name=None, lazy=True):
         """Return a two-node, one-edge network."""
         self.read_calls.append((path, mesh_name))
-        return Network1d(
+        return Mesh1d(
             node_x=np.array([0.0, 1.0]),
             node_y=np.array([0.0, 0.0]),
             edge_node_connectivity=Connectivity(
@@ -1560,10 +1560,10 @@ class Network1dDriver(FakeDriver):
 
 
 class TestNetwork1dEntryPoint:
-    """A driver returning `Network1d` must have somewhere to return it to.
+    """A driver returning `Mesh1d` must have somewhere to return it to.
 
     The dispatch error and the authoring guide both told the user to call
-    `Network1d.read_file` — a method that did not exist. So the documented way to ship a 1D
+    `Mesh1d.read_file` — a method that did not exist. So the documented way to ship a 1D
     format produced an object nothing could read, and following the instructions led to an
     `AttributeError`.
     """
@@ -1571,7 +1571,7 @@ class TestNetwork1dEntryPoint:
     def test_network1d_read_file_exists_and_reads_through_a_driver(
         self, tmp_path, registered
     ):
-        """`Network1d.read_file` dispatches to a driver and returns the network.
+        """`Mesh1d.read_file` dispatches to a driver and returns the network.
 
         Test scenario:
             A driver claiming `.net` returns a two-node network; reading the file yields it
@@ -1580,12 +1580,12 @@ class TestNetwork1dEntryPoint:
         registered(Network1dDriver())
         target = tmp_path / "channels.net"
         target.write_bytes(b"")
-        network = Network1d.read_file(target)
+        network = Mesh1d.read_file(target)
         assert network.n_node == 2, f"Expected 2 nodes, got {network.n_node}"
         assert network.n_edge == 1, f"Expected 1 edge, got {network.n_edge}"
 
     def test_network1d_read_file_refuses_a_2d_mesh(self, tmp_path, registered):
-        """A driver handing back a `UgridDataset` is reported, not returned.
+        """A driver handing back a `MeshDataset` is reported, not returned.
 
         Test scenario:
             The mirror of `read_file`'s guard: asking for a network and receiving a surface
@@ -1594,8 +1594,8 @@ class TestNetwork1dEntryPoint:
         registered(FakeDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        with pytest.raises(UnsupportedMeshFormatError, match="UgridDataset.read_file"):
-            Network1d.read_file(target)
+        with pytest.raises(UnsupportedMeshFormatError, match="MeshDataset.read_file"):
+            Mesh1d.read_file(target)
 
     def test_read_file_pointing_at_network1d_names_a_method_that_exists(
         self, tmp_path, registered
@@ -1603,19 +1603,19 @@ class TestNetwork1dEntryPoint:
         """The advice `read_file` gives must be followable.
 
         Test scenario:
-            `UgridDataset.read_file` on a 1D format names `Network1d.read_file`, and that
+            `MeshDataset.read_file` on a 1D format names `Mesh1d.read_file`, and that
             attribute resolves to a callable.
         """
         registered(Network1dDriver())
         target = tmp_path / "channels.net"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            UgridDataset.read_file(target)
-        assert "Network1d.read_file" in str(caught.value), (
+            MeshDataset.read_file(target)
+        assert "Mesh1d.read_file" in str(caught.value), (
             f"The error should name the 1D entry point, got: {caught.value}"
         )
-        assert callable(getattr(Network1d, "read_file", None)), (
-            "Network1d.read_file must exist for that advice to be followable"
+        assert callable(getattr(Mesh1d, "read_file", None)), (
+            "Mesh1d.read_file must exist for that advice to be followable"
         )
 
     def test_network1d_read_file_on_a_netcdf_path_is_refused_clearly(
@@ -1630,14 +1630,14 @@ class TestNetwork1dEntryPoint:
         Test scenario:
             With no driver registered, a `.nc` path raises `UnsupportedMeshFormatError`
             that says nothing claims the suffix and asks for a plugin. It also points at
-            `UgridDataset.read_file` -- but as the answer to "this might be a surface mesh",
+            `MeshDataset.read_file` -- but as the answer to "this might be a surface mesh",
             not as a bare redirect. The loop #1351 reported is broken by
             `_read_through_driver` naming `driver=`, not by deleting the pointer, and
             deleting it left the most likely mistake with no correct advice at all.
         """
         registered()
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(ugrid_convention_nc_path)
+            Mesh1d.read_file(ugrid_convention_nc_path)
         message = str(caught.value)
         assert "as a 1D network" in message
         assert "none installed" in message, (
@@ -1645,7 +1645,7 @@ class TestNetwork1dEntryPoint:
         )
         assert "surface mesh" in message, (
             f"a .nc is most likely a surface mesh handed to the wrong entry point, so the "
-            f"message must point at UgridDataset.read_file for that case; got:\n{message}"
+            f"message must point at MeshDataset.read_file for that case; got:\n{message}"
         )
         assert "driver=" not in message, (
             f"with no driver claiming the suffix there is none to suggest; got:\n{message}"
@@ -1674,7 +1674,7 @@ class TestMeshNamesContract:
         target = tmp_path / "model.slf"
         target.write_bytes(b"\x00\x01")
         with pytest.raises(UnsupportedMeshFormatError, match="mesh driver plugin"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_read_all_unclaimed_suffix_raises_unsupported_format(
         self, tmp_path, registered
@@ -1688,7 +1688,7 @@ class TestMeshNamesContract:
         target = tmp_path / "model.slf"
         target.write_bytes(b"\x00\x01")
         with pytest.raises(UnsupportedMeshFormatError):
-            UgridDataset.read_all(target)
+            MeshDataset.read_all(target)
 
     def test_mesh_names_attributes_a_driver_failure(self, tmp_path, registered):
         """A driver raising inside `mesh_names` is named, as it is for `read`.
@@ -1706,7 +1706,7 @@ class TestMeshNamesContract:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="'fake' driver failed"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_mesh_names_rejects_a_non_list_return(self, tmp_path, registered):
         """The return shape is checked at the boundary.
@@ -1724,7 +1724,7 @@ class TestMeshNamesContract:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="list of topology names"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_mesh_names_rejects_non_string_names(self, tmp_path, registered):
         """Names must be strings, since `read_file(mesh_name=...)` takes them.
@@ -1742,7 +1742,7 @@ class TestMeshNamesContract:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="list of topology names"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_read_all_resolves_the_driver_once(self, tmp_path, registered):
         """`read_all` must not re-sniff the file per topology.
@@ -1757,7 +1757,7 @@ class TestMeshNamesContract:
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        UgridDataset.read_all(target)
+        MeshDataset.read_all(target)
         assert len(driver.sniffed) == 1, (
             f"Expected one can_open call, got {len(driver.sniffed)}"
         )
@@ -1819,7 +1819,7 @@ class TestRegistryRobustness:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.warns(RuntimeWarning, match="can_open"):
-            result = UgridDataset.read_file(target)
+            result = MeshDataset.read_file(target)
         assert result.n_face == 1, "The working driver should have read the file"
         assert len(driver.read_calls) == 1, (
             f"The second driver should have been reached, calls: {driver.read_calls}"
@@ -1845,7 +1845,7 @@ class TestRegistryRobustness:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             with pytest.raises(UnsupportedMeshFormatError):
-                UgridDataset.read_file(target)
+                MeshDataset.read_file(target)
         sniff_warnings = [
             str(record.message)
             for record in caught
@@ -1890,7 +1890,7 @@ class TestRemainingDispatchBranches:
         folder = tmp_path / "a_directory.fake"
         folder.mkdir()
         with pytest.raises(IsADirectoryError) as caught:
-            UgridDataset.mesh_names(folder)
+            MeshDataset.mesh_names(folder)
         assert "driver plugin" not in str(caught.value), (
             f"A directory must not be reported as a missing plugin: {caught.value}"
         )
@@ -1911,7 +1911,7 @@ class TestRemainingDispatchBranches:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(OSError, match="companion index") as caught:
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
         assert not isinstance(caught.value, UnsupportedMeshFormatError), (
             "A missing sibling file must not be reported as an unsupported format"
         )
@@ -2163,7 +2163,7 @@ class TestContractTruth:
             Reading a UGRID file with `driver="ugrid"` succeeds and returns the mesh.
         """
         registered(FakeDriver())
-        result = UgridDataset.read_file(ugrid_convention_nc_path, driver="ugrid")
+        result = MeshDataset.read_file(ugrid_convention_nc_path, driver="ugrid")
         assert result.n_node > 0, "The built-in reader should have read the file"
 
     def test_driver_ugrid_bypasses_a_plugin_claiming_the_suffix(
@@ -2178,7 +2178,7 @@ class TestContractTruth:
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.fake"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
-        result = UgridDataset.read_file(target, driver="ugrid")
+        result = MeshDataset.read_file(target, driver="ugrid")
         assert result.n_node > 0, "The built-in reader should have read it"
         assert driver.read_calls == [], (
             f"The plugin must not be consulted, got: {driver.read_calls}"
@@ -2193,7 +2193,7 @@ class TestContractTruth:
         registered(FakeDriver())
         target = tmp_path / "mesh.nc"
         _square_mesh().to_file(target, driver="ugrid")
-        assert UgridDataset.read_file(target).n_face == 1, (
+        assert MeshDataset.read_file(target).n_face == 1, (
             "driver='ugrid' should write through the built-in writer"
         )
 
@@ -2217,7 +2217,7 @@ class TestReadAllResolution:
         target = tmp_path / "model.fake"
         target.write_bytes(b"\x00\x01")
         with pytest.raises(UnsupportedMeshFormatError):
-            UgridDataset.read_all(target)
+            MeshDataset.read_all(target)
         assert len(driver.sniffed) == 1, (
             f"Expected one can_open call on the fallback route, got {len(driver.sniffed)}"
         )
@@ -2241,7 +2241,7 @@ class TestReadAllResolution:
         driver = registered(Recording())
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
-        UgridDataset.read_all(target, lazy=False)
+        MeshDataset.read_all(target, lazy=False)
         assert driver.lazy_seen == [False, False], (
             f"lazy must reach every per-topology read, got: {driver.lazy_seen}"
         )
@@ -2261,7 +2261,7 @@ class TestReadAllResolution:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="duplicate"):
-            UgridDataset.read_all(target)
+            MeshDataset.read_all(target)
 
     def test_an_empty_topology_list_is_refused(self, tmp_path, registered):
         """Claiming a file and then reporting nothing in it is a driver bug.
@@ -2278,7 +2278,7 @@ class TestReadAllResolution:
         target = tmp_path / "mesh.fake"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError, match="no topologies"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_a_plugin_bug_in_read_data_is_attributed(self, tmp_path, registered):
         """A `ValueError` that is not about the mesh is a plugin bug, and is named.
@@ -2462,7 +2462,7 @@ class TestNetcdfDriverFallback:
         driver = registered(NetcdfDriver())
         target = tmp_path / "results_3di.nc"
         _plain_netcdf(str(target))
-        result = UgridDataset.read_file(target)
+        result = MeshDataset.read_file(target)
         assert result.n_face == 1, "the driver's dataset should be returned"
         assert driver.sniffed == [str(target)], (
             f"the driver's can_open should have been consulted once, got: {driver.sniffed}"
@@ -2482,7 +2482,7 @@ class TestNetcdfDriverFallback:
         driver = registered(NetcdfDriver())
         target = tmp_path / "mesh.nc"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
-        UgridDataset.read_file(target)
+        MeshDataset.read_file(target)
         assert driver.sniffed == [], (
             f"a successful UGRID read must not consult the driver, got: {driver.sniffed}"
         )
@@ -2495,7 +2495,7 @@ class TestNetcdfDriverFallback:
         driver = registered(NetcdfDriver())
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        result = UgridDataset.read_file(target, driver="nc3di")
+        result = MeshDataset.read_file(target, driver="nc3di")
         assert result.n_face == 1
         assert driver.sniffed == [], (
             f"an explicit driver skips can_open, got: {driver.sniffed}"
@@ -2514,7 +2514,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "plain.nc"
         _plain_netcdf(str(target))
         with pytest.raises(ValueError, match="No UGRID mesh topology") as caught:
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
         assert not isinstance(caught.value, FileFormatNotSupportedError), (
             "an unclaimed NetCDF must stay a ValueError, not become UnsupportedMeshFormatError"
         )
@@ -2531,7 +2531,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "mesh.nc"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
         with pytest.raises(ValueError, match="No UGRID topology named"):
-            UgridDataset.read_file(target, mesh_name="does_not_exist")
+            MeshDataset.read_file(target, mesh_name="does_not_exist")
         assert driver.sniffed == [], (
             f"a wrong mesh_name must not reach the driver, got: {driver.sniffed}"
         )
@@ -2541,14 +2541,14 @@ class TestNetcdfDriverFallback:
         registered(NetcdfDriver())
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        assert UgridDataset.mesh_names(target) == ["first", "second"]
+        assert MeshDataset.mesh_names(target) == ["first", "second"]
 
     def test_read_all_falls_back_to_the_driver(self, tmp_path, registered):
         """`read_all` shares the fallback, so every topology of a driver-backed NetCDF is read."""
         registered(NetcdfDriver())
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        result = UgridDataset.read_all(target)
+        result = MeshDataset.read_all(target)
         assert sorted(result) == ["first", "second"], (
             f"read_all should route through the driver's mesh_names, got: {sorted(result)}"
         )
@@ -2561,7 +2561,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "plain.nc"
         _plain_netcdf(str(target))
         with pytest.raises(ValueError, match="No UGRID mesh topology"):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_read_all_reraises_when_no_driver_claims_the_netcdf(
         self, tmp_path, registered
@@ -2571,7 +2571,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "plain.nc"
         _plain_netcdf(str(target))
         with pytest.raises(ValueError, match="No UGRID mesh topology"):
-            UgridDataset.read_all(target)
+            MeshDataset.read_all(target)
 
     def test_fallback_skips_a_vetoing_driver_for_the_next(self, tmp_path, registered):
         """Among drivers sharing `.nc`, one whose `can_open` refuses is passed over for the next."""
@@ -2588,7 +2588,7 @@ class TestNetcdfDriverFallback:
         registered(veto, accept)
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        result = UgridDataset.read_file(target)
+        result = MeshDataset.read_file(target)
         assert result.n_face == 1, "the second, accepting driver should have read it"
         assert veto.sniffed == [str(target)], (
             "the vetoing driver should have been asked first"
@@ -2620,7 +2620,7 @@ class TestNetcdfDriverFallback:
         _plain_netcdf(str(target))
         for reserved in ("ugrid", "netcdf"):
             with pytest.raises(ValueError, match="No UGRID mesh topology"):
-                UgridDataset.read_file(target, driver=reserved)
+                MeshDataset.read_file(target, driver=reserved)
         assert driver.read_calls == [], (
             f"a reserved driver name must not consult a plugin, got: {driver.read_calls}"
         )
@@ -2657,7 +2657,7 @@ class TestNetcdfDriverFallback:
         with pytest.raises(
             UnsupportedMeshFormatError, match="carry values but no mesh"
         ):
-            UgridDataset.read_file(target)
+            MeshDataset.read_file(target)
 
     def test_lazy_false_reaches_a_driver_backed_netcdf(self, tmp_path, registered):
         """`lazy=False` is forwarded to a `.nc` driver as False, not rejected before the fallback.
@@ -2680,7 +2680,7 @@ class TestNetcdfDriverFallback:
         driver = registered(RecordingNetcdf())
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        result = UgridDataset.read_file(target, lazy=False)
+        result = MeshDataset.read_file(target, lazy=False)
         assert result.n_face == 1, "the driver should have read the file"
         assert driver.lazy_seen == [False], (
             f"lazy=False must be forwarded to the driver, got: {driver.lazy_seen}"
@@ -2693,7 +2693,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "mesh.nc"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
         with pytest.raises(TypeError, match="lazy=False"):
-            UgridDataset.read_file(target, lazy=False)
+            MeshDataset.read_file(target, lazy=False)
 
     def test_read_all_rejects_lazy_false_on_a_native_ugrid_read(
         self, tmp_path, ugrid_convention_nc_path
@@ -2706,7 +2706,7 @@ class TestNetcdfDriverFallback:
         target = tmp_path / "mesh.nc"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
         with pytest.raises(TypeError, match="lazy=False"):
-            UgridDataset.read_all(target, lazy=False)
+            MeshDataset.read_all(target, lazy=False)
 
     def test_mesh_names_needs_mesh_driver_points_to_attach_data(
         self, tmp_path, registered
@@ -2724,7 +2724,7 @@ class TestNetcdfDriverFallback:
         with pytest.raises(
             UnsupportedMeshFormatError, match="carry values but no mesh"
         ):
-            UgridDataset.mesh_names(target)
+            MeshDataset.mesh_names(target)
 
     def test_read_all_needs_mesh_driver_points_to_attach_data(
         self, tmp_path, registered
@@ -2742,7 +2742,7 @@ class TestNetcdfDriverFallback:
         with pytest.raises(
             UnsupportedMeshFormatError, match="carry values but no mesh"
         ):
-            UgridDataset.read_all(target)
+            MeshDataset.read_all(target)
 
     def test_mesh_names_and_read_all_never_consult_a_driver_on_a_ugrid_read(
         self, tmp_path, registered, ugrid_convention_nc_path
@@ -2755,8 +2755,8 @@ class TestNetcdfDriverFallback:
         driver = registered(NetcdfDriver())
         target = tmp_path / "mesh.nc"
         target.write_bytes(Path(ugrid_convention_nc_path).read_bytes())
-        UgridDataset.mesh_names(target)
-        UgridDataset.read_all(target)
+        MeshDataset.mesh_names(target)
+        MeshDataset.read_all(target)
         assert driver.sniffed == [], (
             f"a genuine UGRID read must not consult the driver, got: {driver.sniffed}"
         )
@@ -2775,8 +2775,8 @@ class TestNetcdfDriverFallback:
         driver = registered(NetcdfDriver())
         target = tmp_path / "results.nc"
         _plain_netcdf(str(target))
-        UgridDataset.mesh_names(target)
-        UgridDataset.read_all(target)
+        MeshDataset.mesh_names(target)
+        MeshDataset.read_all(target)
         assert driver.sniffed == [str(target), str(target)], (
             f"can_open should be consulted on each entry point, got: {driver.sniffed}"
         )

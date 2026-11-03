@@ -57,7 +57,7 @@ graph LR
         direction TB
         Dataset
         NetCDF_class[NetCDF]
-        UgridDataset
+        MeshDataset
         DatasetCollection
         FeatureCollection
         subgraph Engines["Dataset engines (ds.io · ds.spatial · ds.bands · ds.analysis · ds.cell · ds.vectorize · ds.cog)"]
@@ -68,11 +68,11 @@ graph LR
     Dataset -->|crop · reproject · align| Dataset
     Dataset --- Engines
     FeatureCollection -->|rasterize| Dataset
-    UgridDataset -->|interpolate| Dataset
+    MeshDataset -->|interpolate| Dataset
     Dataset -->|vectorize| FeatureCollection
     DatasetCollection -->|lazy temporal stack| Dataset
     NetCDF_class -->|extends| Dataset
-    Dataset & NetCDF_class & DatasetCollection & UgridDataset -->|plot| Plotting
+    Dataset & NetCDF_class & DatasetCollection & MeshDataset -->|plot| Plotting
     Plotting -->|delegates| cleopatra(["cleopatra<br/>ArrayGlyph · MeshGlyph · tiles"])
 ```
 
@@ -91,14 +91,14 @@ Main Features
   Optional labeled-array interoperability. `NetCDF.plot` exposes a labeled-array-style plotting API
   (`variable=` + grouped `Selectors` / `FacetSpec` dataclasses, loose colour kwargs (`cmap`, `robust`, …),
   curvilinear coordinates via `axes=CoordinateSpec(...)`, `kind=`, `animate=`, lazy `chunks=`).
-- **UgridDataset** - Read and visualize UGRID-1.0 unstructured meshes (triangles, quads, mixed).
+- **MeshDataset** - Read and visualize UGRID-1.0 unstructured meshes (triangles, quads, mixed).
   Supports mesh-to-raster interpolation and mesh-to-vector export.
 - **DatasetCollection** - Manage time-series of co-registered rasters as a lazy temporal stack
   (per-timestep gdal handles open on demand; the full cube is never materialised in RAM)
   with optional dask-backed reductions and groupby.
 - **FeatureCollection** - Work with vector data (shapefiles, GeoJSON) through a unified GeoDataFrame and
   OGR DataSource interface, including rasterization and geometry operations.
-- **Plotting** - `Dataset` / `NetCDF` / `DatasetCollection` / `UgridDataset` all expose a `plot` method
+- **Plotting** - `Dataset` / `NetCDF` / `DatasetCollection` / `MeshDataset` all expose a `plot` method
   backed by [cleopatra](https://github.com/serapeum-org/cleopatra) (the `[viz]` extra), routed through
   a shared `pyramids.dataset._plot_helpers` core. Optional web-tile basemap underlays via
   `pyramids.basemap.add_basemap` (a thin wrapper over `cleopatra.tiles.add_tiles`).

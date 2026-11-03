@@ -10,13 +10,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
 @pytest.fixture
-def source() -> UgridDataset:
+def source() -> MeshDataset:
     """A unit square meshed as two triangles."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -25,9 +25,9 @@ def source() -> UgridDataset:
 
 
 @pytest.fixture
-def partly_covered() -> UgridDataset:
+def partly_covered() -> MeshDataset:
     """A target whose second face lies far outside the source."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 5.0, 6.0, 6.0]),
         node_y=np.array([0.0, 0.0, 1.0, 5.0, 5.0, 6.0]),
         face_node_connectivity=np.array([[0, 1, 2], [3, 4, 5]]),
@@ -49,7 +49,7 @@ class TestRegridNodata:
         assert values[0] == pytest.approx(1.0)
 
     def test_a_fully_covered_target_also_declares_it(self, source):
-        target = UgridDataset.from_arrays(
+        target = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

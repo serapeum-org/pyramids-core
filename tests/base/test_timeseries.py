@@ -1,6 +1,6 @@
 """The along-axis fitting / calculus kernels directly (issue #1377).
 
-``tests/netcdf/ugrid/test_alongtime_fitting.py`` drives these through ``UgridDataset``, which
+``tests/netcdf/ugrid/test_alongtime_fitting.py`` drives these through ``MeshDataset``, which
 validates its own arguments first — so the kernels' **own** guards never fire from above and
 their contract goes untested. These are the kernels' documented reuse surface (the raster side
 is the stated next consumer), so they are tested here on their own terms: the guards, the

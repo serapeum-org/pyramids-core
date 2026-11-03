@@ -14,7 +14,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.regrid import rasterize_like
 
 AXIS_ALIGNED = (0.0, 1.0, 0.0, 4.0, 0.0, -1.0)
@@ -22,9 +22,9 @@ ROTATED = (0.0, 1.0, 0.5, 4.0, 0.25, -1.0)
 
 
 @pytest.fixture
-def mesh() -> UgridDataset:
+def mesh() -> MeshDataset:
     """A 4x4 extent meshed as two triangles, carrying a field linear in x."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 4.0, 4.0, 0.0]),
         node_y=np.array([0.0, 0.0, 4.0, 4.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -101,9 +101,9 @@ class TestRotatedSamplePositions:
         return x, y
 
     @pytest.fixture
-    def plane_mesh(self) -> UgridDataset:
+    def plane_mesh(self) -> MeshDataset:
         """A square large enough to contain every rotated cell centre, carrying a plane."""
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([-10.0, 20.0, 20.0, -10.0]),
             node_y=np.array([-10.0, -10.0, 20.0, 20.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

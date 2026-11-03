@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.equals and UgridDataset.identical."""
+"""Tests for MeshDataset.equals and MeshDataset.identical."""
 
 from __future__ import annotations
 

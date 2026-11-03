@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.interop_xarray import from_xarray, read_crs_wkt, to_xarray
 
 xr = pytest.importorskip("xarray")
@@ -18,9 +18,9 @@ xr = pytest.importorskip("xarray")
 pytestmark = pytest.mark.interop
 
 
-def _square_mesh(epsg: int = 4326) -> UgridDataset:
+def _square_mesh(epsg: int = 4326) -> MeshDataset:
     """A unit square split into two triangles, carrying one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -77,14 +77,14 @@ class TestCrsRoundTrip:
         assert np.asarray(variables["depth"].data).tolist() == [2.0, 4.0]
 
     def test_the_dataset_facade_round_trips_the_epsg(self):
-        # A UgridDataset keeps its CRS on the dataset, not on the Mesh2d, so the export has to
+        # A MeshDataset keeps its CRS on the dataset, not on the Mesh2d, so the export has to
         # be handed the dataset's WKT or the CRS is silently lost.
         mesh = _square_mesh(epsg=3857)
-        back = UgridDataset.from_xarray(mesh.to_xarray())
+        back = MeshDataset.from_xarray(mesh.to_xarray())
         assert back.epsg == 3857
 
     def test_a_mesh_without_a_crs_exports_none(self):
-        bare = UgridDataset.from_arrays(
+        bare = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -96,7 +96,7 @@ class TestCrsRoundTrip:
 
 class TestTopologyName:
     def test_the_mesh_name_is_recovered(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -126,7 +126,7 @@ class TestTopologyName:
 
 class TestDimensionNaming:
     def test_a_temporal_variable_names_its_time_axis(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

@@ -85,7 +85,7 @@ such as `cmap=` / `robust=` for the colour scale, and so on).
 
 Internally `NetCDF.plot` is a thin facade over `pyramids.netcdf._plot.NetCDFPlot`, which shares the
 `pyramids.dataset._plot_helpers.render_array` rendering core with `Dataset.plot` and
-`DatasetCollection.plot` (and `mesh_render` with `UgridDataset.plot`). The full rendered method
+`DatasetCollection.plot` (and `mesh_render` with `MeshDataset.plot`). The full rendered method
 signature and docstring are on the [NetCDF Class](index.md) reference page.
 
 ## Option dataclasses

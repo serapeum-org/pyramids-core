@@ -1,4 +1,4 @@
-"""Tests for the UgridDataset analysis members (Phase 3A).
+"""Tests for the MeshDataset analysis members (Phase 3A).
 
 summary / sample / weighted / zonal_stats on an in-memory two-triangle mesh. These reuse the
 shared pure kernels in ``pyramids.base._reductions`` but are exercised here through the
@@ -13,16 +13,16 @@ import pytest
 from shapely.geometry import box
 
 from pyramids.feature import FeatureCollection
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
 @pytest.fixture
-def unit_mesh() -> UgridDataset:
+def unit_mesh() -> MeshDataset:
     """Two triangles of unequal area sharing an edge.
 
     Face 0 = (0,0),(4,0),(4,2) -> area 4.0 ; face 1 = (0,0),(4,2),(0,1) -> area 2.0.
     """
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 4.0, 4.0, 0.0]),
         node_y=np.array([0.0, 0.0, 2.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -47,7 +47,7 @@ class TestSummary:
         assert df["count"].dtype == np.int64
 
     def test_nodata_is_excluded(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -141,9 +141,9 @@ class TestZonalStats:
 class TestNonTimeFirstAxis:
     """A variable storing time as a trailing axis must still reduce over the right axis."""
 
-    def _mesh_time_trailing(self) -> UgridDataset:
+    def _mesh_time_trailing(self) -> MeshDataset:
         # data shape (n_face=2, n_time=3); dimensions mark the trailing axis as time.
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -185,8 +185,8 @@ class TestWeightedValidation:
 
 
 class TestSampleNodeMethod:
-    def _node_mesh(self) -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def _node_mesh(self) -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -261,8 +261,8 @@ class TestRound2AnalysisFixes:
         # plain Σ value = 10 + 20 = 30, NOT the area-weighted integral 10*4 + 20*2 = 80.
         assert out["sum"].iloc[0] == 30.0
 
-    def _layered_mesh(self) -> UgridDataset:
-        mesh = UgridDataset.from_arrays(
+    def _layered_mesh(self) -> MeshDataset:
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

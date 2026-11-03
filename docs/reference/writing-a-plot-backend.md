@@ -37,7 +37,7 @@ from typing import Any
 def render_globe(obj: Any, *, backend: str, **kwargs: Any) -> Any:
     """Render a pyramids object and return the backend's own object.
 
-    - `obj` is the Dataset / NetCDF / FeatureCollection / DatasetCollection / UgridDataset the user
+    - `obj` is the Dataset / NetCDF / FeatureCollection / DatasetCollection / MeshDataset the user
       called `plot` (or `animate`) on.
     - `backend` is the selected name, so one callable can serve several names (e.g. a single
       function registered under `interactive` and `web` that branches on it).

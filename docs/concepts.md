@@ -11,7 +11,7 @@ flowchart TB
     AD["AbstractDataset (ABC)<br/>geo-properties: epsg · cell_size · bounds · no_data"]
     AD --> DS["Dataset<br/>a single raster (GeoTIFF · COG · ASCII)"]
     DS --> NC["NetCDF<br/>NetCDF/CF file: variables · time · groups"]
-    UG["UgridDataset<br/>unstructured (UGRID) mesh — standalone class"]
+    UG["MeshDataset<br/>unstructured (UGRID) mesh — standalone class"]
     DC["DatasetCollection<br/>a time-series stack of aligned rasters"]
     FC["FeatureCollection<br/>vector data (wraps a GeoDataFrame)"]
     NC -. "mesh ↔ raster bridge" .-> UG
@@ -22,7 +22,7 @@ flowchart TB
 |-----------|-----|-------|
 | One raster — GeoTIFF, COG, ASCII grid | **`Dataset`** | bands, no-data, crop/reproject/align/mosaic, COG, overviews |
 | A NetCDF / CF file (variables, time, packed, curvilinear, WRF, groups) | **`NetCDF`** | extends `Dataset`; adds variable & time handling |
-| An unstructured (UGRID) mesh | **`UgridDataset`** | triangular/polygonal meshes; mesh↔raster bridge |
+| An unstructured (UGRID) mesh | **`MeshDataset`** | triangular/polygonal meshes; mesh↔raster bridge |
 | Many aligned rasters as one time cube | **`DatasetCollection`** | temporal stack backed by a base `Dataset`; Zarr I/O |
 | Vector — Shapefile, GeoJSON, GeoPackage, GeoParquet | **`FeatureCollection`** | wraps a GeoPandas `GeoDataFrame`; rasterize / geometry ops |
 

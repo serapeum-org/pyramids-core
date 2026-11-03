@@ -18,7 +18,7 @@ is worse than an exception, because a caller joins on it.
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -30,7 +30,7 @@ _TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 @pytest.fixture
 def two_faces():
     """A two-face mesh carrying one static per-face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,

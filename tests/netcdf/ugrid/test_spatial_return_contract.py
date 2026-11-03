@@ -1,7 +1,7 @@
 """Regression tests for STR-3: the ugrid spatial subsetters' return contract.
 
 ``clip_mesh`` / ``subset_by_bounds`` / ``_subset_mesh_by_face_indices`` return the rebuilt
-``(mesh, data_variables)`` rather than a ``UgridDataset``, so ``ugrid.spatial`` no longer
+``(mesh, data_variables)`` rather than a ``MeshDataset``, so ``ugrid.spatial`` no longer
 imports ``ugrid.dataset`` (the import cycle is broken). These pin that contract.
 """
 
@@ -22,11 +22,11 @@ def unit_square_dataset():
     """A 2x2-cell unit-square UGRID dataset with a face variable.
 
     Returns:
-        UgridDataset: 9 nodes, 4 quad faces, one ``temperature`` face variable.
+        MeshDataset: 9 nodes, 4 quad faces, one ``temperature`` face variable.
     """
-    from pyramids.netcdf.ugrid.dataset import UgridDataset
+    from pyramids.netcdf.ugrid.dataset import MeshDataset
 
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
         node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
         face_node_connectivity=np.array(
@@ -80,12 +80,12 @@ class TestEdgeRemapWithTopology:
         """Two triangles sharing an edge, with edge_node_connectivity and an edge variable.
 
         Returns:
-            UgridDataset: nodes 0-3, faces ``[[0,1,2],[1,3,2]]``, edges
+            MeshDataset: nodes 0-3, faces ``[[0,1,2],[1,3,2]]``, edges
             ``[[0,1],[1,2],[2,0],[1,3],[3,2]]`` and an ``edge_flux`` edge variable
             ``[10,11,12,13,14]``.
         """
         from pyramids.netcdf.ugrid.connectivity import Connectivity
-        from pyramids.netcdf.ugrid.dataset import UgridDataset
+        from pyramids.netcdf.ugrid.dataset import MeshDataset
         from pyramids.netcdf.ugrid.mesh import Mesh2d
         from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -113,7 +113,7 @@ class TestEdgeRemapWithTopology:
             shape=(5,),
             _data=np.array([10.0, 11.0, 12.0, 13.0, 14.0]),
         )
-        return UgridDataset(
+        return MeshDataset(
             mesh=mesh, data_variables={"edge_flux": edge_var}, global_attributes={}
         )
 
@@ -159,12 +159,12 @@ class TestEdgeVariableClip:
         """A 2x2-cell unit-square dataset with an *edge*-located variable but no edge topology.
 
         Returns:
-            UgridDataset: ``from_arrays`` builds only face_node_connectivity, so the
+            MeshDataset: ``from_arrays`` builds only face_node_connectivity, so the
             mesh has no ``edge_node_connectivity`` — the H1 trigger condition.
         """
-        from pyramids.netcdf.ugrid.dataset import UgridDataset
+        from pyramids.netcdf.ugrid.dataset import MeshDataset
 
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
             face_node_connectivity=np.array(
@@ -236,7 +236,7 @@ class TestEdgeLinestringsNoneFill:
         from shapely.geometry import LineString
 
         from pyramids.netcdf.ugrid.connectivity import Connectivity
-        from pyramids.netcdf.ugrid.dataset import UgridDataset
+        from pyramids.netcdf.ugrid.dataset import MeshDataset
         from pyramids.netcdf.ugrid.mesh import Mesh2d
 
         mesh = Mesh2d(
@@ -255,7 +255,7 @@ class TestEdgeLinestringsNoneFill:
                 original_start_index=0,
             ),
         )
-        dataset = UgridDataset(mesh=mesh, data_variables={}, global_attributes={})
+        dataset = MeshDataset(mesh=mesh, data_variables={}, global_attributes={})
 
         gdf = dataset.to_geodataframe(location="edge")
 

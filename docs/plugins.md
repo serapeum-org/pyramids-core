@@ -50,16 +50,16 @@ scene = Dataset.read_file("ee://COPERNICUS/S2_SR_HARMONIZED/20200701T...")
 
 `pyramids-mesh` registers UGRID mesh drivers for 48 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
 Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, VTK, MODFLOW 6, FVCOM, …).
-`UgridDataset.read_file` picks the right driver from the file.
+`MeshDataset.read_file` picks the right driver from the file.
 
 ```bash
 pip install pyramids-mesh
 ```
 
 ```python
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
-mesh = UgridDataset.read_file("model.2dm")   # resolved by the pyramids-mesh "2dm" driver
+mesh = MeshDataset.read_file("model.2dm")   # resolved by the pyramids-mesh "2dm" driver
 ```
 
 ## digitalearth — interactive, 3-D and web visualization

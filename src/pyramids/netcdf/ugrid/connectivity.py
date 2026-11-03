@@ -172,7 +172,7 @@ def _narrowed_fill(declared: Any, label: str) -> int:
     """
     if isinstance(declared, (bool, np.bool_)):
         # `bool` subclasses `int` and `np.bool_` has `__index__`, so either would be read as
-        # element 0 or 1. `Network1d._validated_outlet` rejects them for the same reason.
+        # element 0 or 1. `Mesh1d._validated_outlet` rejects them for the same reason.
         raise TypeError(
             f"{label}.fill_value must be an integer or None, got {declared!r} "
             f"({type(declared).__name__}). A boolean is not an index, even though it "
@@ -252,7 +252,7 @@ def _normalised_connectivity(
       while ``fill_value`` claims ``-1``.
     - **Padding and every other negative become** ``-1``. A stray negative addresses an
       element from the wrong end exactly as silently as the conventional fill does, which is
-      why :attr:`Network1d._real_edges` already excludes all of them.
+      why :attr:`Mesh1d._real_edges` already excludes all of them.
     - **The surviving indices are checked** against ``index_count`` when it is known, so a
       table that disagrees with its coordinate arrays is reported here rather than
       half-rewritten into something that merely looks smaller.
@@ -280,7 +280,7 @@ def _normalised_connectivity(
         addresses: What the indices point at -- ``"node"``, ``"edge"`` or ``"face"``.
             Defaults to ``"node"``.
         topology: What the table belongs to, ``"mesh"`` or ``"network"``, so a
-            :class:`Network1d` refusal does not call itself a mesh. Defaults to ``"mesh"``.
+            :class:`Mesh1d` refusal does not call itself a mesh. Defaults to ``"mesh"``.
 
     Returns:
         Connectivity: The same object only when it is already exactly what the package
@@ -288,7 +288,7 @@ def _normalised_connectivity(
             a signed integer, and which holds no negative outside its padding. Otherwise a
             **new** table with ``fill_value=-1`` and a :data:`numpy.intp` ``data`` array; a
             bare array is wrapped into one, so every member that reads the table works and
-            :class:`Mesh2d` accepts the same input :class:`Network1d` does. The caller's
+            :class:`Mesh2d` accepts the same input :class:`Mesh1d` does. The caller's
             object and array are never modified, so a caller holding its own reference still
             sees the fill it declared -- read the table back off the mesh.
 
@@ -301,7 +301,7 @@ def _normalised_connectivity(
     """
     declared: Any = getattr(connectivity, "fill_value", _MISSING)
     if declared is _MISSING:
-        # A bare index array. `Network1d` has always accepted one, and `topology_subset`
+        # A bare index array. `Mesh1d` has always accepted one, and `topology_subset`
         # still defends against it, but every member that reads the table needs a
         # `Connectivity` -- and `Mesh2d` rejected it outright from inside `__init__`. Wrapping
         # it here makes the two constructors agree and the object usable.

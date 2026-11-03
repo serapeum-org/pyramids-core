@@ -11,8 +11,13 @@ from __future__ import annotations
 
 import argparse
 
-from pyramids._cli_shared import info_print, refuse_existing
-from pyramids.cli_vector import _resolve_vector_driver
+from pyramids._cli_shared import (
+    info_print,
+    refuse_existing,
+)
+from pyramids._cli_shared import (
+    resolve_vector_driver as _resolve_vector_driver,
+)
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 

@@ -574,7 +574,7 @@ class TestUnexpectedErrors:
         def boom(_args):
             raise KeyError("internal")
 
-        monkeypatch.setattr("pyramids.cli._cmd_raster_info", boom)
+        monkeypatch.setattr("pyramids.cli_dataset._cmd_raster_info", boom)
         rc = main(["info", src_raster])
         err = capsys.readouterr().err
         assert rc == 1, "an unexpected internal error must exit 1"
@@ -587,7 +587,7 @@ class TestUnexpectedErrors:
         def boom(_args):
             raise KeyError("internal")
 
-        monkeypatch.setattr("pyramids.cli._cmd_raster_info", boom)
+        monkeypatch.setattr("pyramids.cli_dataset._cmd_raster_info", boom)
         monkeypatch.setenv("PYRAMIDS_DEBUG", "1")
         with pytest.raises(KeyError):
             main(["info", src_raster])
@@ -1043,7 +1043,7 @@ class TestShapesRasterizeCLI:
             With the cell-count cap lowered to 4, a 64-cell raster is refused
             (exit 1, nothing written).
         """
-        monkeypatch.setattr("pyramids.cli._SHAPES_MAX_CELLS", 4)
+        monkeypatch.setattr("pyramids.cli_dataset._SHAPES_MAX_CELLS", 4)
         out = str(tmp_path / "big.geojson")
         rc = main(["shapes", src_raster, out])
         assert rc == 1, "an over-threshold shapes must exit 1"
@@ -1055,7 +1055,7 @@ class TestShapesRasterizeCLI:
         Test scenario:
             With the cap lowered to 4, --allow-large still vectorizes the raster.
         """
-        monkeypatch.setattr("pyramids.cli._SHAPES_MAX_CELLS", 4)
+        monkeypatch.setattr("pyramids.cli_dataset._SHAPES_MAX_CELLS", 4)
         out = str(tmp_path / "big.geojson")
         rc = main(["shapes", src_raster, out, "--allow-large"])
         assert rc == 0, "--allow-large must proceed"

@@ -2,7 +2,7 @@
 
 Covers nearest-valid spatial fill (:func:`fill_na_spatial`) and Laplace
 interpolation (:func:`laplace_interpolate`) over small meshes built with
-:meth:`UgridDataset.from_arrays` and hand-built :class:`Mesh2d` objects.
+:meth:`MeshDataset.from_arrays` and hand-built :class:`Mesh2d` objects.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import Connectivity, Mesh2d, UgridDataset
+from pyramids.netcdf.ugrid import Connectivity, Mesh2d, MeshDataset
 from pyramids.netcdf.ugrid.fill import fill_na_spatial, laplace_interpolate
 
 
@@ -47,7 +47,7 @@ def _quad_grid(
 def _grid_mesh(nx: int, ny: int) -> Mesh2d:
     """Return the :class:`Mesh2d` of a regular ``nx`` by ``ny`` quad grid."""
     node_x, node_y, faces = _quad_grid(nx, ny)
-    return UgridDataset.from_arrays(node_x, node_y, faces).mesh
+    return MeshDataset.from_arrays(node_x, node_y, faces).mesh
 
 
 class TestFillNaSpatial:
@@ -171,7 +171,7 @@ class TestLaplaceInterpolate:
         node_x = np.concatenate([nx0, nx1])
         node_y = np.concatenate([nodes0, nodes1])
         faces = np.concatenate([faces0, faces1], axis=0)
-        mesh = UgridDataset.from_arrays(node_x, node_y, faces).mesh
+        mesh = MeshDataset.from_arrays(node_x, node_y, faces).mesh
         cx, cy = mesh.face_centroids
         values = 2.0 * cx + 3.0 * cy + 1.0
         values[4] = np.nan  # interior gap in the first component
