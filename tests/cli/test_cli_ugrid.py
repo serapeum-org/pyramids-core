@@ -1,9 +1,9 @@
 """Tests for the ``pyramids mesh`` command group (UGRID).
 
-Marked ``lazy``: reading/rasterizing a UGRID mesh goes through the dask-backed
-lazy path, which needs the ``[lazy]`` extra, so these run only in the dask-equipped
-envs (dev / lazy) — the core-wheel job still covers mesh parser registration via
-the ``--help`` surface test. Mirrors the collection-stats gating (#1435).
+These are extras-free (core): ``mesh info|extract|convert`` read via the GDAL
+multidimensional path and the ``rasterize_like`` / ``to_feature_collection``
+kernels fall back to NumPy, so no ``[lazy]`` package is required (verified by
+blocking dask/xarray/zarr/fsspec and running each command — see PR #1442 review).
 """
 
 from __future__ import annotations
@@ -12,14 +12,11 @@ import json
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
-
-pytestmark = pytest.mark.lazy
 
 # A small UGRID mesh shipped with the test suite (mesh2d; node/edge data vars).
 _MESH = Path(__file__).parents[1] / "data" / "netcdf" / "ugrid" / "ugrid.nc"
