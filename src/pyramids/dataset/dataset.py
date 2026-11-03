@@ -192,7 +192,7 @@ def _invalidate_cached_accessors(ds: Any) -> None:
         ds.__dict__.pop(name, None)
 
 
-def _flush_prior_handle(prev: "gdal.Dataset | None", src: "gdal.Dataset") -> None:
+def _flush_prior_handle(prev: gdal.Dataset | None, src: gdal.Dataset) -> None:
     """Best-effort flush of the GDAL handle an in-place swap is about to drop.
 
     Called by `_update_inplace` (on both `Dataset` and `NetCDF`) before its
