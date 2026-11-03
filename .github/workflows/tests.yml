@@ -83,26 +83,43 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         target:
-          # Each target runs in an env that HAS its extra and selects its tests (by marker, or by
-          # path where an env-specific routing is needed), so they EXECUTE here instead of skipping
-          # in the main matrix (whose envs omit these extras). `markexpr` becomes the single -m
-          # expression; `paths` scopes collection ("" = whole tree, then filtered by the marker).
-          - { name: netcdf_lazy,    env: lazy,    paths: tests/netcdf/lazy,  markexpr: "not live" }
-          - { name: parquet_lazy,   env: parquet, paths: tests/feature/lazy, markexpr: "not live" }
+          # Each target runs in an env that HAS its extra and selects its tests (by marker, or by a
+          # path where env-specific routing is needed), so they EXECUTE here instead of skipping in
+          # the main matrix (whose envs omit these extras). `strict` appends --strict-extra-skips
+          # (turn a missing-dependency skip into a failure) on the jobs whose env is verified to
+          # carry every dependency the selected tests need. See docs/how-to/testing.md.
+          - name: netcdf_lazy
+            env: lazy
+            paths: tests/netcdf/lazy
+            markexpr: "not live"
+            strict: ""
+          - name: parquet_lazy
+            env: parquet
+            paths: tests/feature/lazy
+            markexpr: "not live"
+            strict: ""
           # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
-          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute
-          # rather than skip. (A pure marker split can't express "this netcdf_lazy file in parquet".)
+          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute.
           - name: netcdf_parquet
             env: parquet
             paths: tests/netcdf/lazy/test_to_dask_dataframe.py
             markexpr: "not live"
+            strict: ""
           # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
-          # stac/test_geoparquet*) live outside the dirs above, so they ran in NO CI job. Select them
-          # by marker in the parquet env so they execute.
-          - { name: parquet,        env: parquet, paths: "", markexpr: "parquet and not live" }
-          # STAC is pure-Python but no main-matrix env installs it; run the whole stac suite (the
-          # mock-client and real-client tests alike) in the dev env, which carries the stac feature.
-          - { name: stac,           env: dev,     paths: "tests/stac tests/dataset/stac", markexpr: "not live" }
+          # stac/test_geoparquet_spec) ran in NO CI job; select them in the parquet env, which carries
+          # pyarrow and every other dep they need, so --strict-extra-skips is safe here.
+          - name: parquet
+            env: parquet
+            paths: ""
+            markexpr: "parquet and not live"
+            strict: "--strict-extra-skips"
+          # STAC runs the whole suite (mock + real-client) in the dev env, which carries every extra,
+          # so a missing-dependency skip there is always a bug -> --strict-extra-skips.
+          - name: stac
+            env: dev
+            paths: "tests/stac tests/dataset/stac"
+            markexpr: "not live"
+            strict: "--strict-extra-skips"
 
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
@@ -125,7 +142,7 @@ jobs:
           pixi run -e ${{ matrix.target.env }}
           pytest -vvv ${{ matrix.target.paths }} -m "${{ matrix.target.markexpr }}"
           --cov=src/pyramids --cov-report=xml --cov-report=term-missing
-          --cov-fail-under=0
+          --cov-fail-under=0 ${{ matrix.target.strict }}
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1

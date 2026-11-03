@@ -99,6 +99,60 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_live)
 
 
+# --- No-silent-skip guard (see docs/how-to/testing.md) -------------------------------------------
+# A skip for a missing optional dependency is normally invisible: it is folded into "N skipped",
+# CI stays green, and a whole marker can run nowhere for months unnoticed (this happened to the
+# stac suite). The per-extra CI jobs run in an environment that HAS the extra, so there a
+# dependency-skip is never legitimate — it means the test was mis-routed or mis-marked. Passing
+# `--strict-extra-skips` turns such a skip into a hard failure, so the silent gap becomes loud in
+# the exact job that was supposed to execute the test. It is a CLI flag (not an env var, per the
+# project's marker-only convention) and is off by default, so ordinary/local runs still skip
+# cleanly on a partial install.
+_DEP_SKIP_REASON = re.compile(r"not installed", re.IGNORECASE)
+_strict_extra_skips: list[str] = []
+
+
+def pytest_addoption(parser):
+    """Register `--strict-extra-skips` (fail on a missing-dependency skip)."""
+    parser.addoption(
+        "--strict-extra-skips",
+        action="store_true",
+        default=False,
+        help="Fail the session if any test is skipped for a missing optional dependency. Use it in "
+        "the per-extra CI jobs, whose environment installs the extra, so a dependency-skip there "
+        "is a routing/marking bug rather than an expected skip.",
+    )
+
+
+def pytest_runtest_logreport(report):
+    """Record any skip whose reason says a dependency is 'not installed'."""
+    if not report.skipped:
+        return
+    longrepr = getattr(report, "longrepr", None)
+    # A skip's longrepr is a (path, lineno, "Skipped: <reason>") tuple.
+    reason = longrepr[2] if isinstance(longrepr, tuple) and len(longrepr) == 3 else str(longrepr)
+    if _DEP_SKIP_REASON.search(reason or ""):
+        _strict_extra_skips.append(f"{report.nodeid} -> {reason}")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Fail the session when `--strict-extra-skips` is set and a dependency-skip occurred."""
+    if session.config.getoption("--strict-extra-skips") and _strict_extra_skips:
+        session.exitstatus = 1
+
+
+def pytest_terminal_summary(terminalreporter):
+    """Report the offending dependency-skips so the failure is actionable."""
+    if terminalreporter.config.getoption("--strict-extra-skips") and _strict_extra_skips:
+        terminalreporter.write_sep("=", "strict-extra-skips: dependency-skips in a job that owns the dep")
+        for line in _strict_extra_skips:
+            terminalreporter.write_line(f"  {line}")
+        terminalreporter.write_line(
+            "A per-extra job skipped a test for a missing dependency it is supposed to install — "
+            "the test is mis-routed or mis-marked (see docs/how-to/testing.md)."
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def seed_randomness():
     """Fix random seeds for deterministic test runs."""
