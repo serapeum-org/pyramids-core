@@ -264,7 +264,7 @@ nav:
       - CF Conventions: reference/netcdf/cf/index.md
       - UGRID:
         - Overview: reference/netcdf/ugrid/index.md
-        - UgridDataset: reference/netcdf/ugrid/dataset.md
+        - MeshDataset: reference/netcdf/ugrid/dataset.md
         - Mesh2d: reference/netcdf/ugrid/mesh.md
         - Connectivity: reference/netcdf/ugrid/connectivity.md
         - Spatial Operations: reference/netcdf/ugrid/spatial.md
@@ -276,7 +276,7 @@ nav:
         - Vector Operations: reference/netcdf/ugrid/vector_ops.md
         - Regridding & Sampling: reference/netcdf/ugrid/regrid.md
         - xarray & Zarr Interop: reference/netcdf/ugrid/interop_xarray.md
-        - Network1d: reference/netcdf/ugrid/network.md
+        - Mesh1d: reference/netcdf/ugrid/mesh1d.md
         - 3-D results (masks & ragged layers): reference/netcdf/ugrid/3d-results.md
         - Data Models: reference/netcdf/ugrid/models.md
         - Visualization: reference/netcdf/ugrid/plot.md

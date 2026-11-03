@@ -408,7 +408,7 @@ classDiagram
     }
 
     %% MeshDataset
-    class ugrid_UgridDataset {
+    class ugrid_MeshDataset {
         +__init__(src)
         +mesh · n_face
         +data_variable_names
@@ -548,7 +548,7 @@ classDiagram
 
     %% other relations
     collection_DatasetCollection o-- dataset_Dataset : per-timestep
-    ugrid_UgridDataset ..> dataset_Dataset : interpolate
+    ugrid_MeshDataset ..> dataset_Dataset : interpolate
     feature_FeatureCollection ..> dataset_Dataset : rasterize
     dataset_Dataset ..> feature_FeatureCollection : vectorize
     feature_FeatureCollection ..> feature_Coords : uses
@@ -563,7 +563,7 @@ classDiagram
     netcdf_NetCDFPlot ..> plot_helpers_module : render_array
     engines_Analysis ..> plot_helpers_module : render_array
     collection_DatasetCollection ..> plot_helpers_module : render_array(mode="animate")
-    ugrid_UgridDataset ..> plot_helpers_module : mesh_render
+    ugrid_MeshDataset ..> plot_helpers_module : mesh_render
     feature_FeatureCollection ..> basemap_module : add_basemap
     plot_helpers_module ..> basemap_module : basemap overlay
     plot_helpers_module ..> cleopatra_pkg : ArrayGlyph / MeshGlyph
