@@ -24,6 +24,7 @@ from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
+_HELP_JSON = "emit JSON"
 
 
 def _metadata_payload(metadata: object) -> object:
@@ -172,18 +173,18 @@ def add_nc_inspect_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_sum.add_argument(
         "--vars", nargs="+", help="variables to summarize (default: all)"
     )
-    nc_sum.add_argument("--json", action="store_true", help="emit JSON")
+    nc_sum.add_argument("--json", action="store_true", help=_HELP_JSON)
     nc_sum.set_defaults(func=_cmd_nc_summary)
 
     nc_meta = ncsub.add_parser("metadata", help="the full metadata record")
     nc_meta.add_argument("file", help=_HELP_NC_FILE)
-    nc_meta.add_argument("--json", action="store_true", help="emit JSON")
+    nc_meta.add_argument("--json", action="store_true", help=_HELP_JSON)
     nc_meta.set_defaults(func=_cmd_nc_metadata)
 
     nc_dim = ncsub.add_parser("dim-values", help="a dimension's coordinate values")
     nc_dim.add_argument("file", help=_HELP_NC_FILE)
     nc_dim.add_argument("--dim", required=True, help="dimension name")
-    nc_dim.add_argument("--json", action="store_true", help="emit JSON")
+    nc_dim.add_argument("--json", action="store_true", help=_HELP_JSON)
     nc_dim.set_defaults(func=_cmd_nc_dim_values)
 
     nc_time = ncsub.add_parser("time-values", help="the formatted time-axis labels")
@@ -196,7 +197,7 @@ def add_nc_inspect_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_time.add_argument(
         "--format", default="%Y-%m-%d", help="strftime format for the labels"
     )
-    nc_time.add_argument("--json", action="store_true", help="emit JSON")
+    nc_time.add_argument("--json", action="store_true", help=_HELP_JSON)
     nc_time.set_defaults(func=_cmd_nc_time_values)
 
     nc_set = ncsub.add_parser("set-attr", help="set a global attribute")
