@@ -151,8 +151,11 @@ def test_every_extras_marker_is_run_by_a_ci_job():
 def test_main_package_marker_allowlist_is_not_stale():
     """The _MAIN_PACKAGE_MARKERS allow-list must still match how the workflow/envs are wired."""
     text = _workflow_text()
-    assert "interop" in text and "plot" in text, (
-        "the main-package job no longer references interop/plot; _MAIN_PACKAGE_MARKERS is stale"
+    assert "interop" in text, (
+        "the main-package job no longer references interop; _MAIN_PACKAGE_MARKERS is stale"
+    )
+    assert "plot" in text, (
+        "the main-package job no longer references plot; _MAIN_PACKAGE_MARKERS is stale"
     )
     envs = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))["tool"]["pixi"][
         "environments"
