@@ -15,9 +15,12 @@ import re
 #     "pyramids-core[viz] not installed", "the optional interop dependency is not installed",
 #     "dask.dataframe needs dask + pyarrow (pyramids-core[parquet])";
 #   * ``pytest.importorskip("x")`` — default reason "could not import 'x'".
-# Matching these three shapes ("not installed", a "pyramids-core[" extra reference, and
-# "could not import") catches a dependency-skip regardless of which phrasing a test used, so the
-# gate does not silently miss one — which is the whole point of the gate.
+# The pattern matches those three shapes ("not installed", a "pyramids-core[" extra reference, and
+# "could not import"). It deliberately does NOT try to catch arbitrary free-text wording (e.g. a
+# bare ``pytest.skip("dask + zarr required")``): matching generic words like "required" or "not
+# available" would false-positive legitimate platform skips and turn them red in a strict job. A
+# dependency skip must therefore be written with one of the canonical forms above — the project
+# convention — to be seen by the gate.
 DEPENDENCY_SKIP_REASON = re.compile(
     r"not installed|could not import|pyramids-core\[", re.IGNORECASE
 )

@@ -114,7 +114,11 @@ jobs:
             markexpr: "parquet and not live"
             strict: "--strict-extra-skips"
           # STAC runs the whole suite (mock + real-client) in the dev env, which carries every extra,
-          # so a missing-dependency skip there is always a bug -> --strict-extra-skips.
+          # so a missing-dependency skip there is always a bug -> --strict-extra-skips. NOTE: the
+          # strict gate's safety here rests on `stac-asset` being present in the dev env; it reaches
+          # it via pixi.lock as the [stac] extra's PyPI dep, not the pixi `stac` conda feature (which
+          # only lists pystac-client). If a lock regen ever drops the [stac] PyPI deps, this job goes
+          # red (correctly, but citing "mis-routed test") — the fix then is to restore the extra.
           - name: stac
             env: dev
             paths: "tests/stac tests/dataset/stac"
