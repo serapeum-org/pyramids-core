@@ -12855,6 +12855,12 @@ class NetCDF(Dataset):
         over them. A copying `add_variable` on a weighted result is the route that needs it.
         """
         old = self._raster
+        # Unlike `_update_inplace`, this flush is strict (not routed through the
+        # best-effort `_flush_prior_handle`): the old handle here is *not* dropped
+        # -- it is only flushed, never closed, because a caller may still hold it
+        # or a `get_group()` view of it (#143, see the docstring). A flush failure
+        # on a surviving handle means uncommitted writes a caller can still read,
+        # so it must surface rather than be swallowed.
         if old is not None and old is not new_raster:
             old.FlushCache()
         # RasterBase state
