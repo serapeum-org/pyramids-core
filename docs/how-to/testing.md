@@ -101,9 +101,10 @@ they self-skip when the extra's headline dep is missing. They *run* fully
 ## No silent skips
 
 A skipped test is invisible: it folds into "N skipped", CI stays green, and a whole marker can run
-in no job for months unnoticed — which is exactly what happened to the `stac` suite (tagged
-`core`, needing `pystac-client`, installed in no CI test env, so it skipped everywhere while
-reading as passing). Three mechanisms make that impossible:
+in no job for months unnoticed — which is exactly what happened to the `stac` suite. It was tagged
+`core`, and the tests needing the real `pystac-client` were installed in no CI test env: the
+mock-client tests still ran in the main job, but the **real-dependency** coverage skipped in every
+job while reading as passing. Three mechanisms make that impossible:
 
 1. **Marker-routing.** Every extras marker runs in a CI job whose environment installs its
    dependency (the `extras-package` matrix in `.github/workflows/tests.yml`), so the tests
