@@ -789,6 +789,16 @@ class Dataset(RasterBase):
         state across the swap (e.g. NetCDF's variable-subset
         attributes) override this method.
 
+        Before the swap, the prior handle (``self._raster``) is
+        ``FlushCache``'d when it differs from ``src``, committing any
+        buffered writes and not relying on refcounting alone to
+        finalize it once ``__dict__.update`` drops the reference
+        (mirrors the explicit flush in :mod:`pyramids.dataset.ops.io`
+        ``_create_copy_and_reopen``). The ``prev is not src`` guard
+        skips the no-op case where the operation handed back the very
+        handle it was given, so the live handle is never flushed and
+        then reused.
+
         after `__dict__.update`, the collaborators on
         `self` came from `new.__dict__` and point at the temporary
         `new` instance, not at `self`. Re-bind every collaborator's
@@ -803,6 +813,14 @@ class Dataset(RasterBase):
             declared slot stays legal. The proxy is freshly built
             from ``self`` (not pulled from ``new``) so the engines
             point at the live Dataset after the swap.
+
+        Args:
+            src: The new ``gdal.Dataset`` whose state replaces the
+                current one. If it is the same object as the current
+                ``self._raster`` the prior handle is not flushed.
+            access: Access mode for the rebuilt instance. Defaults to
+                ``None``, which reuses the dataset's current
+                ``self._access``.
         """
         # Flush the prior handle before it is dropped by the dict swap below, so
         # any buffered writes are committed and the handle is not relied upon to
