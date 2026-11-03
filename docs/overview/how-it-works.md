@@ -38,7 +38,7 @@ flowchart TB
 
     subgraph NC["pyramids.netcdf"]
       NCD[NetCDF]:::c
-      UG[UgridDataset]:::c
+      UG[MeshDataset]:::c
     end
 
     subgraph Vec["pyramids.feature"]
@@ -82,7 +82,7 @@ flowchart LR
     nc[NetCDF]
     cf[cf]
     lazy[_lazy._apply_unpack]
-    ugds[ugrid.UgridDataset]
+    ugds[ugrid.MeshDataset]
   end
   subgraph PF["pyramids.feature"]
     fc[FeatureCollection]
@@ -120,7 +120,7 @@ flowchart LR
    virtual filesystem paths in `pyramids._io` /
    `pyramids.base.remote`.
 2. Raster inputs become `Dataset` (GeoTIFF, ASC) / `NetCDF` (NetCDF, HDF5) /
-   `UgridDataset` (UGRID NetCDF) instances; vector inputs become
+   `MeshDataset` (UGRID NetCDF) instances; vector inputs become
    `FeatureCollection`. Each concrete class composes engines for its
    public-API families (`ds.spatial`, `ds.io`, …).
 3. `DatasetCollection` wraps `N` co-registered `Dataset` instances into a

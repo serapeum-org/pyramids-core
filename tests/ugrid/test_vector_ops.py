@@ -3,7 +3,7 @@
 Covers :func:`~pyramids.netcdf.ugrid.vector_ops.polygonize` (F1),
 :func:`~pyramids.netcdf.ugrid.vector_ops.sample_line` (F2), and
 :func:`~pyramids.netcdf.ugrid.vector_ops.burn` (F3) on small meshes built with
-``UgridDataset.from_arrays``.
+``MeshDataset.from_arrays``.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from shapely.geometry import LineString, Point, box
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.vector_ops import burn, polygonize, sample_line
 
 pytestmark = pytest.mark.core
@@ -32,7 +32,7 @@ def grid_2x2():
     node_x = np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0])
     node_y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0])
     faces = np.array([[0, 1, 4, 3], [1, 2, 5, 4], [3, 4, 7, 6], [4, 5, 8, 7]])
-    dataset = UgridDataset.from_arrays(node_x, node_y, faces)
+    dataset = MeshDataset.from_arrays(node_x, node_y, faces)
     return dataset.mesh
 
 
@@ -49,7 +49,7 @@ def strip_1x4():
     node_x = np.concatenate([bottom_x, bottom_x])
     node_y = np.concatenate([np.zeros(5), np.ones(5)])
     faces = np.array([[0, 1, 6, 5], [1, 2, 7, 6], [2, 3, 8, 7], [3, 4, 9, 8]])
-    dataset = UgridDataset.from_arrays(node_x, node_y, faces)
+    dataset = MeshDataset.from_arrays(node_x, node_y, faces)
     return dataset.mesh
 
 

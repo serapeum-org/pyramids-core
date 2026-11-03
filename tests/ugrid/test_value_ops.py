@@ -8,7 +8,7 @@ numbers behind the bars.
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.analysis import valid_samples
 
 pytestmark = pytest.mark.core
@@ -20,7 +20,7 @@ _FACES = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4]])
 
 def _mesh(values, nodata=None):
     """A three-face mesh carrying ``values`` as a face variable."""
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,

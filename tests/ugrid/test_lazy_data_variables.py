@@ -1,6 +1,6 @@
 """Regression tests for lazy UGRID data-variable loading (PERF-3).
 
-``UgridDataset.read_file`` reads only per-variable *metadata* eagerly; each variable's
+``MeshDataset.read_file`` reads only per-variable *metadata* eagerly; each variable's
 array is materialised on first ``.data`` access through a re-opening loader. These tests
 pin that contract so a future change can't silently revert to eager reads.
 """
@@ -11,18 +11,18 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf.ugrid import models
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 
 _UGRID_PATH = Path("tests/data/netcdf/ugrid/ugrid.nc")
 
 
-def _temporal_dataset() -> tuple[UgridDataset, np.ndarray]:
+def _temporal_dataset() -> tuple[MeshDataset, np.ndarray]:
     """A tiny two-triangle mesh carrying one temporal face variable ``h`` of shape ``(3, 2)``."""
     node_x = np.array([0.0, 1.0, 1.0, 0.0])
     node_y = np.array([0.0, 0.0, 1.0, 1.0])
     fnc = np.array([[0, 1, 2], [0, 2, 3]])
     temporal = np.arange(3 * 2, dtype=np.float64).reshape(3, 2)  # (time=3, n_face=2)
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x,
         node_y,
         fnc,
@@ -50,13 +50,13 @@ def ugrid_ds():
     ``.data`` must not leave a populated cache visible to another test.
 
     Returns:
-        UgridDataset: The sample mesh read metadata-only (no variable arrays loaded).
+        MeshDataset: The sample mesh read metadata-only (no variable arrays loaded).
     """
-    return UgridDataset.read_file(_UGRID_PATH)
+    return MeshDataset.read_file(_UGRID_PATH)
 
 
 class TestLazyDataVariables:
-    """``UgridDataset.read_file`` defers variable array reads to first ``.data`` access."""
+    """``MeshDataset.read_file`` defers variable array reads to first ``.data`` access."""
 
     def test_read_file_defers_variable_reads(self, ugrid_ds):
         """After ``read_file`` every data variable carries a loader and no eager array.
@@ -112,7 +112,7 @@ class TestLazyDataVariables:
             the loader, so the deferred read still succeeds — it would raise a
             "No such file" ``RuntimeError`` if the relative path leaked into the loader.
         """
-        ds = UgridDataset.read_file(_UGRID_PATH)
+        ds = MeshDataset.read_file(_UGRID_PATH)
         assert not _UGRID_PATH.is_absolute(), "precondition: opened via a relative path"
         name = next(iter(ds._data_variables))
 
@@ -167,7 +167,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        var = UgridDataset.read_file(path).get_data("h")
+        var = MeshDataset.read_file(path).get_data("h")
         result = np.asarray(var.sel_time(1))
         assert calls == [(1, None)], (
             "sel_time should issue exactly one single-step slab read"
@@ -187,7 +187,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = UgridDataset.read_file(path).get_data("h").sel_time_range(0, 2)
+        result = MeshDataset.read_file(path).get_data("h").sel_time_range(0, 2)
         assert calls == [(0, 2)], (
             "sel_time_range should issue exactly one range slab read"
         )
@@ -196,7 +196,7 @@ class TestWindowedTimeSelection:
     def test_cached_variable_slices_in_memory(self, temporal_file, monkeypatch):
         """Once `.data` is cached, `sel_time` slices in memory instead of re-reading the file."""
         path, temporal = temporal_file
-        var = UgridDataset.read_file(path).get_data("h")
+        var = MeshDataset.read_file(path).get_data("h")
         _ = var.data  # force the full load / cache
         calls = []
         monkeypatch.setattr(models, "_read_time_slab", lambda *a: calls.append(a))
@@ -208,7 +208,7 @@ class TestWindowedTimeSelection:
         path, temporal = temporal_file
         calls = []
         monkeypatch.setattr(models, "_read_time_slab", lambda *a: calls.append(a))
-        result = np.asarray(UgridDataset.read_file(path).get_data("h").sel_time(-1))
+        result = np.asarray(MeshDataset.read_file(path).get_data("h").sel_time(-1))
         assert calls == [], "a negative index must not take the windowed path"
         np.testing.assert_array_equal(result, temporal[-1])
 
@@ -230,7 +230,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = UgridDataset.read_file(path).get_data("h").sel_time_range(2, 1)
+        result = MeshDataset.read_file(path).get_data("h").sel_time_range(2, 1)
         assert calls == [], "a reversed range must not take the windowed path"
         np.testing.assert_array_equal(np.asarray(result.data), temporal[2:1])
 
@@ -252,7 +252,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = UgridDataset.read_file(path).get_data("h").sel_time_range(1, 1)
+        result = MeshDataset.read_file(path).get_data("h").sel_time_range(1, 1)
         assert calls == [], "an empty range must not take the windowed path"
         assert np.asarray(result.data).shape[0] == 0
         np.testing.assert_array_equal(np.asarray(result.data), temporal[1:1])
@@ -270,7 +270,7 @@ class TestWindowedTimeSelection:
             ),
         )
         n_steps = temporal.shape[0]
-        result = UgridDataset.read_file(path).get_data("h").sel_time_range(0, n_steps)
+        result = MeshDataset.read_file(path).get_data("h").sel_time_range(0, n_steps)
         assert calls == [(0, n_steps)], "a full range should still window a single read"
         np.testing.assert_array_equal(np.asarray(result.data), temporal)
 
@@ -291,7 +291,7 @@ class TestStreamingWrite:
         src = tmp_path / "src.nc"
         seed.to_file(src)
 
-        rb = UgridDataset.read_file(src)
+        rb = MeshDataset.read_file(src)
         assert all(v._data is None for v in rb._data_variables.values()), (
             "precondition: a freshly-read dataset is uncached"
         )
@@ -302,10 +302,10 @@ class TestStreamingWrite:
             "to_file must not populate the shared variable cache"
         )
 
-        back = UgridDataset.read_file(out)
+        back = MeshDataset.read_file(out)
         np.testing.assert_array_equal(
             np.asarray(back.get_data("h").data),
-            np.asarray(UgridDataset.read_file(src).get_data("h").data),
+            np.asarray(MeshDataset.read_file(src).get_data("h").data),
         )
 
 

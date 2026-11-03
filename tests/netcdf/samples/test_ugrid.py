@@ -2,7 +2,7 @@
 
 import pytest
 
-from pyramids.netcdf import NetCDF, UgridDataset
+from pyramids.netcdf import MeshDataset, NetCDF
 from tests.netcdf.samples.conftest import MESH
 
 pytestmark = pytest.mark.core
@@ -28,8 +28,8 @@ def test_ugrid_files_have_unstructured_dimensions(sample_name, sample):
 
 
 def test_ugrid_dataset_reads_mesh(sample):
-    """``UgridDataset.read_file`` loads a UGRID-style mesh declared via cf_role connectivity (#589)."""
-    ug = UgridDataset.read_file(sample(MESH))
+    """``MeshDataset.read_file`` loads a UGRID-style mesh declared via cf_role connectivity (#589)."""
+    ug = MeshDataset.read_file(sample(MESH))
     assert ug.mesh is not None
     assert ug.mesh.n_node == 16
     assert ug.mesh.n_face == 4
@@ -40,4 +40,4 @@ def test_ugrid_data_only_files_have_no_mesh(name, sample):
     """Files carrying data on a mesh dimension but no topology raise a clear error (no mesh to build)."""
     src = sample(name)
     with pytest.raises(ValueError, match="mesh topology"):
-        UgridDataset.read_file(src)
+        MeshDataset.read_file(src)

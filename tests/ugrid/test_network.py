@@ -1,4 +1,4 @@
-"""Unit tests for pyramids.netcdf.ugrid.network.Network1d.
+"""Unit tests for pyramids.netcdf.ugrid.mesh1d.Mesh1d.
 
 Covers construction from arrays, topology/geometry properties (node/edge
 counts, bounds, edge lengths and midpoints), the network sort -- over stored
@@ -14,7 +14,7 @@ import pytest
 from shapely.geometry import LineString, Point
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.network import Network1d
+from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 
 pytestmark = pytest.mark.core
 
@@ -41,12 +41,12 @@ def y_network():
             3           (outlet)
 
     Returns:
-        Network1d: 4 nodes, 3 directed edges oriented downstream.
+        Mesh1d: 4 nodes, 3 directed edges oriented downstream.
     """
     node_x = np.array([0.0, 2.0, 1.0, 1.0])
     node_y = np.array([2.0, 2.0, 1.0, 0.0])
     edges = np.array([[0, 2], [1, 2], [2, 3]], dtype=np.intp)
-    return Network1d.from_arrays(node_x, node_y, edges, directed=True, epsg=4326)
+    return Mesh1d.from_arrays(node_x, node_y, edges, directed=True, epsg=4326)
 
 
 class TestConstruction:
@@ -77,19 +77,19 @@ class TestConstruction:
 
         Test scenario:
             The class used to carry an `n_face` property whose body only raised, which left
-            `dir()` and `hasattr(Network1d, "n_face")` advertising a member that could never
+            `dir()` and `hasattr(Mesh1d, "n_face")` advertising a member that could never
             be read while `hasattr(net, "n_face")` denied it. With the property gone every
             probe agrees, and the counts a network does have stay visible.
         """
         assert hasattr(y_network, "n_face") is False, (
             "an instance must not advertise n_face"
         )
-        assert hasattr(Network1d, "n_face") is False, (
+        assert hasattr(Mesh1d, "n_face") is False, (
             "the class must not advertise n_face either -- a property would, because "
             "class access never invokes its getter"
         )
         assert "n_face" not in dir(y_network), "n_face must not be listed by dir()"
-        assert "n_face" not in vars(Network1d), "no n_face descriptor on the class"
+        assert "n_face" not in vars(Mesh1d), "no n_face descriptor on the class"
         assert getattr(y_network, "n_face", "absent") == "absent"
         # The hint lives in `__getattr__`, which Python consults only after normal lookup
         # fails -- so the attribute stays absent to every probe while the guidance survives.
@@ -123,12 +123,12 @@ class TestConstruction:
             `AttributeError`, including from inside a property body. Answering
             unconditionally reported existing members as missing and erased the real cause:
             an `AttributeError` raised inside the connectivity handling surfaced as
-            "'Network1d' object has no attribute 'edge_tree'", with no `__cause__` and a
+            "'Mesh1d' object has no attribute 'edge_tree'", with no `__cause__` and a
             traceback ending in `__getattr__`. Here a property is made to raise
             `AttributeError` from its own body; the message must be that one, not a claim
             that `bounds` does not exist.
         """
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
 
         class Exploding:
             """Stands in for a connectivity whose attribute access fails."""
@@ -151,7 +151,7 @@ class TestConstruction:
 
     def test_a_genuinely_absent_name_keeps_the_interpreter_message(self):
         """Handing back to normal lookup also gives the default wording for free."""
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         with pytest.raises(AttributeError, match="no attribute 'definitely_not_here'"):
             _ = net.definitely_not_here
 
@@ -224,7 +224,7 @@ class TestSort:
             from the identical arrays. It now names the degree-1 nodes that are candidate
             outlets, because a network stores no elevation and the choice is the caller's.
         """
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         with pytest.raises(ValueError) as caught:
             net.sort()
         message = str(caught.value)
@@ -242,7 +242,7 @@ class TestSort:
     )
     def test_sort_undirected_orients_from_the_outlet(self, outlet, expected):
         """Naming the outlet orients the edges and the sort proceeds (issue #1353)."""
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         order = net.sort(outlet=outlet).tolist()
         assert order == expected, (
             f"every edge should run towards node {outlet}, giving {expected}, got {order}"
@@ -250,7 +250,7 @@ class TestSort:
 
     def test_sort_undirected_upstream_reverses_the_inferred_orientation(self):
         """`upstream` reverses the derived edges, as it does the stored ones."""
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         assert net.sort("upstream", outlet=3).tolist() == [3, 2, 1, 0]
 
     def test_sort_undirected_matches_the_directed_answer(self):
@@ -261,20 +261,20 @@ class TestSort:
             labelled, not whether an order exists. Same nodes, same edges, one built
             directed and one oriented from its outlet -- the answers must agree.
         """
-        inferred = Network1d.from_arrays(*CHAIN).sort(outlet=3)
-        declared = Network1d.from_arrays(*CHAIN, directed=True).sort()
+        inferred = Mesh1d.from_arrays(*CHAIN).sort(outlet=3)
+        declared = Mesh1d.from_arrays(*CHAIN, directed=True).sort()
         assert inferred.tolist() == declared.tolist()
 
     def test_sort_outlet_refused_on_a_directed_network(self):
         """A directed network already carries its orientation, so outlet= is refused."""
-        net = Network1d.from_arrays(*CHAIN, directed=True)
+        net = Mesh1d.from_arrays(*CHAIN, directed=True)
         with pytest.raises(ValueError, match="already directed"):
             net.sort(outlet=3)
 
     @pytest.mark.parametrize("outlet", [-1, 4, 99], ids=["negative", "one-past", "far"])
     def test_sort_outlet_must_be_a_node_index(self, outlet):
         """An outlet outside the node range is refused by range, not by IndexError."""
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         with pytest.raises(ValueError, match=r"outlet must be a node index"):
             net.sort(outlet=outlet)
 
@@ -286,7 +286,7 @@ class TestSort:
             which way the edge between them runs. That is the genuine ambiguity #1353 says
             should still raise -- and the message names the edge and the distance.
         """
-        triangle = Network1d.from_arrays(
+        triangle = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 0.5]),
             np.array([0.0, 0.0, 1.0]),
             np.array([[0, 1], [1, 2], [2, 0]]),
@@ -305,7 +305,7 @@ class TestSort:
             a diamond run from the far node to the near one, so the orientation is defined and
             the outlet comes last.
         """
-        diamond = Network1d.from_arrays(
+        diamond = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 1.0, 2.0]),
             np.array([0.0, 1.0, -1.0, 0.0]),
             np.array([[0, 1], [0, 2], [1, 3], [2, 3]]),
@@ -316,7 +316,7 @@ class TestSort:
 
     def test_sort_refuses_a_component_the_outlet_cannot_reach(self):
         """An edge in another component has no distance to the outlet, so it is refused."""
-        split = Network1d.from_arrays(
+        split = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 5.0, 6.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [2, 3]]),
@@ -331,7 +331,7 @@ class TestSort:
 
     def test_sort_detects_cycle(self):
         """A cyclic directed network cannot be sorted."""
-        net = Network1d.from_arrays(
+        net = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [2, 0]]),
@@ -347,7 +347,7 @@ class TestSort:
             In a ring every node has degree 2, so the degree-1 heuristic finds nothing. The
             message has to say that rather than print an empty candidate list.
         """
-        ring = Network1d.from_arrays(
+        ring = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 1.0, 0.0]),
             np.array([0.0, 0.0, 1.0, 1.0]),
             np.array([[0, 1], [1, 2], [2, 3], [3, 0]]),
@@ -369,7 +369,7 @@ class TestSort:
         """
         spokes = 10
         hub_x = np.concatenate([[0.0], np.arange(1, spokes + 1, dtype="float64")])
-        star = Network1d.from_arrays(
+        star = Mesh1d.from_arrays(
             hub_x,
             np.zeros(spokes + 1),
             np.array([[0, spoke] for spoke in range(1, spokes + 1)]),
@@ -391,7 +391,7 @@ class TestSort:
             build a friendly message died inside numpy, and the caller never saw the
             candidate-outlet guidance at all.
         """
-        padded = Network1d.from_arrays(
+        padded = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [-1, -1]]),
@@ -415,7 +415,7 @@ class TestSort:
             confident, wrong diagnosis naming an edge and nodes that do not exist. Node 3 is
             unattached here, so the two real edges orient towards node 2.
         """
-        padded = Network1d.from_arrays(
+        padded = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [-1, -1]]),
@@ -433,7 +433,7 @@ class TestSort:
             `adjacency[-1].append(-1)` and `indegree[-1] += 1` corrupted the last node, so
             Kahn's algorithm could not place every node and the chain was reported as cyclic.
         """
-        padded = Network1d.from_arrays(
+        padded = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [2, 3], [-1, -1]]),
@@ -460,7 +460,7 @@ class TestSort:
             degree census had the matching defect, reporting node 5 as a candidate outlet of
             a 3-node network because `np.bincount` widens past `minlength`.
         """
-        net = Network1d.from_arrays(
+        net = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array(edges),
@@ -479,7 +479,7 @@ class TestSort:
             way to make the claim true, but the directed path already admits such nodes (see
             `test_sort_keeps_an_isolated_node`), so both paths now agree and say so.
         """
-        with_isolated = Network1d.from_arrays(
+        with_isolated = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 9.0]),
             np.array([0.0, 0.0, 0.0, 9.0]),
             np.array([[0, 1], [1, 2]]),
@@ -503,7 +503,7 @@ class TestSort:
             branch fired and announced that every node has two or more edges -- the exact
             opposite of the truth. Every node has zero.
         """
-        edgeless = Network1d.from_arrays(
+        edgeless = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.empty((0, 2), dtype=int),
@@ -518,7 +518,7 @@ class TestSort:
 
     def test_sort_on_an_edgeless_network_returns_every_node(self):
         """An edgeless network is the all-isolated case, so every node passes through (M8)."""
-        edgeless = Network1d.from_arrays(
+        edgeless = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.empty((0, 2), dtype=int),
@@ -535,7 +535,7 @@ class TestSort:
             `0 <= int(outlet) < n` accepts `True` and silently orients towards node 1, which
             is a plausible-looking order for a node the caller never named.
         """
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         with pytest.raises(ValueError, match="outlet must be an integer node index"):
             net.sort(outlet=outlet)
 
@@ -548,7 +548,7 @@ class TestSort:
             asked for something that is not a node index at all. Even `3.0`, which truncates
             exactly, is refused -- the signature says `int`.
         """
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         with pytest.raises(ValueError, match="outlet must be an integer node index"):
             net.sort(outlet=outlet)
 
@@ -559,7 +559,7 @@ class TestSort:
             The type guard must not reject the integer types numpy hands back from
             `argmin`/`flatnonzero`, which is how a caller would most naturally pick an outlet.
         """
-        net = Network1d.from_arrays(*CHAIN)
+        net = Mesh1d.from_arrays(*CHAIN)
         assert net.sort(outlet=np.int64(3)).tolist() == [0, 1, 2, 3]
 
 
@@ -619,7 +619,7 @@ class TestPaddedAndIsolatedTopology:
     @pytest.fixture
     def padded_network(self):
         """A chain of two edges plus a third row that is all fill."""
-        return Network1d.from_arrays(
+        return Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [-1, -1]]),
@@ -685,7 +685,7 @@ class TestPaddedAndIsolatedTopology:
             ordering is documented as covering the nodes -- so dropping it would make
             `len(order) != n_node` and silently misalign any node-indexed array built from it.
         """
-        isolated = Network1d.from_arrays(
+        isolated = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 5.0]),
             np.array([0.0, 0.0, 5.0]),
             np.array([[0, 1]]),
@@ -733,14 +733,14 @@ class TestAmbiguousFillValue:
         connectivity = self._connectivity(fill_value)
 
         with pytest.raises(ValueError, match="fill value") as caught:
-            Network1d(node_x, node_y, connectivity)
+            Mesh1d(node_x, node_y, connectivity)
         message = str(caught.value)
         assert str(fill_value) in message, f"the fill must be named, got: {message}"
         assert "valid node index" in message, (
             f"the message must say why the fill is the problem, got: {message}"
         )
         assert "in this network" in message, (
-            f"a Network1d refusal must not call itself a mesh, got: {message}"
+            f"a Mesh1d refusal must not call itself a mesh, got: {message}"
         )
         assert "mesh" not in message, (
             f"the noun comes from the caller, so no 'mesh' here, got: {message}"
@@ -760,7 +760,7 @@ class TestAmbiguousFillValue:
             `n_node` is equally unambiguous. Neither may be refused, and the directed sort
             must give the same answer for all of them.
         """
-        net = Network1d(
+        net = Mesh1d(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             self._connectivity(fill_value),
@@ -772,7 +772,7 @@ class TestAmbiguousFillValue:
 
     def test_from_arrays_is_unaffected(self):
         """`from_arrays` normalises the fill to -1, so it can never trip the guard."""
-        net = Network1d.from_arrays(
+        net = Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0, 3.0]),
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2], [2, 3]]),
@@ -803,7 +803,7 @@ class TestAmbiguousFillValue:
             cf_role="edge_node_connectivity",
             original_start_index=0,
         )
-        net = Network1d(
+        net = Mesh1d(
             np.array([0.0, 1.0, 2.0, 3.0]), np.array([0.0, 0.0, 0.0, 0.0]), padded
         )
 
@@ -828,7 +828,7 @@ class TestAmbiguousFillValue:
             cf_role="edge_node_connectivity",
             original_start_index=0,
         )
-        net = Network1d(
+        net = Mesh1d(
             np.array([0.0, 1.0, 2.0, 3.0]), np.array([0.0, 0.0, 0.0, 0.0]), padded
         )
         np.testing.assert_array_equal(
@@ -850,7 +850,7 @@ class TestAmbiguousFillValue:
             cf_role="edge_node_connectivity",
             original_start_index=0,
         )
-        net = Network1d(
+        net = Mesh1d(
             np.array([0.0, 1.0, 2.0, 3.0]), np.array([0.0, 0.0, 0.0, 0.0]), original
         )
         assert net.edge_node_connectivity is original, (

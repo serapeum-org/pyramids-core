@@ -1,7 +1,7 @@
-"""`UgridDataset.plot_vector_field` (issue #1373).
+"""`MeshDataset.plot_vector_field` (issue #1373).
 
 A hydrodynamic mesh's velocity field is the canonical results visual — D-Flow FM writes
-`mesh2d_ucx` / `mesh2d_ucy` per face — and `UgridDataset` had no way to draw it. The facade
+`mesh2d_ucx` / `mesh2d_ucy` per face — and `MeshDataset` had no way to draw it. The facade
 forwards to cleopatra's `MeshGlyph.plot_vector_field` (available from cleopatra 0.44.0),
 keeping the `kind` / `thin` vocabulary of the raster `Dataset.plot_vector_field` so the two
 read the same.
@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -64,36 +64,36 @@ def _variable(name: str, values, location: str = "face") -> MeshVariable:
     )
 
 
-def _dataset(**variables) -> UgridDataset:
-    """Build a UgridDataset over `_mesh()` carrying the given variables.
+def _dataset(**variables) -> MeshDataset:
+    """Build a MeshDataset over `_mesh()` carrying the given variables.
 
     Args:
         **variables: Name to MeshVariable.
 
     Returns:
-        UgridDataset: The dataset.
+        MeshDataset: The dataset.
     """
-    return UgridDataset(
+    return MeshDataset(
         mesh=_mesh(), data_variables=dict(variables), global_attributes={}
     )
 
 
 @pytest.fixture
-def velocity() -> UgridDataset:
+def velocity() -> MeshDataset:
     """A 2-face dataset with a face-located velocity field.
 
     Returns:
-        UgridDataset: `ucx` pointing east on one face, `ucy` north on the other.
+        MeshDataset: `ucx` pointing east on one face, `ucy` north on the other.
     """
     return _dataset(ucx=_variable("ucx", [1.0, 0.0]), ucy=_variable("ucy", [0.0, 1.0]))
 
 
 @pytest.fixture
-def temporal_velocity() -> UgridDataset:
+def temporal_velocity() -> MeshDataset:
     """A 3-step face-located velocity field, each step an order of magnitude apart.
 
     Returns:
-        UgridDataset: `ucx` of shape (3, 2) and a matching zero `ucy`.
+        MeshDataset: `ucx` of shape (3, 2) and a matching zero `ucy`.
     """
     return _dataset(
         ucx=_variable("ucx", [[1.0, 2.0], [10.0, 20.0], [100.0, 200.0]]),
@@ -105,9 +105,9 @@ class TestRendering:
     """What the facade draws, and what it returns."""
 
     def test_the_method_exists_on_the_class(self):
-        """`UgridDataset` advertises the member the issue reported missing."""
-        assert hasattr(UgridDataset, "plot_vector_field"), (
-            "UgridDataset should expose plot_vector_field (issue #1373)"
+        """`MeshDataset` advertises the member the issue reported missing."""
+        assert hasattr(MeshDataset, "plot_vector_field"), (
+            "MeshDataset should expose plot_vector_field (issue #1373)"
         )
 
     def test_a_face_field_renders_as_a_quiver(self, velocity):

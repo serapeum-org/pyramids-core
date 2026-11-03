@@ -10,7 +10,7 @@ when a caller opts in, and it round-trips to disk distinct from the fill value.
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
@@ -51,8 +51,8 @@ def _temporal_var(active=None) -> MeshVariable:
     )
 
 
-def _dataset(var: MeshVariable) -> UgridDataset:
-    return UgridDataset(_mesh(), {var.name: var}, {})
+def _dataset(var: MeshVariable) -> MeshDataset:
+    return MeshDataset(_mesh(), {var.name: var}, {})
 
 
 class TestMeshVariableMask:
@@ -232,7 +232,7 @@ class TestAccessors:
         The element axis is 0 and time is last here — a layout the rest of the module supports
         via ``time_index``. The mask is still the canonical ``(n_time, n_element)``.
         """
-        base = UgridDataset.from_arrays(
+        base = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -251,7 +251,7 @@ class TestAccessors:
             active=mask,
             _data=data,
         )
-        ds = UgridDataset(base.mesh, {"wl": var}, {})
+        ds = MeshDataset(base.mesh, {"wl": var}, {})
         assert var.time_index == 1, "this variable stores time trailing"
         out = ds.masked_values("wl")
         np.testing.assert_array_equal(
@@ -386,7 +386,7 @@ class TestShiftMask:
     """shift relocates snapshots, so the per-step mask must move with the data (H1)."""
 
     def _two_face_masked(self, data, mask):
-        base = UgridDataset.from_arrays(
+        base = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -401,7 +401,7 @@ class TestShiftMask:
             active=mask,
             _data=data,
         )
-        return UgridDataset(base.mesh, {"wl": var}, {})
+        return MeshDataset(base.mesh, {"wl": var}, {})
 
     def test_shift_moves_the_per_step_mask_with_the_data(self):
         """Regression (H1): after shift(1), row t holds the step-(t-1) snapshot, so the mask
@@ -423,7 +423,7 @@ class TestShiftMask:
     def test_shift_keeps_a_static_mask(self):
         """A static mask is step-independent, so shift leaves it unchanged."""
         data = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
-        base = UgridDataset.from_arrays(
+        base = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -438,7 +438,7 @@ class TestShiftMask:
             active=np.array([True, False]),
             _data=data,
         )
-        shifted_ds = UgridDataset(base.mesh, {"wl": var}, {}).shift(1)
+        shifted_ds = MeshDataset(base.mesh, {"wl": var}, {}).shift(1)
         np.testing.assert_array_equal(shifted_ds["wl"].active, [True, False])
 
 
@@ -466,7 +466,7 @@ class TestNetcdfRoundTrip:
         ds = _dataset(_temporal_var(mask))
         path = tmp_path / "per_step.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.active_mask("wl") is not None
         np.testing.assert_array_equal(back.active_mask("wl"), mask)
 
@@ -476,7 +476,7 @@ class TestNetcdfRoundTrip:
         ds = _dataset(var)
         path = tmp_path / "static.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         np.testing.assert_array_equal(back.active_mask("wl"), [True, False, True])
         assert back["wl"].nodata == -999.0  # mask did not become the fill value
 
@@ -484,7 +484,7 @@ class TestNetcdfRoundTrip:
         ds = _dataset(_temporal_var())
         path = tmp_path / "plain.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.active_mask("wl") is None
 
     def test_main_variable_gains_ancillary_variables_on_disk(self, tmp_path):
@@ -494,7 +494,7 @@ class TestNetcdfRoundTrip:
         ds = _dataset(_temporal_var(np.array([True, False, True])))
         path = tmp_path / "anc.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back["wl"].attributes.get("ancillary_variables") == "wl_active"
 
     def test_unmasked_variable_has_no_ancillary_variables(self, tmp_path):
@@ -502,5 +502,5 @@ class TestNetcdfRoundTrip:
         ds = _dataset(_temporal_var())
         path = tmp_path / "plain_anc.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert "ancillary_variables" not in back["wl"].attributes

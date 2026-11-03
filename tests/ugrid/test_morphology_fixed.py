@@ -10,11 +10,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
 @pytest.fixture
-def grid() -> UgridDataset:
+def grid() -> MeshDataset:
     """A 3x3 quad grid with only face 0 set."""
     coords = np.arange(4, dtype=float)
     grid_x, grid_y = np.meshgrid(coords, coords)
@@ -25,7 +25,7 @@ def grid() -> UgridDataset:
     ]
     seed = np.zeros(9)
     seed[0] = 1.0
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=grid_x.ravel(),
         node_y=grid_y.ravel(),
         face_node_connectivity=np.array(faces),
@@ -34,7 +34,7 @@ def grid() -> UgridDataset:
     )
 
 
-def _mask(dataset: UgridDataset) -> list[int]:
+def _mask(dataset: MeshDataset) -> list[int]:
     """The boolean face mask as 0/1."""
     return np.asarray(dataset["m"].data).astype(int).tolist()
 

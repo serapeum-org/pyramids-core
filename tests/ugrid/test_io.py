@@ -205,7 +205,7 @@ class TestWriteUgridTopology:
     """Direct unit tests for write_ugrid_topology() (H6)."""
 
     def _write_and_reopen(self, tmp_path, mesh, mesh_name="mesh2d", crs_wkt=None):
-        """Helper: write via UgridDataset.to_file and reopen with GDAL.
+        """Helper: write via MeshDataset.to_file and reopen with GDAL.
 
         Args:
             tmp_path: pytest tmp_path fixture.
@@ -216,7 +216,7 @@ class TestWriteUgridTopology:
         Returns:
             Tuple of (nc_path, gdal_root_group).
         """
-        from pyramids.netcdf.ugrid.dataset import UgridDataset
+        from pyramids.netcdf.ugrid.dataset import MeshDataset
         from pyramids.netcdf.ugrid.models import MeshTopologyInfo
 
         topo = MeshTopologyInfo(
@@ -227,7 +227,7 @@ class TestWriteUgridTopology:
             face_node_var=f"{mesh_name}_face_nodes",
             crs_wkt=crs_wkt,
         )
-        ds = UgridDataset(
+        ds = MeshDataset(
             mesh=mesh,
             data_variables={},
             global_attributes={"Conventions": "CF-1.8 UGRID-1.0"},

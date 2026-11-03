@@ -13,7 +13,7 @@ import io
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.models import MeshVariable
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
@@ -33,15 +33,15 @@ class _CountingLoader:
         return self.values
 
 
-def _with_variables(variables: dict[str, MeshVariable]) -> UgridDataset:
+def _with_variables(variables: dict[str, MeshVariable]) -> MeshDataset:
     """A dataset carrying exactly the given variables, bypassing from_arrays."""
-    template = UgridDataset.from_arrays(
+    template = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
         data={"seed": np.array([1.0, 2.0])},
     )
-    return UgridDataset(
+    return MeshDataset(
         mesh=template.mesh,
         data_variables=variables,
         global_attributes={},
@@ -52,7 +52,7 @@ def _with_variables(variables: dict[str, MeshVariable]) -> UgridDataset:
 
 
 @pytest.fixture
-def lazy_dataset() -> tuple[UgridDataset, _CountingLoader]:
+def lazy_dataset() -> tuple[MeshDataset, _CountingLoader]:
     """A dataset whose single variable is read through a counting loader."""
     loader = _CountingLoader(np.array([1.0, 2.0]))
     lazy = MeshVariable(
@@ -90,7 +90,7 @@ class TestInfoDoesNotLoad:
         assert "unloaded" in buffer.getvalue()
 
     def test_an_eager_variable_prints_its_shape(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -104,4 +104,4 @@ class TestInfoDoesNotLoad:
         dataset, _ = lazy_dataset
         buffer = io.StringIO()
         dataset.info(buf=buffer)
-        assert "UgridDataset: mesh2d" in buffer.getvalue()
+        assert "MeshDataset: mesh2d" in buffer.getvalue()

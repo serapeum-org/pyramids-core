@@ -1,4 +1,4 @@
-"""UgridDataset — top-level container for UGRID NetCDF mesh data.
+"""MeshDataset — top-level container for UGRID NetCDF mesh data.
 
 Combines mesh topology, data variables, metadata, and provides
 the user-facing API for reading, inspecting, and operating on
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from cleopatra.styling.params import Contour, DataStyle
     from cleopatra.styling.scaling import ColorScaling
 
-    from pyramids.netcdf.ugrid.network import Network1d
+    from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 from osgeo import gdal
 from pyproj import CRS, Transformer
 from shapely.geometry import LineString, box
@@ -93,7 +93,7 @@ from pyramids.netcdf.ugrid._drivers import (
     mesh_drivers,
     unsupported_format_message,
 )
-from pyramids.netcdf.ugrid._facades import _axis_distances, _UgridFacades
+from pyramids.netcdf.ugrid._facades import _axis_distances, _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
@@ -113,9 +113,9 @@ from pyramids.netcdf.ugrid.models import (
     ACTIVE_MASK_SUFFIX,
     DEFAULT_MESH_NAME,
     UGRID_CONVENTIONS,
+    MeshMetadata,
     MeshTopologyInfo,
     MeshVariable,
-    UgridMetadata,
     VolumeTopology,
     _consistent_active,
     read_mesh_variable,
@@ -143,7 +143,7 @@ from pyramids.netcdf.utils import (
 class _joins_meshes:  # noqa: N801
     """Descriptor making a join callable on the class and on a dataset.
 
-    ``UgridDataset.concat([a, b])`` is the canonical spelling, but ``a.concat([b])`` reads
+    ``MeshDataset.concat([a, b])`` is the canonical spelling, but ``a.concat([b])`` reads
     naturally as "join this dataset with that one". A plain method only supports the second and
     a ``classmethod`` only the first — and as a classmethod the instance it was reached through
     would be invisible, silently dropping ``a``. This threads the receiver in instead: an
@@ -178,12 +178,12 @@ class _joins_meshes:  # noqa: N801
             # a.concat` holds, which a freshly built closure could not give.
             return MethodType(function, instance)
 
-        target = owner if owner is not None else UgridDataset
+        target = owner if owner is not None else MeshDataset
         cached = self._class_calls.get(target)
         if cached is not None:
             # Built once per owner. Rebuilding it per access made
-            # `UgridDataset.concat is UgridDataset.concat` false and `pickle.dumps` fail with
-            # "it's not the same object as UgridDataset.merge", and the signature repair added
+            # `MeshDataset.concat is MeshDataset.concat` false and `pickle.dumps` fail with
+            # "it's not the same object as MeshDataset.merge", and the signature repair added
             # an `inspect.signature` call to every read on top of that.
             return cached
 
@@ -195,7 +195,7 @@ class _joins_meshes:  # noqa: N801
             # becoming the receiver; everything else is forwarded.
             #
             # A bare dataset is iterable over its variable names, so `list(objs)` would turn
-            # `UgridDataset.concat(a)` into a list of strings. Promote a single dataset to a
+            # `MeshDataset.concat(a)` into a list of strings. Promote a single dataset to a
             # one-element list, exactly as the instance path already accepts `a.concat(b)`.
             parts = [objs] if isinstance(objs, target) else list(objs)
             if not parts:
@@ -206,7 +206,7 @@ class _joins_meshes:  # noqa: N801
 
         # `functools.wraps` sets `__wrapped__`, which `inspect.signature` follows -- so the
         # class call advertised the undecorated `(self, others, *, compat=...)`. That is the
-        # instance spelling with a stray `self`, and wrong for `UgridDataset.merge([a, b])`,
+        # instance spelling with a stray `self`, and wrong for `MeshDataset.merge([a, b])`,
         # which takes the whole join as one positional argument. Re-advertise it: drop `self`
         # and name the first parameter after the one this wrapper really takes.
         original = inspect.signature(function)
@@ -219,12 +219,14 @@ class _joins_meshes:  # noqa: N801
         return call
 
 
-class UgridDataset(_UgridFacades):
-    """Container for UGRID NetCDF mesh data.
+class MeshDataset(_MeshFacades):
+    """An unstructured mesh with data variables -- the mesh equivalent of the raster
+    :class:`~pyramids.dataset.Dataset` and the vector :class:`~pyramids.feature.FeatureCollection`.
 
-    Combines mesh topology, data variables, and global attributes
-    into a single object with GIS-aware operations. Does NOT inherit
-    from Dataset or RasterBase — the raster paradigm does not
+    Combines a mesh topology (:class:`~pyramids.netcdf.ugrid.mesh.Mesh2d`), data variables,
+    global attributes and a CRS into one object with GIS-aware operations. The UGRID NetCDF
+    convention is one format it reads and writes (:meth:`read_file` / :meth:`to_file`), not
+    its identity. Does NOT inherit from Dataset or RasterBase -- the raster paradigm does not
     apply to unstructured meshes.
 
     Attributes:
@@ -289,7 +291,7 @@ class UgridDataset(_UgridFacades):
         mesh_name: str | None = None,
         driver: str | None = None,
         lazy: bool = True,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Open a mesh file.
 
         UGRID NetCDF is read here. Any other format — 2DM, Selafin, DFSU, XMDF, … — is read by a
@@ -325,7 +327,7 @@ class UgridDataset(_UgridFacades):
                 always lazy, so it rejects ``lazy=False`` rather than ignoring it.
 
         Returns:
-            UgridDataset instance.
+            MeshDataset instance.
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -370,7 +372,7 @@ class UgridDataset(_UgridFacades):
         mesh_name: str | None,
         wrap_unreadable: bool = False,
         lazy: bool = True,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Read a UGRID NetCDF file through GDAL's multidimensional API.
 
         The built-in reader, unchanged from before driver dispatch existed. It is reached both
@@ -388,7 +390,7 @@ class UgridDataset(_UgridFacades):
                 before any geometry is read. Defaults to True.
 
         Returns:
-            UgridDataset instance.
+            MeshDataset instance.
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -566,7 +568,7 @@ class UgridDataset(_UgridFacades):
         self._crs_wkt = wkt
         self._cached_crs = crs_obj
 
-    def _mesh_equals(self, other: UgridDataset) -> bool:
+    def _mesh_equals(self, other: MeshDataset) -> bool:
         """Compare mesh topology and coordinate arrays."""
         result = np.array_equal(self._mesh.node_x, other._mesh.node_x)
         if result:
@@ -608,7 +610,7 @@ class UgridDataset(_UgridFacades):
 
         Args:
             other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``UgridDataset``.
+                immediately if *other* is not a ``MeshDataset``.
 
         Returns:
             ``True`` when the two datasets are value-equal.
@@ -617,7 +619,7 @@ class UgridDataset(_UgridFacades):
             identical: Strict comparison that also checks dtype,
                 nodata sentinels, CRS WKT, and global attributes.
         """
-        if not isinstance(other, UgridDataset):
+        if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
         if result:
@@ -646,7 +648,7 @@ class UgridDataset(_UgridFacades):
         """Strict per-variable comparison (dtype, nodata, values)."""
         for name in vars_a:
             va, vb = vars_a[name], vars_b[name]
-            if not UgridDataset._nodata_matches(va.nodata, vb.nodata):
+            if not MeshDataset._nodata_matches(va.nodata, vb.nodata):
                 return False
             if va.data is None and vb.data is None:
                 continue
@@ -656,7 +658,7 @@ class UgridDataset(_UgridFacades):
                 return False
         return True
 
-    def _crs_identical(self, other: UgridDataset) -> bool:
+    def _crs_identical(self, other: MeshDataset) -> bool:
         """Semantic CRS comparison, falling back to WKT string."""
         if self.crs is not None and other.crs is not None:
             return self.crs == other.crs
@@ -670,7 +672,7 @@ class UgridDataset(_UgridFacades):
 
         Args:
             other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``UgridDataset``.
+                immediately if *other* is not a ``MeshDataset``.
 
         Returns:
             ``True`` when the two datasets are bitwise-identical.
@@ -679,7 +681,7 @@ class UgridDataset(_UgridFacades):
             equals: Looser comparison that ignores nodata positions,
                 dtype differences, and attribute mismatches.
         """
-        if not isinstance(other, UgridDataset):
+        if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
         if result:
@@ -837,7 +839,7 @@ class UgridDataset(_UgridFacades):
         *,
         location: str = "face",
         nodata: float | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Return a new dataset with ``name`` added or replaced.
 
         UGRID derivations are immutable — unlike ``NetCDF.set_variable`` this does not mutate
@@ -852,7 +854,7 @@ class UgridDataset(_UgridFacades):
             nodata: Optional no-data value for the new variable.
 
         Returns:
-            UgridDataset: A new dataset carrying the variable.
+            MeshDataset: A new dataset carrying the variable.
         """
         arr = np.asarray(data)
         variable = MeshVariable(
@@ -867,14 +869,14 @@ class UgridDataset(_UgridFacades):
         new_vars[name] = variable
         return self._rebuild(new_vars)
 
-    def drop_variables(self, names: str | list[str]) -> UgridDataset:
+    def drop_variables(self, names: str | list[str]) -> MeshDataset:
         """Return a new dataset without the named variable(s).
 
         Args:
             names: A variable name, or a list of them, to drop.
 
         Returns:
-            UgridDataset: A new dataset without those variables.
+            MeshDataset: A new dataset without those variables.
 
         Raises:
             KeyError: A named variable is not present.
@@ -889,7 +891,7 @@ class UgridDataset(_UgridFacades):
             del new_vars[name]
         return self._rebuild(new_vars)
 
-    def rename_variable(self, old: str, new: str) -> UgridDataset:
+    def rename_variable(self, old: str, new: str) -> MeshDataset:
         """Return a new dataset with variable ``old`` renamed to ``new``.
 
         Args:
@@ -897,7 +899,7 @@ class UgridDataset(_UgridFacades):
             new: The new name.
 
         Returns:
-            UgridDataset: A new dataset with the variable renamed.
+            MeshDataset: A new dataset with the variable renamed.
 
         Raises:
             KeyError: ``old`` is not present.
@@ -920,12 +922,12 @@ class UgridDataset(_UgridFacades):
         return self._rebuild(new_vars)
 
     @property
-    def metadata(self) -> UgridMetadata:
+    def metadata(self) -> MeshMetadata:
         """Full metadata summary for this dataset."""
         topo_tuple = (self._topology_info,) if self._topology_info else ()
         data_vars = {name: var.location for name, var in self._data_variables.items()}
         conventions = self._global_attributes.get("Conventions")
-        result = UgridMetadata(
+        result = MeshMetadata(
             mesh_topologies=topo_tuple,
             data_variables=data_vars,
             global_attributes=self._global_attributes,
@@ -1018,7 +1020,7 @@ class UgridDataset(_UgridFacades):
         *,
         bbox: tuple[float, float, float, float] | list[float] | None = None,
         epsg: int | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Crop the mesh to a polygon mask or a bbox — the unstructured-mesh analogue of crop.
 
         The mesh equivalent of :meth:`pyramids.dataset.Dataset.crop` / :meth:`NetCDF.crop`. Rather
@@ -1046,7 +1048,7 @@ class UgridDataset(_UgridFacades):
                 the mesh CRS.
 
         Returns:
-            UgridDataset: A new sub-mesh — faces inside the region, connectivity renumbered, and data
+            MeshDataset: A new sub-mesh — faces inside the region, connectivity renumbered, and data
                 variables subset to the surviving elements.
 
         Raises:
@@ -1058,8 +1060,8 @@ class UgridDataset(_UgridFacades):
             - Crop a mesh to a polygon (faces intersecting it survive):
                 ```python
                 >>> from shapely.geometry import Polygon
-                >>> from pyramids.netcdf import UgridDataset
-                >>> ug = UgridDataset.read_file("mesh.nc")                        # doctest: +SKIP
+                >>> from pyramids.netcdf import MeshDataset
+                >>> ug = MeshDataset.read_file("mesh.nc")                        # doctest: +SKIP
                 >>> sub = ug.crop(Polygon([(-1, -1), (0, -1), (0, 1), (-1, 1)]))  # doctest: +SKIP
                 >>> sub.n_face <= ug.n_face                                       # doctest: +SKIP
                 True
@@ -1110,7 +1112,7 @@ class UgridDataset(_UgridFacades):
 
     def _wrap_subset(
         self, mesh: Mesh2d, data_variables: dict[str, MeshVariable]
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Wrap a ``(mesh, data_variables)`` pair from the spatial subsetters into a dataset.
 
         The spatial subsetting helpers (:func:`clip_mesh` / :func:`subset_by_bounds`) return
@@ -1123,7 +1125,7 @@ class UgridDataset(_UgridFacades):
             data_variables: The sliced data variables.
 
         Returns:
-            UgridDataset: The wrapped subset.
+            MeshDataset: The wrapped subset.
         """
         return type(self)(
             mesh=mesh,
@@ -1134,7 +1136,7 @@ class UgridDataset(_UgridFacades):
             file_name=self._file_name,
         )
 
-    def clip(self, mask: Any, touch: bool = True) -> UgridDataset:
+    def clip(self, mask: Any, touch: bool = True) -> MeshDataset:
         """Clip the mesh to a polygon mask.
 
         Selects faces that intersect (touch=True) or are fully
@@ -1146,7 +1148,7 @@ class UgridDataset(_UgridFacades):
             touch: If True, include faces touching the boundary.
 
         Returns:
-            New UgridDataset with clipped mesh and data.
+            New MeshDataset with clipped mesh and data.
         """
         mesh, data_variables = clip_mesh(self, mask, touch=touch)
         return self._wrap_subset(mesh, data_variables)
@@ -1157,7 +1159,7 @@ class UgridDataset(_UgridFacades):
         ymin: float,
         xmax: float,
         ymax: float,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Subset mesh to faces within a bounding box.
 
         Args:
@@ -1167,12 +1169,12 @@ class UgridDataset(_UgridFacades):
             ymax: Maximum y-coordinate.
 
         Returns:
-            New UgridDataset with subset mesh and data.
+            New MeshDataset with subset mesh and data.
         """
         mesh, data_variables = subset_by_bounds(self, xmin, ymin, xmax, ymax)
         return self._wrap_subset(mesh, data_variables)
 
-    def to_crs(self, to_epsg: int | str | Any) -> UgridDataset:
+    def to_crs(self, to_epsg: int | str | Any) -> MeshDataset:
         """Reproject all node coordinates to a new CRS.
 
         Uses pyproj.Transformer to reproject node coordinates.
@@ -1189,7 +1191,7 @@ class UgridDataset(_UgridFacades):
                 a valid target.
 
         Returns:
-            New UgridDataset with reprojected coordinates.
+            New MeshDataset with reprojected coordinates.
 
         Raises:
             ValueError: The mesh declares neither an EPSG code nor a WKT, so there is no
@@ -1200,8 +1202,8 @@ class UgridDataset(_UgridFacades):
             - Reproject to an authority string, which used to be rejected (#1404):
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -1217,8 +1219,8 @@ class UgridDataset(_UgridFacades):
                 and reports `epsg` as `None`:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -1313,7 +1315,7 @@ class UgridDataset(_UgridFacades):
             new_topo_info = replace(self._topology_info, crs_wkt=new_crs_wkt)
 
         # `type(self)` and `file_name`, as every other derivation does: hard-coding
-        # `UgridDataset(` silently downgraded a subclass, and dropping `file_name` made the
+        # `MeshDataset(` silently downgraded a subclass, and dropping `file_name` made the
         # attribute unreliable rather than absent.
         result = type(self)(
             mesh=new_mesh,
@@ -1343,7 +1345,7 @@ class UgridDataset(_UgridFacades):
                 break
         return result
 
-    def sel_time(self, index: int) -> UgridDataset:
+    def sel_time(self, index: int) -> MeshDataset:
         """Select a single time step from all temporal variables.
 
         Non-temporal variables are kept unchanged.
@@ -1352,7 +1354,7 @@ class UgridDataset(_UgridFacades):
             index: Time step index.
 
         Returns:
-            New UgridDataset with single time step data.
+            New MeshDataset with single time step data.
         """
         new_data_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -1375,7 +1377,7 @@ class UgridDataset(_UgridFacades):
         )
         return result
 
-    def sel_time_range(self, start: int, stop: int) -> UgridDataset:
+    def sel_time_range(self, start: int, stop: int) -> MeshDataset:
         """Select a time range from all temporal variables.
 
         Args:
@@ -1383,7 +1385,7 @@ class UgridDataset(_UgridFacades):
             stop: Stop index (exclusive).
 
         Returns:
-            New UgridDataset with the selected time range.
+            New MeshDataset with the selected time range.
         """
         new_data_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -1406,14 +1408,14 @@ class UgridDataset(_UgridFacades):
 
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Attach a results-only file's variables to this mesh.
 
         Some formats carry values but no topology — an SMS ``.dat``, an XMDF, an XDMF — and must
         be paired with a mesh read from elsewhere. Those drivers declare ``needs_mesh``, and
         :meth:`read_file` refuses them, pointing here.
 
-            >>> mesh = UgridDataset.read_file("domain.2dm")       # doctest: +SKIP
+            >>> mesh = MeshDataset.read_file("domain.2dm")       # doctest: +SKIP
             >>> result = mesh.attach_data("velocity.dat")         # doctest: +SKIP
 
         The driver returns **only the variables it read**; this method merges them onto the
@@ -1711,7 +1713,7 @@ class UgridDataset(_UgridFacades):
             ys = self._mesh.node_y[node_idx]
             return list(shapely.linestrings(np.stack([xs, ys], axis=-1)))
         # Rare ragged / filled edge connectivity: fall back to a per-edge build.
-        # See `Network1d._edge_linestrings`: a row with fewer than two real nodes is no
+        # See `Mesh1d._edge_linestrings`: a row with fewer than two real nodes is no
         # edge, and GEOS refuses a one-point LineString, so such a row escaped as a raw
         # GEOSException. An empty geometry keeps one row per declared edge.
         return [
@@ -1754,8 +1756,8 @@ class UgridDataset(_UgridFacades):
         data_locations: dict[str, str] | None = None,
         epsg: int = 4326,
         mesh_name: str = DEFAULT_MESH_NAME,
-    ) -> UgridDataset:
-        """Create a UgridDataset programmatically from arrays.
+    ) -> MeshDataset:
+        """Create a MeshDataset programmatically from arrays.
 
         Plural because an unstructured mesh is not one array: the topology
         needs node coordinates *and* a face-node connectivity table before any
@@ -1776,15 +1778,15 @@ class UgridDataset(_UgridFacades):
             mesh_name: Name for the topology variable.
 
         Returns:
-            UgridDataset instance.
+            MeshDataset instance.
 
         Examples:
             - Build the smallest possible mesh — two triangles — and inspect
               its topology:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -1798,8 +1800,8 @@ class UgridDataset(_UgridFacades):
             - Attach a per-face variable and read it back:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -1870,7 +1872,7 @@ class UgridDataset(_UgridFacades):
         dataset: Any,
         band_names: list[str] | None = None,
         mesh_name: str = DEFAULT_MESH_NAME,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Build a mesh from a raster, one quad face per cell.
 
         The bridge from the structured world: each cell becomes a quad over the corner
@@ -1884,7 +1886,7 @@ class UgridDataset(_UgridFacades):
             mesh_name: The topology name to stamp. Defaults to the package default.
 
         Returns:
-            UgridDataset: The quad mesh carrying the band values.
+            MeshDataset: The quad mesh carrying the band values.
         """
         node_x, node_y, faces, data = _construct.from_structured(dataset, band_names)
         return cls.from_arrays(
@@ -1899,7 +1901,7 @@ class UgridDataset(_UgridFacades):
     @classmethod
     def from_geodataframe(
         cls, gdf: Any, mesh_name: str = DEFAULT_MESH_NAME
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Build a mesh from polygon geometries, one face per polygon.
 
         Vertices are deduplicated into the node set and each ring is oriented
@@ -1911,7 +1913,7 @@ class UgridDataset(_UgridFacades):
             mesh_name: The topology name to stamp. Defaults to the package default.
 
         Returns:
-            UgridDataset: The mesh built from the polygons.
+            MeshDataset: The mesh built from the polygons.
 
         Raises:
             ValueError: The frame declares no CRS, so the mesh would carry no
@@ -1952,7 +1954,7 @@ class UgridDataset(_UgridFacades):
         )
 
     @classmethod
-    def from_xarray(cls, ds: Any) -> UgridDataset:
+    def from_xarray(cls, ds: Any) -> MeshDataset:
         """Read a mesh back from an ``xarray.Dataset`` in the UGRID-CF encoding.
 
         The inverse of :meth:`to_xarray`. xarray is a peer dependency, imported only inside
@@ -1962,7 +1964,7 @@ class UgridDataset(_UgridFacades):
             ds: The ``xarray.Dataset`` to read.
 
         Returns:
-            UgridDataset: The reconstructed mesh and variables.
+            MeshDataset: The reconstructed mesh and variables.
 
         Raises:
             OptionalPackageDoesNotExist: xarray is not installed.
@@ -1984,7 +1986,7 @@ class UgridDataset(_UgridFacades):
         )
 
     @classmethod
-    def from_zarr(cls, store: Any, **kwargs: Any) -> UgridDataset:
+    def from_zarr(cls, store: Any, **kwargs: Any) -> MeshDataset:
         """Read a mesh from a zarr store written by :meth:`to_zarr`.
 
         Args:
@@ -1992,7 +1994,7 @@ class UgridDataset(_UgridFacades):
             **kwargs: Passed to ``xarray.open_zarr``.
 
         Returns:
-            UgridDataset: The reconstructed mesh and variables.
+            MeshDataset: The reconstructed mesh and variables.
 
         Raises:
             OptionalPackageDoesNotExist: xarray or zarr is not installed.
@@ -2047,7 +2049,7 @@ class UgridDataset(_UgridFacades):
             result = _mesh_names_through_driver(selected, path)
         else:
             try:
-                result = UgridDataset._ugrid_netcdf_mesh_names(
+                result = MeshDataset._ugrid_netcdf_mesh_names(
                     path, wrap_unreadable=not native
                 )
             except NoMeshTopologyError:
@@ -2126,7 +2128,7 @@ class UgridDataset(_UgridFacades):
         driver: str | None = None,
         mesh_name: str | None = None,
         sort: bool = True,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Open many mesh files sharing one topology and stack them along time (#1378).
 
         The many-**files** entry point. :meth:`read_all` answers every topology in **one**
@@ -2155,7 +2157,7 @@ class UgridDataset(_UgridFacades):
                 ``False`` always keeps the given order.
 
         Returns:
-            UgridDataset: One dataset on the shared topology, its time axis spanning every
+            MeshDataset: One dataset on the shared topology, its time axis spanning every
             file in order.
 
         Raises:
@@ -2169,7 +2171,7 @@ class UgridDataset(_UgridFacades):
         Examples:
             - Stack a run written one file per day:
                 ```python
-                >>> ds = UgridDataset.open_mfdataset("out/*_map.nc")  # doctest: +SKIP
+                >>> ds = MeshDataset.open_mfdataset("out/*_map.nc")  # doctest: +SKIP
                 >>> ds.time_values[0], ds.time_values[-1]  # doctest: +SKIP
                 ```
         """
@@ -2214,7 +2216,7 @@ class UgridDataset(_UgridFacades):
                 )
             ]
 
-            def first_stamp(dataset: UgridDataset) -> tuple:
+            def first_stamp(dataset: MeshDataset) -> tuple:
                 """The sort key of a dated dataset: its earliest stamp."""
                 stamps = dataset.time_values
                 # `dated_slots` holds only datasets whose `time_values` is non-empty, which
@@ -2233,7 +2235,7 @@ class UgridDataset(_UgridFacades):
     @classmethod
     def read_all(
         cls, path: str | Path, driver: str | None = None, lazy: bool = True
-    ) -> dict[str, UgridDataset]:
+    ) -> dict[str, MeshDataset]:
         """Read **every** topology in a file, one dataset each.
 
         :meth:`read_file` answers a single mesh (the first, or the one named). This answers
@@ -2251,7 +2253,7 @@ class UgridDataset(_UgridFacades):
                 only ever be read lazily.
 
         Returns:
-            dict[str, UgridDataset]: Each topology name mapped to its dataset.
+            dict[str, MeshDataset]: Each topology name mapped to its dataset.
 
         Raises:
             FileNotFoundError: The file does not exist.
@@ -2459,7 +2461,7 @@ class UgridDataset(_UgridFacades):
                     return list(stamps)
         return None
 
-    def isel_layer(self, index: int | slice | list[int] | np.ndarray) -> UgridDataset:
+    def isel_layer(self, index: int | slice | list[int] | np.ndarray) -> MeshDataset:
         """Select along the layer axis by position.
 
         A layered variable — ``(layer, element)``, or ``(time, layer, element)`` — is indexed
@@ -2479,7 +2481,7 @@ class UgridDataset(_UgridFacades):
                 mesh accepts only an ``int``.
 
         Returns:
-            UgridDataset: A new dataset with the layer selection applied.
+            MeshDataset: A new dataset with the layer selection applied.
 
         Raises:
             ValueError: No variable has a layer dimension, or a non-``int`` ``index`` was given
@@ -2519,7 +2521,7 @@ class UgridDataset(_UgridFacades):
             )
         return self._rebuild(new_vars)
 
-    def sel_layer(self, value: Any) -> UgridDataset:
+    def sel_layer(self, value: Any) -> MeshDataset:
         """Select along the layer axis by coordinate value.
 
         Matches ``value`` against :attr:`layer_values`, falling back to layer positions when
@@ -2531,7 +2533,7 @@ class UgridDataset(_UgridFacades):
             value: The layer coordinate value to select.
 
         Returns:
-            UgridDataset: A new dataset with that layer selected.
+            MeshDataset: A new dataset with that layer selected.
 
         Raises:
             ValueError: No layer dimension, or the value is not among the layer coordinates.
@@ -2555,7 +2557,7 @@ class UgridDataset(_UgridFacades):
 
     def _isel_layer_ragged(
         self, index: int | slice | list[int] | np.ndarray
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Select the ``index``-th layer per column for a ragged 3-D mesh (issue #1330).
 
         The per-column counterpart of :meth:`isel_layer`: a ``location="volume"`` variable's
@@ -2569,7 +2571,7 @@ class UgridDataset(_UgridFacades):
                 meaningful for a ragged mesh.
 
         Returns:
-            UgridDataset: A new dataset with the volume variables collapsed to face fields.
+            MeshDataset: A new dataset with the volume variables collapsed to face fields.
 
         Raises:
             ValueError: ``index`` is not an ``int``, or is negative.
@@ -2643,7 +2645,7 @@ class UgridDataset(_UgridFacades):
 
     def _rebuild_without_volume(
         self, data_variables: dict[str, MeshVariable]
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """A :meth:`_rebuild` that drops the volume topology — the layer axis is gone.
 
         Used by the ragged layer selectors: once a ``volume`` variable has been gathered to a
@@ -2659,7 +2661,7 @@ class UgridDataset(_UgridFacades):
             file_name=self._file_name,
         )
 
-    def collapse_layer(self, layer: int, *, location: str = "face") -> UgridDataset:
+    def collapse_layer(self, layer: int, *, location: str = "face") -> MeshDataset:
         """Collapse a ragged 3-D mesh's ``volume`` variables to a 2-D field (issue #1330).
 
         The explicit 2-D collapse of a ragged mesh: each column's ``layer``-th value becomes a
@@ -2675,7 +2677,7 @@ class UgridDataset(_UgridFacades):
                 collapses onto its columns' faces. Defaults to ``"face"``.
 
         Returns:
-            UgridDataset: A new dataset whose volume variables are 2-D face fields.
+            MeshDataset: A new dataset whose volume variables are 2-D face fields.
 
         Raises:
             ValueError: ``location`` is not ``"face"``, or the dataset has no volume topology
@@ -3040,14 +3042,14 @@ class UgridDataset(_UgridFacades):
             }
         )
 
-    def copy(self) -> UgridDataset:
+    def copy(self) -> MeshDataset:
         """An independent deep copy of this dataset.
 
         Every variable's values are copied, so writing into the copy never shows in the
         original — the counterpart of :meth:`pyramids.netcdf.NetCDF.copy`.
 
         Returns:
-            UgridDataset: The copy.
+            MeshDataset: The copy.
         """
         copied: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -3067,7 +3069,7 @@ class UgridDataset(_UgridFacades):
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes, *, suffix: str = ".nc") -> UgridDataset:
+    def from_bytes(cls, data: bytes, *, suffix: str = ".nc") -> MeshDataset:
         """Read a UGRID mesh from an in-memory buffer.
 
         Writes ``data`` into GDAL's in-memory filesystem and reads it as a file, mirroring
@@ -3080,7 +3082,7 @@ class UgridDataset(_UgridFacades):
             suffix: The extension to present to GDAL. Defaults to ``".nc"``.
 
         Returns:
-            UgridDataset: The mesh read from the buffer.
+            MeshDataset: The mesh read from the buffer.
 
         Raises:
             RuntimeError: GDAL cannot read the buffer at all. It is written to ``/vsimem`` and
@@ -3112,7 +3114,7 @@ class UgridDataset(_UgridFacades):
         """
         stream = sys.stdout if buf is None else buf
         lines = [
-            f"UgridDataset: {self.mesh_name}",
+            f"MeshDataset: {self.mesh_name}",
             f"  nodes: {self.n_node}  faces: {self.n_face}  edges: {self.n_edge}",
             f"  epsg: {self.epsg}",
             f"  variables ({len(self._data_variables)}):",
@@ -3143,7 +3145,7 @@ class UgridDataset(_UgridFacades):
             lines.extend(f"    {line}" for line in driver_lines)
         stream.write("\n".join(lines) + "\n")
 
-    def set_global_attribute(self, name: str, value: Any) -> UgridDataset:
+    def set_global_attribute(self, name: str, value: Any) -> MeshDataset:
         """Return a new dataset carrying one more global attribute.
 
         A UGRID derivation is immutable here (as :meth:`with_variable` is), so this answers a
@@ -3155,7 +3157,7 @@ class UgridDataset(_UgridFacades):
             value: The attribute value.
 
         Returns:
-            UgridDataset: A new dataset whose global attributes include ``name``.
+            MeshDataset: A new dataset whose global attributes include ``name``.
         """
         return type(self)(
             mesh=self._mesh,
@@ -3167,7 +3169,7 @@ class UgridDataset(_UgridFacades):
             volume_topology=self._volume_topology,
         )
 
-    def delete_global_attribute(self, name: str) -> UgridDataset:
+    def delete_global_attribute(self, name: str) -> MeshDataset:
         """Return a new dataset without the global attribute ``name``.
 
         Args:
@@ -3175,7 +3177,7 @@ class UgridDataset(_UgridFacades):
                 mirroring the raster ``delete_global_attribute``.
 
         Returns:
-            UgridDataset: A new dataset without that attribute.
+            MeshDataset: A new dataset without that attribute.
         """
         remaining = {
             key: value for key, value in self._global_attributes.items() if key != name
@@ -3213,8 +3215,8 @@ class UgridDataset(_UgridFacades):
             - A variable with a mask reports it; one without answers ``None``:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> ds = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3255,8 +3257,8 @@ class UgridDataset(_UgridFacades):
             - Dry elements become NaN, so a mean over the wet cells is straightforward:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> ds = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3375,8 +3377,8 @@ class UgridDataset(_UgridFacades):
             - Per-variable summary of a two-triangle mesh:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3513,8 +3515,8 @@ class UgridDataset(_UgridFacades):
               smaller (area 2, value 20), pulling the mean below the unweighted 15.0:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 4.0, 4.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 2.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3527,8 +3529,8 @@ class UgridDataset(_UgridFacades):
             - The area-weighted quantile clamps to the data range at the extremes:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 4.0, 4.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 2.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3661,7 +3663,7 @@ class UgridDataset(_UgridFacades):
         """Names of the variables that carry a real time dimension."""
         return [name for name, var in self._data_variables.items() if var.has_time]
 
-    def _rebuild(self, data_variables: dict[str, MeshVariable]) -> UgridDataset:
+    def _rebuild(self, data_variables: dict[str, MeshVariable]) -> MeshDataset:
         """A new dataset with the same mesh/metadata but different data variables.
 
         Every along-time member below is immutable — it derives a fresh dataset rather than
@@ -3718,7 +3720,7 @@ class UgridDataset(_UgridFacades):
         skipna: bool = True,
         q: float | None = None,
         groupby: Any = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Reduce the time dimension of every temporal variable, whole or in groups.
 
         The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.reduce` over time. Each
@@ -3748,7 +3750,7 @@ class UgridDataset(_UgridFacades):
                 dropped. ``None`` reduces the whole axis. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset. Without ``groupby`` each temporal variable is
+            MeshDataset: A new dataset. Without ``groupby`` each temporal variable is
             collapsed over time into a static per-element variable; with ``groupby`` each one
             keeps its time dimension, at one step per group.
 
@@ -3763,8 +3765,8 @@ class UgridDataset(_UgridFacades):
             - Mean over two time steps of a per-face variable:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -3840,7 +3842,7 @@ class UgridDataset(_UgridFacades):
         *,
         skipna: bool = True,
         q: float | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Bin the time axis by a calendar frequency and reduce each bin.
 
         Sugar over ``reduce(how, groupby=freq)``: the mesh counterpart of the raster
@@ -3858,7 +3860,7 @@ class UgridDataset(_UgridFacades):
             q: The quantile, required when ``how="quantile"``.
 
         Returns:
-            UgridDataset: A new dataset with one time step per bin.
+            MeshDataset: A new dataset with one time step per bin.
 
         Raises:
             ValueError: No variable has a time dimension, the coordinates are not date-like,
@@ -3866,84 +3868,84 @@ class UgridDataset(_UgridFacades):
         """
         return self.reduce(how, skipna=skipna, q=q, groupby=freq)
 
-    def mean(self, *, skipna: bool = True) -> UgridDataset:
+    def mean(self, *, skipna: bool = True) -> MeshDataset:
         """Mean over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time mean.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time mean.
 
         Raises:
             ValueError: No variable has a time dimension.
         """
         return self.reduce("mean", skipna=skipna)
 
-    def sum(self, *, skipna: bool = True) -> UgridDataset:
+    def sum(self, *, skipna: bool = True) -> MeshDataset:
         """Sum over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time sum.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time sum.
 
         Raises:
             ValueError: No variable has a time dimension.
         """
         return self.reduce("sum", skipna=skipna)
 
-    def min(self, *, skipna: bool = True) -> UgridDataset:
+    def min(self, *, skipna: bool = True) -> MeshDataset:
         """Minimum over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time minimum.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time minimum.
 
         Raises:
             ValueError: No variable has a time dimension.
         """
         return self.reduce("min", skipna=skipna)
 
-    def max(self, *, skipna: bool = True) -> UgridDataset:
+    def max(self, *, skipna: bool = True) -> MeshDataset:
         """Maximum over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time maximum.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time maximum.
 
         Raises:
             ValueError: No variable has a time dimension.
         """
         return self.reduce("max", skipna=skipna)
 
-    def std(self, *, skipna: bool = True) -> UgridDataset:
+    def std(self, *, skipna: bool = True) -> MeshDataset:
         """Std-dev over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time std.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time std.
 
         Raises:
             ValueError: No variable has a time dimension.
         """
         return self.reduce("std", skipna=skipna)
 
-    def var(self, *, skipna: bool = True) -> UgridDataset:
+    def var(self, *, skipna: bool = True) -> MeshDataset:
         """Variance over time of every temporal variable (thin wrapper over :meth:`reduce`).
 
         Args:
             skipna: Skip the declared no-data value and NaN. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset; each temporal variable collapsed to its time variance.
+            MeshDataset: A new dataset; each temporal variable collapsed to its time variance.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -3952,7 +3954,7 @@ class UgridDataset(_UgridFacades):
 
     def _transform_time(
         self, operation: str, fn: Any, active_fn: Any = None
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Apply a shape-preserving ``fn(float_data, axis)`` to each temporal variable.
 
         ``fn`` receives the variable's values as float64 with no-data blanked to NaN, and the
@@ -3990,11 +3992,11 @@ class UgridDataset(_UgridFacades):
             new_vars[name] = moved
         return self._rebuild(new_vars)
 
-    def cumsum(self) -> UgridDataset:
+    def cumsum(self) -> MeshDataset:
         """Cumulative sum along time for every temporal variable.
 
         Returns:
-            UgridDataset: A new dataset in which each temporal variable holds the running
+            MeshDataset: A new dataset in which each temporal variable holds the running
             sum of its steps along the time axis; static variables are unchanged.
 
         Raises:
@@ -4005,8 +4007,8 @@ class UgridDataset(_UgridFacades):
             - Running sum over three time steps of a per-face variable:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -4020,11 +4022,11 @@ class UgridDataset(_UgridFacades):
         """
         return self._transform_time("cumsum", lambda d, axis: np.cumsum(d, axis=axis))
 
-    def cumprod(self) -> UgridDataset:
+    def cumprod(self) -> MeshDataset:
         """Cumulative product along time for every temporal variable.
 
         Returns:
-            UgridDataset: A new dataset in which each temporal variable holds the running
+            MeshDataset: A new dataset in which each temporal variable holds the running
             product of its steps along the time axis; static variables are unchanged.
 
         Raises:
@@ -4033,14 +4035,14 @@ class UgridDataset(_UgridFacades):
         """
         return self._transform_time("cumprod", lambda d, axis: np.cumprod(d, axis=axis))
 
-    def shift(self, periods: int = 1) -> UgridDataset:
+    def shift(self, periods: int = 1) -> MeshDataset:
         """Shift each temporal variable ``periods`` steps along time, vacated steps NaN.
 
         Args:
             periods: Steps to shift; negative shifts towards the start. Defaults to 1.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable shifted along time, the
+            MeshDataset: A new dataset with each temporal variable shifted along time, the
             vacated steps filled with NaN; static variables are unchanged.
 
         Raises:
@@ -4107,7 +4109,7 @@ class UgridDataset(_UgridFacades):
             )
         return coord
 
-    def polyfit(self, deg: int, variable_name: str | None = None) -> UgridDataset:
+    def polyfit(self, deg: int, variable_name: str | None = None) -> MeshDataset:
         """Fit a polynomial per element along time, returning its coefficients (#1377).
 
         The mesh counterpart of the raster ``polyfit``, and what produces a **trend map**: a
@@ -4122,7 +4124,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to fit (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset whose variables carry the fitted coefficients.
+            MeshDataset: A new dataset whose variables carry the fitted coefficients.
 
         Raises:
             ValueError: No variable has a time dimension, ``deg`` is negative, or the axis is
@@ -4144,7 +4146,7 @@ class UgridDataset(_UgridFacades):
 
     def curvefit(
         self, func: Any, p0: Any = None, variable_name: str | None = None
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Fit an arbitrary model per element along time (#1377).
 
         The general form of :meth:`polyfit`. Each element is fitted in turn, since there is no
@@ -4159,7 +4161,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to fit (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset whose variables carry the fitted parameters along a
+            MeshDataset: A new dataset whose variables carry the fitted parameters along a
             ``parameter`` axis.
 
         Raises:
@@ -4183,7 +4185,7 @@ class UgridDataset(_UgridFacades):
         variable_name: str | None,
         kernel: Any,
         axis_name: str,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Shared body of :meth:`polyfit` / :meth:`curvefit`.
 
         Both replace the time axis with a fitted-parameter axis, which makes the result static
@@ -4198,7 +4200,7 @@ class UgridDataset(_UgridFacades):
                 :meth:`polyfit`, ``"parameter"`` for :meth:`curvefit`.
 
         Returns:
-            UgridDataset: A new dataset carrying the fitted values.
+            MeshDataset: A new dataset carrying the fitted values.
 
         Raises:
             ValueError: A selected variable has no loaded data to fit.
@@ -4237,7 +4239,7 @@ class UgridDataset(_UgridFacades):
             )
         return self._rebuild(new_vars)
 
-    def differentiate(self, variable_name: str | None = None) -> UgridDataset:
+    def differentiate(self, variable_name: str | None = None) -> MeshDataset:
         """The derivative of every temporal variable along time (#1377).
 
         Honours the time coordinate's own spacing, so an unevenly spaced output interval gives
@@ -4248,7 +4250,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to differentiate (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset of rates, the same shape as the input.
+            MeshDataset: A new dataset of rates, the same shape as the input.
 
         Raises:
             ValueError: No variable has a time dimension, or the axis has fewer than two steps.
@@ -4266,7 +4268,7 @@ class UgridDataset(_UgridFacades):
             ),
         )
 
-    def cumulative_integrate(self, variable_name: str | None = None) -> UgridDataset:
+    def cumulative_integrate(self, variable_name: str | None = None) -> MeshDataset:
         """The running integral of every temporal variable along time (#1377).
 
         Keeps the time axis, unlike :meth:`integrate`. The first step is ``0`` — nothing has
@@ -4276,7 +4278,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to integrate (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset of running integrals, the same shape as the input.
+            MeshDataset: A new dataset of running integrals, the same shape as the input.
 
         Raises:
             ValueError: No variable has a time dimension, or the axis has fewer than two steps.
@@ -4296,7 +4298,7 @@ class UgridDataset(_UgridFacades):
 
     def rank(
         self, variable_name: str | None = None, *, pct: bool = False
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Rank each element's values along time, ties averaged (#1377).
 
         Per face this is an **exceedance map**: where does each step sit among all the steps at
@@ -4312,7 +4314,7 @@ class UgridDataset(_UgridFacades):
                 count, so its largest usable value is ``1.0``.
 
         Returns:
-            UgridDataset: A new dataset of ranks, the same shape as the input, counting from 1
+            MeshDataset: A new dataset of ranks, the same shape as the input, counting from 1
             (or in ``(0, 1]`` with ``pct=True``), with ``NaN`` where the value was missing.
 
         Raises:
@@ -4333,7 +4335,7 @@ class UgridDataset(_UgridFacades):
 
     def _map_alongtime(
         self, operation: str, variable_name: str | None, kernel: Any
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Apply a shape-preserving along-time kernel to the selected temporal variables.
 
         The shared body of the members that keep the time axis — :meth:`differentiate`,
@@ -4348,7 +4350,7 @@ class UgridDataset(_UgridFacades):
                 convention.
 
         Returns:
-            UgridDataset: A new dataset carrying the transformed values.
+            MeshDataset: A new dataset carrying the transformed values.
 
         Raises:
             ValueError: A selected variable has no loaded data.
@@ -4376,7 +4378,7 @@ class UgridDataset(_UgridFacades):
             new_vars[name] = transformed
         return self._rebuild(new_vars)
 
-    def integrate(self, variable_name: str | None = None) -> UgridDataset:
+    def integrate(self, variable_name: str | None = None) -> MeshDataset:
         """The definite integral of every temporal variable along time (#1377).
 
         The integral **consumes** the time axis, so the result is static — one value per
@@ -4387,7 +4389,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to integrate (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset whose temporal variables are now static totals.
+            MeshDataset: A new dataset whose temporal variables are now static totals.
 
         Raises:
             ValueError: No variable has a time dimension, or the axis has fewer than two steps.
@@ -4425,7 +4427,7 @@ class UgridDataset(_UgridFacades):
 
     def coarsen(
         self, window: int, how: str = "mean", variable_name: str | None = None
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Block-aggregate the time axis into windows of ``window`` steps (#1377).
 
         **Not** a duplicate of :meth:`resample`. That one bins by a calendar frequency and so
@@ -4450,7 +4452,7 @@ class UgridDataset(_UgridFacades):
             variable_name: Variable to aggregate (default: every temporal variable).
 
         Returns:
-            UgridDataset: A new dataset whose time axis holds one step per full block, stamped
+            MeshDataset: A new dataset whose time axis holds one step per full block, stamped
             with each block's first coordinate value.
 
         Raises:
@@ -4488,7 +4490,7 @@ class UgridDataset(_UgridFacades):
             )
         return self._rebuild(new_vars)
 
-    def interp_like(self, other: UgridDataset) -> UgridDataset:
+    def interp_like(self, other: MeshDataset) -> MeshDataset:
         """Interpolate onto another dataset's time stamps (#1377).
 
         What lines two runs up on a common axis before :meth:`concat` or an operator. Linear,
@@ -4507,7 +4509,7 @@ class UgridDataset(_UgridFacades):
             all.
 
         Returns:
-            UgridDataset: A new dataset on ``other``'s time stamps, carrying ``other``'s time
+            MeshDataset: A new dataset on ``other``'s time stamps, carrying ``other``'s time
             units and calendar (or none, when ``other`` is positional).
 
         Raises:
@@ -4616,9 +4618,7 @@ class UgridDataset(_UgridFacades):
         instants = [_to_cftime(stamp, calendar) for stamp in stamps]
         return np.asarray(instants, dtype=object), units, calendar
 
-    def convert_calendar(
-        self, calendar: str, *, align_on: str = "date"
-    ) -> UgridDataset:
+    def convert_calendar(self, calendar: str, *, align_on: str = "date") -> MeshDataset:
         """Restamp the time axis onto another CF calendar (issue #1381).
 
         The mesh counterpart of :meth:`NetCDF.convert_calendar`, and what lets a mesh run on a
@@ -4641,7 +4641,7 @@ class UgridDataset(_UgridFacades):
                 day, and the duplicates are dropped to keep the axis strictly monotonic.
 
         Returns:
-            UgridDataset: A new dataset whose time axis is restamped onto ``calendar``, carrying
+            MeshDataset: A new dataset whose time axis is restamped onto ``calendar``, carrying
             that calendar and the original units.
 
         Raises:
@@ -4697,7 +4697,7 @@ class UgridDataset(_UgridFacades):
             new_vars[name] = moved
         return self._rebuild(new_vars)
 
-    def interp_calendar(self, target: UgridDataset) -> UgridDataset:
+    def interp_calendar(self, target: MeshDataset) -> MeshDataset:
         """Interpolate the values onto another dataset's stamps, across calendars (#1381).
 
         :meth:`convert_calendar`'s lossless counterpart. Where that one restamps the steps it
@@ -4714,7 +4714,7 @@ class UgridDataset(_UgridFacades):
                 the same topology.
 
         Returns:
-            UgridDataset: A new dataset on ``target``'s stamps, carrying its units and calendar.
+            MeshDataset: A new dataset on ``target``'s stamps, carrying its units and calendar.
 
         Raises:
             AlignmentError: ``target`` sits on a different mesh.
@@ -4832,7 +4832,7 @@ class UgridDataset(_UgridFacades):
 
     def convert_units(
         self, target: str, variable_name: str | None = None
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Convert variable values to ``target`` units (issue #1378).
 
         Mesh variables carry a ``units`` attribute, so the raster's conversion applies
@@ -4849,7 +4849,7 @@ class UgridDataset(_UgridFacades):
                 that declares a unit; one already in ``target`` units passes through unchanged.
 
         Returns:
-            UgridDataset: A new dataset with converted values and the new unit recorded.
+            MeshDataset: A new dataset with converted values and the new unit recorded.
 
         Raises:
             ValueError: A selected variable declares no source unit, or the
@@ -4941,9 +4941,7 @@ class UgridDataset(_UgridFacades):
         frame = self.to_dataframe(variables, dropna=dropna)
         return dd.from_pandas(frame, npartitions=npartitions)
 
-    def ffill(
-        self, *, limit: int | None = None, dim: str | None = None
-    ) -> UgridDataset:
+    def ffill(self, *, limit: int | None = None, dim: str | None = None) -> MeshDataset:
         """Forward-fill gaps along time from the last valid step.
 
         Args:
@@ -4952,7 +4950,7 @@ class UgridDataset(_UgridFacades):
                 name is refused; ``None`` means time. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable's gaps carried forward
+            MeshDataset: A new dataset with each temporal variable's gaps carried forward
             from the previous valid step; static variables are unchanged.
 
         Raises:
@@ -4964,9 +4962,7 @@ class UgridDataset(_UgridFacades):
             "ffill", lambda d, axis: pushed(d, axis, limit, False)
         )
 
-    def bfill(
-        self, *, limit: int | None = None, dim: str | None = None
-    ) -> UgridDataset:
+    def bfill(self, *, limit: int | None = None, dim: str | None = None) -> MeshDataset:
         """Back-fill gaps along time from the next valid step.
 
         Args:
@@ -4975,7 +4971,7 @@ class UgridDataset(_UgridFacades):
                 name is refused; ``None`` means time. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable's gaps carried backward
+            MeshDataset: A new dataset with each temporal variable's gaps carried backward
             from the next valid step; static variables are unchanged.
 
         Raises:
@@ -4994,7 +4990,7 @@ class UgridDataset(_UgridFacades):
         limit: int | None = None,
         use_coordinate: bool = True,
         dim: str | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Fill each interior time gap by interpolating between the steps on either side.
 
         Distance is measured along the time coordinate by default, so unevenly spaced steps
@@ -5016,7 +5012,7 @@ class UgridDataset(_UgridFacades):
                 only, so any other name is refused; ``None`` means time. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable's interior gaps
+            MeshDataset: A new dataset with each temporal variable's interior gaps
             interpolated along time; static variables are unchanged.
 
         Raises:
@@ -5056,7 +5052,7 @@ class UgridDataset(_UgridFacades):
         min_periods: int | None = None,
         q: float | None = None,
         dim: str | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Rolling-window reduction along time for every temporal variable.
 
         Each time step becomes a statistic of the window of steps it owns (ending at it, or
@@ -5079,7 +5075,7 @@ class UgridDataset(_UgridFacades):
                 other name is refused; ``None`` means time. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable replaced by its rolling
+            MeshDataset: A new dataset with each temporal variable replaced by its rolling
             statistic along time; static variables are unchanged.
 
         Raises:
@@ -5151,7 +5147,7 @@ class UgridDataset(_UgridFacades):
             )
         return distinct.pop()
 
-    def _select_steps(self, indices: np.typing.NDArray) -> UgridDataset:
+    def _select_steps(self, indices: np.typing.NDArray) -> MeshDataset:
         """Keep the time steps at ``indices`` (in order) for every temporal variable.
 
         Trims each temporal variable's data along its time axis and, when the variable
@@ -5184,7 +5180,7 @@ class UgridDataset(_UgridFacades):
 
     def _select_elements(
         self, element: int | slice | list[int] | np.ndarray
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Keep the faces at ``element`` positions, renumbering the mesh around them.
 
         The element axis is the mesh's own axis, so selecting along it is a *topology* change,
@@ -5196,7 +5192,7 @@ class UgridDataset(_UgridFacades):
             element: An ``int`` face index, a ``slice``, or a sequence of face indices.
 
         Returns:
-            UgridDataset: A new dataset whose mesh holds only the selected faces.
+            MeshDataset: A new dataset whose mesh holds only the selected faces.
 
         Raises:
             IndexError: A face index is out of range for this mesh. A negative index counts
@@ -5224,7 +5220,7 @@ class UgridDataset(_UgridFacades):
         time: int | slice | list[int] | np.ndarray | None = None,
         *,
         element: int | slice | list[int] | np.ndarray | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Select by position along the time axis, the element axis, or both.
 
         The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.isel`. Over **time** an integer
@@ -5241,7 +5237,7 @@ class UgridDataset(_UgridFacades):
                 ``None`` (the default) leaves the mesh alone.
 
         Returns:
-            UgridDataset: A new dataset with the selection applied.
+            MeshDataset: A new dataset with the selection applied.
 
         Raises:
             ValueError: Neither ``time`` nor ``element`` was given, or ``time`` was asked of a
@@ -5252,8 +5248,8 @@ class UgridDataset(_UgridFacades):
             - Keep one face, renumbering the mesh around it:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> mesh = UgridDataset.from_arrays(
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
                 ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
                 ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -5281,7 +5277,7 @@ class UgridDataset(_UgridFacades):
             indices = np.asarray(time, dtype=np.intp)
         return self._select_steps(indices)
 
-    def _collapse_to_step(self, index: int) -> UgridDataset:
+    def _collapse_to_step(self, index: int) -> MeshDataset:
         """Take one time step from every temporal variable, dropping the time dimension.
 
         The single-step half of :meth:`isel`: each temporal variable becomes static, as
@@ -5291,7 +5287,7 @@ class UgridDataset(_UgridFacades):
             index: The time position to take.
 
         Returns:
-            UgridDataset: A new dataset whose temporal variables hold that step.
+            MeshDataset: A new dataset whose temporal variables hold that step.
 
         Raises:
             ValueError: A temporal variable has no loaded data.
@@ -5314,14 +5310,14 @@ class UgridDataset(_UgridFacades):
             )
         return self._rebuild(new_vars)
 
-    def head(self, n: int = 5) -> UgridDataset:
+    def head(self, n: int = 5) -> MeshDataset:
         """Keep the first ``n`` time steps (fewer if the axis is shorter).
 
         Args:
             n: Number of leading steps to keep. Defaults to 5.
 
         Returns:
-            UgridDataset: A new dataset trimmed to the first ``n`` steps.
+            MeshDataset: A new dataset trimmed to the first ``n`` steps.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5329,14 +5325,14 @@ class UgridDataset(_UgridFacades):
         length = self._time_length("head")
         return self._select_steps(np.arange(min(n, length)))
 
-    def tail(self, n: int = 5) -> UgridDataset:
+    def tail(self, n: int = 5) -> MeshDataset:
         """Keep the last ``n`` time steps (fewer if the axis is shorter).
 
         Args:
             n: Number of trailing steps to keep. Defaults to 5.
 
         Returns:
-            UgridDataset: A new dataset trimmed to the last ``n`` steps.
+            MeshDataset: A new dataset trimmed to the last ``n`` steps.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5344,14 +5340,14 @@ class UgridDataset(_UgridFacades):
         length = self._time_length("tail")
         return self._select_steps(np.arange(max(length - n, 0), length))
 
-    def thin(self, step: int) -> UgridDataset:
+    def thin(self, step: int) -> MeshDataset:
         """Keep every ``step``-th time step.
 
         Args:
             step: Stride; must be >= 1.
 
         Returns:
-            UgridDataset: A new dataset keeping every ``step``-th step.
+            MeshDataset: A new dataset keeping every ``step``-th step.
 
         Raises:
             ValueError: ``step`` is less than 1, or no variable is temporal.
@@ -5361,7 +5357,7 @@ class UgridDataset(_UgridFacades):
         length = self._time_length("thin")
         return self._select_steps(np.arange(0, length, step))
 
-    def drop_isel(self, indices: int | list[int] | np.ndarray) -> UgridDataset:
+    def drop_isel(self, indices: int | list[int] | np.ndarray) -> MeshDataset:
         """Drop the time steps at ``indices`` by position, keeping the rest.
 
         Args:
@@ -5369,7 +5365,7 @@ class UgridDataset(_UgridFacades):
                 count from the end).
 
         Returns:
-            UgridDataset: A new dataset without the dropped steps.
+            MeshDataset: A new dataset without the dropped steps.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5379,14 +5375,14 @@ class UgridDataset(_UgridFacades):
         keep = np.array([i for i in range(length) if i not in drop], dtype=np.intp)
         return self._select_steps(keep)
 
-    def squeeze(self) -> UgridDataset:
+    def squeeze(self) -> MeshDataset:
         """Drop the time dimension when it has length 1; otherwise return unchanged.
 
         Mirrors :meth:`pyramids.netcdf.NetCDF.squeeze` for the time axis: a single-step
         temporal variable becomes static, a multi-step one is left alone.
 
         Returns:
-            UgridDataset: A new dataset with single-step temporal variables collapsed to
+            MeshDataset: A new dataset with single-step temporal variables collapsed to
             static, or ``self`` when there is nothing to squeeze.
 
         Raises:
@@ -5419,7 +5415,7 @@ class UgridDataset(_UgridFacades):
             )
         return self._rebuild(new_vars)
 
-    def diff(self, n: int = 1) -> UgridDataset:
+    def diff(self, n: int = 1) -> MeshDataset:
         """Discrete difference along time (``out[i] = x[i] - x[i-1]``), ``n`` times.
 
         The time dimension shortens by ``n``; a ``time_values`` coordinate, if present, drops
@@ -5429,7 +5425,7 @@ class UgridDataset(_UgridFacades):
             n: The number of successive differences. Defaults to 1.
 
         Returns:
-            UgridDataset: A new dataset with each temporal variable differenced along time
+            MeshDataset: A new dataset with each temporal variable differenced along time
             (its time axis shorter by ``n``); static variables are unchanged.
 
         Raises:
@@ -5456,7 +5452,7 @@ class UgridDataset(_UgridFacades):
 
     def _extremum_along_time(
         self, operation: str, *, largest: bool, as_coordinate: bool
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Locate each element's extreme time step, as a position or as a coordinate.
 
         The time axis is dropped — the answer is one value per element — so the result is a
@@ -5471,7 +5467,7 @@ class UgridDataset(_UgridFacades):
             as_coordinate: Answer with the time coordinate value instead of the step position.
 
         Returns:
-            UgridDataset: A new dataset whose temporal variables became static; static
+            MeshDataset: A new dataset whose temporal variables became static; static
             variables are carried over unchanged.
 
         Raises:
@@ -5512,11 +5508,11 @@ class UgridDataset(_UgridFacades):
             new_vars[name] = _static_from(var, values, axis, nodata=nodata)
         return self._rebuild(new_vars)
 
-    def argmin(self) -> UgridDataset:
+    def argmin(self) -> MeshDataset:
         """The time-step position of each element's minimum.
 
         Returns:
-            UgridDataset: Static ``int64`` variables holding the step index of the minimum,
+            MeshDataset: Static ``int64`` variables holding the step index of the minimum,
             declaring ``-1`` for an element with no valid step.
 
         Raises:
@@ -5524,11 +5520,11 @@ class UgridDataset(_UgridFacades):
         """
         return self._extremum_along_time("argmin", largest=False, as_coordinate=False)
 
-    def argmax(self) -> UgridDataset:
+    def argmax(self) -> MeshDataset:
         """The time-step position of each element's maximum.
 
         Returns:
-            UgridDataset: Static ``int64`` variables holding the step index of the maximum,
+            MeshDataset: Static ``int64`` variables holding the step index of the maximum,
             declaring ``-1`` for an element with no valid step.
 
         Raises:
@@ -5536,14 +5532,14 @@ class UgridDataset(_UgridFacades):
         """
         return self._extremum_along_time("argmax", largest=True, as_coordinate=False)
 
-    def idxmin(self) -> UgridDataset:
+    def idxmin(self) -> MeshDataset:
         """The time **coordinate** of each element's minimum.
 
         Where :meth:`argmin` answers a step position, this answers the value of the time
         coordinate at that step, so it needs numeric time coordinates.
 
         Returns:
-            UgridDataset: Static ``float64`` variables holding the time coordinate of the
+            MeshDataset: Static ``float64`` variables holding the time coordinate of the
             minimum, NaN where an element has no valid step.
 
         Raises:
@@ -5553,11 +5549,11 @@ class UgridDataset(_UgridFacades):
         """
         return self._extremum_along_time("idxmin", largest=False, as_coordinate=True)
 
-    def idxmax(self) -> UgridDataset:
+    def idxmax(self) -> MeshDataset:
         """The time **coordinate** of each element's maximum.
 
         Returns:
-            UgridDataset: Static ``float64`` variables holding the time coordinate of the
+            MeshDataset: Static ``float64`` variables holding the time coordinate of the
             maximum, NaN where an element has no valid step.
 
         Raises:
@@ -5582,7 +5578,7 @@ class UgridDataset(_UgridFacades):
         *,
         method: str | None = None,
         tolerance: float | None = None,
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Select time steps by coordinate value, exactly or by nearest.
 
         The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.sel` over time. A scalar selects
@@ -5601,7 +5597,7 @@ class UgridDataset(_UgridFacades):
                 ``"nearest"``, and must not be negative.
 
         Returns:
-            UgridDataset: A new dataset with the selected steps.
+            MeshDataset: A new dataset with the selected steps.
 
         Raises:
             ValueError: No time dimension; an unknown ``method``; ``tolerance`` without
@@ -5635,14 +5631,14 @@ class UgridDataset(_UgridFacades):
             result = self.isel(positions[0])
         return result
 
-    def drop_sel(self, values: Any) -> UgridDataset:
+    def drop_sel(self, values: Any) -> MeshDataset:
         """Drop the time steps whose coordinate is in ``values``, keeping the rest.
 
         Args:
             values: A coordinate value, or a sequence of them, to drop.
 
         Returns:
-            UgridDataset: A new dataset without the steps whose coordinate is in ``values``.
+            MeshDataset: A new dataset without the steps whose coordinate is in ``values``.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5656,11 +5652,11 @@ class UgridDataset(_UgridFacades):
         keep = [i for i, coord in enumerate(coords) if coord not in drop]
         return self._select_steps(np.asarray(keep, dtype=np.intp))
 
-    def sortby(self) -> UgridDataset:
+    def sortby(self) -> MeshDataset:
         """Sort the time steps by their coordinate value (stable).
 
         Returns:
-            UgridDataset: A new dataset with steps ordered by ascending time coordinate.
+            MeshDataset: A new dataset with steps ordered by ascending time coordinate.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5669,11 +5665,11 @@ class UgridDataset(_UgridFacades):
         order = np.argsort(np.asarray(coords), kind="stable")
         return self._select_steps(order)
 
-    def drop_duplicates(self) -> UgridDataset:
+    def drop_duplicates(self) -> MeshDataset:
         """Keep the first step of each distinct time coordinate value.
 
         Returns:
-            UgridDataset: A new dataset with duplicate-coordinate steps removed, first kept.
+            MeshDataset: A new dataset with duplicate-coordinate steps removed, first kept.
 
         Raises:
             ValueError: No variable has a time dimension.
@@ -5689,7 +5685,7 @@ class UgridDataset(_UgridFacades):
 
     def dropna(
         self, how: str = "any", thresh: int | None = None, *, dim: str | None = None
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Drop time steps that do not hold enough valid cells.
 
         A step is kept only when **every** temporal variable meets the threshold at that
@@ -5704,7 +5700,7 @@ class UgridDataset(_UgridFacades):
                 name is refused; ``None`` means time. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with the surviving steps.
+            MeshDataset: A new dataset with the surviving steps.
 
         Raises:
             ValueError: ``how`` is neither ``"any"`` nor ``"all"``; ``dim`` names anything but
@@ -5740,7 +5736,7 @@ class UgridDataset(_UgridFacades):
             )
         return self._select_steps(np.flatnonzero(keep))
 
-    def _assert_same_topology(self, other: UgridDataset, operation: str) -> None:
+    def _assert_same_topology(self, other: MeshDataset, operation: str) -> None:
         """Refuse ``operation`` unless ``other`` sits on the same mesh as ``self``.
 
         Same mesh means the same node/face/edge counts and the same node coordinates and
@@ -5765,7 +5761,7 @@ class UgridDataset(_UgridFacades):
             )
 
     @_joins_meshes
-    def concat(self, others: UgridDataset | list[UgridDataset]) -> UgridDataset:
+    def concat(self, others: MeshDataset | list[MeshDataset]) -> MeshDataset:
         """Concatenate same-topology datasets along time.
 
         The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.concat`. Every dataset must sit
@@ -5783,7 +5779,7 @@ class UgridDataset(_UgridFacades):
             others: One dataset, or a list of them, to append after ``self`` in order.
 
         Returns:
-            UgridDataset: A new dataset spanning the concatenated time axis.
+            MeshDataset: A new dataset spanning the concatenated time axis.
 
         Raises:
             AlignmentError: A dataset sits on a different mesh. Note this is **not** a
@@ -5794,7 +5790,7 @@ class UgridDataset(_UgridFacades):
         """
         parts = [
             self,
-            *([others] if isinstance(others, UgridDataset) else list(others)),
+            *([others] if isinstance(others, MeshDataset) else list(others)),
         ]
         for other in parts[1:]:
             self._assert_same_topology(other, "concat")
@@ -5822,10 +5818,10 @@ class UgridDataset(_UgridFacades):
     @_joins_meshes
     def merge(
         self,
-        others: UgridDataset | list[UgridDataset],
+        others: MeshDataset | list[MeshDataset],
         *,
         compat: str = "no_conflicts",
-    ) -> UgridDataset:
+    ) -> MeshDataset:
         """Merge the variables of same-topology datasets into one.
 
         The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.merge`. Every dataset must sit
@@ -5834,18 +5830,18 @@ class UgridDataset(_UgridFacades):
 
         Args:
             others: One dataset, or a list of them, whose variables join ``self``'s. Under
-                the class spelling ``UgridDataset.merge([a, b, c])`` this one argument is the
+                the class spelling ``MeshDataset.merge([a, b, c])`` this one argument is the
                 whole join: its first element becomes ``self`` and the rest are merged onto it.
             compat: How to handle a variable name present in more than one dataset --
                 ``"no_conflicts"`` refuses the collision, ``"override"`` keeps the value from
                 the **first dataset in join order that carries the name**: ``self``, then each
                 of ``others`` in turn. That is ``self``'s only when ``self`` has the variable;
                 when it does not, the first of ``others`` carrying it wins. (Under the class
-                spelling ``UgridDataset.merge([a, b, c])``, ``self`` is ``a``.) Defaults to
+                spelling ``MeshDataset.merge([a, b, c])``, ``self`` is ``a``.) Defaults to
                 ``"no_conflicts"``.
 
         Returns:
-            UgridDataset: A new dataset carrying every variable.
+            MeshDataset: A new dataset carrying every variable.
 
         Raises:
             AlignmentError: A dataset sits on a different mesh.
@@ -5856,7 +5852,7 @@ class UgridDataset(_UgridFacades):
             raise ValueError(
                 f"merge: compat must be 'no_conflicts' or 'override', got {compat!r}."
             )
-        parts = [others] if isinstance(others, UgridDataset) else list(others)
+        parts = [others] if isinstance(others, MeshDataset) else list(others)
         new_vars: dict[str, MeshVariable] = dict(self._data_variables)
         for other in parts:
             self._assert_same_topology(other, "merge")
@@ -5895,7 +5891,7 @@ class UgridDataset(_UgridFacades):
         N-6 — this facade now goes through the same module-level
         helper as the raster path. The mesh-specific dispatch lives in
         :func:`pyramids.dataset._plot_helpers.mesh_render`; both
-        ``Dataset.plot``/``NetCDF.plot`` and ``UgridDataset.plot`` share
+        ``Dataset.plot``/``NetCDF.plot`` and ``MeshDataset.plot`` share
         the "resolve data, hand to a single helper" contract so the
         two formats no longer maintain independent plotting code paths.
 
@@ -5993,7 +5989,7 @@ class UgridDataset(_UgridFacades):
         if title is None:
             title = variable_name
         if basemap and self.epsg is None:
-            raise ValueError("UgridDataset must have a CRS (epsg) to use basemap.")
+            raise ValueError("MeshDataset must have a CRS (epsg) to use basemap.")
         # ``points`` / ``kind`` are part of the shared raster-family plot signature
         # but have no meaning for a mesh (no point overlay; the renderer is fixed to
         # tripcolor/tricontour), so they are accepted and ignored. ``colorbar`` and the
@@ -6095,8 +6091,8 @@ class UgridDataset(_UgridFacades):
         Examples:
             - Draw a D-Flow FM velocity field, thinned so the arrows stay readable:
                 ```python
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> ds = UgridDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
                 >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
                 ...     "mesh2d_ucx", "mesh2d_ucy", kind="quiver", thin=4
                 ... )
@@ -6106,8 +6102,8 @@ class UgridDataset(_UgridFacades):
                 ```
             - Draw the last step of a temporal component as wind barbs:
                 ```python
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> ds = UgridDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
                 >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
                 ...     "mesh2d_ucx", "mesh2d_ucy", kind="barbs", time_index=-1
                 ... )
@@ -6115,8 +6111,8 @@ class UgridDataset(_UgridFacades):
                 ```
             - Compose a vector field over an existing mesh plot by reusing its axes:
                 ```python
-                >>> from pyramids.netcdf.ugrid import UgridDataset
-                >>> ds = UgridDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
                 >>> glyph = ds.plot("mesh2d_waterdepth")               # doctest: +SKIP
                 >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
                 ...     "mesh2d_ucx", "mesh2d_ucy", ax=glyph.ax
@@ -6361,7 +6357,7 @@ class UgridDataset(_UgridFacades):
     def __str__(self) -> str:
         """Human-readable summary of the dataset."""
         lines = [
-            f"UgridDataset: {self._file_name or '(in-memory)'}",
+            f"MeshDataset: {self._file_name or '(in-memory)'}",
             f"  Mesh: {self.mesh_name}",
             f"  Nodes: {self.n_node}, Faces: {self.n_face}, Edges: {self.n_edge}",
             f"  Bounds: {self.bounds}",
@@ -6378,14 +6374,14 @@ class UgridDataset(_UgridFacades):
     def __repr__(self) -> str:
         """Repr string for the dataset."""
         result = (
-            f"UgridDataset(mesh='{self.mesh_name}', "
+            f"MeshDataset(mesh='{self.mesh_name}', "
             f"n_node={self.n_node}, n_face={self.n_face}, n_edge={self.n_edge}, "
             f"variables={self.data_variable_names})"
         )
         return result
 
 
-#: The statistics :meth:`UgridDataset.rolling` supports — the collapsing reducers that make
+#: The statistics :meth:`MeshDataset.rolling` supports — the collapsing reducers that make
 #: sense per window. The counting reducers (``count``/``all``/``any``) are excluded: their
 #: flag bands carry the ``FLAG_NO_DATA`` sentinel, which must not surface as a data value.
 _ROLLING_HOWS: frozenset[str] = frozenset(
@@ -6517,7 +6513,7 @@ def _topology_info_named(
 
     The bridges rebuild a mesh from arrays rather than from a file's variables, so there are
     no variable names to record -- but the topology's name still has to survive, because it
-    is what :attr:`UgridDataset.mesh_name` answers and what a re-export names its dimensions
+    is what :attr:`MeshDataset.mesh_name` answers and what a re-export names its dimensions
     after.
 
     Args:
@@ -6681,7 +6677,7 @@ def _coarsened_variable(
 ) -> MeshVariable | None:
     """One variable block-aggregated along time, or ``None`` when it is too short.
 
-    Lifted out of :meth:`UgridDataset.coarsen` so that method reads as the loop it is: the
+    Lifted out of :meth:`MeshDataset.coarsen` so that method reads as the loop it is: the
     per-variable work is where the skip-or-raise decision and the re-binning live, and keeping
     both inline took the method past the cognitive-complexity limit.
 
@@ -6972,7 +6968,7 @@ def _static_from(
 
     Drops the time dimension (at ``time_axis``) from the variable's ``dimensions`` so the
     result reports ``has_time == False``, and takes its shape from ``data``. Used by
-    :meth:`UgridDataset.reduce` when a reduction collapses the time axis.
+    :meth:`MeshDataset.reduce` when a reduction collapses the time axis.
 
     Args:
         var: The source temporal variable.
@@ -7021,11 +7017,11 @@ def _static_from(
 
 
 def _concat_temporal_variable(
-    name: str, var: MeshVariable, parts: list[UgridDataset]
+    name: str, var: MeshVariable, parts: list[MeshDataset]
 ) -> MeshVariable:
     """Concatenate one temporal variable's data across ``parts`` along its time axis.
 
-    The per-variable body of :meth:`UgridDataset.concat`. Joins each part's array along the
+    The per-variable body of :meth:`MeshDataset.concat`. Joins each part's array along the
     variable's time axis and its ``time_values`` coordinate when every part has one; if any
     part lacks it, the result carries no (stale) coordinate.
 
@@ -7079,7 +7075,7 @@ def _concat_temporal_variable(
 def _make_variable_loader(path: str, var_name: str):
     """Build a zero-arg loader that reads one variable's array on first access.
 
-    The store opened in :meth:`UgridDataset.read_file` is closed before any
+    The store opened in :meth:`MeshDataset.read_file` is closed before any
     :class:`MeshVariable` data is touched, so a lazy loader cannot capture the live
     root group — it re-opens ``path`` and reads ``var_name`` on demand instead. This
     keeps ``read_file`` metadata-only: variables the caller never touches are never read.
@@ -7304,7 +7300,7 @@ def _time_coordinate_name(variables: dict[str, MeshVariable]) -> str | None:
     which is what makes this usable as the array name to open.
 
     A variable that carries **no** dimension names — which is every variable built through
-    :meth:`UgridDataset.from_arrays` — still reports ``has_time`` and a ``time_index``, so the
+    :meth:`MeshDataset.from_arrays` — still reports ``has_time`` and a ``time_index``, so the
     axis exists and only its name is unknown. Those fall back to ``"time"``, the name the
     writer registers the dimension under. Returning ``None`` for them meant the whole CF
     coordinate write was skipped for any dataset a caller built in memory, silently.
@@ -7331,7 +7327,7 @@ def _decode_time_coordinate(rg: gdal.Group, variables: dict[str, MeshVariable]) 
 
     The UGRID reader collects data variables by their ``location`` attribute, and a CF time
     coordinate carries none — so the time axis was read as a bare dimension and
-    :attr:`UgridDataset.time_values` fell back to ``range(n_time_steps)``, positional indices,
+    :attr:`MeshDataset.time_values` fell back to ``range(n_time_steps)``, positional indices,
     even for a file that states its stamps. Real D-Flow FM output does state them
     (``units = "seconds since 2017-01-01 00:00:00"``), and the decoding primitives already
     exist, so this reads the coordinate and stores the decoded stamps, units and calendar on
@@ -7339,7 +7335,7 @@ def _decode_time_coordinate(rg: gdal.Group, variables: dict[str, MeshVariable]) 
 
     Deliberately best-effort: a file with no such coordinate, or one whose ``units`` is not a CF
     time unit, is left exactly as it read before. Decoding must not become a new way for
-    :meth:`UgridDataset.read_file` to fail, so a malformed coordinate is skipped rather than
+    :meth:`MeshDataset.read_file` to fail, so a malformed coordinate is skipped rather than
     raised on. Mutates ``variables`` in place.
 
     Args:
@@ -7444,7 +7440,7 @@ def _read_data_variables(
 #: result precisely instead of widening every caller to `Any`. Bound rather than
 #: unconstrained: the only two shapes a driver may return are a surface mesh and a 1D
 #: network, and each entry point passes its own, so the bound documents the pair.
-_MeshObject = TypeVar("_MeshObject", bound="UgridDataset | Network1d")
+_MeshObject = TypeVar("_MeshObject", bound="MeshDataset | Mesh1d")
 
 
 def _unknown_driver_message(driver: str) -> str:
@@ -7634,11 +7630,11 @@ def _detected_read_driver(target: str) -> tuple[MeshDriver | None, bool]:
 
 
 def _netcdf_fallback_driver(
-    path: str | Path, driver: str | None, expected: str = "UgridDataset"
+    path: str | Path, driver: str | None, expected: str = "MeshDataset"
 ) -> MeshDriver | None:
     """Find a driver for a NetCDF-suffixed file the built-in reader could not read.
 
-    Consulted **only** after :meth:`UgridDataset._read_ugrid_netcdf` raises
+    Consulted **only** after :meth:`MeshDataset._read_ugrid_netcdf` raises
     :class:`NoMeshTopologyError` — a ``.nc`` that opened but carries no UGRID topology, as a
     3Di or TUFLOW FV result does. A NetCDF suffix otherwise short-circuits ahead of discovery
     (see :func:`_detected_read_driver`), so running discovery here, and nowhere earlier, is
@@ -7655,9 +7651,9 @@ def _netcdf_fallback_driver(
         driver: The name the caller passed to the entry point, or ``None`` to detect. A
             non-``None`` value means the caller chose the reader explicitly, so no fallback.
         expected: The class the calling entry point returns, forwarded to
-            :func:`_needs_mesh_error` so a ``Network1d`` caller is not sent to an
-            ``attach_data`` that only :class:`UgridDataset` has. Defaults to
-            ``"UgridDataset"``.
+            :func:`_needs_mesh_error` so a ``Mesh1d`` caller is not sent to an
+            ``attach_data`` that only :class:`MeshDataset` has. Defaults to
+            ``"MeshDataset"``.
 
     Returns:
         The first driver claiming the NetCDF suffix whose ``can_open`` accepts the file, or
@@ -7686,11 +7682,11 @@ def _netcdf_fallback_driver(
 
 
 def _resolve_read_driver(
-    path: str | Path, driver: str | None, expected: str = "UgridDataset"
+    path: str | Path, driver: str | None, expected: str = "MeshDataset"
 ) -> tuple[MeshDriver | None, bool]:
     """Decide which reader opens a file.
 
-    Implements steps 1-3 of :meth:`UgridDataset.read_file`'s resolution order. The second
+    Implements steps 1-3 of :meth:`MeshDataset.read_file`'s resolution order. The second
     element of the result separates "this is a NetCDF path" from "no driver claimed it", which
     is what lets a genuine NetCDF failure report GDAL's error while an unclaimed suffix reports
     the installed drivers instead.
@@ -7699,11 +7695,11 @@ def _resolve_read_driver(
         path: The file to read.
         driver: An explicitly requested driver name, or ``None`` to detect.
         expected: The class the calling entry point returns, forwarded to
-            :func:`_needs_mesh_error`. Defaults to ``"UgridDataset"``. A
-            :class:`Network1d` caller reaches this function for every non-NetCDF suffix,
+            :func:`_needs_mesh_error`. Defaults to ``"MeshDataset"``. A
+            :class:`Mesh1d` caller reaches this function for every non-NetCDF suffix,
             which is the route the ``needs_mesh`` formats actually use -- an SMS ``.dat``,
             an XMDF or an XDMF -- so without it the advice named an ``attach_data`` that
-            :class:`Network1d` does not have.
+            :class:`Mesh1d` does not have.
 
     Returns:
         ``(driver, native)``. ``driver`` is the driver to use, or ``None`` for the built-in
@@ -7713,7 +7709,7 @@ def _resolve_read_driver(
     Raises:
         DriverNotExistError: If ``driver`` names a driver that is not installed.
         UnsupportedMeshFormatError: If the chosen driver needs a mesh supplied, which
-            :meth:`UgridDataset.attach_data` does and :meth:`read_file` cannot.
+            :meth:`MeshDataset.attach_data` does and :meth:`read_file` cannot.
     """
     _require_existing_file(path)
     target = str(path)
@@ -7730,7 +7726,7 @@ def _resolve_read_driver(
 
 
 def _needs_mesh_error(
-    selected: MeshDriver, target: str, expected: str = "UgridDataset"
+    selected: MeshDriver, target: str, expected: str = "MeshDataset"
 ) -> UnsupportedMeshFormatError:
     """Build the error for a results-only driver asked to read a file on its own.
 
@@ -7742,26 +7738,26 @@ def _needs_mesh_error(
     Args:
         selected: The driver, named in the message.
         target: The path the caller gave, shown in the suggested ``attach_data`` call.
-        expected: The class the caller asked for. ``"UgridDataset"`` (the default) gets the
-            ``attach_data`` recipe; a :class:`Network1d` caller cannot be given it, because
-            ``Network1d`` has no ``attach_data``, so it is told that instead of being sent to
+        expected: The class the caller asked for. ``"MeshDataset"`` (the default) gets the
+            ``attach_data`` recipe; a :class:`Mesh1d` caller cannot be given it, because
+            ``Mesh1d`` has no ``attach_data``, so it is told that instead of being sent to
             a method that does not exist.
 
     Returns:
         An :class:`UnsupportedMeshFormatError` whose advice the caller can actually follow.
     """
-    if expected != "UgridDataset":
+    if expected != "MeshDataset":
         result = UnsupportedMeshFormatError(
             f"{selected.long_name} files carry values but no mesh, so {target!r} cannot be "
             f"opened on its own -- and {expected} has no attach_data to combine them with a "
             f"topology. Read the mesh this file's values belong to with "
-            f"UgridDataset.read_file, then attach them there."
+            f"MeshDataset.read_file, then attach them there."
         )
         return result
     return UnsupportedMeshFormatError(
         f"{selected.long_name} files carry values but no mesh, so {target!r} cannot be "
         f"opened on its own. Read the mesh first, then attach these values to it:\n"
-        f"    mesh = UgridDataset.read_file('<the mesh file>')\n"
+        f"    mesh = MeshDataset.read_file('<the mesh file>')\n"
         f"    result = mesh.attach_data({target!r})"
     )
 
@@ -7805,13 +7801,13 @@ def _read_through_driver(
         produced = type(result).__name__
         # Decided by an isinstance check on what the driver produced, not by matching on a
         # class name: a subclass called `MyNetwork1d` would fail an `endswith` test, and a
-        # subclass of `UgridDataset` was previously told to use `UgridDataset.read_file` --
+        # subclass of `MeshDataset` was previously told to use `MeshDataset.read_file` --
         # the call it had just made.
-        from pyramids.netcdf.ugrid.network import Network1d as _Network1d
+        from pyramids.netcdf.ugrid.mesh1d import Mesh1d as _Network1d
 
-        other = "Network1d" if isinstance(result, _Network1d) else "UgridDataset"
+        other = "Mesh1d" if isinstance(result, _Network1d) else "MeshDataset"
         # Name the driver in the suggested call. Without it this message and the one
-        # `Network1d.read_file` raises pointed at each other, and a caller bounced between the
+        # `Mesh1d.read_file` raises pointed at each other, and a caller bounced between the
         # two without either naming `driver=` as the way through.
         raise UnsupportedMeshFormatError(
             f"The {driver.name!r} driver read {str(path)!r} as a {produced}, not a "
@@ -7876,7 +7872,7 @@ def _mesh_names_through_driver(driver: MeshDriver, path: str | Path) -> list[str
 
 
 def _read_data_through_driver(
-    driver: MeshDriver, path: str | Path, dataset: UgridDataset, lazy: bool
+    driver: MeshDriver, path: str | Path, dataset: MeshDataset, lazy: bool
 ) -> dict[str, MeshVariable]:
     """Read a results-only file through a driver and check the shape of what it returns.
 
@@ -7999,7 +7995,7 @@ def _named_attach_driver(driver: str) -> MeshDriver:
         can_do = ", ".join(sorted(selected.capabilities))
         raise UnsupportedMeshFormatError(
             f"The {driver!r} driver reads a mesh of its own, so it has nothing to attach; "
-            f"it declares: {can_do}. Use UgridDataset.read_file instead."
+            f"it declares: {can_do}. Use MeshDataset.read_file instead."
         )
     return selected
 
@@ -8023,3 +8019,30 @@ def _detected_attach_driver(target: str) -> MeshDriver:
         if "needs_mesh" in candidate.capabilities and _sniff(candidate, target):
             return candidate
     raise UnsupportedMeshFormatError(unsupported_format_message(target, suffix))
+
+
+def __getattr__(name: str):
+    """Resolve the renamed `UgridDataset` / `UgridMetadata` names, warning once.
+
+    Args:
+        name: The attribute requested from this module.
+
+    Returns:
+        The replacement object for a deprecated name.
+
+    Raises:
+        AttributeError: Any name that is neither current nor a known old name.
+    """
+    import warnings
+
+    renamed = {"UgridDataset": ("MeshDataset", MeshDataset)}
+    entry = renamed.get(name)
+    if entry is not None:
+        new_name, obj = entry
+        warnings.warn(
+            f"{name} is renamed to {new_name}; import {new_name} instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return obj
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

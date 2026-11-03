@@ -13,7 +13,7 @@ from pyproj import CRS
 from shapely.geometry import box
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshTopologyInfo, MeshVariable
 from pyramids.netcdf.ugrid.spatial import MeshSpatialIndex
@@ -61,10 +61,10 @@ def unit_square_mesh():
 
 @pytest.fixture
 def unit_square_dataset(unit_square_mesh):
-    """UgridDataset with unit square mesh and face data.
+    """MeshDataset with unit square mesh and face data.
 
     Returns:
-        UgridDataset with 4 faces and a 'temperature' variable.
+        MeshDataset with 4 faces and a 'temperature' variable.
     """
     data_vars = {
         "temperature": MeshVariable(
@@ -83,7 +83,7 @@ def unit_square_dataset(unit_square_mesh):
         face_node_var="face_nodes",
         data_variables={"temperature": "face"},
     )
-    return UgridDataset(
+    return MeshDataset(
         mesh=unit_square_mesh,
         data_variables=data_vars,
         global_attributes={"Conventions": "CF-1.8 UGRID-1.0"},
@@ -93,10 +93,10 @@ def unit_square_dataset(unit_square_mesh):
 
 @pytest.fixture
 def unit_square_dataset_4326(unit_square_mesh):
-    """Unit-square UgridDataset tagged with a real CRS (EPSG:4326).
+    """Unit-square MeshDataset tagged with a real CRS (EPSG:4326).
 
     Returns:
-        UgridDataset identical to ``unit_square_dataset`` but carrying an EPSG:4326 ``crs_wkt`` so the
+        MeshDataset identical to ``unit_square_dataset`` but carrying an EPSG:4326 ``crs_wkt`` so the
         CRS-aware crop paths (bbox reprojection, epsg validation) can be exercised.
     """
     topo = MeshTopologyInfo(
@@ -107,7 +107,7 @@ def unit_square_dataset_4326(unit_square_mesh):
         face_node_var="face_nodes",
         data_variables={"temperature": "face"},
     )
-    return UgridDataset(
+    return MeshDataset(
         mesh=unit_square_mesh,
         data_variables={
             "temperature": MeshVariable(
@@ -372,7 +372,7 @@ class TestSubsetByBounds:
         assert result.n_face >= 1, f"Expected at least 1 face, got {result.n_face}"
 
     def test_subset_via_dataset_method(self, unit_square_dataset):
-        """Test subset_by_bounds via UgridDataset.subset_by_bounds().
+        """Test subset_by_bounds via MeshDataset.subset_by_bounds().
 
         Test scenario:
             Method on dataset should produce same result as standalone function.
@@ -381,7 +381,7 @@ class TestSubsetByBounds:
         assert result.n_face == 4, f"Expected 4 faces, got {result.n_face}"
 
     def test_clip_via_dataset_method(self, unit_square_dataset):
-        """Test clip via UgridDataset.clip() method.
+        """Test clip via MeshDataset.clip() method.
 
         Test scenario:
             clip() method should delegate to clip_mesh correctly.
@@ -400,9 +400,9 @@ class TestSpatialWithUgridConventionNc:
         """Load UGRID convention NC dataset once for the class.
 
         Returns:
-            UgridDataset from the UGRID convention NC file.
+            MeshDataset from the UGRID convention NC file.
         """
-        return UgridDataset.read_file(ugrid_convention_nc_path)
+        return MeshDataset.read_file(ugrid_convention_nc_path)
 
     def test_spatial_index_creation(self, ugrid_ds):
         """Test creating a spatial index for a real mesh.
@@ -473,7 +473,7 @@ class TestSpatialEdgeCases:
             Clip a mesh with node data and verify node count matches data length.
         """
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
             face_node_connectivity=np.array(
@@ -496,7 +496,7 @@ class TestSpatialEdgeCases:
 
 
 class TestCrop:
-    """Tests for ``UgridDataset.crop`` — the API-parity facade over clip / subset_by_bounds (#606)."""
+    """Tests for ``MeshDataset.crop`` — the API-parity facade over clip / subset_by_bounds (#606)."""
 
     def test_crop_polygon_matches_clip(self, unit_square_dataset):
         """crop(mask) selects the same faces as clip(mask).

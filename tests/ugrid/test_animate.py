@@ -1,4 +1,4 @@
-"""``animate()`` across UgridDataset, Dataset, NetCDF and DatasetCollection (issue #1380).
+"""``animate()`` across MeshDataset, Dataset, NetCDF and DatasetCollection (issue #1380).
 
 Two of the four could already animate -- ``NetCDF.plot(animate=...)`` and
 ``DatasetCollection.plot``, whose plot *is* the animation -- but under names that made the
@@ -23,7 +23,7 @@ from pyramids.base.georeference import GeoReference  # noqa: E402
 from pyramids.dataset import Dataset  # noqa: E402
 from pyramids.dataset.collection import DatasetCollection  # noqa: E402
 from pyramids.netcdf import ExtraDimensions, NetCDF  # noqa: E402
-from pyramids.netcdf.ugrid import UgridDataset  # noqa: E402
+from pyramids.netcdf.ugrid import MeshDataset  # noqa: E402
 
 pytestmark = [
     pytest.mark.plot,
@@ -36,7 +36,7 @@ _TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
 def _mesh(values, location="face"):
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,
@@ -96,7 +96,7 @@ class TestUgridAnimate:
 
     def test_a_layered_variable_is_refused_with_a_hint(self):
         """(time, layer, face) has no single value per element per frame."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,

@@ -74,7 +74,7 @@ classDiagram
 
 ## UML Class: Plotting layer
 
-`Dataset.plot` / `NetCDF.plot` / `DatasetCollection.plot` / `UgridDataset.plot` are thin facades.
+`Dataset.plot` / `NetCDF.plot` / `DatasetCollection.plot` / `MeshDataset.plot` are thin facades.
 The shared `pyramids.dataset._plot_helpers` module owns the cleopatra dispatch (`render_array` for
 arrays, `mesh_render` for meshes); `pyramids.netcdf._plot.NetCDFPlot` does the NetCDF-specific
 variable/selector/curvilinear/facet/animate resolution and feeds `render_array`; `Selectors` /
@@ -94,7 +94,7 @@ classDiagram
   class DatasetCollection {
     +plot(...)
   }
-  class UgridDataset {
+  class MeshDataset {
     +plot(variable_name, ...)
     +plot_outline(...)
   }
@@ -164,7 +164,7 @@ classDiagram
   NetCDFPlot ..> CoordinateSpec : uses
   NetCDFPlot ..> FacetSpec : uses
   DatasetCollection ..> plot_helpers : render_array(mode="animate")
-  UgridDataset ..> plot_helpers : mesh_render
+  MeshDataset ..> plot_helpers : mesh_render
   plot_helpers ..> ArrayGlyph : builds
   plot_helpers ..> MeshGlyph : builds (mesh_render)
   plot_helpers ..> add_basemap : basemap overlay
@@ -407,7 +407,7 @@ classDiagram
         +plot(variable, *, selectors, facet, axes, kind, animate, chunks, **kwargs)
     }
 
-    %% UgridDataset
+    %% MeshDataset
     class ugrid_UgridDataset {
         +__init__(src)
         +mesh · n_face

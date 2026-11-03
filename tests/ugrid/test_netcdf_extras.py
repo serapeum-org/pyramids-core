@@ -8,13 +8,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
 @pytest.fixture
-def mesh() -> UgridDataset:
+def mesh() -> MeshDataset:
     """Two triangles with one static face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -23,9 +23,9 @@ def mesh() -> UgridDataset:
 
 
 @pytest.fixture
-def temporal() -> UgridDataset:
+def temporal() -> MeshDataset:
     """Two triangles with a two-step temporal face variable."""
-    out = UgridDataset.from_arrays(
+    out = MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -93,14 +93,14 @@ class TestFromBytes:
     def test_round_trips_through_memory(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
         mesh.to_file(path)
-        back = UgridDataset.from_bytes(path.read_bytes())
+        back = MeshDataset.from_bytes(path.read_bytes())
         assert (back.n_face, back.n_node) == (mesh.n_face, mesh.n_node)
         assert back["depth"].data.tolist() == [2.0, 4.0]
 
     def test_result_survives_the_buffer(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
         mesh.to_file(path)
-        back = UgridDataset.from_bytes(path.read_bytes())
+        back = MeshDataset.from_bytes(path.read_bytes())
         # The vsimem file is unlinked inside from_bytes; the values must still be readable.
         assert float(np.asarray(back["depth"].data).sum()) == 6.0
 
@@ -110,7 +110,7 @@ class TestInfo:
         buffer = io.StringIO()
         mesh.info(buf=buffer)
         text = buffer.getvalue()
-        assert "UgridDataset:" in text
+        assert "MeshDataset:" in text
         assert "faces: 2" in text
         assert "depth" in text
 
@@ -147,5 +147,5 @@ class TestGlobalAttributes:
     ):
         path = tmp_path / "m.nc"
         mesh.set_global_attribute("bounds", [1.0, 2.0, 3.0]).to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert list(np.atleast_1d(back.global_attributes["bounds"])) == [1.0, 2.0, 3.0]

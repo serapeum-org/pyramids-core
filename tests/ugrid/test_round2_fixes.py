@@ -18,7 +18,7 @@ import pytest
 import shapely
 from pyproj import CRS
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.models import MeshVariable
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
@@ -38,14 +38,14 @@ class _CountingLoader:
         return self.values
 
 
-class _Derived(UgridDataset):
+class _Derived(MeshDataset):
     """A subclass, to check the subset paths do not downgrade it."""
 
 
 @pytest.fixture
-def base() -> UgridDataset:
+def base() -> MeshDataset:
     """A two-triangle mesh with one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -53,9 +53,9 @@ def base() -> UgridDataset:
     )
 
 
-def _with_dimensions(data: np.ndarray, dimensions: tuple[str, ...]) -> UgridDataset:
+def _with_dimensions(data: np.ndarray, dimensions: tuple[str, ...]) -> MeshDataset:
     """A mesh whose single variable carries the given shape and dimension names."""
-    dataset = UgridDataset.from_arrays(
+    dataset = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -116,7 +116,7 @@ class TestTidyFrameAxisOrder:
 
 class TestLayerApiIsMetadataOnly:
     @pytest.fixture
-    def lazy(self, base) -> tuple[UgridDataset, _CountingLoader]:
+    def lazy(self, base) -> tuple[MeshDataset, _CountingLoader]:
         """A layered variable read through a counting loader."""
         loader = _CountingLoader(np.arange(6.0).reshape(3, 2))
         variable = MeshVariable(
@@ -127,7 +127,7 @@ class TestLayerApiIsMetadataOnly:
             dimensions=("mesh2d_nLayers", "mesh2d_nFaces"),
             _loader=loader,
         )
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=base.mesh,
             data_variables={"s": variable},
             global_attributes={},
@@ -195,11 +195,11 @@ class TestGeoDataFrameCrsIsNotInvented:
     def test_a_frame_without_a_crs_is_refused(self, polygons):
         frame = gpd.GeoDataFrame(geometry=polygons)
         with pytest.raises(ValueError, match="declares no CRS"):
-            UgridDataset.from_geodataframe(frame)
+            MeshDataset.from_geodataframe(frame)
 
     def test_an_epsg_crs_is_carried_through(self, polygons):
         frame = gpd.GeoDataFrame(geometry=polygons, crs=4326)
-        assert UgridDataset.from_geodataframe(frame).epsg == 4326
+        assert MeshDataset.from_geodataframe(frame).epsg == 4326
 
     def test_a_projected_crs_stays_projected(self):
         # Previously any CRS whose to_epsg() was None landed on 4326 — metres stamped as
@@ -212,15 +212,15 @@ class TestGeoDataFrameCrsIsNotInvented:
             ],
             crs=projected,
         )
-        built = UgridDataset.from_geodataframe(frame)
+        built = MeshDataset.from_geodataframe(frame)
         assert built.crs.is_projected
 
 
 class TestInterpolateNaHonoursDates:
     @pytest.fixture
-    def dated(self) -> UgridDataset:
+    def dated(self) -> MeshDataset:
         """A gap at the middle step, with the steps a day and ten days apart."""
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -245,7 +245,7 @@ class TestInterpolateNaHonoursDates:
         assert filled.tolist() == pytest.approx([5.0, 5.0])
 
     def test_numeric_coordinates_are_unchanged(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -257,7 +257,7 @@ class TestInterpolateNaHonoursDates:
         assert filled.tolist() == pytest.approx([1.0, 1.0])
 
     def test_unmeasurable_labels_fall_back_to_positions(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -271,9 +271,9 @@ class TestInterpolateNaHonoursDates:
 
 class TestSelectionConventions:
     @pytest.fixture
-    def faces(self) -> UgridDataset:
+    def faces(self) -> MeshDataset:
         """Two faces carrying distinguishable values."""
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -291,7 +291,7 @@ class TestSelectionConventions:
             faces.isel(element=5)
 
     def test_sel_without_a_value_says_so(self):
-        temporal = UgridDataset.from_arrays(
+        temporal = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -304,7 +304,7 @@ class TestSelectionConventions:
 
 class TestTidyFrameDtypes:
     def test_a_label_variable_is_not_forced_to_float(self):
-        labelled = UgridDataset.from_arrays(
+        labelled = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -313,7 +313,7 @@ class TestTidyFrameDtypes:
         assert labelled.to_dataframe()["value"].tolist() == ["a", "b"]
 
     def test_the_empty_frame_matches_the_populated_schema(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -327,9 +327,9 @@ class TestTidyFrameDtypes:
 
 class TestNanProducingFacadesDeclareIt:
     @pytest.fixture
-    def with_nodata(self) -> UgridDataset:
+    def with_nodata(self) -> MeshDataset:
         """A face variable declaring a sentinel no-data value."""
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -376,7 +376,7 @@ class TestInterpTimeTimeCoordinates:
     @staticmethod
     def _dated(stamps):
         """A two-face mesh with two steps carrying `stamps` as their coordinates."""
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,

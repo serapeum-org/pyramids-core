@@ -6586,7 +6586,7 @@ class Analysis(_Engine["Dataset"]):
             cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``
             attribute is the :class:`matplotlib.animation.FuncAnimation` — save with
             ``glyph.anim.save("out.gif")``. Note this differs from
-            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two
+            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two
             cleopatra glyph families return different objects and pyramids passes each through
             rather than wrapping one to look like the other. **Keep a reference to it** —
             matplotlib warns and stops an animation held only as a temporary.

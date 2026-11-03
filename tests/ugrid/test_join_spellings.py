@@ -1,7 +1,7 @@
 """Every spelling of the class-or-instance joins.
 
 `concat` / `merge` are reachable four ways: on the class with a list, on the class with a single
-dataset, on an instance with a list, and on an instance with a single dataset. A `UgridDataset` is
+dataset, on an instance with a list, and on an instance with a single dataset. A `MeshDataset` is
 iterable over its variable names, so the class path turned a bare dataset into a list of strings
 before this was pinned.
 """
@@ -13,16 +13,16 @@ import inspect
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _dataset(values: list[list[float]], name: str = "v") -> UgridDataset:
+def _dataset(values: list[list[float]], name: str = "v") -> MeshDataset:
     """A two-face mesh carrying one temporal variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -32,29 +32,29 @@ def _dataset(values: list[list[float]], name: str = "v") -> UgridDataset:
 
 
 @pytest.fixture
-def first() -> UgridDataset:
+def first() -> MeshDataset:
     """One time step of values."""
     return _dataset([[1.0, 2.0]])
 
 
 @pytest.fixture
-def second() -> UgridDataset:
+def second() -> MeshDataset:
     """A second, later time step."""
     return _dataset([[3.0, 4.0]])
 
 
-def _steps(dataset: UgridDataset, name: str = "v") -> int:
+def _steps(dataset: MeshDataset, name: str = "v") -> int:
     """The number of time steps a variable carries."""
     return int(np.asarray(dataset[name].data).shape[0])
 
 
 class TestConcatSpellings:
     def test_class_call_with_a_list(self, first, second):
-        assert _steps(UgridDataset.concat([first, second])) == 2
+        assert _steps(MeshDataset.concat([first, second])) == 2
 
     def test_class_call_with_a_single_dataset(self, first):
         # A bare dataset is iterable over variable names; it must not be treated as a list.
-        assert _steps(UgridDataset.concat(first)) == 1
+        assert _steps(MeshDataset.concat(first)) == 1
 
     def test_instance_call_with_a_list(self, first, second):
         assert _steps(first.concat([second])) == 2
@@ -64,17 +64,17 @@ class TestConcatSpellings:
 
     def test_an_empty_list_is_refused(self):
         with pytest.raises(ValueError, match="at least one dataset"):
-            UgridDataset.concat([])
+            MeshDataset.concat([])
 
 
 class TestMergeSpellings:
     def test_class_call_with_a_single_dataset(self, first):
-        merged = UgridDataset.merge(first)
+        merged = MeshDataset.merge(first)
         assert set(merged) == {"v"}
 
     def test_class_call_with_a_list(self, first):
         other = _dataset([[9.0, 9.0]], name="w")
-        merged = UgridDataset.merge([first, other])
+        merged = MeshDataset.merge([first, other])
         assert set(merged) == {"v", "w"}
 
     def test_instance_call_with_a_single_dataset(self, first):
@@ -83,7 +83,7 @@ class TestMergeSpellings:
 
     def test_compat_override_is_reachable_from_the_class(self, first):
         clashing = _dataset([[7.0, 7.0]])
-        merged = UgridDataset.merge([first, clashing], compat="override")
+        merged = MeshDataset.merge([first, clashing], compat="override")
         assert np.asarray(merged["v"].data).tolist() == [[1.0, 2.0]]
 
     def test_override_keeps_the_first_carrier_not_self(self, first):
@@ -120,10 +120,10 @@ class TestJoinIntrospection:
             `functools.wraps` sets `__wrapped__`, which `inspect.signature` follows, so the
             class call used to advertise the undecorated `(self, others, *, compat=...)`. That
             is the instance signature with a stray leading `self` -- wrong for
-            `UgridDataset.merge([a, b])`, where the list *is* the first argument. Asserting
+            `MeshDataset.merge([a, b])`, where the list *is* the first argument. Asserting
             only that "compat" appears passed against it, because `compat` is in both.
         """
-        signature = inspect.signature(UgridDataset.merge)
+        signature = inspect.signature(MeshDataset.merge)
         parameters = list(signature.parameters)
 
         assert "self" not in parameters, (
@@ -135,7 +135,7 @@ class TestJoinIntrospection:
         assert (
             signature.parameters["others"].kind
             is inspect.Parameter.POSITIONAL_OR_KEYWORD
-        ), "the join list is passed positionally, as UgridDataset.merge([a, b]) does"
+        ), "the join list is passed positionally, as MeshDataset.merge([a, b]) does"
 
     def test_the_bound_join_compares_equal_like_a_method(self, first):
         # Two separate attribute accesses, as an ordinary bound method would be compared.
@@ -160,6 +160,6 @@ class TestJoinIntrospection:
         assert "Merge the variables" in doc, (
             f"expected merge's own summary, got {doc!r}"
         )
-        assert doc == UgridDataset.merge.__doc__, (
+        assert doc == MeshDataset.merge.__doc__, (
             "the bound and class spellings should show the same documentation"
         )

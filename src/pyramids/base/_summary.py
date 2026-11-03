@@ -3,7 +3,7 @@
 The reduction math lives in :mod:`pyramids.base._reductions` (numpy-only). This module adds the one
 pandas-aware assembly step that turns a mapping of already-masked, already-unpacked arrays into a
 ``DataFrame`` with one row per variable — the single source of truth behind ``NetCDF.summary`` and
-``UgridDataset.summary`` so the two never drift apart.
+``MeshDataset.summary`` so the two never drift apart.
 
 The helper is geometry-agnostic: it never knows whether a sample is a raster cell or a mesh element.
 Each caller owns the concerns that *are* geometry-specific — reading the full array, applying CF

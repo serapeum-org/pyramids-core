@@ -8,7 +8,7 @@ its ``layer_count`` / ``volume_offset`` (and optional vertical) companion arrays
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset, VolumeTopology
+from pyramids.netcdf.ugrid import MeshDataset, VolumeTopology
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
@@ -44,10 +44,10 @@ def test_active_mask_round_trips_through_xarray():
         active=mask,
         _data=np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
     )
-    ds = UgridDataset(_mesh(), {"wl": var}, {})
+    ds = MeshDataset(_mesh(), {"wl": var}, {})
     exported = ds.to_xarray()
     assert "wl_active" in exported.data_vars
-    back = UgridDataset.from_xarray(exported)
+    back = MeshDataset.from_xarray(exported)
     np.testing.assert_array_equal(back.active_mask("wl"), mask)
 
 
@@ -66,10 +66,10 @@ def test_volume_topology_round_trips_through_xarray():
         dimensions=("mesh2d_nVolumes",),
         _data=np.arange(6.0),
     )
-    ds = UgridDataset(_mesh(), {"sal": var}, {}, volume_topology=topology)
+    ds = MeshDataset(_mesh(), {"sal": var}, {}, volume_topology=topology)
     exported = ds.to_xarray()
     assert "mesh2d_layer_count" in exported.data_vars
-    back = UgridDataset.from_xarray(exported)
+    back = MeshDataset.from_xarray(exported)
     assert back.volume_topology is not None
     assert back.volume_topology.layer_count.tolist() == [3, 1, 2]
     np.testing.assert_allclose(back.volume_topology.layer_z, topology.layer_z)

@@ -733,7 +733,7 @@ class MeshVariable:
 
 
 @dataclass(frozen=True)
-class UgridMetadata:
+class MeshMetadata:
     """Full metadata summary for a UGRID dataset.
 
     Aggregates topology information, data variable inventory,
@@ -757,3 +757,27 @@ class UgridMetadata:
     n_nodes: int = 0
     n_faces: int = 0
     n_edges: int = 0
+
+
+def __getattr__(name: str):
+    """Resolve the renamed `UgridMetadata` name, warning once.
+
+    Args:
+        name: The attribute requested from this module.
+
+    Returns:
+        :class:`MeshMetadata` for the old ``"UgridMetadata"`` name.
+
+    Raises:
+        AttributeError: Any other unknown name.
+    """
+    import warnings
+
+    if name == "UgridMetadata":
+        warnings.warn(
+            "UgridMetadata is renamed to MeshMetadata; import MeshMetadata instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return MeshMetadata
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

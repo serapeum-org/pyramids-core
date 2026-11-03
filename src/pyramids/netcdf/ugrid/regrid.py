@@ -3,7 +3,7 @@
 This module is the compute kernel behind the UGRID regridding surface. It holds
 pure ``numpy`` / ``scipy`` / ``shapely`` implementations with **no** heavy
 geometry dependency (no numba, no cell-tree), so every function here runs on a
-core install. The :class:`~pyramids.netcdf.ugrid.dataset.UgridDataset` facades
+core install. The :class:`~pyramids.netcdf.ugrid.dataset.MeshDataset` facades
 (``sample`` / ``rasterize_like`` / ``regrid`` / ``interp_time``) are thin
 wrappers that marshal a :class:`MeshVariable`'s array and location into these
 functions and rewrap the result.
@@ -80,7 +80,7 @@ def sample(
 ) -> NDArray:
     """Sample mesh ``values`` at arbitrary points.
 
-    The compute kernel the ``UgridDataset.sample`` facade wires into. It resolves each
+    The compute kernel the ``MeshDataset.sample`` facade wires into. It resolves each
     query point to a mesh element and gathers (or interpolates) the value there. It is
     temporal-aware: when ``values`` is 2-D ``(n_time, n_elements)`` the leading time axis
     is preserved and the result is ``(n_time, n_points)``.
@@ -233,7 +233,7 @@ def rasterize_like(
     Args:
         mesh: Source mesh topology.
         values: Data on the mesh. A temporal ``(n_time, n_elements)`` array uses the first
-            time step, matching ``UgridDataset.to_dataset``.
+            time step, matching ``MeshDataset.to_dataset``.
         other_grid: Reference raster whose grid the output matches.
         location: Mesh location the values live on — ``"face"``, ``"node"`` or ``"edge"``.
         method: ``"nearest"``, ``"linear"`` or ``"idw"`` (inverse-distance-weighted).
@@ -434,7 +434,7 @@ def interp_time(
 
     Distinct from gap-filling: this blends between existing time steps at requested labels.
     A field that is linear in time is reproduced exactly at any interior label. This is the
-    kernel behind the ``UgridDataset.interp_time`` facade, which supplies the variable's own
+    kernel behind the ``MeshDataset.interp_time`` facade, which supplies the variable's own
     time axis as ``axis``.
 
     Args:

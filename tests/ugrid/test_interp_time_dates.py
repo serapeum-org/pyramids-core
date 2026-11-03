@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -27,7 +27,7 @@ _STAMPS = ["2020-01-01", "2020-01-03"]
 
 def _dated(stamps):
     """A two-face mesh with two time steps carrying `stamps` as their coordinates."""
-    mesh = UgridDataset.from_arrays(
+    mesh = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,

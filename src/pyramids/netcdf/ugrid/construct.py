@@ -4,7 +4,7 @@ Pure, dependency-light functions that turn a pyramids :class:`~pyramids.dataset.
 (regular raster grid) or a :class:`geopandas.GeoDataFrame` of polygons into the node coordinate
 and ``face_node_connectivity`` arrays a UGRID 2D mesh needs. Each function returns a plain tuple
 ``(node_x, node_y, face_node_connectivity, data)`` so the caller can hand it straight to
-:meth:`pyramids.netcdf.ugrid.dataset.UgridDataset.from_arrays` together with the CRS it reads from
+:meth:`pyramids.netcdf.ugrid.dataset.MeshDataset.from_arrays` together with the CRS it reads from
 the source (``Dataset.epsg`` / ``GeoDataFrame.crs``). Keeping the result as bare arrays — rather
 than a built :class:`~pyramids.netcdf.ugrid.mesh.Mesh2d` — avoids an import cycle with
 ``ugrid.dataset`` and lets the facade own the single ``from_arrays`` call.
@@ -66,7 +66,7 @@ def from_structured(
         ``float64`` arrays of length ``(ny + 1) * (nx + 1)``, ``face_node_connectivity`` is an
         ``(rows * columns, 4)`` ``intp`` array of 0-indexed node indices, and ``data`` maps each
         band name to a ``(rows * columns,)`` array. Hand these to
-        :meth:`UgridDataset.from_arrays` with ``epsg=dataset.epsg``.
+        :meth:`MeshDataset.from_arrays` with ``epsg=dataset.epsg``.
 
     Raises:
         ValueError: If the dataset has no rows or columns.
@@ -119,8 +119,8 @@ def from_dataset(
 ) -> MeshArrays:
     """Alias for :func:`from_structured`.
 
-    Provided so the UGRID facade can expose both ``UgridDataset.from_dataset`` and
-    ``UgridDataset.from_structured`` names over the same quad-meshing logic.
+    Provided so the UGRID facade can expose both ``MeshDataset.from_dataset`` and
+    ``MeshDataset.from_structured`` names over the same quad-meshing logic.
 
     Args:
         dataset: Source pyramids :class:`~pyramids.dataset.dataset.Dataset`.
@@ -176,7 +176,7 @@ def from_geodataframe(
     gdf: gpd.GeoDataFrame,
     include_attributes: bool = True,
 ) -> MeshArrays:
-    """Build a face mesh from polygon geometries — the inverse of ``UgridDataset.to_geodataframe``.
+    """Build a face mesh from polygon geometries — the inverse of ``MeshDataset.to_geodataframe``.
 
     Each polygon becomes one face. Exterior-ring vertices (the closing duplicate dropped) are
     stacked across all polygons and deduplicated with ``np.unique(..., axis=0,
@@ -206,7 +206,7 @@ def from_geodataframe(
         ``float64`` node coordinates, ``face_node_connectivity`` is an ``(n_face, max_nodes)``
         ``intp`` array of 0-indexed node indices padded with ``-1``, and ``data`` maps each kept
         attribute column to an ``(n_face,)`` array. Hand these to
-        :meth:`UgridDataset.from_arrays` with the ``epsg`` taken from ``gdf.crs``.
+        :meth:`MeshDataset.from_arrays` with the ``epsg`` taken from ``gdf.crs``.
 
     Raises:
         ValueError: If the GeoDataFrame holds no valid (non-degenerate) polygon.

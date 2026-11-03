@@ -1,9 +1,9 @@
-"""Exercise the UGRID class API (UgridDataset, Mesh2d, Connectivity, MeshSpatialIndex) on a mesh file."""
+"""Exercise the UGRID class API (MeshDataset, Mesh2d, Connectivity, MeshSpatialIndex) on a mesh file."""
 
 import numpy as np
 import pytest
 
-from pyramids.netcdf import UgridDataset
+from pyramids.netcdf import MeshDataset
 from pyramids.netcdf.ugrid import Connectivity, Mesh2d, MeshSpatialIndex
 from tests.netcdf.samples.conftest import MESH
 
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.core
 
 @pytest.fixture
 def ug(sample):
-    return UgridDataset.read_file(sample(MESH))
+    return MeshDataset.read_file(sample(MESH))
 
 
 class TestUgridDataset:
@@ -31,7 +31,7 @@ class TestUgridDataset:
     def test_to_file_roundtrip(self, ug, tmp_path):
         out = str(tmp_path / "mesh.nc")
         ug.to_file(out)
-        reloaded = UgridDataset.read_file(out)
+        reloaded = MeshDataset.read_file(out)
         assert reloaded.n_node == 16 and reloaded.n_face == 4
 
     @pytest.mark.plot

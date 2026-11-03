@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover - matplotlib is a viz-extra dependency
 _MATPLOTLIB_IMPORT = plt is not None
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshTopologyInfo, MeshVariable
 
@@ -67,8 +67,8 @@ def make_two_triangle_ds(
     nodata=None,
     global_attributes: dict | None = None,
     load_data: bool = True,
-) -> UgridDataset:
-    """Build a minimal 2-face triangular UgridDataset.
+) -> MeshDataset:
+    """Build a minimal 2-face triangular MeshDataset.
 
     Parameters ``nodata``, ``global_attributes``, and ``load_data``
     let callers test edge cases without rebuilding the mesh inline.
@@ -94,7 +94,7 @@ def make_two_triangle_ds(
     if nodata is not None:
         kwargs["nodata"] = nodata
     var = MeshVariable(**kwargs)
-    return UgridDataset(
+    return MeshDataset(
         mesh=mesh,
         data_variables={var_name: var},
         global_attributes=global_attributes or {},
@@ -103,8 +103,8 @@ def make_two_triangle_ds(
 
 def make_square_ds(
     values: np.ndarray | None = None,
-) -> UgridDataset:
-    """Build a 4-face square UgridDataset with a center node."""
+) -> MeshDataset:
+    """Build a 4-face square MeshDataset with a center node."""
     mesh = _square_mesh()
     if values is None:
         values = np.array([1.0, 2.0, 3.0, 4.0])
@@ -115,7 +115,7 @@ def make_square_ds(
         shape=values.shape,
         _data=values,
     )
-    return UgridDataset(
+    return MeshDataset(
         mesh=mesh,
         data_variables={"elevation": var},
         global_attributes={},
@@ -124,8 +124,8 @@ def make_square_ds(
 
 def make_single_triangle_ds(
     with_data: bool = False,
-) -> UgridDataset:
-    """Build a minimal 1-face triangular UgridDataset with no CRS."""
+) -> MeshDataset:
+    """Build a minimal 1-face triangular MeshDataset with no CRS."""
     fnc = Connectivity(
         data=np.array([[0, 1, 2]], dtype=np.intp),
         fill_value=-1,
@@ -146,7 +146,7 @@ def make_single_triangle_ds(
             shape=(1,),
             _data=np.array([5.0]),
         )
-    return UgridDataset(
+    return MeshDataset(
         mesh=mesh,
         data_variables=data_variables,
         global_attributes={},

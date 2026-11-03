@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.interop_xarray import to_xarray
 
 xr = pytest.importorskip("xarray")
@@ -31,9 +31,9 @@ TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
 @pytest.fixture
-def dataset() -> UgridDataset:
+def dataset() -> MeshDataset:
     """A two-triangle mesh with a CRS and one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -42,7 +42,7 @@ def dataset() -> UgridDataset:
     )
 
 
-def _written(dataset: UgridDataset, path: Path, mesh_name: str) -> Path:
+def _written(dataset: MeshDataset, path: Path, mesh_name: str) -> Path:
     """Export through xarray to a NetCDF file on disk."""
     exported = to_xarray(
         dataset.mesh, dataset.data_vars, mesh_name=mesh_name, crs_wkt=dataset.crs_wkt
@@ -55,7 +55,7 @@ def _two_topologies(path: Path) -> Path:
     """A single file declaring two independent mesh topologies."""
     parts = []
     for name, offset in (("mesh_a", 0.0), ("mesh_b", 10.0)):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X + offset,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -69,30 +69,30 @@ def _two_topologies(path: Path) -> Path:
 class TestFileRoundTrip:
     def test_the_topology_is_found(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "mesh.nc", "mesh_a")
-        assert UgridDataset.mesh_names(path) == ["mesh_a"]
+        assert MeshDataset.mesh_names(path) == ["mesh_a"]
 
     def test_the_geometry_comes_back(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "mesh.nc", "mesh_a")
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert (back.n_face, back.n_node) == (2, 4)
 
     def test_the_data_variable_comes_back(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "mesh.nc", "mesh_a")
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert list(back) == ["v"]
 
     def test_the_values_come_back(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "mesh.nc", "mesh_a")
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert np.asarray(back["v"].data).tolist() == [1.0, 2.0]
 
     def test_the_crs_comes_back(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "mesh.nc", "mesh_a")
-        assert UgridDataset.read_file(path).epsg == 3857
+        assert MeshDataset.read_file(path).epsg == 3857
 
     def test_the_default_mesh_name_also_round_trips(self, dataset, tmp_path):
         path = _written(dataset, tmp_path / "default.nc", "mesh2d")
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert list(back) == ["v"]
         assert back.n_face == 2
 
@@ -104,29 +104,29 @@ class TestFileRoundTrip:
 class TestMultipleTopologies:
     def test_mesh_names_lists_both(self, tmp_path):
         path = _two_topologies(tmp_path / "two.nc")
-        assert UgridDataset.mesh_names(path) == ["mesh_a", "mesh_b"]
+        assert MeshDataset.mesh_names(path) == ["mesh_a", "mesh_b"]
 
     def test_read_all_returns_one_dataset_each(self, tmp_path):
         path = _two_topologies(tmp_path / "two.nc")
-        everything = UgridDataset.read_all(path)
+        everything = MeshDataset.read_all(path)
         assert sorted(everything) == ["mesh_a", "mesh_b"]
 
     def test_each_dataset_carries_only_its_own_variable(self, tmp_path):
         path = _two_topologies(tmp_path / "two.nc")
-        everything = UgridDataset.read_all(path)
+        everything = MeshDataset.read_all(path)
         assert list(everything["mesh_a"]) == ["v_mesh_a"]
         assert list(everything["mesh_b"]) == ["v_mesh_b"]
 
     def test_reading_one_by_name_picks_that_topology(self, tmp_path):
         path = _two_topologies(tmp_path / "two.nc")
-        assert list(UgridDataset.read_file(path, mesh_name="mesh_b")) == ["v_mesh_b"]
+        assert list(MeshDataset.read_file(path, mesh_name="mesh_b")) == ["v_mesh_b"]
 
 
 class TestNonDefaultMeshName:
     @pytest.fixture
-    def named(self) -> UgridDataset:
+    def named(self) -> MeshDataset:
         """A mesh whose topology is not called `mesh2d`, with file-read dimension names."""
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -157,19 +157,19 @@ class TestNonDefaultMeshName:
         assert "rivers2d_nFaces" in dimensions
 
     def test_the_name_survives_a_round_trip(self, named):
-        assert UgridDataset.from_xarray(named.to_xarray()).mesh_name == "rivers2d"
+        assert MeshDataset.from_xarray(named.to_xarray()).mesh_name == "rivers2d"
 
     def test_a_re_export_still_names_it(self, named):
-        back = UgridDataset.from_xarray(named.to_xarray())
+        back = MeshDataset.from_xarray(named.to_xarray())
         again = back.to_xarray()
         assert again["v"].attrs["mesh"] == "rivers2d"
 
     def test_the_values_and_crs_survive_too(self, named):
-        back = UgridDataset.from_xarray(named.to_xarray())
+        back = MeshDataset.from_xarray(named.to_xarray())
         assert np.asarray(back["v"].data).tolist() == [1.0, 2.0]
         assert back.epsg == 3857
 
     def test_the_file_round_trip_keeps_the_name(self, named, tmp_path):
         path = tmp_path / "named.nc"
         named.to_xarray().to_netcdf(path)
-        assert UgridDataset.mesh_names(path) == ["rivers2d"]
+        assert MeshDataset.mesh_names(path) == ["rivers2d"]

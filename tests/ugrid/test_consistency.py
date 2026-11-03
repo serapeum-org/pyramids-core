@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import pyramids.netcdf.ugrid as ugrid
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.interop_xarray import _variable_dims
 from pyramids.netcdf.ugrid.mesh import Mesh2d
@@ -19,14 +19,14 @@ NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-class _Derived(UgridDataset):
+class _Derived(MeshDataset):
     """A subclass, to check derivations do not downgrade it."""
 
 
 @pytest.fixture
-def dataset() -> UgridDataset:
+def dataset() -> MeshDataset:
     """A two-triangle mesh with one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -101,7 +101,7 @@ class TestModuleExports:
             "fill",
             "graph",
             "interop_xarray",
-            "network",
+            "mesh1d",
             "regrid",
             "vector_ops",
         ],
@@ -110,6 +110,35 @@ class TestModuleExports:
         assert name in ugrid.__all__
         assert hasattr(ugrid, name)
 
+    @pytest.mark.parametrize(
+        "old, new",
+        [
+            ("UgridDataset", "MeshDataset"),
+            ("Network1d", "Mesh1d"),
+            ("UgridMetadata", "MeshMetadata"),
+        ],
+    )
+    def test_the_old_name_still_imports_with_a_deprecation_warning(self, old, new):
+        """Each renamed class keeps a deprecated alias so callers do not break.
+
+        Test scenario:
+            The UGRID/hydrodynamic names were renamed to the general-mesh names. Accessing
+            the old name off the package must still return the new class and emit a
+            `DeprecationWarning`, so existing imports keep working for one release.
+        """
+        with pytest.warns(DeprecationWarning, match=new):
+            obj = getattr(ugrid, old)
+        assert obj is getattr(ugrid, new), f"{old} must alias {new}"
+
+    def test_the_old_network_submodule_path_still_works(self):
+        """`pyramids.netcdf.ugrid.network.Network1d` resolves to `Mesh1d`, warning once."""
+        import importlib
+
+        shim = importlib.import_module("pyramids.netcdf.ugrid.network")
+        with pytest.warns(DeprecationWarning, match="Mesh1d"):
+            cls = shim.Network1d
+        assert cls is ugrid.Mesh1d
+
 
 class TestEveryDerivationKeepsTheSubclassAndFileName:
     """`to_crs`, `sel_time` and `sel_time_range` were the siblings the conversion missed.
@@ -117,11 +146,11 @@ class TestEveryDerivationKeepsTheSubclassAndFileName:
     The constructor's docstring says it is "what every derivation calls through
     `type(self)(...)`, which is how a subclass survives them". `_rebuild`, `copy`,
     `set_global_attribute`, `delete_global_attribute` and `_wrap_subset` all do. These three
-    hard-coded `UgridDataset(`, so each silently downgraded a subclass -- and they were also
+    hard-coded `MeshDataset(`, so each silently downgraded a subclass -- and they were also
     the only derivations still dropping `file_name`, which `_wrap_subset` was changed to carry.
     """
 
-    class Derived(UgridDataset):
+    class Derived(MeshDataset):
         """A subclass that must survive every derivation."""
 
     @pytest.fixture

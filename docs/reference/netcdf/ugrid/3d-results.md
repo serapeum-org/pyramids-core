@@ -1,7 +1,7 @@
 # 3-D results fidelity: active masks and ragged layers
 
 Hydrodynamic mesh results carry two kinds of structure a plain `(time, layer, element)` block
-cannot represent faithfully. `UgridDataset` models both, additively — a 2-D mesh or a
+cannot represent faithfully. `MeshDataset` models both, additively — a 2-D mesh or a
 uniformly-layered one behaves exactly as before, and every accessor below is inert until the
 relevant structure is present.
 
@@ -15,9 +15,9 @@ series are destroyed. pyramids keeps the mask as a first-class field on
 
 ```python
 import numpy as np
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
-ds = UgridDataset.read_file("flood_map.nc")
+ds = MeshDataset.read_file("flood_map.nc")
 
 # The mask as read — True = active/wet, never applied to the values on its own.
 mask = ds.active_mask("water_depth")        # (n_element,) or (n_time, n_element), or None
@@ -49,7 +49,7 @@ volume axis, and a variable on the new `location="volume"` is indexed through it
 ```python
 from pyramids.netcdf.ugrid import VolumeTopology
 
-ds = UgridDataset.read_file("estuary_3d.nc")
+ds = MeshDataset.read_file("estuary_3d.nc")
 ds.volume_topology          # VolumeTopology, or None for a 2-D / uniform mesh
 ds.n_volume                 # total volumes, or None
 ds.n_layers                 # the MAX layer count over the columns (documented), for a ragged mesh

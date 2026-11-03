@@ -1,4 +1,4 @@
-"""Tests for ``NetCDF.summary`` and its parity with ``UgridDataset.summary``.
+"""Tests for ``NetCDF.summary`` and its parity with ``MeshDataset.summary``.
 
 Both classes forward to the shared ``pyramids.base._summary.variable_summary``; these tests pin the
 NetCDF wrapper (container + single variable, physical units, no-data) and prove that equivalent data
@@ -14,7 +14,7 @@ import pytest
 
 from pyramids.base._summary import variable_summary
 from pyramids.netcdf import NetCDF
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "netcdf"
 CF_12V = DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
@@ -68,7 +68,7 @@ class TestCrossClassParity:
         # NetCDF wrapper over its own read must equal the helper on that read — so both classes
         # reduce to the one shared frame.
         values = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

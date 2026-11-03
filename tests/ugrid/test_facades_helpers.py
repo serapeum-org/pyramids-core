@@ -18,7 +18,7 @@ from pyramids.netcdf.ugrid.analysis import (
     sample_random,
 )
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 from tests.ugrid.conftest import make_two_triangle_ds
@@ -26,8 +26,8 @@ from tests.ugrid.conftest import make_two_triangle_ds
 pytestmark = pytest.mark.core
 
 
-def _two_var_ds() -> UgridDataset:
-    """Build a UgridDataset with two data variables."""
+def _two_var_ds() -> MeshDataset:
+    """Build a MeshDataset with two data variables."""
     fnc = Connectivity(
         data=np.array([[0, 1, 2]], dtype=np.intp),
         fill_value=-1,
@@ -53,7 +53,7 @@ def _two_var_ds() -> UgridDataset:
         shape=(1,),
         _data=np.array([15.0]),
     )
-    ds = UgridDataset(
+    ds = MeshDataset(
         mesh=mesh,
         data_variables={"depth": var_a, "temp": var_b},
         global_attributes={},
@@ -61,8 +61,8 @@ def _two_var_ds() -> UgridDataset:
     return ds
 
 
-def _no_data_var_ds() -> UgridDataset:
-    """Build a UgridDataset whose only variable has no loaded data."""
+def _no_data_var_ds() -> MeshDataset:
+    """Build a MeshDataset whose only variable has no loaded data."""
     fnc = Connectivity(
         data=np.array([[0, 1, 2]], dtype=np.intp),
         fill_value=-1,
@@ -80,7 +80,7 @@ def _no_data_var_ds() -> UgridDataset:
         mesh_name="mesh2d",
         shape=(1,),
     )
-    ds = UgridDataset(
+    ds = MeshDataset(
         mesh=mesh,
         data_variables={"depth": var},
         global_attributes={},
@@ -297,7 +297,7 @@ class TestRewrapStripsBoolNodata:
             _data=np.array([-9999.0]),
             nodata=-9999.0,
         )
-        ds = UgridDataset(
+        ds = MeshDataset(
             mesh=mesh,
             data_variables={"depth": var},
             global_attributes={},

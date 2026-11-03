@@ -1,4 +1,4 @@
-"""Tests for element-wise array operations on UgridDataset.
+"""Tests for element-wise array operations on MeshDataset.
 
 Covers the facade methods (fillna, isnull, notnull, clip_values, round,
 astype, isin) *and* the underlying ``base._array_ops`` kernels including
@@ -15,7 +15,7 @@ from pyramids.base._array_ops import (
     array_identical,
     nodata_mask,
 )
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from tests.ugrid.conftest import make_two_triangle_ds
 
 pytestmark = pytest.mark.core
@@ -24,7 +24,7 @@ pytestmark = pytest.mark.core
 def _make_ds(
     values: np.ndarray | None = None,
     nodata: float | None = None,
-) -> UgridDataset:
+) -> MeshDataset:
     ds = make_two_triangle_ds(values=values)
     if nodata is not None:
         ds["depth"].nodata = nodata

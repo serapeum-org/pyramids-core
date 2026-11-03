@@ -8,7 +8,7 @@ Two raster operations that looked covered on the mesh side but were not:
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -20,7 +20,7 @@ _FACES = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5]])
 
 
 def _strip(values, nodata=None):
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -81,7 +81,7 @@ class TestCluster:
         assert labels.tolist() == [0, 1, 1, 0]
 
     def test_refuses_a_temporal_variable(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -128,7 +128,7 @@ class TestFootprint:
         assert ds.footprint().area == pytest.approx(ds.bounding_polygon().area)
 
     def test_refuses_a_temporal_variable(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -147,7 +147,7 @@ class TestClusterLabelsDeclareNoSentinel:
         it - declaring a no-data value no label array can ever hold, while the real "not in
         any cluster" marker is 0. Any `nodata_mask` on the labels would be wrong both ways.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
             node_y=np.array([0.0, 1.0, 0.0, 1.0, 0.0, 1.0]),
             face_node_connectivity=np.array(
@@ -162,7 +162,7 @@ class TestClusterLabelsDeclareNoSentinel:
         assert np.asarray(labels.data).tolist() == [1, 0, 0, 2]
 
     def test_the_source_variable_is_untouched(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0]),
             node_y=np.array([0.0, 1.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),

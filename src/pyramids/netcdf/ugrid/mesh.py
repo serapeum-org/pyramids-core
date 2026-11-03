@@ -159,7 +159,7 @@ class Mesh2d:
     def crs(self) -> Any:
         """The mesh's coordinate reference system, or ``None``.
 
-        Public counterpart of :attr:`pyramids.netcdf.ugrid.network.Network1d.crs`, so callers
+        Public counterpart of :attr:`pyramids.netcdf.ugrid.mesh1d.Mesh1d.crs`, so callers
         (and the xarray bridge) no longer have to reach for the private attribute.
         """
         return self._crs

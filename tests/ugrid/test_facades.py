@@ -1,4 +1,4 @@
-"""Integration of the capability modules through their UgridDataset facades.
+"""Integration of the capability modules through their MeshDataset facades.
 
 The kernels are unit-tested in `test_graph.py` / `test_fill.py` / `test_vector_ops.py` /
 `test_regrid.py` / `test_construct.py` / `test_interop_xarray.py`; this file pins the wiring —
@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 from shapely.geometry import LineString, box
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
 @pytest.fixture
-def strip() -> UgridDataset:
+def strip() -> MeshDataset:
     """Two quads side by side carrying one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
         node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -28,9 +28,9 @@ def strip() -> UgridDataset:
 
 
 @pytest.fixture
-def split() -> UgridDataset:
+def split() -> MeshDataset:
     """Two disjoint triangles, so the graph has two components."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 5.0, 6.0, 6.0]),
         node_y=np.array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [3, 4, 5]]),
@@ -78,7 +78,7 @@ class TestFillFacades:
         assert gappy.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
 
     def test_laplace_interpolate_fills_a_hole(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0, 0.0, 1.0, 2.0, 3.0]),
             node_y=np.array([0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6]]),
@@ -110,7 +110,7 @@ class TestVectorFacades:
 
 class TestRegridFacades:
     def test_regrid_onto_another_mesh(self, strip):
-        target = UgridDataset.from_arrays(
+        target = MeshDataset.from_arrays(
             node_x=np.array([0.0, 2.0, 2.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2, 3]]),
@@ -121,7 +121,7 @@ class TestRegridFacades:
         assert out["d"].data.tolist() == pytest.approx([1.5])
 
     def test_interp_time_relabels_the_axis(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -142,7 +142,7 @@ class TestConstructors:
             geometry=[box(0, 0, 1, 1), box(1, 0, 2, 1)],
             crs="EPSG:4326",
         )
-        mesh = UgridDataset.from_geodataframe(gdf)
+        mesh = MeshDataset.from_geodataframe(gdf)
         assert (mesh.n_face, mesh.epsg) == (2, 4326)
         assert mesh["v"].data.tolist() == [1.0, 2.0]
 
@@ -153,7 +153,7 @@ class TestConstructors:
             np.arange(6.0).reshape(2, 3),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        mesh = UgridDataset.from_structured(raster)
+        mesh = MeshDataset.from_structured(raster)
         assert mesh.n_face == 6
         assert "band_1" in mesh.data_variable_names
 

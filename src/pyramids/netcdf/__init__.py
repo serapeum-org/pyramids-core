@@ -26,7 +26,7 @@ from pyramids.netcdf.plot_options import (
     FacetSpec,
     Selectors,
 )
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 __all__ = [
     "CFAttributes",
@@ -51,7 +51,7 @@ __all__ = [
     "StructuralInfo",
     "to_dict",
     "to_json",
-    "UgridDataset",
+    "MeshDataset",
     "Variable",
     "VariableInfo",
 ]

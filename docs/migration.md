@@ -629,7 +629,7 @@ against a crop's shape will see it change. It applies to both crop routes and to
 storable, declared sentinel.
 
 **`create_from_array` is now `from_array`, and takes a `GeoReference`.** Hard change, no deprecation alias — the
-old name and the old flat keywords are gone. The same rename applies to `UgridDataset.create_from_arrays` ->
+old name and the old flat keywords are gone. The same rename applies to `MeshDataset.create_from_arrays` ->
 `from_arrays` (still plural: it takes three arrays, not one).
 
 The four flat georeferencing keywords are replaced by one `geo_ref` argument, and `driver_type` is gone
@@ -643,7 +643,7 @@ Dataset.create_from_array(arr, driver_type="GTiff", path="out.tif")
 Dataset.create(cell_size=0.05, rows=r, columns=c, dtype="float32", bands=1,
                top_left_corner=(0, 10), epsg=4326)
 Dataset.create_empty(rows, cols, geo=GEO, epsg=4326, driver_type="MEM")
-UgridDataset.create_from_arrays(node_x, node_y, faces)
+MeshDataset.create_from_arrays(node_x, node_y, faces)
 
 # After
 from pyramids.dataset import Dataset, GeoReference
@@ -654,7 +654,7 @@ Dataset.from_array(arr, geo_ref=GeoReference(geo=GEO), path="out.tif")  # driver
 Dataset.create(rows=r, columns=c, dtype="float32", bands=1,
                geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=0.05, epsg=4326))
 Dataset.create_empty(rows, cols, geo_ref=GeoReference(geo=GEO, epsg=4326))
-UgridDataset.from_arrays(node_x, node_y, faces)
+MeshDataset.from_arrays(node_x, node_y, faces)
 ```
 
 The module-level `pyramids.netcdf.engines.variables.create_from_array` is renamed `from_array` too. It carries

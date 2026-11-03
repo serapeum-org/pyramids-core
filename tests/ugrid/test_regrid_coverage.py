@@ -24,7 +24,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.regrid import Regridder, interp_time, rasterize_like, sample
 
 pytestmark = pytest.mark.core
@@ -39,9 +39,9 @@ NODE_VALUES = np.array([1.0, 3.0, 6.0, 4.0])
 
 
 @pytest.fixture
-def triangles() -> UgridDataset:
+def triangles() -> MeshDataset:
     """The two-triangle unit square, carrying one face variable and one node variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -52,9 +52,9 @@ def triangles() -> UgridDataset:
 
 
 @pytest.fixture
-def grid_2x2() -> UgridDataset:
+def grid_2x2() -> MeshDataset:
     """A 2x2 grid of unit quads over ``[0, 2] x [0, 2]``, one value per face."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
         node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
         face_node_connectivity=np.array(
@@ -67,9 +67,9 @@ def grid_2x2() -> UgridDataset:
 
 
 @pytest.fixture
-def one_quad() -> UgridDataset:
+def one_quad() -> MeshDataset:
     """A single-face mesh covering ``[0, 2] x [0, 2]`` -- exactly one source point per location."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 2.0, 2.0, 0.0]),
         node_y=np.array([0.0, 0.0, 2.0, 2.0]),
         face_node_connectivity=np.array([[0, 1, 2, 3]], dtype=np.intp),
@@ -282,9 +282,9 @@ class TestRegridderMetadata:
     """The accessors and guards around the reusable weight matrix."""
 
     @pytest.fixture
-    def target(self) -> UgridDataset:
+    def target(self) -> MeshDataset:
         """A single-face target covering the whole 2x2 source extent."""
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 2.0, 2.0, 0.0]),
             node_y=np.array([0.0, 0.0, 2.0, 2.0]),
             face_node_connectivity=np.array([[0, 1, 2, 3]], dtype=np.intp),

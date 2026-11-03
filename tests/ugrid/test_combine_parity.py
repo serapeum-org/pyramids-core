@@ -6,16 +6,16 @@ import numpy as np
 import pytest
 
 from pyramids.base._errors import AlignmentError
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 FACES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _temporal(values: np.ndarray, name: str = "d") -> UgridDataset:
+def _temporal(values: np.ndarray, name: str = "d") -> MeshDataset:
     """A two-face mesh carrying `values` of shape (n_time, 2) under `name`."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=FACES,
@@ -24,9 +24,9 @@ def _temporal(values: np.ndarray, name: str = "d") -> UgridDataset:
     )
 
 
-def _other_mesh() -> UgridDataset:
+def _other_mesh() -> MeshDataset:
     """A mesh with different node coordinates, so topology comparison must fail."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X + 10.0,
         node_y=NODE_Y,
         face_node_connectivity=FACES,
@@ -88,7 +88,7 @@ class TestCallShapes:
     def test_concat_as_classmethod(self):
         a = _temporal(np.array([[1.0, 1.0]]))
         b = _temporal(np.array([[2.0, 2.0]]))
-        out = UgridDataset.concat([a, b])
+        out = MeshDataset.concat([a, b])
         assert out["d"].data.tolist() == [[1.0, 1.0], [2.0, 2.0]]
 
     def test_concat_as_instance_method(self):
@@ -101,16 +101,16 @@ class TestCallShapes:
         a = _temporal(np.array([[1.0, 1.0]]))
         b = _temporal(np.array([[2.0, 2.0]]))
         assert (
-            UgridDataset.concat([a, b])["d"].data.tolist()
+            MeshDataset.concat([a, b])["d"].data.tolist()
             == a.concat([b])["d"].data.tolist()
         )
 
     def test_merge_as_classmethod(self):
         a = _temporal(np.array([[1.0, 1.0]]))
         b = _temporal(np.array([[2.0, 2.0]]), name="e")
-        out = UgridDataset.merge([a, b])
+        out = MeshDataset.merge([a, b])
         assert sorted(out.data_variable_names) == ["d", "e"]
 
     def test_empty_class_call_refused(self):
         with pytest.raises(ValueError, match="at least one dataset"):
-            UgridDataset.concat([])
+            MeshDataset.concat([])
