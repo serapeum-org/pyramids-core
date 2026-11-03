@@ -7581,7 +7581,7 @@ truncated by an integer fill. <code>sample_line</code> reads a field along a lin
 <p>Standalone, side-effect-free functions that bridge a :class:<code>~pyramids.netcdf.ugrid.mesh.Mesh2d</code>
 (plus a per-face value array and/or shapely / geopandas geometry) and ordinary vector geometry.
 None of them mutate their inputs, and none import :mod:<code>pyramids.netcdf.ugrid.dataset</code>, so they can
-be driven directly or wrapped by thin <code>MeshDataset</code> facades:</p>
+be driven directly or wrapped by thin <code>UgridDataset</code> facades:</p>
 <ul>
 <li>:func:<code>polygonize</code> — dissolve adjacent faces that share an (approximately) equal value into merged
   polygons, one row per value group (the mesh analogue of raster <code>to_feature_collection</code>).</li>

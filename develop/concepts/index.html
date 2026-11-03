@@ -7572,7 +7572,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     AD["AbstractDataset (ABC)&lt;br/&gt;geo-properties: epsg · cell_size · bounds · no_data"]
     AD --&gt; DS["Dataset&lt;br/&gt;a single raster (GeoTIFF · COG · ASCII)"]
     DS --&gt; NC["NetCDF&lt;br/&gt;NetCDF/CF file: variables · time · groups"]
-    UG["MeshDataset&lt;br/&gt;unstructured (UGRID) mesh — standalone class"]
+    UG["UgridDataset&lt;br/&gt;unstructured (UGRID) mesh — standalone class"]
     DC["DatasetCollection&lt;br/&gt;a time-series stack of aligned rasters"]
     FC["FeatureCollection&lt;br/&gt;vector data (wraps a GeoDataFrame)"]
     NC -. "mesh ↔ raster bridge" .-&gt; UG
@@ -7600,7 +7600,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 </tr>
 <tr>
 <td>An unstructured (UGRID) mesh</td>
-<td><strong><code>MeshDataset</code></strong></td>
+<td><strong><code>UgridDataset</code></strong></td>
 <td>triangular/polygonal meshes; mesh↔raster bridge</td>
 </tr>
 <tr>

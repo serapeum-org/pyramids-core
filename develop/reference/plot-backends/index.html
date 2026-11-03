@@ -7568,10 +7568,10 @@ pyramids, pyramids knows only the group name.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"interactive"</span><span class="p">)</span>          <span class="c1"># an interactive map object</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"3d"</span><span class="p">,</span> <span class="n">z_exaggeration</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># a 3-D scene; extra kwargs pass through to the backend</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">collection</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"web"</span><span class="p">)</span>          <span class="c1"># the collection animation, as a web map</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">mesh</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"interactive"</span><span class="p">)</span>        <span class="c1"># a MeshDataset mesh, interactively</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">mesh</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"interactive"</span><span class="p">)</span>        <span class="c1"># a UgridDataset mesh, interactively</span>
 </code></pre></div>
 <p>The <code>backend=</code> keyword is available on <code>Dataset.plot</code> / <code>Dataset.animate</code>, <code>NetCDF.plot</code>, <code>FeatureCollection.plot</code>,
-<code>DatasetCollection.plot</code> / <code>DatasetCollection.animate</code>, and <code>MeshDataset.plot</code> / <code>MeshDataset.animate</code>.</p>
+<code>DatasetCollection.plot</code> / <code>DatasetCollection.animate</code>, and <code>UgridDataset.plot</code> / <code>UgridDataset.animate</code>.</p>
 <h3 id="what-carries-over-and-what-does-not"><a class="toclink" href="#what-carries-over-and-what-does-not">What carries over, and what does not</a><a class="headerlink" href="#what-carries-over-and-what-does-not" title="Permanent link">#</a></h3>
 <p>On a non-matplotlib backend the facade forwards the <strong>data-selection</strong> arguments and lets the backend accept or
 refuse each by name. The forwarded set is per facade — the data selector plus the arguments that describe <em>what to
@@ -7586,9 +7586,9 @@ show</em>, with <code>None</code>-valued and default ones dropped:</p>
 <li><strong><code>FeatureCollection.plot</code></strong> — <code>column</code>, <code>basemap</code>, a bool <code>colorbar</code>, <code>title</code>, a non-default <code>kind</code>.</li>
 <li><strong><code>DatasetCollection.plot</code> / <code>.animate</code></strong> — a non-default <code>band</code>, <code>exclude_value</code>, <code>rgb_options</code>, <code>basemap</code>, a
   bool <code>colorbar</code>, <code>animation_axis_values</code>, and <code>animate=True</code>.</li>
-<li><strong><code>MeshDataset.plot</code></strong> — <code>variable_name</code>, a non-default <code>cmap</code>, <code>title</code>, <code>basemap</code>, a bool <code>colorbar</code>, a
+<li><strong><code>UgridDataset.plot</code></strong> — <code>variable_name</code>, a non-default <code>cmap</code>, <code>title</code>, <code>basemap</code>, a bool <code>colorbar</code>, a
   non-default <code>kind</code>.</li>
-<li><strong><code>MeshDataset.animate</code></strong> — <code>variable_name</code>, a non-default <code>interval</code>, and <code>animate=True</code>.</li>
+<li><strong><code>UgridDataset.animate</code></strong> — <code>variable_name</code>, a non-default <code>interval</code>, and <code>animate=True</code>.</li>
 </ul>
 <p>Any further keyword you pass is forwarded too. Arguments that only mean something on the matplotlib read/render
 path are instead <strong>rejected</strong> with a <code>ValueError</code>, so a silently-ignored argument is never mistaken for an applied

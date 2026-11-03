@@ -7620,7 +7620,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 
     subgraph NC["pyramids.netcdf"]
       NCD[NetCDF]:::c
-      UG[MeshDataset]:::c
+      UG[UgridDataset]:::c
     end
 
     subgraph Vec["pyramids.feature"]
@@ -7685,7 +7685,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     nc[NetCDF]
     cf[cf]
     lazy[_lazy._apply_unpack]
-    ugds[ugrid.MeshDataset]
+    ugds[ugrid.UgridDataset]
   end
   subgraph PF["pyramids.feature"]
     fc[FeatureCollection]
@@ -7723,7 +7723,7 @@ Hold "Ctrl" to enable pan &amp; zoom
    virtual filesystem paths in <code>pyramids._io</code> /
    <code>pyramids.base.remote</code>.</li>
 <li>Raster inputs become <code>Dataset</code> (GeoTIFF, ASC) / <code>NetCDF</code> (NetCDF, HDF5) /
-   <code>MeshDataset</code> (UGRID NetCDF) instances; vector inputs become
+   <code>UgridDataset</code> (UGRID NetCDF) instances; vector inputs become
    <code>FeatureCollection</code>. Each concrete class composes engines for its
    public-API families (<code>ds.spatial</code>, <code>ds.io</code>, …).</li>
 <li><code>DatasetCollection</code> wraps <code>N</code> co-registered <code>Dataset</code> instances into a

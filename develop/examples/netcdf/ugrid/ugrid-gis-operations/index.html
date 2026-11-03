@@ -8994,8 +8994,8 @@ the examples are self-contained (no external data files needed).</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9024,20 +9024,6 @@ the examples are self-contained (no external data files needed).</p>
 import numpy as np
 
 from pyramids.netcdf.ugrid import UgridDataset</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_4067/1295155799.py:5: DeprecationWarning: UgridDataset is renamed to MeshDataset; import MeshDataset instead (UgridDataset will be removed in a future release).
-  from pyramids.netcdf.ugrid import UgridDataset
-</pre>
 </div>
 </div>
 </div>
@@ -9152,7 +9138,7 @@ print(f"Faces: {ds.n_face}, Nodes: {ds.n_node}, CRS: {ds.epsg}")</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>MeshDataset: (in-memory)
+<pre>UgridDataset: (in-memory)
   Mesh: mesh2d
   Nodes: 25, Faces: 16, Edges: 0
   Bounds: (0.0, 0.0, 400.0, 400.0)

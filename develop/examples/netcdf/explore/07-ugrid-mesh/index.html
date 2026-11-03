@@ -8231,8 +8231,8 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9c7f6fa9">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=9c7f6fa9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8267,20 +8267,6 @@ from shapely.geometry import Polygon, box
 from pyramids.netcdf import NetCDF, UgridDataset
 
 DATA = Path('../../../../examples/data/netcdf/samples')</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3760/3293510761.py:6: DeprecationWarning: UgridDataset is renamed to MeshDataset; import MeshDataset instead.
-  from pyramids.netcdf import NetCDF, UgridDataset
-</pre>
 </div>
 </div>
 </div>
@@ -8354,7 +8340,7 @@ ug</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[2]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>MeshDataset(mesh='mesh2d', n_node=16, n_face=4, n_edge=0, variables=[])</pre>
+<pre>UgridDataset(mesh='mesh2d', n_node=16, n_face=4, n_edge=0, variables=[])</pre>
 </div>
 </div>
 </div>
@@ -8409,7 +8395,7 @@ print('bounds:', ug.bounds)</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>nodes: 16 | faces: 4 | edges: 0
-mesh: &lt;pyramids.netcdf.ugrid.mesh.Mesh2d object at 0x7f69edf0d940&gt;
+mesh: &lt;pyramids.netcdf.ugrid.mesh.Mesh2d object at 0x7f81fac997f0&gt;
 bounds: (-0.3252372145652771, -0.26931479573249817, 0.38283485174179077, 0.2782424986362457)
 </pre>
 </div>
@@ -8461,7 +8447,7 @@ bounds: (-0.3252372145652771, -0.26931479573249817, 0.38283485174179077, 0.27824
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f69ed5c17f0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f81fac157f0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8729,7 +8715,7 @@ print('faces before:', ug.n_face, '| faces after crop:', cropped.n_face)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f69e53ffed0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f81f201fc50&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9004,7 +8990,7 @@ print('faces inside the triangle:', triangle_crop.n_face)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[14]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f69e52cb9d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph at 0x7f81f20e7750&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

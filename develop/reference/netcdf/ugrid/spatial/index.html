@@ -7737,7 +7737,7 @@
 clipping by polygon, and bounding box subsetting.</p>
 <p><code>MeshSpatialIndex</code> wraps a <code>Mesh2d</code> and builds its KD-trees / STRtree lazily on first query. The
 module-level <code>clip_mesh</code> / <code>subset_by_bounds</code> functions use it to return a new <code>(Mesh2d, data)</code> pair —
-they back <code>MeshDataset.clip</code> and <code>MeshDataset.subset_by_bounds</code>:</p>
+they back <code>UgridDataset.clip</code> and <code>UgridDataset.subset_by_bounds</code>:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
 Hold "Ctrl" to enable pan &amp; zoom
@@ -9260,7 +9260,7 @@ to produce a compact, self-consistent mesh.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Source MeshDataset.</p>
+                <p>Source UgridDataset.</p>
               </div>
             </td>
             <td>
@@ -9334,7 +9334,7 @@ If False, only include faces fully inside.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>meth:<code>MeshDataset.clip</code>, which is the public entry point.</p>
+                <p>meth:<code>UgridDataset.clip</code>, which is the public entry point.</p>
               </div>
             </td>
           </tr>
@@ -9397,14 +9397,14 @@ If False, only include faces fully inside.</p>
 <a id="__codelineno-0-252" name="__codelineno-0-252"></a><span class="sd">    to produce a compact, self-consistent mesh.</span>
 <a id="__codelineno-0-253" name="__codelineno-0-253"></a>
 <a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="sd">        dataset: Source MeshDataset.</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="sd">        dataset: Source UgridDataset.</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="sd">        mask: Polygon mask (GeoDataFrame, FeatureCollection, or Shapely geometry).</span>
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="sd">        touch: If True, include faces that touch the mask boundary.</span>
 <a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="sd">            If False, only include faces fully inside.</span>
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="sd">        tuple: ``(mesh, data_variables)`` for the clipped faces — wrap with</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">        :meth:`MeshDataset.clip`, which is the public entry point.</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">        :meth:`UgridDataset.clip`, which is the public entry point.</span>
 <a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">    """</span>
 <a id="__codelineno-0-264" name="__codelineno-0-264"></a>    <span class="n">mesh</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mesh</span>
 <a id="__codelineno-0-265" name="__codelineno-0-265"></a>
@@ -9470,7 +9470,7 @@ intersection tests. Uses vectorized numpy comparisons.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Source MeshDataset.</p>
+                <p>Source UgridDataset.</p>
               </div>
             </td>
             <td>
@@ -9575,7 +9575,7 @@ intersection tests. Uses vectorized numpy comparisons.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>wrap with :meth:<code>MeshDataset.subset_by_bounds</code>, the public entry point.</p>
+                <p>wrap with :meth:<code>UgridDataset.subset_by_bounds</code>, the public entry point.</p>
               </div>
             </td>
           </tr>
@@ -9629,7 +9629,7 @@ intersection tests. Uses vectorized numpy comparisons.</p>
 <a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">    intersection tests. Uses vectorized numpy comparisons.</span>
 <a id="__codelineno-0-299" name="__codelineno-0-299"></a>
 <a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a><span class="sd">        dataset: Source MeshDataset.</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a><span class="sd">        dataset: Source UgridDataset.</span>
 <a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">        xmin: Minimum x-coordinate.</span>
 <a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="sd">        ymin: Minimum y-coordinate.</span>
 <a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="sd">        xmax: Maximum x-coordinate.</span>
@@ -9637,7 +9637,7 @@ intersection tests. Uses vectorized numpy comparisons.</p>
 <a id="__codelineno-0-306" name="__codelineno-0-306"></a>
 <a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">        tuple: ``(mesh, data_variables)`` for the faces whose centroids fall in the box —</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">        wrap with :meth:`MeshDataset.subset_by_bounds`, the public entry point.</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">        wrap with :meth:`UgridDataset.subset_by_bounds`, the public entry point.</span>
 <a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">    """</span>
 <a id="__codelineno-0-311" name="__codelineno-0-311"></a>    <span class="n">mesh</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mesh</span>
 <a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="n">cx</span><span class="p">,</span> <span class="n">cy</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">face_centroids</span>

@@ -5977,10 +5977,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.MeshMetadata" class="md-nav__link">
+  <a href="#pyramids.netcdf.ugrid.UgridMetadata" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MeshMetadata
+        UgridMetadata
       
     </span>
   </a>
@@ -7755,10 +7755,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.MeshMetadata" class="md-nav__link">
+  <a href="#pyramids.netcdf.ugrid.UgridMetadata" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MeshMetadata
+        UgridMetadata
       
     </span>
   </a>
@@ -7801,9 +7801,9 @@
 <h1 id="ugrid-data-models"><a class="toclink" href="#ugrid-data-models">UGRID Data Models</a><a class="headerlink" href="#ugrid-data-models" title="Permanent link">#</a></h1>
 <p>Dataclasses for UGRID topology metadata, mesh variables, and
 dataset-level metadata summaries.</p>
-<p><code>MeshMetadata</code> is the dataset-level summary: it aggregates one <code>MeshTopologyInfo</code> per mesh and records
+<p><code>UgridMetadata</code> is the dataset-level summary: it aggregates one <code>MeshTopologyInfo</code> per mesh and records
 the variable <strong>inventory</strong> as a <code>data_variables: dict[str, str]</code> map (variable name → mesh location). The
-<code>MeshVariable</code> records themselves are held by <a href="../dataset/"><code>MeshDataset</code></a>, not by <code>MeshMetadata</code>. A
+<code>MeshVariable</code> records themselves are held by <a href="../dataset/"><code>UgridDataset</code></a>, not by <code>UgridMetadata</code>. A
 <code>MeshVariable</code> carries a lazy loader so its <code>data</code> is only materialised on access, and offers
 time-slicing helpers:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
@@ -7830,7 +7830,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 </button>
     </nav>
     <pre class="mermaid"><code>classDiagram
-    class MeshMetadata {
+    class UgridMetadata {
       data_variables : dict[str,str]
       global_attributes
       conventions
@@ -7852,9 +7852,9 @@ Hold "Ctrl" to enable pan &amp; zoom
       +sel_time_range(a, b)
       +with_data(arr)
     }
-    MeshMetadata o-- MeshTopologyInfo : mesh_topologies
-    note for MeshMetadata "data_variables is a name → location map, not MeshVariable records"
-    note for MeshVariable "held by MeshDataset; data is loaded lazily on first access"</code></pre> 
+    UgridMetadata o-- MeshTopologyInfo : mesh_topologies
+    note for UgridMetadata "data_variables is a name → location map, not MeshVariable records"
+    note for MeshVariable "held by UgridDataset; data is loaded lazily on first access"</code></pre> 
     
 </div>
 
@@ -9916,15 +9916,15 @@ layer selection); pass a sliced mask when the element or time axis changed, or
 
 
 
-<h3 id="pyramids.netcdf.ugrid.MeshMetadata" class="doc doc-heading"><a href="#pyramids.netcdf.ugrid.MeshMetadata" class="toclink">
-            <code>pyramids.netcdf.ugrid.MeshMetadata</code>
+<h3 id="pyramids.netcdf.ugrid.UgridMetadata" class="doc doc-heading"><a href="#pyramids.netcdf.ugrid.UgridMetadata" class="toclink">
+            <code>pyramids.netcdf.ugrid.UgridMetadata</code>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
   </span>
 
-</a><a href="#pyramids.netcdf.ugrid.MeshMetadata" class="headerlink" title="Permanent link">#</a></h3>
+</a><a href="#pyramids.netcdf.ugrid.UgridMetadata" class="headerlink" title="Permanent link">#</a></h3>
 
 
     <div class="doc doc-contents first">
@@ -9948,7 +9948,7 @@ and inspection purposes.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.mesh_topologies">mesh_topologies</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.mesh_topologies">mesh_topologies</span></code></td>
             <td>
                   <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.MeshTopologyInfo&lt;/code&gt;
 
@@ -9964,7 +9964,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.data_variables">data_variables</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.data_variables">data_variables</span></code></td>
             <td>
                   <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
             </td>
@@ -9975,7 +9975,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.global_attributes">global_attributes</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.global_attributes">global_attributes</span></code></td>
             <td>
                   <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
             </td>
@@ -9986,7 +9986,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.conventions">conventions</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.conventions">conventions</span></code></td>
             <td>
                   <code><span title="str">str</span> | None</code>
             </td>
@@ -9997,7 +9997,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.n_nodes">n_nodes</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.n_nodes">n_nodes</span></code></td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
@@ -10008,7 +10008,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.n_faces">n_faces</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.n_faces">n_faces</span></code></td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
@@ -10019,7 +10019,7 @@ and inspection purposes.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="pyramids.netcdf.ugrid.MeshMetadata.n_edges">n_edges</span></code></td>
+            <td><code><span title="pyramids.netcdf.ugrid.UgridMetadata.n_edges">n_edges</span></code></td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
@@ -10066,7 +10066,7 @@ and inspection purposes.</p>
 <span class="normal"><a href="#__codelineno-0-757">757</a></span>
 <span class="normal"><a href="#__codelineno-0-758">758</a></span>
 <span class="normal"><a href="#__codelineno-0-759">759</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="k">class</span><span class="w"> </span><span class="nc">MeshMetadata</span><span class="p">:</span>
+<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="k">class</span><span class="w"> </span><span class="nc">UgridMetadata</span><span class="p">:</span>
 <a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="w">    </span><span class="sd">"""Full metadata summary for a UGRID dataset.</span>
 <a id="__codelineno-0-738" name="__codelineno-0-738"></a>
 <a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">    Aggregates topology information, data variable inventory,</span>

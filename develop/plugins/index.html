@@ -7633,12 +7633,12 @@ driver claims the bare path first.</p>
 <h2 id="pyramids-mesh-hydraulic-simulation-mesh-formats"><a class="toclink" href="#pyramids-mesh-hydraulic-simulation-mesh-formats">pyramids-mesh — hydraulic &amp; simulation mesh formats</a><a class="headerlink" href="#pyramids-mesh-hydraulic-simulation-mesh-formats" title="Permanent link">#</a></h2>
 <p><code>pyramids-mesh</code> registers UGRID mesh drivers for 48 hydraulic-modelling and interchange formats (SMS 2DM, Telemac
 Selafin, DHI DFSU, XMDF, Stanford PLY, ANUGA SWW, HEC-RAS, ADCIRC, SCHISM, GMSH, VTK, MODFLOW 6, FVCOM, …).
-<code>MeshDataset.read_file</code> picks the right driver from the file.</p>
+<code>UgridDataset.read_file</code> picks the right driver from the file.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyramids-mesh
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">mesh</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"model.2dm"</span><span class="p">)</span>   <span class="c1"># resolved by the pyramids-mesh "2dm" driver</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">mesh</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"model.2dm"</span><span class="p">)</span>   <span class="c1"># resolved by the pyramids-mesh "2dm" driver</span>
 </code></pre></div>
 <h2 id="digitalearth-interactive-3-d-and-web-visualization"><a class="toclink" href="#digitalearth-interactive-3-d-and-web-visualization">digitalearth — interactive, 3-D and web visualization</a><a class="headerlink" href="#digitalearth-interactive-3-d-and-web-visualization" title="Permanent link">#</a></h2>
 <p><code>digitalearth</code> is a geospatial visualization package that also exposes its renderers to pyramids as <strong>plot

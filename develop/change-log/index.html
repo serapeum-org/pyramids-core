@@ -14102,11 +14102,11 @@
 <h2 id="0720-2026-10-26"><a class="toclink" href="#0720-2026-10-26">0.72.0 (2026-10-26)</a><a class="headerlink" href="#0720-2026-10-26" title="Permanent link">#</a></h2>
 <h3 id="feat_2"><a class="toclink" href="#feat_2">Feat</a><a class="headerlink" href="#feat_2" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>ugrid</strong>: add a mesh vector field, fix Mesh1d read/sort/n_face, normalise connectivity fills (#1395)</li>
+<li><strong>ugrid</strong>: add a mesh vector field, fix Network1d read/sort/n_face, normalise connectivity fills (#1395)</li>
 <li><strong>feature</strong>: add a conformance kit for pyramids.vector_drivers plugins (#1399)</li>
 <li><strong>feature</strong>: add pyramids.vector_drivers plugin hook for third-party vector readers (#1392)</li>
 <li><strong>ugrid</strong>: add CF time decoding, terrain, focal stats and along-time analysis (#1382)</li>
-<li><strong>ugrid</strong>: add 17 GIS-parity methods to MeshDataset (#1356)</li>
+<li><strong>ugrid</strong>: add 17 GIS-parity methods to UgridDataset (#1356)</li>
 </ul>
 <h2 id="0710-2026-10-20"><a class="toclink" href="#0710-2026-10-20">0.71.0 (2026-10-20)</a><a class="headerlink" href="#0710-2026-10-20" title="Permanent link">#</a></h2>
 <h3 id="feat_3"><a class="toclink" href="#feat_3">Feat</a><a class="headerlink" href="#feat_3" title="Permanent link">#</a></h3>
@@ -14179,18 +14179,18 @@ errors_as_nodata to tolerance=ReadTolerance(); method and fuse_func to
 fusion=GroupFusion(); rescale and cfg to read=AssetRead(); properties
 and eo_band_names to provenance=CubeProvenance(). A call that passed
 none of these flags is unaffected.</li>
-<li>MeshDataset.stats is removed; use
+<li>UgridDataset.stats is removed; use
 summary(variables=[name]).loc[name] instead.</li>
 </ul>
 <h3 id="feat_7"><a class="toclink" href="#feat_7">Feat</a><a class="headerlink" href="#feat_7" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>dataset</strong>: add a line-transect sampler (Dataset.transect) (#1305)</li>
-<li><strong>ugrid</strong>: complete the UGRID parity surface on MeshDataset (#1283)</li>
+<li><strong>ugrid</strong>: complete the UGRID parity surface on UgridDataset (#1283)</li>
 <li><strong>collection</strong>: add median, mode, percentile and trend to reduce_time (#1304)</li>
 <li><strong>stac</strong>: implement the STAC feature backlog (STAC-00 … STAC-18) (#1279)</li>
 <li><strong>stac</strong>: enrich Items and widen asset, cube and catalog reads</li>
 <li><strong>netcdf,ugrid</strong>: shared summary, weighted quantile, and spline gap-fill (#1278)</li>
-<li><strong>ugrid</strong>: add analysis and along-time API to MeshDataset (#1270)</li>
+<li><strong>ugrid</strong>: add analysis and along-time API to UgridDataset (#1270)</li>
 </ul>
 <h2 id="0660-2026-10-09"><a class="toclink" href="#0660-2026-10-09">0.66.0 (2026-10-09)</a><a class="headerlink" href="#0660-2026-10-09" title="Permanent link">#</a></h2>
 <h3 id="breaking-change_1"><a class="toclink" href="#breaking-change_1">BREAKING CHANGE</a><a class="headerlink" href="#breaking-change_1" title="Permanent link">#</a></h3>
@@ -14390,7 +14390,7 @@ first input's grid, where it previously let them broadcast.</li>
 <ul>
 <li><code>Dataset.create_from_array</code>, <code>NetCDF.create_from_array</code> and
 <code>DatasetCollection.create_from_array</code> are renamed to <code>from_array</code>, and
-<code>MeshDataset.create_from_arrays</code> to <code>from_arrays</code>. All three constructors --
+<code>UgridDataset.create_from_arrays</code> to <code>from_arrays</code>. All three constructors --
 <code>from_array</code>, <code>create</code> and <code>create_empty</code> -- now take a single required
 <code>geo_ref: GeoReference</code> in place of the previous <code>geo</code>, <code>epsg</code>,
 <code>top_left_corner</code> and <code>cell_size</code> keyword subsets, and <code>driver_type</code> is
@@ -14781,7 +14781,7 @@ tail(0) returns an empty array.</li>
     aggregation, the plot pipeline, the CF capability map, and the
     ugrid class model, conversion bridges, and submodule diagrams</p>
 <p>Documentation accuracy &amp; hygiene:
-  - fix the MeshMetadata data_variables edge (it is a dict[str,str]
+  - fix the UgridMetadata data_variables edge (it is a dict[str,str]
     name-&gt;location map, not MeshVariable records)
   - clarify the metadata serializers are module-level functions, not
     methods on NetCDFMetadata

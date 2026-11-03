@@ -7903,7 +7903,7 @@ that points at the replacement:</p>
 <p><code>NetCDF.plot</code> is a thin facade over <code>pyramids.netcdf._plot.NetCDFPlot</code>, which resolves the variable,
 selectors, curvilinear coordinates, facet stack, and animation axis, then hands a 2-D (or stacked)
 array to the shared <code>pyramids.dataset._plot_helpers.render_array</code> core — the same renderer used by
-<code>Dataset.plot</code>, <code>DatasetCollection.plot</code> (animate mode), and (via <code>mesh_render</code>) <code>MeshDataset.plot</code>.
+<code>Dataset.plot</code>, <code>DatasetCollection.plot</code> (animate mode), and (via <code>mesh_render</code>) <code>UgridDataset.plot</code>.
 That core builds a cleopatra <code>ArrayGlyph</code> and dispatches to <code>plot</code> / <code>facet</code> / <code>animate</code>. See the
 <a href="../../overview/diagrams/#uml-class-plotting-layer">architecture diagrams</a>.</p>
 

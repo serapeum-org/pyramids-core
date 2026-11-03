@@ -26561,7 +26561,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-5189" name="__codelineno-0-5189"></a><span class="sd">        `read_array` returns them.</span>
 <a id="__codelineno-0-5190" name="__codelineno-0-5190"></a>
 <a id="__codelineno-0-5191" name="__codelineno-0-5191"></a><span class="sd">        Built on the shared :func:`pyramids.base._summary.variable_summary`, so this answers in the</span>
-<a id="__codelineno-0-5192" name="__codelineno-0-5192"></a><span class="sd">        identical shape to :meth:`pyramids.netcdf.ugrid.MeshDataset.summary`.</span>
+<a id="__codelineno-0-5192" name="__codelineno-0-5192"></a><span class="sd">        identical shape to :meth:`pyramids.netcdf.ugrid.UgridDataset.summary`.</span>
 <a id="__codelineno-0-5193" name="__codelineno-0-5193"></a>
 <a id="__codelineno-0-5194" name="__codelineno-0-5194"></a><span class="sd">        Args:</span>
 <a id="__codelineno-0-5195" name="__codelineno-0-5195"></a><span class="sd">            variables: Which variables to summarise, in output-row order. `None` (the default)</span>
@@ -26662,7 +26662,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-5290" name="__codelineno-0-5290"></a>
 <a id="__codelineno-0-5291" name="__codelineno-0-5291"></a><span class="sd">        The cube could already animate, but only through ``plot(animate=...)``, where the</span>
 <a id="__codelineno-0-5292" name="__codelineno-0-5292"></a><span class="sd">        capability is easy to miss. This is the same path under the name the other classes use</span>
-<a id="__codelineno-0-5293" name="__codelineno-0-5293"></a><span class="sd">        (:meth:`Dataset.animate`, :meth:`MeshDataset.animate`,</span>
+<a id="__codelineno-0-5293" name="__codelineno-0-5293"></a><span class="sd">        (:meth:`Dataset.animate`, :meth:`UgridDataset.animate`,</span>
 <a id="__codelineno-0-5294" name="__codelineno-0-5294"></a><span class="sd">        :meth:`DatasetCollection.animate`), so one name finds it everywhere.</span>
 <a id="__codelineno-0-5295" name="__codelineno-0-5295"></a>
 <a id="__codelineno-0-5296" name="__codelineno-0-5296"></a><span class="sd">        The signature deliberately replaces the inherited raster one: a cube's frames come</span>
@@ -26680,7 +26680,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-5308" name="__codelineno-0-5308"></a><span class="sd">            cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``</span>
 <a id="__codelineno-0-5309" name="__codelineno-0-5309"></a><span class="sd">            attribute is the :class:`matplotlib.animation.FuncAnimation` — save with</span>
 <a id="__codelineno-0-5310" name="__codelineno-0-5310"></a><span class="sd">            ``glyph.anim.save("out.gif")``. Note this differs from</span>
-<a id="__codelineno-0-5311" name="__codelineno-0-5311"></a><span class="sd">            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
+<a id="__codelineno-0-5311" name="__codelineno-0-5311"></a><span class="sd">            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
 <a id="__codelineno-0-5312" name="__codelineno-0-5312"></a><span class="sd">            cleopatra glyph families return different objects and pyramids passes each through</span>
 <a id="__codelineno-0-5313" name="__codelineno-0-5313"></a><span class="sd">            rather than wrapping one to look like the other. **Keep a reference to it** —</span>
 <a id="__codelineno-0-5314" name="__codelineno-0-5314"></a><span class="sd">            matplotlib warns and stops an animation held only as a temporary.</span>
@@ -26696,7 +26696,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-5324" name="__codelineno-0-5324"></a>
 <a id="__codelineno-0-5325" name="__codelineno-0-5325"></a><span class="sd">        See Also:</span>
 <a id="__codelineno-0-5326" name="__codelineno-0-5326"></a><span class="sd">            plot: One frame, or the same animation via ``animate=``.</span>
-<a id="__codelineno-0-5327" name="__codelineno-0-5327"></a><span class="sd">            MeshDataset.animate: The unstructured counterpart.</span>
+<a id="__codelineno-0-5327" name="__codelineno-0-5327"></a><span class="sd">            UgridDataset.animate: The unstructured counterpart.</span>
 <a id="__codelineno-0-5328" name="__codelineno-0-5328"></a><span class="sd">        """</span>
 <a id="__codelineno-0-5329" name="__codelineno-0-5329"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
 <a id="__codelineno-0-5330" name="__codelineno-0-5330"></a>            <span class="n">variable</span><span class="o">=</span><span class="n">variable</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="n">dim</span> <span class="k">if</span> <span class="n">dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
@@ -41951,7 +41951,7 @@ cell. It therefore works on a container, which <code>stats</code> refuses. Value
 units (CF <code>scale_factor</code> / <code>add_offset</code> applied) with no-data left out, exactly as
 <code>read_array</code> returns them.</p>
 <p>Built on the shared :func:<code>pyramids.base._summary.variable_summary</code>, so this answers in the
-identical shape to :meth:<code>pyramids.netcdf.ugrid.MeshDataset.summary</code>.</p>
+identical shape to :meth:<code>pyramids.netcdf.ugrid.UgridDataset.summary</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -42223,7 +42223,7 @@ available too.</p>
 <a id="__codelineno-0-5189" name="__codelineno-0-5189"></a><span class="sd">    `read_array` returns them.</span>
 <a id="__codelineno-0-5190" name="__codelineno-0-5190"></a>
 <a id="__codelineno-0-5191" name="__codelineno-0-5191"></a><span class="sd">    Built on the shared :func:`pyramids.base._summary.variable_summary`, so this answers in the</span>
-<a id="__codelineno-0-5192" name="__codelineno-0-5192"></a><span class="sd">    identical shape to :meth:`pyramids.netcdf.ugrid.MeshDataset.summary`.</span>
+<a id="__codelineno-0-5192" name="__codelineno-0-5192"></a><span class="sd">    identical shape to :meth:`pyramids.netcdf.ugrid.UgridDataset.summary`.</span>
 <a id="__codelineno-0-5193" name="__codelineno-0-5193"></a>
 <a id="__codelineno-0-5194" name="__codelineno-0-5194"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-5195" name="__codelineno-0-5195"></a><span class="sd">        variables: Which variables to summarise, in output-row order. `None` (the default)</span>
@@ -42498,7 +42498,7 @@ available too.</p>
         <p>Animate a variable along one of its non-spatial dimensions (issue #1380).</p>
 <p>The cube could already animate, but only through <code>plot(animate=...)</code>, where the
 capability is easy to miss. This is the same path under the name the other classes use
-(:meth:<code>Dataset.animate</code>, :meth:<code>MeshDataset.animate</code>,
+(:meth:<code>Dataset.animate</code>, :meth:<code>UgridDataset.animate</code>,
 :meth:<code>DatasetCollection.animate</code>), so one name finds it everywhere.</p>
 <p>The signature deliberately replaces the inherited raster one: a cube's frames come
 from one of its own dimensions, not from band indices, which is why :meth:<code>plot</code>
@@ -42615,7 +42615,7 @@ primary band dimension.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>meth:<code>MeshDataset.animate</code>, which returns the <code>FuncAnimation</code> itself: the two</p>
+                <p>meth:<code>UgridDataset.animate</code>, which returns the <code>FuncAnimation</code> itself: the two</p>
               </div>
             </td>
           </tr>
@@ -42696,7 +42696,7 @@ rejected here the same way and with the same message.</p>
 <details class="see-also" open>
   <summary>See Also</summary>
   <p>plot: One frame, or the same animation via <code>animate=</code>.
-MeshDataset.animate: The unstructured counterpart.</p>
+UgridDataset.animate: The unstructured counterpart.</p>
 </details>
 
             <details class="mkdocstrings-source">
@@ -42759,7 +42759,7 @@ MeshDataset.animate: The unstructured counterpart.</p>
 <a id="__codelineno-0-5290" name="__codelineno-0-5290"></a>
 <a id="__codelineno-0-5291" name="__codelineno-0-5291"></a><span class="sd">    The cube could already animate, but only through ``plot(animate=...)``, where the</span>
 <a id="__codelineno-0-5292" name="__codelineno-0-5292"></a><span class="sd">    capability is easy to miss. This is the same path under the name the other classes use</span>
-<a id="__codelineno-0-5293" name="__codelineno-0-5293"></a><span class="sd">    (:meth:`Dataset.animate`, :meth:`MeshDataset.animate`,</span>
+<a id="__codelineno-0-5293" name="__codelineno-0-5293"></a><span class="sd">    (:meth:`Dataset.animate`, :meth:`UgridDataset.animate`,</span>
 <a id="__codelineno-0-5294" name="__codelineno-0-5294"></a><span class="sd">    :meth:`DatasetCollection.animate`), so one name finds it everywhere.</span>
 <a id="__codelineno-0-5295" name="__codelineno-0-5295"></a>
 <a id="__codelineno-0-5296" name="__codelineno-0-5296"></a><span class="sd">    The signature deliberately replaces the inherited raster one: a cube's frames come</span>
@@ -42777,7 +42777,7 @@ MeshDataset.animate: The unstructured counterpart.</p>
 <a id="__codelineno-0-5308" name="__codelineno-0-5308"></a><span class="sd">        cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``</span>
 <a id="__codelineno-0-5309" name="__codelineno-0-5309"></a><span class="sd">        attribute is the :class:`matplotlib.animation.FuncAnimation` — save with</span>
 <a id="__codelineno-0-5310" name="__codelineno-0-5310"></a><span class="sd">        ``glyph.anim.save("out.gif")``. Note this differs from</span>
-<a id="__codelineno-0-5311" name="__codelineno-0-5311"></a><span class="sd">        :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
+<a id="__codelineno-0-5311" name="__codelineno-0-5311"></a><span class="sd">        :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
 <a id="__codelineno-0-5312" name="__codelineno-0-5312"></a><span class="sd">        cleopatra glyph families return different objects and pyramids passes each through</span>
 <a id="__codelineno-0-5313" name="__codelineno-0-5313"></a><span class="sd">        rather than wrapping one to look like the other. **Keep a reference to it** —</span>
 <a id="__codelineno-0-5314" name="__codelineno-0-5314"></a><span class="sd">        matplotlib warns and stops an animation held only as a temporary.</span>
@@ -42793,7 +42793,7 @@ MeshDataset.animate: The unstructured counterpart.</p>
 <a id="__codelineno-0-5324" name="__codelineno-0-5324"></a>
 <a id="__codelineno-0-5325" name="__codelineno-0-5325"></a><span class="sd">    See Also:</span>
 <a id="__codelineno-0-5326" name="__codelineno-0-5326"></a><span class="sd">        plot: One frame, or the same animation via ``animate=``.</span>
-<a id="__codelineno-0-5327" name="__codelineno-0-5327"></a><span class="sd">        MeshDataset.animate: The unstructured counterpart.</span>
+<a id="__codelineno-0-5327" name="__codelineno-0-5327"></a><span class="sd">        UgridDataset.animate: The unstructured counterpart.</span>
 <a id="__codelineno-0-5328" name="__codelineno-0-5328"></a><span class="sd">    """</span>
 <a id="__codelineno-0-5329" name="__codelineno-0-5329"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
 <a id="__codelineno-0-5330" name="__codelineno-0-5330"></a>        <span class="n">variable</span><span class="o">=</span><span class="n">variable</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="n">dim</span> <span class="k">if</span> <span class="n">dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>

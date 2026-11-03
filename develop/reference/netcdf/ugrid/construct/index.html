@@ -7559,8 +7559,8 @@
 <h1 id="mesh-construction"><a class="toclink" href="#mesh-construction">Mesh Construction</a><a class="headerlink" href="#mesh-construction" title="Permanent link">#</a></h1>
 <p>Building a mesh from something that is not already a mesh.</p>
 <p>A structured grid becomes a quad mesh, and a <code>GeoDataFrame</code> of polygons becomes a mesh of those
-polygons with shared vertices merged. These back <code>MeshDataset.from_structured</code> and
-<code>MeshDataset.from_geodataframe</code>.</p>
+polygons with shared vertices merged. These back <code>UgridDataset.from_structured</code> and
+<code>UgridDataset.from_geodataframe</code>.</p>
 
 
 <div class="doc doc-object doc-module">
@@ -7580,7 +7580,7 @@ polygons with shared vertices merged. These back <code>MeshDataset.from_structur
 (regular raster grid) or a :class:<code>geopandas.GeoDataFrame</code> of polygons into the node coordinate
 and <code>face_node_connectivity</code> arrays a UGRID 2D mesh needs. Each function returns a plain tuple
 <code>(node_x, node_y, face_node_connectivity, data)</code> so the caller can hand it straight to
-:meth:<code>pyramids.netcdf.ugrid.dataset.MeshDataset.from_arrays</code> together with the CRS it reads from
+:meth:<code>pyramids.netcdf.ugrid.dataset.UgridDataset.from_arrays</code> together with the CRS it reads from
 the source (<code>Dataset.epsg</code> / <code>GeoDataFrame.crs</code>). Keeping the result as bare arrays — rather
 than a built :class:<code>~pyramids.netcdf.ugrid.mesh.Mesh2d</code> — avoids an import cycle with
 <code>ugrid.dataset</code> and lets the facade own the single <code>from_arrays</code> call.</p>
@@ -7744,7 +7744,7 @@ public accessors only (<code>geotransform</code>, <code>rows</code>, <code>colum
             </td>
             <td>
               <div class="doc-md-description">
-                <p>meth:<code>MeshDataset.from_arrays</code> with <code>epsg=dataset.epsg</code>.</p>
+                <p>meth:<code>UgridDataset.from_arrays</code> with <code>epsg=dataset.epsg</code>.</p>
               </div>
             </td>
           </tr>
@@ -7889,7 +7889,7 @@ public accessors only (<code>geotransform</code>, <code>rows</code>, <code>colum
 <a id="__codelineno-0-66" name="__codelineno-0-66"></a><span class="sd">        ``float64`` arrays of length ``(ny + 1) * (nx + 1)``, ``face_node_connectivity`` is an</span>
 <a id="__codelineno-0-67" name="__codelineno-0-67"></a><span class="sd">        ``(rows * columns, 4)`` ``intp`` array of 0-indexed node indices, and ``data`` maps each</span>
 <a id="__codelineno-0-68" name="__codelineno-0-68"></a><span class="sd">        band name to a ``(rows * columns,)`` array. Hand these to</span>
-<a id="__codelineno-0-69" name="__codelineno-0-69"></a><span class="sd">        :meth:`MeshDataset.from_arrays` with ``epsg=dataset.epsg``.</span>
+<a id="__codelineno-0-69" name="__codelineno-0-69"></a><span class="sd">        :meth:`UgridDataset.from_arrays` with ``epsg=dataset.epsg``.</span>
 <a id="__codelineno-0-70" name="__codelineno-0-70"></a>
 <a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="sd">    Raises:</span>
 <a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="sd">        ValueError: If the dataset has no rows or columns.</span>
@@ -7952,8 +7952,8 @@ public accessors only (<code>geotransform</code>, <code>rows</code>, <code>colum
     <div class="doc doc-contents ">
 
         <p>Alias for :func:<code>from_structured</code>.</p>
-<p>Provided so the UGRID facade can expose both <code>MeshDataset.from_dataset</code> and
-<code>MeshDataset.from_structured</code> names over the same quad-meshing logic.</p>
+<p>Provided so the UGRID facade can expose both <code>UgridDataset.from_dataset</code> and
+<code>UgridDataset.from_structured</code> names over the same quad-meshing logic.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -8050,8 +8050,8 @@ public accessors only (<code>geotransform</code>, <code>rows</code>, <code>colum
 <a id="__codelineno-0-119" name="__codelineno-0-119"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MeshArrays</span><span class="p">:</span>
 <a id="__codelineno-0-120" name="__codelineno-0-120"></a><span class="w">    </span><span class="sd">"""Alias for :func:`from_structured`.</span>
 <a id="__codelineno-0-121" name="__codelineno-0-121"></a>
-<a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="sd">    Provided so the UGRID facade can expose both ``MeshDataset.from_dataset`` and</span>
-<a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="sd">    ``MeshDataset.from_structured`` names over the same quad-meshing logic.</span>
+<a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="sd">    Provided so the UGRID facade can expose both ``UgridDataset.from_dataset`` and</span>
+<a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="sd">    ``UgridDataset.from_structured`` names over the same quad-meshing logic.</span>
 <a id="__codelineno-0-124" name="__codelineno-0-124"></a>
 <a id="__codelineno-0-125" name="__codelineno-0-125"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-126" name="__codelineno-0-126"></a><span class="sd">        dataset: Source pyramids :class:`~pyramids.dataset.dataset.Dataset`.</span>
@@ -8078,7 +8078,7 @@ public accessors only (<code>geotransform</code>, <code>rows</code>, <code>colum
 
     <div class="doc doc-contents ">
 
-        <p>Build a face mesh from polygon geometries — the inverse of <code>MeshDataset.to_geodataframe</code>.</p>
+        <p>Build a face mesh from polygon geometries — the inverse of <code>UgridDataset.to_geodataframe</code>.</p>
 <p>Each polygon becomes one face. Exterior-ring vertices (the closing duplicate dropped) are
 stacked across all polygons and deduplicated with <code>np.unique(..., axis=0,
 return_inverse=True)</code>, so shared vertices collapse to a single node. Deduplication is
@@ -8200,7 +8200,7 @@ arrays. When <code>False</code>, <code>data</code> is empty.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>meth:<code>MeshDataset.from_arrays</code> with the <code>epsg</code> taken from <code>gdf.crs</code>.</p>
+                <p>meth:<code>UgridDataset.from_arrays</code> with the <code>epsg</code> taken from <code>gdf.crs</code>.</p>
               </div>
             </td>
           </tr>
@@ -8315,7 +8315,7 @@ arrays. When <code>False</code>, <code>data</code> is empty.</p>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="n">gdf</span><span class="p">:</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">,</span>
 <a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="n">include_attributes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MeshArrays</span><span class="p">:</span>
-<a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="w">    </span><span class="sd">"""Build a face mesh from polygon geometries — the inverse of ``MeshDataset.to_geodataframe``.</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="w">    </span><span class="sd">"""Build a face mesh from polygon geometries — the inverse of ``UgridDataset.to_geodataframe``.</span>
 <a id="__codelineno-0-180" name="__codelineno-0-180"></a>
 <a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="sd">    Each polygon becomes one face. Exterior-ring vertices (the closing duplicate dropped) are</span>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">    stacked across all polygons and deduplicated with ``np.unique(..., axis=0,</span>
@@ -8345,7 +8345,7 @@ arrays. When <code>False</code>, <code>data</code> is empty.</p>
 <a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">        ``float64`` node coordinates, ``face_node_connectivity`` is an ``(n_face, max_nodes)``</span>
 <a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">        ``intp`` array of 0-indexed node indices padded with ``-1``, and ``data`` maps each kept</span>
 <a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">        attribute column to an ``(n_face,)`` array. Hand these to</span>
-<a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">        :meth:`MeshDataset.from_arrays` with the ``epsg`` taken from ``gdf.crs``.</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">        :meth:`UgridDataset.from_arrays` with the ``epsg`` taken from ``gdf.crs``.</span>
 <a id="__codelineno-0-210" name="__codelineno-0-210"></a>
 <a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">    Raises:</span>
 <a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">        ValueError: If the GeoDataFrame holds no valid (non-degenerate) polygon.</span>
