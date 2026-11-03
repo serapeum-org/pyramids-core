@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7579,29 +7579,47 @@ The <code>cog</code> command group mirrors the common write / validate / inspect
 
         <p>Command-line interface for pyramids.</p>
 <p>Thin, scriptable wrappers over the library's primitives, built on the
-standard-library :mod:<code>argparse</code> (no extra dependency). Each command group lives
-in its own <code>cli_&lt;domain&gt;.py</code> module and registers itself on the top-level
-parser via an <code>add_&lt;domain&gt;_commands(sub)</code> function; this module only wires the
-groups together, provides the global flags, and runs the dispatch loop.</p>
-<p>Command groups:</p>
+standard-library :mod:<code>argparse</code> (no extra dependency):</p>
 <ul>
-<li>raster / COG (<code>pyramids.cli_dataset</code>) — <code>info</code>, <code>bounds</code>, <code>clip</code>, <code>warp</code>,
-  <code>merge</code>, <code>overview</code>, <code>sample</code>, <code>convert</code>, <code>georeference</code>, <code>orthorectify</code>,
-  <code>edit-info</code>, <code>calc</code>, <code>shapes</code>, <code>rasterize</code>, <code>render</code>, and <code>cog create|validate|info</code></li>
-<li>vector (<code>pyramids.cli_vector</code>) — <code>vector info|bounds|convert|warp|clip</code></li>
-<li>NetCDF (<code>pyramids.cli_netcdf</code>) — <code>nc list-vars|extract</code></li>
-<li>collection (<code>pyramids.cli_collection</code>) — <code>collection info|stats</code></li>
-<li>STAC (<code>pyramids.cli_stac</code>) — <code>stac search|download</code> (<code>[stac]</code> extra)</li>
-<li>OGC (<code>pyramids.cli_ogc</code>) — <code>fetch wms|wcs|wfs</code></li>
-<li>UGRID mesh (<code>pyramids.cli_ugrid</code>) — <code>mesh info|extract|convert</code></li>
-<li>processing (<code>pyramids.processing.cli</code>) — <code>run</code>, <code>apply</code>, <code>tools</code>, <code>tool</code></li>
+<li><code>pyramids cog create|validate|info ...</code> — the Cloud Optimized GeoTIFF group</li>
+<li><code>pyramids info FILE [--json]</code> — raster metadata at a glance</li>
+<li><code>pyramids bounds FILE [--crs CRS] [--json]</code> — bounding box</li>
+<li><code>pyramids clip SRC DST (--bbox MINX MINY MAXX MAXY | --vector PATH)</code> — crop</li>
+<li><code>pyramids warp SRC DST --crs CRS [--resampling M]</code> — reproject</li>
+<li><code>pyramids merge SRC... DST [--bbox MINX MINY MAXX MAXY] [--bbox-crs CRS]</code> —
+  mosaic, reading only the window when one is given</li>
+<li><code>pyramids overview FILE [--resampling M] [--levels N...]</code> — build overviews</li>
+<li><code>pyramids sample FILE --points "x,y;x,y..." [--json]</code> — point sampling</li>
+<li><code>pyramids convert SRC DST [--driver NAME]</code> — format conversion</li>
+<li><code>pyramids georeference SRC DST --gcp PIXEL LINE X Y ... --gcp-crs CRS</code> —
+  warp from ground-control points</li>
+<li><code>pyramids orthorectify SRC DST [--dem PATH | --rpc-height H]</code> — RPC
+  orthorectification</li>
+<li><code>pyramids edit-info FILE [--crs CRS] [--nodata V] [--tag K=V...]</code> — edit
+  CRS / nodata / tags in place</li>
+<li><code>pyramids calc EXPR SRC... DST [--dtype T]</code> — evaluate a band expression
+  (safe AST evaluator, no <code>eval</code>)</li>
+<li><code>pyramids shapes SRC DST [--geometry polygon|point]</code> — vectorize a raster</li>
+<li><code>pyramids rasterize SRC DST (--cell-size S | --like RASTER) [--column C]</code> —
+  burn a vector into a raster</li>
+<li><code>pyramids render FILE OUT.png</code> — quick-look PNG via cleopatra (headless)</li>
+<li><code>pyramids run PIPELINE.yaml --inputs GLOB... --out DIR [--manifest M]</code> — run a
+  processing pipeline (batched) over inputs</li>
+<li><code>pyramids apply NAME SRC DST [--set K=V...]</code> — run one registered tool</li>
+<li><code>pyramids tools</code> / <code>pyramids tool NAME</code> — list / describe the processing tools</li>
+<li><code>pyramids vector info|bounds|convert|warp|clip ...</code> — vector (FeatureCollection) ops</li>
+<li><code>pyramids nc list-vars|extract ...</code> — NetCDF variable listing / extraction</li>
+<li><code>pyramids collection info|stats ...</code> — temporal raster-stack summary / reduction</li>
+<li><code>pyramids stac search|download ...</code> — STAC search / asset download (<code>[stac]</code> extra)</li>
+<li><code>pyramids fetch wms|wcs|wfs ...</code> — pull an OGC web-service window to a file</li>
 </ul>
 <p>The top-level <code>--version</code>/<code>-V</code> prints the version, and global <code>--quiet</code>/<code>-q</code>
-(before the command) suppresses informational output. Every command maps 1:1 onto
-an existing library call — no business logic lives here. Expected user errors
-(missing file, bad CRS, unknown driver) exit non-zero with a one-line message
-instead of a traceback. The entry point is registered as the <code>pyramids</code> console
-script; the functions here are also callable in-process (<code>main([...])</code>) for testing.</p>
+(before the command) suppresses informational output.</p>
+<p>Every command maps 1:1 onto an existing library call — no business logic lives
+here. Expected user errors (missing file, bad CRS, unknown driver) exit
+non-zero with a one-line message instead of a traceback. The entry point is
+registered as the <code>pyramids</code> console script; the functions here are also
+callable in-process (<code>main([...])</code>) for testing.</p>
 
 
 
@@ -7703,93 +7721,93 @@ script; the functions here are also callable in-process (<code>main([...])</code
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyramids/cli.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
-<span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
-<span class="normal"><a href="#__codelineno-0-98"> 98</a></span>
-<span class="normal"><a href="#__codelineno-0-99"> 99</a></span>
-<span class="normal"><a href="#__codelineno-0-100">100</a></span>
-<span class="normal"><a href="#__codelineno-0-101">101</a></span>
-<span class="normal"><a href="#__codelineno-0-102">102</a></span>
-<span class="normal"><a href="#__codelineno-0-103">103</a></span>
-<span class="normal"><a href="#__codelineno-0-104">104</a></span>
-<span class="normal"><a href="#__codelineno-0-105">105</a></span>
-<span class="normal"><a href="#__codelineno-0-106">106</a></span>
-<span class="normal"><a href="#__codelineno-0-107">107</a></span>
-<span class="normal"><a href="#__codelineno-0-108">108</a></span>
-<span class="normal"><a href="#__codelineno-0-109">109</a></span>
-<span class="normal"><a href="#__codelineno-0-110">110</a></span>
-<span class="normal"><a href="#__codelineno-0-111">111</a></span>
-<span class="normal"><a href="#__codelineno-0-112">112</a></span>
-<span class="normal"><a href="#__codelineno-0-113">113</a></span>
-<span class="normal"><a href="#__codelineno-0-114">114</a></span>
-<span class="normal"><a href="#__codelineno-0-115">115</a></span>
-<span class="normal"><a href="#__codelineno-0-116">116</a></span>
-<span class="normal"><a href="#__codelineno-0-117">117</a></span>
-<span class="normal"><a href="#__codelineno-0-118">118</a></span>
-<span class="normal"><a href="#__codelineno-0-119">119</a></span>
-<span class="normal"><a href="#__codelineno-0-120">120</a></span>
-<span class="normal"><a href="#__codelineno-0-121">121</a></span>
-<span class="normal"><a href="#__codelineno-0-122">122</a></span>
-<span class="normal"><a href="#__codelineno-0-123">123</a></span>
-<span class="normal"><a href="#__codelineno-0-124">124</a></span>
-<span class="normal"><a href="#__codelineno-0-125">125</a></span>
-<span class="normal"><a href="#__codelineno-0-126">126</a></span>
-<span class="normal"><a href="#__codelineno-0-127">127</a></span>
-<span class="normal"><a href="#__codelineno-0-128">128</a></span>
-<span class="normal"><a href="#__codelineno-0-129">129</a></span>
-<span class="normal"><a href="#__codelineno-0-130">130</a></span>
-<span class="normal"><a href="#__codelineno-0-131">131</a></span>
-<span class="normal"><a href="#__codelineno-0-132">132</a></span>
-<span class="normal"><a href="#__codelineno-0-133">133</a></span>
-<span class="normal"><a href="#__codelineno-0-134">134</a></span>
-<span class="normal"><a href="#__codelineno-0-135">135</a></span>
-<span class="normal"><a href="#__codelineno-0-136">136</a></span>
-<span class="normal"><a href="#__codelineno-0-137">137</a></span>
-<span class="normal"><a href="#__codelineno-0-138">138</a></span>
-<span class="normal"><a href="#__codelineno-0-139">139</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="w">    </span><span class="sd">"""Entry point for the `pyramids` console script.</span>
-<a id="__codelineno-0-98" name="__codelineno-0-98"></a>
-<a id="__codelineno-0-99" name="__codelineno-0-99"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-100" name="__codelineno-0-100"></a><span class="sd">        argv: Argument list (excluding the program name). Defaults to</span>
-<a id="__codelineno-0-101" name="__codelineno-0-101"></a><span class="sd">            :data:`sys.argv` when `None`.</span>
-<a id="__codelineno-0-102" name="__codelineno-0-102"></a>
-<a id="__codelineno-0-103" name="__codelineno-0-103"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-104" name="__codelineno-0-104"></a><span class="sd">        int: Process exit code (`0` success, non-zero failure).</span>
-<a id="__codelineno-0-105" name="__codelineno-0-105"></a>
-<a id="__codelineno-0-106" name="__codelineno-0-106"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-107" name="__codelineno-0-107"></a><span class="sd">        - Inspect a COG from the shell:</span>
-<a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="sd">            ```python</span>
-<a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="sd">            &gt;&gt;&gt; main(["cog", "info", "scene.tif"])  # doctest: +SKIP</span>
-<a id="__codelineno-0-110" name="__codelineno-0-110"></a><span class="sd">            0</span>
-<a id="__codelineno-0-111" name="__codelineno-0-111"></a>
-<a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="sd">            ```</span>
-<a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="sd">    """</span>
-<a id="__codelineno-0-114" name="__codelineno-0-114"></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">_build_parser</span><span class="p">()</span>
-<a id="__codelineno-0-115" name="__codelineno-0-115"></a>    <span class="k">if</span> <span class="n">argcomplete</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional convenience</span>
-<a id="__codelineno-0-116" name="__codelineno-0-116"></a>        <span class="n">argcomplete</span><span class="o">.</span><span class="n">autocomplete</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
-<a id="__codelineno-0-117" name="__codelineno-0-117"></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
-<a id="__codelineno-0-118" name="__codelineno-0-118"></a>    <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-119" name="__codelineno-0-119"></a>        <span class="n">result</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-<a id="__codelineno-0-120" name="__codelineno-0-120"></a>    <span class="k">except</span> <span class="p">(</span>
-<a id="__codelineno-0-121" name="__codelineno-0-121"></a>        <span class="ne">ValueError</span><span class="p">,</span>
-<a id="__codelineno-0-122" name="__codelineno-0-122"></a>        <span class="ne">TypeError</span><span class="p">,</span>
-<a id="__codelineno-0-123" name="__codelineno-0-123"></a>        <span class="ne">OSError</span><span class="p">,</span>
-<a id="__codelineno-0-124" name="__codelineno-0-124"></a>        <span class="ne">RuntimeError</span><span class="p">,</span>
-<a id="__codelineno-0-125" name="__codelineno-0-125"></a>        <span class="n">_PyramidsError</span><span class="p">,</span>
-<a id="__codelineno-0-126" name="__codelineno-0-126"></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-<a id="__codelineno-0-127" name="__codelineno-0-127"></a>        <span class="c1"># Expected user errors (missing file, bad CRS, unknown driver, ...)</span>
-<a id="__codelineno-0-128" name="__codelineno-0-128"></a>        <span class="c1"># exit non-zero with a one-line message instead of a traceback.</span>
-<a id="__codelineno-0-129" name="__codelineno-0-129"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
-<a id="__codelineno-0-130" name="__codelineno-0-130"></a>        <span class="n">result</span> <span class="o">=</span> <span class="mi">1</span>
-<a id="__codelineno-0-131" name="__codelineno-0-131"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
-<a id="__codelineno-0-132" name="__codelineno-0-132"></a>        <span class="c1"># An unexpected internal error (a bug, or a GDAL error type not listed</span>
-<a id="__codelineno-0-133" name="__codelineno-0-133"></a>        <span class="c1"># above) still gets a one-line message for the CLI user rather than a raw</span>
-<a id="__codelineno-0-134" name="__codelineno-0-134"></a>        <span class="c1"># traceback — unless PYRAMIDS_DEBUG is set, which re-raises the full stack.</span>
-<a id="__codelineno-0-135" name="__codelineno-0-135"></a>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"PYRAMIDS_DEBUG"</span><span class="p">):</span>
-<a id="__codelineno-0-136" name="__codelineno-0-136"></a>            <span class="k">raise</span>
-<a id="__codelineno-0-137" name="__codelineno-0-137"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"error: unexpected failure: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
-<a id="__codelineno-0-138" name="__codelineno-0-138"></a>        <span class="n">result</span> <span class="o">=</span> <span class="mi">1</span>
-<a id="__codelineno-0-139" name="__codelineno-0-139"></a>    <span class="k">return</span> <span class="n">result</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1303">1303</a></span>
+<span class="normal"><a href="#__codelineno-0-1304">1304</a></span>
+<span class="normal"><a href="#__codelineno-0-1305">1305</a></span>
+<span class="normal"><a href="#__codelineno-0-1306">1306</a></span>
+<span class="normal"><a href="#__codelineno-0-1307">1307</a></span>
+<span class="normal"><a href="#__codelineno-0-1308">1308</a></span>
+<span class="normal"><a href="#__codelineno-0-1309">1309</a></span>
+<span class="normal"><a href="#__codelineno-0-1310">1310</a></span>
+<span class="normal"><a href="#__codelineno-0-1311">1311</a></span>
+<span class="normal"><a href="#__codelineno-0-1312">1312</a></span>
+<span class="normal"><a href="#__codelineno-0-1313">1313</a></span>
+<span class="normal"><a href="#__codelineno-0-1314">1314</a></span>
+<span class="normal"><a href="#__codelineno-0-1315">1315</a></span>
+<span class="normal"><a href="#__codelineno-0-1316">1316</a></span>
+<span class="normal"><a href="#__codelineno-0-1317">1317</a></span>
+<span class="normal"><a href="#__codelineno-0-1318">1318</a></span>
+<span class="normal"><a href="#__codelineno-0-1319">1319</a></span>
+<span class="normal"><a href="#__codelineno-0-1320">1320</a></span>
+<span class="normal"><a href="#__codelineno-0-1321">1321</a></span>
+<span class="normal"><a href="#__codelineno-0-1322">1322</a></span>
+<span class="normal"><a href="#__codelineno-0-1323">1323</a></span>
+<span class="normal"><a href="#__codelineno-0-1324">1324</a></span>
+<span class="normal"><a href="#__codelineno-0-1325">1325</a></span>
+<span class="normal"><a href="#__codelineno-0-1326">1326</a></span>
+<span class="normal"><a href="#__codelineno-0-1327">1327</a></span>
+<span class="normal"><a href="#__codelineno-0-1328">1328</a></span>
+<span class="normal"><a href="#__codelineno-0-1329">1329</a></span>
+<span class="normal"><a href="#__codelineno-0-1330">1330</a></span>
+<span class="normal"><a href="#__codelineno-0-1331">1331</a></span>
+<span class="normal"><a href="#__codelineno-0-1332">1332</a></span>
+<span class="normal"><a href="#__codelineno-0-1333">1333</a></span>
+<span class="normal"><a href="#__codelineno-0-1334">1334</a></span>
+<span class="normal"><a href="#__codelineno-0-1335">1335</a></span>
+<span class="normal"><a href="#__codelineno-0-1336">1336</a></span>
+<span class="normal"><a href="#__codelineno-0-1337">1337</a></span>
+<span class="normal"><a href="#__codelineno-0-1338">1338</a></span>
+<span class="normal"><a href="#__codelineno-0-1339">1339</a></span>
+<span class="normal"><a href="#__codelineno-0-1340">1340</a></span>
+<span class="normal"><a href="#__codelineno-0-1341">1341</a></span>
+<span class="normal"><a href="#__codelineno-0-1342">1342</a></span>
+<span class="normal"><a href="#__codelineno-0-1343">1343</a></span>
+<span class="normal"><a href="#__codelineno-0-1344">1344</a></span>
+<span class="normal"><a href="#__codelineno-0-1345">1345</a></span>
+<span class="normal"><a href="#__codelineno-0-1346">1346</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1303" name="__codelineno-0-1303"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-0-1304" name="__codelineno-0-1304"></a><span class="w">    </span><span class="sd">"""Entry point for the `pyramids` console script.</span>
+<a id="__codelineno-0-1305" name="__codelineno-0-1305"></a>
+<a id="__codelineno-0-1306" name="__codelineno-0-1306"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-1307" name="__codelineno-0-1307"></a><span class="sd">        argv: Argument list (excluding the program name). Defaults to</span>
+<a id="__codelineno-0-1308" name="__codelineno-0-1308"></a><span class="sd">            :data:`sys.argv` when `None`.</span>
+<a id="__codelineno-0-1309" name="__codelineno-0-1309"></a>
+<a id="__codelineno-0-1310" name="__codelineno-0-1310"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-1311" name="__codelineno-0-1311"></a><span class="sd">        int: Process exit code (`0` success, non-zero failure).</span>
+<a id="__codelineno-0-1312" name="__codelineno-0-1312"></a>
+<a id="__codelineno-0-1313" name="__codelineno-0-1313"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-1314" name="__codelineno-0-1314"></a><span class="sd">        - Inspect a COG from the shell:</span>
+<a id="__codelineno-0-1315" name="__codelineno-0-1315"></a><span class="sd">            ```python</span>
+<a id="__codelineno-0-1316" name="__codelineno-0-1316"></a><span class="sd">            &gt;&gt;&gt; main(["cog", "info", "scene.tif"])  # doctest: +SKIP</span>
+<a id="__codelineno-0-1317" name="__codelineno-0-1317"></a><span class="sd">            0</span>
+<a id="__codelineno-0-1318" name="__codelineno-0-1318"></a>
+<a id="__codelineno-0-1319" name="__codelineno-0-1319"></a><span class="sd">            ```</span>
+<a id="__codelineno-0-1320" name="__codelineno-0-1320"></a><span class="sd">    """</span>
+<a id="__codelineno-0-1321" name="__codelineno-0-1321"></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">_build_parser</span><span class="p">()</span>
+<a id="__codelineno-0-1322" name="__codelineno-0-1322"></a>    <span class="k">if</span> <span class="n">argcomplete</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional convenience</span>
+<a id="__codelineno-0-1323" name="__codelineno-0-1323"></a>        <span class="n">argcomplete</span><span class="o">.</span><span class="n">autocomplete</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+<a id="__codelineno-0-1324" name="__codelineno-0-1324"></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+<a id="__codelineno-0-1325" name="__codelineno-0-1325"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-1326" name="__codelineno-0-1326"></a>        <span class="n">result</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<a id="__codelineno-0-1327" name="__codelineno-0-1327"></a>    <span class="k">except</span> <span class="p">(</span>
+<a id="__codelineno-0-1328" name="__codelineno-0-1328"></a>        <span class="ne">ValueError</span><span class="p">,</span>
+<a id="__codelineno-0-1329" name="__codelineno-0-1329"></a>        <span class="ne">TypeError</span><span class="p">,</span>
+<a id="__codelineno-0-1330" name="__codelineno-0-1330"></a>        <span class="ne">OSError</span><span class="p">,</span>
+<a id="__codelineno-0-1331" name="__codelineno-0-1331"></a>        <span class="ne">RuntimeError</span><span class="p">,</span>
+<a id="__codelineno-0-1332" name="__codelineno-0-1332"></a>        <span class="n">_PyramidsError</span><span class="p">,</span>
+<a id="__codelineno-0-1333" name="__codelineno-0-1333"></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-0-1334" name="__codelineno-0-1334"></a>        <span class="c1"># Expected user errors (missing file, bad CRS, unknown driver, ...)</span>
+<a id="__codelineno-0-1335" name="__codelineno-0-1335"></a>        <span class="c1"># exit non-zero with a one-line message instead of a traceback.</span>
+<a id="__codelineno-0-1336" name="__codelineno-0-1336"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<a id="__codelineno-0-1337" name="__codelineno-0-1337"></a>        <span class="n">result</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="__codelineno-0-1338" name="__codelineno-0-1338"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+<a id="__codelineno-0-1339" name="__codelineno-0-1339"></a>        <span class="c1"># An unexpected internal error (a bug, or a GDAL error type not listed</span>
+<a id="__codelineno-0-1340" name="__codelineno-0-1340"></a>        <span class="c1"># above) still gets a one-line message for the CLI user rather than a raw</span>
+<a id="__codelineno-0-1341" name="__codelineno-0-1341"></a>        <span class="c1"># traceback — unless PYRAMIDS_DEBUG is set, which re-raises the full stack.</span>
+<a id="__codelineno-0-1342" name="__codelineno-0-1342"></a>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"PYRAMIDS_DEBUG"</span><span class="p">):</span>
+<a id="__codelineno-0-1343" name="__codelineno-0-1343"></a>            <span class="k">raise</span>
+<a id="__codelineno-0-1344" name="__codelineno-0-1344"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"error: unexpected failure: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<a id="__codelineno-0-1345" name="__codelineno-0-1345"></a>        <span class="n">result</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="__codelineno-0-1346" name="__codelineno-0-1346"></a>    <span class="k">return</span> <span class="n">result</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
