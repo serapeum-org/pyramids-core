@@ -146,6 +146,7 @@ class TestModuleExports:
         "modname, old, new_attr",
         [
             ("pyramids.netcdf.ugrid.dataset", "UgridDataset", "MeshDataset"),
+            ("pyramids.netcdf.ugrid.dataset", "UgridMetadata", "MeshMetadata"),
             ("pyramids.netcdf.ugrid.models", "UgridMetadata", "MeshMetadata"),
         ],
     )

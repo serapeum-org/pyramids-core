@@ -8035,7 +8035,10 @@ def __getattr__(name: str):
     """
     import warnings
 
-    renamed = {"UgridDataset": ("MeshDataset", MeshDataset)}
+    renamed = {
+        "UgridDataset": ("MeshDataset", MeshDataset),
+        "UgridMetadata": ("MeshMetadata", MeshMetadata),
+    }
     entry = renamed.get(name)
     if entry is not None:
         new_name, obj = entry
