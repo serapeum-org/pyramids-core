@@ -177,6 +177,23 @@ class TestModuleExports:
         ):
             getattr(mod, "definitely_not_a_name")
 
+    def test_the_old_name_imports_from_the_netcdf_package_too(self):
+        """`from pyramids.netcdf import UgridDataset` still resolves to `MeshDataset` (R1 H1).
+
+        Test scenario:
+            `pyramids.netcdf` re-exports the mesh data container and listed `UgridDataset` in its
+            `__all__` before the rename, so that top-level import path must keep working with a
+            `DeprecationWarning`, not hard-break with `ImportError`.
+        """
+        import importlib
+
+        from pyramids.netcdf.ugrid import MeshDataset
+
+        netcdf = importlib.import_module("pyramids.netcdf")
+        with pytest.warns(DeprecationWarning, match="MeshDataset"):
+            obj = netcdf.UgridDataset
+        assert obj is MeshDataset, "pyramids.netcdf.UgridDataset must alias MeshDataset"
+
     def test_the_old_network_submodule_path_still_works(self):
         """`pyramids.netcdf.ugrid.network.Network1d` resolves to `Mesh1d`, warning once."""
         import importlib
