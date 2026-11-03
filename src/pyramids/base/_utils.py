@@ -1907,6 +1907,9 @@ def reshape_as_image(arr: np.ndarray) -> np.ndarray:
     the band-last ``(rows, cols, bands)`` layout. This is the inverse of
     :func:`reshape_as_raster`. Masked arrays are preserved.
 
+    Returns a view with permuted strides (no copy); wrap it in
+    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.
+
     Args:
         arr: A 3-D ``(bands, rows, cols)`` array.
 
@@ -1940,6 +1943,9 @@ def reshape_as_raster(arr: np.ndarray) -> np.ndarray:
     The inverse of :func:`reshape_as_image`: converts image-style ``(rows, cols,
     bands)`` arrays back to the band-first ``(bands, rows, cols)`` layout GDAL and
     pyramids use. Masked arrays are preserved.
+
+    Returns a view with permuted strides (no copy); wrap it in
+    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.
 
     Args:
         arr: A 3-D ``(rows, cols, bands)`` array.
