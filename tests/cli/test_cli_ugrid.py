@@ -67,6 +67,24 @@ class TestMeshConvert:
         assert rc == 1
         assert "cannot infer a vector driver" in capsys.readouterr().err
 
+    def test_location_node(self, tmp_path):
+        """--location node converts the node-located geometries."""
+        out = str(tmp_path / "nodes.geojson")
+        rc = main(
+            [
+                "mesh",
+                "convert",
+                str(_MESH),
+                out,
+                "--var",
+                "mesh2d_node_z",
+                "--location",
+                "node",
+            ]
+        )
+        assert rc == 0
+        assert len(FeatureCollection.read_file(out)) > 0
+
 
 class TestMeshExtract:
     """`pyramids mesh extract`."""
@@ -132,3 +150,22 @@ class TestMeshExtract:
             )
             == 1
         )
+
+    def test_unknown_variable_errors(self, tmp_path, capsys):
+        """An unknown --var exits 1 with a one-line error, not a traceback."""
+        rc = main(
+            [
+                "mesh",
+                "extract",
+                str(_MESH),
+                str(tmp_path / "x.tif"),
+                "--like",
+                self._template(tmp_path),
+                "--var",
+                "does_not_exist",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert err.startswith("error: ")
+        assert "Traceback" not in err
