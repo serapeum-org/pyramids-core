@@ -8,7 +8,7 @@ inheritance that goes untested until it breaks. It did: carrying `meta_data` thr
 turned every operator on a NetCDF variable into `TypeError: 'NetCDFMetadata' object is not
 iterable`.
 
-`UgridDataset` is not a `Dataset` subclass, so it inherits none of this. That is pinned
+`MeshDataset` is not a `Dataset` subclass, so it inherits none of this. That is pinned
 here too, so the absence is a recorded fact rather than an assumption.
 """
 
@@ -23,7 +23,7 @@ import pytest
 
 from pyramids.dataset import Dataset, GeoReference
 from pyramids.netcdf.netcdf import Container, NetCDF, Variable
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -204,31 +204,31 @@ class TestTruthinessAcrossTheHierarchy:
 
 
 class TestUgridDatasetIsNotARaster:
-    """`UgridDataset` inherits none of this, and that is the recorded contract."""
+    """`MeshDataset` inherits none of this, and that is the recorded contract."""
 
     def test_it_is_not_a_dataset_subclass(self):
         """An unstructured mesh is not a grid, so it gets no raster operators.
 
         Test scenario:
-            Nothing raster may enter `UgridDataset`'s MRO and no cell-by-cell operator may
-            be inherited. The mesh does mix in its own facade base (`_UgridFacades`, itself
+            Nothing raster may enter `MeshDataset`'s MRO and no cell-by-cell operator may
+            be inherited. The mesh does mix in its own facade base (`_MeshFacades`, itself
             straight off `object`), so this pins the invariant that actually matters rather
             than the shape of the MRO: every base is either `object` or mesh-owned, `Dataset`
             is absent, and each arithmetic/comparison dunder is still `object`'s. That is
-            what stops a future `UgridDataset(Dataset)` from silently inheriting operators
+            what stops a future `MeshDataset(Dataset)` from silently inheriting operators
             with no meaning on a mesh — and it is strictly stronger than the old
             `__mro__[1:] == (object,)` check on the operator question, since `Dataset` does
             override these dunders (asserted below).
         """
-        assert not issubclass(UgridDataset, Dataset)
-        assert Dataset not in UgridDataset.__mro__
+        assert not issubclass(MeshDataset, Dataset)
+        assert Dataset not in MeshDataset.__mro__
         assert all(
             base is object or base.__module__.startswith("pyramids.netcdf.ugrid")
-            for base in UgridDataset.__mro__[1:]
+            for base in MeshDataset.__mro__[1:]
         )
         operators = ("__add__", "__sub__", "__mul__", "__truediv__", "__ge__", "__lt__")
         for dunder in operators:
-            assert getattr(UgridDataset, dunder, None) is getattr(object, dunder, None)
+            assert getattr(MeshDataset, dunder, None) is getattr(object, dunder, None)
         # The guard above is only meaningful because Dataset really does override them.
         assert any(
             getattr(Dataset, dunder, None) is not getattr(object, dunder, None)
@@ -251,7 +251,7 @@ class TestUgridDatasetIsNotARaster:
             Two meshes give Python's own TypeError rather than a half-working answer, so
             a caller reaching for raster arithmetic on a mesh finds out immediately.
         """
-        mesh = UgridDataset.read_file(UGRID_SAMPLE)
+        mesh = MeshDataset.read_file(UGRID_SAMPLE)
 
         with pytest.raises(TypeError):
             apply_operator(mesh, mesh)
@@ -264,7 +264,7 @@ class TestUgridDatasetIsNotARaster:
             A mesh is an ordinary object, so `if mesh:` still works — the breaking change
             is scoped to rasters.
         """
-        mesh = UgridDataset.read_file(UGRID_SAMPLE)
+        mesh = MeshDataset.read_file(UGRID_SAMPLE)
 
         assert bool(mesh) is True
         assert mesh is not None

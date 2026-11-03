@@ -6,17 +6,17 @@ SCHISM, FVCOM, ADCIRC).
 
 ## Architecture
 
-`UgridDataset` is a standalone class that does **not** inherit from
+`MeshDataset` is a standalone class that does **not** inherit from
 `Dataset` or `RasterBase`. Unstructured meshes have no
 geotransform, rows, or columns. Instead, data is indexed by topology
 elements (nodes, faces, edges).
 
-`UgridDataset` holds a `Mesh2d` (the topology), a `dict[str, MeshVariable]` (the data on nodes / faces
+`MeshDataset` holds a `Mesh2d` (the topology), a `dict[str, MeshVariable]` (the data on nodes / faces
 / edges), and a `MeshTopologyInfo`. `Mesh2d` in turn holds several `Connectivity` arrays:
 
 ```mermaid
 classDiagram
-    class UgridDataset {
+    class MeshDataset {
       +mesh : Mesh2d
       +data_variable_names
       +n_node / n_face / n_edge
@@ -45,9 +45,9 @@ classDiagram
       +sel_time(i)
     }
     class MeshTopologyInfo
-    UgridDataset *-- Mesh2d : mesh
-    UgridDataset o-- MeshVariable : data_variables
-    UgridDataset o-- MeshTopologyInfo
+    MeshDataset *-- Mesh2d : mesh
+    MeshDataset o-- MeshVariable : data_variables
+    MeshDataset o-- MeshTopologyInfo
     Mesh2d *-- Connectivity : face_node / edge_node / ...
 ```
 
@@ -57,7 +57,7 @@ worlds on demand — rasterize with `to_dataset`, vectorize with `to_geodatafram
 
 ```mermaid
 flowchart LR
-    F[(".nc UGRID file")] -->|read_file| U["UgridDataset"]
+    F[(".nc UGRID file")] -->|read_file| U["MeshDataset"]
     U -->|"to_dataset(var, cell_size)"| R["Dataset (raster)"]
     U -->|"to_geodataframe · to_feature_collection"| GDF["GeoDataFrame /<br/>FeatureCollection"]
     U -->|"plot · plot_outline"| G(["cleopatra MeshGlyph"])
@@ -67,10 +67,10 @@ flowchart LR
 ## Quick Start
 
 ```python
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 # Read a UGRID file
-ds = UgridDataset.read_file("model_output.nc")
+ds = MeshDataset.read_file("model_output.nc")
 print(ds)
 
 # Access mesh topology
@@ -99,7 +99,7 @@ reprojected = ds.to_crs(4326)
 
 | Module | Description |
 |--------|-------------|
-| [dataset](dataset.md) | `UgridDataset` main entry point |
+| [dataset](dataset.md) | `MeshDataset` main entry point |
 | [mesh](mesh.md) | `Mesh2d` topology class |
 | [connectivity](connectivity.md) | `Connectivity` array wrapper |
 | [spatial](spatial.md) | Spatial indexing, clipping, subsetting |

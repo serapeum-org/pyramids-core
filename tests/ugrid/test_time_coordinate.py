@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.dataset import (
     TIME_CALENDAR_ATTR,
     TIME_UNITS_ATTR,
@@ -28,7 +28,7 @@ _TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 def _temporal_mesh(stamps=None, units=None, calendar="standard"):
     """A two-face mesh with a 3-step variable, optionally carrying CF time metadata."""
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,
@@ -56,7 +56,7 @@ class TestTimeCoordinateName:
 
     def test_none_when_nothing_is_temporal(self):
         """A static-only dataset has no time coordinate to look for."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -85,7 +85,7 @@ class TestRoundTrip:
         ds = _temporal_mesh(stamps, "seconds since 2020-03-01 00:00:00")
         path = tmp_path / "stamped.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert [str(v) for v in back.time_values] == [str(v) for v in stamps]
 
     def test_units_and_calendar_survive(self, tmp_path):
@@ -97,7 +97,7 @@ class TestRoundTrip:
         ds = _temporal_mesh(stamps, "days since 2020-01-01 00:00:00")
         path = tmp_path / "units.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         attrs = back["depth"].attributes
         assert "days since" in str(attrs.get(TIME_UNITS_ATTR))
         assert attrs.get(TIME_CALENDAR_ATTR) == "standard"
@@ -114,7 +114,7 @@ class TestRoundTrip:
         ds = _temporal_mesh(stamps, "days since 2020-01-01 00:00:00", calendar="noleap")
         path = tmp_path / "noleap.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back["depth"].attributes.get(TIME_CALENDAR_ATTR) == "noleap"
         assert len(back.time_values) == 3
 
@@ -127,12 +127,12 @@ class TestPositionalFallback:
         ds = _temporal_mesh()  # no stamps, no units
         path = tmp_path / "plain.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.time_values == [0, 1, 2]
 
     def test_a_static_mesh_is_untouched(self, tmp_path):
         """No time dimension at all: nothing to decode, nothing to write."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -141,7 +141,7 @@ class TestPositionalFallback:
         )
         path = tmp_path / "static.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.time_values is None
 
 
@@ -158,7 +158,7 @@ class TestResampleUnblocked:
         ds = _temporal_mesh(stamps, "seconds since 2020-01-01 00:00:00")
         path = tmp_path / "resample.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         hourly = back.resample("1h", how="mean")
         assert hourly["depth"].n_time_steps == 2
 
@@ -189,7 +189,7 @@ class TestFittedDimensionNames:
         match the time-name patterns, or the fallback bug comes straight back."""
         from pyramids.netcdf.ugrid.dataset import _fitted_dimensions
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -205,7 +205,7 @@ class TestFittedDimensionNames:
         name of its own - and it must not look like a time axis either."""
         from pyramids.netcdf.ugrid.dataset import _fitted_dimensions
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -218,7 +218,7 @@ class TestFittedDimensionNames:
 
     def test_a_fit_result_never_reports_a_time_axis(self):
         """The property the naming exists to guarantee, asserted end to end."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -261,7 +261,7 @@ class TestDecodingIsBestEffort:
         Asserted against the exact dates, not merely "not an int" - a float offset would
         satisfy that and the guard would pass while nothing had decoded.
         """
-        read = UgridDataset.read_file(str(self._written(tmp_path)))
+        read = MeshDataset.read_file(str(self._written(tmp_path)))
         stamps = read.time_values
         assert [str(value)[:10] for value in stamps] == [
             "2001-01-01",
@@ -291,7 +291,7 @@ class TestDecodingIsBestEffort:
             raise error
 
         monkeypatch.setattr(ugrid_dataset, "decode_cf_time", exploding)
-        read = UgridDataset.read_file(str(path))
+        read = MeshDataset.read_file(str(path))
         assert read is not None, "a failed decode must not fail the read"
         stamps = read.time_values
         assert stamps is not None
@@ -315,7 +315,7 @@ class TestWritingIsBestEffortToo:
         path = tmp_path / "unencodable.nc"
         ds.to_file(str(path))
         assert path.stat().st_size > 0, "the mesh still wrote"
-        read = UgridDataset.read_file(str(path))
+        read = MeshDataset.read_file(str(path))
         assert read["depth"].n_time_steps == 3, "the data survived"
         assert read.time_values == [0, 1, 2], (
             f"with no coordinate written, the read falls back to positions; got "
@@ -327,7 +327,7 @@ class TestWritingIsBestEffortToo:
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 2001-01-01")
         path = tmp_path / "unencodable2.nc"
         ds.to_file(str(path))
-        read = UgridDataset.read_file(str(path))
+        read = MeshDataset.read_file(str(path))
         assert np.allclose(read["depth"].data, [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
 
 
@@ -358,7 +358,7 @@ class TestSilentLossIsWarned:
         with pytest.warns(UserWarning):
             ds.to_file(str(path))
         assert path.stat().st_size > 0
-        assert UgridDataset.read_file(str(path))["depth"].n_time_steps == 3
+        assert MeshDataset.read_file(str(path))["depth"].n_time_steps == 3
 
     def test_a_successful_write_warns_about_nothing(self, tmp_path):
         """The ordinary path must stay quiet."""
@@ -384,7 +384,7 @@ class TestWriterTimeDimensionName:
 
     def test_a_non_default_axis_name_still_writes_its_stamps(self):
         """The stamps survive - under the writer's "time" axis, not the source's name."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -404,7 +404,7 @@ class TestWriterTimeDimensionName:
         ds = _temporal_mesh(stamps=list(stamps), units="days since 2001-01-01")
         path = tmp_path / "default_axis.nc"
         ds.to_file(str(path))
-        read = UgridDataset.read_file(str(path))
+        read = MeshDataset.read_file(str(path))
         assert [str(value)[:10] for value in read.time_values] == [
             "2001-01-01",
             "2001-01-02",
@@ -491,7 +491,7 @@ class TestRoundTripWithoutHandSetDimensions:
     @staticmethod
     def _from_arrays_with_stamps():
         """A dataset built the way a caller builds one: no `.dimensions` assignment."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -513,7 +513,7 @@ class TestRoundTripWithoutHandSetDimensions:
         """Was `[0, 1, 2]`, with nothing written and nothing warned."""
         path = tmp_path / "from_arrays.nc"
         self._from_arrays_with_stamps().to_file(str(path))
-        read = UgridDataset.read_file(str(path))
+        read = MeshDataset.read_file(str(path))
         assert [str(value)[:10] for value in read.time_values] == [
             "2020-03-01",
             "2020-03-02",

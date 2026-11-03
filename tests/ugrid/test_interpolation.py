@@ -1,7 +1,7 @@
 """Unit tests for pyramids.netcdf.ugrid.interpolation.
 
 Covers mesh_to_grid nearest-neighbor and linear interpolation,
-and the to_dataset() bridge method on UgridDataset.
+and the to_dataset() bridge method on MeshDataset.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import pytest
 
 from pyramids.dataset import Dataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshTopologyInfo, MeshVariable
@@ -198,7 +198,7 @@ class TestMeshToGridLinear:
 
 
 class TestToDataset:
-    """Tests for UgridDataset.to_dataset() method (UGRID-12)."""
+    """Tests for MeshDataset.to_dataset() method (UGRID-12)."""
 
     def test_to_dataset_basic(self, ugrid_convention_nc_path):
         """Test to_dataset produces a pyramids Dataset.
@@ -207,7 +207,7 @@ class TestToDataset:
             Should return a Dataset with correct dimensions.
         """
 
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         raster = ds.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert isinstance(raster, Dataset), f"Expected Dataset, got {type(raster)}"
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
@@ -219,7 +219,7 @@ class TestToDataset:
         Test scenario:
             cell_size=500 should be reflected in the Dataset.
         """
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         raster = ds.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert abs(raster.cell_size - 500.0) < 1e-6, (
             f"Expected cell_size 500, got {raster.cell_size}"
@@ -232,7 +232,7 @@ class TestToDataset:
             Linear method should produce a smoother result.
         """
 
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         raster = ds.to_dataset("mesh2d_node_z", cell_size=1000.0, method="linear")
         assert isinstance(raster, Dataset), f"Expected Dataset, got {type(raster)}"
 
@@ -242,7 +242,7 @@ class TestToDataset:
         Test scenario:
             Should raise KeyError.
         """
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
         with pytest.raises(KeyError):
             ds.to_dataset("nonexistent", cell_size=500.0)
 

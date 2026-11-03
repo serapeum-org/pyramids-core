@@ -1,13 +1,13 @@
-# UgridDataset — Complete Method Reference
+# MeshDataset — Complete Method Reference
 
-`UgridDataset` exposes 143 public methods and 19 properties. Many are
-inherited from the `_UgridFacades` mixin and do not appear directly on
+`MeshDataset` exposes 143 public methods and 19 properties. Many are
+inherited from the `_MeshFacades` mixin and do not appear directly on
 the class definition, making them hard to discover via code search or
 LLM introspection. This page lists **every** public method and property
 grouped by category.
 
-> **Source files**: methods marked **(F)** live on `_UgridFacades`
-> (`_facades.py`); those marked **(D)** live directly on `UgridDataset`
+> **Source files**: methods marked **(F)** live on `_MeshFacades`
+> (`_facades.py`); those marked **(D)** live directly on `MeshDataset`
 > (`dataset.py`).
 
 ---
@@ -28,7 +28,7 @@ grouped by category.
 | `n_face` | **(D)** | Number of mesh faces |
 | `n_edge` | **(D)** | Number of mesh edges |
 | `data_vars` | **(D)** | Copy of the `{name: MeshVariable}` mapping |
-| `metadata` | **(D)** | Full metadata summary (`UgridMetadata`) |
+| `metadata` | **(D)** | Full metadata summary (`MeshMetadata`) |
 | `time_values` | **(D)** | Parsed time coordinate values, or `None` |
 | `volume_topology` | **(D)** | Ragged vertical layering, or `None` |
 | `n_volume` | **(D)** | Total number of 3-D volumes, or `None` |
@@ -93,7 +93,7 @@ grouped by category.
 
 ## Mapping Interface
 
-`UgridDataset` implements the read-only `Mapping` protocol:
+`MeshDataset` implements the read-only `Mapping` protocol:
 
 | Method | Source | Description |
 |--------|--------|-------------|

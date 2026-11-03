@@ -22,7 +22,7 @@ matplotlib.use("Agg")
 
 from unittest.mock import patch  # noqa: E402
 
-from pyramids.netcdf.ugrid import UgridDataset  # noqa: E402
+from pyramids.netcdf.ugrid import MeshDataset  # noqa: E402
 
 pytestmark = pytest.mark.plot
 
@@ -32,7 +32,7 @@ _FACES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
 def _mesh(epsg=32636):
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -88,7 +88,7 @@ class TestCrsGuard:
 
     def test_a_mesh_without_a_crs_is_refused(self):
         """Mirrors `plot`: a CRS-less mesh raises rather than mis-placing the tiles."""
-        no_crs = UgridDataset.from_arrays(
+        no_crs = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,

@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -30,7 +30,7 @@ class TestFullLifecycle:
             6. Verify the Dataset has valid data.
         """
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
             face_node_connectivity=np.array(
@@ -51,7 +51,7 @@ class TestFullLifecycle:
         ds.to_file(out_path)
         assert out_path.exists(), "Step 2 failed: file not created"
 
-        ds2 = UgridDataset.read_file(out_path)
+        ds2 = MeshDataset.read_file(out_path)
         assert ds2.n_face == 4, f"Step 3 failed: expected 4 faces, got {ds2.n_face}"
         assert "temperature" in ds2.data_variable_names, (
             "Step 3 failed: temperature variable missing"
@@ -79,7 +79,7 @@ class TestFullLifecycle:
             Create mesh, convert to GeoDataFrame, verify polygon count
             and data values match.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -102,7 +102,7 @@ class TestFullLifecycle:
             Create mesh in UTM, reproject to WGS84, then interpolate
             to a regular grid.
         """
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([500000.0, 500100.0, 500050.0]),
             node_y=np.array([5600000.0, 5600000.0, 5600100.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -122,7 +122,7 @@ class TestFullLifecycle:
         Test scenario:
             Read -> subset -> to_dataset -> verify raster dimensions.
         """
-        ds = UgridDataset.read_file(ugrid_convention_nc_path)
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
 
         xmin, ymin, xmax, ymax = ds.bounds
         mid_x = (xmin + xmax) / 2

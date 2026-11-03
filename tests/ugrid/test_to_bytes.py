@@ -1,16 +1,16 @@
-"""Tests for UgridDataset.to_bytes."""
+"""Tests for MeshDataset.to_bytes."""
 
 from __future__ import annotations
 
 import pytest
 
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from tests.ugrid.conftest import make_two_triangle_ds
 
 pytestmark = pytest.mark.core
 
 
-def _make_ds() -> UgridDataset:
+def _make_ds() -> MeshDataset:
     ds = make_two_triangle_ds()
     ds.set_crs(epsg=4326)
     return ds
@@ -28,6 +28,6 @@ class TestToBytes:
         data = ds.to_bytes()
         out = tmp_path / "roundtrip.nc"
         out.write_bytes(data)
-        loaded = UgridDataset.read_file(str(out))
+        loaded = MeshDataset.read_file(str(out))
         assert loaded.n_face == ds.n_face
         assert loaded.n_node == ds.n_node

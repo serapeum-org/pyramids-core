@@ -5,7 +5,7 @@ clipping by polygon, and bounding box subsetting.
 
 `MeshSpatialIndex` wraps a `Mesh2d` and builds its KD-trees / STRtree lazily on first query. The
 module-level `clip_mesh` / `subset_by_bounds` functions use it to return a new `(Mesh2d, data)` pair —
-they back `UgridDataset.clip` and `UgridDataset.subset_by_bounds`:
+they back `MeshDataset.clip` and `MeshDataset.subset_by_bounds`:
 
 ```mermaid
 classDiagram

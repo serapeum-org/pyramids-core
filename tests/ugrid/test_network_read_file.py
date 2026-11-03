@@ -1,9 +1,9 @@
-"""Driver dispatch for `Network1d.read_file` (issue #1351).
+"""Driver dispatch for `Mesh1d.read_file` (issue #1351).
 
 A NetCDF suffix short-circuits ahead of driver discovery inside `_detected_read_driver`, so a
 `.nc` carrying a 1D network never reached the plugin able to read it: `can_open` was not
-called even once. `UgridDataset.read_file` recovers from that short-circuit through
-`_netcdf_fallback_driver`; these tests cover `Network1d.read_file` doing the same, and the
+called even once. `MeshDataset.read_file` recovers from that short-circuit through
+`_netcdf_fallback_driver`; these tests cover `Mesh1d.read_file` doing the same, and the
 error message it raises when nothing claims the file.
 """
 
@@ -17,7 +17,7 @@ from pyramids.netcdf.ugrid._drivers import (
     MESH_DRIVER_API_VERSION,
     UnsupportedMeshFormatError,
 )
-from pyramids.netcdf.ugrid.network import Network1d
+from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 
 pytestmark = pytest.mark.core
 
@@ -67,20 +67,20 @@ class NetworkNetcdfDriver:
             lazy: Accepted and ignored.
 
         Returns:
-            Network1d: A 4-node, 3-edge chain.
+            Mesh1d: A 4-node, 3-edge chain.
         """
         self.read_calls.append((path, mesh_name))
-        return Network1d.from_arrays(*CHAIN)
+        return Mesh1d.from_arrays(*CHAIN)
 
 
 class SurfaceNetcdfDriver(NetworkNetcdfDriver):
-    """A `.nc` driver that returns a surface mesh, so `Network1d` must refuse what it gets."""
+    """A `.nc` driver that returns a surface mesh, so `Mesh1d` must refuse what it gets."""
 
     name = "surf2d"
     long_name = "Surface mesh in NetCDF (fake)"
 
     def read(self, path: str, mesh_name: str | None = None, lazy: bool = True):
-        """Return a `UgridDataset`, which is the wrong type for this entry point.
+        """Return a `MeshDataset`, which is the wrong type for this entry point.
 
         Args:
             path: The file to read.
@@ -88,7 +88,7 @@ class SurfaceNetcdfDriver(NetworkNetcdfDriver):
             lazy: Accepted and ignored.
 
         Returns:
-            UgridDataset: A two-triangle surface mesh.
+            MeshDataset: A two-triangle surface mesh.
         """
         from tests.ugrid.conftest import make_two_triangle_ds
 
@@ -141,8 +141,8 @@ class TestNetcdfFallback:
             without the driver's `can_open` being called at all.
         """
         driver = registered(NetworkNetcdfDriver())
-        result = Network1d.read_file(netcdf_path)
-        assert isinstance(result, Network1d), f"got {type(result).__name__}"
+        result = Mesh1d.read_file(netcdf_path)
+        assert isinstance(result, Mesh1d), f"got {type(result).__name__}"
         assert (result.n_node, result.n_edge) == (4, 3)
         assert driver.sniffed == [str(netcdf_path)], (
             f"can_open should be consulted exactly once, got {driver.sniffed}"
@@ -154,7 +154,7 @@ class TestNetcdfFallback:
     def test_mesh_name_is_forwarded_through_the_fallback(self, netcdf_path, registered):
         """The fallback route forwards `mesh_name`, as the named-driver route does."""
         driver = registered(NetworkNetcdfDriver())
-        Network1d.read_file(netcdf_path, mesh_name="network1d")
+        Mesh1d.read_file(netcdf_path, mesh_name="network1d")
         assert driver.read_calls == [(str(netcdf_path), "network1d")]
 
     def test_an_explicit_driver_still_bypasses_detection(self, netcdf_path, registered):
@@ -166,8 +166,8 @@ class TestNetcdfFallback:
             fix, and it must keep working without a `can_open` round trip.
         """
         driver = registered(NetworkNetcdfDriver())
-        result = Network1d.read_file(netcdf_path, driver="net1d")
-        assert isinstance(result, Network1d)
+        result = Mesh1d.read_file(netcdf_path, driver="net1d")
+        assert isinstance(result, Mesh1d)
         assert driver.sniffed == [], (
             f"an explicit driver should not be sniffed, got {driver.sniffed}"
         )
@@ -177,8 +177,8 @@ class TestNetcdfFallback:
     ):
         """The fallback does not weaken the type check at the end of the read."""
         registered(SurfaceNetcdfDriver())
-        with pytest.raises(UnsupportedMeshFormatError, match="not a Network1d"):
-            Network1d.read_file(netcdf_path)
+        with pytest.raises(UnsupportedMeshFormatError, match="not a Mesh1d"):
+            Mesh1d.read_file(netcdf_path)
 
     def test_a_reserved_driver_name_is_refused_with_the_documented_reason(
         self, netcdf_path, registered
@@ -194,7 +194,7 @@ class TestNetcdfFallback:
         """
         registered(NetworkNetcdfDriver())
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(netcdf_path, driver="ugrid")
+            Mesh1d.read_file(netcdf_path, driver="ugrid")
         message = str(caught.value)
         assert "ugrid" in message
         assert "2D mesh" in message or "Mesh2d" in message, (
@@ -219,7 +219,7 @@ class TestNetcdfFallback:
         with pytest.raises(
             UnsupportedMeshFormatError, match="built-in UGRID reader"
         ) as caught:
-            Network1d.read_file(netcdf_path, driver="UGRID")
+            Mesh1d.read_file(netcdf_path, driver="UGRID")
         assert "'UGRID'" in str(caught.value), (
             f"the name is echoed as spelled, got: {caught.value}"
         )
@@ -245,7 +245,7 @@ class TestNetcdfFallback:
         absent = tmp_path / "absent_net.nc"
         kwargs = {} if driver is None else {"driver": driver}
         with pytest.raises(FileNotFoundError):
-            Network1d.read_file(absent, **kwargs)
+            Mesh1d.read_file(absent, **kwargs)
 
     def test_a_directory_is_reported_as_a_directory(self, tmp_path, registered):
         """An unclaimed directory must not be reported as a missing plugin (M3).
@@ -253,7 +253,7 @@ class TestNetcdfFallback:
         Test scenario:
             `_require_existing_file` deliberately lets a directory through, because Esri TIN
             is a directory format, and its docstring says the fallback path reports one as a
-            directory. That arm lives on `UgridDataset`'s GDAL fallback; `Network1d` has no
+            directory. That arm lives on `MeshDataset`'s GDAL fallback; `Mesh1d` has no
             built-in read to fall back to, so an unclaimed directory fell out of the
             no-driver message -- whose one imperative line, "Install a mesh driver plugin",
             cannot fix having passed a directory.
@@ -262,7 +262,7 @@ class TestNetcdfFallback:
         a_dir = tmp_path / "a_dir"
         a_dir.mkdir()
         with pytest.raises(IsADirectoryError) as caught:
-            Network1d.read_file(a_dir)
+            Mesh1d.read_file(a_dir)
         assert "directory" in str(caught.value), (
             f"the message must name the real problem, got: {caught.value}"
         )
@@ -285,7 +285,7 @@ class TestNetcdfFallback:
         driver = registered(DirectoryDriver())
         a_dir = tmp_path / "tin_dir_input"
         a_dir.mkdir()
-        result = Network1d.read_file(a_dir)
+        result = Mesh1d.read_file(a_dir)
         assert (result.n_node, result.n_edge) == (4, 3)
         assert driver.read_calls, "the claiming driver must still be used"
 
@@ -299,7 +299,7 @@ class TestNoDriverMessage:
         """A driver that declines the file produces a message naming the way through.
 
         Test scenario:
-            The old message sent the caller to `UgridDataset.read_file`, which refuses a
+            The old message sent the caller to `MeshDataset.read_file`, which refuses a
             network by design and sends them straight back — a loop naming neither `driver=`
             nor the drivers installed.
         """
@@ -323,7 +323,7 @@ class TestNoDriverMessage:
 
         registered(DecliningDriver())
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(netcdf_path)
+            Mesh1d.read_file(netcdf_path)
         message = str(caught.value)
         assert "as a 1D network" in message
         assert "declines" in message, "a driver claiming the suffix must be listed"
@@ -341,7 +341,7 @@ class TestNoDriverMessage:
         """With no drivers at all the message asks for one rather than naming a call."""
         registered()
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(netcdf_path)
+            Mesh1d.read_file(netcdf_path)
         message = str(caught.value)
         assert "none installed" in message
         assert "Install a mesh driver plugin" in message
@@ -353,12 +353,12 @@ class TestNoDriverMessage:
         """A path that does not exist reports as missing, not as an unsupported format."""
         registered(NetworkNetcdfDriver())
         with pytest.raises(FileNotFoundError):
-            Network1d.read_file(tmp_path / "absent_net.nc")
+            Mesh1d.read_file(tmp_path / "absent_net.nc")
 
     def test_a_non_netcdf_suffix_gets_no_surface_mesh_pointer(
         self, tmp_path, registered
     ):
-        """The `UgridDataset.read_file` line is for a NetCDF suffix only.
+        """The `MeshDataset.read_file` line is for a NetCDF suffix only.
 
         Test scenario:
             The pointer exists because a `.nc` handed to the 1D entry point is most likely a
@@ -370,12 +370,12 @@ class TestNoDriverMessage:
         target = tmp_path / "channels.2dm"
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(target)
+            Mesh1d.read_file(target)
         message = str(caught.value)
         assert "'.2dm'" in message, f"the suffix must be named, got:\n{message}"
         assert "surface mesh" not in message, (
             f"a .2dm cannot be read by the built-in UGRID reader, so pointing at "
-            f"UgridDataset.read_file would be misleading; got:\n{message}"
+            f"MeshDataset.read_file would be misleading; got:\n{message}"
         )
         assert "Install a mesh driver plugin" in message, (
             f"nothing claims '.2dm' here, so a plugin is the way forward; got:\n{message}"
@@ -391,10 +391,10 @@ class TestResultsOnlyDriver:
         """A results-only driver must not send a network caller to `attach_data` (L10).
 
         Test scenario:
-            `_needs_mesh_error` was written for `UgridDataset.read_file`, so its recipe is
-            `mesh = UgridDataset.read_file(...)` then `mesh.attach_data(...)`. Reached from
-            `Network1d.read_file` that is wrong twice over: the caller asked for a network,
-            and `Network1d` has no `attach_data` at all.
+            `_needs_mesh_error` was written for `MeshDataset.read_file`, so its recipe is
+            `mesh = MeshDataset.read_file(...)` then `mesh.attach_data(...)`. Reached from
+            `Mesh1d.read_file` that is wrong twice over: the caller asked for a network,
+            and `Mesh1d` has no `attach_data` at all.
         """
 
         class ResultsOnlyDriver(NetworkNetcdfDriver):
@@ -405,20 +405,20 @@ class TestResultsOnlyDriver:
             capabilities = frozenset({"needs_mesh", "read_data"})
 
         registered(ResultsOnlyDriver())
-        assert not hasattr(Network1d, "attach_data"), (
-            "the premise of this test is that Network1d has no attach_data"
+        assert not hasattr(Mesh1d, "attach_data"), (
+            "the premise of this test is that Mesh1d has no attach_data"
         )
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(netcdf_path)
+            Mesh1d.read_file(netcdf_path)
         message = str(caught.value)
         assert "no attach_data" in message, (
             f"the message must say why the usual recipe does not apply, got:\n{message}"
         )
-        assert "UgridDataset.read_file" in message, (
+        assert "MeshDataset.read_file" in message, (
             f"it must still name where the mesh comes from, got:\n{message}"
         )
         assert "mesh.attach_data" not in message, (
-            f"the UgridDataset recipe must not be offered to a network caller, "
+            f"the MeshDataset recipe must not be offered to a network caller, "
             f"got:\n{message}"
         )
 
@@ -434,7 +434,7 @@ class TestResultsOnlyDriver:
 
         Test scenario:
             Round 1 threaded `expected` through `_netcdf_fallback_driver` only. A
-            `Network1d` caller reaches `_resolve_read_driver` first, and for a non-NetCDF
+            `Mesh1d` caller reaches `_resolve_read_driver` first, and for a non-NetCDF
             suffix that is the route the refusal comes from -- the fallback returns early.
             The `needs_mesh` formats `_drivers.py` itself names are an SMS `.dat`, an XMDF
             and an XDMF, none of which is NetCDF, so the unpatched arm was the principal
@@ -453,13 +453,13 @@ class TestResultsOnlyDriver:
         target = tmp_path / filename
         target.write_bytes(b"")
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            Network1d.read_file(target)
+            Mesh1d.read_file(target)
         message = str(caught.value)
         assert "no attach_data" in message, (
             f"the {suffix} arm must say why the usual recipe does not apply; got:"
             f"\n{message}"
         )
         assert "mesh.attach_data" not in message, (
-            f"the UgridDataset recipe must not reach a network caller on the {suffix} "
+            f"the MeshDataset recipe must not reach a network caller on the {suffix} "
             f"arm; got:\n{message}"
         )

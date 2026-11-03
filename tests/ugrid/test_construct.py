@@ -13,7 +13,7 @@ import pytest
 from shapely.geometry import Polygon
 
 from pyramids.dataset import Dataset, GeoReference
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.construct import (
     from_dataset,
     from_geodataframe,
@@ -74,9 +74,9 @@ class TestFromStructured:
         assert np.all(areas > 0), areas
 
     def test_positive_face_areas_via_mesh(self, north_up_dataset: Dataset):
-        """The assembled UgridDataset reports positive (non-degenerate) face areas."""
+        """The assembled MeshDataset reports positive (non-degenerate) face areas."""
         node_x, node_y, fnc, data = from_structured(north_up_dataset)
-        uds = UgridDataset.from_arrays(
+        uds = MeshDataset.from_arrays(
             node_x, node_y, fnc, data=data, epsg=north_up_dataset.epsg
         )
         assert uds.n_face == 9
@@ -95,7 +95,7 @@ class TestFromStructured:
         ``arr[r, c]`` at that centroid.
         """
         node_x, node_y, fnc, data = from_structured(north_up_dataset)
-        uds = UgridDataset.from_arrays(
+        uds = MeshDataset.from_arrays(
             node_x, node_y, fnc, data=data, epsg=north_up_dataset.epsg
         )
         cx, cy = uds.mesh.face_centroids
@@ -109,7 +109,7 @@ class TestFromStructured:
     def test_crs_carried_from_source(self, north_up_dataset: Dataset):
         """The CRS the facade carries comes from the source dataset EPSG."""
         node_x, node_y, fnc, data = from_structured(north_up_dataset)
-        uds = UgridDataset.from_arrays(
+        uds = MeshDataset.from_arrays(
             node_x, node_y, fnc, data=data, epsg=north_up_dataset.epsg
         )
         assert uds.epsg == 4326
@@ -193,7 +193,7 @@ class TestFromGeoDataFrame:
         gdf = self._two_quads()
         node_x, node_y, fnc, data = from_geodataframe(gdf)
         epsg = gdf.crs.to_epsg()
-        uds = UgridDataset.from_arrays(node_x, node_y, fnc, data=data, epsg=epsg)
+        uds = MeshDataset.from_arrays(node_x, node_y, fnc, data=data, epsg=epsg)
         recovered = uds.to_geodataframe()
         assert len(recovered) == 2
         for original, built in zip(gdf.geometry, recovered.geometry):
@@ -203,7 +203,7 @@ class TestFromGeoDataFrame:
         """The EPSG flows from gdf.crs into the assembled dataset."""
         gdf = self._two_quads()
         node_x, node_y, fnc, data = from_geodataframe(gdf)
-        uds = UgridDataset.from_arrays(
+        uds = MeshDataset.from_arrays(
             node_x, node_y, fnc, data=data, epsg=gdf.crs.to_epsg()
         )
         assert uds.epsg == 4326

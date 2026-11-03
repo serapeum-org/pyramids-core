@@ -1,6 +1,6 @@
 """Unit tests for pyramids.netcdf.ugrid.models.
 
-Covers MeshTopologyInfo, MeshVariable, and UgridMetadata dataclasses
+Covers MeshTopologyInfo, MeshVariable, and MeshMetadata dataclasses
 with comprehensive scenario coverage. Targets >=95% line+branch coverage.
 
 Style: Google-style docstrings, <=120 char lines, descriptive assertion messages.
@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid.models import MeshTopologyInfo, MeshVariable, UgridMetadata
+from pyramids.netcdf.ugrid.models import MeshMetadata, MeshTopologyInfo, MeshVariable
 
 pytestmark = pytest.mark.core
 
@@ -609,7 +609,7 @@ class TestMeshVariable:
 
 
 class TestUgridMetadata:
-    """Tests for the UgridMetadata frozen dataclass."""
+    """Tests for the MeshMetadata frozen dataclass."""
 
     def test_init_defaults(self):
         """Test construction with default values.
@@ -617,7 +617,7 @@ class TestUgridMetadata:
         Test scenario:
             All fields should have sensible defaults.
         """
-        meta = UgridMetadata()
+        meta = MeshMetadata()
         assert meta.mesh_topologies == (), (
             f"Expected empty tuple, got {meta.mesh_topologies}"
         )
@@ -636,7 +636,7 @@ class TestUgridMetadata:
         """Test construction with a mesh topology and data variables.
 
         Test scenario:
-            Full UgridMetadata with a single 2D mesh topology.
+            Full MeshMetadata with a single 2D mesh topology.
         """
         topo = MeshTopologyInfo(
             mesh_name="mesh2d",
@@ -644,7 +644,7 @@ class TestUgridMetadata:
             node_x_var="node_x",
             node_y_var="node_y",
         )
-        meta = UgridMetadata(
+        meta = MeshMetadata(
             mesh_topologies=(topo,),
             data_variables={"water_level": "face"},
             global_attributes={"Conventions": "CF-1.8 UGRID-1.0"},
@@ -668,22 +668,22 @@ class TestUgridMetadata:
         assert meta.n_edges == 200, f"Expected n_edges 200, got {meta.n_edges}"
 
     def test_frozen_immutability(self):
-        """Test that UgridMetadata is immutable.
+        """Test that MeshMetadata is immutable.
 
         Test scenario:
             Attempting to set an attribute should raise FrozenInstanceError.
         """
-        meta = UgridMetadata()
+        meta = MeshMetadata()
         with pytest.raises(AttributeError):
             meta.n_nodes = 42
 
     def test_equality(self):
-        """Test equality between identical UgridMetadata instances.
+        """Test equality between identical MeshMetadata instances.
 
         Test scenario:
-            Two UgridMetadata objects with the same values should be equal.
+            Two MeshMetadata objects with the same values should be equal.
         """
         kwargs = {"conventions": "CF-1.8", "n_nodes": 10, "n_faces": 5, "n_edges": 15}
-        m1 = UgridMetadata(**kwargs)
-        m2 = UgridMetadata(**kwargs)
-        assert m1 == m2, "Identical UgridMetadata objects should be equal"
+        m1 = MeshMetadata(**kwargs)
+        m2 = MeshMetadata(**kwargs)
+        assert m1 == m2, "Identical MeshMetadata objects should be equal"

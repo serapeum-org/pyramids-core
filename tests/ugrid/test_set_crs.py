@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.set_crs and the Mesh2d CRS setter."""
+"""Tests for MeshDataset.set_crs and the Mesh2d CRS setter."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import pytest
 from pyproj import CRS
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from tests.ugrid.conftest import make_single_triangle_ds as _crs_less_dataset
 
@@ -146,7 +146,7 @@ class TestSetCrsPreservesData:
 
 class TestSetCrsOverwrite:
     def test_overwrite_existing_crs(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),

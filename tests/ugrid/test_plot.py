@@ -15,7 +15,7 @@ mesh_glyph = pytest.importorskip(
     "cleopatra.glyphs.gridded.mesh_glyph", reason="cleopatra not installed"
 )
 MeshGlyph = mesh_glyph.MeshGlyph
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.plot import plot_mesh_data, plot_mesh_outline
 
 pytestmark = pytest.mark.plot
@@ -123,11 +123,11 @@ class TestPlotMeshOutline:
 
 @pytest.mark.plot
 class TestUgridDatasetPlotMethods:
-    """Tests for UgridDataset.plot() and plot_outline()."""
+    """Tests for MeshDataset.plot() and plot_outline()."""
 
     def test_dataset_plot_returns_mesh_glyph(self):
-        """Test UgridDataset.plot() returns MeshGlyph."""
-        ds = UgridDataset.from_arrays(
+        """Test MeshDataset.plot() returns MeshGlyph."""
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -138,8 +138,8 @@ class TestUgridDatasetPlotMethods:
         assert isinstance(result, MeshGlyph), f"Expected MeshGlyph, got {type(result)}"
 
     def test_dataset_plot_outline_returns_mesh_glyph(self):
-        """Test UgridDataset.plot_outline() returns MeshGlyph."""
-        ds = UgridDataset.from_arrays(
+        """Test MeshDataset.plot_outline() returns MeshGlyph."""
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -148,11 +148,11 @@ class TestUgridDatasetPlotMethods:
         assert isinstance(result, MeshGlyph), f"Expected MeshGlyph, got {type(result)}"
 
     def test_dataset_plot_routes_through_mesh_render(self):
-        """N-6 — UgridDataset.plot dispatches via the shared helper.
+        """N-6 — MeshDataset.plot dispatches via the shared helper.
 
         Test scenario:
             Patch ``pyramids.dataset._plot_helpers.mesh_render`` and
-            verify ``UgridDataset.plot`` goes through it. The patched
+            verify ``MeshDataset.plot`` goes through it. The patched
             helper records the call args so the test asserts both that
             the data flows through and that the same single-backend
             abstraction now serves raster (``render_array``) and mesh
@@ -160,7 +160,7 @@ class TestUgridDatasetPlotMethods:
         """
         from unittest.mock import patch
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -173,7 +173,7 @@ class TestUgridDatasetPlotMethods:
         ) as mock_render:
             result = ds.plot("depth")
         assert result == "sentinel", (
-            f"UgridDataset.plot must return mesh_render result, got {result!r}"
+            f"MeshDataset.plot must return mesh_render result, got {result!r}"
         )
         mock_render.assert_called_once()
         kw = mock_render.call_args.kwargs
@@ -187,12 +187,12 @@ class TestUgridDatasetPlotMethods:
             Patch ``mesh_render`` and verify the helper receives the
             exact mesh topology and data array from the dataset, plus
             forwarded ``cmap``/``basemap``/``basemap_epsg`` kwargs. This
-            guards the contract that ``UgridDataset.plot`` is a thin
+            guards the contract that ``MeshDataset.plot`` is a thin
             facade over the shared backend.
         """
         from unittest.mock import patch
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -221,7 +221,7 @@ class TestUgridDatasetPlotMethods:
         """``basemap=True`` on a CRS-less dataset raises before dispatch.
 
         Test scenario:
-            ``UgridDataset.plot`` short-circuits the basemap path when
+            ``MeshDataset.plot`` short-circuits the basemap path when
             ``self.epsg is None`` to surface the missing CRS error with
             a UGRID-specific message. ``_mesh_render`` must not be
             entered at all. Patch the ``epsg`` property to ``None`` to
@@ -229,7 +229,7 @@ class TestUgridDatasetPlotMethods:
         """
         from unittest.mock import patch
 
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -237,7 +237,7 @@ class TestUgridDatasetPlotMethods:
             data_locations={"depth": "face"},
         )
         with patch.object(
-            UgridDataset, "epsg", new_callable=lambda: property(lambda s: None)
+            MeshDataset, "epsg", new_callable=lambda: property(lambda s: None)
         ):
             with patch(
                 "pyramids.netcdf.ugrid.dataset._mesh_render",
@@ -262,9 +262,9 @@ class TestMeshStyleHillshade:
 
     @staticmethod
     def _dataset(location="face"):
-        """Build a single-face UgridDataset carrying a ``depth`` variable."""
+        """Build a single-face MeshDataset carrying a ``depth`` variable."""
         data = np.array([5.0]) if location == "face" else np.array([0.0, 1.0, 2.0])
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -276,7 +276,7 @@ class TestMeshStyleHillshade:
         not _mesh_supports_style, reason="cleopatra < 0.24 has no MeshGlyph style"
     )
     def test_dataset_plot_style_renders(self):
-        """``UgridDataset.plot(data_style=DataStyle(style=...))`` renders a styled mesh."""
+        """``MeshDataset.plot(data_style=DataStyle(style=...))`` renders a styled mesh."""
         from cleopatra.styling.params import DataStyle
 
         result = self._dataset("face").plot(
@@ -328,7 +328,7 @@ class TestMeshStyleHillshade:
         assert data_style.hillshade is True
 
     def test_data_style_forwarded_to_mesh_render(self):
-        """``UgridDataset.plot`` forwards a ``data_style=DataStyle`` to the helper.
+        """``MeshDataset.plot`` forwards a ``data_style=DataStyle`` to the helper.
 
         The loose ``style`` / ``hillshade`` kwargs were removed (they now raise); the
         typed ``data_style`` group is what reaches ``_mesh_render``.
@@ -357,13 +357,13 @@ class TestMeshStyleHillshade:
         reason="cleopatra < 0.25 has no MeshGlyph.apply_style()",
     )
     def test_returned_mesh_glyph_supports_apply_style(self):
-        """The glyph from ``UgridDataset.plot`` can be restyled in place (0.25).
+        """The glyph from ``MeshDataset.plot`` can be restyled in place (0.25).
 
         Test scenario:
             cleopatra 0.25 adds ``MeshGlyph.apply_style(style)`` and a ``style``
             read-back. pyramids returns the raw glyph, so a caller can re-apply a
             preset by name without rebuilding — verify the round trip through the
-            ``UgridDataset.plot`` facade.
+            ``MeshDataset.plot`` facade.
         """
         from cleopatra.styling.params import DataStyle
 
@@ -376,18 +376,18 @@ class TestMeshStyleHillshade:
 
 
 class TestUgridPlotAlignment:
-    """The raster-family plot params (colorbar/points/kind) on ``UgridDataset.plot``.
+    """The raster-family plot params (colorbar/points/kind) on ``MeshDataset.plot``.
 
-    ``UgridDataset.plot`` shares the raster plot signature; ``colorbar`` maps onto the
+    ``MeshDataset.plot`` shares the raster plot signature; ``colorbar`` maps onto the
     mesh backend while ``points`` / ``kind`` have no mesh meaning and are accepted but
     ignored.
     """
 
     @staticmethod
     def _dataset(location="face"):
-        """Build a single-face UgridDataset carrying a ``depth`` variable."""
+        """Build a single-face MeshDataset carrying a ``depth`` variable."""
         data = np.array([5.0]) if location == "face" else np.array([0.0, 1.0, 2.0])
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -399,7 +399,7 @@ class TestUgridPlotAlignment:
         """An explicit ``colorbar`` forwards through to ``MeshGlyph.plot``.
 
         Test scenario:
-            ``UgridDataset.plot(colorbar=ColorBar(...))`` must forward the spec down
+            ``MeshDataset.plot(colorbar=ColorBar(...))`` must forward the spec down
             the facade -> mesh_render -> plot_mesh_data -> ``MeshGlyph.plot`` chain.
         """
         from cleopatra.styling.colorbar import ColorBar
@@ -450,7 +450,7 @@ class TestUgridPlotAlignment:
 
 
 class TestUgridGroupParams:
-    """Typed render groups (color/contour/data_style) on ``UgridDataset.plot``.
+    """Typed render groups (color/contour/data_style) on ``MeshDataset.plot``.
 
     ``MeshGlyph.plot`` accepts ``color`` / ``contour`` / ``data_style`` (no ``cells``);
     the facade forwards them when set, and an explicit group wins over the loose kwargs.
@@ -458,9 +458,9 @@ class TestUgridGroupParams:
 
     @staticmethod
     def _dataset(location="face"):
-        """Build a single-face UgridDataset carrying a ``depth`` variable."""
+        """Build a single-face MeshDataset carrying a ``depth`` variable."""
         data = np.array([5.0]) if location == "face" else np.array([0.0, 1.0, 2.0])
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 0.5]),
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),

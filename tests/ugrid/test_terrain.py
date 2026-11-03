@@ -8,7 +8,7 @@ and aspect are known analytically, and pin the raster conventions the mesh versi
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 pytestmark = pytest.mark.core
 
@@ -19,7 +19,7 @@ _FACES = np.array([[0, 1, 2], [1, 2, 3]])
 
 def _dem(node_z, location="node"):
     """A two-triangle mesh carrying ``node_z`` as the elevation."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_FACES,
@@ -111,7 +111,7 @@ class TestInputLocations:
 
     def test_an_edge_located_elevation_is_refused(self):
         """There is no defined route from edges to the nodes the plane fit needs."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -122,7 +122,7 @@ class TestInputLocations:
             ds.slope()
 
     def test_a_temporal_elevation_is_refused(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_FACES,
@@ -138,7 +138,7 @@ class TestDegenerateFaces:
 
     def test_collinear_nodes_give_nan(self):
         """Three points on a line define no plane, so the gradient is undefined."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0]),  # all collinear
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -150,7 +150,7 @@ class TestDegenerateFaces:
 
     def test_a_degenerate_face_does_not_poison_its_neighbours(self):
         """The NaN must stay local to the face that has no plane."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0, 1.0]),
             node_y=np.array([0.0, 0.0, 0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [1, 2, 4]]),
@@ -189,7 +189,7 @@ _QUADS = np.array([[0, 1, 4, 3], [1, 2, 5, 4]])
 
 def _void_dem(values, location="node", nodata=-9999.0):
     """A two-quad DEM carrying a declared sentinel."""
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_QUAD_X,
         node_y=_QUAD_Y,
         face_node_connectivity=_QUADS,
@@ -232,7 +232,7 @@ class TestNodataIsNotTerrain:
 
     def test_no_declared_nodata_leaves_every_face_defined(self):
         """Without a sentinel nothing is masked, so a plain DEM is unaffected."""
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_QUAD_X,
             node_y=_QUAD_Y,
             face_node_connectivity=_QUADS,

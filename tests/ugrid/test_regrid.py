@@ -7,7 +7,7 @@ Covers the four B-epic capabilities implemented purely in numpy/scipy/shapely:
 - :func:`interp_time` (B4) — temporal interpolation onto new time labels.
 - :class:`Regridder` (B3) — overlap / conservative / centroid / barycentric mesh->mesh regridding.
 
-All fixtures are small meshes built with :meth:`UgridDataset.from_arrays`.
+All fixtures are small meshes built with :meth:`MeshDataset.from_arrays`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.regrid import Regridder, interp_time, rasterize_like, sample
 
 pytestmark = pytest.mark.core
@@ -37,7 +37,7 @@ def _two_triangle_dataset(node_values=None, face_values=None, epsg=4326):
     if face_values is not None:
         data["f"] = np.asarray(face_values, dtype=np.float64)
         locations["f"] = "face"
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=node_x,
         node_y=node_y,
         face_node_connectivity=faces,
@@ -60,7 +60,7 @@ def _grid_2x2(face_values=None, epsg=4326):
         else None
     )
     locations = {"v": "face"} if face_values is not None else None
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=node_x,
         node_y=node_y,
         face_node_connectivity=faces,
@@ -75,7 +75,7 @@ def _single_quad_mesh(x0, y0, x1, y1):
     node_x = np.array([x0, x1, x1, x0])
     node_y = np.array([y0, y0, y1, y1])
     faces = np.array([[0, 1, 2, 3]], dtype=np.intp)
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=node_x, node_y=node_y, face_node_connectivity=faces
     ).mesh
 
@@ -314,7 +314,7 @@ class TestRegridder:
         node_x = np.array([0.0, 2.0, 2.0, 0.0, 10.0, 11.0, 11.0, 10.0])
         node_y = np.array([0.0, 0.0, 2.0, 2.0, 10.0, 10.0, 11.0, 11.0])
         faces = np.array([[0, 1, 2, 3], [4, 5, 6, 7]], dtype=np.intp)
-        target = UgridDataset.from_arrays(
+        target = MeshDataset.from_arrays(
             node_x=node_x, node_y=node_y, face_node_connectivity=faces
         ).mesh
         got = Regridder(source.mesh, target, method="overlap").regrid(source["v"].data)

@@ -1,6 +1,6 @@
 """A mesh whose CRS is WKT-only must still be usable.
 
-`UgridDataset` describes its CRS with a WKT string copied from the file. A
+`MeshDataset` describes its CRS with a WKT string copied from the file. A
 projected CRS often has no EPSG code to resolve back to, so `epsg` is `None`
 while the mesh plainly has a CRS. Two methods took `self.epsg` as the whole
 answer: `to_dataset` fell back to EPSG:4326 and stamped degrees onto metre
@@ -15,7 +15,7 @@ from pyproj import CRS
 
 from pyramids.base._errors import CRSError
 from pyramids.base.crs import sr_from_epsg
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.models import MeshVariable
 
 pytestmark = pytest.mark.core
@@ -34,13 +34,13 @@ ORTHO_WKT = (
 
 
 @pytest.fixture
-def wkt_only_projected_mesh(triangle_mesh) -> UgridDataset:
+def wkt_only_projected_mesh(triangle_mesh) -> MeshDataset:
     """A mesh carrying a projected WKT and no EPSG code.
 
     Self-asserting: the fixture is worthless if the CRS ever resolves to an
     EPSG code, because the branch under test would stop being reached.
     """
-    dataset = UgridDataset(
+    dataset = MeshDataset(
         mesh=triangle_mesh,
         data_variables={
             "h": MeshVariable(
@@ -63,7 +63,7 @@ def wkt_only_projected_mesh(triangle_mesh) -> UgridDataset:
 class TestCrsWktProperty:
     """`crs_wkt` exposes the WKT only when it parses."""
 
-    def test_a_parseable_wkt_is_returned(self, wkt_only_projected_mesh: UgridDataset):
+    def test_a_parseable_wkt_is_returned(self, wkt_only_projected_mesh: MeshDataset):
         """A mesh with a usable CRS hands back its WKT."""
         assert wkt_only_projected_mesh.crs_wkt == ORTHO_WKT
 
@@ -75,7 +75,7 @@ class TestCrsWktProperty:
         `_crs_wkt` verbatim would hand the broken string to callers and move
         the parse out from under that handler.
         """
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=triangle_mesh,
             data_variables={},
             global_attributes={},
@@ -87,7 +87,7 @@ class TestCrsWktProperty:
 
     def test_a_mesh_without_a_crs_has_no_wkt(self, triangle_mesh):
         """No CRS at all means no WKT."""
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=triangle_mesh, data_variables={}, global_attributes={}
         )
 
@@ -98,7 +98,7 @@ class TestWktOnlyMeshIsUsable:
     """The two methods that previously took `epsg` as the whole answer."""
 
     def test_to_dataset_does_not_relabel_a_projected_mesh_as_wgs84(
-        self, wkt_only_projected_mesh: UgridDataset
+        self, wkt_only_projected_mesh: MeshDataset
     ):
         """A projected mesh keeps its own CRS instead of defaulting to 4326.
 
@@ -110,7 +110,7 @@ class TestWktOnlyMeshIsUsable:
         assert result.epsg != 4326, "projected mesh was relabelled as WGS84"
 
     def test_to_crs_reprojects_a_wkt_only_mesh(
-        self, wkt_only_projected_mesh: UgridDataset
+        self, wkt_only_projected_mesh: MeshDataset
     ):
         """Reprojection works from a CRS described only by WKT.
 
@@ -123,7 +123,7 @@ class TestWktOnlyMeshIsUsable:
 
     def test_a_mesh_with_no_crs_still_refuses_to_reproject(self, triangle_mesh):
         """The error is kept for the case it was written for."""
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=triangle_mesh, data_variables={}, global_attributes={}
         )
 
@@ -131,7 +131,7 @@ class TestWktOnlyMeshIsUsable:
             dataset.to_crs(4326)
 
     def test_str_reports_the_crs_name_when_there_is_no_epsg_code(
-        self, wkt_only_projected_mesh: UgridDataset
+        self, wkt_only_projected_mesh: MeshDataset
     ):
         """A mesh with a CRS but no code stops printing "unknown"."""
         assert "unknown" not in str(wkt_only_projected_mesh)
@@ -150,7 +150,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             `to_dataset(...).to_file("out.tif")` would write a GeoTIFF with no
             CRS where it has always written WGS 84.
         """
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=triangle_mesh,
             data_variables={
                 "h": MeshVariable(
@@ -179,7 +179,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             `epsg is not None` branch, so an argument of 3857 has to survive
             it.
         """
-        dataset = UgridDataset(
+        dataset = MeshDataset(
             mesh=triangle_mesh,
             data_variables={
                 "h": MeshVariable(
@@ -198,7 +198,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
         assert raster.epsg == 3857
 
     def test_the_wkt_only_mesh_is_not_dragged_back_to_wgs84(
-        self, wkt_only_projected_mesh: UgridDataset
+        self, wkt_only_projected_mesh: MeshDataset
     ):
         """The fix this restores a default behind must still hold.
 
@@ -215,9 +215,9 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
 
 
 @pytest.fixture
-def wgs84_mesh(triangle_mesh) -> UgridDataset:
+def wgs84_mesh(triangle_mesh) -> MeshDataset:
     """A mesh in EPSG:4326, to reproject *to* a variety of target CRS forms."""
-    dataset = UgridDataset(
+    dataset = MeshDataset(
         mesh=triangle_mesh,
         data_variables={
             "h": MeshVariable(
@@ -238,11 +238,11 @@ def wgs84_mesh(triangle_mesh) -> UgridDataset:
 class TestToCrsTargetAcceptsAnyInput:
     """`to_crs` target takes any CRS form, not only a bare EPSG integer (#1404)."""
 
-    def test_a_bare_int_target_still_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_bare_int_target_still_reprojects(self, wgs84_mesh: MeshDataset):
         """Backward compatibility: the historical `int` spelling is unchanged."""
         assert wgs84_mesh.to_crs(3857).epsg == 3857
 
-    def test_an_authority_string_target_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_an_authority_string_target_reprojects(self, wgs84_mesh: MeshDataset):
         """`"EPSG:3857"` used to interpolate into the nonsense `EPSG:EPSG:3857`.
 
         Test scenario:
@@ -252,7 +252,7 @@ class TestToCrsTargetAcceptsAnyInput:
         """
         assert wgs84_mesh.to_crs("EPSG:3857").epsg == 3857
 
-    def test_a_proj4_target_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_proj4_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A PROJ4 string reaches the transformer instead of `EPSG:+proj=robin`."""
         result = wgs84_mesh.to_crs("+proj=robin")
 
@@ -260,13 +260,13 @@ class TestToCrsTargetAcceptsAnyInput:
         assert result.crs is not None, "the result must carry a CRS"
         assert result.crs.is_projected, "Robinson is a projected CRS"
 
-    def test_a_wkt_target_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_wkt_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A WKT target used to become `EPSG:PROJCRS[...]`."""
         result = wgs84_mesh.to_crs(CRS.from_epsg(3857).to_wkt())
 
         assert result.epsg == 3857
 
-    def test_a_target_without_an_epsg_code_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_target_without_an_epsg_code_reprojects(self, wgs84_mesh: MeshDataset):
         """A no-EPSG target exercises *both* call sites the bug touched (#1404).
 
         Test scenario:
@@ -284,9 +284,7 @@ class TestToCrsTargetAcceptsAnyInput:
         )
         assert "Robinson" in result.crs.name
 
-    def test_an_epsg_target_keeps_the_full_authority_wkt(
-        self, wgs84_mesh: UgridDataset
-    ):
+    def test_an_epsg_target_keeps_the_full_authority_wkt(self, wgs84_mesh: MeshDataset):
         """The stored WKT for a coded target is unchanged from before #1404 (L1).
 
         Test scenario:
@@ -306,16 +304,16 @@ class TestToCrsTargetAcceptsAnyInput:
             "a coded string target must get the same full WKT as the bare int"
         )
 
-    def test_a_bare_numeric_string_target_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_bare_numeric_string_target_reprojects(self, wgs84_mesh: MeshDataset):
         """`"3857"` is advertised in the docstring; exercise it at the to_crs level (L2)."""
         assert wgs84_mesh.to_crs("3857").epsg == 3857
 
-    def test_a_pyproj_crs_object_target_reprojects(self, wgs84_mesh: UgridDataset):
+    def test_a_pyproj_crs_object_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A `pyproj.CRS` is advertised; exercise it at the to_crs level (L2)."""
         assert wgs84_mesh.to_crs(CRS.from_epsg(3857)).epsg == 3857
 
     def test_a_gdal_only_epsg_code_keeps_its_authority_in_the_wkt(
-        self, wgs84_mesh: UgridDataset
+        self, wgs84_mesh: MeshDataset
     ):
         """A code only GDAL's PROJ database knows must survive in the stored WKT (R2 H1).
 
@@ -338,7 +336,7 @@ class TestToCrsTargetAcceptsAnyInput:
         )
 
     def test_an_uninterpretable_target_is_refused_without_a_doubled_prefix(
-        self, wgs84_mesh: UgridDataset
+        self, wgs84_mesh: MeshDataset
     ):
         """A bad target names what the caller passed, not a prefixed `EPSG:` version."""
         with pytest.raises(CRSError) as caught:

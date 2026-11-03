@@ -2,7 +2,7 @@
 
 Three findings the second review round raised. `permute_faces` claimed in a comment to copy what
 it carries over but aliased the edge connectivity, so a write through the result reached the input
-mesh. `Network1d.topology_subset` let the `-1` fill through `np.unique`, and numpy's negative
+mesh. `Mesh1d.topology_subset` let the `-1` fill through `np.unique`, and numpy's negative
 indexing then addressed the *last* node — turning a padded edge row into a real edge. And an empty
 mesh reached scipy, which refuses a 0x0 matrix.
 """
@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import Network1d, graph
+from pyramids.netcdf.ugrid import Mesh1d, graph
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
@@ -42,9 +42,9 @@ def square() -> Mesh2d:
 
 
 @pytest.fixture
-def chain() -> Network1d:
+def chain() -> Mesh1d:
     """A four-node chain whose last edge row is padded."""
-    return Network1d(
+    return Mesh1d(
         node_x=np.array([0.0, 1.0, 2.0, 3.0]),
         node_y=np.zeros(4),
         edge_node_connectivity=np.array([[0, 1], [1, 2], [2, -1]]),
@@ -106,7 +106,7 @@ class TestEmptyInputs:
         assert graph.reverse_cuthill_mckee(empty).tolist() == []
 
     def test_an_empty_network_refuses_bounds(self):
-        empty = Network1d(
+        empty = Mesh1d(
             node_x=np.array([]),
             node_y=np.array([]),
             edge_node_connectivity=np.empty((0, 2), dtype=np.intp),

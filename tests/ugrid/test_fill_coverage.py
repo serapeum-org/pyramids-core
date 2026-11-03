@@ -16,7 +16,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.fill import fill_na_spatial, laplace_interpolate
 from pyramids.netcdf.ugrid.mesh import Mesh2d
@@ -65,7 +65,7 @@ def _quad_grid(
 def _grid_mesh(nx: int, ny: int) -> Mesh2d:
     """Return the :class:`Mesh2d` of a regular ``nx`` by ``ny`` quad grid, with no derived tables."""
     node_x, node_y, faces = _quad_grid(nx, ny)
-    return UgridDataset.from_arrays(node_x, node_y, faces).mesh
+    return MeshDataset.from_arrays(node_x, node_y, faces).mesh
 
 
 def _connectivity(data: np.ndarray, cf_role: str) -> Connectivity:
@@ -136,7 +136,7 @@ def disjoint_grids() -> Mesh2d:
     second_x, second_y, second_faces = _quad_grid(
         2, 2, x0=20.0, node_offset=len(first_x)
     )
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         np.concatenate([first_x, second_x]),
         np.concatenate([first_y, second_y]),
         np.concatenate([first_faces, second_faces], axis=0),

@@ -14,7 +14,7 @@ flowchart TB
         direction LR
         DS["<b>pyramids.dataset</b><br/>Dataset · DatasetCollection · RasterBase<br/>engines · ops · cog · merge"]
         NC["<b>pyramids.netcdf</b><br/>NetCDF · CF conventions · kerchunk"]
-        UG["<b>pyramids.netcdf.ugrid</b><br/>UgridDataset · Mesh2d"]
+        UG["<b>pyramids.netcdf.ugrid</b><br/>MeshDataset · Mesh2d"]
         FC["<b>pyramids.feature</b><br/>FeatureCollection · Coords"]
     end
 
@@ -67,7 +67,7 @@ flowchart TB
 - `pyramids.netcdf`
   - `NetCDF` (extends Dataset for NetCDF files, classic + multidimensional),
     plus CF-convention support, kerchunk side-cars, and an MFDataset reader.
-  - `pyramids.netcdf.ugrid` — `UgridDataset` (UGRID-1.0 unstructured meshes,
+  - `pyramids.netcdf.ugrid` — `MeshDataset` (UGRID-1.0 unstructured meshes,
     triangles / quads / mixed) and an interpolation pathway to `Dataset`.
 - `pyramids.feature`
   - `FeatureCollection` (GeoPandas + OGR DataSource hybrid) and the
@@ -94,7 +94,7 @@ flowchart TB
 - `pyramids.dataset.Dataset`
 - `pyramids.dataset.DatasetCollection`
 - `pyramids.netcdf.NetCDF`
-- `pyramids.netcdf.ugrid.UgridDataset`
+- `pyramids.netcdf.ugrid.MeshDataset`
 - `pyramids.feature.FeatureCollection`
 
 ## Representative Public API
@@ -125,7 +125,7 @@ flowchart TB
 
 - External data (GeoTIFF / ASC / NetCDF / Vector) → `pyramids._io` /
   `pyramids.base.remote` parsers → `Dataset` / `NetCDF` / `FeatureCollection` /
-  `UgridDataset` instances.
+  `MeshDataset` instances.
 - `DatasetCollection` orchestrates collections of `Dataset` for temporal
   / spatial ops; the cube is lazy by default (per-timestep gdal handles
   open on demand, dask graph for time-axis ops).
@@ -167,7 +167,7 @@ classDiagram
     +read_array(band, window, unpack)
     +time_stamp
   }
-  class UgridDataset {
+  class MeshDataset {
     +mesh
     +read_file(path)
     +to_dataset(...)
@@ -216,7 +216,7 @@ classDiagram
   Dataset *-- "1" Vectorize : ds.vectorize
   Dataset *-- "1" COG : ds.cog
   DatasetCollection o-- "N" Dataset : per-timestep
-  UgridDataset ..> Dataset : interpolate
+  MeshDataset ..> Dataset : interpolate
   FeatureCollection ..> Dataset : rasterize
   Dataset ..> FeatureCollection : vectorize
 ```

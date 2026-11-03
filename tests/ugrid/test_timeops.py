@@ -1,4 +1,4 @@
-"""Tests for the UgridDataset along-time family (Phase 3B).
+"""Tests for the MeshDataset along-time family (Phase 3B).
 
 reduce / mean / sum / … / cumsum / shift / ffill / bfill / interpolate_na / rolling on an
 in-memory mesh with a temporal face variable. These reuse the shared pure kernels in
@@ -11,12 +11,12 @@ import numpy as np
 import pytest
 
 from pyramids.base._errors import AlignmentError
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
-def _temporal_mesh(data: np.ndarray) -> UgridDataset:
+def _temporal_mesh(data: np.ndarray) -> MeshDataset:
     """Two-face mesh carrying one temporal variable ``d`` of shape (n_time, 2)."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -26,7 +26,7 @@ def _temporal_mesh(data: np.ndarray) -> UgridDataset:
 
 
 @pytest.fixture
-def mesh() -> UgridDataset:
+def mesh() -> MeshDataset:
     return _temporal_mesh(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
 
 
@@ -45,7 +45,7 @@ class TestReduce:
     def test_no_temporal_variable_raises(self):
         static = _temporal_mesh(np.array([[1.0, 2.0]]))  # single step -> still temporal
         # A genuinely static mesh: build one with a 1-D variable.
-        flat = UgridDataset.from_arrays(
+        flat = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -85,7 +85,7 @@ class TestTransforms:
 
 class TestFill:
     @pytest.fixture
-    def gappy(self) -> UgridDataset:
+    def gappy(self) -> MeshDataset:
         return _temporal_mesh(np.array([[1.0, 2.0], [np.nan, np.nan], [5.0, 6.0]]))
 
     def test_ffill(self, gappy):
@@ -112,7 +112,7 @@ class TestFill:
     def test_interpolate_na_rejects_unknown_method_up_front(self):
         # The method is validated before the time check, so a bogus method is rejected as such
         # even on a mesh with no temporal variable (where the time check would otherwise mask it).
-        static = UgridDataset.from_arrays(
+        static = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -155,7 +155,7 @@ class TestRolling:
 
 class TestSelection:
     @pytest.fixture
-    def four(self) -> UgridDataset:
+    def four(self) -> MeshDataset:
         return _temporal_mesh(
             np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]])
         )
@@ -205,8 +205,8 @@ class TestSelection:
 
 
 class TestConcatMerge:
-    def _mesh(self, data: np.ndarray, name: str = "d") -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def _mesh(self, data: np.ndarray, name: str = "d") -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -248,7 +248,7 @@ class TestConcatMerge:
 
     def test_different_topology_raises(self):
         a = self._mesh(np.array([[1.0, 2.0]]))
-        other = UgridDataset.from_arrays(
+        other = MeshDataset.from_arrays(
             node_x=np.array([0.0, 2.0, 2.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -261,8 +261,8 @@ class TestConcatMerge:
 
 class TestMappingSurface:
     @pytest.fixture
-    def mesh(self) -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def mesh(self) -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -290,8 +290,8 @@ class TestMappingSurface:
 
 class TestVariableManagement:
     @pytest.fixture
-    def mesh(self) -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def mesh(self) -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -328,8 +328,8 @@ class TestVariableManagement:
 
 
 class TestLabelSelection:
-    def _mesh(self, data: np.ndarray, time_values: list | None = None) -> UgridDataset:
-        m = UgridDataset.from_arrays(
+    def _mesh(self, data: np.ndarray, time_values: list | None = None) -> MeshDataset:
+        m = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -373,8 +373,8 @@ class TestLabelSelection:
 
 
 class TestDropna:
-    def _mesh(self, data: np.ndarray) -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def _mesh(self, data: np.ndarray) -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -398,7 +398,7 @@ class TestDropna:
 
 class TestAlongTimeValidation:
     @pytest.fixture
-    def mesh(self) -> UgridDataset:
+    def mesh(self) -> MeshDataset:
         return _temporal_mesh(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
 
     def test_reduce_unknown_how_raises(self, mesh):
@@ -445,7 +445,7 @@ class TestReviewFixes:
 
     def test_concat_temporal_static_mismatch_raises(self):
         temporal = _temporal_mesh(np.array([[1.0, 2.0], [3.0, 4.0]]))
-        static = UgridDataset.from_arrays(
+        static = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -457,8 +457,8 @@ class TestReviewFixes:
 
 
 class TestRound2Fixes:
-    def _two_temporal(self, len_a: int, len_b: int) -> UgridDataset:
-        return UgridDataset.from_arrays(
+    def _two_temporal(self, len_a: int, len_b: int) -> MeshDataset:
+        return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -480,7 +480,7 @@ class TestRound2Fixes:
             mesh.rolling(2, "all")
 
     def test_l2_squeeze_squeezes_a_later_single_step_var(self):
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -492,7 +492,7 @@ class TestRound2Fixes:
         assert out["multi"].has_time is True
 
     def test_l3_concat_static_in_self_temporal_in_other_raises(self):
-        static = UgridDataset.from_arrays(
+        static = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

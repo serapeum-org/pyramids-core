@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.models import MeshVariable
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
@@ -25,9 +25,9 @@ TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
 @pytest.fixture
-def triangles() -> UgridDataset:
+def triangles() -> MeshDataset:
     """The unit square as two right triangles carrying one face variable."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -36,9 +36,9 @@ def triangles() -> UgridDataset:
 
 
 @pytest.fixture
-def grid() -> UgridDataset:
+def grid() -> MeshDataset:
     """A 2x2 quad grid carrying one face variable, for the raster facades."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
         node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]),
         face_node_connectivity=np.array(
@@ -49,9 +49,9 @@ def grid() -> UgridDataset:
 
 
 @pytest.fixture
-def unloaded(triangles) -> UgridDataset:
+def unloaded(triangles) -> MeshDataset:
     """The same mesh carrying a variable with neither eager data nor a loader."""
-    return UgridDataset(
+    return MeshDataset(
         mesh=triangles.mesh,
         data_variables={
             "v": MeshVariable(

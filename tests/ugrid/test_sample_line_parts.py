@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from shapely.geometry import LineString
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.vector_ops import sample_line
@@ -102,7 +102,7 @@ class TestFaceIndicesAreNotUnique:
         """
         node_x = np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0])
         node_y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0])
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=node_x,
             node_y=node_y,
             face_node_connectivity=np.array(

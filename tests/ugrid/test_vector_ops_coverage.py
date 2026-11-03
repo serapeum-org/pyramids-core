@@ -16,7 +16,7 @@ import pytest
 import shapely
 from shapely.geometry import GeometryCollection, LineString, Point
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.vector_ops import burn, polygonize, sample_line
@@ -30,7 +30,7 @@ def grid_2x2() -> Mesh2d:
     node_x = np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0])
     node_y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0])
     faces = np.array([[0, 1, 4, 3], [1, 2, 5, 4], [3, 4, 7, 6], [4, 5, 8, 7]])
-    return UgridDataset.from_arrays(node_x, node_y, faces).mesh
+    return MeshDataset.from_arrays(node_x, node_y, faces).mesh
 
 
 @pytest.fixture

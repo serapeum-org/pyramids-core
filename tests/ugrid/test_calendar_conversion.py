@@ -10,7 +10,7 @@ import cftime
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
 
 pytestmark = pytest.mark.core
@@ -27,7 +27,7 @@ def _mesh(stamps, values=None, units="days since 2000-01-01", calendar="standard
         if values is not None
         else np.arange(2.0 * len(stamps)).reshape(len(stamps), 2)
     )
-    ds = UgridDataset.from_arrays(
+    ds = MeshDataset.from_arrays(
         node_x=_NODE_X,
         node_y=_NODE_Y,
         face_node_connectivity=_TRIANGLES,
@@ -226,7 +226,7 @@ class TestInterpCalendar:
 
     def test_a_different_mesh_is_refused(self):
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 5)))
-        other = UgridDataset.from_arrays(
+        other = MeshDataset.from_arrays(
             node_x=np.array([0.0, 9.0, 9.0]),
             node_y=np.array([0.0, 0.0, 9.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
@@ -247,7 +247,7 @@ class TestStaticVariablesPassThrough:
     @staticmethod
     def _mixed():
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 3), (2001, 1, 5))
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -345,7 +345,7 @@ class TestInterpLikeCalendarMetadata:
 
     @staticmethod
     def _dated(stamps, units, calendar):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -363,7 +363,7 @@ class TestInterpLikeCalendarMetadata:
 
     @staticmethod
     def _undated(steps):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -463,7 +463,7 @@ class TestInterpLikeRefusesMixedScales:
         stamps = np.array(
             [f"2001-01-01T{hour:02d}" for hour in range(steps)], dtype="datetime64[ns]"
         )
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,
@@ -484,7 +484,7 @@ class TestInterpLikeRefusesMixedScales:
 
     @staticmethod
     def _positional(steps):
-        return UgridDataset.from_arrays(
+        return MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,

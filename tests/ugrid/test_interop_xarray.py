@@ -20,7 +20,7 @@ import pytest
 from pyramids.errors import OptionalPackageDoesNotExist
 from pyramids.netcdf.ugrid import interop_xarray
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -226,7 +226,7 @@ class TestChunkedVariables:
     def test_chunked_read_computes_matching_reduction(self):
         """A chunked read of the sample file yields dask arrays whose reduction matches eager."""
         da = pytest.importorskip("dask.array")
-        ug = UgridDataset.read_file(str(_SAMPLE_NC))
+        ug = MeshDataset.read_file(str(_SAMPLE_NC))
         data_vars = ug.data_vars
 
         chunked = interop_xarray.chunked_variables(data_vars, chunks="auto")

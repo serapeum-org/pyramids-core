@@ -1,4 +1,4 @@
-"""The capability facades `UgridDataset` exposes, as a mixin.
+"""The capability facades `MeshDataset` exposes, as a mixin.
 
 The algorithms live in focused modules — :mod:`~pyramids.netcdf.ugrid.graph` (topology and
 graph operations), :mod:`~pyramids.netcdf.ugrid.fill` (spatial gap filling),
@@ -180,8 +180,8 @@ def _numeric_stamps(stamps: Any) -> np.ndarray:
     return distances
 
 
-class _UgridFacades:
-    """Capability facades mixed into :class:`~pyramids.netcdf.ugrid.dataset.UgridDataset`."""
+class _MeshFacades:
+    """Capability facades mixed into :class:`~pyramids.netcdf.ugrid.dataset.MeshDataset`."""
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -234,7 +234,7 @@ class _UgridFacades:
                 something else entirely.
 
         Returns:
-            UgridDataset: A new dataset carrying ``values`` under ``var``'s name.
+            MeshDataset: A new dataset carrying ``values`` under ``var``'s name.
         """
         new_vars = dict(self._data_variables)  # type: ignore[attr-defined]
         array = np.asarray(values)
@@ -563,7 +563,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset whose variable carries the per-face cluster labels.
+            MeshDataset: A new dataset whose variable carries the per-face cluster labels.
 
         Raises:
             ValueError: The variable is not one value per face (select a step first).
@@ -690,7 +690,7 @@ class _UgridFacades:
                 face free to change. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with the dilated mask.
+            MeshDataset: A new dataset with the dilated mask.
         """
         var = self._facade_variable("binary_dilation", variable_name)
         grown = _graph.binary_dilation(
@@ -722,7 +722,7 @@ class _UgridFacades:
                 face free to change. Defaults to ``None``.
 
         Returns:
-            UgridDataset: A new dataset with the eroded mask.
+            MeshDataset: A new dataset with the eroded mask.
         """
         var = self._facade_variable("binary_erosion", variable_name)
         shrunk = _graph.binary_erosion(
@@ -745,7 +745,7 @@ class _UgridFacades:
             variable_name: The variable to remap, or ``None`` for the only one.
 
         Returns:
-            UgridDataset: A new dataset whose variable sits on ``location``.
+            MeshDataset: A new dataset whose variable sits on ``location``.
 
         Raises:
             ValueError: An unknown ``location``, or a remap the kernel does not offer.
@@ -804,7 +804,7 @@ class _UgridFacades:
                 (the default) is unbounded.
 
         Returns:
-            UgridDataset: A new dataset with the gaps filled.
+            MeshDataset: A new dataset with the gaps filled.
         """
         var = self._facade_variable("fill_na_spatial", variable_name)
         filled = _fill.fill_na_spatial(
@@ -833,7 +833,7 @@ class _UgridFacades:
             direct_solve: Solve directly rather than iteratively. Defaults to False.
 
         Returns:
-            UgridDataset: A new dataset with the interior gaps filled.
+            MeshDataset: A new dataset with the interior gaps filled.
         """
         var = self._facade_variable("laplace_interpolate", variable_name)
         filled = _fill.laplace_interpolate(
@@ -914,7 +914,7 @@ class _UgridFacades:
                 centroid falls inside. Defaults to True.
 
         Returns:
-            UgridDataset: A new dataset carrying the burned variable.
+            MeshDataset: A new dataset carrying the burned variable.
         """
         values = _vector_ops.burn(
             self._mesh,  # type: ignore[attr-defined]
@@ -992,7 +992,7 @@ class _UgridFacades:
                 ``"clamp"`` to hold the first/last step's value. Defaults to ``"nan"``.
 
         Returns:
-            UgridDataset: A new dataset on the requested time coordinates.
+            MeshDataset: A new dataset on the requested time coordinates.
 
         Raises:
             ValueError: No variable has a time dimension; ``method`` is neither ``"linear"``
@@ -1030,13 +1030,13 @@ class _UgridFacades:
         """Regrid a variable onto another mesh.
 
         Args:
-            target: The destination ``UgridDataset`` (its mesh is the target).
+            target: The destination ``MeshDataset`` (its mesh is the target).
             method: ``"overlap"`` (area-weighted mean), ``"conservative"`` (integral
                 preserving), ``"centroid"`` or ``"barycentric"``. Defaults to ``"overlap"``.
             variable_name: The variable to regrid, or ``None`` for the only one.
 
         Returns:
-            UgridDataset: ``target``'s mesh carrying the regridded variable.
+            MeshDataset: ``target``'s mesh carrying the regridded variable.
 
         Raises:
             ValueError: An unknown ``method``; the variable does not sit on faces (only
@@ -1113,7 +1113,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with missing values replaced.
+            MeshDataset: A new dataset with missing values replaced.
 
         See Also:
             isnull: Boolean mask of missing positions.
@@ -1132,7 +1132,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with boolean data.
+            MeshDataset: A new dataset with boolean data.
 
         See Also:
             notnull: Inverse mask (non-missing positions).
@@ -1150,7 +1150,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with boolean data.
+            MeshDataset: A new dataset with boolean data.
 
         See Also:
             isnull: Inverse mask (missing positions).
@@ -1166,7 +1166,7 @@ class _UgridFacades:
         """Clamp variable values to ``[lower, upper]``.
 
         Named ``clip_values`` to avoid collision with the spatial
-        :meth:`~pyramids.netcdf.ugrid.dataset.UgridDataset.clip` method.
+        :meth:`~pyramids.netcdf.ugrid.dataset.MeshDataset.clip` method.
 
         Args:
             lower: Minimum allowed value.
@@ -1174,7 +1174,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with clamped values.
+            MeshDataset: A new dataset with clamped values.
 
         See Also:
             round: Round values to a number of decimal places.
@@ -1192,7 +1192,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with rounded values.
+            MeshDataset: A new dataset with rounded values.
 
         See Also:
             clip_values: Clamp values to a range.
@@ -1210,7 +1210,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with the new dtype.
+            MeshDataset: A new dataset with the new dtype.
 
         See Also:
             round: Round floating-point values before an integer cast.
@@ -1243,7 +1243,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with the unselected elements masked.
+            MeshDataset: A new dataset with the unselected elements masked.
 
         See Also:
             clip_values: Clamp values to a range instead of masking outside it.
@@ -1272,7 +1272,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset carrying the transformed values.
+            MeshDataset: A new dataset carrying the transformed values.
 
         Raises:
             ValueError: ``func`` changed the array shape.
@@ -1324,7 +1324,7 @@ class _UgridFacades:
             variable_name: Variable to act on (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with boolean data.
+            MeshDataset: A new dataset with boolean data.
         """
         var = self._facade_variable("isin", variable_name)
         result = _array_ops.isin_values(np.asarray(var.data), test_values)
@@ -1392,7 +1392,7 @@ class _UgridFacades:
             sample_random: Draw spatially random samples instead of
                 querying specific coordinates.
             sample: Interpolated point sampling (existing method on
-                UgridDataset).
+                MeshDataset).
         """
         var = self._facade_variable("extract", variable_name)
         result = _analysis.extract_points(
@@ -1539,7 +1539,7 @@ class _UgridFacades:
             variable_name: Variable to sieve (default: the only one).
 
         Returns:
-            UgridDataset: A new dataset with small-region faces
+            MeshDataset: A new dataset with small-region faces
                 replaced by NaN.
 
         Raises:

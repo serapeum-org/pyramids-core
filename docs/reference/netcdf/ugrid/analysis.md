@@ -2,8 +2,8 @@
 
 Mesh-native analysis kernels: point extraction, random sampling,
 contouring, and histogram plotting. These functions operate on
-`Mesh2d` + numpy arrays and are called by the `_UgridFacades`
-mixin methods on `UgridDataset`.
+`Mesh2d` + numpy arrays and are called by the `_MeshFacades`
+mixin methods on `MeshDataset`.
 
 ::: pyramids.netcdf.ugrid.analysis
     options:

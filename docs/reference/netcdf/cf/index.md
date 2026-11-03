@@ -2,7 +2,7 @@
 
 The `cf` module provides shared infrastructure for reading and writing
 CF (Climate and Forecast) convention attributes. It is used by both the
-structured `NetCDF` class and the unstructured `UgridDataset` class.
+structured `NetCDF` class and the unstructured `MeshDataset` class.
 
 ## Key Capabilities
 
@@ -23,13 +23,13 @@ structured `NetCDF` class and the unstructured `UgridDataset` class.
 ## Capability map
 
 The `cf` module is a flat collection of helpers (no classes) shared by the structured `NetCDF` reader
-and the unstructured `UgridDataset`. They group into five roles — classification, CRS translation,
+and the unstructured `MeshDataset`. They group into five roles — classification, CRS translation,
 convention parsing, attribute writing, and value decoding/validation:
 
 ```mermaid
 flowchart TB
     NC["NetCDF"] --> CF
-    UG["UgridDataset"] --> CF
+    UG["MeshDataset"] --> CF
     subgraph CF["cf module"]
         direction TB
         CLS["classify_variables()<br/>data · coordinate · grid_mapping · bounds<br/>mesh_topology · connectivity · …"]

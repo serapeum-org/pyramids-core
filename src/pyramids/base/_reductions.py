@@ -4,7 +4,7 @@ Geometry-agnostic NumPy kernels for the along-axis operation family (reduce, rol
 shift, gap-fill, interpolate) and for weighted statistics. Every function here takes a
 NumPy (or dask) array plus integer axis/axes and nothing else — no GDAL object, no
 geotransform, no CRS, no band model — so the raster ``NetCDF`` stack, the unstructured
-``UgridDataset`` mesh, and any future non-gridded dataset can share one implementation.
+``MeshDataset`` mesh, and any future non-gridded dataset can share one implementation.
 
 The module lives in ``pyramids.base`` rather than beside ``pyramids.netcdf`` because
 ``pyramids.netcdf.netcdf`` imports ``pyramids.dataset``: importing these kernels from the

@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.domain_area and count_domain_cells."""
+"""Tests for MeshDataset.domain_area and count_domain_cells."""
 
 from __future__ import annotations
 

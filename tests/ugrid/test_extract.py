@@ -1,4 +1,4 @@
-"""Tests for UgridDataset.extract and UgridDataset.sample."""
+"""Tests for MeshDataset.extract and MeshDataset.sample."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 
 from pyramids.netcdf.ugrid.analysis import extract_points, sample_random
 from pyramids.netcdf.ugrid.connectivity import Connectivity
-from pyramids.netcdf.ugrid.dataset import UgridDataset
+from pyramids.netcdf.ugrid.dataset import MeshDataset
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
 from tests.ugrid.conftest import make_two_triangle_ds as _make_ds
@@ -61,7 +61,7 @@ class TestExtractNodeLocation:
             shape=node_vals.shape,
             _data=node_vals,
         )
-        ds = UgridDataset(
+        ds = MeshDataset(
             mesh=mesh,
             data_variables={"temp": var},
             global_attributes={},

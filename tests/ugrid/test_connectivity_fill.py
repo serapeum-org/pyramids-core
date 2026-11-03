@@ -318,7 +318,7 @@ class TestOtherNegatives:
         """Every negative is normalised, not just the declared fill (M2).
 
         Test scenario:
-            `Network1d._real_edges` already excludes all negatives, with a comment naming the
+            `Mesh1d._real_edges` already excludes all negatives, with a comment naming the
             hazard: a negative index addresses a node from the wrong end just as silently as
             the conventional fill. `Mesh2d` kept them, so `get_element(1)` returned
             `[1, 3, -5]` and `nodes_per_element()` counted -5 as a real node.
@@ -343,17 +343,17 @@ class TestPassThroughInputs:
         """A raw ndarray becomes a real table, so every member works (round 2 H2).
 
         Test scenario:
-            `Network1d(edge_node_connectivity=np.empty((0, 2)))` is what
+            `Mesh1d(edge_node_connectivity=np.empty((0, 2)))` is what
             `test_graph_network_round2.py` passes, so the input has to be accepted. Passing
             it straight through was not enough: `n_edge`, `edge_lengths`, `edge_tree`,
             `sort` and six more members all raised on the result, and `Mesh2d` rejected the
             same input from inside `__init__`. Wrapping it makes the two constructors agree
             and the object usable, which an identity assertion never checked.
         """
-        from pyramids.netcdf.ugrid.network import Network1d
+        from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 
         raw = np.array([[0, 1], [1, 2]], dtype=np.intp)
-        net = Network1d(np.array([0.0, 1.0, 2.0]), np.array([0.0, 0.0, 0.0]), raw)
+        net = Mesh1d(np.array([0.0, 1.0, 2.0]), np.array([0.0, 0.0, 0.0]), raw)
 
         stored = net.edge_node_connectivity
         assert isinstance(stored, Connectivity), f"got {type(stored).__name__}"
@@ -369,7 +369,7 @@ class TestPassThroughInputs:
 
         Test scenario:
             `Mesh2d` used to raise `AttributeError: 'numpy.ndarray' object has no attribute
-            'n_elements'` from inside `__init__` for the input `Network1d` documented as
+            'n_elements'` from inside `__init__` for the input `Mesh1d` documented as
             supported.
         """
         mesh = Mesh2d(NODE_X, NODE_Y, np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp))

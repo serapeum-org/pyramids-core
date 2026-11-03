@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf.array_options import (
     CFAttributes,
@@ -26,7 +28,7 @@ from pyramids.netcdf.plot_options import (
     FacetSpec,
     Selectors,
 )
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 __all__ = [
     "CFAttributes",
@@ -51,7 +53,35 @@ __all__ = [
     "StructuralInfo",
     "to_dict",
     "to_json",
-    "UgridDataset",
+    "MeshDataset",
     "Variable",
     "VariableInfo",
 ]
+
+
+def __getattr__(name: str):
+    """Resolve the renamed `UgridDataset` name at the `pyramids.netcdf` level, warning once.
+
+    `UgridDataset` was renamed to :class:`~pyramids.netcdf.ugrid.MeshDataset`; this top-level
+    re-export kept the old name importable for one release so `from pyramids.netcdf import
+    UgridDataset` does not break.
+
+    Args:
+        name: The attribute requested from this package.
+
+    Returns:
+        :class:`~pyramids.netcdf.ugrid.MeshDataset` for the old ``"UgridDataset"`` name.
+
+    Raises:
+        AttributeError: Any other unknown name.
+    """
+
+    if name == "UgridDataset":
+        warnings.warn(
+            "UgridDataset is renamed to MeshDataset; import MeshDataset instead. "
+            "UgridDataset will be removed in a future release (see the migration guide).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return MeshDataset
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

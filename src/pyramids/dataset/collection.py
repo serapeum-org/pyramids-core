@@ -3513,7 +3513,7 @@ class DatasetCollection:
         :meth:`plot` on a collection **is** the animation — it renders the stack of band
         slices as frames rather than a single picture. This is that method under the name the
         other classes use (:meth:`Dataset.animate`, :meth:`NetCDF.animate`,
-        :meth:`UgridDataset.animate`), so the capability is discoverable by one name across
+        :meth:`MeshDataset.animate`), so the capability is discoverable by one name across
         the four; the arguments and conventions are :meth:`plot`'s, documented there.
 
         Args:

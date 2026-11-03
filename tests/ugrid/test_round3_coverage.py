@@ -8,7 +8,7 @@ round's half-applied fixes survived as long as they did.
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid._facades import _representable
 from pyramids.netcdf.ugrid.construct import _polygon_ring, _without_repeats
 
@@ -69,7 +69,7 @@ class TestTidyFrameAxisCollisions:
 
     def _with_dims(self, values, dimensions):
         """A two-face mesh carrying `values` under `dimensions`."""
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=_NODE_X,
             node_y=_NODE_Y,
             face_node_connectivity=_TRIANGLES,

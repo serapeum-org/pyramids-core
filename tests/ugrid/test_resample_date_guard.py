@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
@@ -22,9 +22,9 @@ TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 VALUES = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
 
 
-def _dataset(time_values: list | None = None) -> UgridDataset:
+def _dataset(time_values: list | None = None) -> MeshDataset:
     """A three-step mesh variable, optionally stamped with real time coordinates."""
-    dataset = UgridDataset.from_arrays(
+    dataset = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -37,13 +37,13 @@ def _dataset(time_values: list | None = None) -> UgridDataset:
 
 
 @pytest.fixture
-def positional() -> UgridDataset:
+def positional() -> MeshDataset:
     """A dataset whose time coordinate is just step positions."""
     return _dataset()
 
 
 @pytest.fixture
-def dated() -> UgridDataset:
+def dated() -> MeshDataset:
     """A dataset spanning two calendar months."""
     return _dataset(
         [

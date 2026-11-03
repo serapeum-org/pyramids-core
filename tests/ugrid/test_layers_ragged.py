@@ -11,7 +11,7 @@ NetCDF round-trip. The uniform-layer path must stay untouched when no volume top
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset, VolumeTopology
+from pyramids.netcdf.ugrid import MeshDataset, VolumeTopology
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import MeshVariable
@@ -46,7 +46,7 @@ def _topology() -> VolumeTopology:
     )
 
 
-def _volume_dataset(data=None, topology=None) -> UgridDataset:
+def _volume_dataset(data=None, topology=None) -> MeshDataset:
     topology = topology or _topology()
     data = np.arange(6.0) if data is None else data
     dims = ("mesh2d_nVolumes",) if data.ndim == 1 else ("time", "mesh2d_nVolumes")
@@ -58,7 +58,7 @@ def _volume_dataset(data=None, topology=None) -> UgridDataset:
         dimensions=dims,
         _data=data,
     )
-    return UgridDataset(_mesh(), {"sal": var}, {}, volume_topology=topology)
+    return MeshDataset(_mesh(), {"sal": var}, {}, volume_topology=topology)
 
 
 class TestVolumeTopologyValidation:
@@ -133,7 +133,7 @@ class TestDatasetAccessors:
         assert _volume_dataset().n_layers == 3
 
     def test_a_2d_dataset_has_no_volume_topology(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -200,7 +200,7 @@ class TestCollapseLayer:
         assert out.data.tolist() == [0.0, 3.0, 4.0]
 
     def test_requires_a_volume_topology(self):
-        ds = UgridDataset.from_arrays(
+        ds = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -251,7 +251,7 @@ class TestNetcdfRoundTrip:
         ds = _volume_dataset()
         path = tmp_path / "ragged.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.volume_topology is not None
         assert back.volume_topology.layer_count.tolist() == [3, 1, 2]
         assert back.volume_topology.volume_offset.tolist() == [0, 3, 4, 6]
@@ -282,7 +282,7 @@ class TestNetcdfRoundTrip:
         ds = _volume_dataset()
         path = tmp_path / "ragged_i64.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         assert back.volume_topology.layer_count.dtype == np.int64
         assert back.volume_topology.volume_offset.dtype == np.int64
 
@@ -296,7 +296,7 @@ class TestNetcdfRoundTrip:
         ds = _volume_dataset(topology=topology)
         path = tmp_path / "ragged_z.nc"
         ds.to_file(path)
-        back = UgridDataset.read_file(path)
+        back = MeshDataset.read_file(path)
         np.testing.assert_allclose(back.volume_topology.layer_z, topology.layer_z)
         np.testing.assert_allclose(
             back.volume_topology.interface_z, topology.interface_z

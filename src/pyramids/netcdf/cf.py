@@ -3,7 +3,7 @@
 Pure functions for detecting, reading, writing, and validating
 CF convention attributes on NetCDF files. Used by both the
 structured-grid NetCDF class and the unstructured-grid
-UgridDataset class.
+MeshDataset class.
 """
 
 from __future__ import annotations

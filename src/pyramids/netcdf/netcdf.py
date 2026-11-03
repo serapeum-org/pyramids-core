@@ -5189,7 +5189,7 @@ class NetCDF(Dataset):
         `read_array` returns them.
 
         Built on the shared :func:`pyramids.base._summary.variable_summary`, so this answers in the
-        identical shape to :meth:`pyramids.netcdf.ugrid.UgridDataset.summary`.
+        identical shape to :meth:`pyramids.netcdf.ugrid.MeshDataset.summary`.
 
         Args:
             variables: Which variables to summarise, in output-row order. `None` (the default)
@@ -5290,7 +5290,7 @@ class NetCDF(Dataset):
 
         The cube could already animate, but only through ``plot(animate=...)``, where the
         capability is easy to miss. This is the same path under the name the other classes use
-        (:meth:`Dataset.animate`, :meth:`UgridDataset.animate`,
+        (:meth:`Dataset.animate`, :meth:`MeshDataset.animate`,
         :meth:`DatasetCollection.animate`), so one name finds it everywhere.
 
         The signature deliberately replaces the inherited raster one: a cube's frames come
@@ -5308,7 +5308,7 @@ class NetCDF(Dataset):
             cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``
             attribute is the :class:`matplotlib.animation.FuncAnimation` — save with
             ``glyph.anim.save("out.gif")``. Note this differs from
-            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two
+            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two
             cleopatra glyph families return different objects and pyramids passes each through
             rather than wrapping one to look like the other. **Keep a reference to it** —
             matplotlib warns and stops an animation held only as a temporary.
@@ -5324,7 +5324,7 @@ class NetCDF(Dataset):
 
         See Also:
             plot: One frame, or the same animation via ``animate=``.
-            UgridDataset.animate: The unstructured counterpart.
+            MeshDataset.animate: The unstructured counterpart.
         """
         return self.plot(
             variable=variable, animate=dim if dim is not None else True, **kwargs

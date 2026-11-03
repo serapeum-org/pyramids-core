@@ -1167,7 +1167,7 @@ def mesh_render(
     backend abstraction, one entry point per cleopatra glyph" — so the
     raster facade (:meth:`pyramids.dataset.Dataset.plot`,
     :meth:`pyramids.netcdf.NetCDF.plot`) and the mesh facade
-    (:meth:`pyramids.netcdf.ugrid.dataset.UgridDataset.plot`) now share
+    (:meth:`pyramids.netcdf.ugrid.dataset.MeshDataset.plot`) now share
     the same dispatch shape.
 
     Args:
@@ -1199,8 +1199,8 @@ def mesh_render(
 
     Examples:
         - Render a single-triangle mesh with face-centred data,
-          mirroring the dispatch :meth:`UgridDataset.plot
-          <pyramids.netcdf.ugrid.dataset.UgridDataset.plot>` performs
+          mirroring the dispatch :meth:`MeshDataset.plot
+          <pyramids.netcdf.ugrid.dataset.MeshDataset.plot>` performs
           internally. Tagged ``+SKIP`` because the call requires the
           optional ``[viz]`` extra and a real matplotlib backend:
 

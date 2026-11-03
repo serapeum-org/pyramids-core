@@ -13,20 +13,20 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _layered(counts: dict[str, int]) -> UgridDataset:
+def _layered(counts: dict[str, int]) -> MeshDataset:
     """A mesh whose variables sit on the given layer counts, with explicit dimension names."""
     data = {
         name: np.arange(float(count * 2)).reshape(count, 2)
         for name, count in counts.items()
     }
-    dataset = UgridDataset.from_arrays(
+    dataset = MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -39,7 +39,7 @@ def _layered(counts: dict[str, int]) -> UgridDataset:
 
 
 @pytest.fixture
-def centres_and_interfaces() -> UgridDataset:
+def centres_and_interfaces() -> MeshDataset:
     """Three layer centres plus four layer interfaces, as a 3-D model writes them."""
     return _layered({"salinity": 3, "w": 4})
 
@@ -72,7 +72,7 @@ class TestMixedLayerCounts:
 
 class TestLayerAxisDetection:
     def test_a_temporal_layered_variable_finds_the_middle_axis(self):
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,
@@ -88,7 +88,7 @@ class TestLayerAxisDetection:
     def test_a_variable_whose_time_dimension_is_last_has_no_layer_axis(self):
         # Time in the element slot breaks the [time?, layer?, element] layout, so no axis can
         # be claimed as the layer axis — reporting axis 0 would name the element axis.
-        dataset = UgridDataset.from_arrays(
+        dataset = MeshDataset.from_arrays(
             node_x=NODE_X,
             node_y=NODE_Y,
             face_node_connectivity=TRIANGLES,

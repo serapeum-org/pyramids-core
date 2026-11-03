@@ -1,8 +1,8 @@
 """UGRID mesh CLI command group — ``pyramids mesh …``.
 
-Thin wrappers over :class:`pyramids.netcdf.ugrid.UgridDataset`: inspect a mesh,
+Thin wrappers over :class:`pyramids.netcdf.ugrid.MeshDataset`: inspect a mesh,
 rasterize a mesh variable onto a raster grid, and convert the mesh to a vector
-layer. Phase 1 of the full UgridDataset surface (see the CLI-coverage tracker);
+layer. Phase 1 of the full MeshDataset surface (see the CLI-coverage tracker);
 no mesh logic lives here — each command maps 1:1 onto an existing method.
 """
 
@@ -18,12 +18,12 @@ from pyramids._cli_shared import (
     resolve_vector_driver,
 )
 from pyramids.dataset import Dataset
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 _HELP_MESH_FILE = "UGRID NetCDF path"
 
 
-def _validate_variable(mesh: UgridDataset, var: str | None) -> None:
+def _validate_variable(mesh: MeshDataset, var: str | None) -> None:
     """Raise a clean ``ValueError`` when ``var`` is not a data variable of ``mesh``.
 
     ``rasterize_like`` / ``to_feature_collection`` raise ``KeyError`` for an unknown
@@ -54,7 +54,7 @@ def _cmd_mesh_info(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    mesh = UgridDataset.read_file(args.file)
+    mesh = MeshDataset.read_file(args.file)
     bounds = mesh.bounds
     time_values = mesh.time_values
     payload = {
@@ -88,7 +88,7 @@ def _cmd_mesh_extract(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    mesh = UgridDataset.read_file(args.file)
+    mesh = MeshDataset.read_file(args.file)
     _validate_variable(mesh, args.var)
     template = Dataset.read_file(args.like)
     raster = mesh.rasterize_like(template, variable_name=args.var, method=args.method)
@@ -109,7 +109,7 @@ def _cmd_mesh_convert(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     driver = resolve_vector_driver(args.output, args.driver)
-    mesh = UgridDataset.read_file(args.file)
+    mesh = MeshDataset.read_file(args.file)
     _validate_variable(mesh, args.var)
     fc = mesh.to_feature_collection(variable_name=args.var, location=args.location)
     fc.to_file(args.output, driver=driver)

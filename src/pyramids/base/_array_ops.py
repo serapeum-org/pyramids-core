@@ -2,7 +2,7 @@
 
 Every function takes a plain numpy array (plus metadata like a no-data
 sentinel) and returns a plain numpy array.  No geometry, no GDAL, no
-mesh — the caller (a Dataset engine or a UgridFacades method) owns the
+mesh — the caller (a Dataset engine or a MeshFacades method) owns the
 spatial context.
 
 Same design contract as :mod:`pyramids.base._reductions`: pure numpy

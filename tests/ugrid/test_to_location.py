@@ -13,16 +13,16 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
 NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
 TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
 
 
-def _dataset(values: list[float], location: str) -> UgridDataset:
+def _dataset(values: list[float], location: str) -> MeshDataset:
     """A two-triangle mesh with one variable on `location`."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=NODE_X,
         node_y=NODE_Y,
         face_node_connectivity=TRIANGLES,
@@ -32,7 +32,7 @@ def _dataset(values: list[float], location: str) -> UgridDataset:
 
 
 @pytest.fixture
-def face_variable() -> UgridDataset:
+def face_variable() -> MeshDataset:
     """A face variable carrying the dimension names a file read would give it."""
     dataset = _dataset([10.0, 20.0], "face")
     dataset["v"].dimensions = ("mesh2d_nFaces",)

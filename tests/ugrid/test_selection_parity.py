@@ -1,16 +1,16 @@
-"""A1 — element-axis `isel` and nearest-by-label `sel` on UgridDataset."""
+"""A1 — element-axis `isel` and nearest-by-label `sel` on MeshDataset."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from pyramids.netcdf.ugrid import UgridDataset
+from pyramids.netcdf.ugrid import MeshDataset
 
 
-def _two_triangles(data: dict | None = None) -> UgridDataset:
+def _two_triangles(data: dict | None = None) -> MeshDataset:
     """A unit square split into two triangles, optionally carrying data."""
-    return UgridDataset.from_arrays(
+    return MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
@@ -18,9 +18,9 @@ def _two_triangles(data: dict | None = None) -> UgridDataset:
     )
 
 
-def _temporal(stamps: list[float]) -> UgridDataset:
+def _temporal(stamps: list[float]) -> MeshDataset:
     """A two-face mesh with a temporal variable and explicit time coordinates."""
-    mesh = UgridDataset.from_arrays(
+    mesh = MeshDataset.from_arrays(
         node_x=np.array([0.0, 1.0, 1.0, 0.0]),
         node_y=np.array([0.0, 0.0, 1.0, 1.0]),
         face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),

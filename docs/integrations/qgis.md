@@ -88,7 +88,7 @@ Processing Toolbox. Core raster & vector algorithms wrap these CLI commands:
 | Polygonize raster | `shapes` |
 | Create Cloud Optimized GeoTIFF | `cog create` |
 
-Mesh algorithms (convert mesh format, mesh → vector) wrap `UgridDataset`, and the Earth-observation algorithms
+Mesh algorithms (convert mesh format, mesh → vector) wrap `MeshDataset`, and the Earth-observation algorithms
 (contrast stretch, tasseled cap) wrap `pyramids-eo`. See the plugin's README for the up-to-date, complete list
 and its roadmap.
 

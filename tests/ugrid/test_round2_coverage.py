@@ -14,11 +14,11 @@ import pytest
 from pyproj import CRS
 from shapely.geometry import Polygon
 
-from pyramids.netcdf.ugrid import UgridDataset, graph
+from pyramids.netcdf.ugrid import MeshDataset, graph
 from pyramids.netcdf.ugrid._facades import _representable
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
-from pyramids.netcdf.ugrid.network import Network1d
+from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 from pyramids.netcdf.ugrid.regrid import _interpolate_idw, _rows_with_no_weight
 
 pytestmark = pytest.mark.core
@@ -51,7 +51,7 @@ class TestFromGeoDataFrameWithoutAnEpsgCode:
             crs=_NO_EPSG_CRS,
         )
 
-        mesh = UgridDataset.from_geodataframe(frame)
+        mesh = MeshDataset.from_geodataframe(frame)
 
         assert mesh.crs_wkt is not None, "the mesh should carry a CRS"
         assert CRS.from_wkt(mesh.crs_wkt).equals(_NO_EPSG_CRS), (
@@ -71,7 +71,7 @@ class TestFromGeoDataFrameWithoutAnEpsgCode:
             crs=_NO_EPSG_CRS,
         )
 
-        mesh = UgridDataset.from_geodataframe(frame)
+        mesh = MeshDataset.from_geodataframe(frame)
         axis = CRS.from_wkt(mesh.crs_wkt).axis_info[0]
 
         assert axis.unit_name == "metre", (
@@ -206,7 +206,7 @@ class TestRepresentableNodata:
             as `TypeError` from inside numpy, because the `np.isnan` call sat outside the
             helper's `try`.
         """
-        mesh = UgridDataset.from_arrays(
+        mesh = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 0.0, 1.0, 2.0]),
             node_y=np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 4, 3], [1, 2, 5, 4]]),
@@ -223,12 +223,12 @@ class TestRepresentableNodata:
 
 
 class TestNetworkEdgeAccessors:
-    """The per-edge accessors on `Network1d`."""
+    """The per-edge accessors on `Mesh1d`."""
 
     @pytest.fixture
     def chain(self):
         """Three nodes in a line joined by two edges."""
-        return Network1d.from_arrays(
+        return Mesh1d.from_arrays(
             np.array([0.0, 1.0, 2.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([[0, 1], [1, 2]]),
