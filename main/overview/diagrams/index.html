@@ -5363,7 +5363,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5692,14 +5692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7788,7 +7788,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     
 </div>
 <h2 id="uml-class-plotting-layer"><a class="toclink" href="#uml-class-plotting-layer">UML Class: Plotting layer</a><a class="headerlink" href="#uml-class-plotting-layer" title="Permanent link">#</a></h2>
-<p><code>Dataset.plot</code> / <code>NetCDF.plot</code> / <code>DatasetCollection.plot</code> / <code>UgridDataset.plot</code> are thin facades.
+<p><code>Dataset.plot</code> / <code>NetCDF.plot</code> / <code>DatasetCollection.plot</code> / <code>MeshDataset.plot</code> are thin facades.
 The shared <code>pyramids.dataset._plot_helpers</code> module owns the cleopatra dispatch (<code>render_array</code> for
 arrays, <code>mesh_render</code> for meshes); <code>pyramids.netcdf._plot.NetCDFPlot</code> does the NetCDF-specific
 variable/selector/curvilinear/facet/animate resolution and feeds <code>render_array</code>; <code>Selectors</code> /
@@ -7829,7 +7829,7 @@ Hold "Ctrl" to enable pan &amp; zoom
   class DatasetCollection {
     +plot(...)
   }
-  class UgridDataset {
+  class MeshDataset {
     +plot(variable_name, ...)
     +plot_outline(...)
   }
@@ -7899,7 +7899,7 @@ Hold "Ctrl" to enable pan &amp; zoom
   NetCDFPlot ..&gt; CoordinateSpec : uses
   NetCDFPlot ..&gt; FacetSpec : uses
   DatasetCollection ..&gt; plot_helpers : render_array(mode="animate")
-  UgridDataset ..&gt; plot_helpers : mesh_render
+  MeshDataset ..&gt; plot_helpers : mesh_render
   plot_helpers ..&gt; ArrayGlyph : builds
   plot_helpers ..&gt; MeshGlyph : builds (mesh_render)
   plot_helpers ..&gt; add_basemap : basemap overlay
@@ -8330,8 +8330,8 @@ Hold "Ctrl" to enable pan &amp; zoom
         +plot(variable, *, selectors, facet, axes, kind, animate, chunks, **kwargs)
     }
 
-    %% UgridDataset
-    class ugrid_UgridDataset {
+    %% MeshDataset
+    class ugrid_MeshDataset {
         +__init__(src)
         +mesh · n_face
         +data_variable_names
@@ -8471,7 +8471,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 
     %% other relations
     collection_DatasetCollection o-- dataset_Dataset : per-timestep
-    ugrid_UgridDataset ..&gt; dataset_Dataset : interpolate
+    ugrid_MeshDataset ..&gt; dataset_Dataset : interpolate
     feature_FeatureCollection ..&gt; dataset_Dataset : rasterize
     dataset_Dataset ..&gt; feature_FeatureCollection : vectorize
     feature_FeatureCollection ..&gt; feature_Coords : uses
@@ -8486,7 +8486,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     netcdf_NetCDFPlot ..&gt; plot_helpers_module : render_array
     engines_Analysis ..&gt; plot_helpers_module : render_array
     collection_DatasetCollection ..&gt; plot_helpers_module : render_array(mode="animate")
-    ugrid_UgridDataset ..&gt; plot_helpers_module : mesh_render
+    ugrid_MeshDataset ..&gt; plot_helpers_module : mesh_render
     feature_FeatureCollection ..&gt; basemap_module : add_basemap
     plot_helpers_module ..&gt; basemap_module : basemap overlay
     plot_helpers_module ..&gt; cleopatra_pkg : ArrayGlyph / MeshGlyph

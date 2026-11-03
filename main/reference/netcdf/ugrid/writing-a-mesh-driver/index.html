@@ -5372,7 +5372,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5701,14 +5701,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8047,7 +8047,7 @@ registration error.</p>
 <p>Not every mesh file contains a mesh. An SMS <code>.dat</code>, an XMDF and an XDMF carry values that must be
 paired with a topology loaded from somewhere else. Such a driver declares <code>needs_mesh</code>, leaves
 <code>read</code> raising, and implements <code>read_data</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">mesh</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"domain.2dm"</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">mesh</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"domain.2dm"</span><span class="p">)</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">attach_data</span><span class="p">(</span><span class="s2">"velocity.dat"</span><span class="p">)</span>
 </code></pre></div>
 <p><code>read_data</code> returns <strong>only the variables it read</strong>, as a <code>dict[str, MeshVariable]</code> —
@@ -8062,10 +8062,10 @@ than hoping.</p>
 <h2 id="what-a-driver-builds"><a class="toclink" href="#what-a-driver-builds">What a driver builds</a><a class="headerlink" href="#what-a-driver-builds" title="Permanent link">#</a></h2>
 <p>Construct pyramids' own types and return them:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">Connectivity</span><span class="p">,</span> <span class="n">Mesh2d</span><span class="p">,</span> <span class="n">MeshVariable</span><span class="p">,</span> <span class="n">Network1d</span><span class="p">,</span> <span class="n">UgridDataset</span><span class="p">,</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">Connectivity</span><span class="p">,</span> <span class="n">Mesh2d</span><span class="p">,</span> <span class="n">MeshVariable</span><span class="p">,</span> <span class="n">Mesh1d</span><span class="p">,</span> <span class="n">MeshDataset</span><span class="p">,</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">)</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">UgridDataset</span><span class="p">(</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">MeshDataset</span><span class="p">(</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">mesh</span><span class="o">=</span><span class="n">Mesh2d</span><span class="p">(</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="n">node_x</span><span class="p">,</span> <span class="n">node_y</span><span class="p">,</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">Connectivity</span><span class="p">(</span>
@@ -8085,18 +8085,18 @@ than hoping.</p>
 <a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="p">)</span>
 </code></pre></div>
 <p>A format with no NetCDF variables to name — a 2DM or a Selafin — passes <code>topology_info=None</code>,
-which <code>UgridDataset</code> documents as the value for a mesh built from arrays. Synthesise
+which <code>MeshDataset</code> documents as the value for a mesh built from arrays. Synthesise
 UGRID-conventional names only if you want <code>to_file()</code> to write a tidy NetCDF afterwards, and then
 make them match what the writer actually emits.</p>
-<p>Return a <a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.network.Network1d&lt;/code&gt;" href="../network/#pyramids.netcdf.ugrid.network.Network1d"><code>Network1d</code></a> for a file whose topology dimension is 1 —
-2DM's <code>E2L</code> line elements, or FLO-2D's and 3Di's 1D domains. <code>UgridDataset.read_file</code> refuses one
-rather than hand back the wrong type; <code>Network1d.read_file</code> is where it is read:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Network1d</span>
+<p>Return a <a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.mesh1d.Mesh1d&lt;/code&gt;" href="../mesh1d/#pyramids.netcdf.ugrid.mesh1d.Mesh1d"><code>Mesh1d</code></a> for a file whose topology dimension is 1 —
+2DM's <code>E2L</code> line elements, or FLO-2D's and 3Di's 1D domains. <code>MeshDataset.read_file</code> refuses one
+rather than hand back the wrong type; <code>Mesh1d.read_file</code> is where it is read:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh1d</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">network</span> <span class="o">=</span> <span class="n">Network1d</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"channels.2dm"</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">network</span> <span class="o">=</span> <span class="n">Mesh1d</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"channels.2dm"</span><span class="p">)</span>
 </code></pre></div>
-<p>A driver may serve both: return a <code>Network1d</code> when the file declares <code>topology_dimension == 1</code> and
-a <code>UgridDataset</code> otherwise. Each entry point checks what it received and names the other one if it
+<p>A driver may serve both: return a <code>Mesh1d</code> when the file declares <code>topology_dimension == 1</code> and
+a <code>MeshDataset</code> otherwise. Each entry point checks what it received and names the other one if it
 is the wrong shape.</p>
 <h3 id="five-invariants-each-fails-silently"><a class="toclink" href="#five-invariants-each-fails-silently">Five invariants — each fails silently</a><a class="headerlink" href="#five-invariants-each-fails-silently" title="Permanent link">#</a></h3>
 <p>These produce <strong>wrong numbers rather than an exception</strong>, so each needs its own test in your
@@ -8149,7 +8149,7 @@ package:</p>
 <p>Close over the <strong>path</strong>, not an open file handle: the loader may run long after your <code>read</code>
 returned, and on Windows a captured handle also keeps the file locked.</p>
 <h2 id="how-pyramids-dispatches"><a class="toclink" href="#how-pyramids-dispatches">How pyramids dispatches</a><a class="headerlink" href="#how-pyramids-dispatches" title="Permanent link">#</a></h2>
-<p><code>UgridDataset.read_file</code> resolves in this order:</p>
+<p><code>MeshDataset.read_file</code> resolves in this order:</p>
 <ol>
 <li><code>driver=</code> given — that driver, or <code>DriverNotExistError</code>. Never falls back. <code>driver="ugrid"</code>
    names pyramids' own reader, which is why <code>ugrid</code> is in <code>RESERVED_NAMES</code> and a plugin cannot
@@ -8166,7 +8166,7 @@ returned, and on Windows a captured handle also keeps the file locked.</p>
 <p><code>to_file</code> never infers a driver from the suffix: <code>to_file("mesh.slf")</code> writes NetCDF unless you
 pass <code>driver="selafin"</code>. <code>**options</code> reaches your <code>write</code> uninterpreted.</p>
 <p><code>lazy</code> is forwarded to <code>read</code> and <code>read_data</code> from every entry point that takes it —
-<code>read_file</code>, <code>read_all</code>, <code>attach_data</code> and <code>Network1d.read_file</code>. The built-in UGRID reader is
+<code>read_file</code>, <code>read_all</code>, <code>attach_data</code> and <code>Mesh1d.read_file</code>. The built-in UGRID reader is
 always lazy and raises <code>TypeError</code> on <code>lazy=False</code> rather than ignoring it.</p>
 <h2 id="failure-handling"><a class="toclink" href="#failure-handling">Failure handling</a><a class="headerlink" href="#failure-handling" title="Permanent link">#</a></h2>
 <p>Every registration problem is a <strong>warning, not an exception</strong>: a driver that raises on import,
@@ -8228,15 +8228,15 @@ module:</p>
         <p>UGRID (Unstructured Grid) NetCDF support for pyramids.</p>
 <p>This subpackage provides classes for reading, writing, and operating
 on UGRID-compliant NetCDF files containing unstructured mesh data.</p>
-<p>Beyond the core data model (:class:<code>UgridDataset</code>, :class:<code>Mesh2d</code>, :class:<code>Network1d</code>) it
+<p>Beyond the core data model (:class:<code>MeshDataset</code>, :class:<code>Mesh2d</code>, :class:<code>Mesh1d</code>) it
 carries the mesh operation modules: :mod:<code>~pyramids.netcdf.ugrid.graph</code> (topology and graph
 operations), :mod:<code>~pyramids.netcdf.ugrid.fill</code> (spatial gap filling),
 :mod:<code>~pyramids.netcdf.ugrid.vector_ops</code> (mesh↔vector), :mod:<code>~pyramids.netcdf.ugrid.regrid</code>
 (sampling and regridding), :mod:<code>~pyramids.netcdf.ugrid.construct</code> (building a mesh from a
 raster or polygons), :mod:<code>~pyramids.netcdf.ugrid.interop_xarray</code> (xarray / zarr hand-off),
 :mod:<code>~pyramids.netcdf.ugrid.analysis</code> (point extraction, random sampling, contouring) and
-:mod:<code>~pyramids.netcdf.ugrid.network</code> (1-D networks).
-Each is reachable through a :class:<code>UgridDataset</code> facade; the modules are exported too for
+:mod:<code>~pyramids.netcdf.ugrid.mesh1d</code> (1-D networks).
+Each is reachable through a :class:<code>MeshDataset</code> facade; the modules are exported too for
 callers holding a bare :class:<code>Mesh2d</code>.</p>
 
 
@@ -8313,7 +8313,7 @@ mesh the caller already has.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Human-readable format name, shown by :meth:<code>UgridDataset.info</code>.</p>
+                <p>Human-readable format name, shown by :meth:<code>MeshDataset.info</code>.</p>
               </div>
             </td>
           </tr>
@@ -8483,7 +8483,7 @@ mesh the caller already has.</p>
 <a id="__codelineno-0-141" name="__codelineno-0-141"></a>
 <a id="__codelineno-0-142" name="__codelineno-0-142"></a><span class="sd">    Attributes:</span>
 <a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="sd">        name: Short unique identifier, and the value accepted by ``driver=``.</span>
-<a id="__codelineno-0-144" name="__codelineno-0-144"></a><span class="sd">        long_name: Human-readable format name, shown by :meth:`UgridDataset.info`.</span>
+<a id="__codelineno-0-144" name="__codelineno-0-144"></a><span class="sd">        long_name: Human-readable format name, shown by :meth:`MeshDataset.info`.</span>
 <a id="__codelineno-0-145" name="__codelineno-0-145"></a><span class="sd">        suffixes: Lowercase, dot-prefixed file suffixes this driver claims.</span>
 <a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="sd">        api_version: Must equal :data:`MESH_DRIVER_API_VERSION`.</span>
 <a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="sd">        capabilities: A subset of :data:`CAPABILITIES`.</span>
@@ -8512,7 +8512,7 @@ mesh the caller already has.</p>
 <a id="__codelineno-0-170" name="__codelineno-0-170"></a>
 <a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span>
 <a id="__codelineno-0-172" name="__codelineno-0-172"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UgridDataset</span> <span class="o">|</span> <span class="n">Network1d</span><span class="p">:</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MeshDataset</span> <span class="o">|</span> <span class="n">Mesh1d</span><span class="p">:</span>
 <a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="w">        </span><span class="sd">"""Read a file that carries its own topology.</span>
 <a id="__codelineno-0-175" name="__codelineno-0-175"></a>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">        Raises for a ``needs_mesh`` format, which has no topology to build a mesh from and is</span>
@@ -8524,18 +8524,18 @@ mesh the caller already has.</p>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">            lazy: Defer reading variable values until first access.</span>
 <a id="__codelineno-0-183" name="__codelineno-0-183"></a>
 <a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">            A dataset, or a :class:`Network1d` for a file whose topology dimension is 1.</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">            A dataset, or a :class:`Mesh1d` for a file whose topology dimension is 1.</span>
 <a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">        """</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a>        <span class="o">...</span>  <span class="c1"># pragma: no cover - protocol</span>
 <a id="__codelineno-0-188" name="__codelineno-0-188"></a>
 <a id="__codelineno-0-189" name="__codelineno-0-189"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">read_data</span><span class="p">(</span>
-<a id="__codelineno-0-190" name="__codelineno-0-190"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">UgridDataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MeshVariable</span><span class="p">]:</span>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="w">        </span><span class="sd">"""Read a results-only file's variables, for a mesh supplied by the caller.</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">        Required only when ``needs_mesh`` is in :attr:`capabilities`.</span>
 <a id="__codelineno-0-195" name="__codelineno-0-195"></a>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">        Return **only the variables read from the file**; :meth:`UgridDataset.attach_data`</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">        Return **only the variables read from the file**; :meth:`MeshDataset.attach_data`</span>
 <a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">        merges them onto the mesh. That division is what makes a name the dataset already</span>
 <a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">        defines an unambiguous collision, and it means a driver cannot drop the dataset's own</span>
 <a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        variables by rebuilding the mapping.</span>
@@ -8566,7 +8566,7 @@ mesh the caller already has.</p>
 <a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">        """</span>
 <a id="__codelineno-0-225" name="__codelineno-0-225"></a>        <span class="o">...</span>  <span class="c1"># pragma: no cover - protocol</span>
 <a id="__codelineno-0-226" name="__codelineno-0-226"></a>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">UgridDataset</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="w">        </span><span class="sd">"""Write a dataset in this driver's format.</span>
 <a id="__codelineno-0-229" name="__codelineno-0-229"></a>
 <a id="__codelineno-0-230" name="__codelineno-0-230"></a><span class="sd">        Required only when ``write_mesh`` is in :attr:`capabilities`.</span>
@@ -8884,11 +8884,11 @@ reached through :meth:<code>read_data</code> instead.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.UgridDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.UgridDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.UgridDataset">UgridDataset</a> | <a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.network.Network1d&lt;/code&gt;" href="../network/#pyramids.netcdf.ugrid.network.Network1d">Network1d</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.MeshDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.MeshDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.MeshDataset">MeshDataset</a> | <a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.mesh1d.Mesh1d&lt;/code&gt;" href="../mesh1d/#pyramids.netcdf.ugrid.mesh1d.Mesh1d">Mesh1d</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A dataset, or a :class:<code>Network1d</code> for a file whose topology dimension is 1.</p>
+                <p>A dataset, or a :class:<code>Mesh1d</code> for a file whose topology dimension is 1.</p>
               </div>
             </td>
           </tr>
@@ -8916,7 +8916,7 @@ reached through :meth:<code>read_data</code> instead.</p>
 <span class="normal"><a href="#__codelineno-0-186">186</a></span>
 <span class="normal"><a href="#__codelineno-0-187">187</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span>
 <a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UgridDataset</span> <span class="o">|</span> <span class="n">Network1d</span><span class="p">:</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MeshDataset</span> <span class="o">|</span> <span class="n">Mesh1d</span><span class="p">:</span>
 <a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="w">    </span><span class="sd">"""Read a file that carries its own topology.</span>
 <a id="__codelineno-0-175" name="__codelineno-0-175"></a>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">    Raises for a ``needs_mesh`` format, which has no topology to build a mesh from and is</span>
@@ -8928,7 +8928,7 @@ reached through :meth:<code>read_data</code> instead.</p>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">        lazy: Defer reading variable values until first access.</span>
 <a id="__codelineno-0-183" name="__codelineno-0-183"></a>
 <a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">        A dataset, or a :class:`Network1d` for a file whose topology dimension is 1.</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">        A dataset, or a :class:`Mesh1d` for a file whose topology dimension is 1.</span>
 <a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">    """</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a>    <span class="o">...</span>  <span class="c1"># pragma: no cover - protocol</span>
 </code></pre></div></td></tr></table></div>
@@ -8950,7 +8950,7 @@ reached through :meth:<code>read_data</code> instead.</p>
 
         <p>Read a results-only file's variables, for a mesh supplied by the caller.</p>
 <p>Required only when <code>needs_mesh</code> is in :attr:<code>capabilities</code>.</p>
-<p>Return <strong>only the variables read from the file</strong>; :meth:<code>UgridDataset.attach_data</code>
+<p>Return <strong>only the variables read from the file</strong>; :meth:<code>MeshDataset.attach_data</code>
 merges them onto the mesh. That division is what makes a name the dataset already
 defines an unambiguous collision, and it means a driver cannot drop the dataset's own
 variables by rebuilding the mapping.</p>
@@ -8992,7 +8992,7 @@ mismatch is reported by raising :class:<code>ValueError</code>.</p>
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.UgridDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.UgridDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.UgridDataset">UgridDataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.MeshDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.MeshDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.MeshDataset">MeshDataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9079,13 +9079,13 @@ mismatch is reported by raising :class:<code>ValueError</code>.</p>
 <span class="normal"><a href="#__codelineno-0-212">212</a></span>
 <span class="normal"><a href="#__codelineno-0-213">213</a></span>
 <span class="normal"><a href="#__codelineno-0-214">214</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_data</span><span class="p">(</span>
-<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">UgridDataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MeshVariable</span><span class="p">]:</span>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="w">    </span><span class="sd">"""Read a results-only file's variables, for a mesh supplied by the caller.</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">    Required only when ``needs_mesh`` is in :attr:`capabilities`.</span>
 <a id="__codelineno-0-195" name="__codelineno-0-195"></a>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">    Return **only the variables read from the file**; :meth:`UgridDataset.attach_data`</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">    Return **only the variables read from the file**; :meth:`MeshDataset.attach_data`</span>
 <a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">    merges them onto the mesh. That division is what makes a name the dataset already</span>
 <a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    defines an unambiguous collision, and it means a driver cannot drop the dataset's own</span>
 <a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">    variables by rebuilding the mapping.</span>
@@ -9141,7 +9141,7 @@ mismatch is reported by raising :class:<code>ValueError</code>.</p>
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.UgridDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.UgridDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.UgridDataset">UgridDataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.MeshDataset&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.dataset.MeshDataset&lt;/code&gt;)" href="../dataset/#pyramids.netcdf.ugrid.MeshDataset">MeshDataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9200,7 +9200,7 @@ mismatch is reported by raising :class:<code>ValueError</code>.</p>
 <span class="normal"><a href="#__codelineno-0-234">234</a></span>
 <span class="normal"><a href="#__codelineno-0-235">235</a></span>
 <span class="normal"><a href="#__codelineno-0-236">236</a></span>
-<span class="normal"><a href="#__codelineno-0-237">237</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">UgridDataset</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">MeshDataset</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="w">    </span><span class="sd">"""Write a dataset in this driver's format.</span>
 <a id="__codelineno-0-229" name="__codelineno-0-229"></a>
 <a id="__codelineno-0-230" name="__codelineno-0-230"></a><span class="sd">    Required only when ``write_mesh`` is in :attr:`capabilities`.</span>
@@ -9308,7 +9308,7 @@ GDAL was the only reader.</p>
         <p>Return the installed mesh drivers, discovered once and cached.</p>
 <p>Discovery walks every installed distribution, so it runs on the first call only. Nothing on
 the UGRID read path calls it: a <code>.nc</code> read, a <code>/vsi</code> path and a plain
-:meth:<code>UgridDataset.info</code> all short-circuit first. An explicit <code>driver=</code>, a non-NetCDF
+:meth:<code>MeshDataset.info</code> all short-circuit first. An explicit <code>driver=</code>, a non-NetCDF
 suffix or <code>info(drivers=True)</code> does reach it.</p>
 
 
@@ -9452,7 +9452,7 @@ suffix or <code>info(drivers=True)</code> does reach it.</p>
 <a id="__codelineno-0-445" name="__codelineno-0-445"></a>
 <a id="__codelineno-0-446" name="__codelineno-0-446"></a><span class="sd">    Discovery walks every installed distribution, so it runs on the first call only. Nothing on</span>
 <a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">    the UGRID read path calls it: a ``.nc`` read, a ``/vsi`` path and a plain</span>
-<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">    :meth:`UgridDataset.info` all short-circuit first. An explicit ``driver=``, a non-NetCDF</span>
+<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">    :meth:`MeshDataset.info` all short-circuit first. An explicit ``driver=``, a non-NetCDF</span>
 <a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">    suffix or ``info(drivers=True)`` does reach it.</span>
 <a id="__codelineno-0-450" name="__codelineno-0-450"></a>
 <a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">    Returns:</span>

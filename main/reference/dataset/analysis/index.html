@@ -5963,7 +5963,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -6292,14 +6292,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8924,7 +8924,7 @@ so a <code>NetCDF</code> variable has them too.</p>
 <div class="admonition note">
 <p class="admonition-title"><code>clip</code> means two things in this package</p>
 <p><code>Dataset.clip(min, max)</code> bounds <strong>values</strong>, the way xarray and numpy use the name, while
-<code>UgridDataset.clip(mask)</code> clips <strong>geometry</strong> — what most GIS tools mean by it, and what <code>Dataset</code>
+<code>MeshDataset.clip(mask)</code> clips <strong>geometry</strong> — what most GIS tools mean by it, and what <code>Dataset</code>
 spells <a href="../"><code>crop</code></a>. <code>NetCDF.head(n)</code> likewise returns a cube where <code>DatasetCollection.head(n)</code>
 returns a preview array. The xarray names are the right ones to adopt here; the collision is worth
 knowing about when reading across the two classes.</p>
@@ -21507,7 +21507,7 @@ its own <a href="../../../tutorials/lazy/lazy-raster/#zonal-statistics-datasetzo
 <a id="__codelineno-0-6586" name="__codelineno-0-6586"></a><span class="sd">            cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``</span>
 <a id="__codelineno-0-6587" name="__codelineno-0-6587"></a><span class="sd">            attribute is the :class:`matplotlib.animation.FuncAnimation` — save with</span>
 <a id="__codelineno-0-6588" name="__codelineno-0-6588"></a><span class="sd">            ``glyph.anim.save("out.gif")``. Note this differs from</span>
-<a id="__codelineno-0-6589" name="__codelineno-0-6589"></a><span class="sd">            :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
+<a id="__codelineno-0-6589" name="__codelineno-0-6589"></a><span class="sd">            :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
 <a id="__codelineno-0-6590" name="__codelineno-0-6590"></a><span class="sd">            cleopatra glyph families return different objects and pyramids passes each through</span>
 <a id="__codelineno-0-6591" name="__codelineno-0-6591"></a><span class="sd">            rather than wrapping one to look like the other. **Keep a reference to it** —</span>
 <a id="__codelineno-0-6592" name="__codelineno-0-6592"></a><span class="sd">            matplotlib warns and stops an animation held only as a temporary.</span>
@@ -36599,7 +36599,7 @@ band index.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>meth:<code>UgridDataset.animate</code>, which returns the <code>FuncAnimation</code> itself: the two</p>
+                <p>meth:<code>MeshDataset.animate</code>, which returns the <code>FuncAnimation</code> itself: the two</p>
               </div>
             </td>
           </tr>
@@ -36805,7 +36805,7 @@ DatasetCollection.animate: Many rasters as frames rather than many bands.</p>
 <a id="__codelineno-0-6586" name="__codelineno-0-6586"></a><span class="sd">        cleopatra.glyphs.gridded.array_glyph.ArrayGlyph: The glyph, whose ``anim``</span>
 <a id="__codelineno-0-6587" name="__codelineno-0-6587"></a><span class="sd">        attribute is the :class:`matplotlib.animation.FuncAnimation` — save with</span>
 <a id="__codelineno-0-6588" name="__codelineno-0-6588"></a><span class="sd">        ``glyph.anim.save("out.gif")``. Note this differs from</span>
-<a id="__codelineno-0-6589" name="__codelineno-0-6589"></a><span class="sd">        :meth:`UgridDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
+<a id="__codelineno-0-6589" name="__codelineno-0-6589"></a><span class="sd">        :meth:`MeshDataset.animate`, which returns the ``FuncAnimation`` itself: the two</span>
 <a id="__codelineno-0-6590" name="__codelineno-0-6590"></a><span class="sd">        cleopatra glyph families return different objects and pyramids passes each through</span>
 <a id="__codelineno-0-6591" name="__codelineno-0-6591"></a><span class="sd">        rather than wrapping one to look like the other. **Keep a reference to it** —</span>
 <a id="__codelineno-0-6592" name="__codelineno-0-6592"></a><span class="sd">        matplotlib warns and stops an animation held only as a temporary.</span>

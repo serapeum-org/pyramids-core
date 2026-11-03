@@ -5550,7 +5550,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5879,14 +5879,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../../../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7967,11 +7967,11 @@ extra:</p>
 The eager <code>NetCDF.read_array(chunks=None)</code> path is always available and does
 not touch dask / the labeled-array stack / kerchunk.</p>
 <h2 id="ugrid-unstructured-grids"><a class="toclink" href="#ugrid-unstructured-grids">UGRID unstructured grids</a><a class="headerlink" href="#ugrid-unstructured-grids" title="Permanent link">#</a></h2>
-<p><code>UgridDataset</code> (FVCOM, SCHISM, ADCIRC, Delft3D) is not yet wired to
+<p><code>MeshDataset</code> (FVCOM, SCHISM, ADCIRC, Delft3D) is not yet wired to
 pyramids' lazy stack — it currently uses eager reads throughout.
 Lazy UGRID is tracked as a follow-on. The
 <code>docs/examples/netcdf/ugrid/dask-lazy-ugrid.ipynb</code> notebook shows how
-to layer dask on top of the eager <code>UgridDataset</code> manually using
+to layer dask on top of the eager <code>MeshDataset</code> manually using
 <code>dask.delayed</code> for FVCOM NECOFS OPeNDAP endpoints; that path works
 today but isn't yet a first-class pyramids API.</p>
 

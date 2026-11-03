@@ -16,7 +16,7 @@
         <link rel="prev" href="../regrid/">
       
       
-        <link rel="next" href="../network/">
+        <link rel="next" href="../mesh1d/">
       
       
         
@@ -5372,7 +5372,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5864,14 +5864,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7722,7 +7722,7 @@ not read back.</p>
 <code>{name: MeshVariable}</code> mapping and the UGRID-CF encoding carried by an <code>xarray.Dataset</code> --
 the in-memory mirror of the on-disk encoding written by
 :mod:<code>pyramids.netcdf.ugrid.io</code>. Keeping these functions mesh/variable-shaped (never a
-<code>UgridDataset</code>) keeps the module free of the dataset import cycle; the <code>UgridDataset</code> facade
+<code>MeshDataset</code>) keeps the module free of the dataset import cycle; the <code>MeshDataset</code> facade
 wraps the results.</p>
 <p><code>xarray</code>, <code>zarr</code> and <code>dask</code> are <strong>optional</strong> dependencies. None of them is imported at module
 scope: every guarded import happens inside the function that needs it, through
@@ -7772,7 +7772,7 @@ dummy <code>mesh_topology</code> variable, the node coordinates, the <code>face_
 <code>start_index</code> and file <code>_FillValue</code> restored to the on-disk convention), optional
 edge connectivity and face-centre coordinates, a CRS grid-mapping variable, and each data variable
 on its <code>location</code> dimension with <code>mesh</code> / <code>location</code> attributes. The result is readable by
-ecosystem tools such as <code>xugrid.UgridDataset.from_dataset</code> and round-trips losslessly through
+ecosystem tools such as <code>xugrid.MeshDataset.from_dataset</code> and round-trips losslessly through
 :func:<code>from_xarray</code>.</p>
 <p><code>xarray</code> is optional; it is imported through
 :func:<code>pyramids.base._utils.import_xarray</code> inside this function -- never at module scope.</p>
@@ -8045,7 +8045,7 @@ grid mapping, so the result carries no georeferencing. Defaults to <code>None</c
 <a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">    ``start_index`` and file ``_FillValue`` restored to the on-disk convention), optional</span>
 <a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">    edge connectivity and face-centre coordinates, a CRS grid-mapping variable, and each data variable</span>
 <a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">    on its ``location`` dimension with ``mesh`` / ``location`` attributes. The result is readable by</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">    ecosystem tools such as ``xugrid.UgridDataset.from_dataset`` and round-trips losslessly through</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">    ecosystem tools such as ``xugrid.MeshDataset.from_dataset`` and round-trips losslessly through</span>
 <a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">    :func:`from_xarray`.</span>
 <a id="__codelineno-0-272" name="__codelineno-0-272"></a>
 <a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">    ``xarray`` is optional; it is imported through</span>
@@ -8125,7 +8125,7 @@ grid mapping, so the result carries no georeferencing. Defaults to <code>None</c
 <a id="__codelineno-0-347" name="__codelineno-0-347"></a>            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">face_y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">mesh_name</span><span class="si">}</span><span class="s2">_nFaces"</span><span class="p">,)</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>        <span class="p">)</span>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>    <span class="c1"># The caller's WKT wins: a UgridDataset keeps its CRS on the dataset (from_arrays stores an</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>    <span class="c1"># The caller's WKT wins: a MeshDataset keeps its CRS on the dataset (from_arrays stores an</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="c1"># epsg there), not on the Mesh2d, so relying on the mesh alone silently dropped the CRS from</span>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a>    <span class="c1"># every export. Fall back to the mesh's own CRS for a bare-Mesh2d caller.</span>
 <a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="n">exported_wkt</span> <span class="o">=</span> <span class="n">crs_wkt</span> <span class="k">if</span> <span class="n">crs_wkt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_mesh_crs_wkt</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
@@ -9554,13 +9554,13 @@ install hint rather than failing with a bare import error.</p>
         
         
           
-          <a href="../network/" class="md-footer__link md-footer__link--next" aria-label="Next: Network1d">
+          <a href="../mesh1d/" class="md-footer__link md-footer__link--next" aria-label="Next: Mesh1d">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Network1d
+                Mesh1d
               </div>
             </div>
             <div class="md-footer__button md-icon">

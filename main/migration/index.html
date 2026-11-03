@@ -5363,7 +5363,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5692,14 +5692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/netcdf/ugrid/network/" class="md-nav__link">
+      <a href="../reference/netcdf/ugrid/mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -8790,7 +8790,7 @@ in exactly that window — so the new one is the correct answer. But code that i
 against a crop's shape will see it change. It applies to both crop routes and to bands with an ordinary,
 storable, declared sentinel.</p>
 <p><strong><code>create_from_array</code> is now <code>from_array</code>, and takes a <code>GeoReference</code>.</strong> Hard change, no deprecation alias — the
-old name and the old flat keywords are gone. The same rename applies to <code>UgridDataset.create_from_arrays</code> -&gt;
+old name and the old flat keywords are gone. The same rename applies to <code>MeshDataset.create_from_arrays</code> -&gt;
 <code>from_arrays</code> (still plural: it takes three arrays, not one).</p>
 <p>The four flat georeferencing keywords are replaced by one <code>geo_ref</code> argument, and <code>driver_type</code> is gone
 entirely — the driver is now derived from the path extension:</p>
@@ -8801,7 +8801,7 @@ entirely — the driver is now derived from the path extension:</p>
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">Dataset</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">cell_size</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
 <a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>               <span class="n">top_left_corner</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">)</span>
 <a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">Dataset</span><span class="o">.</span><span class="n">create_empty</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">geo</span><span class="o">=</span><span class="n">GEO</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span> <span class="n">driver_type</span><span class="o">=</span><span class="s2">"MEM"</span><span class="p">)</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">UgridDataset</span><span class="o">.</span><span class="n">create_from_arrays</span><span class="p">(</span><span class="n">node_x</span><span class="p">,</span> <span class="n">node_y</span><span class="p">,</span> <span class="n">faces</span><span class="p">)</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">MeshDataset</span><span class="o">.</span><span class="n">create_from_arrays</span><span class="p">(</span><span class="n">node_x</span><span class="p">,</span> <span class="n">node_y</span><span class="p">,</span> <span class="n">faces</span><span class="p">)</span>
 <a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
 <a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># After</span>
 <a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">GeoReference</span>
@@ -8812,7 +8812,7 @@ entirely — the driver is now derived from the path extension:</p>
 <a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="n">Dataset</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
 <a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>               <span class="n">geo_ref</span><span class="o">=</span><span class="n">GeoReference</span><span class="p">(</span><span class="n">top_left_corner</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">))</span>
 <a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="n">Dataset</span><span class="o">.</span><span class="n">create_empty</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">geo_ref</span><span class="o">=</span><span class="n">GeoReference</span><span class="p">(</span><span class="n">geo</span><span class="o">=</span><span class="n">GEO</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">))</span>
-<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="n">UgridDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">node_x</span><span class="p">,</span> <span class="n">node_y</span><span class="p">,</span> <span class="n">faces</span><span class="p">)</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="n">MeshDataset</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">node_x</span><span class="p">,</span> <span class="n">node_y</span><span class="p">,</span> <span class="n">faces</span><span class="p">)</span>
 </code></pre></div>
 <p>The module-level <code>pyramids.netcdf.engines.variables.create_from_array</code> is renamed <code>from_array</code> too. It carries
 no underscore but is an engine internal — reach it through <code>NetCDF.from_array</code>, its public facade.</p>
@@ -9180,6 +9180,45 @@ stamp a default; set a CRS on the input first. <code>pyramids georeference</code
 replace the georeference wholesale.</p>
 <h2 id="netcdf"><a class="toclink" href="#netcdf">netcdf</a><a class="headerlink" href="#netcdf" title="Permanent link">#</a></h2>
 <h3 id="unreleased_4"><a class="toclink" href="#unreleased_4">unreleased</a><a class="headerlink" href="#unreleased_4" title="Permanent link">#</a></h3>
+<p><strong>The unstructured-mesh data model was renamed from <code>Ugrid*</code> / <code>Network1d</code> to <code>Mesh*</code>.</strong> The classes were
+named after the UGRID NetCDF convention and one hydrodynamic use case; they are general GIS mesh types, so the
+names now match the rest of the package (the plugin entry point is already <code>pyramids.mesh_drivers</code>, and the 2D
+topology was already <code>Mesh2d</code>). The old names still import and resolve to the new ones, emitting a
+<code>DeprecationWarning</code>; they are scheduled for removal in a future release.</p>
+<table>
+<thead>
+<tr>
+<th>old</th>
+<th>new</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UgridDataset</code></td>
+<td><code>MeshDataset</code></td>
+</tr>
+<tr>
+<td><code>Network1d</code></td>
+<td><code>Mesh1d</code></td>
+</tr>
+<tr>
+<td><code>UgridMetadata</code></td>
+<td><code>MeshMetadata</code></td>
+</tr>
+<tr>
+<td>module <code>pyramids.netcdf.ugrid.network</code></td>
+<td><code>pyramids.netcdf.ugrid.mesh1d</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The import path <code>pyramids.netcdf.ugrid</code> is unchanged, and <code>from pyramids.netcdf import MeshDataset</code> (the
+  top-level re-export) works as before under the new name.</li>
+<li><code>MeshDataset</code> and <code>Mesh2d</code> / <code>Mesh1d</code> are unchanged in behaviour -- only the names differ. <code>MeshDataset</code> holds
+  a <code>Mesh2d</code> topology plus data variables; <code>Mesh1d</code> is the 1D topology (nodes + edges), the peer of <code>Mesh2d</code>.</li>
+<li>To find every affected call site, run your suite with <code>python -W error::DeprecationWarning -m pytest</code> (see the
+  command at the top of this guide).</li>
+</ul>
 <p><strong>A container now duck-types as a sequence, because it gained <code>__iter__</code> and <code>__len__</code>.</strong> <code>NetCDF</code> had
 neither dunder before, so every <code>isinstance(x, Iterable)</code> test answered <code>False</code> for one. That flipped:</p>
 <table>

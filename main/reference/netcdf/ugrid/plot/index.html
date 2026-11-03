@@ -5372,7 +5372,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5701,14 +5701,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7525,7 +7525,7 @@
 <h1 id="mesh-visualization"><a class="toclink" href="#mesh-visualization">Mesh Visualization</a><a class="headerlink" href="#mesh-visualization" title="Permanent link">#</a></h1>
 <p>Mesh data plotting using matplotlib triangulation (tripcolor,
 tricontourf) and wireframe rendering via LineCollection.</p>
-<p><code>UgridDataset.plot</code> is a thin facade over the shared module-level helper
+<p><code>MeshDataset.plot</code> is a thin facade over the shared module-level helper
 <code>pyramids.dataset._plot_helpers.mesh_render</code> — the same "resolve the data, hand it to one
 helper (which also applies the optional web-tile basemap)" contract used by the raster path
 (<code>Dataset.plot</code> / <code>NetCDF.plot</code>). The functions below are the low-level entry points it builds
@@ -7554,8 +7554,8 @@ Hold "Ctrl" to enable pan &amp; zoom
 </button>
     </nav>
     <pre class="mermaid"><code>flowchart LR
-    U["UgridDataset.plot(var)"] --&gt; MR["mesh_render&lt;br/&gt;(_plot_helpers.py)"]
-    O["UgridDataset.plot_outline()"] --&gt; PMO["plot_mesh_outline(mesh)"]
+    U["MeshDataset.plot(var)"] --&gt; MR["mesh_render&lt;br/&gt;(_plot_helpers.py)"]
+    O["MeshDataset.plot_outline()"] --&gt; PMO["plot_mesh_outline(mesh)"]
     MR --&gt; PMD["plot_mesh_data(mesh, data, location)"]
     PMD --&gt; G(["cleopatra MeshGlyph"])
     PMO --&gt; G</code></pre> 
@@ -7861,7 +7861,7 @@ or if the data length does not match the mesh topology.</p>
 <details class="see-also" open>
   <summary>See Also</summary>
   <p>plot_mesh_outline: Plot mesh edges as a wireframe.
-UgridDataset.plot: Dataset-level convenience method that
+MeshDataset.plot: Dataset-level convenience method that
     calls this function.</p>
 </details>
 
@@ -8042,7 +8042,7 @@ UgridDataset.plot: Dataset-level convenience method that
 <a id="__codelineno-0-145" name="__codelineno-0-145"></a>
 <a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="sd">    See Also:</span>
 <a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="sd">        plot_mesh_outline: Plot mesh edges as a wireframe.</span>
-<a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="sd">        UgridDataset.plot: Dataset-level convenience method that</span>
+<a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="sd">        MeshDataset.plot: Dataset-level convenience method that</span>
 <a id="__codelineno-0-149" name="__codelineno-0-149"></a><span class="sd">            calls this function.</span>
 <a id="__codelineno-0-150" name="__codelineno-0-150"></a><span class="sd">    """</span>
 <a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="n">glyph</span> <span class="o">=</span> <span class="n">_mesh_to_glyph</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
@@ -8681,7 +8681,7 @@ to <code>"black"</code>.</p>
             <td>
               <div class="doc-md-description">
                 <p><code>True</code> or a web-tile provider name, drawing a tile backdrop under the
-wireframe exactly as :meth:<code>UgridDataset.plot</code> does. <code>None</code> (default) draws none.
+wireframe exactly as :meth:<code>MeshDataset.plot</code> does. <code>None</code> (default) draws none.
 Before issue #1354 this fell through to the line collection and raised
 <code>LineCollection.set() got an unexpected keyword argument 'basemap'</code>.</p>
               </div>
@@ -8780,7 +8780,7 @@ placed without a CRS. The data path applies the same guard.</p>
 <details class="see-also" open>
   <summary>See Also</summary>
   <p>plot_mesh_data: Plot data values on the mesh.
-UgridDataset.plot_outline: Dataset-level convenience method.</p>
+MeshDataset.plot_outline: Dataset-level convenience method.</p>
 </details>
 
             <details class="mkdocstrings-source">
@@ -8872,7 +8872,7 @@ UgridDataset.plot_outline: Dataset-level convenience method.</p>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a><span class="sd">            to `"black"`.</span>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">        linewidth: Edge line width in points. Defaults to `0.3`.</span>
 <a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        basemap: ``True`` or a web-tile provider name, drawing a tile backdrop under the</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">            wireframe exactly as :meth:`UgridDataset.plot` does. ``None`` (default) draws none.</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">            wireframe exactly as :meth:`MeshDataset.plot` does. ``None`` (default) draws none.</span>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">            Before issue #1354 this fell through to the line collection and raised</span>
 <a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">            ``LineCollection.set() got an unexpected keyword argument 'basemap'``.</span>
 <a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">        basemap_epsg: CRS code for the tile fetch. Required whenever ``basemap`` is truthy,</span>
@@ -8891,7 +8891,7 @@ UgridDataset.plot_outline: Dataset-level convenience method.</p>
 <a id="__codelineno-0-367" name="__codelineno-0-367"></a>
 <a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="sd">    See Also:</span>
 <a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="sd">        plot_mesh_data: Plot data values on the mesh.</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="sd">        UgridDataset.plot_outline: Dataset-level convenience method.</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="sd">        MeshDataset.plot_outline: Dataset-level convenience method.</span>
 <a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">    """</span>
 <a id="__codelineno-0-372" name="__codelineno-0-372"></a>    <span class="k">if</span> <span class="n">basemap</span> <span class="ow">and</span> <span class="n">basemap_epsg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-373" name="__codelineno-0-373"></a>        <span class="c1"># Same guard and message as the data path: tiles need a CRS to be placed against.</span>

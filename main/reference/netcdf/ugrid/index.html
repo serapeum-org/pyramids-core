@@ -5452,7 +5452,7 @@
   <span class="md-ellipsis">
     
   
-    UgridDataset
+    MeshDataset
   
 
     
@@ -5781,14 +5781,14 @@
   
   
     <li class="md-nav__item">
-      <a href="network/" class="md-nav__link">
+      <a href="mesh1d/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Network1d
+    Mesh1d
   
 
     
@@ -7527,11 +7527,11 @@
 Grid) NetCDF files used in hydrological and coastal modeling (D-Flow FM,
 SCHISM, FVCOM, ADCIRC).</p>
 <h2 id="architecture"><a class="toclink" href="#architecture">Architecture</a><a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
-<p><code>UgridDataset</code> is a standalone class that does <strong>not</strong> inherit from
+<p><code>MeshDataset</code> is a standalone class that does <strong>not</strong> inherit from
 <code>Dataset</code> or <code>RasterBase</code>. Unstructured meshes have no
 geotransform, rows, or columns. Instead, data is indexed by topology
 elements (nodes, faces, edges).</p>
-<p><code>UgridDataset</code> holds a <code>Mesh2d</code> (the topology), a <code>dict[str, MeshVariable]</code> (the data on nodes / faces
+<p><code>MeshDataset</code> holds a <code>Mesh2d</code> (the topology), a <code>dict[str, MeshVariable]</code> (the data on nodes / faces
 / edges), and a <code>MeshTopologyInfo</code>. <code>Mesh2d</code> in turn holds several <code>Connectivity</code> arrays:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
@@ -7557,7 +7557,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 </button>
     </nav>
     <pre class="mermaid"><code>classDiagram
-    class UgridDataset {
+    class MeshDataset {
       +mesh : Mesh2d
       +data_variable_names
       +n_node / n_face / n_edge
@@ -7586,9 +7586,9 @@ Hold "Ctrl" to enable pan &amp; zoom
       +sel_time(i)
     }
     class MeshTopologyInfo
-    UgridDataset *-- Mesh2d : mesh
-    UgridDataset o-- MeshVariable : data_variables
-    UgridDataset o-- MeshTopologyInfo
+    MeshDataset *-- Mesh2d : mesh
+    MeshDataset o-- MeshVariable : data_variables
+    MeshDataset o-- MeshTopologyInfo
     Mesh2d *-- Connectivity : face_node / edge_node / ...</code></pre> 
     
 </div>
@@ -7619,7 +7619,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 </button>
     </nav>
     <pre class="mermaid"><code>flowchart LR
-    F[(".nc UGRID file")] --&gt;|read_file| U["UgridDataset"]
+    F[(".nc UGRID file")] --&gt;|read_file| U["MeshDataset"]
     U --&gt;|"to_dataset(var, cell_size)"| R["Dataset (raster)"]
     U --&gt;|"to_geodataframe · to_feature_collection"| GDF["GeoDataFrame /&lt;br/&gt;FeatureCollection"]
     U --&gt;|"plot · plot_outline"| G(["cleopatra MeshGlyph"])
@@ -7627,10 +7627,10 @@ Hold "Ctrl" to enable pan &amp; zoom
     
 </div>
 <h2 id="quick-start"><a class="toclink" href="#quick-start">Quick Start</a><a class="headerlink" href="#quick-start" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UgridDataset</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Read a UGRID file</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">UgridDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"model_output.nc"</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"model_output.nc"</span><span class="p">)</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Access mesh topology</span>
@@ -7665,7 +7665,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 <tbody>
 <tr>
 <td><a href="dataset/">dataset</a></td>
-<td><code>UgridDataset</code> main entry point</td>
+<td><code>MeshDataset</code> main entry point</td>
 </tr>
 <tr>
 <td><a href="mesh/">mesh</a></td>
@@ -7757,13 +7757,13 @@ Hold "Ctrl" to enable pan &amp; zoom
         
         
           
-          <a href="dataset/" class="md-footer__link md-footer__link--next" aria-label="Next: UgridDataset">
+          <a href="dataset/" class="md-footer__link md-footer__link--next" aria-label="Next: MeshDataset">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                UgridDataset
+                MeshDataset
               </div>
             </div>
             <div class="md-footer__button md-icon">
