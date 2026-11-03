@@ -122,11 +122,13 @@ class TestNcInfo:
         assert main(["nc", "info", str(_NC), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert "Band1" in payload["variables"]
-        assert isinstance(payload["dimensions"], dict) and payload["dimensions"]
+        assert isinstance(payload["dimensions"], dict)
+        assert payload["dimensions"]
         assert payload["epsg"] == 4326
         assert len(payload["bounds"]) == 4
         assert payload["time_steps"] == 0, "a file without a time axis reports 0 steps"
-        assert payload["time_start"] is None and payload["time_end"] is None
+        assert payload["time_start"] is None
+        assert payload["time_end"] is None
 
     def test_plain_lists_keys(self, capsys):
         """The human form prints key: value lines."""
@@ -188,7 +190,8 @@ class TestNcSel:
         )
         err = capsys.readouterr().err
         assert rc == 1
-        assert "nope" in err and "not a valid variable name" in err
+        assert "nope" in err
+        assert "not a valid variable name" in err
         assert "unexpected failure" not in err
         assert "Traceback" not in err
 
@@ -213,7 +216,8 @@ class TestNcSel:
         )
         err = capsys.readouterr().err
         assert rc == 1
-        assert "Group" in err and "not found" in err
+        assert "Group" in err
+        assert "not found" in err
         assert "unexpected failure" not in err
 
     def test_file_without_time_axis_errors_cleanly(self, tmp_path, capsys):
