@@ -195,15 +195,17 @@ def _invalidate_cached_accessors(ds: Any) -> None:
 def _flush_prior_handle(prev: "gdal.Dataset | None", src: "gdal.Dataset") -> None:
     """Best-effort flush of the GDAL handle an in-place swap is about to drop.
 
-    Called at the top of `_update_inplace` (on both `Dataset` and `NetCDF`),
-    before the `__dict__.update` swap rebinds `self._raster`. It commits any
-    writes buffered on the handle that is about to lose its last reference,
-    instead of leaving that to refcounting/GC to finalize (issue #815).
+    Called by `_update_inplace` (on both `Dataset` and `NetCDF`) before its
+    `__dict__.update` swap rebinds `self._raster` — first in the base method,
+    and immediately before the swap in the NetCDF override (which builds its
+    replacement and `preserved` snapshot first). It commits any writes buffered
+    on the handle that is about to lose its last reference, instead of leaving
+    that to refcounting/GC to finalize (issue #815).
 
     The flush is skipped when `prev` is `None` or is the very handle being
     swapped in (`prev is src`), so the live handle is never flushed and then
-    reused — the latter is the `epsg` setter / NetCDF ``_store_raster`` path,
-    which hands the current raster back as `src`.
+    reused — this is the `epsg` setter path, where the current raster (which is
+    also the NetCDF variable's ``_store_raster``) is handed back as `src`.
 
     A `RuntimeError` from the flush is swallowed (debug-logged, not raised):
     the handle is being discarded and the operation's replacement raster is

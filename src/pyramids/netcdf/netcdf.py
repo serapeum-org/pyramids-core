@@ -2786,7 +2786,8 @@ class NetCDF(Dataset):
         # Flush the handle about to be dropped by the swap below, same as the base
         # method -- this override does not chain `super()`, so the call is repeated
         # here. Best-effort; skipped when `src` is that same handle (the `epsg`
-        # setter / `_store_raster` path). See `Dataset._flush_prior_handle` (#815).
+        # setter path, which hands the current raster back as `src`). See
+        # `Dataset._flush_prior_handle` (#815).
         _flush_prior_handle(self._raster, src)
         self.__dict__.update(new.__dict__)
         self.__dict__.update(preserved)
