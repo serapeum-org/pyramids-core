@@ -11,8 +11,6 @@ from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
 
-pytestmark = pytest.mark.core
-
 
 def _stack_with(tmp_path, *, epsg: int, no_data: float) -> str:
     """Write three co-registered 3x3 rasters and return a glob matching them.
@@ -35,7 +33,9 @@ def _stack_with(tmp_path, *, epsg: int, no_data: float) -> str:
 
 
 class TestCollectionInfo:
-    """`pyramids collection info`."""
+    """`pyramids collection info` — metadata only, so it runs in the core wheel env."""
+
+    pytestmark = pytest.mark.core
 
     def test_json_summary(self, cli_stack, capsys):
         """--json summarises the stack (count, CRS, grid)."""
@@ -53,7 +53,16 @@ class TestCollectionInfo:
 
 
 class TestCollectionStats:
-    """`pyramids collection stats`."""
+    """`pyramids collection stats`.
+
+    Marked ``lazy``, not ``core``: ``stats --reduce`` calls the DatasetCollection reducers, which
+    route through ``pyramids.dataset._reduce_ops.resolve_dask_op`` and require the optional ``dask``
+    dependency (the ``[lazy]`` extra). The core wheel has no dask, so these must not run in the
+    ``-m "core ..."`` wheel jobs — only in the dask-equipped envs (dev / lazy), where the
+    Tests - Suite selection ``-m 'not plot ...'`` still picks them up.
+    """
+
+    pytestmark = pytest.mark.lazy
 
     def test_mean_reduction(self, cli_stack, tmp_path):
         """--reduce mean writes the element-wise mean across the stack."""
