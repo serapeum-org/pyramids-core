@@ -4,9 +4,9 @@ Top-level I/O and array utilities exported from `pyramids`.
 
 ## MemoryFile
 
-An in-memory, `/vsimem`-backed raster handle (pyramids' analogue of `rasterio.io.MemoryFile`). Stage a raster by
-handing it encoded bytes (`MemoryFile(ds.to_bytes())` or `write()`), open it as a `Dataset`, or read its bytes
-back; the buffer is unlinked on exit.
+An in-memory, `/vsimem`-backed raster file handle. Stage a raster by handing it encoded bytes
+(`MemoryFile(ds.to_bytes())` or `write()`), open it as a `Dataset`, or read its bytes back; the buffer is
+unlinked on exit.
 
 ::: pyramids._io.MemoryFile
     options:

@@ -1576,9 +1576,9 @@ class MemoryFile:
     unlinked when the handle is closed (or when the object is garbage-collected,
     via :func:`weakref.finalize`).
 
-    This is pyramids' analogue of ``rasterio.io.MemoryFile``; it yields a pyramids
-    ``Dataset`` rather than a rasterio reader. For a plain whole-buffer round-trip
-    see :meth:`Dataset.from_bytes` / :meth:`Dataset.to_bytes`.
+    It mirrors the common in-memory raster-file-handle pattern, yielding a pyramids
+    :class:`~pyramids.dataset.Dataset`. For a plain whole-buffer round-trip see
+    :meth:`Dataset.from_bytes` / :meth:`Dataset.to_bytes`.
 
     Stage a raster by handing it encoded bytes -- ``MemoryFile(ds.to_bytes())`` or
     :meth:`write` -- not by writing to :attr:`name` with ``Dataset.to_file`` (which
