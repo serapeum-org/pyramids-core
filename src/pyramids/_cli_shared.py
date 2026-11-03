@@ -11,8 +11,28 @@ import cycle with :mod:`pyramids.cli`.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import math
 import os
+from collections.abc import Iterator
+
+
+@contextlib.contextmanager
+def map_lookup_errors() -> Iterator[None]:
+    """Remap a ``KeyError``/``IndexError`` raised in the block to ``ValueError``.
+
+    :func:`pyramids.cli.main` maps only ``ValueError``/``TypeError``/``OSError``/
+    ``RuntimeError``/``_PyramidsError`` to the clean one-line ``error:`` exit; a
+    ``KeyError`` or ``IndexError`` from a typo'd variable, dimension, label, or
+    index would otherwise fall through to the ``unexpected failure`` branch that is
+    reserved for genuine internal bugs. Wrap a ``NetCDF`` lookup that forwards a
+    user token in this manager so such a typo is reported cleanly instead.
+    """
+    try:
+        yield
+    except (KeyError, IndexError) as exc:
+        message = exc.args[0] if exc.args else str(exc)
+        raise ValueError(message) from exc
 
 
 def json_safe(value: float | None) -> float | None:

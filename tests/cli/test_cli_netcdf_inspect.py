@@ -30,6 +30,15 @@ class TestNcSummary:
         assert main(["nc", "summary", str(_NC), "--vars", "tas"]) == 0
         assert "tas" in capsys.readouterr().out
 
+    def test_unknown_variable_errors_cleanly(self, capsys):
+        """An unknown --vars exits 1 with a clean error, not the catch-all (H1)."""
+        rc = main(["nc", "summary", str(_NC), "--vars", "nosuchvar"])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "nosuchvar" in err
+        assert "unexpected failure" not in err
+        assert "Traceback" not in err
+
 
 class TestNcMetadata:
     """`pyramids nc metadata`."""

@@ -13,7 +13,12 @@ import argparse
 import dataclasses
 import json
 
-from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_safe,
+    map_lookup_errors,
+    refuse_existing,
+)
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -47,7 +52,8 @@ def _cmd_nc_summary(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     nc = NetCDF.read_file(args.file)
-    frame = nc.summary(variables=args.vars or None)
+    with map_lookup_errors():
+        frame = nc.summary(variables=args.vars or None)
     if args.json:
         print(json.dumps(frame.to_dict(orient="index"), default=json_safe))
     else:

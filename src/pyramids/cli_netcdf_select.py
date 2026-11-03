@@ -20,7 +20,7 @@ import argparse
 from collections.abc import Callable
 from typing import Any
 
-from pyramids._cli_shared import info_print, refuse_existing
+from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -97,12 +97,8 @@ def _selected(build: Callable[[], NetCDF]) -> NetCDF:
     Raises:
         ValueError: ``build`` raised ``KeyError`` or ``IndexError``.
     """
-    try:
-        result = build()
-    except (KeyError, IndexError) as exc:
-        message = exc.args[0] if exc.args else str(exc)
-        raise ValueError(message) from exc
-    return result
+    with map_lookup_errors():
+        return build()
 
 
 def _cmd_nc_isel(args: argparse.Namespace) -> int:

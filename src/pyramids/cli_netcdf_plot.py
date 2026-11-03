@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from pyramids._cli_shared import info_print, refuse_existing
+from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -85,7 +85,8 @@ def _cmd_nc_animate(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     _force_agg()
     nc = NetCDF.read_file(args.file)
-    glyph = nc.animate(variable=args.var, dim=args.dim)
+    with map_lookup_errors():
+        glyph = nc.animate(variable=args.var, dim=args.dim)
     glyph.save_animation(args.output, fps=args.fps)
     info_print(args, f"wrote {args.output}")
     return 0

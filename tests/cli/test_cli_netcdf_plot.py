@@ -42,6 +42,14 @@ class TestNcPlot:
         assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 0
         assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 1
 
+    def test_unknown_variable_errors_cleanly(self, tmp_path, capsys):
+        """An unknown --var exits 1 with a clean error, not the catch-all."""
+        rc = main(["nc", "plot", str(_NC), str(tmp_path / "o.png"), "--var", "nope"])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "unexpected failure" not in err
+        assert "Traceback" not in err
+
 
 class TestNcPlotHistogram:
     """`pyramids nc plot-histogram`."""
@@ -76,3 +84,15 @@ class TestNcAnimate:
         )
         assert out.exists()
         assert out.stat().st_size > 0
+
+    def test_unknown_dim_errors_cleanly(self, tmp_path, capsys):
+        """An unknown --dim exits 1 with a clean error, not the catch-all (H2)."""
+        out = str(tmp_path / "o.gif")
+        rc = main(
+            ["nc", "animate", str(_NC_TIME), out, "--var", "tos", "--dim", "nope"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "not a band dim" in err
+        assert "unexpected failure" not in err
+        assert "Traceback" not in err
