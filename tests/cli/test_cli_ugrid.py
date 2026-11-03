@@ -39,7 +39,8 @@ class TestMeshInfo:
         """The human form prints key: value lines."""
         assert main(["mesh", "info", str(_MESH)]) == 0
         out = capsys.readouterr().out
-        assert "n_node:" in out and "mesh_name:" in out
+        assert "n_node:" in out
+        assert "mesh_name:" in out
 
 
 class TestMeshConvert:

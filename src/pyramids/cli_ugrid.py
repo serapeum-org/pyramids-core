@@ -20,6 +20,8 @@ from pyramids._cli_shared import (
 from pyramids.dataset import Dataset
 from pyramids.netcdf.ugrid import UgridDataset
 
+_HELP_MESH_FILE = "UGRID NetCDF path"
+
 
 def _validate_variable(mesh: UgridDataset, var: str | None) -> None:
     """Raise a clean ``ValueError`` when ``var`` is not a data variable of ``mesh``.
@@ -125,12 +127,12 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
     msub = mesh.add_subparsers(dest="command", required=True)
 
     m_info = msub.add_parser("info", help="print mesh metadata")
-    m_info.add_argument("file", help="UGRID NetCDF path")
+    m_info.add_argument("file", help=_HELP_MESH_FILE)
     m_info.add_argument("--json", action="store_true", help="emit JSON")
     m_info.set_defaults(func=_cmd_mesh_info)
 
     m_ex = msub.add_parser("extract", help="rasterize a mesh variable onto a grid")
-    m_ex.add_argument("file", help="UGRID NetCDF path")
+    m_ex.add_argument("file", help=_HELP_MESH_FILE)
     m_ex.add_argument("output", help="destination raster path")
     m_ex.add_argument(
         "--like", required=True, help="template raster whose grid/CRS the output adopts"
@@ -148,7 +150,7 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
     m_ex.set_defaults(func=_cmd_mesh_extract)
 
     m_conv = msub.add_parser("convert", help="convert a mesh to a vector file")
-    m_conv.add_argument("file", help="UGRID NetCDF path")
+    m_conv.add_argument("file", help=_HELP_MESH_FILE)
     m_conv.add_argument("output", help="destination vector path")
     m_conv.add_argument(
         "--var", help="mesh variable to carry onto each cell (optional)"
