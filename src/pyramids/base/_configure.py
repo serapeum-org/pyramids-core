@@ -147,6 +147,12 @@ def gdal_config(**options: Any) -> Iterator[dict[str, str]]:
     supported. A value of ``None`` unsets the option for the block; booleans are
     coerced to GDAL's ``"YES"``/``"NO"``; everything else is ``str()``-ified.
 
+    Because the options are process-wide, this manager is **not safe to use from
+    multiple threads concurrently**: overlapping blocks on different threads share
+    the same global state and the save/restore is not atomic across threads, so a
+    concurrent block can observe or restore the wrong value. Use it from a single
+    thread (or guard it with your own lock).
+
     Args:
         **options: GDAL config options as keyword arguments (e.g.
             ``GDAL_CACHEMAX="512"``, ``CPL_DEBUG=True``, ``GDAL_NUM_THREADS="ALL_CPUS"``).
