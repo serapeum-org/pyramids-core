@@ -775,7 +775,8 @@ def __getattr__(name: str):
 
     if name == "UgridMetadata":
         warnings.warn(
-            "UgridMetadata is renamed to MeshMetadata; import MeshMetadata instead.",
+            "UgridMetadata is renamed to MeshMetadata; import MeshMetadata instead. "
+            "UgridMetadata will be removed in a future release (see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )

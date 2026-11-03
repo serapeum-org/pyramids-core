@@ -117,7 +117,8 @@ def __getattr__(name: str):
 
         warnings.warn(
             "pyramids.netcdf.ugrid.network is renamed to pyramids.netcdf.ugrid.mesh1d; "
-            "import from mesh1d instead.",
+            "import from mesh1d instead. It will be removed in a future release "
+            "(see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -126,8 +127,8 @@ def __getattr__(name: str):
     if entry is not None:
         new_name, obj = entry
         warnings.warn(
-            f"{name} is renamed to {new_name}; import {new_name} instead "
-            f"({name} will be removed in a future release).",
+            f"{name} is renamed to {new_name}; import {new_name} instead. "
+            f"{name} will be removed in a future release (see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )

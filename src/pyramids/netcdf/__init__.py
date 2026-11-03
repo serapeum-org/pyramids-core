@@ -78,7 +78,8 @@ def __getattr__(name: str):
 
     if name == "UgridDataset":
         warnings.warn(
-            "UgridDataset is renamed to MeshDataset; import MeshDataset instead.",
+            "UgridDataset is renamed to MeshDataset; import MeshDataset instead. "
+            "UgridDataset will be removed in a future release (see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )

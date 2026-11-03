@@ -8043,7 +8043,8 @@ def __getattr__(name: str):
     if entry is not None:
         new_name, obj = entry
         warnings.warn(
-            f"{name} is renamed to {new_name}; import {new_name} instead.",
+            f"{name} is renamed to {new_name}; import {new_name} instead. "
+            f"{name} will be removed in a future release (see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )

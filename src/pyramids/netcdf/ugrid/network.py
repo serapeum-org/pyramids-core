@@ -30,7 +30,8 @@ def __getattr__(name: str):
     if name == "Network1d":
         warnings.warn(
             "pyramids.netcdf.ugrid.network.Network1d is renamed to "
-            "pyramids.netcdf.ugrid.mesh1d.Mesh1d; import Mesh1d from mesh1d instead.",
+            "pyramids.netcdf.ugrid.mesh1d.Mesh1d; import Mesh1d from mesh1d instead. "
+            "It will be removed in a future release (see the migration guide).",
             DeprecationWarning,
             stacklevel=2,
         )

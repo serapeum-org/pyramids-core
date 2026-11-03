@@ -1043,6 +1043,26 @@ replace the georeference wholesale.
 
 ### unreleased
 
+**The unstructured-mesh data model was renamed from `Ugrid*` / `Network1d` to `Mesh*`.** The classes were
+named after the UGRID NetCDF convention and one hydrodynamic use case; they are general GIS mesh types, so the
+names now match the rest of the package (the plugin entry point is already `pyramids.mesh_drivers`, and the 2D
+topology was already `Mesh2d`). The old names still import and resolve to the new ones, emitting a
+`DeprecationWarning`; they are scheduled for removal in a future release.
+
+| old | new |
+|---|---|
+| `UgridDataset` | `MeshDataset` |
+| `Network1d` | `Mesh1d` |
+| `UgridMetadata` | `MeshMetadata` |
+| module `pyramids.netcdf.ugrid.network` | `pyramids.netcdf.ugrid.mesh1d` |
+
+- The import path `pyramids.netcdf.ugrid` is unchanged, and `from pyramids.netcdf import MeshDataset` (the
+  top-level re-export) works as before under the new name.
+- `MeshDataset` and `Mesh2d` / `Mesh1d` are unchanged in behaviour -- only the names differ. `MeshDataset` holds
+  a `Mesh2d` topology plus data variables; `Mesh1d` is the 1D topology (nodes + edges), the peer of `Mesh2d`.
+- To find every affected call site, run your suite with `python -W error::DeprecationWarning -m pytest` (see the
+  command at the top of this guide).
+
 **A container now duck-types as a sequence, because it gained `__iter__` and `__len__`.** `NetCDF` had
 neither dunder before, so every `isinstance(x, Iterable)` test answered `False` for one. That flipped:
 
