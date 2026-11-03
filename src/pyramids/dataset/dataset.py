@@ -823,17 +823,23 @@ class Dataset(RasterBase):
 
         Before the swap, the prior handle (``self._raster``) is
         ``FlushCache``'d when it differs from ``src``, committing any
-        buffered writes and not relying on refcounting alone to
-        finalize it once ``__dict__.update`` drops the reference
-        (mirrors the explicit flush in :mod:`pyramids.dataset.ops.io`
-        ``_create_copy_and_reopen``). The ``prev is not src`` guard
-        skips the no-op case where the operation handed back the very
-        handle it was given, so the live handle is never flushed and
-        then reused. The flush is best-effort: a ``RuntimeError`` from
-        it (a deferred write/commit failure on the discarded handle) is
-        debug-logged, not raised, so it cannot abort an in-place op
-        whose replacement raster is already valid — see
-        :func:`_flush_prior_handle`.
+        buffered writes rather than relying on refcounting alone to
+        finalize the handle once ``__dict__.update`` drops the last
+        reference. The ``prev is not src`` guard skips the no-op case
+        where the operation handed back the very handle it was given,
+        so the live handle is never flushed and then reused. The flush
+        is best-effort: a ``RuntimeError`` from it (a deferred
+        write/commit failure on the discarded handle) is debug-logged,
+        not raised, so it cannot abort an in-place op whose replacement
+        raster is already valid — see :func:`_flush_prior_handle`.
+
+        This is distinct from the flush in :mod:`pyramids.dataset.ops.io`
+        ``_create_copy_and_reopen``, which flushes the *source* before
+        ``CreateCopy`` so the copy reads committed data — a different
+        purpose from finalizing a handle being dropped. On the
+        ``to_file`` reopen path both run: that source is this method's
+        ``prev`` (``reopened`` is ``src``), so the old handle is flushed
+        there and then again here — an accepted idempotent no-op.
 
         after `__dict__.update`, the collaborators on
         `self` came from `new.__dict__` and point at the temporary
