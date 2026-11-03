@@ -14,7 +14,6 @@ import argparse
 import ast
 import json
 import operator
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import replace
@@ -24,7 +23,7 @@ import numpy as np
 from osgeo import osr
 from pandas import DataFrame
 
-from pyramids._cli_shared import info_print
+from pyramids._cli_shared import force_agg_backend, info_print
 from pyramids._cli_shared import json_safe as _json_safe
 from pyramids._cli_shared import refuse_existing as _refuse_existing
 from pyramids.base._errors import AlignmentError
@@ -932,10 +931,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     # Force a non-interactive backend before cleopatra/matplotlib is imported so
-    # a headless CLI/CI run never pops a blocking GUI window. Assigned (not
-    # setdefault) so a pre-exported interactive MPLBACKEND (e.g. TkAgg) cannot
-    # win and block on a popup (L3).
-    os.environ["MPLBACKEND"] = "Agg"
+    # a headless CLI/CI run never pops a blocking GUI window (L3).
+    force_agg_backend()
     ds = Dataset.read_file(args.file)
     glyph = ds.plot(band=args.band, title=args.title)
     glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")

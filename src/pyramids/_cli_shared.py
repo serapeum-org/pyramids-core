@@ -17,6 +17,16 @@ import os
 from collections.abc import Iterator
 
 
+def force_agg_backend() -> None:
+    """Force matplotlib's non-interactive Agg backend before any plot import.
+
+    Assigned (not ``setdefault``) so a pre-exported interactive backend such as
+    TkAgg cannot win and block on a GUI popup in a headless CLI/CI run. Call it in
+    any plotting command before cleopatra/matplotlib is imported.
+    """
+    os.environ["MPLBACKEND"] = "Agg"
+
+
 @contextlib.contextmanager
 def map_lookup_errors() -> Iterator[None]:
     """Remap a ``KeyError``/``IndexError`` raised in the block to ``ValueError``.

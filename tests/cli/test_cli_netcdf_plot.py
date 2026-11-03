@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,15 @@ class TestNcPlot:
         assert rc == 1
         assert "unexpected failure" not in err
         assert "Traceback" not in err
+
+    def test_forces_agg_backend(self, tmp_path, monkeypatch):
+        """A pre-set interactive backend is overridden to Agg and the PNG still renders."""
+        monkeypatch.setenv("MPLBACKEND", "TkAgg")
+        out = str(tmp_path / "forced.png")
+        assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 0
+        assert os.environ["MPLBACKEND"] == "Agg"
+        assert os.path.exists(out)
+        assert os.path.getsize(out) > 0
 
 
 class TestNcPlotHistogram:

@@ -11,23 +11,18 @@ components and are better driven from Python, so they are not exposed here.
 from __future__ import annotations
 
 import argparse
-import os
 
-from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
+from pyramids._cli_shared import (
+    force_agg_backend,
+    info_print,
+    map_lookup_errors,
+    refuse_existing,
+)
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OVERWRITE = "replace the output if it exists"
 _HELP_VAR = "variable to plot"
-
-
-def _force_agg() -> None:
-    """Force the non-interactive Agg matplotlib backend.
-
-    Assigned (not ``setdefault``) so a pre-exported interactive backend such as
-    TkAgg cannot win and block on a popup in a headless run.
-    """
-    os.environ["MPLBACKEND"] = "Agg"
 
 
 def _cmd_nc_plot(args: argparse.Namespace) -> int:
@@ -41,7 +36,7 @@ def _cmd_nc_plot(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    _force_agg()
+    force_agg_backend()
     nc = NetCDF.read_file(args.file)
     glyph = nc.plot(variable=args.var, kind=args.kind, title=args.title)
     glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
@@ -62,7 +57,7 @@ def _cmd_nc_plot_histogram(args: argparse.Namespace) -> int:
         ValueError: ``--var`` names a variable that cannot be plotted (no figure).
     """
     refuse_existing(args.output, args.overwrite)
-    _force_agg()
+    force_agg_backend()
     variable = NetCDF.read_file(args.file).get_variable(args.var)
     if not hasattr(variable, "plot_histogram"):
         raise ValueError(f"variable {args.var!r} cannot be plotted as a histogram")
@@ -83,7 +78,7 @@ def _cmd_nc_animate(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    _force_agg()
+    force_agg_backend()
     nc = NetCDF.read_file(args.file)
     with map_lookup_errors():
         glyph = nc.animate(variable=args.var, dim=args.dim)
