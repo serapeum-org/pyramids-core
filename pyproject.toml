@@ -62,6 +62,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# These extras are the PUBLISHED dependency contract (wheel/sdist metadata + the conda-forge
+# recipe) — what `pip install pyramids-gis[<extra>]` installs. The dev/CI conda env does NOT
+# install them as pip wheels; it re-declares the same capabilities as conda packages under
+# [tool.pixi.feature.*.dependencies] so they share GDAL's native stack. See the rationale at
+# [tool.pixi.pypi-dependencies]; keep the two sets of version floors in sync.
 # The floor is the oldest cleopatra pyramids' plotting can actually use, not the
 # version CI happens to resolve: an unbounded / too-loose floor is what let an
 # untested cleopatra resolve and break pyramids' plotting in the first place.
@@ -380,6 +385,18 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
+# pyramids-core is installed WITHOUT its extras (no `extras = [...]`) on purpose. The
+# optional-dependency extras above ([lazy], [viz], [stac], ...) are the *published* contract:
+# they go into the wheel/sdist metadata and drive the conda-forge feedstock recipe, so
+# `pip install pyramids-gis[lazy]` and conda-forge users get those deps. This dev/CI/docs env
+# instead gets the same capabilities as *conda* packages, declared under
+# [tool.pixi.feature.*.dependencies] (e.g. conda `dask-core`, not pip `dask`; plus `hdf5`,
+# `libgdal-netcdf`, `h5py`, ...). The duplication is deliberate, not an oversight: GDAL only
+# works from conda-forge, and every HDF5-linking lib must come from that one channel so they
+# share a single native stack. Pulling the extras in as pip wheels instead would shadow
+# conda's GDAL/HDF5 binaries — the exact DLL-shadow failure the hdf5 pin further down guards
+# against. The cost is that each extra's version floor must be kept in sync by hand with its
+# conda twin in the pixi feature below.
 pyramids-core = { path = ".", editable = true }
 
 [tool.pixi.tasks]
