@@ -2086,6 +2086,10 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Bands.select <pyramids.dataset.engines.Bands.select>`."""
         return self.bands.select(*args, **kwargs)
 
+    def checksum(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Bands.checksum <pyramids.dataset.engines.Bands.checksum>`."""
+        return self.bands.checksum(*args, **kwargs)
+
     def change_no_data_value(self, *args, **kwargs):
         """Facade — concrete override of the abstract :meth:`RasterBase.change_no_data_value`.
 

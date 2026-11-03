@@ -1060,6 +1060,39 @@ class Bands(_Engine["Dataset"]):
         for i, val in enumerate(value):
             self._iloc(i).SetOffset(val)
 
+    @overload
+    def checksum(self, band: None = ...) -> list[int]: ...
+
+    @overload
+    def checksum(self, band: int) -> int: ...
+
+    def checksum(self, band: int | None = None) -> list[int] | int:
+        """GDAL per-band checksum(s) (``GDALChecksumImage``).
+
+        A fast 16-bit image checksum, handy for cheap equality/integrity checks,
+        caching keys, and tests. It is not cryptographic: equal checksums are
+        strong evidence of equal data but not a guarantee -- use
+        :meth:`Dataset.equals` for an exact comparison.
+
+        Args:
+            band: A 0-based band index to checksum just that band, or ``None``
+                (default) to checksum every band in band order.
+
+        Returns:
+            list[int] | int: A list of per-band checksums when ``band`` is ``None``,
+            or a single checksum when a band index is given.
+
+        Raises:
+            IndexError: If ``band`` is negative or out of range.
+        """
+        if band is None:
+            result: list[int] | int = [
+                self._iloc(i).Checksum() for i in range(self._ds.band_count)
+            ]
+        else:
+            result = self._iloc(band).Checksum()
+        return result
+
     def get_band_by_color(self, color_name: str) -> int | None:
         """Get the band associated with a given color.
 
