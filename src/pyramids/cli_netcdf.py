@@ -15,6 +15,9 @@ import json
 from typing import Any
 
 from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids.cli_netcdf_inspect import add_nc_inspect_commands
+from pyramids.cli_netcdf_io import add_nc_io_commands
+from pyramids.cli_netcdf_plot import add_nc_plot_commands
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -220,3 +223,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         "--overwrite", action="store_true", help=_HELP_OVERWRITE
     )
     nc_crop.set_defaults(func=_cmd_nc_crop)
+
+    add_nc_inspect_commands(ncsub)
+    add_nc_io_commands(ncsub)
+    add_nc_plot_commands(ncsub)
