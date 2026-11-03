@@ -22,6 +22,7 @@ from unittest import mock
 
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
@@ -142,6 +143,12 @@ class TestEngineWiring:
         nc._update_inplace(src_nc.raster)
 
         prior.FlushCache.assert_called_once()
+        # The flush must not have aborted the override's swap: `_raster` must have
+        # been rebound off the sentinel to a real GDAL handle, and the engines
+        # re-bound to the surviving instance (the override's post-swap work ran).
+        assert nc._raster is not prior, "swap did not complete; handle still the sentinel"
+        assert isinstance(nc._raster, gdal.Dataset), "handle not rebound to a real dataset"
+        assert nc.selection._ds.epsg == nc.epsg, "engine back-ref stale after flush+swap"
 
     def test_facade_delegates_to_engine(self, mdim_container, monkeypatch):
         """The interop export façade forwards to ``self.interop``.
