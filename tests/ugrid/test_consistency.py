@@ -164,6 +164,7 @@ class TestModuleExports:
     @pytest.mark.parametrize(
         "modname",
         [
+            "pyramids.netcdf",
             "pyramids.netcdf.ugrid",
             "pyramids.netcdf.ugrid.dataset",
             "pyramids.netcdf.ugrid.models",
