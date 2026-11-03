@@ -112,7 +112,8 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
         "--like", required=True, help="template raster whose grid/CRS the output adopts"
     )
     m_ex.add_argument(
-        "--var", help="mesh variable to rasterize (default: the first data variable)"
+        "--var",
+        help="mesh variable to rasterize; required when the mesh has >1 data variable",
     )
     m_ex.add_argument(
         "--method", default="nearest", help="rasterization method (default: nearest)"

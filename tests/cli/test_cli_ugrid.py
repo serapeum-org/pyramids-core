@@ -166,3 +166,25 @@ class TestMeshExtract:
         assert rc == 1
         assert err.startswith("error: ")
         assert "Traceback" not in err
+
+    def test_multi_variable_mesh_requires_var(self, tmp_path, capsys):
+        """On a multi-variable mesh, omitting --var exits 1 with a clear message (L1).
+
+        The shipped mesh has two data variables, so the library cannot pick one;
+        the CLI surfaces that as a one-line error rather than a traceback.
+        """
+        rc = main(
+            [
+                "mesh",
+                "extract",
+                str(_MESH),
+                str(tmp_path / "nv.tif"),
+                "--like",
+                self._template(tmp_path),
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert err.startswith("error: ")
+        assert "data variable" in err
+        assert "Traceback" not in err
