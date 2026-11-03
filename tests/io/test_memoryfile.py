@@ -88,3 +88,9 @@ class TestMemoryFile:
         with MemoryFile() as mf:
             with pytest.raises((FileNotFoundError, OSError)):
                 mf.read()
+
+    def test_empty_bytes_buffer_not_openable(self):
+        """Staging empty bytes creates an un-openable buffer; open() raises."""
+        with MemoryFile(b"") as mf:
+            with pytest.raises((ValueError, RuntimeError, OSError)):
+                mf.open()

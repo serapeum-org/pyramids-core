@@ -40,3 +40,8 @@ class TestWindowCovering:
     def test_read_args(self):
         """The covering window reads as (col_off, row_off, cols, rows)."""
         assert Window.covering((1.0, 1.0, 3.0, 3.0), GT).to_read_args() == (1, 1, 2, 2)
+
+    def test_inverted_bbox_raises(self):
+        """An inverted bounding box raises ValueError (inherited from from_bounds)."""
+        with pytest.raises(ValueError):
+            Window.covering((3.0, 3.0, 1.0, 1.0), GT)
