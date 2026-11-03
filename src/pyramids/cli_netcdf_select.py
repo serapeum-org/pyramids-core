@@ -112,9 +112,8 @@ def _cmd_nc_isel(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     indexers = _dim_value_map(args.index, cast=int)
-    result = _selected(
-        lambda: NetCDF.read_file(args.file).isel(drop=args.drop, **indexers)
-    )
+    nc = NetCDF.read_file(args.file)
+    result = _selected(lambda: nc.isel(drop=args.drop, **indexers))
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -238,11 +237,8 @@ def _cmd_nc_dropna(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    result = _selected(
-        lambda: NetCDF.read_file(args.file).dropna(
-            args.dim, how=args.how, thresh=args.thresh
-        )
-    )
+    nc = NetCDF.read_file(args.file)
+    result = _selected(lambda: nc.dropna(args.dim, how=args.how, thresh=args.thresh))
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -260,10 +256,9 @@ def _cmd_nc_pad(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     pad_width = _dim_value_map(args.width, cast=int)
+    nc = NetCDF.read_file(args.file)
     result = _selected(
-        lambda: NetCDF.read_file(args.file).pad(
-            mode=args.mode, constant_values=args.value, **pad_width
-        )
+        lambda: nc.pad(mode=args.mode, constant_values=args.value, **pad_width)
     )
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
