@@ -49,13 +49,15 @@ class TestMapLookupErrors:
 
     def test_keyerror_message_preserved(self):
         """A KeyError's argument is carried into the ValueError message."""
+        error = KeyError("missing")
         with pytest.raises(ValueError, match="missing"):
-            _raise_through_map_lookup(KeyError("missing"))
+            _raise_through_map_lookup(error)
 
     def test_argless_error_falls_back_to_str(self):
         """An argless IndexError still remaps (the str(exc) fallback branch)."""
+        error = IndexError()
         with pytest.raises(ValueError):
-            _raise_through_map_lookup(IndexError())
+            _raise_through_map_lookup(error)
 
 
 class TestJsonSanitize:
