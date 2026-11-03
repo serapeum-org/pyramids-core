@@ -17,6 +17,9 @@ callers holding a bare :class:`Mesh2d`.
 
 from __future__ import annotations
 
+import importlib
+import warnings
+
 from pyramids.netcdf.ugrid import (
     analysis,
     construct,
@@ -105,14 +108,12 @@ def __getattr__(name: str):
     Raises:
         AttributeError: `name` is neither a current nor a deprecated public name.
     """
-    import warnings
 
     if name == "network":
         # Return the real `network.py` shim, not the `mesh1d` module: the shim both re-exports
         # `Mesh1d` and resolves the old `Network1d` name through its own `__getattr__`, so
         # `ugrid.network.Network1d` works regardless of whether the shim was imported first.
         # Returning `mesh1d` here would leave `ugrid.network.Network1d` raising AttributeError.
-        import importlib
 
         warnings.warn(
             "pyramids.netcdf.ugrid.network is renamed to pyramids.netcdf.ugrid.mesh1d; "

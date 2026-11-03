@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf.array_options import (
     CFAttributes,
@@ -73,7 +75,6 @@ def __getattr__(name: str):
     Raises:
         AttributeError: Any other unknown name.
     """
-    import warnings
 
     if name == "UgridDataset":
         warnings.warn(

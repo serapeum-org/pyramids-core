@@ -7,6 +7,7 @@ mesh), and dataset-level metadata.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, cast
@@ -771,7 +772,6 @@ def __getattr__(name: str):
     Raises:
         AttributeError: Any other unknown name.
     """
-    import warnings
 
     if name == "UgridMetadata":
         warnings.warn(
