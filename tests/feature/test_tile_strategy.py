@@ -16,11 +16,11 @@ hardware-dependent.
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
 
 import geopandas as gpd
 import pytest
+from osgeo import ogr
 from shapely.geometry import Point, box
 
 from pyramids.feature import FeatureCollection
@@ -154,10 +154,11 @@ class TestNoBboxIgnoresStrategy:
     reason="pyarrow not installed (install with pyramids-core[parquet])",
 )
 @pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="GDAL Parquet driver fails to load duckdb.dll on Windows (conda-forge "
-    "libgdal-arrow-parquet native-lib gap); the row_group pushdown path is "
-    "exercised on Linux/macOS CI.",
+    ogr.GetDriverByName("Parquet") is None,
+    reason="OGR Parquet vector driver (libgdal-arrow-parquet) unavailable: not installed on "
+    "Linux/macOS conda without the package, and broken on Windows (conda-forge duckdb.dll "
+    "native-lib gap). Tracked in #457. Gating on the driver itself (not sys.platform) means "
+    "this runs automatically wherever the driver actually loads.",
 )
 class TestRowGroupParquet:
     """``row_group`` on a Parquet file exercises the pyarrow pushdown path."""
