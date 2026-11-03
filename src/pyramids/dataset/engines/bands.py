@@ -1084,6 +1084,20 @@ class Bands(_Engine["Dataset"]):
 
         Raises:
             IndexError: If ``band`` is negative or out of range.
+
+        Examples:
+            - One checksum per band, or a single band's checksum:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326)
+                >>> ds = Dataset.from_array(np.ones((2, 3, 4), np.float32), geo_ref=ref)
+                >>> len(ds.checksum())
+                2
+                >>> ds.checksum() == [ds.checksum(band=0), ds.checksum(band=1)]
+                True
+
+                ```
         """
         if band is None:
             result: list[int] | int = [
