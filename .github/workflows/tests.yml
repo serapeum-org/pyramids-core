@@ -71,12 +71,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    # One job per [project.optional-dependencies] group that ships native
-    # deps (conda-forge backed). Each job installs the matching
-    # ``dev-<extra>`` pixi env and runs only the tests tagged with the
-    # extra's pytest marker. Tests auto-skip on missing deps via the
-    # ``pytest_collection_modifyitems`` hook in tests/conftest.py, so
-    # this job is the only place the extra-gated suite actually runs.
+    # One job per optional-dependency group. Each job installs an env that HAS the
+    # extra and RUNS that extra's tests, so they execute for real here instead of
+    # skipping silently in the main matrix (whose envs omit these extras). Without a
+    # job like this an extra's tests skip in every job and a regression merges green —
+    # exactly what happened to tests/stac, which had no home until the `stac` target below.
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -94,6 +93,11 @@ jobs:
           # extra rather than lazy; run its tests under the parquet env so they execute
           # instead of skipping (the lazy env has no pyarrow).
           - { name: netcdf_parquet, env: parquet,    dir: tests/netcdf/lazy/test_to_dask_dataframe.py }
+          # STAC (pystac-client / stac-asset) is pure-Python — no native driver — but no
+          # main-matrix env installs it, so tests/stac + tests/dataset/stac (~25 files, 1000+
+          # assertions) skipped in every CI job and a STAC regression would merge green. Run
+          # them in the `dev` env, which carries the stac feature, so they actually execute.
+          - { name: stac, env: dev, dir: "tests/stac tests/dataset/stac" }
 
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
