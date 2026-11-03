@@ -230,9 +230,12 @@ nav:
       - Cell Operations: reference/dataset/cell.md
       - Georeferencing (GCPs & RPCs): reference/dataset/georef.md
       - Merge & stack: reference/dataset/merge.md
+      - Window: reference/dataset/window.md
       - Writing a raster driver: reference/dataset/writing-a-raster-driver.md
     - DatasetCollection: reference/dataset/collection.md
     - Processing pipelines: reference/processing.md
+    - Configuration: reference/configure.md
+    - In-memory rasters & array helpers: reference/io-helpers.md
     - Zarr: reference/zarr.md
     - Feature:
       - Overview: reference/feature/index.md
