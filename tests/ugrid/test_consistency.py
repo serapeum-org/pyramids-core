@@ -131,16 +131,18 @@ class TestModuleExports:
         assert obj is getattr(ugrid, new), f"{old} must alias {new}"
 
     def test_the_old_network_attribute_on_the_package_warns(self):
-        """`ugrid.network` (attribute access) warns and returns the renamed `mesh1d` module."""
-        import importlib
+        """`ugrid.network` attribute access warns and still resolves `Network1d` (R1 M2).
 
-        from pyramids.netcdf.ugrid import mesh1d as mesh1d_module
-
+        Test scenario:
+            The attribute must return the `network.py` shim, not the bare `mesh1d` module, so
+            the historical `from pyramids.netcdf.ugrid import network; network.Network1d`
+            pattern keeps working (warns -> `Mesh1d`) instead of raising `AttributeError`.
+        """
         with pytest.warns(DeprecationWarning, match="mesh1d"):
             returned = ugrid.network
-        assert returned is mesh1d_module, (
-            "ugrid.network must resolve to the mesh1d module"
-        )
+        with pytest.warns(DeprecationWarning, match="Mesh1d"):
+            cls = returned.Network1d
+        assert cls is ugrid.Mesh1d, "ugrid.network.Network1d must resolve to Mesh1d"
 
     @pytest.mark.parametrize(
         "modname, old, new_attr",

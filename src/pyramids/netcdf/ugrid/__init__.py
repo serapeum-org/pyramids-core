@@ -108,13 +108,19 @@ def __getattr__(name: str):
     import warnings
 
     if name == "network":
+        # Return the real `network.py` shim, not the `mesh1d` module: the shim both re-exports
+        # `Mesh1d` and resolves the old `Network1d` name through its own `__getattr__`, so
+        # `ugrid.network.Network1d` works regardless of whether the shim was imported first.
+        # Returning `mesh1d` here would leave `ugrid.network.Network1d` raising AttributeError.
+        import importlib
+
         warnings.warn(
             "pyramids.netcdf.ugrid.network is renamed to pyramids.netcdf.ugrid.mesh1d; "
             "import from mesh1d instead.",
             DeprecationWarning,
             stacklevel=2,
         )
-        return mesh1d
+        return importlib.import_module("pyramids.netcdf.ugrid.network")
     entry = _DEPRECATED_NAMES.get(name)
     if entry is not None:
         new_name, obj = entry
