@@ -7800,12 +7800,12 @@ def _read_through_driver(
     if not isinstance(result, expected):
         produced = type(result).__name__
         # Decided by an isinstance check on what the driver produced, not by matching on a
-        # class name: a subclass called `MyNetwork1d` would fail an `endswith` test, and a
+        # class name: a subclass called `MyMesh1d` would fail an `endswith` test, and a
         # subclass of `MeshDataset` was previously told to use `MeshDataset.read_file` --
         # the call it had just made.
-        from pyramids.netcdf.ugrid.mesh1d import Mesh1d as _Network1d
+        from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 
-        other = "Mesh1d" if isinstance(result, _Network1d) else "MeshDataset"
+        other = "Mesh1d" if isinstance(result, Mesh1d) else "MeshDataset"
         # Name the driver in the suggested call. Without it this message and the one
         # `Mesh1d.read_file` raises pointed at each other, and a caller bounced between the
         # two without either naming `driver=` as the way through.
