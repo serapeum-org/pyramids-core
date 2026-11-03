@@ -21,6 +21,12 @@ def _reject_non_finite(token):
     raise AssertionError(f"non-finite JSON token emitted: {token}")
 
 
+def _raise_through_map_lookup(exc):
+    """Raise `exc` inside `map_lookup_errors` (the single call under test)."""
+    with map_lookup_errors():
+        raise exc
+
+
 class TestMetadataPayload:
     """`_metadata_payload` fallbacks for non-dataclass inputs."""
 
@@ -44,14 +50,12 @@ class TestMapLookupErrors:
     def test_keyerror_message_preserved(self):
         """A KeyError's argument is carried into the ValueError message."""
         with pytest.raises(ValueError, match="missing"):
-            with map_lookup_errors():
-                raise KeyError("missing")
+            _raise_through_map_lookup(KeyError("missing"))
 
     def test_argless_error_falls_back_to_str(self):
         """An argless IndexError still remaps (the str(exc) fallback branch)."""
         with pytest.raises(ValueError):
-            with map_lookup_errors():
-                raise IndexError()
+            _raise_through_map_lookup(IndexError())
 
 
 class TestJsonSanitize:
