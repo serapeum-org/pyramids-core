@@ -42,11 +42,19 @@ class TestBlocksCommand:
         assert main(["blocks", src_raster]) == 0
         assert "block 0:" in capsys.readouterr().out
 
-    def test_bad_band_errors(self, src_raster, capsys):
-        """An out-of-range band exits 1 with a one-line error."""
+    def test_out_of_range_band_errors(self, src_raster, capsys):
+        """An out-of-range band exits 1 with a clear 'out of range' message (not 'unexpected')."""
         rc = main(["blocks", src_raster, "--band", "9"])
         assert rc == 1
-        assert capsys.readouterr().err.strip() != ""
+        err = capsys.readouterr().err
+        assert "out of range" in err
+        assert "unexpected failure" not in err
+
+    def test_negative_band_rejected(self, src_raster, capsys):
+        """A negative band is rejected (exit 1), not silently interpreted from the end."""
+        rc = main(["blocks", src_raster, "--band", "-1"])
+        assert rc == 1
+        assert "out of range" in capsys.readouterr().err
 
     def test_missing_file_errors(self, tmp_path, capsys):
         """A missing input exits 1."""

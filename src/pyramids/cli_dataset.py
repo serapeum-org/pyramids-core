@@ -249,6 +249,10 @@ def _cmd_blocks(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
+    if args.band < 0 or args.band >= ds.band_count:
+        raise ValueError(
+            f"band {args.band} out of range for a {ds.band_count}-band raster"
+        )
     geotransform = ds.geotransform
     records: list[dict[str, Any]] = []
     for index, win in enumerate(ds.block_windows(band=args.band)):
