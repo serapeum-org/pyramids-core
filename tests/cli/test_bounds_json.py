@@ -61,7 +61,9 @@ def failing_transform(monkeypatch: pytest.MonkeyPatch):
             failed = (float("inf"), float("inf"), 0.0)
             return [failed] + [(1.0, 2.0, 0.0)] * (len(points) - 1)
 
-    monkeypatch.setattr(cli_dataset.osr, "CoordinateTransformation", lambda *a, **k: _Failing())
+    monkeypatch.setattr(
+        cli_dataset.osr, "CoordinateTransformation", lambda *a, **k: _Failing()
+    )
 
 
 class TestBoundsJson:
