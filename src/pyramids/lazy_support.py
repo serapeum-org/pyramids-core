@@ -19,6 +19,13 @@ Rules (enforced by ``tests/test_lazy_support.py``):
   name removed, or a signature/semantics changed); additions never need a bump. A lazy backend pins
   ``pyramids.lazy_support.LAZY_SUPPORT_API_VERSION >= N`` at its own import and fails loudly
   ("upgrade pyramids-core") rather than on a later missing attribute.
+* **Private primitives are re-exported on purpose.** A few names here are underscore-prefixed core
+  primitives (``_is_identity_packing``, ``_dtype_to_str``) the lazy layer genuinely needs; they are
+  part of this contract despite the leading underscore.
+* **Patch deferred forwarders at their home module.** Core re-imports these primitives inside the
+  method bodies that use them (plan #2), so a test double belongs on the *home* module (e.g.
+  ``pyramids.dataset.ops._zarr._resolve_store``), not on the consumer module, which no longer holds
+  the name at module scope.
 
 Examples:
     - A lazy backend checks the contract version, then uses a re-exported primitive -- which is the
