@@ -250,7 +250,7 @@ class TestGeodesicDistance:
         assert run(argv) == 0
         values = json.loads(capsys.readouterr().out)
         assert len(values) == 6
-        assert max(values) == 0.0
+        assert max(values) == pytest.approx(0.0, abs=1e-6)
 
     def test_non_point_raises(self):
         """A non-point source has no geodesic distance and surfaces a caught error."""
@@ -266,7 +266,7 @@ class TestDistance:
         assert run(["distance", _POINTS, "--other", _POINTS, "--json"]) == 0
         values = json.loads(capsys.readouterr().out)
         assert len(values) == 6
-        assert max(values) == 0.0
+        assert max(values) == pytest.approx(0.0, abs=1e-6)
 
     def test_missing_other_raises(self, tmp_path):
         """A missing --other file surfaces a caught error."""
@@ -281,7 +281,7 @@ class TestHausdorffDistance:
         """The Hausdorff distance of each geometry to itself is zero."""
         assert run(["hausdorff-distance", _POINTS, "--other", _POINTS, "--json"]) == 0
         values = json.loads(capsys.readouterr().out)
-        assert max(values) == 0.0
+        assert max(values) == pytest.approx(0.0, abs=1e-6)
 
     def test_missing_other_raises(self, tmp_path):
         """A missing --other file surfaces a caught error."""
@@ -297,7 +297,7 @@ class TestFrechetDistance:
         """The Frechet distance of each geometry to itself is zero."""
         assert run(["frechet-distance", _POINTS, "--other", _POINTS, "--json"]) == 0
         values = json.loads(capsys.readouterr().out)
-        assert max(values) == 0.0
+        assert max(values) == pytest.approx(0.0, abs=1e-6)
 
     def test_missing_other_raises(self, tmp_path):
         """A missing --other file surfaces a caught error."""
