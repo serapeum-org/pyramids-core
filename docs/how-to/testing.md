@@ -87,7 +87,7 @@ specific `netcdf4` build string so the HDF5 shared library matches
 | `tests/dataset/ops/lazy/` | `lazy` | ✅ | — | `dev` |
 | `tests/dataset/collection/` | `lazy` (+ kerchunk seam, auto-skip) | ✅ | — | `dev` |
 | `tests/dataset/ops/test_zonal_stats.py` | core | ✅ | — | `dev` |
-| `tests/dataset/test_stac.py` | core (duck-typed, no pystac dep) | ✅ | — | `dev` |
+| `tests/dataset/stac/test_stac.py` | core (duck-typed, no pystac dep) | ✅ | — | `dev` |
 | `tests/feature/` (excl. `lazy/`) | core + `parquet` (some) | ✅ | — | `dev` |
 | `tests/feature/lazy/` | `parquet` | ✅ (skips) | ✅ `parquet` | `parquet` |
 | `tests/netcdf/` (excl. `lazy/`) | `interop` | ✅ (interop-tests step) | — | `dev` |
