@@ -40,6 +40,7 @@ from pyramids.feature import FeatureCollection, create_polygon, get_coords
 
 pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
+
 @pytest.fixture
 def big_points_geojson(tmp_path: Path) -> Path:
     """100 points with a 'score' attribute, spread diagonally."""

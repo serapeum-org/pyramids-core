@@ -22,6 +22,7 @@ from pyramids.dataset import Dataset, cog
 
 pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
+
 @pytest.fixture
 def float_dataset_128() -> Dataset:
     arr = np.arange(128 * 128, dtype=np.float32).reshape(128, 128)

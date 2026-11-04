@@ -245,6 +245,7 @@ def geometry_collection_gdf() -> GeoDataFrame:
 # H3/indexing and point-geometry fixtures, moved from the root conftest: only feature
 # tests consume them (point_gdf today; the hex/H3 helpers are kept here for indexing tests).
 
+
 @pytest.fixture(scope="session")
 def lat_lon() -> Tuple[float, float]:
     return 89.83, -157.30

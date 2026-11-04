@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests._marks import requires_parquet_lazy, requires_parquet
+from tests._marks import requires_parquet, requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 

@@ -14,7 +14,7 @@ import pytest
 from shapely.geometry import Point
 
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_parquet_lazy, requires_parquet
+from tests._marks import requires_parquet, requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 

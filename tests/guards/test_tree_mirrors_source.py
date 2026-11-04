@@ -77,9 +77,7 @@ def test_no_stray_test_file_at_the_tests_root():
 def test_no_unexpected_python_file_at_the_tests_root():
     """The tests/ root holds only shared helpers + conftest, never a loose module."""
     unexpected = sorted(
-        p.name
-        for p in _TESTS.glob("*.py")
-        if p.name not in _ALLOWED_ROOT_FILES
+        p.name for p in _TESTS.glob("*.py") if p.name not in _ALLOWED_ROOT_FILES
     )
     assert not unexpected, (
         f"unexpected Python file(s) at the tests/ root: {unexpected}. Shared helpers belong in "
@@ -90,9 +88,7 @@ def test_no_unexpected_python_file_at_the_tests_root():
 
 def test_no_hyphenated_python_file_is_silently_uncollectable():
     """A hyphenated .py filename never matches ``test_*.py`` — it would be a test that never runs."""
-    hyphenated = sorted(
-        str(p.relative_to(_REPO)) for p in _TESTS.rglob("*-*.py")
-    )
+    hyphenated = sorted(str(p.relative_to(_REPO)) for p in _TESTS.rglob("*-*.py"))
     assert not hyphenated, (
         f"these .py files under tests/ carry a hyphen, so pytest's `test_*.py` pattern cannot "
         f"collect them — a hyphenated repro or helper that silently never runs: {hyphenated}. "

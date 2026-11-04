@@ -22,8 +22,8 @@ import numpy as np
 import pytest
 
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_netcdf_lazy
 from tests._marks import requires_lazy as requires_zarr
+from tests._marks import requires_netcdf_lazy
 from tests.dataset.collection.conftest import NC_FIXTURE
 
 try:
@@ -37,6 +37,7 @@ except ImportError:  # pragma: no cover - gated on the kerchunk extra
     fsspec = None
 
 pytestmark = [pytest.mark.lazy, pytest.mark.e2e]
+
 
 def _worker_write_zarr(payload: bytes, store: str) -> tuple[int, int, int, int]:
     """Worker: unpickle collection, write to Zarr, return shape."""

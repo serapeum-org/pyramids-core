@@ -22,6 +22,7 @@ from pyramids.dataset.merge import stack_bands
 
 pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
+
 def _write_band(
     directory,
     name,

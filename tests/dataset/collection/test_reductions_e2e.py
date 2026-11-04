@@ -27,6 +27,7 @@ from tests._marks import requires_lazy
 
 pytestmark = [pytest.mark.lazy, pytest.mark.e2e]
 
+
 @pytest.fixture
 def four_ramp_files(tmp_path):
     """Four timesteps filled with values 1..4 on a 3×4 grid."""
