@@ -59,6 +59,14 @@ HAS_PYSTAC_CLIENT = _has("pystac_client")
 # module of that extra is importable — so `netcdf_lazy` requires
 # kerchunk AND h5py AND the lazy stack, all of which now ship in
 # `pip install pyramids-core[lazy]`.
+#
+# Why `netcdf_lazy`/`parquet_lazy` are kept distinct from `lazy`/`parquet` rather than
+# collapsed: each gates on EXTRA modules on top of the base extra's headline dependency
+# (`netcdf_lazy` additionally needs kerchunk + h5py; `parquet_lazy` additionally needs
+# dask-geopandas). The modules ship inside the [lazy]/[parquet] extras, but an install can
+# still carry the base stack (zarr/dask, or pyarrow) without them. A test re-marked plain
+# `lazy`/`parquet` would then FAIL to skip when kerchunk/h5py (or dask-geopandas) is the
+# missing piece — so the finer-grained markers are retained to keep the skip precise.
 _HAS_VIZ = HAS_CLEOPATRA
 _HAS_LAZY = HAS_DASK_ARRAY and HAS_ZARR
 _HAS_INTEROP = HAS_INTEROP
