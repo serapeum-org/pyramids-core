@@ -47,18 +47,8 @@ def multiple_compressed_file_zip_content() -> List[str]:
 
 
 @pytest.fixture(scope="module")
-def multiple_compressed_file_7z() -> str:
-    return "tests/data/virtual-file-system/multiple_compressed_files.7z"
-
-
-@pytest.fixture(scope="module")
 def multiple_compressed_file_tar() -> str:
     return "tests/data/virtual-file-system/multiple_compressed_files.tar"
-
-
-@pytest.fixture(scope="module")
-def one_compressed_file_7z() -> str:
-    return "tests/data/virtual-file-system/one_compressed_file.7z"
 
 
 @pytest.fixture(scope="module")
