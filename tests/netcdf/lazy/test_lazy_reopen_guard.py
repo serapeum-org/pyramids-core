@@ -21,7 +21,7 @@ from pyramids.base._file_manager import (
     gdal_mdarray_open,
 )
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -36,7 +36,7 @@ FIX = (
 class TestReopenGuard:
     """#1224 — reopening a file with a parked lazy handle releases it and warns, never crashing."""
 
-    @requires_dask
+    @requires_lazy
     def test_discard_path_handles_releases_a_parked_handle(self):
         """A computed lazy read parks a handle; `discard_path_handles` releases it, array still computes."""
         nc = NetCDF.read_file(str(FIX))
@@ -52,7 +52,7 @@ class TestReopenGuard:
         )
         np.testing.assert_array_equal(np.asarray(lazy), first)
 
-    @requires_dask
+    @requires_lazy
     def test_reopen_warns_and_the_lazy_array_still_computes(self):
         """Reopening the same file while a computed lazy handle is parked warns and does not crash."""
         nc = NetCDF.read_file(str(FIX))

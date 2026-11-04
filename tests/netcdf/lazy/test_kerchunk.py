@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_kerchunk
+from tests._marks import requires_netcdf_lazy
 from tests.netcdf.lazy.conftest import THREE_D_NC_FIXTURE as FIXTURE
 
 pytestmark = pytest.mark.netcdf_lazy
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.netcdf_lazy
 class TestToKerchunkSingleFile:
     """Emit + read back a single-file manifest."""
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_manifest_is_written(self, tmp_path):
         out = tmp_path / "refs.json"
         nc = NetCDF.read_file(FIXTURE, open_as_multi_dimensional=False)
@@ -30,7 +30,7 @@ class TestToKerchunkSingleFile:
         assert out.exists()
         assert "refs" in result or "version" in result
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_manifest_is_valid_json(self, tmp_path):
         out = tmp_path / "refs.json"
         nc = NetCDF.read_file(FIXTURE, open_as_multi_dimensional=False)
@@ -38,7 +38,7 @@ class TestToKerchunkSingleFile:
         parsed = json.loads(out.read_text())
         assert isinstance(parsed, dict)
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_return_value_matches_file(self, tmp_path):
         out = tmp_path / "refs.json"
         nc = NetCDF.read_file(FIXTURE, open_as_multi_dimensional=False)
@@ -46,7 +46,7 @@ class TestToKerchunkSingleFile:
         written = json.loads(out.read_text())
         assert returned == written
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_native_falls_back_when_source_nonlocal(self, tmp_path):
         """A non-local / missing source falls back to the kerchunk backend.
 
@@ -90,7 +90,7 @@ class TestToKerchunkSingleFile:
 class TestCombineKerchunk:
     """Combine multiple file manifests into one."""
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_combine_three_copies(self, tmp_path):
         out = tmp_path / "combined.json"
         NetCDF.combine_kerchunk(
@@ -103,7 +103,7 @@ class TestCombineKerchunk:
         combined = json.loads(out.read_text())
         assert "refs" in combined or "version" in combined
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_combine_multi_concat_dim_falls_back_to_kerchunk(self, tmp_path):
         """Multi-dim concat falls back from the native combine to the kerchunk translator (gap G8).
 

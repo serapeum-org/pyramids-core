@@ -18,7 +18,7 @@ import pytest
 from shapely.geometry import Point
 
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_dask_geopandas
+from tests._marks import requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 
@@ -48,7 +48,7 @@ class TestDefaultBackend:
 class TestDaskBackend:
     """DASK-22F: ``backend="dask"`` returns a LazyFeatureCollection."""
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_returns_lazy_feature_collection(self, small_geojson):
         """Lazy read returns a LazyFeatureCollection, not a raw dask GDF."""
         from pyramids.feature import LazyFeatureCollection
@@ -57,7 +57,7 @@ class TestDaskBackend:
         assert isinstance(lfc, LazyFeatureCollection)
         assert lfc.npartitions >= 1
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_npartitions_respected(self, small_geojson):
         lfc = FeatureCollection.read_file(
             small_geojson,
@@ -66,7 +66,7 @@ class TestDaskBackend:
         )
         assert lfc.npartitions == 2
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_compute_recovers_features(self, small_geojson):
         lfc = FeatureCollection.read_file(
             small_geojson,
@@ -77,7 +77,7 @@ class TestDaskBackend:
         assert isinstance(eager, FeatureCollection)
         assert len(eager) == 5
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_chunksize_alternative(self, small_geojson):
         from pyramids.feature import LazyFeatureCollection
 

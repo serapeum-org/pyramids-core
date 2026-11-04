@@ -24,7 +24,7 @@ from pyramids.feature import (
     is_lazy_fc,
 )
 from tests._marks import HAS_DASK_GEOPANDAS as HAS_DASK_GP
-from tests._marks import requires_dask_geopandas
+from tests._marks import requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 
@@ -83,7 +83,7 @@ class TestIsLazyFcNegative:
         assert is_lazy_fc(gdf) is False
 
 
-@requires_dask_geopandas
+@requires_parquet_lazy
 class TestIsLazyFcPositive:
     """A constructed :class:`LazyFeatureCollection` returns True."""
 

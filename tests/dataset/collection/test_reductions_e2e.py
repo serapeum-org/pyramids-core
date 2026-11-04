@@ -23,7 +23,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -50,7 +50,7 @@ def _worker_mean(payload: bytes) -> float:
     return float(np.asarray(collection.mean()).mean())
 
 
-@requires_dask
+@requires_lazy
 class TestCollectionReductionsE2E:
     """Cross-task integration for DatasetCollection lazy path."""
 

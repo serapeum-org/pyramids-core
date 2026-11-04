@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import pytest
 
-from tests._marks import requires_dask_geopandas, requires_pyarrow
+from tests._marks import requires_parquet_lazy, requires_parquet
 
 pytestmark = pytest.mark.parquet_lazy
 
 
-@requires_pyarrow
-@requires_dask_geopandas
+@requires_parquet
+@requires_parquet_lazy
 class TestToParquetContract:
     """The pyramids wrapper forces ``compute=True`` and returns None."""
 
@@ -48,8 +48,8 @@ class TestToParquetContract:
             lfc.to_parquet(out_str, compute=False)
 
 
-@requires_pyarrow
-@requires_dask_geopandas
+@requires_parquet
+@requires_parquet_lazy
 class TestRoundTrip:
     """Lazy → Parquet → lazy read back → compute → equal to original."""
 

@@ -15,21 +15,21 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_kerchunk
+from tests._marks import requires_netcdf_lazy
 from tests.dataset.collection.conftest import NC_FIXTURE
 
 pytestmark = pytest.mark.lazy
 
 
 class TestToKerchunk:
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_manifest_written(self, tmp_path):
         collection = DatasetCollection.from_files([NC_FIXTURE, NC_FIXTURE])
         out = tmp_path / "combined.json"
         collection.to_kerchunk(out)
         assert out.exists()
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_manifest_is_valid_json(self, tmp_path):
         collection = DatasetCollection.from_files([NC_FIXTURE, NC_FIXTURE])
         out = tmp_path / "combined.json"
@@ -37,7 +37,7 @@ class TestToKerchunk:
         parsed = json.loads(out.read_text())
         assert isinstance(parsed, dict)
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_return_value_matches_file(self, tmp_path):
         collection = DatasetCollection.from_files([NC_FIXTURE, NC_FIXTURE])
         out = tmp_path / "combined.json"

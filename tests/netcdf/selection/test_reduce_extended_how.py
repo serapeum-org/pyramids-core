@@ -23,7 +23,7 @@ from osgeo import gdal
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import _read_no_data, _reduces_as_a_variable
 from pyramids.netcdf.netcdf import Container, Variable
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -862,7 +862,7 @@ class TestReduceOnAVariable:
         assert_allclose(doubled.read_array(), np.asarray(plain.read_array()) * 2.0)
 
 
-@requires_dask
+@requires_lazy
 class TestTheChunkedPathAgrees:
     """A file-backed variable reduces through dask and must answer what memory answers."""
 
@@ -1053,7 +1053,7 @@ class TestReduceOnADerivedVariable:
         assert_allclose(values, expected)
 
 
-@requires_dask
+@requires_lazy
 class TestWhichVariablesStream:
     """Only a variable still reading as its store is streamed; anything derived is read eagerly."""
 

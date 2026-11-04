@@ -26,7 +26,7 @@ from pyramids.dataset import collection as collection_module
 from pyramids.dataset.engines import io as io_engine
 from pyramids.netcdf import NetCDF
 from tests._helpers import write_raster
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 _NETCDF_DIR = Path(__file__).resolve().parents[2] / "data" / "netcdf"
 _NETCDF_FIXTURE = _NETCDF_DIR / "none__1v__1d1.nc"
@@ -147,7 +147,7 @@ class TestReadFileOpenOptions:
         assert seen, "the per-thread reopen opener was never called"
         assert all(o == ("GEOREF_SOURCES=NONE",) for o in seen), seen
 
-    @requires_dask
+    @requires_lazy
     def test_options_survive_lazy_chunked_reopen(self, georeferenced_tif, mocker):
         """A lazy chunked read forwards the captured options to the per-chunk opener.
 
@@ -378,7 +378,7 @@ class TestCollectionOpenOptions:
         assert handle.geotransform == _IDENTITY_GT, "option not applied at index"
         assert handle.open_options == ["GEOREF_SOURCES=NONE"], "option not captured"
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_data_forwards_the_option(self, two_files, mocker):
         """The lazy `.data` graph threads the option into every per-timestep open.
 

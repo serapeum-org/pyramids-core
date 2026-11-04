@@ -105,15 +105,6 @@ requires_dask_dataframe = pytest.mark.skipif(
     reason="dask.dataframe needs dask + pyarrow (pyramids-core[parquet])",
 )
 
-# Legacy aliases for existing callsites that import the older names.
-# Remove in a follow-up once the open call-sites migrate.
-requires_dask = requires_lazy
-requires_dask_geopandas = requires_parquet_lazy
-requires_kerchunk = pytest.mark.skipif(
-    not HAS_KERCHUNK, reason="kerchunk not installed"
-)
-requires_pyarrow = requires_parquet
-
 
 # Marker-name → skipif-decorator mapping consumed by the collection hook
 # in `tests/conftest.py`. A test annotated with `@pytest.mark.<name>`

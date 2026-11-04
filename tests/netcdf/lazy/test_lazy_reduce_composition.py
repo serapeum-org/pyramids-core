@@ -14,7 +14,7 @@ import pytest
 
 from pyramids.netcdf import NetCDF
 from pyramids.netcdf._lazy_cube import LazyNetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -31,7 +31,7 @@ def _variable() -> NetCDF:
 class TestLazyReduceComposition:
     """`reduce` on a chunked variable defers over dask and computes to the eager result."""
 
-    @requires_dask
+    @requires_lazy
     def test_reduce_returns_a_lazy_cube_that_still_chunks(self):
         """A lazy reduce stays lazy — the result is a `LazyNetCDF` whose collapsed dim is gone."""
         lazy = _variable().chunk("auto").reduce("time", "mean")
@@ -41,7 +41,7 @@ class TestLazyReduceComposition:
             "the reduced dimension must be gone from the chunking"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_reduce_computes_to_the_eager_result(self):
         """`chunk().reduce(...).compute()` equals `NetCDF.reduce(...)` in values and band layout."""
         var = _variable()
@@ -54,7 +54,7 @@ class TestLazyReduceComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_a_chain_of_reductions_stays_lazy_and_matches_eager(self):
         """Two reductions compose without materialising in between, equal to the eager chain."""
         var = _variable()
@@ -73,7 +73,7 @@ class TestLazyReduceComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_a_boundary_op_materialises_with_a_single_warning(self):
         """A non-composed op on a transformed lazy cube crosses the boundary, warning once."""
         lazy = _variable().chunk("auto").reduce("time", "mean")
@@ -88,7 +88,7 @@ class TestLazyReduceComposition:
             _ = lazy.geotransform
         assert not [w for w in caught if issubclass(w.category, UserWarning)]
 
-    @requires_dask
+    @requires_lazy
     def test_a_multi_variable_container_reduce_materialises_at_the_boundary(self):
         """A container (many variables) cannot compose yet, so it reduces eagerly with a warning."""
         nc = NetCDF.read_file(MULTIVAR)
@@ -111,7 +111,7 @@ class TestLazyReduceComposition:
 class TestLazyCoarsenComposition:
     """`coarsen` composes over dask like `reduce` and computes to the eager coarsen."""
 
-    @requires_dask
+    @requires_lazy
     def test_coarsen_returns_a_lazy_cube(self):
         """A lazy coarsen stays lazy and keeps the coarsened dimension at its new length."""
         lazy = _variable().chunk("auto").coarsen("time", 2)
@@ -120,7 +120,7 @@ class TestLazyCoarsenComposition:
             f"time should coarsen 4->2, got {lazy.chunks}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_coarsen_computes_to_the_eager_result(self):
         """`chunk().coarsen(...).compute()` equals `NetCDF.coarsen(...)`."""
         var = _variable()
@@ -133,7 +133,7 @@ class TestLazyCoarsenComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_reduce_then_coarsen_chains_lazily(self):
         """A coarsen followed by a reduce on another dim stays lazy and matches the eager chain."""
         var = _variable()
@@ -151,7 +151,7 @@ class TestLazyCoarsenComposition:
 class TestLazyRollingComposition:
     """`rolling` composes over dask, keeps the dimension length, and matches the eager rolling."""
 
-    @requires_dask
+    @requires_lazy
     def test_rolling_returns_a_lazy_cube_of_the_same_length(self):
         """A lazy rolling stays lazy and keeps `time` at its original length."""
         lazy = _variable().chunk("auto").rolling("time", 2)
@@ -160,7 +160,7 @@ class TestLazyRollingComposition:
             f"rolling keeps the length, got {lazy.chunks}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_rolling_computes_to_the_eager_result(self):
         """`chunk().rolling(...).compute()` equals `NetCDF.rolling(...)`."""
         var = _variable()
@@ -172,7 +172,7 @@ class TestLazyRollingComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_rolling_then_reduce_chains_lazily(self):
         """A rolling followed by a reduce stays lazy and matches the eager chain."""
         var = _variable()
@@ -190,14 +190,14 @@ class TestLazyRollingComposition:
 class TestLazyDiffComposition:
     """`diff` composes over dask, shortening the dimension, and matches the eager diff."""
 
-    @requires_dask
+    @requires_lazy
     def test_diff_returns_a_lazy_cube_one_step_shorter(self):
         """A lazy diff stays lazy and shortens `time` from 4 to 3."""
         lazy = _variable().chunk("auto").diff("time")
         assert isinstance(lazy, LazyNetCDF), f"got {type(lazy).__name__}"
         assert sum(lazy.chunks["time"]) == 3, f"diff shortens 4->3, got {lazy.chunks}"
 
-    @requires_dask
+    @requires_lazy
     def test_diff_computes_to_the_eager_result(self):
         """`chunk().diff(...).compute()` equals `NetCDF.diff(...)`."""
         var = _variable()
@@ -214,7 +214,7 @@ class TestLazyDiffComposition:
 class TestLazyCumsumComposition:
     """`cumsum` composes over dask, keeps the length, and matches the eager cumsum."""
 
-    @requires_dask
+    @requires_lazy
     def test_cumsum_returns_a_lazy_cube(self):
         """A lazy cumsum stays lazy and keeps `time` at length 4."""
         lazy = _variable().chunk("auto").cumsum("time")
@@ -223,7 +223,7 @@ class TestLazyCumsumComposition:
             f"cumsum keeps the length, got {lazy.chunks}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_cumsum_computes_to_the_eager_result(self):
         """`chunk().cumsum(...).compute()` equals `NetCDF.cumsum(...)`."""
         var = _variable()
@@ -239,7 +239,7 @@ class TestLazyCumsumComposition:
 class TestLazyShiftComposition:
     """`shift` composes over dask, keeps the length, and matches the eager shift."""
 
-    @requires_dask
+    @requires_lazy
     def test_shift_computes_to_the_eager_result(self):
         """`chunk().shift(...).compute()` equals `NetCDF.shift(...)`, keeping the length."""
         var = _variable()
@@ -254,7 +254,7 @@ class TestLazyShiftComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_shift_minus_eager_diff_chains_lazily(self):
         """A shift stays lazy and, as the docs note, `var - var.shift(1)` tracks `diff`."""
         var = _variable()
@@ -272,7 +272,7 @@ class TestLazyShiftComposition:
 class TestLazyMapBlocksComposition:
     """scipy/numpy along-dim ops compose lazily via map_blocks, bit-for-bit with the eager op."""
 
-    @requires_dask
+    @requires_lazy
     def test_rank_computes_to_the_eager_result(self):
         """`chunk().rank(...).compute()` equals `NetCDF.rank(...)` (scipy kernel via map_blocks)."""
         var = _variable()
@@ -285,7 +285,7 @@ class TestLazyMapBlocksComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_rank_then_reduce_chains_lazily(self):
         """A rank followed by a reduce stays lazy and matches the eager chain."""
         var = _variable()
@@ -297,7 +297,7 @@ class TestLazyMapBlocksComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize("op", ["argmin", "argmax", "idxmin", "idxmax"])
     def test_extremum_collapses_the_dim_and_matches_eager(self, op):
         """`argmin`/`argmax`/`idxmin`/`idxmax` collapse `dim` via map_blocks (drop_axis), lazily."""
@@ -311,7 +311,7 @@ class TestLazyMapBlocksComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_interpolate_na_computes_to_the_eager_result(self):
         """`chunk().interpolate_na(...).compute()` equals `NetCDF.interpolate_na(...)`."""
         var = _variable()
@@ -324,7 +324,7 @@ class TestLazyMapBlocksComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_pad_extends_a_band_dim_and_matches_eager(self):
         """`chunk().pad(time=(1, 2)).compute()` equals `NetCDF.pad(time=(1, 2))`, time 4->7."""
         var = _variable()
@@ -337,7 +337,7 @@ class TestLazyMapBlocksComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_interp_onto_new_coords_resizes_and_matches_eager(self):
         """`chunk().interp(time=[...]).compute()` equals `NetCDF.interp(time=[...])`, resized."""
         var = _variable()
@@ -354,7 +354,7 @@ class TestLazyMapBlocksComposition:
 class TestLazyCellwiseComposition:
     """Cell-wise ops compose lazily per block, bit-for-bit with the eager op."""
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize(
         "run_lazy, run_eager",
         [
@@ -379,7 +379,7 @@ class TestLazyCellwiseComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_cellwise_chains_with_an_along_dim_op(self):
         """A cell-wise op composes in a chain with an along-dim op, staying lazy."""
         var = _variable()
@@ -395,7 +395,7 @@ class TestLazyCellwiseComposition:
 class TestLazyOperatorComposition:
     """Scalar operators compose lazily per block, bit-for-bit with the eager operator."""
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize(
         "run_lazy, run_eager",
         [
@@ -421,7 +421,7 @@ class TestLazyOperatorComposition:
         assert got.dtype == exp.dtype, f"dtype {got.dtype} != {exp.dtype}"
         np.testing.assert_allclose(got, exp, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_a_scalar_operator_chains_lazily_with_a_reduction(self):
         """`(var - 273.15).reduce('time','mean')` stays lazy and matches the eager chain."""
         var = _variable()
@@ -437,7 +437,7 @@ class TestLazyOperatorComposition:
 class TestLazyBookkeepingComposition:
     """`isel`/`sel`/`squeeze`/`transpose` reindex the band axis lazily, matching the eager cut."""
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize(
         "run_lazy, run_eager",
         [
@@ -487,7 +487,7 @@ class TestLazyBookkeepingComposition:
         assert got.shape == exp.shape, f"{got.shape} != {exp.shape}"
         np.testing.assert_allclose(got, exp, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_squeeze_drops_a_length_one_band_dim_lazily(self):
         """`isel(time=[1]).squeeze()` stays lazy and drops the length-one axis as the eager cube does."""
         var = _variable()
@@ -498,14 +498,14 @@ class TestLazyBookkeepingComposition:
         assert got.shape == exp.shape, f"{got.shape} != {exp.shape}"
         np.testing.assert_allclose(got, exp, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_squeeze_without_a_length_one_dim_is_a_lazy_no_op(self):
         """`squeeze()` on a cube with no length-one band dim returns the same lazy cube unchanged."""
         var = _variable()
         chunked = var.chunk("auto")
         assert chunked.squeeze() is chunked, "a no-op squeeze must not materialise"
 
-    @requires_dask
+    @requires_lazy
     def test_a_band_reindex_chains_lazily_with_a_reduction(self):
         """`isel(time=[0,1,2]).reduce('time','mean')` stays lazy and matches the eager chain."""
         var = _variable()
@@ -517,7 +517,7 @@ class TestLazyBookkeepingComposition:
             equal_nan=True,
         )
 
-    @requires_dask
+    @requires_lazy
     def test_a_container_transpose_materialises_at_the_boundary(self):
         """A multi-variable container cannot compose a reindex, so it warns once and goes eager."""
         container = NetCDF.read_file(MULTIVAR)
