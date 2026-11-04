@@ -87,8 +87,17 @@ def test_no_unexpected_python_file_at_the_tests_root():
 
 
 def test_no_hyphenated_python_file_is_silently_uncollectable():
-    """A hyphenated .py filename never matches ``test_*.py`` — it would be a test that never runs."""
-    hyphenated = sorted(str(p.relative_to(_REPO)) for p in _TESTS.rglob("*-*.py"))
+    """A hyphenated .py filename never matches ``test_*.py`` — it would be a test that never runs.
+
+    Scoped to directories that actually hold test modules: the ``tests/data/`` fixture tree (its
+    ``.py`` files are data/sample inputs, never collected as tests) and ``__pycache__`` are excluded,
+    so a hyphenated data file is not mistaken for a lost test.
+    """
+    hyphenated = sorted(
+        str(p.relative_to(_REPO))
+        for p in _TESTS.rglob("*-*.py")
+        if p.relative_to(_TESTS).parts[0] != "data" and "__pycache__" not in p.parts
+    )
     assert not hyphenated, (
         f"these .py files under tests/ carry a hyphen, so pytest's `test_*.py` pattern cannot "
         f"collect them — a hyphenated repro or helper that silently never runs: {hyphenated}. "
