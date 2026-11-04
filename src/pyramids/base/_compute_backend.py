@@ -23,6 +23,7 @@ backend (its lazy features keep working through the in-core implementations that
 
 from __future__ import annotations
 
+import inspect
 import threading
 import warnings
 from importlib import import_module
@@ -167,7 +168,12 @@ def _load(entry_point: EntryPoint) -> ComputeBackend | None:
     backend: ComputeBackend | None = None
     try:
         candidate = entry_point.load()
-        if callable(candidate) and not isinstance(candidate, ComputeBackend):
+        # A zero-arg factory (the backend *class*, or a function returning the backend) is called to
+        # construct it. Gate on "is it a constructor/factory" -- NOT on the structural
+        # `isinstance(candidate, ComputeBackend)` check, because a class with class-level `api_version`
+        # + methods structurally *is* a ComputeBackend, so that guard would store the class
+        # uninstantiated and later bind the first call arg to `self`.
+        if isinstance(candidate, type) or inspect.isroutine(candidate):
             candidate = candidate()
     except Exception as error:  # noqa: BLE001 - a plugin may fail in any way at all
         warnings.warn(

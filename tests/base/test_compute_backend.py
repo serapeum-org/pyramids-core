@@ -128,6 +128,27 @@ class TestComputeBackends:
         with pytest.warns(RuntimeWarning, match="could not be loaded"):
             assert cb.compute_backends() == {}
 
+    def test_class_entry_point_is_instantiated(self, monkeypatch):
+        """A backend registered as a class is instantiated, not stored as the class object.
+
+        A class is structurally a ComputeBackend (class-level api_version + methods), so the
+        factory guard must instantiate it — otherwise a later `backend.read_array_lazy(ds, ...)`
+        binds `ds` to `self`.
+        """
+        members = {name: (lambda self, *a, **k: None) for name in _METHODS}
+        members["api_version"] = cb.COMPUTE_BACKEND_API_VERSION
+        backend_cls = type("ClassBackend", (), members)
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:C", backend_cls)]
+        )
+        resolved = cb.compute_backends()["lazy"]
+        assert not isinstance(resolved, type), (
+            "a class backend must be instantiated, not stored as the class"
+        )
+        assert isinstance(resolved, backend_cls), (
+            f"expected a ClassBackend instance, got {resolved!r}"
+        )
+
     def test_reentrant_discovery_sees_partial_map(self, monkeypatch):
         """A re-entrant call during discovery (plugin importing itself) sees the partial mapping."""
         partial = {"lazy": _make_backend()}
