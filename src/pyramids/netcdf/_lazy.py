@@ -500,9 +500,11 @@ def _read_mdarray_chunk(
 
 # ``apply_unpack`` is the single shared scale/offset primitive; it lives in
 # ``base/_utils.py`` so both the NetCDF CF path here and the raster read path
-# (``IO.read_array``) call the same implementation. Re-exported here
-# so existing importers of ``pyramids.netcdf._lazy.apply_unpack`` keep working.
-# The ``_apply_unpack`` underscore alias (API-9) is kept for out-of-tree importers.
+# (``IO.read_array``) call the same implementation. Re-exported here (and as the
+# ``_apply_unpack`` API-9 alias) only for backward compatibility; this re-export is
+# DEPRECATED -- import ``apply_unpack`` from ``pyramids.base._utils``. The alias ships
+# with the lazy layer and leaves core when it is extracted (see
+# planning/dask/lazy-plugin-extraction-plan.md).
 _apply_unpack = apply_unpack
 
 

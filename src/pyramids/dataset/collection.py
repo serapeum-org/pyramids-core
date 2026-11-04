@@ -77,7 +77,6 @@ from pyramids.dataset.ops._geobox_zarr import (
     normalize_compressors,
     read_geobox,
 )
-from pyramids.dataset.ops._zarr import _resolve_store
 from pyramids.dataset.ops.io import _read_chunk
 from pyramids.dataset.stac_options import (
     Alignment,
@@ -2039,6 +2038,9 @@ class DatasetCollection:
                 "region semantics); use mode='w' to (over)write the whole cube."
             )
         data = self.data
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.dataset.ops._zarr import _resolve_store
+
         resolved_store = _resolve_store(store, storage_options)
         codec_kwargs = normalize_compressors(compressor)
 
@@ -2970,6 +2972,9 @@ class DatasetCollection:
             )
         )
         import zarr
+
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.dataset.ops._zarr import _resolve_store
 
         resolved = _resolve_store(store, storage_options)
         root = zarr.open_group(resolved, mode="r")

@@ -56,7 +56,7 @@ class TestApplyUnpack:
         np.testing.assert_array_equal(out.mask, [False, True, False])
 
     def test_reexported_identity(self):
-        """The NetCDF module re-exports the same object (one shared primitive)."""
+        """`_lazy` re-exports the canonical `base._utils` primitive (deprecated alias; one object)."""
         from pyramids.netcdf._lazy import _apply_unpack
         from pyramids.netcdf._lazy import apply_unpack as lazy_fn
 

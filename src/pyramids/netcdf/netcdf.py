@@ -38,6 +38,7 @@ from pyramids.base._summary import DEFAULT_METRICS, variable_summary
 from pyramids.base._utils import (
     DEFAULT_RESAMPLING,
     _is_identity_packing,
+    apply_unpack,
     carry_packing,
     gdal_to_numpy_dtype,
     numpy_to_gdal_dtype,
@@ -70,9 +71,6 @@ from pyramids.dataset.engines.io import _caller_stacklevel
 from pyramids.dataset.transform import GeoTransform
 from pyramids.netcdf import dict_io as _dict_io
 from pyramids.netcdf._axis import detect_axis_indices
-from pyramids.netcdf._kerchunk_facade import combine_kerchunk, to_kerchunk
-from pyramids.netcdf._lazy import apply_unpack, build_lazy_array, mask_no_data
-from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf._mdim import (
     GEOSTATIONARY_PROJECTION,
     axis_flips,
@@ -89,7 +87,6 @@ from pyramids.netcdf._mdim import (
     x_axis_is_right_to_left,
     y_axis_is_bottom_up,
 )
-from pyramids.netcdf._mfdataset import open_mfdataset
 from pyramids.netcdf._plot import NetCDFPlot
 from pyramids.netcdf.array_options import (
     CFAttributes,
@@ -137,6 +134,8 @@ if TYPE_CHECKING:
     from cleopatra.styling.scaling import ColorScaling
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+
+    from pyramids.netcdf._lazy_cube import LazyNetCDF
 
 _SPATIAL_DIM_NAMES = _SPATIAL_AXIS_NAMES
 """Dimension names that are a horizontal axis rather than a band one.
@@ -6205,6 +6204,9 @@ class NetCDF(Dataset):
         Returns:
             Any: The lazy `dask` array (a masked dask array when `masked`), still uncomputed.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._lazy import mask_no_data
+
         result = self._read_array_lazy(chunks, lock)
         if window is not None:
             # Slice the oriented `(*band_sizes, y, x)` array to the pixel window so a chunked read
@@ -6597,6 +6599,9 @@ class NetCDF(Dataset):
                 rather than a variable — or the variable was rebuilt in memory, so the
                 store no longer holds these cells. Read it eagerly instead.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._lazy import build_lazy_array
+
         parent = self._parent_nc if self._parent_nc is not None else self
         # Prefer the real /vsimem backing path over a cosmetic from_bytes `name=` that shadows
         # _file_name, so a named in-memory lazy read reopens the true source (#1058; same family as
@@ -8250,6 +8255,9 @@ class NetCDF(Dataset):
             ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
             OptionalPackageDoesNotExist: dask is not installed — install the `lazy` extra.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._lazy_cube import LazyNetCDF
+
         if _interop._is_in_memory(self):
             raise ValueError(
                 "chunk() needs a file-backed cube: the lazy read reopens the store per block, and "
@@ -9798,6 +9806,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The manifest dict that was written.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._kerchunk_facade import to_kerchunk
+
         return to_kerchunk(
             self._file_name,
             output_path,
@@ -9834,6 +9845,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The combined manifest.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._kerchunk_facade import combine_kerchunk
+
         return combine_kerchunk(
             paths,
             output_path,
@@ -9872,6 +9886,9 @@ class NetCDF(Dataset):
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._mfdataset import open_mfdataset
+
         return open_mfdataset(
             paths,
             variable,

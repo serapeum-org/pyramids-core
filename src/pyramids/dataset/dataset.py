@@ -112,10 +112,6 @@ from pyramids.dataset.ops._focal import (
     hillshade,
     slope,
 )
-from pyramids.dataset.ops._zarr import (
-    read_dataset_from_zarr,
-    write_dataset_to_zarr,
-)
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.units import convert_array
@@ -2555,6 +2551,9 @@ class Dataset(RasterBase):
 
                 ```
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.dataset.ops._zarr import write_dataset_to_zarr
+
         resolved_chunks = chunks if chunks is not None else "auto"
         return write_dataset_to_zarr(
             self,
@@ -2597,6 +2596,9 @@ class Dataset(RasterBase):
                 from a foreign GeoZarr store whose auto-detect picks the wrong
                 array.
         """
+        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        from pyramids.dataset.ops._zarr import read_dataset_from_zarr
+
         return read_dataset_from_zarr(
             store,
             chunks=chunks,

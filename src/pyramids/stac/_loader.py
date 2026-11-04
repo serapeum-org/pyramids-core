@@ -58,8 +58,6 @@ from pyramids.base._ogc_api import USER_AGENT, http_error_detail, http_get_with_
 from pyramids.base._utils import import_zarr, lazy_extra_hint
 from pyramids.base.remote import CloudConfig, cloud_config_from_env, is_remote
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset.ops._geobox_zarr import detect_data_var
-from pyramids.dataset.ops._zarr import _resolve_store
 from pyramids.grib import open_grib
 from pyramids.netcdf import NetCDF
 from pyramids.stac._config import (
@@ -1008,6 +1006,10 @@ def _load_zarr(href: str):
         )
     )
     import zarr
+
+    # Deferred so this module imports without the [lazy] extra; bodies move to pyramids-lazy (plan #2).
+    from pyramids.dataset.ops._geobox_zarr import detect_data_var
+    from pyramids.dataset.ops._zarr import _resolve_store
 
     root = zarr.open_group(_resolve_store(href, None), mode="r")
     data_name = detect_data_var(root)
