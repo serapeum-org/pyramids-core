@@ -14405,7 +14405,7 @@ band statistics, a warp -- is comparing two different views of the raster.</p>
 <a id="__codelineno-0-1865" name="__codelineno-0-1865"></a>        <span class="c1"># Map the bbox edges to fractional pixel indices through the geotransform, snapping edges that</span>
 <a id="__codelineno-0-1866" name="__codelineno-0-1866"></a>        <span class="c1"># sit on a cell boundary onto the exact integer first (see `_snap_index`). `min`/`max` keep it</span>
 <a id="__codelineno-0-1867" name="__codelineno-0-1867"></a>        <span class="c1"># correct whichever sign the pixel size has (north-up `pixel_y &lt; 0` or flipped south-up).</span>
-<a id="__codelineno-0-1868" name="__codelineno-0-1868"></a>        <span class="c1"># Deriving the window from nearest_cell instead snapped each corner to the nearest</span>
+<a id="__codelineno-0-1868" name="__codelineno-0-1868"></a>        <span class="c1"># Deriving the window from map_to_array_coordinates instead snapped each corner to the nearest</span>
 <a id="__codelineno-0-1869" name="__codelineno-0-1869"></a>        <span class="c1"># cell centre, which both transposed every non-square window and dropped the boundary</span>
 <a id="__codelineno-0-1870" name="__codelineno-0-1870"></a>        <span class="c1"># row/column of a bbox whose edges fell mid-cell (#719).</span>
 <a id="__codelineno-0-1871" name="__codelineno-0-1871"></a>        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
