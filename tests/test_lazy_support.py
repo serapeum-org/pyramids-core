@@ -106,7 +106,11 @@ def test_lazy_submodule_imports_without_the_extra(module_path: str):
 
 def test_no_public_name_leaks_beyond_all():
     """The module exposes no public name that ``__all__`` does not list (re-export hygiene)."""
-    public = {name for name in vars(ls) if not name.startswith("_") and not inspect.ismodule(getattr(ls, name))}
+    public = {
+        name
+        for name in vars(ls)
+        if not name.startswith("_") and not inspect.ismodule(getattr(ls, name))
+    }
     extra = public - set(ls.__all__)
     assert not extra, f"public names missing from __all__: {sorted(extra)}"
 
@@ -122,6 +126,7 @@ def test_core_never_imports_lazy_support():
     offenders = [
         path.relative_to(pkg_root).as_posix()
         for path in pkg_root.rglob("*.py")
-        if path.name != "lazy_support.py" and "lazy_support" in path.read_text(encoding="utf-8")
+        if path.name != "lazy_support.py"
+        and "lazy_support" in path.read_text(encoding="utf-8")
     ]
     assert not offenders, f"core modules reference lazy_support (must not): {offenders}"
