@@ -1,15 +1,20 @@
 # Codecov configuration.
 #
 # Coverage is aggregated across the tests.yml matrix: 15 main-package shards (3 OS x 5 Pythons)
-# plus 9 extras-package shards (3 OS x 3 extra groups) = 24 Codecov uploads. With no config,
-# Codecov scores the `project` status on whatever shards have arrived when it decides CI is done,
-# so a mid-flight evaluation — or a single superseded/cancelled shard — makes the aggregate look
-# lower than base and flips `codecov/project` red on PRs that changed no source at all. Waiting for
-# all 24 uploads before scoring removes that false negative; a real regression still trips the gate.
+# plus 15 extras-package shards (3 OS x 5 extra targets: netcdf_lazy, parquet_lazy,
+# netcdf_parquet, parquet, stac) = 30 Codecov uploads. With no config, Codecov scores the
+# `project` status on whatever shards have arrived when it decides CI is done, so a mid-flight
+# evaluation — or a single superseded/cancelled shard — makes the aggregate look lower than base
+# and flips `codecov/project` red on PRs that changed no source at all. Waiting for all 30 uploads
+# before scoring removes that false negative; a real regression still trips the gate.
+#
+# Keep `after_n_builds` in step with the matrix: if the number of OS x (Python or extra-target)
+# combinations in tests.yml changes, update the count here, or Codecov will either score early
+# (too low) or wait forever (never enough uploads arrive).
 codecov:
   require_ci_to_pass: true
   notify:
-    after_n_builds: 24
+    after_n_builds: 30
     wait_for_ci: true
 
 coverage:
@@ -23,3 +28,57 @@ coverage:
     patch:
       default:
         informational: false
+
+# Per-subpackage coverage breakdown. The suite reports one aggregate number, which hides thin
+# spots in a single area (e.g. dataset/remote, the cli_ogc path). Components slice the same
+# uploaded coverage by source path — no extra CI uploads or flags needed — so each layer's
+# coverage is visible on the PR and in the Codecov UI, and can be targeted. Components may
+# overlap (dataset and dataset-cog both cover the COG files); that is intentional.
+component_management:
+  individual_components:
+    - component_id: base
+      name: base
+      paths: [src/pyramids/base/**]
+    - component_id: basemap
+      name: basemap
+      paths: [src/pyramids/basemap/**]
+    - component_id: dataset
+      name: dataset
+      paths: [src/pyramids/dataset/**]
+    - component_id: dataset_cog
+      name: dataset/cog
+      paths: [src/pyramids/dataset/cog/**]
+    - component_id: dataset_engines
+      name: dataset/engines
+      paths: [src/pyramids/dataset/engines/**]
+    - component_id: dataset_ops
+      name: dataset/ops
+      paths: [src/pyramids/dataset/ops/**]
+    - component_id: feature
+      name: feature
+      paths: [src/pyramids/feature/**]
+    - component_id: io
+      name: io
+      paths: [src/pyramids/io/**, src/pyramids/_io.py]
+    - component_id: netcdf
+      name: netcdf
+      paths: [src/pyramids/netcdf/**]
+    - component_id: netcdf_ugrid
+      name: netcdf/ugrid
+      paths: [src/pyramids/netcdf/ugrid/**]
+    - component_id: processing
+      name: processing
+      paths: [src/pyramids/processing/**]
+    - component_id: stac
+      name: stac
+      paths: [src/pyramids/stac/**]
+    - component_id: cli
+      name: cli
+      paths:
+        - src/pyramids/cli.py
+        - src/pyramids/cli_*.py
+        - src/pyramids/_cli_shared.py
+        - src/pyramids/__main__.py
+    - component_id: cli_ogc
+      name: cli/ogc
+      paths: [src/pyramids/cli_ogc.py]
