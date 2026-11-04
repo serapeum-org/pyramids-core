@@ -176,3 +176,14 @@ class TestRemoteReaders:
         out = tmp_path / "vts.geojson"
         assert _run(["from-vectortileserver", str(out), "--url", "http://x"]) == 0
         assert out.exists()
+
+
+class TestGeoDictPlain:
+    """`vector to-geo-dict` plain (non-JSON) output."""
+
+    def test_plain_output(self, capsys):
+        """The plain form prints the type and feature count."""
+        assert _run(["to-geo-dict", str(_POLY)]) == 0
+        out = capsys.readouterr().out
+        assert "type:" in out
+        assert "features:" in out

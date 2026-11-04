@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from pyramids._cli_shared import resolve_vector_driver as _resolve_vector_driver
-from pyramids.cli_vector_inspect import add_vector_inspect_commands
+from pyramids.cli_vector_inspect import _info_payload, add_vector_inspect_commands
 from pyramids.feature import FeatureCollection
 
 pytestmark = pytest.mark.core
@@ -263,3 +263,18 @@ def test_driver_resolution_used(tmp_path: Path) -> None:
     out = tmp_path / "edges.geojson"
     _run(["invalid-coverage-edges", _POLYGONS, str(out)])
     assert _resolve_vector_driver(str(out), None) == "geojson"
+
+
+def test_info_payload_object_with_dict() -> None:
+    """_info_payload converts a non-dataclass object via vars()."""
+
+    class Record:
+        def __init__(self) -> None:
+            self.a = 1
+
+    assert _info_payload(Record()) == {"a": 1}
+
+
+def test_info_payload_plain_value() -> None:
+    """_info_payload falls back to str() for a value with no __dict__."""
+    assert _info_payload(42) == "42"
