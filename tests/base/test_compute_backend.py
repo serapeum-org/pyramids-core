@@ -228,3 +228,13 @@ class TestRequireComputeBackend:
         )
         with pytest.raises(OptionalPackageDoesNotExist, match="needs >="):
             cb.require_compute_backend()
+
+    def test_backend_with_bool_api_version_is_rejected(self, monkeypatch):
+        """A bool api_version is rejected: `True == 1` must not be silently taken as version 1."""
+        backend = _make_backend()
+        backend.api_version = True
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
+        )
+        with pytest.raises(OptionalPackageDoesNotExist, match="needs >="):
+            cb.require_compute_backend()

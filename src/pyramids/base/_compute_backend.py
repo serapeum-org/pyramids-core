@@ -334,7 +334,12 @@ def require_compute_backend() -> ComputeBackend:
             "`[parquet]` extras)."
         )
     declared = getattr(backend, "api_version", None)
-    if not isinstance(declared, int) or declared < COMPUTE_BACKEND_API_VERSION:
+    # `bool` subclasses `int`, so exclude it explicitly: `api_version = True` must not pass as 1.
+    if (
+        not isinstance(declared, int)
+        or isinstance(declared, bool)
+        or declared < COMPUTE_BACKEND_API_VERSION
+    ):
         raise OptionalPackageDoesNotExist(
             f"The installed lazy backend declares api_version {declared!r}, but this pyramids needs "
             f">= {COMPUTE_BACKEND_API_VERSION}. Upgrade with `pip install -U pyramids-lazy`."
