@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -98,10 +101,71 @@ def test_reexport_is_the_same_object(name: str):
     )
 
 
+#: Heavy optional deps the lazy layer owns. Blocked in a fresh interpreter so the import guards below
+#: prove behaviour on a bare `pyramids-core` install, not merely in this dev env where they exist.
+_BLOCKED_DEPS = [
+    "dask",
+    "distributed",
+    "zarr",
+    "kerchunk",
+    "h5py",
+    "fsspec",
+    "s3fs",
+    "dask_geopandas",
+    "pyarrow",
+    "xarray",
+]
+
+
+def _run_with_blocked_deps(body: str) -> subprocess.CompletedProcess:
+    """Run `body` in a fresh interpreter with the heavy lazy deps forced unimportable.
+
+    Setting ``sys.modules[name] = None`` makes a later ``import name`` raise ``ImportError``, so any
+    top-level import of a blocked dep fails loudly instead of silently succeeding because the dev env
+    happens to have it installed.
+    """
+    prelude = "import sys\n" + "".join(
+        f"sys.modules[{dep!r}] = None\n" for dep in _BLOCKED_DEPS
+    )
+    script = prelude + textwrap.dedent(body)
+    return subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True
+    )
+
+
 @pytest.mark.parametrize("module_path", _LAZY_SUBMODULES)
 def test_lazy_submodule_imports_without_the_extra(module_path: str):
-    """Each lazy submodule imports cleanly -- core's import deferral must not hide a broken module."""
-    assert importlib.import_module(module_path) is not None
+    """Each lazy submodule imports in a fresh interpreter with dask/zarr/kerchunk/... forced absent.
+
+    Blocking the heavy deps is what makes this a real guard: a plain import in this dev env would pass
+    even if a submodule grew a top-level `import dask`, because dask is installed here.
+    """
+    result = _run_with_blocked_deps(
+        f"import importlib; importlib.import_module({module_path!r})"
+    )
+    assert result.returncode == 0, (
+        f"{module_path} failed to import with lazy extras blocked:\n{result.stderr}"
+    )
+
+
+def test_core_packages_import_without_the_extra_and_do_not_pull_lazy_cube():
+    """Core packages import with the lazy stack absent, and `import pyramids.netcdf` must not pull `_lazy_cube`.
+
+    The second half is the extraction-readiness contract (plan #2): once `_lazy_cube` moves to
+    pyramids-lazy, a bare `import pyramids.netcdf` must still succeed, so the package must resolve
+    `LazyNetCDF` lazily (PEP-562) rather than importing it at module top.
+    """
+    result = _run_with_blocked_deps(
+        """
+        import importlib, sys
+        for pkg in ("pyramids", "pyramids.dataset", "pyramids.netcdf", "pyramids.feature"):
+            importlib.import_module(pkg)
+        assert "pyramids.netcdf._lazy_cube" not in sys.modules, (
+            "importing pyramids.netcdf eagerly pulled the lazy _lazy_cube module"
+        )
+        """
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_no_public_name_leaks_beyond_all():
