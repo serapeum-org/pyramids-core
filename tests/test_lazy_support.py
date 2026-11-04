@@ -12,6 +12,8 @@ Two invariants that a behaviour test never notices:
 from __future__ import annotations
 
 import importlib
+import inspect
+from pathlib import Path
 
 import pytest
 
@@ -100,3 +102,26 @@ def test_reexport_is_the_same_object(name: str):
 def test_lazy_submodule_imports_without_the_extra(module_path: str):
     """Each lazy submodule imports cleanly -- core's import deferral must not hide a broken module."""
     assert importlib.import_module(module_path) is not None
+
+
+def test_no_public_name_leaks_beyond_all():
+    """The module exposes no public name that ``__all__`` does not list (re-export hygiene)."""
+    public = {name for name in vars(ls) if not name.startswith("_") and not inspect.ismodule(getattr(ls, name))}
+    extra = public - set(ls.__all__)
+    assert not extra, f"public names missing from __all__: {sorted(extra)}"
+
+
+def test_core_never_imports_lazy_support():
+    """Core code must never import ``pyramids.lazy_support`` -- only an external backend does (plan 0.3-A).
+
+    A hard rule of the facade: keeping core off it is what keeps the facade out of every core import
+    cycle. This scans the installed ``pyramids`` source tree (excluding the facade itself) for any
+    reference to ``lazy_support``.
+    """
+    pkg_root = Path(ls.__file__).parent
+    offenders = [
+        path.relative_to(pkg_root).as_posix()
+        for path in pkg_root.rglob("*.py")
+        if path.name != "lazy_support.py" and "lazy_support" in path.read_text(encoding="utf-8")
+    ]
+    assert not offenders, f"core modules reference lazy_support (must not): {offenders}"
