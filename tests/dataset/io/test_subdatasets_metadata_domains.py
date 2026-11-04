@@ -28,11 +28,11 @@ pytestmark = pytest.mark.core
 
 # A classic-mode NetCDF whose GDAL handle exposes 4 subdatasets (Band1..Band4).
 NETCDF_CONTAINER = (
-    Path(__file__).parents[1] / "data" / "netcdf" / "cf__6v__1d2-2d4__geog__y-asc.nc"
+    Path(__file__).parents[2] / "data" / "netcdf" / "cf__6v__1d2-2d4__geog__y-asc.nc"
 )
 # A plain single-band GeoTIFF with no subdatasets.
 GEOTIFF_PLAIN = (
-    Path(__file__).parents[1] / "data" / "geotiff" / "coello-without-color-table.tif"
+    Path(__file__).parents[2] / "data" / "geotiff" / "coello-without-color-table.tif"
 )
 
 
