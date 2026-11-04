@@ -11,8 +11,63 @@ import cycle with :mod:`pyramids.cli`.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import math
 import os
+from collections.abc import Iterator
+from typing import Any
+
+
+def json_sanitize(obj: Any) -> Any:
+    """Recursively convert a structure to strict-JSON-safe values.
+
+    Walks dicts, lists, and tuples; maps non-finite floats (``NaN``/``Infinity``) to
+    ``None`` via :func:`json_safe`; and converts numpy scalars/arrays to Python via
+    ``tolist``. This must run **before** :func:`json.dumps`, because ``dumps`` never
+    calls its ``default=`` hook for floats (``numpy.float64`` is a ``float`` subclass
+    the C encoder serialises directly), so a non-finite float would otherwise be
+    emitted as a bare ``NaN``/``Infinity`` token that strict consumers (e.g. ``jq``)
+    reject.
+    """
+    if isinstance(obj, dict):
+        return {key: json_sanitize(value) for key, value in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [json_sanitize(value) for value in obj]
+    if isinstance(obj, bool):
+        return obj  # bool is an int subclass; keep it as-is, never scrub
+    if isinstance(obj, float):
+        return json_safe(obj)
+    if type(obj).__module__ == "numpy" and hasattr(obj, "tolist"):
+        return json_sanitize(obj.tolist())
+    return obj
+
+
+def force_agg_backend() -> None:
+    """Force matplotlib's non-interactive Agg backend before any plot import.
+
+    Assigned (not ``setdefault``) so a pre-exported interactive backend such as
+    TkAgg cannot win and block on a GUI popup in a headless CLI/CI run. Call it in
+    any plotting command before cleopatra/matplotlib is imported.
+    """
+    os.environ["MPLBACKEND"] = "Agg"
+
+
+@contextlib.contextmanager
+def map_lookup_errors() -> Iterator[None]:
+    """Remap a ``KeyError``/``IndexError`` raised in the block to ``ValueError``.
+
+    :func:`pyramids.cli.main` maps only ``ValueError``/``TypeError``/``OSError``/
+    ``RuntimeError``/``_PyramidsError`` to the clean one-line ``error:`` exit; a
+    ``KeyError`` or ``IndexError`` from a typo'd variable, dimension, label, or
+    index would otherwise fall through to the ``unexpected failure`` branch that is
+    reserved for genuine internal bugs. Wrap a ``NetCDF`` lookup that forwards a
+    user token in this manager so such a typo is reported cleanly instead.
+    """
+    try:
+        yield
+    except (KeyError, IndexError) as exc:
+        message = exc.args[0] if exc.args else str(exc)
+        raise ValueError(message) from exc
 
 
 def json_safe(value: float | None) -> float | None:

@@ -12,7 +12,10 @@ Command groups:
   `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
   `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
 - vector (`pyramids.cli_vector`) — `vector info|bounds|convert|warp|clip`
-- NetCDF (`pyramids.cli_netcdf`) — `nc list-vars|extract`
+- NetCDF (`pyramids.cli_netcdf` + `cli_netcdf_{inspect,vars,select,cftime,io,plot}`) —
+  the full `nc` surface across six sub-modules: inspection + global attributes, variable & dimension
+  management, positional/label selection & subsetting, CF/time/calendar/calculus, I/O export, and headless
+  plotting (each sub-module documents its own commands; `pyramids nc --help` lists them)
 - collection (`pyramids.cli_collection`) — `collection info|stats`
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`
