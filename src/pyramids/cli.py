@@ -37,6 +37,8 @@ import os
 import sys
 from collections.abc import Sequence
 
+from shapely.errors import GEOSException
+
 from pyramids import __version__
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
@@ -125,9 +127,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         TypeError,
         OSError,
         RuntimeError,
+        GEOSException,
         _PyramidsError,
     ) as exc:
-        # Expected user errors (missing file, bad CRS, unknown driver, ...)
+        # Expected user errors (missing file, bad CRS, unknown driver, a GEOS
+        # geometry error on the user's input, ...)
         # exit non-zero with a one-line message instead of a traceback.
         print(f"error: {exc}", file=sys.stderr)
         result = 1

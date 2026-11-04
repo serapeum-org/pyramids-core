@@ -20,7 +20,11 @@ from pyramids._cli_shared import (
 from pyramids._cli_shared import (
     resolve_vector_driver as _resolve_vector_driver,
 )
+from pyramids.cli_vector_geom import add_vector_geom_commands
+from pyramids.cli_vector_inspect import add_vector_inspect_commands
 from pyramids.cli_vector_io import add_vector_io_commands
+from pyramids.cli_vector_overlay import add_vector_overlay_commands
+from pyramids.cli_vector_tess import add_vector_tess_commands
 from pyramids.feature import FeatureCollection
 
 _HELP_SRC_VECTOR = "source vector path"
@@ -213,4 +217,8 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_clip.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_clip.set_defaults(func=_cmd_vector_clip)
 
+    add_vector_inspect_commands(vsub)
+    add_vector_geom_commands(vsub)
+    add_vector_overlay_commands(vsub)
+    add_vector_tess_commands(vsub)
     add_vector_io_commands(vsub)
