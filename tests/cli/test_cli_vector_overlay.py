@@ -713,3 +713,11 @@ class TestMainErrorContract:
         assert rc == 1
         assert "unexpected failure" not in err
         assert "Traceback" not in err
+
+    def test_overlay_writes_requested_format(self, tmp_path):
+        """intersection-all to .shp writes a real shapefile (sidecars present), not GeoJSON (H1)."""
+        out = tmp_path / "inter.shp"
+        rc = main(["vector", "intersection-all", _G_POLYGONS, str(out)])
+        assert rc == 0
+        assert (tmp_path / "inter.shx").exists()
+        assert (tmp_path / "inter.dbf").exists()

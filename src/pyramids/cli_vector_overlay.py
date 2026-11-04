@@ -15,7 +15,12 @@ import argparse
 
 from geopandas import GeoDataFrame, GeoSeries
 
-from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    map_lookup_errors,
+    refuse_existing,
+    resolve_vector_driver,
+)
 from pyramids.feature import FeatureCollection
 
 _HELP_SRC_VECTOR = "source vector path"
@@ -99,7 +104,8 @@ def _write_collection(args: argparse.Namespace, result: object, src_crs: object)
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    _to_collection(result, src_crs).to_file(args.output)
+    driver = resolve_vector_driver(args.output, None)
+    _to_collection(result, src_crs).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
 
