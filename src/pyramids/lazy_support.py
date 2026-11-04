@@ -19,6 +19,19 @@ Rules (enforced by ``tests/test_lazy_support.py``):
   name removed, or a signature/semantics changed); additions never need a bump. A lazy backend pins
   ``pyramids.lazy_support.LAZY_SUPPORT_API_VERSION >= N`` at its own import and fails loudly
   ("upgrade pyramids-core") rather than on a later missing attribute.
+
+Examples:
+    - A lazy backend checks the contract version, then uses a re-exported primitive -- which is the
+      *same* object as its canonical home (the facade re-exports, never copies):
+        ```python
+        >>> import pyramids.lazy_support as ls
+        >>> ls.LAZY_SUPPORT_API_VERSION >= 1
+        True
+        >>> from pyramids.base._utils import apply_unpack
+        >>> ls.apply_unpack is apply_unpack
+        True
+
+        ```
 """
 
 from pyramids.base._axes import AXIS_NAMES

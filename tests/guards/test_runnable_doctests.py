@@ -20,6 +20,7 @@ DOCTEST_MODULES = [
     "pyramids.base.config",
     "pyramids.io.sniff",
     "pyramids._resource",
+    "pyramids.lazy_support",
 ]
 
 
