@@ -220,7 +220,11 @@ def _cmd_vector_sample_points(args: argparse.Namespace) -> int:
     except ImportError as exc:
         # Every method other than "uniform" imports the optional `pointpats`
         # package; turn its absence into a clean user error instead of the
-        # "unexpected failure" branch (ImportError is not caught by main()).
+        # "unexpected failure" branch (ImportError is not caught by main()). Only
+        # the pointpats import is remapped — any other ImportError is a real bug
+        # and must keep propagating.
+        if "pointpats" not in str(exc):
+            raise
         raise ValueError(
             f"--method {args.method!r} needs the optional 'pointpats' package; "
             f"install it or use --method uniform"
