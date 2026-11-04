@@ -92,11 +92,41 @@ specific `netcdf4` build string so the HDF5 shared library matches
 | `tests/feature/lazy/` | `parquet` | ✅ (skips) | ✅ `parquet` | `parquet` |
 | `tests/netcdf/` (excl. `lazy/`) | `interop` | ✅ (interop-tests step) | — | `dev` |
 | `tests/netcdf/lazy/` | `lazy` | ✅ (most skip without kerchunk) | ✅ `lazy` | `lazy` |
-| `tests/ugrid/` | `interop` | ✅ | — | `dev` |
+| `tests/netcdf/ugrid/` | `interop` | ✅ | — | `dev` |
 
 "Skips" in the main-package column means the tests are tagged or guarded so
 they self-skip when the extra's headline dep is missing. They *run* fully
 (no skip) in the corresponding extras-package job.
+
+## No silent skips
+
+A skipped test is invisible: it folds into "N skipped", CI stays green, and a whole marker can run
+in no job for months unnoticed — which is exactly what happened to the `stac` suite. It was tagged
+`core`, and the tests needing the real `pystac-client` were installed in no CI test env: the
+mock-client tests still ran in the main job, but the **real-dependency** coverage skipped in every
+job while reading as passing. Three mechanisms make that impossible:
+
+1. **Marker-routing.** Every extras marker runs in a CI job whose environment installs its
+   dependency (the `extras-package` matrix in `.github/workflows/tests.yml`), so the tests
+   *execute* rather than skip. `parquet` runs via `pytest -m parquet` in the `parquet` env; the
+   whole `stac` suite runs in the `dev` env (which carries `pystac-client`); `lazy` / `interop` /
+   `plot` run in the main-package job.
+2. **`--strict-extra-skips`.** The per-extra jobs whose env carries every dependency their selected
+   tests need pass this `pytest` flag (defined in `tests/conftest.py`). It turns any skip whose
+   reason says a dependency is "not installed" into a hard failure — so a mis-routed or mis-marked
+   test that would silently skip in the job that *owns* its dependency makes CI red instead. It is
+   a CLI flag (never an env var, per the marker-only convention) and is off by default, so ordinary
+   and local runs still skip cleanly on a partial install.
+3. **A coverage guard.** `tests/guards/test_extras_markers_run_in_ci.py` asserts that every
+   registered extras marker (`tests/_marks.py::EXTRA_MARKERS`) is run by some CI job. Add a marker
+   with no job and the guard fails that PR — the check that would have caught `stac` on day one.
+
+**Genuinely-absent native capabilities** — ones no Python package can supply — use `xfail`, not
+`skip`, so they stay visible. The OGR Parquet vector driver (`libgdal-arrow-parquet`) is the
+current example: `tests/feature/test_tile_strategy.py::TestRowGroupParquet` is
+`xfail(strict, condition="driver absent")`. It runs, is reported as *xfailed* (not hidden in the
+skip count), and flips to a failure the moment the driver loads — forcing the stale exception out.
+Tracked in #457.
 
 ## Running each slice locally
 
@@ -112,12 +142,15 @@ pixi run -e dev test-all             # everything in one go
 ### Each extras env, scoped to the directory CI runs there
 
 ```bash
-pixi run -e lazy         pytest -vvv tests/netcdf/lazy
+pixi run -e lazy    pytest -vvv tests/netcdf/lazy
 pixi run -e parquet pytest -vvv tests/feature/lazy
+pixi run -e parquet pytest -vvv -m "parquet and not live" --strict-extra-skips
+pixi run -e dev     pytest -vvv tests/stac tests/dataset/stac --strict-extra-skips
 ```
 
-These two commands mirror the two extras-package matrix entries. If they pass
-locally and `dev` passes too, CI should be green.
+These mirror the `extras-package` matrix entries. `--strict-extra-skips` is how the `parquet` and
+`stac` jobs fail on a missing-dependency skip (see "No silent skips"); run them with the flag to
+reproduce CI exactly. If these pass locally and `dev` passes too, CI should be green.
 
 ### First-time install
 

@@ -24,7 +24,7 @@ from pyramids.stac._geoparquet import (
     to_geoparquet_spec,
 )
 
-pytestmark = pytest.mark.parquet
+pytestmark = pytest.mark.stac
 
 pa = pytest.importorskip("pyarrow")
 pq = pytest.importorskip("pyarrow.parquet")

@@ -46,7 +46,7 @@ class TestToGeoparquetGuards:
             to_geoparquet([123], "x.parquet")
 
 
-@pytest.mark.parquet
+@pytest.mark.stac
 class TestRoundTrip:
     """Round-trip items through GeoParquet (needs pyarrow)."""
 

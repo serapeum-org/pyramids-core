@@ -71,12 +71,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    # One job per [project.optional-dependencies] group that ships native
-    # deps (conda-forge backed). Each job installs the matching
-    # ``dev-<extra>`` pixi env and runs only the tests tagged with the
-    # extra's pytest marker. Tests auto-skip on missing deps via the
-    # ``pytest_collection_modifyitems`` hook in tests/conftest.py, so
-    # this job is the only place the extra-gated suite actually runs.
+    # One job per optional-dependency group. Each job installs an env that HAS the
+    # extra and RUNS that extra's tests, so they execute for real here instead of
+    # skipping silently in the main matrix (whose envs omit these extras). Without a
+    # job like this an extra's tests skip in every job and a regression merges green —
+    # exactly what happened to tests/stac, which had no home until the `stac` target below.
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -84,16 +83,47 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         target:
-          # ``dir`` is the subdirectory that exercises the extra's code
-          # paths. Keeping CI subdir-scoped avoids re-running the full
-          # suite in every extras env while still covering the code
-          # that each extra activates.
-          - { name: netcdf_lazy,  env: lazy,         dir: tests/netcdf/lazy }
-          - { name: parquet_lazy, env: parquet,      dir: tests/feature/lazy }
-          # to_dask_dataframe needs dask.dataframe (pyarrow), which ships in the parquet
-          # extra rather than lazy; run its tests under the parquet env so they execute
-          # instead of skipping (the lazy env has no pyarrow).
-          - { name: netcdf_parquet, env: parquet,    dir: tests/netcdf/lazy/test_to_dask_dataframe.py }
+          # Each target runs in an env that HAS its extra and selects its tests (by marker, or by a
+          # path where env-specific routing is needed), so they EXECUTE here instead of skipping in
+          # the main matrix (whose envs omit these extras). `strict` appends --strict-extra-skips
+          # (turn a missing-dependency skip into a failure) on the jobs whose env is verified to
+          # carry every dependency the selected tests need. See docs/how-to/testing.md.
+          - name: netcdf_lazy
+            env: lazy
+            paths: tests/netcdf/lazy
+            markexpr: "not live"
+            strict: ""
+          - name: parquet_lazy
+            env: parquet
+            paths: tests/feature/lazy
+            markexpr: "not live"
+            strict: ""
+          # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
+          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute.
+          - name: netcdf_parquet
+            env: parquet
+            paths: tests/netcdf/lazy/test_to_dask_dataframe.py
+            markexpr: "not live"
+            strict: ""
+          # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
+          # stac/test_geoparquet_spec) ran in NO CI job; select them in the parquet env, which carries
+          # pyarrow and every other dep they need, so --strict-extra-skips is safe here.
+          - name: parquet
+            env: parquet
+            paths: ""
+            markexpr: "parquet and not live"
+            strict: "--strict-extra-skips"
+          # STAC runs the whole suite (mock + real-client) in the dev env, which carries every extra,
+          # so a missing-dependency skip there is always a bug -> --strict-extra-skips. NOTE: the
+          # strict gate's safety here rests on `stac-asset` being present in the dev env; it reaches
+          # it via pixi.lock as the [stac] extra's PyPI dep, not the pixi `stac` conda feature (which
+          # only lists pystac-client). If a lock regen ever drops the [stac] PyPI deps, this job goes
+          # red (correctly, but citing "mis-routed test") — the fix then is to restore the extra.
+          - name: stac
+            env: dev
+            paths: "tests/stac tests/dataset/stac"
+            markexpr: "not live"
+            strict: "--strict-extra-skips"
 
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
@@ -114,9 +144,9 @@ jobs:
         # job at Codecov.
         run: >-
           pixi run -e ${{ matrix.target.env }}
-          pytest -vvv ${{ matrix.target.dir }} -m 'not live'
+          pytest -vvv ${{ matrix.target.paths }} -m "${{ matrix.target.markexpr }}"
           --cov=src/pyramids --cov-report=xml --cov-report=term-missing
-          --cov-fail-under=0
+          --cov-fail-under=0 ${{ matrix.target.strict }}
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1

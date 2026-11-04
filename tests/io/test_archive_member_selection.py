@@ -52,7 +52,7 @@ from pyramids.dataset import Dataset
 
 pytestmark = pytest.mark.core
 
-ARCHIVES = Path(__file__).parent / "data" / "virtual-file-system"
+ARCHIVES = Path("tests/data") / "virtual-file-system"
 KINDS = ["zip", "tar", "gz"]
 
 
