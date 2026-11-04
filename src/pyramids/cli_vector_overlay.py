@@ -19,6 +19,7 @@ from pyramids._cli_shared import (
     info_print,
     map_lookup_errors,
     refuse_existing,
+    require_matching_crs,
     resolve_vector_driver,
 )
 from pyramids.feature import FeatureCollection
@@ -122,6 +123,7 @@ def _cmd_vector_intersection(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.intersection(other), fc.crs)
 
 
@@ -137,6 +139,7 @@ def _cmd_vector_difference(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.difference(other), fc.crs)
 
 
@@ -152,6 +155,7 @@ def _cmd_vector_symmetric_difference(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.symmetric_difference(other), fc.crs)
 
 
@@ -167,6 +171,7 @@ def _cmd_vector_union(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.union(other), fc.crs)
 
 
@@ -210,6 +215,7 @@ def _cmd_vector_overlay(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     right = FeatureCollection.read_file(args.right)
+    require_matching_crs(fc, right)
     return _write_collection(args, fc.overlay(right, how=args.how), fc.crs)
 
 
@@ -243,6 +249,7 @@ def _cmd_vector_sjoin(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     right = FeatureCollection.read_file(args.right)
+    require_matching_crs(fc, right)
     result = fc.sjoin(right, how=args.how, predicate=args.predicate)
     return _write_collection(args, result, fc.crs)
 
@@ -259,6 +266,7 @@ def _cmd_vector_sjoin_nearest(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     right = FeatureCollection.read_file(args.right)
+    require_matching_crs(fc, right)
     result = fc.sjoin_nearest(right, how=args.how, max_distance=args.max_distance)
     return _write_collection(args, result, fc.crs)
 
@@ -290,6 +298,7 @@ def _cmd_vector_shared_paths(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.shared_paths(other), fc.crs)
 
 
@@ -305,6 +314,7 @@ def _cmd_vector_shortest_line(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     return _write_collection(args, fc.shortest_line(other), fc.crs)
 
 
@@ -340,6 +350,7 @@ def _cmd_vector_filter(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     mask = FeatureCollection.read_file(args.mask)
+    require_matching_crs(fc, mask)
     mask_geometry = mask.union_all()
     predicate = getattr(fc, args.predicate)
     if args.predicate == "dwithin":

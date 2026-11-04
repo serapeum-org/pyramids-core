@@ -34,6 +34,7 @@ from pyramids._cli_shared import (
     json_sanitize,
     map_lookup_errors,
     refuse_existing,
+    require_matching_crs,
     resolve_vector_driver,
 )
 from pyramids.feature import FeatureCollection
@@ -330,6 +331,7 @@ def _cmd_vector_distance(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     _emit_series(args, fc.distance(other), "distance")
     return 0
 
@@ -345,6 +347,7 @@ def _cmd_vector_hausdorff_distance(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     _emit_series(args, fc.hausdorff_distance(other), "hausdorff_distance")
     return 0
 
@@ -360,6 +363,7 @@ def _cmd_vector_frechet_distance(args: argparse.Namespace) -> int:
     """
     fc = FeatureCollection.read_file(args.src)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     _emit_series(args, fc.frechet_distance(other), "frechet_distance")
     return 0
 

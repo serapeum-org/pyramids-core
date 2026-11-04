@@ -721,3 +721,13 @@ class TestMainErrorContract:
         assert rc == 0
         assert (tmp_path / "inter.shx").exists()
         assert (tmp_path / "inter.dbf").exists()
+
+    def test_mixed_crs_errors_cleanly(self, tmp_path, capsys):
+        """Two layers in different CRS exit 1 with a clear 'different CRS' error (M1)."""
+        geog = str(_DATA / "geometries" / "multi-polygons.geojson")  # EPSG:4326
+        out = str(tmp_path / "x.geojson")
+        rc = main(["vector", "intersection", _COELLO_POLYGONS, out, "--other", geog])
+        err = capsys.readouterr().err
+        assert rc == 1  # _COELLO_POLYGONS is EPSG:32618
+        assert "different CRS" in err
+        assert "unexpected failure" not in err
