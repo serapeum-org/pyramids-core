@@ -1,0 +1,376 @@
+"""Vector I/O, export, and remote-service reader commands for ``pyramids vector``.
+
+Thin wrappers over :class:`pyramids.feature.FeatureCollection` construction/export
+methods: build from a bbox, round-trip Parquet/Feather, emit GeoJSON/WKT/WKB, write
+vector tiles (MVT/PMTiles), and read from OGC API Features / Esri FeatureServer /
+vector-tile services. Network/DB readers are thin forwarders; parquet/tile/service
+dependencies stay lazily imported by the underlying methods, so importing this
+module (and ``pyramids.cli``) requires no optional extra.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+
+from pyramids._cli_shared import info_print, json_sanitize, refuse_existing
+from pyramids.feature import FeatureCollection
+
+_HELP_SRC = "source vector path"
+_HELP_OUTPUT = "destination path"
+_HELP_OVERWRITE = "replace the output if it already exists"
+_HELP_LAYER = "layer name or index in a multi-layer source"
+_HELP_JSON = "emit JSON"
+_HELP_BBOX = "bounding box as MINX MINY MAXX MAXY"
+
+
+def _cmd_vector_from_bbox(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-bbox`` — write a one-feature bbox polygon.
+
+    Args:
+        args: Parsed args with ``output``, ``bbox``, ``epsg``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    FeatureCollection.from_bbox(tuple(args.bbox), epsg=args.epsg).to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_read_parquet(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector read-parquet`` — convert a GeoParquet to a vector file.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    FeatureCollection.read_parquet(args.src).to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_parquet(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-parquet`` — write a GeoParquet file.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    FeatureCollection.read_file(args.src, layer=args.layer).to_parquet(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_feather(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-feather`` — write a GeoFeather file.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    FeatureCollection.read_file(args.src, layer=args.layer).to_feather(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_json(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-json`` — emit the GeoJSON string.
+
+    Writes to ``--out`` when given, else prints to stdout (for piping).
+
+    Args:
+        args: Parsed args with ``src``, ``layer``, ``out``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    text = FeatureCollection.read_file(args.src, layer=args.layer).to_json()
+    if args.out:
+        refuse_existing(args.out, args.overwrite)
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        info_print(args, f"wrote {args.out}")
+    else:
+        print(text)
+    return 0
+
+
+def _cmd_vector_to_geo_dict(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-geo-dict`` — print the GeoJSON mapping.
+
+    Args:
+        args: Parsed args with ``src``, ``layer``, ``json``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    payload = FeatureCollection.read_file(args.src, layer=args.layer).to_geo_dict()
+    if args.json:
+        print(json.dumps(json_sanitize(payload)))
+    else:
+        print(f"type: {payload.get('type')}")
+        print(f"features: {len(payload.get('features', []))}")
+    return 0
+
+
+def _cmd_vector_to_wkt(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-wkt`` — write a WKT table to CSV.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    FeatureCollection.read_file(args.src, layer=args.layer).to_wkt().to_csv(
+        args.output, index=False
+    )
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_wkb(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-wkb`` — write a WKB table to CSV.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``hex``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    fc.to_wkb(hex=args.hex).to_csv(args.output, index=False)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_mvt(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-mvt`` — write a Mapbox Vector Tiles archive.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``min_zoom``,
+            ``max_zoom``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    fc.to_mvt(args.output, min_zoom=args.min_zoom, max_zoom=args.max_zoom)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_to_pmtiles(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector to-pmtiles`` — write a PMTiles archive.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``min_zoom``,
+            ``max_zoom``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    fc.to_pmtiles(args.output, min_zoom=args.min_zoom, max_zoom=args.max_zoom)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_from_ogc_features(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-ogc-features`` — read an OGC API Features service.
+
+    Args:
+        args: Parsed args with ``endpoint``, ``collection``, ``bbox``, ``output``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    bbox = tuple(args.bbox) if args.bbox else None
+    fc = FeatureCollection.from_ogc_features(
+        args.endpoint, collection=args.collection, bbox=bbox
+    )
+    fc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_from_featureserver(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-featureserver`` — read an Esri FeatureServer layer.
+
+    Args:
+        args: Parsed args with ``url``, ``where``, ``out_fields``, ``output``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.from_featureserver(
+        args.url, where=args.where, out_fields=args.out_fields
+    )
+    fc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_from_vectortileserver(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-vectortileserver`` — read a vector-tile service.
+
+    Args:
+        args: Parsed args with ``url``, ``layer``, ``bbox``, ``output``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    bbox = tuple(args.bbox) if args.bbox else None
+    fc = FeatureCollection.from_vectortileserver(args.url, layer=args.layer, bbox=bbox)
+    fc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
+    """Register the ``vector`` I/O, export, and remote-reader commands on ``vsub``.
+
+    Args:
+        vsub: The ``vector`` group's ``add_subparsers`` action.
+    """
+    v_bbox = vsub.add_parser("from-bbox", help="write a one-feature bbox polygon")
+    v_bbox.add_argument("output", help=_HELP_OUTPUT)
+    v_bbox.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        required=True,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        help=_HELP_BBOX,
+    )
+    v_bbox.add_argument("--epsg", type=int, required=True, help="EPSG code of the bbox")
+    v_bbox.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_bbox.set_defaults(func=_cmd_vector_from_bbox)
+
+    v_rpq = vsub.add_parser(
+        "read-parquet", help="convert a GeoParquet to a vector file"
+    )
+    v_rpq.add_argument("src", help="source GeoParquet path")
+    v_rpq.add_argument("output", help=_HELP_OUTPUT)
+    v_rpq.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_rpq.set_defaults(func=_cmd_vector_read_parquet)
+
+    v_tpq = vsub.add_parser("to-parquet", help="write a GeoParquet file")
+    v_tpq.add_argument("src", help=_HELP_SRC)
+    v_tpq.add_argument("output", help="destination .parquet path")
+    v_tpq.add_argument("--layer", help=_HELP_LAYER)
+    v_tpq.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_tpq.set_defaults(func=_cmd_vector_to_parquet)
+
+    v_tf = vsub.add_parser("to-feather", help="write a GeoFeather file")
+    v_tf.add_argument("src", help=_HELP_SRC)
+    v_tf.add_argument("output", help="destination .feather path")
+    v_tf.add_argument("--layer", help=_HELP_LAYER)
+    v_tf.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_tf.set_defaults(func=_cmd_vector_to_feather)
+
+    v_tj = vsub.add_parser("to-json", help="emit the GeoJSON string (stdout or --out)")
+    v_tj.add_argument("src", help=_HELP_SRC)
+    v_tj.add_argument("--layer", help=_HELP_LAYER)
+    v_tj.add_argument("--out", help="write to this path instead of stdout")
+    v_tj.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_tj.set_defaults(func=_cmd_vector_to_json)
+
+    v_gd = vsub.add_parser("to-geo-dict", help="print the GeoJSON mapping")
+    v_gd.add_argument("src", help=_HELP_SRC)
+    v_gd.add_argument("--layer", help=_HELP_LAYER)
+    v_gd.add_argument("--json", action="store_true", help=_HELP_JSON)
+    v_gd.set_defaults(func=_cmd_vector_to_geo_dict)
+
+    v_wkt = vsub.add_parser("to-wkt", help="write a WKT table to CSV")
+    v_wkt.add_argument("src", help=_HELP_SRC)
+    v_wkt.add_argument("output", help="destination .csv path")
+    v_wkt.add_argument("--layer", help=_HELP_LAYER)
+    v_wkt.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_wkt.set_defaults(func=_cmd_vector_to_wkt)
+
+    v_wkb = vsub.add_parser("to-wkb", help="write a WKB table to CSV")
+    v_wkb.add_argument("src", help=_HELP_SRC)
+    v_wkb.add_argument("output", help="destination .csv path")
+    v_wkb.add_argument("--layer", help=_HELP_LAYER)
+    v_wkb.add_argument("--hex", action="store_true", help="encode geometries as hex")
+    v_wkb.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_wkb.set_defaults(func=_cmd_vector_to_wkb)
+
+    v_mvt = vsub.add_parser("to-mvt", help="write a Mapbox Vector Tiles archive")
+    v_mvt.add_argument("src", help=_HELP_SRC)
+    v_mvt.add_argument("output", help="destination .mvt path")
+    v_mvt.add_argument("--layer", help=_HELP_LAYER)
+    v_mvt.add_argument("--min-zoom", type=int, default=0, help="minimum zoom level")
+    v_mvt.add_argument("--max-zoom", type=int, default=None, help="maximum zoom level")
+    v_mvt.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_mvt.set_defaults(func=_cmd_vector_to_mvt)
+
+    v_pm = vsub.add_parser("to-pmtiles", help="write a PMTiles archive")
+    v_pm.add_argument("src", help=_HELP_SRC)
+    v_pm.add_argument("output", help="destination .pmtiles path")
+    v_pm.add_argument("--layer", help=_HELP_LAYER)
+    v_pm.add_argument("--min-zoom", type=int, default=0, help="minimum zoom level")
+    v_pm.add_argument("--max-zoom", type=int, default=None, help="maximum zoom level")
+    v_pm.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_pm.set_defaults(func=_cmd_vector_to_pmtiles)
+
+    v_ogc = vsub.add_parser(
+        "from-ogc-features", help="read an OGC API Features service"
+    )
+    v_ogc.add_argument("output", help=_HELP_OUTPUT)
+    v_ogc.add_argument("--endpoint", required=True, help="service base URL")
+    v_ogc.add_argument("--collection", required=True, help="collection id")
+    v_ogc.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        help=_HELP_BBOX,
+    )
+    v_ogc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_ogc.set_defaults(func=_cmd_vector_from_ogc_features)
+
+    v_fs = vsub.add_parser(
+        "from-featureserver", help="read an Esri FeatureServer layer"
+    )
+    v_fs.add_argument("output", help=_HELP_OUTPUT)
+    v_fs.add_argument("--url", required=True, help="FeatureServer layer URL")
+    v_fs.add_argument("--where", default="1=1", help="attribute filter")
+    v_fs.add_argument("--out-fields", default="*", help="comma-separated fields")
+    v_fs.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_fs.set_defaults(func=_cmd_vector_from_featureserver)
+
+    v_vts = vsub.add_parser("from-vectortileserver", help="read a vector-tile service")
+    v_vts.add_argument("output", help=_HELP_OUTPUT)
+    v_vts.add_argument("--url", required=True, help="vector-tile service URL")
+    v_vts.add_argument("--layer", help="layer name")
+    v_vts.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        help=_HELP_BBOX,
+    )
+    v_vts.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_vts.set_defaults(func=_cmd_vector_from_vectortileserver)
