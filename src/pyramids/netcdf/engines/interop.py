@@ -1542,7 +1542,7 @@ def _lazy_var_data(ds: NetCDF, var_name: str, chunks: Any, md_arr: Any) -> Any:
     path = _reopenable_path(ds)
     if path is None:
         return ds._md_array_to_numpy(md_arr)
-    # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+    # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
     from pyramids.netcdf._lazy import build_lazy_array
 
     try:

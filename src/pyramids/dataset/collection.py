@@ -2038,7 +2038,7 @@ class DatasetCollection:
                 "region semantics); use mode='w' to (over)write the whole cube."
             )
         data = self.data
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.dataset.ops._zarr import _resolve_store
 
         resolved_store = _resolve_store(store, storage_options)
@@ -2973,7 +2973,7 @@ class DatasetCollection:
         )
         import zarr
 
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.dataset.ops._zarr import _resolve_store
 
         resolved = _resolve_store(store, storage_options)

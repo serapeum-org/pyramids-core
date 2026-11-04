@@ -2551,7 +2551,7 @@ class Dataset(RasterBase):
 
                 ```
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.dataset.ops._zarr import write_dataset_to_zarr
 
         resolved_chunks = chunks if chunks is not None else "auto"
@@ -2596,7 +2596,7 @@ class Dataset(RasterBase):
                 from a foreign GeoZarr store whose auto-detect picks the wrong
                 array.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.dataset.ops._zarr import read_dataset_from_zarr
 
         return read_dataset_from_zarr(

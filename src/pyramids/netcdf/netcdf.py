@@ -6204,7 +6204,7 @@ class NetCDF(Dataset):
         Returns:
             Any: The lazy `dask` array (a masked dask array when `masked`), still uncomputed.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._lazy import mask_no_data
 
         result = self._read_array_lazy(chunks, lock)
@@ -6599,7 +6599,7 @@ class NetCDF(Dataset):
                 rather than a variable — or the variable was rebuilt in memory, so the
                 store no longer holds these cells. Read it eagerly instead.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._lazy import build_lazy_array
 
         parent = self._parent_nc if self._parent_nc is not None else self
@@ -8255,7 +8255,7 @@ class NetCDF(Dataset):
             ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
             OptionalPackageDoesNotExist: dask is not installed — install the `lazy` extra.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._lazy_cube import LazyNetCDF
 
         if _interop._is_in_memory(self):
@@ -9806,7 +9806,7 @@ class NetCDF(Dataset):
         Returns:
             dict: The manifest dict that was written.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._kerchunk_facade import to_kerchunk
 
         return to_kerchunk(
@@ -9845,7 +9845,7 @@ class NetCDF(Dataset):
         Returns:
             dict: The combined manifest.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._kerchunk_facade import combine_kerchunk
 
         return combine_kerchunk(
@@ -9886,7 +9886,7 @@ class NetCDF(Dataset):
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
         """
-        # Deferred so this module imports without the [lazy] extra; body moves to pyramids-lazy (plan #2).
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
         from pyramids.netcdf._mfdataset import open_mfdataset
 
         return open_mfdataset(

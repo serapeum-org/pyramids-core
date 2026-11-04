@@ -1007,7 +1007,7 @@ def _load_zarr(href: str):
     )
     import zarr
 
-    # Deferred so this module imports without the [lazy] extra; bodies move to pyramids-lazy (plan #2).
+    # Deferred so core still imports once these bodies move to pyramids-lazy (plan #2).
     from pyramids.dataset.ops._geobox_zarr import detect_data_var
     from pyramids.dataset.ops._zarr import _resolve_store
 
