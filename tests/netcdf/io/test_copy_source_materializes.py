@@ -26,7 +26,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 
 # Named, not globbed. A glob evaluated at collection time reports *zero* tests
 # when the data directory moves, instead of failing, and a `variable_names[:2]`

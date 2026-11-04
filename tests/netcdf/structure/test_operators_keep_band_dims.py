@@ -29,13 +29,13 @@ from pyramids.netcdf.netcdf import NetCDF
 pytestmark = pytest.mark.core
 
 CUBE_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "data"
     / "netcdf"
     / "cf__5v__1d4-4d1__y-asc.nc"
 )
 ERA5_T2M = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "data"
     / "netcdf"
     / "cf__5v__1d4-3d1__geog__y-desc.nc"

@@ -19,7 +19,7 @@ from pyramids.netcdf import NetCDF
 from tests._marks import requires_lazy
 
 MULTIVAR = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "data"
     / "netcdf"
     / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"

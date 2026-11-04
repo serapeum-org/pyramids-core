@@ -27,7 +27,7 @@ from pyramids.netcdf import NetCDF
 # has no xarray, and `-m core` must not collect a test that cannot run there.
 pytestmark = pytest.mark.interop
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 BOUNDED = "cf__7v__1d3-2d3-3d1__y-asc.nc"
 CURVILINEAR = "cf__8v__1d3-2d3-3d1-4d1__curv-stag.nc"
 CURVILINEAR_PLAIN = "none__4v__1d1-2d2-3d1__curv.nc"

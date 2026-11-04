@@ -16,7 +16,7 @@ from pyramids.base._summary import variable_summary
 from pyramids.netcdf import NetCDF
 from pyramids.netcdf.ugrid import MeshDataset
 
-DATA = Path(__file__).resolve().parents[1] / "data" / "netcdf"
+DATA = Path(__file__).resolve().parents[2] / "data" / "netcdf"
 CF_12V = DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 ONE_VAR = DATA / "none__1v__1d1.nc"
 

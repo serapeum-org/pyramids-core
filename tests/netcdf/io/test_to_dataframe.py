@@ -29,7 +29,7 @@ CELLS = np.arange(8.0).reshape(2, 2, 2)
 # ROMS-shaped: `salt` and `zeta` are enumerated as data variables, and neither carries a
 # recognised (y, x) pair, so the store has variables and no gridded one.
 NO_GRIDDED_VARIABLE = (
-    Path(__file__).parents[1]
+    Path(__file__).parents[2]
     / "data"
     / "netcdf"
     / "cf__8v__1d3-2d3-3d1-4d1__curv-stag.nc"
