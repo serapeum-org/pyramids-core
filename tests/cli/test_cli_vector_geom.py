@@ -619,3 +619,11 @@ class TestSetPrecision:
                     "1",
                 ]
             )
+
+
+def test_snap_mixed_crs_errors(tmp_path):
+    """snap on two layers with different CRS raises a clean ValueError (M1)."""
+    coello = str(_DATA / "coello_polygons.geojson")  # EPSG:32618
+    out = str(tmp_path / "o.geojson")
+    with pytest.raises(ValueError, match="different CRS"):
+        run(["snap", coello, out, "--other", MULTIPOLYGONS, "--tolerance", "1"])

@@ -18,6 +18,7 @@ import geopandas as gpd
 from pyramids._cli_shared import (
     info_print,
     refuse_existing,
+    require_matching_crs,
     resolve_vector_driver,
 )
 from pyramids.feature import FeatureCollection
@@ -406,6 +407,7 @@ def _cmd_vector_snap(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     other = FeatureCollection.read_file(args.other)
+    require_matching_crs(fc, other)
     result = fc.snap(other, args.tolerance)
     _write_result(args, result)
     return 0
