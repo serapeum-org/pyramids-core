@@ -197,3 +197,13 @@ class TestRequireComputeBackend:
         )
         with pytest.raises(OptionalPackageDoesNotExist, match="needs >="):
             cb.require_compute_backend()
+
+    def test_backend_with_non_int_api_version_is_rejected(self, monkeypatch):
+        """A backend whose api_version is not an int (garbage/missing) is rejected, not trusted."""
+        backend = _make_backend()
+        backend.api_version = "oops"
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
+        )
+        with pytest.raises(OptionalPackageDoesNotExist, match="needs >="):
+            cb.require_compute_backend()
