@@ -96,16 +96,15 @@ class TestBuffer:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "buffer",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--distance",
+            "100",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "buffer",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--distance",
-                    "100",
-                ]
-            )
+            run(argv)
 
 
 class TestSimplify:
@@ -121,16 +120,15 @@ class TestSimplify:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "simplify",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--tolerance",
+            "10",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "simplify",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--tolerance",
-                    "10",
-                ]
-            )
+            run(argv)
 
 
 class TestSimplifyCoverage:
@@ -146,16 +144,15 @@ class TestSimplifyCoverage:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "simplify-coverage",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--tolerance",
+            "10",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "simplify-coverage",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--tolerance",
-                    "10",
-                ]
-            )
+            run(argv)
 
 
 class TestMakeValid:
@@ -171,8 +168,9 @@ class TestMakeValid:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["make-valid", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["make-valid", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestNormalize:
@@ -188,8 +186,9 @@ class TestNormalize:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["normalize", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["normalize", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestReverse:
@@ -205,8 +204,9 @@ class TestReverse:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["reverse", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["reverse", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestForce2d:
@@ -222,8 +222,9 @@ class TestForce2d:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["force-2d", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["force-2d", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestForce3d:
@@ -239,8 +240,9 @@ class TestForce3d:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["force-3d", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["force-3d", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestSegmentize:
@@ -256,16 +258,15 @@ class TestSegmentize:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "segmentize",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--max-length",
+            "10",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "segmentize",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--max-length",
-                    "10",
-                ]
-            )
+            run(argv)
 
 
 class TestRemoveRepeatedPoints:
@@ -281,14 +282,13 @@ class TestRemoveRepeatedPoints:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "remove-repeated-points",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "remove-repeated-points",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestOffsetCurve:
@@ -304,16 +304,15 @@ class TestOffsetCurve:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "offset-curve",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--distance",
+            "5",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "offset-curve",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--distance",
-                    "5",
-                ]
-            )
+            run(argv)
 
 
 class TestRepresentativePoint:
@@ -329,14 +328,13 @@ class TestRepresentativePoint:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "representative-point",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "representative-point",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestConcaveHull:
@@ -351,8 +349,9 @@ class TestConcaveHull:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["concave-hull", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["concave-hull", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestMinimumBoundingCircle:
@@ -368,14 +367,13 @@ class TestMinimumBoundingCircle:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "minimum-bounding-circle",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "minimum-bounding-circle",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestMinimumRotatedRectangle:
@@ -391,14 +389,13 @@ class TestMinimumRotatedRectangle:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "minimum-rotated-rectangle",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "minimum-rotated-rectangle",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestMaximumInscribedCircle:
@@ -414,14 +411,13 @@ class TestMaximumInscribedCircle:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "maximum-inscribed-circle",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "maximum-inscribed-circle",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestAffineTransform:
@@ -450,21 +446,20 @@ class TestAffineTransform:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "affine-transform",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--matrix",
+            "1",
+            "0",
+            "0",
+            "1",
+            "0",
+            "0",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "affine-transform",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--matrix",
-                    "1",
-                    "0",
-                    "0",
-                    "1",
-                    "0",
-                    "0",
-                ]
-            )
+            run(argv)
 
 
 class TestRotate:
@@ -480,16 +475,15 @@ class TestRotate:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "rotate",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--angle",
+            "90",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "rotate",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--angle",
-                    "90",
-                ]
-            )
+            run(argv)
 
 
 class TestScale:
@@ -505,8 +499,9 @@ class TestScale:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["scale", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["scale", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestTranslate:
@@ -523,8 +518,9 @@ class TestTranslate:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["translate", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["translate", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestSnap:
@@ -542,18 +538,17 @@ class TestSnap:
 
     def test_missing_other_raises(self, tmp_path):
         """A missing ``--other`` layer surfaces as a caught error type."""
+        argv = [
+            "snap",
+            POLYGONS,
+            str(tmp_path / "o.geojson"),
+            "--other",
+            _missing(tmp_path),
+            "--tolerance",
+            "1",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "snap",
-                    POLYGONS,
-                    str(tmp_path / "o.geojson"),
-                    "--other",
-                    _missing(tmp_path),
-                    "--tolerance",
-                    "1",
-                ]
-            )
+            run(argv)
 
 
 class TestBuildArea:
@@ -569,8 +564,9 @@ class TestBuildArea:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = ["build-area", _missing(tmp_path), str(tmp_path / "o.geojson")]
         with pytest.raises(CAUGHT):
-            run(["build-area", _missing(tmp_path), str(tmp_path / "o.geojson")])
+            run(argv)
 
 
 class TestExtractUniquePoints:
@@ -586,14 +582,13 @@ class TestExtractUniquePoints:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "extract-unique-points",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "extract-unique-points",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                ]
-            )
+            run(argv)
 
 
 class TestSetPrecision:
@@ -609,16 +604,15 @@ class TestSetPrecision:
 
     def test_missing_source_raises(self, tmp_path):
         """A missing source surfaces as a caught error type."""
+        argv = [
+            "set-precision",
+            _missing(tmp_path),
+            str(tmp_path / "o.geojson"),
+            "--grid-size",
+            "1",
+        ]
         with pytest.raises(CAUGHT):
-            run(
-                [
-                    "set-precision",
-                    _missing(tmp_path),
-                    str(tmp_path / "o.geojson"),
-                    "--grid-size",
-                    "1",
-                ]
-            )
+            run(argv)
 
 
 def test_snap_mixed_crs_errors(tmp_path):
