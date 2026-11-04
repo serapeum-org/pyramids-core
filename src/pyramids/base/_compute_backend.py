@@ -18,7 +18,7 @@ one provider in practice (``pyramids-lazy``) but a third party *could* register 
 **Status:** the resolver and contract are defined here in Phase 1; the core method bodies are wired
 to :func:`require_compute_backend` in the Phase 2 cutover, when ``pyramids-lazy`` ships the backend.
 Until then nothing in core calls :func:`require_compute_backend`, and a bare install resolves no
-backend (its lazy features keep working through the in-core implementations that still live here).
+backend (its lazy features keep working through the in-core implementations that still live in core).
 """
 
 from __future__ import annotations
@@ -70,6 +70,12 @@ class ComputeBackend(Protocol):
     Phase 2 moves out of core; signatures mirror today's in-core implementations so the cutover is a
     straight delegation. ``@runtime_checkable`` so :func:`require_compute_backend` can verify the
     object structurally.
+
+    Scope: the v1 contract covers the raster (``Dataset``), raster-cube (``NetCDF``) and vector
+    (``FeatureCollection``) lazy ops. ``MeshDataset``'s own lazy surface (``open_mfdataset`` /
+    ``to_dask_dataframe`` / ``to_zarr`` / ``from_zarr``) is **intentionally out of v1** — mesh lazy
+    parity is deferred to FR-B (issue #1458); its methods are added (additively, no api_version bump)
+    when the mesh lazy bodies move to the backend.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
