@@ -92,7 +92,7 @@ every file (`tests/netcdf/samples/test_smoke_all_files.py`):
 
 The MDIM read plumbing that all of the above sits on is unit-tested directly:
 
-- `tests/netcdf/test_netcdf_core.py::TestReadMdArray` — `_read_md_array` returns the classic dataset (and the
+- `tests/netcdf/unit/test_netcdf_core.py::TestReadMdArray` — `_read_md_array` returns the classic dataset (and the
   `y_flipped` decision) for 2-D / 3-D variables.
 - `tests/netcdf/unit/test_netcdf_unit_read.py` — classic vs MDIM read modes, the Y-flip decision, band-dim tracking,
   1-D string/numeric variables, and the error/fallback branches.
