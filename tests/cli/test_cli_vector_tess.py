@@ -402,3 +402,14 @@ class TestMainErrorContract:
         assert main(["vector", "get-coordinates", _POINTS, out]) == 0
         assert main(["vector", "get-coordinates", _POINTS, out]) == 1
         assert main(["vector", "get-coordinates", _POINTS, out, "--overwrite"]) == 0
+
+
+def test_sample_points_non_pointpats_importerror_propagates(tmp_path, monkeypatch):
+    """A non-pointpats ImportError is re-raised, not remapped to the pointpats hint (L2)."""
+
+    def boom(self, *args, **kwargs):
+        raise ImportError("No module named 'unrelated_thing'")
+
+    monkeypatch.setattr(FeatureCollection, "sample_points", boom)
+    with pytest.raises(ImportError):
+        run(["sample-points", _POLYGONS, str(tmp_path / "o.geojson"), "--size", "5"])
