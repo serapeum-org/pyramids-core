@@ -8,15 +8,19 @@ import re
 import tarfile
 import time
 import warnings
+import weakref
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 from osgeo import gdal
 
 from pyramids.base import remote
 from pyramids.base._errors import FileFormatNotSupportedError
+
+if TYPE_CHECKING:
+    from pyramids.dataset import Dataset
 
 COMPRESSED_FILES_EXTENSIONS = [".zip", ".gz", ".tar"]
 DOES_NOT_SUPPORT_INTERNAL = [".gz"]
@@ -1561,3 +1565,116 @@ def to_ascii(
         for i in range(rows):
             file.writelines(list(map(insert_space, arr[i, :])))
             file.write("\n")
+
+
+class MemoryFile:
+    """An in-memory, VSI-backed raster file handle with deterministic cleanup.
+
+    Wraps a GDAL ``/vsimem/`` path so a raster can be built or staged in memory
+    and handed to code that needs a filesystem-like path, then read back as bytes
+    or opened as a :class:`~pyramids.dataset.Dataset`. The backing buffer is
+    unlinked when the handle is closed (or when the object is garbage-collected,
+    via :func:`weakref.finalize`).
+
+    It mirrors the common in-memory raster-file-handle pattern, yielding a pyramids
+    :class:`~pyramids.dataset.Dataset`. For a plain whole-buffer round-trip see
+    :meth:`Dataset.from_bytes` / :meth:`Dataset.to_bytes`.
+
+    Stage a raster by handing it encoded bytes -- ``MemoryFile(ds.to_bytes())`` or
+    :meth:`write` -- not by writing to :attr:`name` with ``Dataset.to_file`` (which
+    does not target VSI paths). :attr:`name` is still a real ``/vsimem/`` path for
+    GDAL/VSI-aware consumers that accept one.
+
+    An in-memory dataset opened from a ``MemoryFile`` should be consumed before the
+    ``MemoryFile`` is closed (closing unlinks the shared buffer), and such datasets
+    are not picklable.
+
+    Args:
+        data: Optional raster bytes to stage immediately. When ``None`` (default)
+            the handle just reserves a ``/vsimem/`` path to be written by other code.
+        suffix: File-name suffix for the minted path (controls the format GDAL infers).
+
+    Examples:
+        - Stage bytes and open them as a Dataset:
+            ```python
+            >>> import numpy as np
+            >>> from pyramids import MemoryFile
+            >>> from pyramids.dataset import Dataset, GeoReference
+            >>> ref = GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326)
+            >>> data = Dataset.from_array(np.ones((1, 3, 4), np.float32), geo_ref=ref).to_bytes()
+            >>> with MemoryFile(data) as mf:
+            ...     mf.open().shape
+            (1, 3, 4)
+
+            ```
+    """
+
+    def __init__(
+        self,
+        data: bytes | bytearray | memoryview | None = None,
+        *,
+        suffix: str = ".tif",
+    ) -> None:
+        if data is not None and not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError(
+                f"data must be bytes-like or None, got {type(data).__name__}."
+            )
+        self._path = new_vsimem_path(suffix)
+        self._closed = False
+        if data is not None:
+            gdal.FileFromMemBuffer(self._path, bytes(data))
+        self._finalizer = weakref.finalize(self, silent_unlink, self._path)
+
+    @property
+    def name(self) -> str:
+        """The ``/vsimem/`` path (usable anywhere GDAL accepts a path)."""
+        self._check_open()
+        return self._path
+
+    def open(self, *, read_only: bool = True) -> Dataset:
+        """Open the in-memory file as a pyramids :class:`~pyramids.dataset.Dataset`."""
+        self._check_open()
+        # Local import breaks the pyramids.dataset <-> pyramids._io import cycle
+        # (dataset.py imports _io at module load).
+        from pyramids.dataset import Dataset
+
+        return Dataset.read_file(self._path, read_only=read_only)
+
+    def write(self, data: bytes | bytearray | memoryview) -> None:
+        """Write (or overwrite) the in-memory file's contents with raster bytes.
+
+        Args:
+            data: Encoded raster bytes (e.g. from :meth:`Dataset.to_bytes`).
+        """
+        self._check_open()
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError(f"data must be bytes-like, got {type(data).__name__}.")
+        gdal.FileFromMemBuffer(self._path, bytes(data))
+
+    def read(self) -> bytes:
+        """Return the current encoded bytes of the in-memory file.
+
+        Raises:
+            FileNotFoundError: Nothing has been written to the handle yet.
+        """
+        self._check_open()
+        return read_vsi_bytes(self._path)
+
+    def close(self) -> None:
+        """Unlink the backing ``/vsimem/`` buffer (idempotent)."""
+        if not self._closed:
+            self._finalizer()
+            self._closed = True
+
+    def _check_open(self) -> None:
+        """Raise if the handle has been closed."""
+        if self._closed:
+            raise ValueError("MemoryFile is closed.")
+
+    def __enter__(self) -> MemoryFile:
+        """Enter the context, returning the handle."""
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        """Close the handle on context exit."""
+        self.close()

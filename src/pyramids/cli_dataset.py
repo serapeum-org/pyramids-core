@@ -236,6 +236,53 @@ def _cmd_raster_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_blocks(args: argparse.Namespace) -> int:
+    """Handle `pyramids blocks` — list a raster's native block (tile) windows.
+
+    Iterates the native blocking of the chosen band and reports each block's pixel
+    window (`col_off`, `row_off`, `cols`, `rows`) and map-space `bounds`.
+
+    Args:
+        args: Parsed arguments with `file`, `band`, and `json`.
+
+    Returns:
+        int: `0` on success.
+    """
+    ds = Dataset.read_file(args.file)
+    if args.band < 0 or args.band >= ds.band_count:
+        raise ValueError(
+            f"band {args.band} out of range for a {ds.band_count}-band raster"
+        )
+    geotransform = ds.geotransform
+    records: list[dict[str, Any]] = []
+    for index, win in enumerate(ds.block_windows(band=args.band)):
+        col_off, row_off, cols, rows = win.to_read_args()
+        bounds = win.to_bounds(geotransform)
+        records.append(
+            {
+                "index": index,
+                "window": {
+                    "col_off": col_off,
+                    "row_off": row_off,
+                    "cols": cols,
+                    "rows": rows,
+                },
+                "bounds": [_json_safe(float(value)) for value in bounds],
+            }
+        )
+    if args.json:
+        print(json.dumps(records))
+    else:
+        for record in records:
+            window = record["window"]
+            print(
+                f"block {record['index']}: col_off={window['col_off']} "
+                f"row_off={window['row_off']} cols={window['cols']} "
+                f"rows={window['rows']} bounds={tuple(record['bounds'])}"
+            )
+    return 0
+
+
 def _cmd_bounds(args: argparse.Namespace) -> int:
     """Handle `pyramids bounds` — print the bounding box.
 
@@ -1143,6 +1190,19 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
         help="set a metadata tag; repeat for each tag",
     )
     edit_info.set_defaults(func=_cmd_edit_info)
+
+    blocks = sub.add_parser(
+        "blocks", help="list a raster's native block (tile) windows"
+    )
+    blocks.add_argument("file", help=_HELP_INSPECT_RASTER)
+    blocks.add_argument(
+        "--band",
+        type=int,
+        default=0,
+        help="0-based band whose native blocking to report (default 0)",
+    )
+    blocks.add_argument("--json", action="store_true", help=_HELP_JSON)
+    blocks.set_defaults(func=_cmd_blocks)
 
     calc = sub.add_parser("calc", help="evaluate a band expression into a new raster")
     calc.add_argument(

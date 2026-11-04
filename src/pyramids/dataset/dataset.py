@@ -2086,6 +2086,17 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Bands.select <pyramids.dataset.engines.Bands.select>`."""
         return self.bands.select(*args, **kwargs)
 
+    def checksum(self, band: int | None = None) -> list[int] | int:
+        """Facade — delegates to :meth:`Bands.checksum <pyramids.dataset.engines.Bands.checksum>`.
+
+        Typed with the engine's union return -- a list of per-band checksums, or a
+        single checksum when `band` is given -- so the public entry point stays
+        type-safe instead of erasing to `Any` through a `*args, **kwargs`
+        passthrough. The per-arg narrowing lives on `Bands.checksum`; duplicating
+        its `@overload` stubs here would only trip the duplication gate.
+        """
+        return self.bands.checksum(band)
+
     def change_no_data_value(self, *args, **kwargs):
         """Facade — concrete override of the abstract :meth:`RasterBase.change_no_data_value`.
 

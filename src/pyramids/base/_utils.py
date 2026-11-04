@@ -1897,3 +1897,77 @@ def apply_unpack(
         if offset is not None:
             result = result + offset
     return result
+
+
+def reshape_as_image(arr: np.ndarray) -> np.ndarray:
+    """Reshape a band-first ``(bands, rows, cols)`` array to band-last ``(rows, cols, bands)``.
+
+    pyramids and GDAL use the band-first layout (``Dataset.read_array`` returns
+    ``(bands, rows, cols)``), while matplotlib / PIL and most image tooling expect
+    the band-last ``(rows, cols, bands)`` layout. This is the inverse of
+    :func:`reshape_as_raster`. Masked arrays are preserved.
+
+    Returns a view with permuted strides (no copy); wrap it in
+    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.
+
+    Args:
+        arr: A 3-D ``(bands, rows, cols)`` array.
+
+    Returns:
+        np.ndarray: The same data viewed as ``(rows, cols, bands)``.
+
+    Raises:
+        ValueError: If ``arr`` is not 3-D (a single-band ``(rows, cols)`` array must
+            gain a band axis first, e.g. ``arr[None]``).
+
+    Examples:
+        - Move the band axis last for display:
+            ```python
+            >>> import numpy as np
+            >>> from pyramids.base._utils import reshape_as_image
+            >>> reshape_as_image(np.zeros((3, 4, 5))).shape
+            (4, 5, 3)
+
+            ```
+    """
+    if arr.ndim != 3:
+        raise ValueError(
+            f"expected a 3-D (bands, rows, cols) array, got ndim={arr.ndim}"
+        )
+    return np.moveaxis(arr, 0, -1)
+
+
+def reshape_as_raster(arr: np.ndarray) -> np.ndarray:
+    """Reshape a band-last ``(rows, cols, bands)`` array to band-first ``(bands, rows, cols)``.
+
+    The inverse of :func:`reshape_as_image`: converts image-style ``(rows, cols,
+    bands)`` arrays back to the band-first ``(bands, rows, cols)`` layout GDAL and
+    pyramids use. Masked arrays are preserved.
+
+    Returns a view with permuted strides (no copy); wrap it in
+    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.
+
+    Args:
+        arr: A 3-D ``(rows, cols, bands)`` array.
+
+    Returns:
+        np.ndarray: The same data viewed as ``(bands, rows, cols)``.
+
+    Raises:
+        ValueError: If ``arr`` is not 3-D.
+
+    Examples:
+        - Move the band axis first for writing:
+            ```python
+            >>> import numpy as np
+            >>> from pyramids.base._utils import reshape_as_raster
+            >>> reshape_as_raster(np.zeros((4, 5, 3))).shape
+            (3, 4, 5)
+
+            ```
+    """
+    if arr.ndim != 3:
+        raise ValueError(
+            f"expected a 3-D (rows, cols, bands) array, got ndim={arr.ndim}"
+        )
+    return np.moveaxis(arr, -1, 0)

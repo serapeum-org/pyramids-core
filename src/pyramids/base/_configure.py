@@ -21,6 +21,8 @@ plugin path engage.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from osgeo import gdal
@@ -132,6 +134,55 @@ def configure(
         _register_worker_plugin(client, env)
 
     return env
+
+
+@contextmanager
+def gdal_config(**options: Any) -> Iterator[dict[str, str]]:
+    """Temporarily set GDAL config options for the duration of a ``with`` block.
+
+    Unlike :func:`configure`, which applies options permanently, this sets them
+    for the block and restores the previous values on exit, so it nests cleanly --
+    a scoped GDAL environment. Options are applied process-wide (not thread-local)
+    so values such as ``GDAL_CACHEMAX`` that GDAL only honours globally are
+    supported. A value of ``None`` unsets the option for the block; booleans are
+    coerced to GDAL's ``"YES"``/``"NO"``; everything else is ``str()``-ified.
+
+    Because the options are process-wide, this manager is **not safe to use from
+    multiple threads concurrently**: overlapping blocks on different threads share
+    the same global state and the save/restore is not atomic across threads, so a
+    concurrent block can observe or restore the wrong value. Use it from a single
+    thread (or guard it with your own lock).
+
+    Args:
+        **options: GDAL config options as keyword arguments (e.g.
+            ``GDAL_CACHEMAX="512"``, ``CPL_DEBUG=True``, ``GDAL_NUM_THREADS="ALL_CPUS"``).
+
+    Yields:
+        dict[str, str]: The effective key->value options applied for the block
+        (``None`` unsets are excluded), useful for logging/inspection.
+
+    Examples:
+        - Scope options to a block and inspect what was applied:
+            ```python
+            >>> from pyramids import gdal_config
+            >>> with gdal_config(GDAL_NUM_THREADS="2", CPL_DEBUG=True) as applied:
+            ...     applied["GDAL_NUM_THREADS"], applied["CPL_DEBUG"]
+            ('2', 'YES')
+
+            ```
+    """
+    mapping: dict[str, str | None] = {}
+    for key, value in options.items():
+        if value is None:
+            mapping[key] = None
+        elif isinstance(value, bool):
+            mapping[key] = "YES" if value else "NO"
+        else:
+            mapping[key] = str(value)
+    with gdal.config_options(mapping, thread_local=False):
+        effective = {key: val for key, val in mapping.items() if val is not None}
+        logger.debug("pyramids.gdal_config applied %d GDAL option(s)", len(effective))
+        yield effective
 
 
 def _register_plugin(client: Any, plugin: Any, name: str) -> None:

@@ -18,7 +18,11 @@ activate_vendored_osgeo(Path(__path__[0]))
 
 # These import `from osgeo import …` transitively, so they must run *after*
 # activate_vendored_osgeo() puts `_vendor/` on sys.path — hence E402 is expected.
-from pyramids.base._configure import configure, configure_lazy_vector  # noqa: E402
+from pyramids.base._configure import (  # noqa: E402
+    configure,
+    configure_lazy_vector,
+    gdal_config,
+)
 from pyramids.base.config import Config  # noqa: E402
 
 try:
@@ -64,10 +68,15 @@ _LAZY_RESOURCE_EXPORTS = frozenset({"read_resource", "sniff_kind", "ResourceKind
 # `register_dataset_accessor` lives in the heavy Dataset stack; expose it lazily too
 # so a bare `import pyramids` does not pull that stack in just to reach the hook.
 _LAZY_DATASET_EXPORTS = frozenset({"register_dataset_accessor"})
+# `reshape_as_image` / `reshape_as_raster` live in `pyramids.base._utils`; `MemoryFile`
+# lives in `pyramids._io`. Both modules pull numpy / the IO stack, so expose them lazily
+# too — a bare `import pyramids` should not drag those in just to reach these helpers.
+_LAZY_UTIL_EXPORTS = frozenset({"reshape_as_image", "reshape_as_raster"})
+_LAZY_IO_EXPORTS = frozenset({"MemoryFile"})
 
 
 def __getattr__(name: str):
-    """Lazily import the resource-reader / accessor exports on first access (PEP 562)."""
+    """Lazily import the resource-reader / accessor / util exports on first access (PEP 562)."""
     if name in _LAZY_RESOURCE_EXPORTS:
         from pyramids._resource import ResourceKind, read_resource, sniff_kind
 
@@ -82,19 +91,42 @@ def __getattr__(name: str):
 
         globals()["register_dataset_accessor"] = register_dataset_accessor
         return globals()[name]
+    if name in _LAZY_UTIL_EXPORTS:
+        from pyramids.base._utils import reshape_as_image, reshape_as_raster
+
+        globals().update(
+            reshape_as_image=reshape_as_image,
+            reshape_as_raster=reshape_as_raster,
+        )
+        return globals()[name]
+    if name in _LAZY_IO_EXPORTS:
+        from pyramids._io import MemoryFile
+
+        globals()["MemoryFile"] = MemoryFile
+        return globals()[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> list[str]:
     """Include the lazily-exported names in ``dir(pyramids)``."""
-    return sorted(set(globals()) | _LAZY_RESOURCE_EXPORTS | _LAZY_DATASET_EXPORTS)
+    return sorted(
+        set(globals())
+        | _LAZY_RESOURCE_EXPORTS
+        | _LAZY_DATASET_EXPORTS
+        | _LAZY_UTIL_EXPORTS
+        | _LAZY_IO_EXPORTS
+    )
 
 
 __all__ = [
     "configure",
     "configure_lazy_vector",
+    "gdal_config",
     "read_resource",
     "register_dataset_accessor",
+    "reshape_as_image",
+    "reshape_as_raster",
+    "MemoryFile",
     "sniff_kind",
     "ResourceKind",
     "__version__",

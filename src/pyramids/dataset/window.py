@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
+from typing import Any
 
 from osgeo import gdal
 
@@ -168,6 +169,62 @@ class Window:
         cols = max(1, int(math.ceil(max(cols_px))) - col_off)
         rows = max(1, int(math.ceil(max(rows_px))) - row_off)
         return cls(col_off=col_off, row_off=row_off, cols=cols, rows=rows)
+
+    @classmethod
+    def covering(
+        cls,
+        geometry: Any,
+        geotransform: tuple[float, float, float, float, float, float],
+    ) -> Window:
+        """Pixel window that fully covers ``geometry``'s bounding box.
+
+        A convenience over :meth:`from_bounds` that extracts the bounding box for
+        you. ``geometry`` may be a geopandas ``GeoDataFrame`` / ``GeoSeries`` (uses
+        ``total_bounds``), a shapely geometry (uses ``bounds``), or an explicit
+        ``(min_x, min_y, max_x, max_y)`` sequence. The geometry must already be in
+        the raster's CRS.
+
+        Like :meth:`from_bounds`, the returned window always fully contains the
+        bounding box and is **not** clipped to the raster extent (it may carry
+        negative offsets or extend past the raster) -- intersect it with the
+        full-extent window if you need a readable window.
+
+        Args:
+            geometry: A ``GeoDataFrame`` / ``GeoSeries``, a shapely geometry, or a
+                ``(min_x, min_y, max_x, max_y)`` sequence, in the raster's CRS.
+            geotransform: The GDAL 6-tuple of the raster.
+
+        Returns:
+            Window: The covering pixel window.
+
+        Raises:
+            ValueError: The resolved bounding box is inverted or empty (e.g. an
+                empty geometry), or ``geotransform`` is singular.
+
+        Examples:
+            - Cover a bounding box on a unit-cell grid with origin (0, 4):
+                ```python
+                >>> from pyramids.dataset.window import Window
+                >>> gt = (0.0, 1.0, 0.0, 4.0, 0.0, -1.0)
+                >>> Window.covering((1.0, 1.0, 3.0, 3.0), gt).to_read_args()
+                (1, 1, 2, 2)
+
+                ```
+        """
+        if hasattr(geometry, "total_bounds"):
+            min_x, min_y, max_x, max_y = geometry.total_bounds
+        elif hasattr(geometry, "bounds") and not isinstance(geometry, (tuple, list)):
+            min_x, min_y, max_x, max_y = geometry.bounds
+        else:
+            min_x, min_y, max_x, max_y = geometry
+        bbox = (float(min_x), float(min_y), float(max_x), float(max_y))
+        # An empty geometry / empty GeoDataFrame yields a (nan, nan, nan, nan)
+        # bbox; its NaNs slip past from_bounds' `min >= max` guard (NaN compares
+        # False) and would surface as a cryptic "cannot convert float NaN to
+        # integer". Reject it here with a clear message instead.
+        if any(math.isnan(value) for value in bbox):
+            raise ValueError("geometry is empty: its bounding box is undefined (NaN).")
+        return cls.from_bounds(bbox, geotransform)
 
     def to_bounds(
         self,
