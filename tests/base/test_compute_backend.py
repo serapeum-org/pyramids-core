@@ -69,10 +69,10 @@ class TestContract:
     def test_group_and_version_constants(self):
         """The entry-point group and api-version are the published, stable contract values."""
         assert cb.ENTRY_POINT_GROUP == "pyramids.compute_backend"
-        assert (
-            isinstance(cb.COMPUTE_BACKEND_API_VERSION, int)
-            and cb.COMPUTE_BACKEND_API_VERSION >= 1
+        assert isinstance(cb.COMPUTE_BACKEND_API_VERSION, int), (
+            "api_version must be an int"
         )
+        assert cb.COMPUTE_BACKEND_API_VERSION >= 1, "api_version must be >= 1"
 
     def test_conforming_object_is_a_computebackend(self):
         """An object exposing api_version + every op method satisfies the runtime_checkable protocol."""
