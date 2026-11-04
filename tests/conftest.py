@@ -4,7 +4,7 @@ import random
 import re
 import warnings
 from pathlib import Path
-from typing import Iterator, List, Tuple
+from typing import Iterator, List
 
 import numpy as np
 import pandas as pd
@@ -29,8 +29,6 @@ from osgeo import gdal
 from osgeo.gdal import Dataset
 import geopandas as gpd
 from geopandas import GeoDataFrame
-from shapely import wkt
-from shapely.geometry import Polygon
 
 # isort: on
 from tests._marks import EXTRA_MARKERS
