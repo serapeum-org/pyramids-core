@@ -20,8 +20,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.dataset.merge import stack_bands
 
-pytestmark = pytest.mark.core
-
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
 def _write_band(
     directory,

@@ -20,8 +20,7 @@ from osgeo import gdal
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, cog
 
-pytestmark = pytest.mark.core
-
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
 @pytest.fixture
 def float_dataset_128() -> Dataset:

@@ -36,8 +36,7 @@ try:
 except ImportError:  # pragma: no cover - gated on the kerchunk extra
     fsspec = None
 
-pytestmark = pytest.mark.lazy
-
+pytestmark = [pytest.mark.lazy, pytest.mark.e2e]
 
 def _worker_write_zarr(payload: bytes, store: str) -> tuple[int, int, int, int]:
     """Worker: unpickle collection, write to Zarr, return shape."""

@@ -27,8 +27,7 @@ from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.dataset.ops.vectorize import _features_outside_template
 from pyramids.feature import FeatureCollection
 
-pytestmark = pytest.mark.core
-
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
 def _make_dataset(
     rows: int = 10,

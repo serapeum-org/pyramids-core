@@ -25,8 +25,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
 from tests._marks import requires_lazy
 
-pytestmark = pytest.mark.lazy
-
+pytestmark = [pytest.mark.lazy, pytest.mark.e2e]
 
 @pytest.fixture
 def four_ramp_files(tmp_path):

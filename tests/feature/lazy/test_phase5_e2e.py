@@ -19,8 +19,7 @@ from shapely.geometry import Point
 from pyramids.feature import FeatureCollection
 from tests._marks import requires_parquet_lazy, requires_parquet
 
-pytestmark = pytest.mark.parquet_lazy
-
+pytestmark = [pytest.mark.parquet_lazy, pytest.mark.e2e]
 
 class TestPhase5Pipelines:
     """Cross-task vector pipelines."""
