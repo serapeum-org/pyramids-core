@@ -11,7 +11,10 @@ Command groups:
 - raster / COG (`pyramids.cli_dataset`) — `info`, `bounds`, `clip`, `warp`,
   `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
   `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
-- vector (`pyramids.cli_vector`) — `vector info|bounds|convert|warp|clip`
+- vector (`pyramids.cli_vector` + `cli_vector_{inspect,geom,overlay,tess,io}`) — the full
+  `FeatureCollection` surface: core (`info`/`bounds`/`convert`/`warp`/`clip`), inspection, unary geometry ops,
+  overlay/set ops + predicate `filter`, tessellation/binning/sampling, measurements, I/O export, and remote
+  readers (each sub-module documents its own commands; `pyramids vector --help` lists them)
 - NetCDF (`pyramids.cli_netcdf` + `cli_netcdf_{inspect,vars,select,cftime,io,plot}`) —
   the full `nc` surface across six sub-modules: inspection + global attributes, variable & dimension
   management, positional/label selection & subsetting, CF/time/calendar/calculus, I/O export, and headless
