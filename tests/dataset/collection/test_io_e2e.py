@@ -22,8 +22,8 @@ import numpy as np
 import pytest
 
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_kerchunk
 from tests._marks import requires_lazy as requires_zarr
+from tests._marks import requires_netcdf_lazy
 from tests.dataset.collection.conftest import NC_FIXTURE
 
 try:
@@ -36,7 +36,7 @@ try:
 except ImportError:  # pragma: no cover - gated on the kerchunk extra
     fsspec = None
 
-pytestmark = pytest.mark.lazy
+pytestmark = [pytest.mark.lazy, pytest.mark.e2e]
 
 
 def _worker_write_zarr(payload: bytes, store: str) -> tuple[int, int, int, int]:
@@ -91,7 +91,7 @@ class TestCollectionIOE2E:
         assert data.shape == (1, 3, 4)
         assert np.allclose(data, 1.0)
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_to_kerchunk_consumer_via_fsspec_zarr(self, tmp_path):
         """`collection.to_kerchunk` opens through fsspec + zarr.
 

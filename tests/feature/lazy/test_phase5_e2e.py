@@ -17,15 +17,15 @@ import pytest
 from shapely.geometry import Point
 
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_dask_geopandas, requires_pyarrow
+from tests._marks import requires_parquet, requires_parquet_lazy
 
-pytestmark = pytest.mark.parquet_lazy
+pytestmark = [pytest.mark.parquet_lazy, pytest.mark.e2e]
 
 
 class TestPhase5Pipelines:
     """Cross-task vector pipelines."""
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_read_file_shuffle_compute(self, tmp_path):
         """read_file(dask) → spatial_shuffle → compute preserves rows."""
         gdf = gpd.GeoDataFrame(
@@ -44,8 +44,8 @@ class TestPhase5Pipelines:
         materialised = shuffled.compute()
         assert len(materialised) == 20
 
-    @requires_dask_geopandas
-    @requires_pyarrow
+    @requires_parquet_lazy
+    @requires_parquet
     def test_read_parquet_shuffle_compute(self, tmp_path):
         """read_parquet(dask) → filter → shuffle → compute."""
         gdf = gpd.GeoDataFrame(

@@ -20,7 +20,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 SOURCE = DATA / "cf__5v__1d4-4d1__y-asc.nc"
 # A grid nothing in the fixture could derive by accident, so a read after the
 # raster swap can only report it if the memo was really dropped.

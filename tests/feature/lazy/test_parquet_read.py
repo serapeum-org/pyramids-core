@@ -14,7 +14,7 @@ import pytest
 from shapely.geometry import Point
 
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_dask_geopandas, requires_pyarrow
+from tests._marks import requires_parquet, requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.parquet_lazy
 @pytest.fixture
 def small_parquet(tmp_path):
     """GeoParquet fixture — pyarrow is asserted at the class level via
-    the ``requires_pyarrow`` mark on every class that uses this fixture,
+    the ``requires_parquet`` mark on every class that uses this fixture,
     so no per-fixture skip is needed (N4)."""
     gdf = gpd.GeoDataFrame(
         {"id": list(range(10)), "class": ["water"] * 5 + ["land"] * 5},
@@ -37,7 +37,7 @@ def small_parquet(tmp_path):
 # N4: pyarrow-dependent classes carry the skip as a class-level mark so
 # pytest emits a single "[N] skipped: pyarrow not installed" entry per
 # class rather than one SKIPPED per test method with no shared reason.
-@requires_pyarrow
+@requires_parquet
 class TestDefaultBackend:
     def test_returns_feature_collection(self, small_parquet):
         fc = FeatureCollection.read_parquet(small_parquet)
@@ -45,8 +45,8 @@ class TestDefaultBackend:
         assert len(fc) == 10
 
 
-@requires_pyarrow
-@requires_dask_geopandas
+@requires_parquet
+@requires_parquet_lazy
 class TestDaskBackend:
     def test_returns_lazy_feature_collection(self, small_parquet):
         """DASK-23F: lazy read returns a LazyFeatureCollection."""
@@ -108,7 +108,7 @@ class TestValidation:
         with pytest.raises(ImportError, match="pyramids-core\\[parquet\\]"):
             FeatureCollection.read_parquet(dummy, backend="dask")
 
-    @requires_dask_geopandas
+    @requires_parquet_lazy
     def test_import_error_when_pyarrow_missing_on_dask_branch(
         self, tmp_path, monkeypatch
     ):

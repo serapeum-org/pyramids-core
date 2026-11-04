@@ -16,10 +16,10 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 MULTIVAR = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "data"
     / "netcdf"
     / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
@@ -50,7 +50,7 @@ class TestReadArraySqueeze:
             f"size-1 time axis must be kept by default now: {preserved.shape}"
         )
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize("name", ["ua", "tas"])
     def test_squeeze_false_eager_equals_lazy(self, name):
         """`squeeze=False` returns the identical dimension-preserving shape eager and lazy."""
@@ -62,7 +62,7 @@ class TestReadArraySqueeze:
         )
         np.testing.assert_array_equal(np.asarray(eager), np.asarray(lazy))
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize("name", ["ua", "tas"])
     def test_squeeze_true_eager_equals_lazy(self, name):
         """`squeeze=True` returns the identical classic flattened shape eager and lazy."""
@@ -74,7 +74,7 @@ class TestReadArraySqueeze:
         )
         np.testing.assert_array_equal(np.asarray(eager), np.asarray(lazy))
 
-    @requires_dask
+    @requires_lazy
     def test_the_default_converges_eager_and_lazy(self):
         """Since #1241 the default returns the identical dimension-preserving shape both ways."""
         ua = NetCDF.read_file(str(MULTIVAR)).get_variable("ua")

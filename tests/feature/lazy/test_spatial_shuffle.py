@@ -19,7 +19,7 @@ import pytest
 from shapely.geometry import Point
 
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_dask_geopandas
+from tests._marks import requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 
@@ -37,7 +37,7 @@ def lazy_fc(tmp_path):
     return FeatureCollection.read_file(str(p), backend="dask", npartitions=2)
 
 
-@requires_dask_geopandas
+@requires_parquet_lazy
 class TestInstanceMethod:
     """DASK-24F: lazy_fc.spatial_shuffle(...) is the supported form."""
 

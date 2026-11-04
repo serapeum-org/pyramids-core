@@ -29,7 +29,7 @@ pytestmark = pytest.mark.core
 
 GEO_REF = GeoReference(top_left_corner=(0.0, 5.0), cell_size=0.25, epsg=4326)
 UGRID_SAMPLE = (
-    Path(__file__).resolve().parents[1] / "data" / "netcdf" / "ugrid" / "ugrid.nc"
+    Path(__file__).resolve().parents[2] / "data" / "netcdf" / "ugrid" / "ugrid.nc"
 )
 
 

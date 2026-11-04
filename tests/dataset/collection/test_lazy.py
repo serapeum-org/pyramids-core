@@ -18,7 +18,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -31,31 +31,31 @@ def _worker_compute_mean(payload: bytes) -> float:
 
 
 class TestDataShape:
-    @requires_dask
+    @requires_lazy
     def test_data_returns_dask_array(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         assert hasattr(collection.data, "dask")
 
-    @requires_dask
+    @requires_lazy
     def test_data_shape_matches_files(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         assert collection.data.shape[0] == 3
 
-    @requires_dask
+    @requires_lazy
     def test_data_shape_full_4d(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         assert collection.data.shape == (3, 1, 4, 5)
 
 
 class TestDataValues:
-    @requires_dask
+    @requires_lazy
     def test_compute_returns_expected_values(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         materialized = collection.data.compute()
         for i in range(3):
             assert (materialized[i] == i).all()
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_reduction(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         mean_along_time = collection.data.mean(axis=0).compute()
@@ -64,14 +64,14 @@ class TestDataValues:
 
 
 class TestGraphPickle:
-    @requires_dask
+    @requires_lazy
     def test_collection_pickles(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         payload = pickle.dumps(collection)
         assert b"gdal.Dataset" not in payload
         assert b"Swig Object" not in payload
 
-    @requires_dask
+    @requires_lazy
     def test_cross_process_compute(self, three_files):
         collection = DatasetCollection.from_files(three_files)
         payload = pickle.dumps(collection)
@@ -84,7 +84,7 @@ class TestGraphPickle:
 class TestManagerCaching:
     """Repeated compute calls reuse cached GDAL handles per path."""
 
-    @requires_dask
+    @requires_lazy
     def test_handle_reused_across_computes(self, three_files):
         from pyramids.base._file_manager import FILE_CACHE
 
@@ -124,7 +124,7 @@ class TestTiledDataCube:
     blocks, proving the multi-block tiles reassemble exactly.
     """
 
-    @requires_dask
+    @requires_lazy
     def test_data_matches_eager_stack(self, three_files):
         """`data.compute()` equals the old-style eager per-file stack.
 
@@ -145,7 +145,7 @@ class TestTiledDataCube:
             err_msg="tiled cube values differ from the eager stack",
         )
 
-    @requires_dask
+    @requires_lazy
     def test_data_is_time_stacked_dask_array(self, three_files):
         """`data` is a `(T, B, Y, X)` dask array stacked along time.
 
@@ -161,7 +161,7 @@ class TestTiledDataCube:
             f"time axis should be stacked one block per timestep, got {data.numblocks[0]}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_reduction_matches_numpy(self, three_files):
         """A time-axis reduction over the tiled cube matches numpy.
 
@@ -180,7 +180,7 @@ class TestTiledDataCube:
             np.squeeze(got), expected, err_msg="tiled reduction differs from numpy mean"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_multichunk_data_matches_eager(self, tmp_path):
         """A raster that tiles into >1 spatial block reassembles exactly (ARC-45).
 
@@ -220,7 +220,7 @@ class TestTiledDataCube:
 class TestDuplicatePathSharedLock:
     """A path repeated in the file list shares one IO lock across its timesteps (L4)."""
 
-    @requires_dask
+    @requires_lazy
     def test_duplicate_path_data_computes_and_shares_lock(self, tmp_path, monkeypatch):
         """`from_files([p, p])` computes a correct 2-step cube sharing one lock.
 
@@ -263,7 +263,7 @@ class TestDuplicatePathSharedLock:
             "duplicate paths must share one IO lock, got distinct lock objects"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_separate_data_graphs_share_underlying_lock(self, tmp_path, monkeypatch):
         """Two `.data` graphs over one path share a single underlying mutex (L1).
 

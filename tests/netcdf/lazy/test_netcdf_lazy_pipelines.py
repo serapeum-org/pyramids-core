@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_dask, requires_kerchunk
+from tests._marks import requires_lazy, requires_netcdf_lazy
 from tests.netcdf.lazy.conftest import THREE_D_NC_FIXTURE as FIXTURE
 
 pytestmark = pytest.mark.netcdf_lazy
@@ -34,7 +34,7 @@ try:
     import zarr
 except (
     ImportError
-):  # pragma: no cover - the kerchunk consumer test is @requires_kerchunk gated
+):  # pragma: no cover - the kerchunk consumer test is @requires_netcdf_lazy gated
     fsspec = zarr = None
 
 # #530: the deadlock was in manifest *generation* (kerchunk.hdf -> zarr-v3 sync()),
@@ -53,7 +53,7 @@ def _compute_variable_sum(payload: bytes) -> float:
 class TestNetCDFLazyPipelines:
     """Cross-task pipelines for Phase 2."""
 
-    @requires_dask
+    @requires_lazy
     def test_mfdataset_single_file_equals_direct_read(self):
         """Stacking one file equals a direct variable read (modulo leading axis)."""
         stack = NetCDF.open_mfdataset([FIXTURE], variable="values").compute()
@@ -62,7 +62,7 @@ class TestNetCDFLazyPipelines:
         assert stack.shape[0] == 1
         np.testing.assert_array_equal(stack[0], direct)
 
-    @requires_dask
+    @requires_lazy
     def test_subset_pickle_across_subprocess(self):
         """Variable subset pickles + sums on a spawn worker."""
         nc = NetCDF.read_file(FIXTURE, open_as_multi_dimensional=True)
@@ -74,7 +74,7 @@ class TestNetCDFLazyPipelines:
             got = pool.apply(_compute_variable_sum, (payload,))
         assert got == pytest.approx(expected)
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_kerchunk_roundtrip_via_fsspec_zarr(self, tmp_path):
         """to_kerchunk manifest opens through fsspec + zarr and reads back.
 

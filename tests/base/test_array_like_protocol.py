@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from pyramids.base.protocols import ArrayLike, _ArrayLikeProto, as_numpy, is_lazy
-from tests._marks import requires_dask_array as requires_dask
+from tests._marks import requires_dask_array as requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -41,7 +41,7 @@ class TestArrayLikeIsinstance:
         arr = np.zeros((3, 4))
         assert isinstance(arr, _ArrayLikeProto)
 
-    @requires_dask
+    @requires_lazy
     def test_dask_array_is_arraylike(self):
         arr = dask_array.zeros((3, 4), chunks=2)
         assert isinstance(arr, _ArrayLikeProto)
@@ -62,7 +62,7 @@ class TestIsLazy:
     def test_numpy_is_not_lazy(self):
         assert is_lazy(np.zeros(5)) is False
 
-    @requires_dask
+    @requires_lazy
     def test_dask_is_lazy(self):
         assert is_lazy(dask_array.zeros(5, chunks=2)) is True
 
@@ -75,7 +75,7 @@ class TestIsLazy:
     def test_list_is_not_lazy(self):
         assert is_lazy([1, 2, 3]) is False
 
-    @requires_dask
+    @requires_lazy
     def test_dask_after_compute_is_not_lazy(self):
         arr = dask_array.ones(5, chunks=2).compute()
         assert is_lazy(arr) is False
@@ -90,14 +90,14 @@ class TestAsNumpy:
         assert isinstance(out, np.ndarray)
         np.testing.assert_array_equal(out, src)
 
-    @requires_dask
+    @requires_lazy
     def test_dask_materialises_to_numpy(self):
         src = dask_array.from_array(np.arange(6), chunks=2)
         out = as_numpy(src)
         assert isinstance(out, np.ndarray)
         np.testing.assert_array_equal(out, np.arange(6))
 
-    @requires_dask
+    @requires_lazy
     def test_as_numpy_preserves_shape_and_dtype(self):
         src = dask_array.ones((3, 4), chunks=2, dtype=np.float64)
         out = as_numpy(src)
@@ -120,7 +120,7 @@ class TestArrayLikeAlias:
 
         assert sum_array(np.arange(5)) == pytest.approx(10.0)
 
-    @requires_dask
+    @requires_lazy
     def test_function_accepts_dask(self):
         def sum_array(x: ArrayLike) -> float:
             return float(as_numpy(x).sum())
@@ -231,14 +231,14 @@ class TestArrayLikeGapCoverage:
         out = as_numpy(src)
         assert out.shape == (3, 4)
 
-    @requires_dask
+    @requires_lazy
     def test_as_numpy_dask_int_dtype(self):
         """Dask int arrays materialise with their dtype preserved."""
         src = dask_array.arange(4, chunks=2, dtype=np.int32)
         out = as_numpy(src)
         assert out.dtype == np.int32
 
-    @requires_dask
+    @requires_lazy
     def test_is_lazy_dask_array_reports_lazy(self):
         """A dask.array.Array reports lazy."""
         arr = dask_array.from_array(np.arange(4), chunks=2)

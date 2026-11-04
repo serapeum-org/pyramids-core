@@ -13,7 +13,7 @@ import pytest
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.dataset.collection import _grouped_reduce
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -66,7 +66,7 @@ def files_with_nan_group(tmp_path):
 
 
 class TestGroupbyBasic:
-    @requires_dask
+    @requires_lazy
     def test_two_group_mean(self, four_files):
         """Labels ['A','A','B','B'] → mean('A')=1.5, mean('B')=3.5."""
         collection = DatasetCollection.from_files(four_files)
@@ -76,7 +76,7 @@ class TestGroupbyBasic:
         assert np.allclose(result["A"], 1.5)
         assert np.allclose(result["B"], 3.5)
 
-    @requires_dask
+    @requires_lazy
     def test_sum_respects_group(self, four_files):
         collection = DatasetCollection.from_files(four_files)
         grouped = collection.groupby([0, 0, 1, 1])
@@ -84,7 +84,7 @@ class TestGroupbyBasic:
         assert np.allclose(result[0], 3.0)
         assert np.allclose(result[1], 7.0)
 
-    @requires_dask
+    @requires_lazy
     def test_min_max(self, four_files):
         collection = DatasetCollection.from_files(four_files)
         grouped = collection.groupby(["x", "x", "y", "y"])
@@ -95,7 +95,7 @@ class TestGroupbyBasic:
         assert np.allclose(mins["y"], 3.0)
         assert np.allclose(maxs["y"], 4.0)
 
-    @requires_dask
+    @requires_lazy
     def test_all_one_group(self, four_files):
         collection = DatasetCollection.from_files(four_files)
         grouped = collection.groupby(["A", "A", "A", "A"])
@@ -105,7 +105,7 @@ class TestGroupbyBasic:
 
 
 class TestGroupbyShape:
-    @requires_dask
+    @requires_lazy
     def test_result_shape_matches_meta(self, four_files):
         collection = DatasetCollection.from_files(four_files)
         grouped = collection.groupby([0, 1, 0, 1])
@@ -117,7 +117,7 @@ class TestGroupbyShape:
 class TestGroupbySinglePass:
     """Parity checks for the single-pass local grouped reduction (#712)."""
 
-    @requires_dask
+    @requires_lazy
     def test_interleaved_labels_reduce_per_group(self, four_files):
         """Labels [0, 1, 0, 1] interleave groups across timesteps.
 
@@ -131,7 +131,7 @@ class TestGroupbySinglePass:
         assert np.allclose(result[0], 2.0)
         assert np.allclose(result[1], 3.0)
 
-    @requires_dask
+    @requires_lazy
     def test_std_var_match_numpy(self, four_files):
         """Per-group std / var match the NumPy reference (population, ddof=0)."""
         grouped = DatasetCollection.from_files(four_files).groupby([0, 1, 0, 1])
@@ -140,7 +140,7 @@ class TestGroupbySinglePass:
         assert np.allclose(stds[0], np.std([1.0, 3.0]))  # 1.0
         assert np.allclose(variances[1], np.var([2.0, 4.0]))  # 1.0
 
-    @requires_dask
+    @requires_lazy
     def test_all_nan_group_skipna(self, files_with_nan_group):
         """A group whose every timestep is all-NaN reduces to NaN under skipna."""
         collection = DatasetCollection.from_files(files_with_nan_group)
@@ -148,7 +148,7 @@ class TestGroupbySinglePass:
         assert np.allclose(result["A"], 2.0)
         assert np.isnan(result["B"]).all()
 
-    @requires_dask
+    @requires_lazy
     def test_non_contiguous_integer_labels(self, four_files):
         """Non-contiguous integer labels (0 and 5, no 1-4) group correctly.
 
@@ -161,7 +161,7 @@ class TestGroupbySinglePass:
         assert np.allclose(result[0], 2.0)
         assert np.allclose(result[5], 3.0)
 
-    @requires_dask
+    @requires_lazy
     def test_skipna_false_propagates_nan(self, files_with_nan_group):
         """skipna=False uses the plain (non-nan-aware) op, so any NaN propagates.
 
@@ -174,7 +174,7 @@ class TestGroupbySinglePass:
         assert np.isnan(result["A"]).all()
         assert np.isnan(result["B"]).all()
 
-    @requires_dask
+    @requires_lazy
     def test_chunk_spanning_groups_read_once(self):
         """A single time chunk spanning every group is fetched exactly once.
 

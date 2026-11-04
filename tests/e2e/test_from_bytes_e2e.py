@@ -21,8 +21,7 @@ from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf import NetCDF
 
-pytestmark = pytest.mark.core
-
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 GEOTIFF_FIXTURE = "tests/data/acc4000.tif"
 NETCDF_FIXTURE = "tests/data/netcdf/cf__6v__1d2-2d4__geog__y-asc.nc"
 

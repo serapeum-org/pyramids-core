@@ -25,7 +25,7 @@ from pyramids.netcdf.engines.interop import (
     _write_md_array_streamed,
 )
 from pyramids.netcdf.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 GEOG_3D_NC = "tests/data/netcdf/cf__5v__1d4-3d1__geog__y-desc.nc"
 
@@ -797,7 +797,7 @@ class TestInteropEngineBranches:
 class TestToXarrayLazy:
     """Chunked interop export builds dask-backed variables in native order (ARC-48)."""
 
-    @requires_dask
+    @requires_lazy
     def test_numeric_var_is_dask_backed(self):
         """A numeric data variable is dask-backed when chunks= is given.
 
@@ -814,7 +814,7 @@ class TestToXarrayLazy:
         finally:
             nc.close()
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_values_match_eager(self):
         """Computed lazy values equal the eager interop values (raw order kept).
 
@@ -834,7 +834,7 @@ class TestToXarrayLazy:
         finally:
             nc.close()
 
-    @requires_dask
+    @requires_lazy
     def test_string_var_falls_back_to_eager(self):
         """A non-chunkable string variable is read eagerly, not as dask, and still matches.
 
@@ -865,7 +865,7 @@ class TestToXarrayLazy:
         finally:
             nc.close()
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_container_ignores_chunks(self):
         """An in-memory container has no file to reopen, so chunks= falls back to eager.
 
@@ -880,7 +880,7 @@ class TestToXarrayLazy:
             "in-memory container should ignore chunks and stay eager"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_read_threads_gdal_env(self, monkeypatch):
         """The container's `_gdal_env` is carried into the lazy read so a signed remote store
         re-opens authenticated (#839).
@@ -939,7 +939,7 @@ class _RecordingMDArray:
 class TestFromXarrayStreaming:
     """from_xarray streams a dask-backed variable block by block, not all at once (ARC-48)."""
 
-    @requires_dask
+    @requires_lazy
     def test_dask_input_round_trips_and_matches_eager(self):
         """A dask-backed input reproduces the data and agrees with the equivalent numpy input.
 
@@ -970,7 +970,7 @@ class TestFromXarrayStreaming:
             nc_lazy.close()
             nc_eager.close()
 
-    @requires_dask
+    @requires_lazy
     def test_dask_written_block_by_block(self):
         """A dask array is written one hyperslab per block, and the blocks reconstruct the array.
 

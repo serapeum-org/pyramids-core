@@ -22,7 +22,7 @@ from pyramids.netcdf.utils import decode_cf_time, is_cf_time_units
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 BOUNDED = DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
 CURVILINEAR = DATA / "cf__8v__1d3-2d3-3d1-4d1__curv-stag.nc"
 RECTILINEAR = DATA / "cf__5v__1d4-4d1__y-asc.nc"

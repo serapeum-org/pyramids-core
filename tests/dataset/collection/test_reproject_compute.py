@@ -15,7 +15,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -32,7 +32,7 @@ def align_ref() -> Dataset:
 class TestToCrsCompute:
     """Deferred ``to_crs(compute=False)`` over the plan-once EPSG path."""
 
-    @requires_dask
+    @requires_lazy
     def test_returns_delayed(self, three_files):
         """``compute=False`` returns a ``dask.delayed.Delayed``, not a collection.
 
@@ -48,7 +48,7 @@ class TestToCrsCompute:
             f"expected a Delayed, got {type(deferred)}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_compute_reprojects(self, three_files):
         """Computing the ``Delayed`` yields a reprojected collection.
 
@@ -66,7 +66,7 @@ class TestToCrsCompute:
             f"time_length should be preserved, got {result.time_length}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_compute_false_with_inplace_raises(self, three_files):
         """``compute=False`` combined with ``inplace=True`` raises ``ValueError``.
 
@@ -80,7 +80,7 @@ class TestToCrsCompute:
         ):
             collection.to_crs(3857, inplace=True, compute=False)
 
-    @requires_dask
+    @requires_lazy
     def test_non_epsg_target_deferred(self, three_files):
         """A no-EPSG target under ``compute=False`` defers the direct fallback.
 
@@ -103,7 +103,7 @@ class TestToCrsCompute:
 class TestAlignCompute:
     """Deferred ``align(compute=False)`` over the plan-once ``Aligner`` path."""
 
-    @requires_dask
+    @requires_lazy
     def test_returns_delayed(self, three_files, align_ref):
         """``align(ref, compute=False)`` returns a ``dask.delayed.Delayed``.
 
@@ -118,7 +118,7 @@ class TestAlignCompute:
             f"expected a Delayed, got {type(deferred)}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_compute_aligns(self, three_files, align_ref):
         """Computing the ``Delayed`` yields a collection aligned to the reference.
 
@@ -142,7 +142,7 @@ class TestAlignCompute:
             f"time_length should be preserved, got {result.time_length}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_compute_false_with_inplace_raises(self, three_files, align_ref):
         """``align(compute=False, inplace=True)`` raises ``ValueError``.
 
@@ -156,7 +156,7 @@ class TestAlignCompute:
         ):
             collection.align(align_ref, inplace=True, compute=False)
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_align_method_passthrough(self, three_files, align_ref):
         """``method=`` survives into the deferred ``_align_sync`` body.
 
@@ -173,7 +173,7 @@ class TestAlignCompute:
             f"aligned columns {result.base.columns} != reference {align_ref.columns}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_align_no_epsg_reference_method_passthrough(
         self, three_files, align_ref
     ):

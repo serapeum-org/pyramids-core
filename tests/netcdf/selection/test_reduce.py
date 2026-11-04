@@ -10,7 +10,7 @@ import pytest
 
 from pyramids.dataset import Dataset
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -468,7 +468,7 @@ class TestReduceMultiBandDim:
         assert "d0" not in var._band_dim_names, "reduced dim should be gone"
 
 
-@requires_dask
+@requires_lazy
 class TestReduceStreamingLazyPath:
     """A file-backed reduce takes the dask streaming path and matches numpy across corners (review M3)."""
 

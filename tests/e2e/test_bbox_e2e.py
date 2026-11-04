@@ -17,8 +17,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.feature import FeatureCollection
 
-pytestmark = pytest.mark.core
-
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 CELL_SIZE = 0.05
 
 
