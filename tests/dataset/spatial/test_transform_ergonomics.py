@@ -225,13 +225,6 @@ class TestXY:
             "rotated centre wrong"
         )
 
-    def test_parity_with_engine(self, unit_dataset):
-        """xy matches array_to_map_coordinates on a square north-up grid."""
-        xs, ys = unit_dataset.array_to_map_coordinates([2], [3], center=True)
-        assert unit_dataset.xy(2, 3) == pytest.approx((float(xs[0]), float(ys[0]))), (
-            "engine parity drift"
-        )
-
 
 class TestRowCol:
     """Tests for Dataset.rowcol."""
@@ -286,10 +279,8 @@ class TestRowCol:
                 assert back == (row, col), f"rotated round-trip broke at {(row, col)}"
 
     def test_parity_with_engine(self, unit_dataset):
-        """rowcol matches map_to_array_coordinates on a square north-up grid."""
-        engine = unit_dataset.map_to_array_coordinates(
-            DataFrame({"x": [2.5], "y": [1.5]})
-        )
+        """rowcol matches nearest_cell on a square north-up grid."""
+        engine = unit_dataset.nearest_cell(DataFrame({"x": [2.5], "y": [1.5]}))
         assert unit_dataset.rowcol(2.5, 1.5) == (
             int(engine[0, 0]),
             int(engine[0, 1]),

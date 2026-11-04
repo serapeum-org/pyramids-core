@@ -971,7 +971,7 @@ def _promote_cf_non_data_arrays(
         _data_vars_from_arrays: Builds the mapping this reclassifies.
         _coords_from_dimensions: The dimension coordinates it joins them to.
     """
-    cf = ds.meta_data.cf
+    cf = ds.metadata.cf
     if cf is None:
         result = exported
     else:

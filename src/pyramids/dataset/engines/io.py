@@ -4976,12 +4976,12 @@ class IO(_Engine["Dataset"]):
             target_band.SetRasterColorInterpretation(
                 source_band.GetRasterColorInterpretation()
             )
-        meta_data = self._ds.meta_data
+        meta_data = self._ds.metadata
         # A NetCDF exposes meta_data as a NetCDFMetadata, not a mapping, and the Dataset
         # setter iterates .items(). An overview level is a plain raster, so carry only a
         # real mapping and leave a container's structured attributes behind.
         if isinstance(meta_data, dict) and meta_data:
-            overview.meta_data = meta_data
+            overview.metadata = meta_data
 
     def _overview_dataset_from_file(
         self, file_name: str, band: int | None, overview_index: int

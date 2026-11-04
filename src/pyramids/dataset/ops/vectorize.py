@@ -332,7 +332,7 @@ def _features_outside_template(features: FeatureCollection, template: Dataset) -
         template extent. A zero-area feature *inside* the extent (e.g. a single point)
         returns ``False``.
     """
-    txmin, tymin, txmax, tymax = template.bbox
+    txmin, tymin, txmax, tymax = template.total_bounds
     fxmin, fymin, fxmax, fymax = features.total_bounds
     empty = any(np.isnan(v) for v in (fxmin, fymin, fxmax, fymax))
     return bool(

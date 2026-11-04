@@ -345,18 +345,18 @@ class TestMetadataDomains:
         assert isinstance(domains, list), "meta_data_domains must be a list"
         assert all(isinstance(d, str) for d in domains), "entries must be str"
 
-    def test_public_name_is_meta_data_domains_not_metadata_domains(self, plain):
-        """Pin the shipped name so code and docs cannot drift again (#1052).
+    def test_public_name_is_metadata_domains_with_deprecated_alias(self, plain):
+        """`metadata_domains` is the canonical name; `meta_data_domains` stays as alias.
 
-        The listing shipped as `meta_data_domains` (consistent with the `meta_data` /
-        `get_meta_data` siblings). PR #1040's body called it `metadata_domains`, which
-        never existed; this asserts the real name is present and the other is absent.
+        The naming cleanup (#1462) made the one-word `metadata_domains` canonical,
+        consistent with the `metadata` / `get_metadata` siblings. The old two-word
+        `meta_data_domains` is kept as a deprecation-warning alias, so both resolve.
         """
-        assert hasattr(plain, "meta_data_domains"), (
-            "meta_data_domains is the public name"
+        assert hasattr(plain, "metadata_domains"), (
+            "metadata_domains is the canonical public name"
         )
-        assert not hasattr(plain, "metadata_domains"), (
-            "metadata_domains must not exist; one canonical name only"
+        assert hasattr(plain, "meta_data_domains"), (
+            "meta_data_domains is kept as a deprecated alias"
         )
 
     def test_set_meta_data_round_trips_a_custom_domain(self, plain):
