@@ -176,8 +176,12 @@ pyramids vector filter parcels.geojson in_aoi.geojson --predicate intersects --m
 **Remote readers** — `from-ogc-features --endpoint --collection`, `from-featureserver --url`,
 `from-vectortileserver --url` (plus `fetch wfs`).
 
-A GEOS geometry error on the input (e.g. `shared-paths` on non-lineal geometry) exits 1 with a one-line message,
-not a traceback. Not exposed as one-shot CLI verbs (use Python): `from-features` / `from-dict` / `from-records` /
+The two-layer ops (overlay/set ops, `sjoin`, `snap`, the predicate `filter --mask`, and the planar distance
+measurements) require both layers in the **same CRS** and exit 1 with a clear message on a mismatch — reproject
+one first with `vector warp`. (The exception is `clip --mask`, which reprojects the mask to the source CRS for
+convenience; `geodesic-distance` is CRS-agnostic.) A GEOS geometry error on the input (e.g. `shared-paths` on
+non-lineal geometry) exits 1 with a one-line message, not a traceback. Not exposed as one-shot CLI verbs (use
+Python): `from-features` / `from-dict` / `from-records` /
 `from-arrow` / `from-xyz` (need in-memory objects), `transform` (needs a callable), `to-arrow` / `to-xarray` /
 `iter-features` (return Python objects), `read-gpx-layers` (returns a layer dict), and `from-postgis` /
 `to-postgis` (need a live PostGIS connection). Inherited pandas/GeoDataFrame tabular and arithmetic methods are
