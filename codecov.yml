@@ -1,8 +1,8 @@
 # Codecov configuration.
 #
 # Coverage is aggregated across the tests.yml matrix: 15 main-package shards (3 OS x 5 Pythons)
-# plus 15 extras-package shards (3 OS x 5 extra targets: netcdf_lazy, parquet_lazy,
-# netcdf_parquet, parquet, stac) = 30 Codecov uploads. With no config, Codecov scores the
+# plus 18 extras-package shards (3 OS x 6 extra targets: netcdf_lazy, parquet_lazy,
+# netcdf_parquet, parquet, stac, e2e) = 33 Codecov uploads. With no config, Codecov scores the
 # `project` status on whatever shards have arrived when it decides CI is done, so a mid-flight
 # evaluation — or a single superseded/cancelled shard — makes the aggregate look lower than base
 # and flips `codecov/project` red on PRs that changed no source at all. Waiting for all 30 uploads
@@ -14,7 +14,7 @@
 codecov:
   require_ci_to_pass: true
   notify:
-    after_n_builds: 30
+    after_n_builds: 33
     wait_for_ci: true
 
 coverage:
