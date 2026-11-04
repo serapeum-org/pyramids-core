@@ -165,8 +165,9 @@ def _load(entry_point: EntryPoint) -> ComputeBackend | None:
     """Load one backend object, or warn and skip.
 
     Args:
-        entry_point: The entry point to resolve. Its value may be the backend object itself or a
-            zero-argument factory returning it.
+        entry_point: The entry point to resolve. Its value may be an already-constructed backend
+            object, the backend *class*, or a zero-argument factory *function* returning it (a class
+            or a function/routine is called; an already-constructed instance is used as-is).
 
     Returns:
         The loaded backend, or ``None`` when it could not be loaded or does not conform.
@@ -272,7 +273,7 @@ def _fallback_backend() -> ComputeBackend | None:
 
     Raises:
         OptionalPackageDoesNotExist: ``pyramids_lazy`` is installed but too old to expose
-            ``get_compute_backend``.
+            ``get_compute_backend``, or its backend does not implement :class:`ComputeBackend`.
     """
     backend: ComputeBackend | None = None
     if not extra_missing(_FALLBACK_DISTRIBUTION):
@@ -284,6 +285,15 @@ def _fallback_backend() -> ComputeBackend | None:
                 "(no `get_compute_backend`). Upgrade with `pip install -U pyramids-lazy`."
             )
         backend = factory()
+        # Enforce the same structural check the entry-point path applies in `_load`, so a malformed
+        # first-party backend fails here with a clear message rather than AttributeError-ing deep in
+        # a later lazy call.
+        if not isinstance(backend, ComputeBackend):
+            raise OptionalPackageDoesNotExist(
+                "The installed pyramids-lazy returned a backend that does not implement the "
+                "ComputeBackend protocol (missing required methods). Upgrade with "
+                "`pip install -U pyramids-lazy`."
+            )
     return backend
 
 

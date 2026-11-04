@@ -202,6 +202,30 @@ class TestRequireComputeBackend:
         with pytest.raises(OptionalPackageDoesNotExist, match="pyramids-lazy"):
             cb.require_compute_backend()
 
+    def test_non_conforming_fallback_backend_is_rejected(self, monkeypatch):
+        """A pyramids_lazy fallback that doesn't implement the protocol is rejected, not returned.
+
+        The entry-point path validates structurally in `_load`; the fallback path must enforce the
+        same check, or a malformed first-party backend AttributeErrors deep in a Phase-2 call.
+        """
+
+        class _Partial:  # has api_version but none of the op methods -> not a ComputeBackend
+            api_version = cb.COMPUTE_BACKEND_API_VERSION
+
+        monkeypatch.setattr(cb, "entry_points", lambda group=None: [])
+        monkeypatch.setattr(cb, "extra_missing", lambda name: False)
+        monkeypatch.setattr(
+            cb,
+            "import_module",
+            lambda name: type(
+                "M", (), {"get_compute_backend": staticmethod(lambda: _Partial())}
+            ),
+        )
+        with pytest.raises(
+            OptionalPackageDoesNotExist, match="does not implement the ComputeBackend"
+        ):
+            cb.require_compute_backend()
+
     def test_fallback_too_old_without_factory_raises(self, monkeypatch):
         """pyramids_lazy present but lacking get_compute_backend -> branded 'too old' error."""
         monkeypatch.setattr(cb, "entry_points", lambda group=None: [])
