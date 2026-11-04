@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from pyramids.base._errors import _PyramidsError
+from pyramids.cli import main
 from pyramids.cli_vector_tess import add_vector_tess_commands
 from pyramids.feature import FeatureCollection
 
@@ -360,3 +361,44 @@ class TestGetCoordinates:
         out = _touch(tmp_path / "coords.csv")
         with pytest.raises(_CAUGHT):
             run(["get-coordinates", _POINTS, out])
+
+
+class TestMainErrorContract:
+    """Round-1 fixes verified through the real `pyramids vector` dispatch."""
+
+    def test_sample_points_non_uniform_errors_cleanly(self, tmp_path, capsys):
+        """A non-uniform --method (needs pointpats) exits 1 cleanly, not the catch-all (H2)."""
+        out = str(tmp_path / "sp.geojson")
+        rc = main(
+            [
+                "vector",
+                "sample-points",
+                _POLYGONS,
+                out,
+                "--size",
+                "5",
+                "--method",
+                "cluster_poisson",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "pointpats" in err
+        assert "unexpected failure" not in err
+
+    def test_h3_bin_agg_without_column_errors(self, tmp_path, capsys):
+        """--agg other than count without --column exits 1 cleanly (L2)."""
+        out = str(tmp_path / "h.geojson")
+        rc = main(
+            ["vector", "h3-bin", _POINTS, out, "--resolution", "7", "--agg", "mean"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "unexpected failure" not in err
+
+    def test_get_coordinates_overwrite(self, tmp_path):
+        """get-coordinates refuses an existing CSV, then replaces it with --overwrite (L1)."""
+        out = str(tmp_path / "c.csv")
+        assert main(["vector", "get-coordinates", _POINTS, out]) == 0
+        assert main(["vector", "get-coordinates", _POINTS, out]) == 1
+        assert main(["vector", "get-coordinates", _POINTS, out, "--overwrite"]) == 0

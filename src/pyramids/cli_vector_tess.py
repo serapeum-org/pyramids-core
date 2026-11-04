@@ -190,6 +190,11 @@ def _cmd_vector_h3_bin(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.dst, args.overwrite)
+    if args.column is None and args.agg != "count":
+        raise ValueError(
+            f"--agg {args.agg!r} needs --column; only the default 'count' aggregates "
+            f"without a column"
+        )
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     with map_lookup_errors():
         result = fc.h3_bin(args.resolution, agg=args.agg, column=args.column)
@@ -209,7 +214,16 @@ def _cmd_vector_sample_points(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.dst, args.overwrite)
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
-    result = fc.sample_points(size=args.size, method=args.method, rng=args.seed)
+    try:
+        result = fc.sample_points(size=args.size, method=args.method, rng=args.seed)
+    except ImportError as exc:
+        # Every method other than "uniform" imports the optional `pointpats`
+        # package; turn its absence into a clean user error instead of the
+        # "unexpected failure" branch (ImportError is not caught by main()).
+        raise ValueError(
+            f"--method {args.method!r} needs the optional 'pointpats' package; "
+            f"install it or use --method uniform"
+        ) from exc
     _write_collection(args, result)
     return 0
 
@@ -385,7 +399,7 @@ def _cmd_vector_get_coordinates(args: argparse.Namespace) -> int:
     ``--json`` (in which case ``dst`` is not touched).
 
     Args:
-        args: Parsed args with ``src``, ``dst``, ``json``.
+        args: Parsed args with ``src``, ``dst``, ``json``, ``overwrite``.
 
     Returns:
         int: ``0`` on success.
@@ -395,7 +409,7 @@ def _cmd_vector_get_coordinates(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(json_sanitize(frame.to_dict(orient="list"))))
     else:
-        refuse_existing(args.dst, overwrite=False)
+        refuse_existing(args.dst, args.overwrite)
         frame.to_csv(args.dst, index=False)
         info_print(args, f"wrote {args.dst}")
     return 0
@@ -545,6 +559,7 @@ def _add_measurement_commands(vsub: argparse._SubParsersAction) -> None:
     v_coords.add_argument("src", help=_HELP_SRC_VECTOR)
     v_coords.add_argument("dst", help="destination CSV path")
     v_coords.add_argument("--json", action="store_true", help=_HELP_JSON)
+    v_coords.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_coords.set_defaults(func=_cmd_vector_get_coordinates)
 
 
