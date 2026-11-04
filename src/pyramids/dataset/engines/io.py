@@ -1865,7 +1865,7 @@ class IO(_Engine["Dataset"]):
         # Map the bbox edges to fractional pixel indices through the geotransform, snapping edges that
         # sit on a cell boundary onto the exact integer first (see `_snap_index`). `min`/`max` keep it
         # correct whichever sign the pixel size has (north-up `pixel_y < 0` or flipped south-up).
-        # Deriving the window from map_to_array_coordinates instead snapped each corner to the nearest
+        # Deriving the window from nearest_cell instead snapped each corner to the nearest
         # cell centre, which both transposed every non-square window and dropped the boundary
         # row/column of a bbox whose edges fell mid-cell (#719).
         cols = [

@@ -941,13 +941,19 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Cell.cell_area <pyramids.dataset.engines.Cell.cell_area>`."""
         return self.cell.cell_area(*args, **kwargs)
 
-    def map_to_array_coordinates(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Cell.map_to_array_coordinates <pyramids.dataset.engines.Cell.map_to_array_coordinates>`."""
-        return self.cell.map_to_array_coordinates(*args, **kwargs)
+    def nearest_cell(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Cell.nearest_cell <pyramids.dataset.engines.Cell.nearest_cell>`."""
+        return self.cell.nearest_cell(*args, **kwargs)
 
-    def array_to_map_coordinates(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Cell.array_to_map_coordinates <pyramids.dataset.engines.Cell.array_to_map_coordinates>`."""
-        return self.cell.array_to_map_coordinates(*args, **kwargs)
+    def map_to_array_coordinates(self, *args, **kwargs):
+        """Deprecated alias for :meth:`nearest_cell`."""
+        warnings.warn(
+            "`map_to_array_coordinates` is deprecated and will be removed in a future "
+            "release; use `nearest_cell`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.nearest_cell(*args, **kwargs)
 
     def to_cog(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.to_cog <pyramids.dataset.engines.COG.to_cog>`."""
@@ -1083,14 +1089,25 @@ class Dataset(RasterBase):
             other, func, band=band, no_data_value=no_data_value
         )
 
-    def fill(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Analysis.fill <pyramids.dataset.engines.Analysis.fill>`.
+    def fill_domain(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Analysis.fill_domain <pyramids.dataset.engines.Analysis.fill_domain>`.
 
-        The collaborator returns `None` for `inplace=True`; see
-        :meth:`apply` for the rationale.
+        Writes `value` to the cells that already hold data (the domain) and leaves
+        the gaps alone -- the opposite of :meth:`fillna`. The collaborator returns
+        `None` for `inplace=True`; see :meth:`apply` for the rationale.
         """
-        result = self.analysis.fill(*args, **kwargs)
+        result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
+
+    def fill(self, *args, **kwargs):
+        """Deprecated alias for :meth:`fill_domain`."""
+        warnings.warn(
+            "`fill` is deprecated and will be removed in a future release; use "
+            "`fill_domain` (it writes the data cells, not the gaps -- `fillna` writes the gaps).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fill_domain(*args, **kwargs)
 
     def where(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.where <pyramids.dataset.engines.Analysis.where>`.

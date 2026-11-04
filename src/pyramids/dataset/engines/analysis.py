@@ -2326,6 +2326,22 @@ class Analysis(_Engine["Dataset"]):
     def fill(
         self, value: float | int, inplace: bool = False, path: str | Path | None = None
     ) -> Dataset | None:
+        """Deprecated alias for :meth:`fill_domain`.
+
+        Renamed to `fill_domain` because it writes the *domain* (the cells that
+        already hold data), not the gaps -- the opposite of :meth:`fillna`.
+        """
+        warnings.warn(
+            "`fill` is deprecated and will be removed in a future release; use "
+            "`fill_domain` (it writes the data cells, not the gaps -- `fillna` writes the gaps).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fill_domain(value, inplace=inplace, path=path)
+
+    def fill_domain(
+        self, value: float | int, inplace: bool = False, path: str | Path | None = None
+    ) -> Dataset | None:
         """Fill the domain cells with a certain value.
 
         Every cell the no-data sentinel does not mark takes `value`; the gaps keep the
@@ -2371,7 +2387,7 @@ class Analysis(_Engine["Dataset"]):
                [2 2 3 1 3]
                [3 4 3 3 4]
                [4 4 2 1 1]]
-              >>> new_dataset = dataset.fill(10)
+              >>> new_dataset = dataset.fill_domain(10)
               >>> print(new_dataset.read_array())
               [[10 10 10 10 10]
                [10 10 10 10 10]
@@ -2393,7 +2409,7 @@ class Analysis(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> filled = packed.fill(7.5)
+              >>> filled = packed.fill_domain(7.5)
               >>> filled.read_array().tolist(), filled.dtype, filled.scale
               ([[7.5, 7.5], [7.5, -9999.0]], ['float64'], [1.0])
 
@@ -3893,7 +3909,7 @@ class Analysis(_Engine["Dataset"]):
                     "Dataset.crop(); explode MultiPoint masks into single points "
                     "first."
                 )
-            indices = self._ds.map_to_array_coordinates(mask)
+            indices = self._ds.nearest_cell(mask)
             if arr.ndim > 2:
                 values = arr[:, indices[:, 0], indices[:, 1]]
             else:
