@@ -187,3 +187,34 @@ class TestGeoDictPlain:
         out = capsys.readouterr().out
         assert "type:" in out
         assert "features:" in out
+
+
+class TestWriteFormat:
+    """Writers honor the output extension (H1)."""
+
+    def test_from_bbox_shapefile_sidecars(self, tmp_path):
+        """from-bbox to .shp produces a real shapefile (sidecars), not GeoJSON-in-.shp."""
+        out = tmp_path / "b.shp"
+        rc = _run(
+            ["from-bbox", str(out), "--bbox", "0", "0", "1", "1", "--epsg", "4326"]
+        )
+        assert rc == 0
+        assert (tmp_path / "b.shx").exists()
+        assert (tmp_path / "b.dbf").exists()
+
+
+class TestParquetExtraMissing:
+    """to-parquet/to-feather report a clean error when pyarrow is absent (M2)."""
+
+    def test_to_parquet_missing_pyarrow(self, tmp_path, monkeypatch, capsys):
+        """A missing-pyarrow ImportError becomes a clean [parquet]-extra error."""
+
+        def boom(self, *args, **kwargs):
+            raise ImportError("Missing optional dependency 'pyarrow'.")
+
+        monkeypatch.setattr(cli_vector_io.FeatureCollection, "to_parquet", boom)
+        rc = _run(["to-parquet", str(_POLY), str(tmp_path / "o.parquet")])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "parquet" in err
+        assert "unexpected failure" not in err

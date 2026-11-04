@@ -11,9 +11,16 @@ module (and ``pyramids.cli``) requires no optional extra.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+from collections.abc import Iterator
 
-from pyramids._cli_shared import info_print, json_sanitize, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_sanitize,
+    refuse_existing,
+    resolve_vector_driver,
+)
 from pyramids.feature import FeatureCollection
 
 _HELP_SRC = "source vector path"
@@ -22,6 +29,24 @@ _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_LAYER = "layer name or index in a multi-layer source"
 _HELP_JSON = "emit JSON"
 _HELP_BBOX = "bounding box as MINX MINY MAXX MAXY"
+
+
+@contextlib.contextmanager
+def _needs_parquet_extra() -> Iterator[None]:
+    """Remap a missing-pyarrow ``ImportError`` to a clean ``ValueError``.
+
+    ``to_parquet``/``to_feather`` import ``pyarrow`` from the optional ``[parquet]``
+    extra; its absence raises ``ImportError``, which :func:`pyramids.cli.main` does
+    not catch (it would leak the "unexpected failure" branch). Turn it into a clean
+    user error naming the extra.
+    """
+    try:
+        yield
+    except ImportError as exc:
+        raise ValueError(
+            "this command needs the optional [parquet] extra (pyarrow); install it "
+            "with `pip install pyramids-gis[parquet]`"
+        ) from exc
 
 
 def _cmd_vector_from_bbox(args: argparse.Namespace) -> int:
@@ -34,7 +59,10 @@ def _cmd_vector_from_bbox(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    FeatureCollection.from_bbox(tuple(args.bbox), epsg=args.epsg).to_file(args.output)
+    driver = resolve_vector_driver(args.output, None)
+    FeatureCollection.from_bbox(tuple(args.bbox), epsg=args.epsg).to_file(
+        args.output, driver=driver
+    )
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -49,7 +77,8 @@ def _cmd_vector_read_parquet(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    FeatureCollection.read_parquet(args.src).to_file(args.output)
+    driver = resolve_vector_driver(args.output, None)
+    FeatureCollection.read_parquet(args.src).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -64,7 +93,8 @@ def _cmd_vector_to_parquet(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    FeatureCollection.read_file(args.src, layer=args.layer).to_parquet(args.output)
+    with _needs_parquet_extra():
+        FeatureCollection.read_file(args.src, layer=args.layer).to_parquet(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -79,7 +109,8 @@ def _cmd_vector_to_feather(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    FeatureCollection.read_file(args.src, layer=args.layer).to_feather(args.output)
+    with _needs_parquet_extra():
+        FeatureCollection.read_file(args.src, layer=args.layer).to_feather(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -206,7 +237,7 @@ def _cmd_vector_from_ogc_features(args: argparse.Namespace) -> int:
     fc = FeatureCollection.from_ogc_features(
         args.endpoint, collection=args.collection, bbox=bbox
     )
-    fc.to_file(args.output)
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, None))
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -225,7 +256,7 @@ def _cmd_vector_from_featureserver(args: argparse.Namespace) -> int:
     fc = FeatureCollection.from_featureserver(
         args.url, where=args.where, out_fields=args.out_fields
     )
-    fc.to_file(args.output)
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, None))
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -242,7 +273,7 @@ def _cmd_vector_from_vectortileserver(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     bbox = tuple(args.bbox) if args.bbox else None
     fc = FeatureCollection.from_vectortileserver(args.url, layer=args.layer, bbox=bbox)
-    fc.to_file(args.output)
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, None))
     info_print(args, f"wrote {args.output}")
     return 0
 
