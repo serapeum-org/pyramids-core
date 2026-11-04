@@ -1,7 +1,7 @@
 """Stable re-export boundary between pyramids-core and the lazy/dask layer.
 
 This module is the **one** contract an out-of-tree lazy backend (``pyramids-lazy``, once the lazy
-layer is extracted -- see ``planning/dask/lazy-plugin-extraction-plan.md``) imports from
+layer is extracted -- see the lazy-plugin extraction plan, issue #1455) imports from
 pyramids-core. It re-exports -- never reimplements -- the exact core primitives the lazy modules
 depend on, so those primitives can be refactored inside ``pyramids.base`` / ``pyramids.netcdf`` /
 ``pyramids.dataset`` without breaking the plugin, as long as this surface and

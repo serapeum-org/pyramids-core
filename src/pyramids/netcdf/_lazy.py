@@ -503,8 +503,7 @@ def _read_mdarray_chunk(
 # (``IO.read_array``) call the same implementation. Re-exported here (and as the
 # ``_apply_unpack`` API-9 alias) only for backward compatibility; this re-export is
 # DEPRECATED -- import ``apply_unpack`` from ``pyramids.base._utils``. The alias ships
-# with the lazy layer and leaves core when it is extracted (see
-# planning/dask/lazy-plugin-extraction-plan.md).
+# with the lazy layer and leaves core when it is extracted (see issue #1455).
 _apply_unpack = apply_unpack
 
 
