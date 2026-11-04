@@ -898,7 +898,9 @@ class TestToXarrayLazy:
             captured["orient"] = orient
             return object()  # stand-in lazy array; _lazy_var_data returns it unchanged
 
-        monkeypatch.setattr(interop_mod, "build_lazy_array", _spy)
+        # Patch at the home module: interop._lazy_var_data defers build_lazy_array via a
+        # function-local import, so it looks the name up on pyramids.netcdf._lazy at call time.
+        monkeypatch.setattr("pyramids.netcdf._lazy.build_lazy_array", _spy)
         nc = NetCDF.read_file(GEOG_3D_NC)
         try:
             nc.attach_gdal_env({"AWS_REQUEST_PAYER": "requester"})
