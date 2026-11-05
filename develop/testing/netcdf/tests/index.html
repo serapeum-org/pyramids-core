@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7771,7 +7771,7 @@ every file (<code>tests/netcdf/samples/test_smoke_all_files.py</code>):</p>
 <h2 id="read-path-contract"><a class="toclink" href="#read-path-contract">Read-path contract</a><a class="headerlink" href="#read-path-contract" title="Permanent link">#</a></h2>
 <p>The MDIM read plumbing that all of the above sits on is unit-tested directly:</p>
 <ul>
-<li><code>tests/netcdf/test_netcdf_core.py::TestReadMdArray</code> — <code>_read_md_array</code> returns the classic dataset (and the
+<li><code>tests/netcdf/unit/test_netcdf_core.py::TestReadMdArray</code> — <code>_read_md_array</code> returns the classic dataset (and the
   <code>y_flipped</code> decision) for 2-D / 3-D variables.</li>
 <li><code>tests/netcdf/unit/test_netcdf_unit_read.py</code> — classic vs MDIM read modes, the Y-flip decision, band-dim tracking,
   1-D string/numeric variables, and the error/fallback branches.</li>
