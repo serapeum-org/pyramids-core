@@ -16589,7 +16589,7 @@ to construct one.")``.
 <a id="__codelineno-0-3880" name="__codelineno-0-3880"></a>        <span class="c1"># collection rendered on pixel indices where the identical single-raster</span>
 <a id="__codelineno-0-3881" name="__codelineno-0-3881"></a>        <span class="c1"># call rendered on world coordinates. `basemap=` was accepted here all</span>
 <a id="__codelineno-0-3882" name="__codelineno-0-3882"></a>        <span class="c1"># the same, with no extent to place it against.</span>
-<a id="__codelineno-0-3883" name="__codelineno-0-3883"></a>        <span class="n">extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">bbox</span>
+<a id="__codelineno-0-3883" name="__codelineno-0-3883"></a>        <span class="n">extent</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">)</span>
 <a id="__codelineno-0-3884" name="__codelineno-0-3884"></a>        <span class="k">if</span> <span class="n">rgb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-3885" name="__codelineno-0-3885"></a>            <span class="c1"># RGB time-lapse: read the FULL multi-band array per timestep and</span>
 <a id="__codelineno-0-3886" name="__codelineno-0-3886"></a>            <span class="c1"># stack to (time, bands, rows, cols); render_array composites the</span>
@@ -26626,7 +26626,7 @@ ignored.</p>
 <a id="__codelineno-0-3880" name="__codelineno-0-3880"></a>    <span class="c1"># collection rendered on pixel indices where the identical single-raster</span>
 <a id="__codelineno-0-3881" name="__codelineno-0-3881"></a>    <span class="c1"># call rendered on world coordinates. `basemap=` was accepted here all</span>
 <a id="__codelineno-0-3882" name="__codelineno-0-3882"></a>    <span class="c1"># the same, with no extent to place it against.</span>
-<a id="__codelineno-0-3883" name="__codelineno-0-3883"></a>    <span class="n">extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">bbox</span>
+<a id="__codelineno-0-3883" name="__codelineno-0-3883"></a>    <span class="n">extent</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">)</span>
 <a id="__codelineno-0-3884" name="__codelineno-0-3884"></a>    <span class="k">if</span> <span class="n">rgb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-3885" name="__codelineno-0-3885"></a>        <span class="c1"># RGB time-lapse: read the FULL multi-band array per timestep and</span>
 <a id="__codelineno-0-3886" name="__codelineno-0-3886"></a>        <span class="c1"># stack to (time, bands, rows, cols); render_array composites the</span>

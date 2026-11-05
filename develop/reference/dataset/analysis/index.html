@@ -19786,7 +19786,7 @@ its own <a href="../../../tutorials/lazy/lazy-raster/#zonal-statistics-datasetzo
 <a id="__codelineno-0-4741" name="__codelineno-0-4741"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_require_overlap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-4742" name="__codelineno-0-4742"></a><span class="w">        </span><span class="sd">"""Raise ``AlignmentError`` unless ``other``'s extent overlaps this one's.</span>
 <a id="__codelineno-0-4743" name="__codelineno-0-4743"></a>
-<a id="__codelineno-0-4744" name="__codelineno-0-4744"></a><span class="sd">        Uses a planar axis-aligned bounding-box test on ``Dataset.bbox``</span>
+<a id="__codelineno-0-4744" name="__codelineno-0-4744"></a><span class="sd">        Uses a planar axis-aligned bounding-box test on ``Dataset.total_bounds``</span>
 <a id="__codelineno-0-4745" name="__codelineno-0-4745"></a><span class="sd">        (``minx &lt; maxx``, ``miny &lt; maxy``); extents that merely touch at an edge</span>
 <a id="__codelineno-0-4746" name="__codelineno-0-4746"></a><span class="sd">        count as disjoint. It does not special-case a geographic bbox that wraps</span>
 <a id="__codelineno-0-4747" name="__codelineno-0-4747"></a><span class="sd">        the antimeridian (a ±180 longitude wrap would be mis-tested) — normalise</span>
