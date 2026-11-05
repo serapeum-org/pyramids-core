@@ -622,7 +622,7 @@ class RasterBase(ABC):
         :class:`pyramids.feature.FeatureCollection` so both satisfy the
         :class:`pyramids.base.protocols.SpatialObject` protocol.
         """
-        pass
+        pass  # pragma: no cover
 
     @property
     def geotransform(self) -> tuple[float, float, float, float, float, float]:
@@ -862,16 +862,6 @@ class RasterBase(ABC):
         """Dataset-level GDAL metadata (default domain)."""
         self._require_open()
         return self._raster.GetMetadata()
-
-    @property
-    def meta_data(self):
-        """Deprecated alias for :attr:`metadata`."""
-        warnings.warn(
-            "`meta_data` is deprecated and will be removed in a future release; use `metadata`.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.metadata
 
     @property
     def subdatasets(self) -> list[SubDataset]:

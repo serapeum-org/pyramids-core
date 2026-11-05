@@ -27,6 +27,13 @@ class TestFillDomainRename:
         with pytest.warns(DeprecationWarning, match="fill_domain"):
             _ds().fill(5)
 
+    def test_engine_fill_is_deprecated_alias(self):
+        """The Analysis-engine `fill` alias also warns and delegates to `fill_domain`."""
+        ds = _ds()
+        with pytest.warns(DeprecationWarning, match="fill_domain"):
+            out = ds.analysis.fill(5)
+        assert isinstance(out, Dataset)
+
 
 class TestNearestCellRename:
     """`map_to_array_coordinates` -> `nearest_cell`; `array_to_map_coordinates` removed."""
@@ -49,6 +56,15 @@ class TestNearestCellRename:
         ds = _ds()
         with pytest.warns(DeprecationWarning, match="nearest_cell"):
             ds.map_to_array_coordinates(pd.DataFrame({"x": [0.5], "y": [-0.5]}))
+
+    def test_engine_map_to_array_coordinates_is_deprecated_alias(self):
+        """The Cell-engine `map_to_array_coordinates` alias also warns and delegates."""
+        ds = _ds()
+        with pytest.warns(DeprecationWarning, match="nearest_cell"):
+            located = ds.cell.map_to_array_coordinates(
+                pd.DataFrame({"x": [0.5], "y": [-0.5]})
+            )
+        assert np.asarray(located).tolist() == [[0, 0]]
 
 
 class TestMetadataRename:
