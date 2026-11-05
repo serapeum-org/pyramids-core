@@ -1,5 +1,7 @@
 """Renames from the naming-cleanup refactor: new names work, old names deprecate."""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -149,6 +151,25 @@ class TestMetadataRename:
         with pytest.warns(DeprecationWarning, match="set_metadata"):
             ds.set_meta_data({"KEY": "V2"}, domain="MYDOMAIN")
         assert ds.get_metadata("MYDOMAIN")["KEY"] == "V2"
+
+    def test_identical_does_not_self_warn_on_meta_data(self):
+        """`identical()` reads attribute tags via `metadata`, not deprecated `meta_data`.
+
+        Test scenario:
+            The attribute-comparison helper read tags with
+            `getattr(ds, "meta_data")`, firing pyramids' own DeprecationWarning
+            on every `identical()`/`equals` call (and raising under
+            `-W error::DeprecationWarning`). It must read `metadata` instead.
+        """
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            _ds().identical(_ds())
+        offenders = [
+            str(w.message)
+            for w in caught
+            if issubclass(w.category, DeprecationWarning) and "meta_data" in str(w.message)
+        ]
+        assert not offenders, f"identical() self-warned on meta_data: {offenders}"
 
 
 class TestBboxCollapsedIntoTotalBounds:

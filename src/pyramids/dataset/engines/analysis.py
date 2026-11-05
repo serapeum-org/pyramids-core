@@ -2785,7 +2785,7 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             dict: The tags, empty when the raster carries none.
         """
-        tags = getattr(ds, "meta_data", None)
+        tags = getattr(ds, "metadata", None)
         if not isinstance(tags, Mapping):
             tags = getattr(ds, "attrs", None)
         return dict(tags) if isinstance(tags, Mapping) else {}
