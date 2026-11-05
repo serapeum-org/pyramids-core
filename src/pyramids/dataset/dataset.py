@@ -4491,11 +4491,12 @@ class Dataset(RasterBase):
     def total_bounds(self) -> np.typing.NDArray:
         """Bounding box `[minx, miny, maxx, maxy]` as a NumPy array.
 
-        introduced this property so that `Dataset` and
+        This property was introduced so that `Dataset` and
         :class:`pyramids.feature.FeatureCollection` expose the same
         shape (`GeoDataFrame.total_bounds` is the geopandas name
         for exactly this array), letting both classes satisfy the
-        :class:`pyramids.base.protocols.SpatialObject` protocol.
+        :class:`pyramids.base.protocols.SpatialObject` protocol. The
+        deprecated :attr:`bbox` returns the same box as a plain `list`.
         """
         return np.asarray(self._calculate_bbox())
 
