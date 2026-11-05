@@ -805,7 +805,7 @@ class NetCDFPlot:
             # The facet stack is built here from `pinned`; the engine
             # renders it but can't derive the extent from its own
             # `self._ds`, so pass `pinned.bbox` explicitly (M6).
-            analysis_kwargs["_extent"] = pinned.bbox
+            analysis_kwargs["_extent"] = list(pinned.total_bounds)
             result = pinned.analysis.plot(
                 band=0,
                 exclude_value=exclude_value,
