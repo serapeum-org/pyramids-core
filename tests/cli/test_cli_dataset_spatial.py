@@ -140,6 +140,9 @@ def _assert_one_line_error(rc: int, err: str) -> None:
     assert rc == 1, "expected exit code 1"
     assert err.startswith("error: "), f"unexpected stderr: {err}"
     assert "Traceback" not in err, "tracebacks must not leak to users"
+    assert "unexpected failure" not in err, (
+        f"expected-error path leaked into the internal-bug branch: {err!r}"
+    )
 
 
 class TestAlign:

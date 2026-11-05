@@ -36,6 +36,9 @@ def _assert_one_line_error(rc: int, err: str) -> None:
     assert rc == 1, f"expected exit 1, got {rc}"
     assert err.startswith("error: "), f"stderr not a clean error line: {err!r}"
     assert "Traceback" not in err, "a traceback leaked to the user"
+    assert "unexpected failure" not in err, (
+        f"expected-error path leaked into the internal-bug branch: {err!r}"
+    )
 
 
 @pytest.fixture

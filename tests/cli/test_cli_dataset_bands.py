@@ -46,6 +46,9 @@ def _assert_clean_error(rc: int, err: str) -> None:
     assert rc == 1, "expected a non-zero exit"
     assert err.startswith("error: "), f"unexpected stderr: {err}"
     assert "Traceback" not in err, "tracebacks must not leak to users"
+    assert "unexpected failure" not in err, (
+        f"expected-error path leaked into the internal-bug branch: {err!r}"
+    )
 
 
 @pytest.fixture
