@@ -172,12 +172,17 @@ def _cmd_read_overview_array(args: argparse.Namespace) -> int:
         int: `0` on success.
 
     Raises:
-        ValueError: Neither an `output` nor `--json` was given, the band is out
-            of range, or the band/overview index has no such overview.
+        ValueError: Neither an `output` nor `--json` was given (or both were), the
+            band is out of range, or the band/overview index has no such overview.
     """
     if not args.output and not args.json:
         raise ValueError(
             "read-overview-array needs an OUTPUT path, or --json to print stats instead."
+        )
+    if args.output and args.json:
+        raise ValueError(
+            "read-overview-array: pass either an OUTPUT path or --json, not both "
+            "(--json prints stats instead of writing the array)."
         )
     ds = Dataset.read_file(args.input)
     _check_band(ds, args.band)

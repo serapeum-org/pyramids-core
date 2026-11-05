@@ -9,6 +9,7 @@ is dispatched through :func:`pyramids.cli.main` so the real error contract
 from __future__ import annotations
 
 import json
+import os
 
 import numpy as np
 import pytest
@@ -80,6 +81,19 @@ class TestReadOverviewArray:
         """Giving neither an output path nor --json exits 1 with a clear message."""
         assert main(["read-overview-array", raster_with_overviews]) == 1
         assert "OUTPUT path" in capsys.readouterr().err
+
+    def test_output_and_json_together_errors(
+        self, raster_with_overviews, tmp_path, capsys
+    ):
+        """Passing both an OUTPUT path and --json exits 1 instead of silently skipping the write."""
+        out = str(tmp_path / "both.tif")
+        rc = main(["read-overview-array", raster_with_overviews, out, "--json"])
+        err = capsys.readouterr().err
+        assert rc == 1, "output + --json is contradictory and must exit 1"
+        assert "not both" in err, f"error should explain the conflict, got: {err!r}"
+        assert not os.path.exists(out), (
+            "no file should be written when the combination is rejected"
+        )
 
 
 class TestReadPart:
