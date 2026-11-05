@@ -355,8 +355,11 @@ def _cmd_create(args: argparse.Namespace) -> int:
             was given — ``create`` requires a ``GeoReference``.
     """
     refuse_existing(args.output, args.overwrite)
+    placement_given = args.geo is not None or (
+        args.top_left is not None and args.cell_size is not None
+    )
     geo_ref = _build_geo_ref(args)
-    if geo_ref is None:
+    if geo_ref is None or not placement_given:
         raise ValueError(
             "create needs a placement: pass --geo, or --top-left with --cell-size."
         )

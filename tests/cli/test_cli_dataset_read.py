@@ -526,6 +526,30 @@ class TestCreate:
         ]
         assert main(argv) == 1
 
+    def test_epsg_only_gives_tailored_placement_message(self, tmp_path, capsys):
+        """--epsg without --geo/--top-left gets the tailored 'needs a placement' error."""
+        out = str(tmp_path / "o.tif")
+        argv = [
+            "create",
+            out,
+            "--rows",
+            "4",
+            "--columns",
+            "4",
+            "--dtype",
+            "float32",
+            "--bands",
+            "1",
+            "--epsg",
+            "4326",
+        ]
+        rc = main(argv)
+        err = capsys.readouterr().err
+        assert rc == 1, "an epsg-only create must still exit 1"
+        assert "create needs a placement" in err, (
+            f"epsg-only create should get the tailored placement message, got: {err!r}"
+        )
+
 
 class TestCreateEmpty:
     """`pyramids create-empty`."""
