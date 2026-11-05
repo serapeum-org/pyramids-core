@@ -620,7 +620,12 @@ class RasterBase(ABC):
 
         The canonical bounding box, matching ``GeoDataFrame.total_bounds`` and
         :class:`pyramids.feature.FeatureCollection` so both satisfy the
-        :class:`pyramids.base.protocols.SpatialObject` protocol.
+        :class:`pyramids.base.protocols.SpatialObject` protocol. The deprecated
+        :attr:`bbox` returns the same box as a plain ``list``.
+
+        Returns:
+            numpy.ndarray: The box ``[minx, miny, maxx, maxy]``, normalised
+            min-before-max on each axis regardless of grid orientation.
         """
         pass  # pragma: no cover
 
@@ -859,7 +864,21 @@ class RasterBase(ABC):
 
     @property
     def metadata(self):
-        """Dataset-level GDAL metadata (default domain)."""
+        """Dataset-level GDAL metadata from the default domain.
+
+        The canonical spelling of this accessor; the old ``meta_data`` name is kept
+        on :class:`~pyramids.dataset.Dataset` / :class:`~pyramids.netcdf.NetCDF` as a
+        deprecated alias. Read a non-default domain with :meth:`get_metadata`, and
+        list the domains that exist with :attr:`metadata_domains`.
+
+        Returns:
+            dict[str, str]: The default-domain ``KEY=VALUE`` tags, ``{}`` when none
+            are set.
+
+        See Also:
+            - get_metadata: Read a specific (possibly non-default) metadata domain.
+            - metadata_domains: The metadata domains this dataset exposes.
+        """
         self._require_open()
         return self._raster.GetMetadata()
 
