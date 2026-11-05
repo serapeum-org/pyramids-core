@@ -165,6 +165,27 @@ that leaked out of an empty table lookup. Only affects code catching the old typ
 
 ### unreleased
 
+**Naming cleanup (issue #1462): several members renamed to a single canonical spelling.** Each old name keeps
+working as a `DeprecationWarning`-emitting alias (so existing code runs unchanged), except
+`Cell.array_to_map_coordinates`, which is **removed** — it duplicated `Dataset.xy`, so call `xy` instead (note the
+default: `array_to_map_coordinates` defaulted to cell corners, `xy` defaults to cell centres, so pass
+`center=False` for the old behaviour). The renames:
+
+| Old name | New name |
+|---|---|
+| `fill` | `fill_domain` (writes the data cells; `fillna` still writes the gaps) |
+| `map_to_array_coordinates` | `nearest_cell` |
+| `array_to_map_coordinates` | **removed** — use `xy` |
+| `meta_data` | `metadata` |
+| `meta_data_domains` | `metadata_domains` |
+| `get_meta_data` | `get_metadata` |
+| `set_meta_data` | `set_metadata` |
+| `band_meta_data` | `band_metadata` |
+| `bbox` | `total_bounds` (returns a NumPy array; `bbox` still returns a plain `list`) |
+
+`total_bounds` is now an abstract property on `RasterBase`; any third-party subclass that implemented only `bbox`
+must also provide `total_bounds`.
+
 **CF-packed data is now unpacked on read, and the keyword is `unpack`.** Hard change, silent for the values —
 nothing raises. A raster that declares `scale_factor` / `add_offset` (GDAL's `GetScale` / `GetOffset`) now reads
 back in physical units as `float64` instead of raw stored counts.
@@ -1042,6 +1063,10 @@ replace the georeference wholesale.
 ## netcdf
 
 ### unreleased
+
+**`NetCDF.meta_data` is now `NetCDF.metadata`** (part of the dataset naming cleanup, issue #1462). `meta_data`
+keeps working as a `DeprecationWarning`-emitting alias and still returns the same cached `NetCDFMetadata`. See the
+[dataset](#dataset) section's rename table for the full list.
 
 **The unstructured-mesh data model was renamed from `Ugrid*` / `Network1d` to `Mesh*`.** The classes were
 named after the UGRID NetCDF convention and one hydrodynamic use case; they are general GIS mesh types, so the

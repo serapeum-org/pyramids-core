@@ -188,7 +188,8 @@ A variable with no raster plane is the exception — see each member's docstring
 
 | Member                      | What it does                                                    |
 |-----------------------------|-----------------------------------------------------------------|
-| `meta_data`                 | Structured metadata for this NetCDF (cached).                   |
+| `metadata`                  | Structured metadata for this NetCDF (cached).                   |
+| `meta_data`                 | Deprecated alias for `metadata`.                                |
 | `get_all_metadata()`        | The same, re-traversed from GDAL rather than served from cache. |
 | `global_attributes`         | Global attributes on the root group.                            |
 | `set_global_attribute()`    | Sets one global attribute on the root group.                    |

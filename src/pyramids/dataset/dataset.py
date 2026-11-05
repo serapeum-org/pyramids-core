@@ -4293,10 +4293,10 @@ class Dataset(RasterBase):
 
     @property
     def bounds(self) -> GeoDataFrame:
-        """Bounds - the bbox as a geodataframe with a polygon geometry.
+        """Bounds - the bounding box as a geodataframe with a polygon geometry.
 
         See Also:
-            - Dataset.bbox: Dataset bounding box.
+            - Dataset.total_bounds: Dataset bounding box as a NumPy array.
         """
         return self._calculate_bounds()
 
