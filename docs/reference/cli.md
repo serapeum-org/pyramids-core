@@ -132,9 +132,60 @@ pyramids vector warp parcels.shp parcels_3857.gpkg --crs 3857   # reproject
 pyramids vector clip parcels.shp aoi.gpkg --bbox 4.1 51.9 4.6 52.2   # or --mask mask.gpkg
 ```
 
-- The vector group mirrors the raster single-shot commands on a `FeatureCollection`: `info` / `bounds` (with
-  `--json`), `convert`, `warp` (reproject), and `clip` by `--bbox` (reads only the window) or a `--mask` polygon
-  layer. `--layer` selects a layer in a multi-layer source.
+- **Core:** `info` / `bounds` (with `--json`), `convert`, `warp` (reproject), and `clip` by `--bbox` (reads only
+  the window) or a `--mask` polygon layer. `--layer` selects a layer in a multi-layer source.
+
+The group wraps the full vector/GIS surface of `FeatureCollection` — each command is a thin 1:1 wrapper over an
+existing method. Writes refuse to clobber without `--overwrite`.
+
+**Inspect** — `feature-count`, `feature-info`, `list-layers`, `estimate-utm`, `is-valid-reason`,
+`is-valid-coverage`, `invalid-coverage-edges`, `count-coordinates` / `count-geometries` / `count-interior-rings`
+(`--json` on each).
+
+**Unary geometry** (`SRC OUT`) — `buffer`, `simplify` / `simplify-coverage`, `make-valid`, `normalize`, `reverse`,
+`force-2d` / `force-3d`, `segmentize`, `remove-repeated-points`, `offset-curve`, `representative-point`,
+`concave-hull`, `minimum-bounding-circle` / `minimum-rotated-rectangle` / `maximum-inscribed-circle`,
+`affine-transform`, `rotate`, `scale`, `translate`, `snap --other`, `build-area`, `extract-unique-points`,
+`set-precision`.
+
+```bash
+pyramids vector buffer gauges.geojson buf.geojson --distance 500
+pyramids vector simplify coast.geojson simple.geojson --tolerance 10
+```
+
+**Overlay / set ops** (need a second layer) — `intersection` / `difference` / `symmetric-difference` / `union`
+(`--other`), `intersection-all`, `union-all`, `overlay --right --how`, `dissolve [--by]`, `sjoin` / `sjoin-nearest`
+(`--right`), `clip-by-rect --rect`, `shared-paths` / `shortest-line` (`--other`), `explode`, and `filter
+--predicate <contains|within|intersects|covers|covered-by|crosses|disjoint|overlaps|touches|dwithin> --mask`.
+
+```bash
+pyramids vector overlay parcels.geojson zones.geojson out.geojson --right zones.geojson --how intersection
+pyramids vector filter parcels.geojson in_aoi.geojson --predicate intersects --mask aoi.geojson
+```
+
+**Tessellation / binning / sampling** — `voronoi-polygons`, `delaunay-triangles`,
+`constrained-delaunay-triangles`, `fishnet --bounds --cell-size --epsg`, `to-h3 --resolution`,
+`h3-bin --resolution`, `sample-points --size`, `polygonize`.
+
+**Measurements** (print; `--json`) — `geodesic-area` / `geodesic-length` / `geodesic-distance`, `distance`,
+`hausdorff-distance`, `frechet-distance`, `minimum-clearance`, `hilbert-distance`, `get-coordinates` (to CSV).
+
+**I/O & export** — `from-bbox`, `read-parquet`, `to-parquet`, `to-feather`, `to-json` (stdout or `--out`),
+`to-geo-dict`, `to-wkt` / `to-wkb` (to CSV), `to-mvt`, `to-pmtiles`.
+
+**Remote readers** — `from-ogc-features --endpoint --collection`, `from-featureserver --url`,
+`from-vectortileserver --url` (plus `fetch wfs`).
+
+The two-layer ops (overlay/set ops, `sjoin`, `snap`, the predicate `filter --mask`, and the planar distance
+measurements) require both layers in the **same CRS** and exit 1 with a clear message on a mismatch — reproject
+one first with `vector warp`. (The exception is `clip --mask`, which reprojects the mask to the source CRS for
+convenience; `geodesic-distance` is CRS-agnostic.) A GEOS geometry error on the input (e.g. `shared-paths` on
+non-lineal geometry) exits 1 with a one-line message, not a traceback. Not exposed as one-shot CLI verbs (use
+Python): `from-features` / `from-dict` / `from-records` /
+`from-arrow` / `from-xyz` (need in-memory objects), `transform` (needs a callable), `to-arrow` / `to-xarray` /
+`iter-features` (return Python objects), `read-gpx-layers` (returns a layer dict), and `from-postgis` /
+`to-postgis` (need a live PostGIS connection). Inherited pandas/GeoDataFrame tabular and arithmetic methods are
+out of scope.
 
 ## NetCDF
 
