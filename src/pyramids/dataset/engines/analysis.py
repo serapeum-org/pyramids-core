@@ -4741,7 +4741,7 @@ class Analysis(_Engine["Dataset"]):
     def _require_overlap(self, other: Dataset) -> None:
         """Raise ``AlignmentError`` unless ``other``'s extent overlaps this one's.
 
-        Uses a planar axis-aligned bounding-box test on ``Dataset.bbox``
+        Uses a planar axis-aligned bounding-box test on ``Dataset.total_bounds``
         (``minx < maxx``, ``miny < maxy``); extents that merely touch at an edge
         count as disjoint. It does not special-case a geographic bbox that wraps
         the antimeridian (a ±180 longitude wrap would be mis-tested) — normalise

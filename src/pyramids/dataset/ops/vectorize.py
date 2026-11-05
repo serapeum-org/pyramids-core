@@ -314,11 +314,11 @@ def _features_outside_template(features: FeatureCollection, template: Dataset) -
     partial overlap is not flagged — clipping features to the template grid is the
     intended behaviour of a template.
 
-    The template extent comes from :attr:`Dataset.bbox`, which uses the separate X and Y
+    The template extent comes from :attr:`Dataset.total_bounds`, which uses the separate X and Y
     pixel sizes, so the check is correct for non-square grids (a single ``cell_size``
     would mis-measure the Y extent). An empty (or all-empty-geometry) FeatureCollection
     has ``NaN`` bounds and also burns to all-nodata, so it is treated as outside too.
-    ``Dataset.bbox`` is now normalised for south-up (``geotransform[5] > 0``), east-left
+    ``Dataset.total_bounds`` is now normalised for south-up (``geotransform[5] > 0``), east-left
     (``geotransform[1] < 0``) and rotated grids alike — it reduces all four projected
     corners — so this comparison is valid for them too; on a rotated grid the box is the
     axis-aligned bounding box of the footprint, not the exact rotated quadrilateral.
