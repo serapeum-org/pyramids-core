@@ -13,7 +13,7 @@ import pytest
 from osgeo import gdal, osr
 
 from pyramids.dataset import Dataset
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -51,7 +51,7 @@ class TestEagerPathUnchanged:
 class TestLazyDispatch:
     """`chunks=<spec>` returns a dask.array.Array."""
 
-    @requires_dask
+    @requires_lazy
     def test_chunks_auto_returns_dask(self, square_dataset):
         result = square_dataset.map_blocks(
             lambda a: a * 2,
@@ -60,7 +60,7 @@ class TestLazyDispatch:
         )
         assert hasattr(result, "dask")
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_compute_matches_eager(self, square_dataset):
         lazy = square_dataset.map_blocks(
             lambda a: a * 2,
@@ -74,7 +74,7 @@ class TestLazyDispatch:
         )
         np.testing.assert_array_equal(lazy.compute(), eager.read_array())
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_dtype_kwarg_propagates(self, square_dataset):
         result = square_dataset.map_blocks(
             lambda a: a.astype(np.int32),
@@ -84,7 +84,7 @@ class TestLazyDispatch:
         )
         assert result.dtype == np.int32
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_chained_map_blocks(self, square_dataset):
         step1 = square_dataset.map_blocks(lambda a: a + 1, chunks=(5, 5), band=0)
         step2 = step1.map_blocks(lambda a: a * 2)  # dask.array.map_blocks
@@ -96,7 +96,7 @@ class TestLazyDispatch:
         )
         np.testing.assert_array_equal(result, expected)
 
-    @requires_dask
+    @requires_lazy
     def test_drop_axis_kwarg_forwarded(self, square_dataset):
         """`drop_axis=` is forwarded to :func:`dask.array.map_blocks`.
 
@@ -124,7 +124,7 @@ class TestLazyDispatch:
             square_dataset.read_array().sum(axis=0),
         )
 
-    @requires_dask
+    @requires_lazy
     def test_new_axis_kwarg_forwarded(self, square_dataset):
         """`new_axis=` is forwarded to :func:`dask.array.map_blocks`.
 

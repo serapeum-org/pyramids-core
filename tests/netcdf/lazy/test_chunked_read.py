@@ -37,7 +37,7 @@ from osgeo import gdal, osr
 from pyramids.base._file_manager import FILE_CACHE
 from pyramids.netcdf import _lazy as lazy_mod
 from pyramids.netcdf.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -88,7 +88,7 @@ class TestChunksNoneEager:
         assert arr.ndim == 2
 
 
-@requires_dask
+@requires_lazy
 class TestChunksLazy:
     """``chunks`` arguments that return a dask array."""
 
@@ -193,7 +193,7 @@ class TestChunksLazy:
         )
 
 
-@requires_dask
+@requires_lazy
 class TestDefaultChunks:
     """``chunks='auto'`` should honor ``VariableInfo.block_size``."""
 
@@ -229,14 +229,14 @@ class TestContainerCalling:
         with pytest.raises(ValueError, match="container|variable"):
             three_d_nc.read_array()
 
-    @requires_dask
+    @requires_lazy
     def test_container_with_variable_returns_dask(self, three_d_nc):
         """``nc.read_array("x", chunks=...)`` returns a dask array."""
         name = three_d_nc.variable_names[0]
         arr = three_d_nc.read_array(name, chunks="auto")
         assert isinstance(arr, dask_array.Array)
 
-    @requires_dask
+    @requires_lazy
     def test_subset_calling(self, three_d_nc):
         """``nc.get_variable("x").read_array(chunks=...)`` works."""
         name = three_d_nc.variable_names[0]
@@ -247,7 +247,7 @@ class TestContainerCalling:
         assert computed.shape == var.shape
 
 
-@requires_dask
+@requires_lazy
 class TestUnpackLazy:
     """``unpack=True`` on a lazy backing applies scale/offset lazily."""
 
@@ -291,7 +291,7 @@ def _compute_lazy_in_subprocess(payload: bytes) -> tuple[tuple[int, ...], float]
     return (tuple(int(d) for d in arr.shape), total)
 
 
-@requires_dask
+@requires_lazy
 class TestLazyPickle:
     """The lazy array and its parent NetCDF survive a spawn subprocess."""
 
@@ -374,7 +374,7 @@ ORIENTATION_FIXTURES = [
 ]
 
 
-@requires_dask
+@requires_lazy
 class TestLazyOrientationMatchesEager:
     """A chunked read must come back the same way up as the eager read of the same variable."""
 
@@ -656,7 +656,7 @@ class TestLazyOrientationMatchesEager:
         np.testing.assert_array_equal(np.asarray(lazy), eager)
 
 
-@requires_dask
+@requires_lazy
 class TestLazyHandleLifetime:
     """The parked FILE_CACHE handle is released when the lazy array is dropped (#727)."""
 
@@ -845,7 +845,7 @@ class TestLazyHandleLifetime:
         assert eager.size > 0, "the eager reopen read should return data"
 
 
-@requires_dask
+@requires_lazy
 class TestNamedFromBytesLazy:
     """A named ``from_bytes`` lazy (dask) read reopens the real ``/vsimem`` path (#1058).
 

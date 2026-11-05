@@ -30,7 +30,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 # Two variables, packed with *different* factors (0.01/1.5 and 0.1/2.5), so a
 # carry that stamped one factor onto every variable would fail rather than pass.
 PACKED = DATA / "coards__4v__1d2-2d2__scaleoffset__y-asc.nc"

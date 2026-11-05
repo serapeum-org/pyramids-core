@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -27,7 +27,7 @@ def _variable() -> NetCDF:
 class TestWindowedLazyRead:
     """`read_array(window=, chunks=)` matches the eager windowed read and stays lazy."""
 
-    @requires_dask
+    @requires_lazy
     def test_pixel_window_read_matches_eager(self):
         """A chunked pixel-window read computes to the eager `read_array(window=...)` block."""
         var = _variable()
@@ -37,7 +37,7 @@ class TestWindowedLazyRead:
         assert computed.shape == eager.shape, f"{computed.shape} != {eager.shape}"
         np.testing.assert_allclose(computed, eager, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_pixel_window_read_stays_lazy_and_only_the_window(self):
         """The read returns an uncomputed dask array sized to the window, not the whole variable."""
         import dask.array as da
@@ -49,7 +49,7 @@ class TestWindowedLazyRead:
         # trailing (y, x) are the window's (ysize, xsize), not the full (5, 6)
         assert lazy.shape[-2:] == (WINDOW[3], WINDOW[2]), f"not windowed: {lazy.shape}"
 
-    @requires_dask
+    @requires_lazy
     def test_bbox_with_chunks_is_still_refused(self):
         """A `bbox` with `chunks=` has no plain-slice form, so it is still refused."""
         var = _variable()

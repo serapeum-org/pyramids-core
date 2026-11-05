@@ -24,7 +24,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 
 # Two data variables declared `z` then `q`. Alphabetical order reverses them,
 # which is what makes this file able to tell the two orders apart at all.

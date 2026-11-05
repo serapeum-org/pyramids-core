@@ -21,7 +21,7 @@ from pyramids.netcdf._lazy import (
     _normalize_chunks_dict,
     _resolve_chunk_axis,
 )
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -36,7 +36,7 @@ FIX = (
 class TestAutoChunks:
     """#1222 — `"auto"` tiles via dask's byte target instead of one whole-array chunk."""
 
-    @requires_dask
+    @requires_lazy
     def test_auto_tiles_a_large_2d_variable(self):
         """A 20000x20000 float64 variable is split into sub-axis chunks, not one 3.2 GB task."""
         sizes = _auto_chunks((20000, 20000), np.dtype("float64"), None)
@@ -48,7 +48,7 @@ class TestAutoChunks:
             f"each chunk should be bounded, got {chunk_bytes} bytes"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_auto_tiles_the_spatial_plane_of_a_large_3d_variable(self):
         """A 50x10000x10000 variable no longer reads one full 0.8 GB plane per task."""
         sizes = _auto_chunks((50, 10000, 10000), np.dtype("float64"), None)
@@ -57,7 +57,7 @@ class TestAutoChunks:
             f"the penultimate spatial axis must be tiled, got {sizes}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_normalize_chunks_routes_auto_through_dask(self):
         """`_normalize_chunks('auto', ...)` with a dtype uses the dask-targeted sizing."""
         shape = (20000, 20000)
@@ -65,7 +65,7 @@ class TestAutoChunks:
         assert viadask == _auto_chunks(shape, np.dtype("float64"), None)
         assert viadask != shape, "auto must not fall back to the whole-array chunk"
 
-    @requires_dask
+    @requires_lazy
     def test_auto_keeps_a_small_variable_single_chunk(self):
         """A small variable still reads as one chunk (dask keeps it whole)."""
         nc = NetCDF.read_file(str(FIX))
@@ -74,7 +74,7 @@ class TestAutoChunks:
             f"a small variable should stay single-chunk, got {arr.numblocks}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_auto_snaps_to_the_native_block_size(self):
         """A valid block_size is forwarded as previous_chunks, so the chunks are block multiples."""
         sizes = _auto_chunks((20000, 20000), np.dtype("float64"), [1024, 2048])
@@ -88,7 +88,7 @@ class TestAutoChunks:
             f"a large variable must still be tiled, got {sizes}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_auto_block_size_zero_entry_falls_back_to_full_axis(self):
         """A 0 in block_size maps to the full axis length in previous_chunks, not a zero chunk."""
         shape = (20000, 20000)
@@ -127,10 +127,10 @@ class TestAutoChunks:
             f"a 0-length axis should give one empty chunk, got {grid}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_read_array_auto_tiles_a_large_variable_end_to_end(self):
         """read_array(chunks='auto') tiles into >1 block under a small dask chunk target (#1222 symptom)."""
-        import dask  # optional dep, guarded by @requires_dask (the module imports without dask)
+        import dask  # optional dep, guarded by @requires_lazy (the module imports without dask)
 
         nc = NetCDF.read_file(str(FIX))
         with dask.config.set({"array.chunk-size": "2 kiB"}):
@@ -205,7 +205,7 @@ class TestResolveChunkAxis:
         """Spatial name keys resolve case-insensitively."""
         assert _resolve_chunk_axis(key, (4, 3, 5, 6)) == expected, f"{key!r}"
 
-    @requires_dask
+    @requires_lazy
     def test_dict_chunks_target_the_spatial_plane_on_a_4d_variable(self):
         """`{'rows': 1, 'cols': 1}` chunks the trailing (y, x) axes of a 4-D variable, not the leading dims."""
         nc = NetCDF.read_file(str(FIX))

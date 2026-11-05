@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import GeoReference, LazyNetCDF, NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -35,12 +35,12 @@ MULTIVAR = (
 class TestChunkEntryPoint:
     """`NetCDF.chunk` builds a `LazyNetCDF` from a file-backed cube; in-memory is refused."""
 
-    @requires_dask
+    @requires_lazy
     def test_chunk_returns_a_lazy_netcdf(self):
         """A file-backed cube chunks into a `LazyNetCDF`."""
         assert isinstance(NetCDF.read_file(str(FIX)).chunk("auto"), LazyNetCDF)
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_cube_is_refused(self):
         """A cube with no on-disk store cannot be lazily read, so `chunk` raises."""
         nc = NetCDF.from_array(
@@ -51,7 +51,7 @@ class TestChunkEntryPoint:
         with pytest.raises(ValueError):
             nc.chunk("auto")
 
-    @requires_dask
+    @requires_lazy
     def test_chunk_and_to_dask_dataframe_share_the_in_memory_predicate(self):
         """`chunk` and `to_dask_dataframe` classify in-memory via one shared predicate — L3."""
         from pyramids.netcdf.engines.interop import _is_in_memory
@@ -74,7 +74,7 @@ class TestChunkEntryPoint:
 class TestChunksProperty:
     """`chunks` / `chunksizes` read the chunking off the dask arrays without materialising."""
 
-    @requires_dask
+    @requires_lazy
     def test_chunks_keyed_by_dimension_name(self):
         """`chunks` maps every dimension name to its chunk tuple."""
         chunks = NetCDF.read_file(str(FIX)).chunk("auto").chunks
@@ -82,13 +82,13 @@ class TestChunksProperty:
         assert all(isinstance(name, str) for name in chunks)
         assert all(isinstance(sizes, tuple) for sizes in chunks.values())
 
-    @requires_dask
+    @requires_lazy
     def test_chunksizes_aliases_chunks(self):
         """`chunksizes` is the same mapping as `chunks`."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
         assert lazy.chunksizes == lazy.chunks
 
-    @requires_dask
+    @requires_lazy
     def test_representation_stays_lazy(self):
         """The variables are dask arrays and `chunks` needs no materialisation (laziness held)."""
         import dask.array as da
@@ -101,7 +101,7 @@ class TestChunksProperty:
 class TestComputeLoad:
     """`compute` / `load` return the eager cube, materialising the lazy view."""
 
-    @requires_dask
+    @requires_lazy
     def test_compute_returns_an_eager_netcdf_with_the_source_values(self):
         """`compute()` yields an eager cube whose values equal the source read."""
         nc = NetCDF.read_file(str(FIX))
@@ -110,7 +110,7 @@ class TestComputeLoad:
         assert isinstance(eager, NetCDF)
         np.testing.assert_array_equal(eager.read_array(name), nc.read_array(name))
 
-    @requires_dask
+    @requires_lazy
     def test_compute_returns_an_independent_cube_not_the_source(self):
         """`compute()` returns a fresh cube, not the source object (no mutation aliasing) — M1."""
         nc = NetCDF.read_file(str(FIX))
@@ -120,7 +120,7 @@ class TestComputeLoad:
         assert first is not nc, "compute() must not alias the source cube"
         assert first is not second, "each compute() must return an independent cube"
 
-    @requires_dask
+    @requires_lazy
     def test_load_returns_the_source_in_place(self):
         """`load()` is the in-place form and returns the source cube itself — M1."""
         nc = NetCDF.read_file(str(FIX))
@@ -133,7 +133,7 @@ class TestComputeLoad:
 class TestBoundary:
     """Any eager operation on a lazy cube materialises it, warning once."""
 
-    @requires_dask
+    @requires_lazy
     def test_eager_attribute_warns_and_matches_the_cube(self):
         """Reading an eager attribute warns and returns the eager cube's value."""
         nc = NetCDF.read_file(str(FIX))
@@ -142,7 +142,7 @@ class TestBoundary:
             epsg = lazy.epsg
         assert epsg == nc.epsg
 
-    @requires_dask
+    @requires_lazy
     def test_boundary_warns_only_once_on_successful_access(self):
         """The materialise warning fires once across repeated successful accesses."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -153,7 +153,7 @@ class TestBoundary:
         hits = [w for w in caught if "materialis" in str(w.message)]
         assert len(hits) == 1, f"expected exactly one boundary warning, got {len(hits)}"
 
-    @requires_dask
+    @requires_lazy
     def test_boundary_warning_survives_a_raised_first_access(self):
         """A first access under warnings-as-error does not silence later boundary warnings — L1."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -168,7 +168,7 @@ class TestBoundary:
             "the once-flag must not be consumed by a raised first access"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_hasattr_for_a_missing_attribute_does_not_warn(self):
         """Probing for a missing attribute raises cleanly without warning or burning the flag — L2."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -180,7 +180,7 @@ class TestBoundary:
             "an existence probe for a missing attribute must not warn"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_private_name_is_not_forwarded(self):
         """A missing private attribute raises `AttributeError` rather than materialising."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -207,7 +207,7 @@ class TestBoundary:
         assert value == 4326, f"forwarded value wrong: {value}"
         assert source.reads == 1, f"property getter must run once, ran {source.reads}"
 
-    @requires_dask
+    @requires_lazy
     def test_repr_names_the_variables_and_chunks(self):
         """`repr` summarises the view with its class name, variables and chunking."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -219,7 +219,7 @@ class TestBoundary:
 class TestPersistUnify:
     """`persist` keeps the graph in memory lazily; `unify_chunks` reconciles chunkings."""
 
-    @requires_dask
+    @requires_lazy
     def test_persist_returns_a_lazy_view_with_the_same_chunks(self):
         """`persist()` stays lazy and keeps the chunking."""
         lazy = NetCDF.read_file(str(FIX)).chunk("auto")
@@ -227,14 +227,14 @@ class TestPersistUnify:
         assert isinstance(persisted, LazyNetCDF)
         assert persisted.chunks == lazy.chunks
 
-    @requires_dask
+    @requires_lazy
     def test_unify_chunks_is_a_noop_for_a_single_variable(self):
         """With one variable there is nothing to reconcile, so the view is returned unchanged."""
         nc = NetCDF.read_file(str(FIX))
         single = nc.get_variable(nc.variable_names[0]).chunk("auto")
         assert single.unify_chunks() is single
 
-    @requires_dask
+    @requires_lazy
     def test_unify_chunks_reconciles_divergent_variables(self):
         """Two variables chunked differently on a shared dimension share one chunking afterward."""
         nc = NetCDF.read_file(str(MULTIVAR))

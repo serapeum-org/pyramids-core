@@ -8,12 +8,12 @@ import pytest
 
 from pyramids.base.protocols import LazySpatialObject, SpatialObject, is_lazy
 from pyramids.feature import FeatureCollection
-from tests._marks import requires_dask_geopandas
+from tests._marks import requires_parquet_lazy
 
 pytestmark = pytest.mark.parquet_lazy
 
 
-@requires_dask_geopandas
+@requires_parquet_lazy
 class TestLazyFeatureCollection:
     def test_is_dask_gdf_subclass(self, lfc):
         import dask_geopandas as dg

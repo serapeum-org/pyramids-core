@@ -124,7 +124,8 @@ class TestReprojectEdges:
 
     def test_empty_lists(self):
         x, y = reproject_coordinates([], [], from_crs=4326, to_crs=3857)
-        assert x == [] and y == []
+        assert x == []
+        assert y == []
 
     def test_precision_zero_rounds_to_int(self):
         """precision=0 rounds to the nearest integer coordinate."""

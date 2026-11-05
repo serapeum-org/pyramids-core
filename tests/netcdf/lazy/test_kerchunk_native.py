@@ -22,7 +22,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from tests._marks import requires_kerchunk
+from tests._marks import requires_netcdf_lazy
 from tests.netcdf.lazy.conftest import THREE_D_NC_FIXTURE as FIXTURE
 
 pytestmark = pytest.mark.netcdf_lazy
@@ -88,7 +88,7 @@ def _codec_chain(zarray: dict) -> list:
 class TestParityWithKerchunk:
     """Native manifest matches the kerchunk translator where it counts."""
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_same_keys_and_chunk_refs_on_fixture(self, tmp_path):
         """Native + kerchunk agree on every ref key and chunk byte-range/inline."""
         from pyramids.netcdf._kerchunk_builder import build_single_manifest
@@ -109,7 +109,7 @@ class TestParityWithKerchunk:
             else:
                 assert native == kerch, f"inlined chunk {key} must match kerchunk"
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_zarray_codec_chain_matches(self, tmp_path):
         """Decoded codec chain matches kerchunk for the chunked compressed case."""
         from pyramids.netcdf._kerchunk_builder import build_single_manifest
@@ -129,7 +129,7 @@ class TestParityWithKerchunk:
 class TestRoundTrip:
     """Native manifest opens correctly through fsspec's reference fs + zarr."""
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_fixture_values_match_direct_read(self, tmp_path):
         """Non-fill data round-trips; fill cells keep the fill sentinel."""
         from pyramids.netcdf._kerchunk_builder import build_single_manifest
@@ -152,7 +152,7 @@ class TestRoundTrip:
         dims = list(arrays["values"].attrs["_ARRAY_DIMENSIONS"])
         assert dims == ["bands", "y", "x"]
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_chunked_compressed_roundtrip(self, tmp_path):
         """A chunked + gzip + shuffle dataset round-trips bit-for-bit."""
         from pyramids.netcdf._kerchunk_builder import build_single_manifest
@@ -262,7 +262,7 @@ class TestCombine:
         assert json.loads(combined["time/.zarray"])["shape"] == [6]
         assert json.loads(combined["lat/.zarray"])["shape"] == [5], "lat not stacked"
 
-    @requires_kerchunk
+    @requires_netcdf_lazy
     def test_combined_data_equals_real_stack(self, tmp_path):
         """Round-trip: the combined cube equals np.concatenate of the inputs."""
         from pyramids.netcdf._kerchunk_builder import (

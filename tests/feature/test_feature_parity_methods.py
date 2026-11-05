@@ -35,7 +35,7 @@ def _h3_vectors():
     return json.loads(path.read_text())
 
 
-@pytest.fixture()
+@pytest.fixture
 def corner_points() -> FeatureCollection:
     """Four corner points of a 3x3 square with a numeric ``rain`` column, EPSG:4326."""
     return FeatureCollection(
@@ -47,7 +47,7 @@ def corner_points() -> FeatureCollection:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def small_points() -> FeatureCollection:
     """Three points with an ``id`` column, EPSG:4326."""
     return FeatureCollection(
@@ -198,7 +198,8 @@ class TestVectorTileWriters:
             Path(tempfile.mkdtemp()) / "layer.pmtiles", max_zoom=5
         )
         assert isinstance(out, Path)
-        assert out.exists() and out.suffix == ".pmtiles"
+        assert out.exists()
+        assert out.suffix == ".pmtiles"
         assert len(FeatureCollection.read_file(out)) >= 1
 
     def test_to_mvt_writes_tile_root(self, small_points: FeatureCollection) -> None:
@@ -209,7 +210,7 @@ class TestVectorTileWriters:
 
 
 class TestReadGpxLayers:
-    @pytest.fixture()
+    @pytest.fixture
     def gpx_path(self) -> Path:
         """A minimal GPX file with one waypoint and a two-point track (no routes)."""
         gpx = (
@@ -289,7 +290,8 @@ class TestFromFeatureserver:
         fc = FeatureCollection.from_featureserver("https://x/FeatureServer/0")
         assert isinstance(fc, FeatureCollection)
         assert len(fc) == 0
-        assert fc.crs is not None and fc.crs.to_epsg() == 4326
+        assert fc.crs is not None
+        assert fc.crs.to_epsg() == 4326
 
     def test_max_pages_guard_breaks_non_paginating_server(self, monkeypatch) -> None:
         """A server that ignores resultOffset (always returns a full page) is bounded by max_pages."""
@@ -364,7 +366,7 @@ class TestH3Engine:
             _h3.latlng_to_cell(0.0, 0.0, 16)
 
 
-@pytest.fixture()
+@pytest.fixture
 def sf_points() -> FeatureCollection:
     """Four points around San Francisco (two coincident) with a numeric ``v`` column, EPSG:4326."""
     return FeatureCollection(

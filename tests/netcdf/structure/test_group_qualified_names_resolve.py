@@ -23,7 +23,7 @@ from pyramids.netcdf._mdim import open_mdarray
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 GROUPED = DATA / "none__35v__1d35__groups-nc4.nc"
 
 

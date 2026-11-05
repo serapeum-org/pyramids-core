@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 from tests.netcdf.lazy.conftest import THREE_D_NC_FIXTURE as FIXTURE
 
 pytestmark = pytest.mark.netcdf_lazy
@@ -20,12 +20,12 @@ pytestmark = pytest.mark.netcdf_lazy
 class TestSingleFile:
     """Sanity: single-file input behaves like a 1-element stack."""
 
-    @requires_dask
+    @requires_lazy
     def test_single_file_explicit_list(self):
         stack = NetCDF.open_mfdataset([FIXTURE], variable="values")
         assert stack.shape[0] == 1
 
-    @requires_dask
+    @requires_lazy
     def test_single_file_via_glob(self):
         stack = NetCDF.open_mfdataset(FIXTURE, variable="values")
         assert stack.shape[0] == 1
@@ -34,7 +34,7 @@ class TestSingleFile:
 class TestMultiFile:
     """Stacks three copies of the same fixture and verifies shape + order."""
 
-    @requires_dask
+    @requires_lazy
     def test_three_copies_shape(self):
         stack = NetCDF.open_mfdataset(
             [FIXTURE, FIXTURE, FIXTURE],
@@ -42,7 +42,7 @@ class TestMultiFile:
         )
         assert stack.shape[0] == 3
 
-    @requires_dask
+    @requires_lazy
     def test_three_copies_compute_equal(self):
         stack = NetCDF.open_mfdataset(
             [FIXTURE, FIXTURE],
@@ -56,7 +56,7 @@ class TestMultiFile:
 class TestParallelMode:
     """`parallel` is a deprecated, inert flag identical to the default lazy path."""
 
-    @requires_dask
+    @requires_lazy
     def test_parallel_true_emits_deprecation_warning(self):
         """Passing `parallel=True` warns that the flag is deprecated and inert.
 
@@ -68,7 +68,7 @@ class TestParallelMode:
             stack = NetCDF.open_mfdataset([FIXTURE], variable="values", parallel=True)
         assert stack.shape[0] == 1, f"expected a 1-element stack, got {stack.shape}"
 
-    @requires_dask
+    @requires_lazy
     def test_parallel_equivalent_to_sequential(self):
         seq = NetCDF.open_mfdataset(
             [FIXTURE, FIXTURE],
@@ -83,7 +83,7 @@ class TestParallelMode:
             ).compute()
         assert seq.shape == par.shape
 
-    @requires_dask
+    @requires_lazy
     def test_parallel_and_sequential_values_equal(self):
         """With the default (lazy) per-file read, parallel and sequential stacks are identical (ARC-48).
 
@@ -104,7 +104,7 @@ class TestParallelMode:
             err_msg="parallel stack diverged from sequential under the lazy default",
         )
 
-    @requires_dask
+    @requires_lazy
     def test_parallel_frames_have_uniform_chunks(self):
         """Every stacked frame is a single block along the stacked axis (review L3).
 
@@ -129,7 +129,7 @@ class TestParallelMode:
 class TestPreprocessHook:
     """The preprocess callable is applied before extraction."""
 
-    @requires_dask
+    @requires_lazy
     def test_preprocess_invoked(self):
         calls = {"n": 0}
 
@@ -148,7 +148,7 @@ class TestPreprocessHook:
 class TestMissingPath:
     """A non-existent explicit path surfaces a FileNotFoundError (documented contract)."""
 
-    @requires_dask
+    @requires_lazy
     def test_missing_explicit_path_raises(self, tmp_path):
         """An explicit path that does not exist raises FileNotFoundError.
 

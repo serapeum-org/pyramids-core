@@ -59,6 +59,14 @@ HAS_PYSTAC_CLIENT = _has("pystac_client")
 # module of that extra is importable — so `netcdf_lazy` requires
 # kerchunk AND h5py AND the lazy stack, all of which now ship in
 # `pip install pyramids-core[lazy]`.
+#
+# Why `netcdf_lazy`/`parquet_lazy` are kept distinct from `lazy`/`parquet` rather than
+# collapsed: each gates on EXTRA modules on top of the base extra's headline dependency
+# (`netcdf_lazy` additionally needs kerchunk + h5py; `parquet_lazy` additionally needs
+# dask-geopandas). The modules ship inside the [lazy]/[parquet] extras, but an install can
+# still carry the base stack (zarr/dask, or pyarrow) without them. A test re-marked plain
+# `lazy`/`parquet` would then FAIL to skip when kerchunk/h5py (or dask-geopandas) is the
+# missing piece — so the finer-grained markers are retained to keep the skip precise.
 _HAS_VIZ = HAS_CLEOPATRA
 _HAS_LAZY = HAS_DASK_ARRAY and HAS_ZARR
 _HAS_INTEROP = HAS_INTEROP
@@ -104,15 +112,6 @@ requires_dask_dataframe = pytest.mark.skipif(
     not (HAS_DASK_ARRAY and HAS_PYARROW),
     reason="dask.dataframe needs dask + pyarrow (pyramids-core[parquet])",
 )
-
-# Legacy aliases for existing callsites that import the older names.
-# Remove in a follow-up once the open call-sites migrate.
-requires_dask = requires_lazy
-requires_dask_geopandas = requires_parquet_lazy
-requires_kerchunk = pytest.mark.skipif(
-    not HAS_KERCHUNK, reason="kerchunk not installed"
-)
-requires_pyarrow = requires_parquet
 
 
 # Marker-name → skipif-decorator mapping consumed by the collection hook

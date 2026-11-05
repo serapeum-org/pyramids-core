@@ -18,6 +18,31 @@ from collections.abc import Iterator
 from typing import Any
 
 
+def require_matching_crs(left: Any, right: Any) -> None:
+    """Raise if two layers carry a different CRS.
+
+    Both operands of a two-layer vector op (overlay/set op, spatial join, planar
+    distance, ...) must share a coordinate system; combining mismatched ones
+    silently produces geometrically meaningless output. Raise a clean ``ValueError``
+    telling the user to reproject first. A layer whose CRS is unset on either side
+    is left alone (there is nothing to compare).
+
+    Args:
+        left: The primary layer (anything exposing a ``crs`` attribute).
+        right: The second layer read from ``--other`` / ``--right`` / ``--mask``.
+
+    Raises:
+        ValueError: Both layers carry a CRS and the two differ.
+    """
+    left_crs = getattr(left, "crs", None)
+    right_crs = getattr(right, "crs", None)
+    if left_crs is not None and right_crs is not None and left_crs != right_crs:
+        raise ValueError(
+            f"the two layers have different CRS ({left_crs} vs {right_crs}); reproject "
+            f"one to match first, e.g. `pyramids vector warp <src> <out> --crs <epsg>`"
+        )
+
+
 def json_sanitize(obj: Any) -> Any:
     """Recursively convert a structure to strict-JSON-safe values.
 

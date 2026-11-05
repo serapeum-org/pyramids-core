@@ -964,8 +964,8 @@ def _promote_cf_non_data_arrays(
 
         There is no doctest here: reaching this needs a container with a real
         CF classification, which means a file on disk. The behaviour is covered
-        by `tests/netcdf/test_round2_followups.py` and
-        `tests/netcdf/test_xarray_round_trip.py` against the suite's fixtures.
+        by `tests/netcdf/structure/test_documented_contracts.py` and
+        `tests/netcdf/interop/test_xarray_round_trip.py` against the suite's fixtures.
 
     See Also:
         _data_vars_from_arrays: Builds the mapping this reclassifies.

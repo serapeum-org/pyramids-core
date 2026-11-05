@@ -55,7 +55,7 @@ from pyramids.base._locks import DummyLock, SerializableLock
 from pyramids.dataset import Dataset
 from pyramids.dataset.ops import io as io_module
 from pyramids.dataset.ops.io import _read_chunk
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -134,7 +134,7 @@ class TestEagerPathUnchanged:
         assert arr.shape == (3, 3)
 
 
-@requires_dask
+@requires_lazy
 class TestLazyReadReturnsDaskArray:
     """Non-None ``chunks`` returns a :class:`dask.array.Array`."""
 
@@ -159,7 +159,7 @@ class TestLazyReadReturnsDaskArray:
         assert ds._backend == "numpy"
 
 
-@requires_dask
+@requires_lazy
 class TestEagerLazyEquivalence:
     """``arr.compute()`` matches the eager ``read_array()`` values."""
 
@@ -189,7 +189,7 @@ class TestEagerLazyEquivalence:
         np.testing.assert_array_equal(lazy, eager)
 
 
-@requires_dask
+@requires_lazy
 class TestDefaultChunksRespectBlockSize:
     """Default chunking aligns with the on-disk ``GetBlockSize`` grid."""
 
@@ -215,7 +215,7 @@ class TestDefaultChunksRespectBlockSize:
         assert all(c % block_w == 0 for c in col_chunks)
 
 
-@requires_dask
+@requires_lazy
 class TestChunksMinusOne:
     """``chunks=-1`` collapses to a single whole-array chunk."""
 
@@ -231,7 +231,7 @@ class TestChunksMinusOne:
         assert arr.chunks == ((32,), (32,))
 
 
-@requires_dask
+@requires_lazy
 class TestImportErrorBranch:
     """Passing ``chunks=`` without dask installed raises a pointed ImportError."""
 
@@ -250,7 +250,7 @@ class TestImportErrorBranch:
             ds.read_array(chunks="auto")
 
 
-@requires_dask
+@requires_lazy
 class TestLockConvention:
     """``lock=None`` / ``lock=False`` / explicit locks all flow through."""
 
@@ -325,7 +325,7 @@ class TestLockConvention:
         assert captured["lock"] is my_lock
 
 
-@requires_dask
+@requires_lazy
 class TestWindowChunksMutuallyExclusive:
     """``chunks`` + ``window`` together is a user error."""
 
@@ -335,7 +335,7 @@ class TestWindowChunksMutuallyExclusive:
             ds.read_array(chunks="auto", window=[0, 0, 4, 4])
 
 
-@requires_dask
+@requires_lazy
 class TestBandOutOfRange:
     """Out-of-range ``band`` is rejected in the lazy path too."""
 
@@ -345,7 +345,7 @@ class TestBandOutOfRange:
             ds.read_array(band=99, chunks="auto")
 
 
-@requires_dask
+@requires_lazy
 class TestChunkReaderPickle:
     """:func:`_read_chunk` + its closed-over manager must pickle cleanly."""
 
@@ -394,7 +394,7 @@ _CROSS_PROCESS_SCRIPT = textwrap.dedent("""
     """)
 
 
-@requires_dask
+@requires_lazy
 class TestCrossProcessCompute:
     """Pickle a lazy read, then compute it in a fresh ``spawn`` subprocess."""
 
@@ -436,7 +436,7 @@ class TestE2EFixtureTiff:
         assert arr[0, 0, 0] == pytest.approx(0.0)
         assert arr[1, 0, 0] == pytest.approx(1000.0)
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_path_e2e(self, tiled_tif_path: Path):
         ds = Dataset.read_file(str(tiled_tif_path))
         arr = ds.read_array(chunks="auto")
@@ -446,7 +446,7 @@ class TestE2EFixtureTiff:
         assert computed[1, 0, 0] == pytest.approx(1000.0)
 
 
-@requires_dask
+@requires_lazy
 class TestRasterLazyHandleRelease:
     """A raster lazy read releases its parked handle when the array is dropped (#727, GeoTIFF)."""
 

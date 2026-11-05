@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import GeoReference, NetCDF
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.netcdf_lazy
 
@@ -30,7 +30,7 @@ def _file_cube(tmp_path, arr, **kwargs) -> NetCDF:
 class TestLazyMasked:
     """`read_array(chunks=, masked=True)` returns a lazy dask masked array matching the eager one."""
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_masked_equals_eager_masked(self, tmp_path):
         """A lazy masked read matches the eager read's shape, mask and `filled()` values."""
         arr = np.array([1.0, 2.0, -9999.0, 4.0]).reshape(1, 2, 2)
@@ -48,7 +48,7 @@ class TestLazyMasked:
         )
         np.testing.assert_array_equal(eager.filled(np.nan), lazy.filled(np.nan))
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_masked_masks_the_fill_cell(self, tmp_path):
         """Exactly the no-data cell is masked; the three data cells are not."""
         arr = np.array([1.0, 2.0, -9999.0, 4.0]).reshape(1, 2, 2)
@@ -58,7 +58,7 @@ class TestLazyMasked:
             "only the fill cell should be masked"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_lazy_masked_without_fill_cells_masks_nothing(self, tmp_path):
         """A read whose cells never equal the sentinel yields an all-unmasked masked array."""
         rr = _file_cube(

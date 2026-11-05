@@ -33,7 +33,7 @@ from pyramids.netcdf._plot import NetCDFPlot
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 STORE = DATA / "cf__5v__1d4-4d1__y-asc.nc"
 VARIABLE = "temperature"
 

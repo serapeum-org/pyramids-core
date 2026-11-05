@@ -17,7 +17,7 @@ from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
 
-DATA = Path(__file__).parents[1] / "data" / "netcdf"
+DATA = Path(__file__).parents[2] / "data" / "netcdf"
 
 # Fixtures whose first gridded variable actually carries CF attributes worth
 # preserving; files with no such attributes cannot exercise the regression.
