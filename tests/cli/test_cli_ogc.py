@@ -197,6 +197,151 @@ class TestFetchWms:
         assert captured["size"] == (256, 128)
 
 
+class TestFetchWmts:
+    """`pyramids fetch wmts`."""
+
+    def test_forwards_kwargs(self, monkeypatch, tmp_path):
+        """The layer, bbox, resolution and output-crs reach Dataset.from_wmts."""
+        captured: dict = {}
+
+        def fake(endpoint, **kwargs):
+            captured["endpoint"] = endpoint
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr("pyramids.cli_ogc.Dataset.from_wmts", staticmethod(fake))
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "wmts",
+                "https://x/WMTSCapabilities.xml",
+                out,
+                "--layer",
+                "truecolor",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--resolution",
+                "0.01",
+                "--output-crs",
+                "3857",
+            ]
+        )
+        assert rc == 0
+        assert captured["layer"] == "truecolor"
+        assert captured["bbox"] == (0.0, 0.0, 1.0, 1.0)
+        assert captured["resolution"] == 0.01
+        assert captured["output_crs"] == "3857"
+        assert os.path.exists(out)
+
+    def test_missing_layer_is_rejected(self, monkeypatch, tmp_path):
+        """--layer is required, so argparse exits before the handler runs."""
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.Dataset.from_wmts",
+            staticmethod(lambda *a, **k: _FakeDataset()),
+        )
+        argv = [
+            "fetch",
+            "wmts",
+            "https://x",
+            str(tmp_path / "o.tif"),
+            "--bbox",
+            "0",
+            "0",
+            "1",
+            "1",
+        ]
+        with pytest.raises(SystemExit):
+            main(argv)
+
+    @pytest.mark.live
+    def test_live_smoke(self, tmp_path):
+        """Live GIBS crop (deselected by default; run with `-m live`)."""
+        out = str(tmp_path / "gibs.tif")
+        rc = main(
+            [
+                "fetch",
+                "wmts",
+                "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml",
+                out,
+                "--layer",
+                "MODIS_Terra_CorrectedReflectance_TrueColor",
+                "--bbox",
+                "5",
+                "51",
+                "6",
+                "52",
+                "--resolution",
+                "0.01",
+            ]
+        )
+        assert rc == 0
+        assert os.path.exists(out)
+
+
+class TestFetchOgcCoverages:
+    """`pyramids fetch ogc-coverages`."""
+
+    def test_forwards_kwargs(self, monkeypatch, tmp_path):
+        """The coverage id, bbox and resolution reach Dataset.from_ogc_coverages."""
+        captured: dict = {}
+
+        def fake(endpoint, **kwargs):
+            captured["endpoint"] = endpoint
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.Dataset.from_ogc_coverages", staticmethod(fake)
+        )
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "ogc-coverages",
+                "https://maps.example/ogcapi",
+                out,
+                "--coverage",
+                "dem",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--resolution",
+                "0.5",
+                "--coverage-crs",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        assert captured["coverage"] == "dem"
+        assert captured["bbox"] == (0.0, 0.0, 1.0, 1.0)
+        assert captured["resolution"] == 0.5
+        assert captured["coverage_crs"] == "4326"
+        assert os.path.exists(out)
+
+    def test_missing_bbox_is_rejected(self, monkeypatch, tmp_path):
+        """--bbox is required, so argparse exits before the handler runs."""
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.Dataset.from_ogc_coverages",
+            staticmethod(lambda *a, **k: _FakeDataset()),
+        )
+        argv = [
+            "fetch",
+            "ogc-coverages",
+            "https://x",
+            str(tmp_path / "o.tif"),
+            "--coverage",
+            "dem",
+        ]
+        with pytest.raises(SystemExit):
+            main(argv)
+
+
 class TestFetchWfs:
     """`pyramids fetch wfs`."""
 
