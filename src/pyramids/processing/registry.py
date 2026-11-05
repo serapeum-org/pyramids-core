@@ -186,6 +186,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
         input_type="Dataset",
         output_type="Dataset",
         description="Fill every domain cell with a constant value.",
+        method="fill_domain",
         parameters=(
             Parameter("value", "Float", None, False, "Value to fill the domain with."),
         ),
