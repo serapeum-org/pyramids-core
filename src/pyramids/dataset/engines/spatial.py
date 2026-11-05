@@ -3332,7 +3332,7 @@ class Spatial(_Engine["Dataset"]):
               >>> strip = grid.crop(bbox=(170.0, -10.0, -170.0, 10.0))
               >>> strip.shape
               (1, 20, 20)
-              >>> strip.bbox
+              >>> strip.total_bounds.tolist()
               [170.0, -10.0, 190.0, 10.0]
 
               ```
