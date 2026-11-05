@@ -200,7 +200,8 @@ class TestZonalStats:
         records = json.loads(capsys.readouterr().out)
         assert rc == 0, "zonal-stats must exit 0"
         assert len(records) == 1, "one zone, one record"
-        assert "mean" in records[0] and "count" in records[0], "stats missing"
+        assert "mean" in records[0], "mean stat missing"
+        assert "count" in records[0], "count stat missing"
         assert records[0]["count"] == pytest.approx(16.0), "4x4 quadrant = 16 cells"
 
     def test_csv_output(self, ramp, zones, tmp_path, capsys):
@@ -279,7 +280,8 @@ class TestPercentileStretch:
         rc = main(["percentile-stretch", ramp, out, "--lower", "0", "--upper", "100"])
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
-        assert float(values.min()) >= 0.0 and float(values.max()) <= 1.0, "out of [0,1]"
+        assert float(values.min()) >= 0.0, "stretched minimum below 0"
+        assert float(values.max()) <= 1.0, "stretched maximum above 1"
 
     def test_equal_percentiles_error(self, ramp, tmp_path, capsys):
         """Equal lower/upper percentiles are a clean one-line error."""

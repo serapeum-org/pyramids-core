@@ -105,7 +105,8 @@ class TestReadPart:
         rc = main(["read-part", cli_raster, out, "--bbox", "2", "2", "6", "6"])
         assert rc == 0
         result = Dataset.read_file(out)
-        assert result.rows < 8 and result.columns < 8
+        assert result.rows < 8, "window should have fewer rows than the source"
+        assert result.columns < 8, "window should have fewer columns than the source"
 
     def test_out_of_bounds_errors(self, cli_raster, tmp_path):
         """A window disjoint from the raster exits 1."""
