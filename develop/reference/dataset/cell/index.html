@@ -4290,10 +4290,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pyramids.dataset.engines.Cell.array_to_map_coordinates" class="md-nav__link">
+  <a href="#pyramids.dataset.engines.Cell.nearest_cell" class="md-nav__link">
     <span class="md-ellipsis">
       
-        array_to_map_coordinates
+        nearest_cell
       
     </span>
   </a>
@@ -7612,10 +7612,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pyramids.dataset.engines.Cell.array_to_map_coordinates" class="md-nav__link">
+  <a href="#pyramids.dataset.engines.Cell.nearest_cell" class="md-nav__link">
     <span class="md-ellipsis">
       
-        array_to_map_coordinates
+        nearest_cell
       
     </span>
   </a>
@@ -7713,8 +7713,8 @@ Hold "Ctrl" to enable pan &amp; zoom
         <p>Cell-geometry operations on a Dataset.</p>
 <p>Owns the real implementations of <code>get_cell_coords</code>, the private cell-geometry
 cores <code>_cell_polygons</code> / <code>_cell_points</code> (public entry point:
-<code>Dataset.to_geodataframe</code>), <code>map_to_array_coordinates</code>, and
-<code>array_to_map_coordinates</code>. <code>Dataset</code> exposes a same-named facade for the public
+<code>Dataset.to_geodataframe</code>), and <code>nearest_cell</code> (points -&gt; nearest array indices).
+<code>Dataset</code> exposes a same-named facade for the public
 methods, so <code>ds.get_cell_coords(...)</code> and <code>ds.cell.get_cell_coords(...)</code> are
 equivalent.</p>
 
@@ -8483,101 +8483,13 @@ equivalent.</p>
 <span class="normal"><a href="#__codelineno-0-793">793</a></span>
 <span class="normal"><a href="#__codelineno-0-794">794</a></span>
 <span class="normal"><a href="#__codelineno-0-795">795</a></span>
-<span class="normal"><a href="#__codelineno-0-796">796</a></span>
-<span class="normal"><a href="#__codelineno-0-797">797</a></span>
-<span class="normal"><a href="#__codelineno-0-798">798</a></span>
-<span class="normal"><a href="#__codelineno-0-799">799</a></span>
-<span class="normal"><a href="#__codelineno-0-800">800</a></span>
-<span class="normal"><a href="#__codelineno-0-801">801</a></span>
-<span class="normal"><a href="#__codelineno-0-802">802</a></span>
-<span class="normal"><a href="#__codelineno-0-803">803</a></span>
-<span class="normal"><a href="#__codelineno-0-804">804</a></span>
-<span class="normal"><a href="#__codelineno-0-805">805</a></span>
-<span class="normal"><a href="#__codelineno-0-806">806</a></span>
-<span class="normal"><a href="#__codelineno-0-807">807</a></span>
-<span class="normal"><a href="#__codelineno-0-808">808</a></span>
-<span class="normal"><a href="#__codelineno-0-809">809</a></span>
-<span class="normal"><a href="#__codelineno-0-810">810</a></span>
-<span class="normal"><a href="#__codelineno-0-811">811</a></span>
-<span class="normal"><a href="#__codelineno-0-812">812</a></span>
-<span class="normal"><a href="#__codelineno-0-813">813</a></span>
-<span class="normal"><a href="#__codelineno-0-814">814</a></span>
-<span class="normal"><a href="#__codelineno-0-815">815</a></span>
-<span class="normal"><a href="#__codelineno-0-816">816</a></span>
-<span class="normal"><a href="#__codelineno-0-817">817</a></span>
-<span class="normal"><a href="#__codelineno-0-818">818</a></span>
-<span class="normal"><a href="#__codelineno-0-819">819</a></span>
-<span class="normal"><a href="#__codelineno-0-820">820</a></span>
-<span class="normal"><a href="#__codelineno-0-821">821</a></span>
-<span class="normal"><a href="#__codelineno-0-822">822</a></span>
-<span class="normal"><a href="#__codelineno-0-823">823</a></span>
-<span class="normal"><a href="#__codelineno-0-824">824</a></span>
-<span class="normal"><a href="#__codelineno-0-825">825</a></span>
-<span class="normal"><a href="#__codelineno-0-826">826</a></span>
-<span class="normal"><a href="#__codelineno-0-827">827</a></span>
-<span class="normal"><a href="#__codelineno-0-828">828</a></span>
-<span class="normal"><a href="#__codelineno-0-829">829</a></span>
-<span class="normal"><a href="#__codelineno-0-830">830</a></span>
-<span class="normal"><a href="#__codelineno-0-831">831</a></span>
-<span class="normal"><a href="#__codelineno-0-832">832</a></span>
-<span class="normal"><a href="#__codelineno-0-833">833</a></span>
-<span class="normal"><a href="#__codelineno-0-834">834</a></span>
-<span class="normal"><a href="#__codelineno-0-835">835</a></span>
-<span class="normal"><a href="#__codelineno-0-836">836</a></span>
-<span class="normal"><a href="#__codelineno-0-837">837</a></span>
-<span class="normal"><a href="#__codelineno-0-838">838</a></span>
-<span class="normal"><a href="#__codelineno-0-839">839</a></span>
-<span class="normal"><a href="#__codelineno-0-840">840</a></span>
-<span class="normal"><a href="#__codelineno-0-841">841</a></span>
-<span class="normal"><a href="#__codelineno-0-842">842</a></span>
-<span class="normal"><a href="#__codelineno-0-843">843</a></span>
-<span class="normal"><a href="#__codelineno-0-844">844</a></span>
-<span class="normal"><a href="#__codelineno-0-845">845</a></span>
-<span class="normal"><a href="#__codelineno-0-846">846</a></span>
-<span class="normal"><a href="#__codelineno-0-847">847</a></span>
-<span class="normal"><a href="#__codelineno-0-848">848</a></span>
-<span class="normal"><a href="#__codelineno-0-849">849</a></span>
-<span class="normal"><a href="#__codelineno-0-850">850</a></span>
-<span class="normal"><a href="#__codelineno-0-851">851</a></span>
-<span class="normal"><a href="#__codelineno-0-852">852</a></span>
-<span class="normal"><a href="#__codelineno-0-853">853</a></span>
-<span class="normal"><a href="#__codelineno-0-854">854</a></span>
-<span class="normal"><a href="#__codelineno-0-855">855</a></span>
-<span class="normal"><a href="#__codelineno-0-856">856</a></span>
-<span class="normal"><a href="#__codelineno-0-857">857</a></span>
-<span class="normal"><a href="#__codelineno-0-858">858</a></span>
-<span class="normal"><a href="#__codelineno-0-859">859</a></span>
-<span class="normal"><a href="#__codelineno-0-860">860</a></span>
-<span class="normal"><a href="#__codelineno-0-861">861</a></span>
-<span class="normal"><a href="#__codelineno-0-862">862</a></span>
-<span class="normal"><a href="#__codelineno-0-863">863</a></span>
-<span class="normal"><a href="#__codelineno-0-864">864</a></span>
-<span class="normal"><a href="#__codelineno-0-865">865</a></span>
-<span class="normal"><a href="#__codelineno-0-866">866</a></span>
-<span class="normal"><a href="#__codelineno-0-867">867</a></span>
-<span class="normal"><a href="#__codelineno-0-868">868</a></span>
-<span class="normal"><a href="#__codelineno-0-869">869</a></span>
-<span class="normal"><a href="#__codelineno-0-870">870</a></span>
-<span class="normal"><a href="#__codelineno-0-871">871</a></span>
-<span class="normal"><a href="#__codelineno-0-872">872</a></span>
-<span class="normal"><a href="#__codelineno-0-873">873</a></span>
-<span class="normal"><a href="#__codelineno-0-874">874</a></span>
-<span class="normal"><a href="#__codelineno-0-875">875</a></span>
-<span class="normal"><a href="#__codelineno-0-876">876</a></span>
-<span class="normal"><a href="#__codelineno-0-877">877</a></span>
-<span class="normal"><a href="#__codelineno-0-878">878</a></span>
-<span class="normal"><a href="#__codelineno-0-879">879</a></span>
-<span class="normal"><a href="#__codelineno-0-880">880</a></span>
-<span class="normal"><a href="#__codelineno-0-881">881</a></span>
-<span class="normal"><a href="#__codelineno-0-882">882</a></span>
-<span class="normal"><a href="#__codelineno-0-883">883</a></span>
-<span class="normal"><a href="#__codelineno-0-884">884</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="k">class</span><span class="w"> </span><span class="nc">Cell</span><span class="p">(</span><span class="n">_Engine</span><span class="p">[</span><span class="s2">"Dataset"</span><span class="p">]):</span>
+<span class="normal"><a href="#__codelineno-0-796">796</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="k">class</span><span class="w"> </span><span class="nc">Cell</span><span class="p">(</span><span class="n">_Engine</span><span class="p">[</span><span class="s2">"Dataset"</span><span class="p">]):</span>
 <a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="w">    </span><span class="sd">"""Cell-geometry operations on a Dataset.</span>
 <a id="__codelineno-0-42" name="__codelineno-0-42"></a>
 <a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="sd">    Owns the real implementations of `get_cell_coords`, the private cell-geometry</span>
 <a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">    cores `_cell_polygons` / `_cell_points` (public entry point:</span>
-<a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="sd">    `Dataset.to_geodataframe`), `map_to_array_coordinates`, and</span>
-<a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="sd">    `array_to_map_coordinates`. `Dataset` exposes a same-named facade for the public</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="sd">    `Dataset.to_geodataframe`), and `nearest_cell` (points -&gt; nearest array indices).</span>
+<a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="sd">    `Dataset` exposes a same-named facade for the public</span>
 <a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="sd">    methods, so `ds.get_cell_coords(...)` and `ds.cell.get_cell_coords(...)` are</span>
 <a id="__codelineno-0-48" name="__codelineno-0-48"></a><span class="sd">    equivalent.</span>
 <a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="sd">    """</span>
@@ -9230,192 +9142,104 @@ equivalent.</p>
 <a id="__codelineno-0-696" name="__codelineno-0-696"></a>        <span class="n">gdf</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">index</span>
 <a id="__codelineno-0-697" name="__codelineno-0-697"></a>        <span class="k">return</span> <span class="n">gdf</span>
 <a id="__codelineno-0-698" name="__codelineno-0-698"></a>
-<a id="__codelineno-0-699" name="__codelineno-0-699"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">map_to_array_coordinates</span><span class="p">(</span>
-<a id="__codelineno-0-700" name="__codelineno-0-700"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-701" name="__codelineno-0-701"></a>        <span class="n">points</span><span class="p">:</span> <span class="n">GeoDataFrame</span> <span class="o">|</span> <span class="n">FeatureCollection</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
-<a id="__codelineno-0-702" name="__codelineno-0-702"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
-<a id="__codelineno-0-703" name="__codelineno-0-703"></a><span class="w">        </span><span class="sd">"""Convert coordinates of points to array indices.</span>
-<a id="__codelineno-0-704" name="__codelineno-0-704"></a>
-<a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="sd">        - map_to_array_coordinates locates a point with real coordinates (x, y) or (lon, lat) on the array by finding</span>
-<a id="__codelineno-0-706" name="__codelineno-0-706"></a><span class="sd">            the cell indices (row, column) of the nearest cell in the raster.</span>
-<a id="__codelineno-0-707" name="__codelineno-0-707"></a><span class="sd">        - The point coordinate system of the raster has to be projected to be able to calculate the distance.</span>
+<a id="__codelineno-0-699" name="__codelineno-0-699"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">map_to_array_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+<a id="__codelineno-0-700" name="__codelineno-0-700"></a><span class="w">        </span><span class="sd">"""Deprecated alias for :meth:`nearest_cell`."""</span>
+<a id="__codelineno-0-701" name="__codelineno-0-701"></a>        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+<a id="__codelineno-0-702" name="__codelineno-0-702"></a>            <span class="s2">"`map_to_array_coordinates` is deprecated and will be removed in a future "</span>
+<a id="__codelineno-0-703" name="__codelineno-0-703"></a>            <span class="s2">"release; use `nearest_cell`."</span><span class="p">,</span>
+<a id="__codelineno-0-704" name="__codelineno-0-704"></a>            <span class="ne">DeprecationWarning</span><span class="p">,</span>
+<a id="__codelineno-0-705" name="__codelineno-0-705"></a>            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-706" name="__codelineno-0-706"></a>        <span class="p">)</span>
+<a id="__codelineno-0-707" name="__codelineno-0-707"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nearest_cell</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
 <a id="__codelineno-0-708" name="__codelineno-0-708"></a>
-<a id="__codelineno-0-709" name="__codelineno-0-709"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-710" name="__codelineno-0-710"></a><span class="sd">            points (GeoDataFrame | pandas.DataFrame | FeatureCollection):</span>
-<a id="__codelineno-0-711" name="__codelineno-0-711"></a><span class="sd">                - GeoDataFrame: GeoDataFrame with POINT geometry.</span>
-<a id="__codelineno-0-712" name="__codelineno-0-712"></a><span class="sd">                - DataFrame: DataFrame with x, y columns.</span>
-<a id="__codelineno-0-713" name="__codelineno-0-713"></a>
-<a id="__codelineno-0-714" name="__codelineno-0-714"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-715" name="__codelineno-0-715"></a><span class="sd">            np.ndarray:</span>
-<a id="__codelineno-0-716" name="__codelineno-0-716"></a><span class="sd">                Array with shape (N, 2) containing the row and column indices in the array.</span>
-<a id="__codelineno-0-717" name="__codelineno-0-717"></a>
-<a id="__codelineno-0-718" name="__codelineno-0-718"></a><span class="sd">        Examples:</span>
-<a id="__codelineno-0-719" name="__codelineno-0-719"></a><span class="sd">            - Create `Dataset` consisting of 2 bands, 10 rows, 10 columns, at the point lon/lat (0, 0).</span>
-<a id="__codelineno-0-720" name="__codelineno-0-720"></a>
-<a id="__codelineno-0-721" name="__codelineno-0-721"></a><span class="sd">              ```python</span>
-<a id="__codelineno-0-722" name="__codelineno-0-722"></a><span class="sd">              &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-723" name="__codelineno-0-723"></a><span class="sd">              &gt;&gt;&gt; import pandas as pd</span>
-<a id="__codelineno-0-724" name="__codelineno-0-724"></a><span class="sd">              &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
-<a id="__codelineno-0-725" name="__codelineno-0-725"></a><span class="sd">              &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(2, 10, 10))</span>
-<a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="sd">              &gt;&gt;&gt; top_left_corner = (0, 0)</span>
-<a id="__codelineno-0-727" name="__codelineno-0-727"></a><span class="sd">              &gt;&gt;&gt; cell_size = 0.05</span>
-<a id="__codelineno-0-728" name="__codelineno-0-728"></a><span class="sd">              &gt;&gt;&gt; dataset = Dataset.from_array(</span>
-<a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">              ...     arr,</span>
-<a id="__codelineno-0-730" name="__codelineno-0-730"></a><span class="sd">              ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
-<a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">              ... )</span>
-<a id="__codelineno-0-732" name="__codelineno-0-732"></a>
-<a id="__codelineno-0-733" name="__codelineno-0-733"></a><span class="sd">              ```</span>
-<a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">            - DataFrame with x, y columns:</span>
-<a id="__codelineno-0-735" name="__codelineno-0-735"></a>
-<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">              - We can give the function a DataFrame with x, y columns to array the coordinates of the points that are located within the dataset domain.</span>
-<a id="__codelineno-0-737" name="__codelineno-0-737"></a>
-<a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">              ```python</span>
-<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">              &gt;&gt;&gt; points = pd.DataFrame({"x": [0.025, 0.175, 0.375], "y": [0.025, 0.225, 0.125]})</span>
-<a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="sd">              &gt;&gt;&gt; indices = dataset.map_to_array_coordinates(points)</span>
-<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">              &gt;&gt;&gt; print(indices)</span>
-<a id="__codelineno-0-742" name="__codelineno-0-742"></a><span class="sd">              [[0 0]</span>
-<a id="__codelineno-0-743" name="__codelineno-0-743"></a><span class="sd">               [0 3]</span>
-<a id="__codelineno-0-744" name="__codelineno-0-744"></a><span class="sd">               [0 7]]</span>
+<a id="__codelineno-0-709" name="__codelineno-0-709"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">nearest_cell</span><span class="p">(</span>
+<a id="__codelineno-0-710" name="__codelineno-0-710"></a>        <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-711" name="__codelineno-0-711"></a>        <span class="n">points</span><span class="p">:</span> <span class="n">GeoDataFrame</span> <span class="o">|</span> <span class="n">FeatureCollection</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
+<a id="__codelineno-0-712" name="__codelineno-0-712"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+<a id="__codelineno-0-713" name="__codelineno-0-713"></a><span class="w">        </span><span class="sd">"""Convert coordinates of points to array indices.</span>
+<a id="__codelineno-0-714" name="__codelineno-0-714"></a>
+<a id="__codelineno-0-715" name="__codelineno-0-715"></a><span class="sd">        - nearest_cell locates a point with real coordinates (x, y) or (lon, lat) on the array by finding</span>
+<a id="__codelineno-0-716" name="__codelineno-0-716"></a><span class="sd">            the cell indices (row, column) of the nearest cell in the raster.</span>
+<a id="__codelineno-0-717" name="__codelineno-0-717"></a><span class="sd">        - The point coordinate system of the raster has to be projected to be able to calculate the distance.</span>
+<a id="__codelineno-0-718" name="__codelineno-0-718"></a>
+<a id="__codelineno-0-719" name="__codelineno-0-719"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-720" name="__codelineno-0-720"></a><span class="sd">            points (GeoDataFrame | pandas.DataFrame | FeatureCollection):</span>
+<a id="__codelineno-0-721" name="__codelineno-0-721"></a><span class="sd">                - GeoDataFrame: GeoDataFrame with POINT geometry.</span>
+<a id="__codelineno-0-722" name="__codelineno-0-722"></a><span class="sd">                - DataFrame: DataFrame with x, y columns.</span>
+<a id="__codelineno-0-723" name="__codelineno-0-723"></a>
+<a id="__codelineno-0-724" name="__codelineno-0-724"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-725" name="__codelineno-0-725"></a><span class="sd">            np.ndarray:</span>
+<a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="sd">                Array with shape (N, 2) containing the row and column indices in the array.</span>
+<a id="__codelineno-0-727" name="__codelineno-0-727"></a>
+<a id="__codelineno-0-728" name="__codelineno-0-728"></a><span class="sd">        Examples:</span>
+<a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">            - Create `Dataset` consisting of 2 bands, 10 rows, 10 columns, at the point lon/lat (0, 0).</span>
+<a id="__codelineno-0-730" name="__codelineno-0-730"></a>
+<a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">              ```python</span>
+<a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">              &gt;&gt;&gt; import numpy as np</span>
+<a id="__codelineno-0-733" name="__codelineno-0-733"></a><span class="sd">              &gt;&gt;&gt; import pandas as pd</span>
+<a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">              &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
+<a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="sd">              &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(2, 10, 10))</span>
+<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">              &gt;&gt;&gt; top_left_corner = (0, 0)</span>
+<a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="sd">              &gt;&gt;&gt; cell_size = 0.05</span>
+<a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">              &gt;&gt;&gt; dataset = Dataset.from_array(</span>
+<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">              ...     arr,</span>
+<a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="sd">              ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
+<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">              ... )</span>
+<a id="__codelineno-0-742" name="__codelineno-0-742"></a>
+<a id="__codelineno-0-743" name="__codelineno-0-743"></a><span class="sd">              ```</span>
+<a id="__codelineno-0-744" name="__codelineno-0-744"></a><span class="sd">            - DataFrame with x, y columns:</span>
 <a id="__codelineno-0-745" name="__codelineno-0-745"></a>
-<a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">              ```</span>
-<a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="sd">            - GeoDataFrame with POINT geometry:</span>
-<a id="__codelineno-0-748" name="__codelineno-0-748"></a>
-<a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">              - We can give the function a GeoDataFrame with POINT geometry to array the coordinates of the points that locate within the dataset domain.</span>
-<a id="__codelineno-0-750" name="__codelineno-0-750"></a>
-<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">              ```python</span>
-<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">              &gt;&gt;&gt; from shapely.geometry import Point</span>
-<a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">              &gt;&gt;&gt; from geopandas import GeoDataFrame</span>
-<a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">              &gt;&gt;&gt; points = GeoDataFrame({"geometry": [Point(0.025, 0.025), Point(0.175, 0.225), Point(0.375, 0.125)]})</span>
-<a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="sd">              &gt;&gt;&gt; indices = dataset.map_to_array_coordinates(points)</span>
-<a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">              &gt;&gt;&gt; print(indices)</span>
-<a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">              [[0 0]</span>
-<a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="sd">               [0 3]</span>
-<a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">               [0 7]]</span>
+<a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">              - We can give the function a DataFrame with x, y columns to array the coordinates of the points that are located within the dataset domain.</span>
+<a id="__codelineno-0-747" name="__codelineno-0-747"></a>
+<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">              ```python</span>
+<a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">              &gt;&gt;&gt; points = pd.DataFrame({"x": [0.025, 0.175, 0.375], "y": [0.025, 0.225, 0.125]})</span>
+<a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">              &gt;&gt;&gt; indices = dataset.nearest_cell(points)</span>
+<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">              &gt;&gt;&gt; print(indices)</span>
+<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">              [[0 0]</span>
+<a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">               [0 3]</span>
+<a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">               [0 7]]</span>
+<a id="__codelineno-0-755" name="__codelineno-0-755"></a>
+<a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">              ```</span>
+<a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">            - GeoDataFrame with POINT geometry:</span>
+<a id="__codelineno-0-758" name="__codelineno-0-758"></a>
+<a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">              - We can give the function a GeoDataFrame with POINT geometry to array the coordinates of the points that locate within the dataset domain.</span>
 <a id="__codelineno-0-760" name="__codelineno-0-760"></a>
-<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">              ```</span>
-<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">        """</span>
-<a id="__codelineno-0-763" name="__codelineno-0-763"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">FeatureCollection</span><span class="p">):</span>
-<a id="__codelineno-0-764" name="__codelineno-0-764"></a>            <span class="n">verts</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
-<a id="__codelineno-0-765" name="__codelineno-0-765"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-766" name="__codelineno-0-766"></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">GeoDataFrame</span><span class="p">):</span>
-<a id="__codelineno-0-767" name="__codelineno-0-767"></a>            <span class="n">verts</span> <span class="o">=</span> <span class="n">FeatureCollection</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
-<a id="__codelineno-0-768" name="__codelineno-0-768"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-769" name="__codelineno-0-769"></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">):</span>
-<a id="__codelineno-0-770" name="__codelineno-0-770"></a>            <span class="c1"># `any`, not `all`: a frame carrying only "x" is just as unusable as one</span>
-<a id="__codelineno-0-771" name="__codelineno-0-771"></a>            <span class="c1"># carrying neither, but `all(... not in ...)` only fires when *both* are</span>
-<a id="__codelineno-0-772" name="__codelineno-0-772"></a>            <span class="c1"># missing, so the half-formed case fell through to a KeyError below.</span>
-<a id="__codelineno-0-773" name="__codelineno-0-773"></a>            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">elem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">points</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]):</span>
-<a id="__codelineno-0-774" name="__codelineno-0-774"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-775" name="__codelineno-0-775"></a>                    <span class="s2">"If the input is a DataFrame, it should have two columns x, and y"</span>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a>                <span class="p">)</span>
-<a id="__codelineno-0-777" name="__codelineno-0-777"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-778" name="__codelineno-0-778"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-779" name="__codelineno-0-779"></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-<a id="__codelineno-0-780" name="__codelineno-0-780"></a>                <span class="s2">"please check points input it should be GeoDataFrame/DataFrame/FeatureCollection - given"</span>
-<a id="__codelineno-0-781" name="__codelineno-0-781"></a>                <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-782" name="__codelineno-0-782"></a>            <span class="p">)</span>
-<a id="__codelineno-0-783" name="__codelineno-0-783"></a>
-<a id="__codelineno-0-784" name="__codelineno-0-784"></a>        <span class="n">indices</span> <span class="o">=</span> <span class="n">locate_values</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
-<a id="__codelineno-0-785" name="__codelineno-0-785"></a>        <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
-<a id="__codelineno-0-786" name="__codelineno-0-786"></a>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
-<a id="__codelineno-0-787" name="__codelineno-0-787"></a>
-<a id="__codelineno-0-788" name="__codelineno-0-788"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">array_to_map_coordinates</span><span class="p">(</span>
-<a id="__codelineno-0-789" name="__codelineno-0-789"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="n">rows_index</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a>        <span class="n">column_index</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a>        <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]]:</span>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="w">        </span><span class="sd">"""Convert array indices to map coordinates.</span>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="sd">        array_to_map_coordinates converts the array indices (rows, cols) to real coordinates (x, y) or (lon, lat).</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a>
-<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">            rows_index (List[Number] | np.ndarray):</span>
-<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">                The row indices of the cells in the raster array. Any finite</span>
-<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">                iterable of indices is accepted (list, tuple, ndarray, generator).</span>
-<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">            column_index (List[Number] | np.ndarray):</span>
-<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">                The column indices of the cells in the raster array. Any finite</span>
-<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">                iterable of indices is accepted (list, tuple, ndarray, generator).</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">            center (bool):</span>
-<a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">                If True, the coordinates will be the center of the cell. Default is False.</span>
-<a id="__codelineno-0-807" name="__codelineno-0-807"></a>
-<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">            Tuple[List[Number], List[Number]]:</span>
-<a id="__codelineno-0-810" name="__codelineno-0-810"></a><span class="sd">                A tuple of two equal-length lists, the x coordinates and the y</span>
-<a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">                coordinates of the cells. The elements are plain Python floats</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="sd">                regardless of whether the inputs were lists or NumPy arrays.</span>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a>
-<a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="sd">            ValueError: ``rows_index`` and ``column_index`` have different</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="sd">                lengths (the indices are paired element-wise).</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a><span class="sd">        Examples:</span>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="sd">            - Create `Dataset` consisting of 1 band, 10 rows, 10 columns, at the point lon/lat (0, 0):</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">              ```python</span>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">              &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">              &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
-<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">              &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(10, 10))</span>
-<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">              &gt;&gt;&gt; top_left_corner = (0, 0)</span>
-<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">              &gt;&gt;&gt; cell_size = 0.05</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">              &gt;&gt;&gt; dataset = Dataset.from_array(</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">              ...     arr,</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a><span class="sd">              ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a><span class="sd">              ... )</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a><span class="sd">              ```</span>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">            - Now call the function with two lists of row and column indices:</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">              ```python</span>
-<a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">              &gt;&gt;&gt; rows_index = [1, 3, 5]</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">              &gt;&gt;&gt; column_index = [2, 4, 6]</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="sd">              &gt;&gt;&gt; coords = dataset.array_to_map_coordinates(rows_index, column_index)</span>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">              &gt;&gt;&gt; print(coords) # doctest: +SKIP</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">              ([0.1, 0.2, 0.3], [-0.05, -0.15, -0.25])</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">              ```</span>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">        Notes:</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a><span class="sd">            The conversion is affine-exact: it applies the full geotransform</span>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="sd">            (per-axis pixel sizes and the rotation terms), so it is correct on</span>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="sd">            non-square and rotated grids rather than assuming square pixels.</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a>
-<a id="__codelineno-0-850" name="__codelineno-0-850"></a><span class="sd">        See Also:</span>
-<a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="sd">            - :meth:`map_to_array_coordinates`: The inverse direction</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="sd">              (map coordinates to the nearest array indices).</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a><span class="sd">            - :meth:`pyramids.dataset.abstract_dataset.RasterBase.xy`: The</span>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a><span class="sd">              scalar/array affine companion used by the affine-style API.</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a><span class="sd">        """</span>
-<a id="__codelineno-0-856" name="__codelineno-0-856"></a>        <span class="c1"># Materialise to 1-D float arrays first. Going through ``list`` accepts</span>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="c1"># any finite iterable of indices (lists, tuples, ndarrays, generators)</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>        <span class="c1"># and gives one source of truth for the equal-length check.</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>        <span class="n">cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">column_index</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">rows_index</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a>        <span class="k">if</span> <span class="n">cols</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">rows</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a>                <span class="s2">"rows_index and column_index must have the same length, got "</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a>                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rows</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">cols</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">."</span>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a>            <span class="p">)</span>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a>        <span class="c1"># Apply the full affine geotransform (vectorised over the points) so the</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a>        <span class="c1"># y axis uses the pixel height (geotransform[5]) and the rotation terms</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a>        <span class="c1"># are honoured, instead of reusing the pixel width for both axes (issue</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a>        <span class="c1"># #505). The ``center`` half-pixel shift is a +0.5 offset on (col, row).</span>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a>        <span class="p">(</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a>            <span class="n">x_origin</span><span class="p">,</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a>            <span class="n">pixel_width</span><span class="p">,</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a>            <span class="n">row_rotation</span><span class="p">,</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a>            <span class="n">y_origin</span><span class="p">,</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a>            <span class="n">column_rotation</span><span class="p">,</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a>            <span class="n">pixel_height</span><span class="p">,</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">geotransform</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>        <span class="n">offset</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="k">if</span> <span class="n">center</span> <span class="k">else</span> <span class="mf">0.0</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>        <span class="n">cols</span> <span class="o">=</span> <span class="n">cols</span> <span class="o">+</span> <span class="n">offset</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span> <span class="o">+</span> <span class="n">offset</span>
-<a id="__codelineno-0-881" name="__codelineno-0-881"></a>        <span class="n">x_coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_origin</span> <span class="o">+</span> <span class="n">cols</span> <span class="o">*</span> <span class="n">pixel_width</span> <span class="o">+</span> <span class="n">rows</span> <span class="o">*</span> <span class="n">row_rotation</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-<a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="n">y_coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_origin</span> <span class="o">+</span> <span class="n">cols</span> <span class="o">*</span> <span class="n">column_rotation</span> <span class="o">+</span> <span class="n">rows</span> <span class="o">*</span> <span class="n">pixel_height</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-<a id="__codelineno-0-883" name="__codelineno-0-883"></a>
-<a id="__codelineno-0-884" name="__codelineno-0-884"></a>        <span class="k">return</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span>
+<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">              ```python</span>
+<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">              &gt;&gt;&gt; from shapely.geometry import Point</span>
+<a id="__codelineno-0-763" name="__codelineno-0-763"></a><span class="sd">              &gt;&gt;&gt; from geopandas import GeoDataFrame</span>
+<a id="__codelineno-0-764" name="__codelineno-0-764"></a><span class="sd">              &gt;&gt;&gt; points = GeoDataFrame({"geometry": [Point(0.025, 0.025), Point(0.175, 0.225), Point(0.375, 0.125)]})</span>
+<a id="__codelineno-0-765" name="__codelineno-0-765"></a><span class="sd">              &gt;&gt;&gt; indices = dataset.nearest_cell(points)</span>
+<a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="sd">              &gt;&gt;&gt; print(indices)</span>
+<a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">              [[0 0]</span>
+<a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">               [0 3]</span>
+<a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">               [0 7]]</span>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">              ```</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">        """</span>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">FeatureCollection</span><span class="p">):</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a>            <span class="n">verts</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">GeoDataFrame</span><span class="p">):</span>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a>            <span class="n">verts</span> <span class="o">=</span> <span class="n">FeatureCollection</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">):</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a>            <span class="c1"># `any`, not `all`: a frame carrying only "x" is just as unusable as one</span>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a>            <span class="c1"># carrying neither, but `all(... not in ...)` only fires when *both* are</span>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a>            <span class="c1"># missing, so the half-formed case fell through to a KeyError below.</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">elem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">points</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]):</span>
+<a id="__codelineno-0-784" name="__codelineno-0-784"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-785" name="__codelineno-0-785"></a>                    <span class="s2">"If the input is a DataFrame, it should have two columns x, and y"</span>
+<a id="__codelineno-0-786" name="__codelineno-0-786"></a>                <span class="p">)</span>
+<a id="__codelineno-0-787" name="__codelineno-0-787"></a>            <span class="n">points</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-788" name="__codelineno-0-788"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-789" name="__codelineno-0-789"></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a>                <span class="s2">"please check points input it should be GeoDataFrame/DataFrame/FeatureCollection - given"</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a>                <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a>            <span class="p">)</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="n">indices</span> <span class="o">=</span> <span class="n">locate_values</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -10461,9 +10285,48 @@ cell size, or a rotation that collapses the parallelogram.</p>
 
     <div class="doc doc-contents ">
 
+        <p>Deprecated alias for :meth:<code>nearest_cell</code>.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/pyramids/dataset/engines/cell.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-699">699</a></span>
+<span class="normal"><a href="#__codelineno-0-700">700</a></span>
+<span class="normal"><a href="#__codelineno-0-701">701</a></span>
+<span class="normal"><a href="#__codelineno-0-702">702</a></span>
+<span class="normal"><a href="#__codelineno-0-703">703</a></span>
+<span class="normal"><a href="#__codelineno-0-704">704</a></span>
+<span class="normal"><a href="#__codelineno-0-705">705</a></span>
+<span class="normal"><a href="#__codelineno-0-706">706</a></span>
+<span class="normal"><a href="#__codelineno-0-707">707</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-699" name="__codelineno-0-699"></a><span class="k">def</span><span class="w"> </span><span class="nf">map_to_array_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+<a id="__codelineno-0-700" name="__codelineno-0-700"></a><span class="w">    </span><span class="sd">"""Deprecated alias for :meth:`nearest_cell`."""</span>
+<a id="__codelineno-0-701" name="__codelineno-0-701"></a>    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+<a id="__codelineno-0-702" name="__codelineno-0-702"></a>        <span class="s2">"`map_to_array_coordinates` is deprecated and will be removed in a future "</span>
+<a id="__codelineno-0-703" name="__codelineno-0-703"></a>        <span class="s2">"release; use `nearest_cell`."</span><span class="p">,</span>
+<a id="__codelineno-0-704" name="__codelineno-0-704"></a>        <span class="ne">DeprecationWarning</span><span class="p">,</span>
+<a id="__codelineno-0-705" name="__codelineno-0-705"></a>        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="p">)</span>
+<a id="__codelineno-0-707" name="__codelineno-0-707"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nearest_cell</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pyramids.dataset.engines.Cell.nearest_cell" class="doc doc-heading"><a href="#pyramids.dataset.engines.Cell.nearest_cell" class="toclink">
+            <code class="highlight language-python"><span class="n">nearest_cell</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></code>
+
+</a><a href="#pyramids.dataset.engines.Cell.nearest_cell" class="headerlink" title="Permanent link">#</a></h4>
+
+
+    <div class="doc doc-contents ">
+
         <p>Convert coordinates of points to array indices.</p>
 <ul>
-<li>map_to_array_coordinates locates a point with real coordinates (x, y) or (lon, lat) on the array by finding
+<li>nearest_cell locates a point with real coordinates (x, y) or (lon, lat) on the array by finding
     the cell indices (row, column) of the nearest cell in the raster.</li>
 <li>The point coordinate system of the raster has to be projected to be able to calculate the distance.</li>
 </ul>
@@ -10547,7 +10410,7 @@ Array with shape (N, 2) containing the row and column indices in the array.</p>
 <li>We can give the function a DataFrame with x, y columns to array the coordinates of the points that are located within the dataset domain.</li>
 </ul>
 <p><div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">points</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"x"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.025</span><span class="p">,</span> <span class="mf">0.175</span><span class="p">,</span> <span class="mf">0.375</span><span class="p">],</span> <span class="s2">"y"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.025</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">]})</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map_to_array_coordinates</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">nearest_cell</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">print</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">[[</span><span class="mi">0</span> <span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a> <span class="p">[</span><span class="mi">0</span> <span class="mi">3</span><span class="p">]</span>
@@ -10560,7 +10423,7 @@ Array with shape (N, 2) containing the row and column indices in the array.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Point</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">GeoDataFrame</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">points</span> <span class="o">=</span> <span class="n">GeoDataFrame</span><span class="p">({</span><span class="s2">"geometry"</span><span class="p">:</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="mf">0.025</span><span class="p">,</span> <span class="mf">0.025</span><span class="p">),</span> <span class="n">Point</span><span class="p">(</span><span class="mf">0.175</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">),</span> <span class="n">Point</span><span class="p">(</span><span class="mf">0.375</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">)]})</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map_to_array_coordinates</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">nearest_cell</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">print</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">[[</span><span class="mi">0</span> <span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a> <span class="p">[</span><span class="mi">0</span> <span class="mi">3</span><span class="p">]</span>
@@ -10570,17 +10433,7 @@ Array with shape (N, 2) containing the row and column indices in the array.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyramids/dataset/engines/cell.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-699">699</a></span>
-<span class="normal"><a href="#__codelineno-0-700">700</a></span>
-<span class="normal"><a href="#__codelineno-0-701">701</a></span>
-<span class="normal"><a href="#__codelineno-0-702">702</a></span>
-<span class="normal"><a href="#__codelineno-0-703">703</a></span>
-<span class="normal"><a href="#__codelineno-0-704">704</a></span>
-<span class="normal"><a href="#__codelineno-0-705">705</a></span>
-<span class="normal"><a href="#__codelineno-0-706">706</a></span>
-<span class="normal"><a href="#__codelineno-0-707">707</a></span>
-<span class="normal"><a href="#__codelineno-0-708">708</a></span>
-<span class="normal"><a href="#__codelineno-0-709">709</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-709">709</a></span>
 <span class="normal"><a href="#__codelineno-0-710">710</a></span>
 <span class="normal"><a href="#__codelineno-0-711">711</a></span>
 <span class="normal"><a href="#__codelineno-0-712">712</a></span>
@@ -10657,275 +10510,9 @@ Array with shape (N, 2) containing the row and column indices in the array.</p>
 <span class="normal"><a href="#__codelineno-0-783">783</a></span>
 <span class="normal"><a href="#__codelineno-0-784">784</a></span>
 <span class="normal"><a href="#__codelineno-0-785">785</a></span>
-<span class="normal"><a href="#__codelineno-0-786">786</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-699" name="__codelineno-0-699"></a><span class="k">def</span><span class="w"> </span><span class="nf">map_to_array_coordinates</span><span class="p">(</span>
-<a id="__codelineno-0-700" name="__codelineno-0-700"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-701" name="__codelineno-0-701"></a>    <span class="n">points</span><span class="p">:</span> <span class="n">GeoDataFrame</span> <span class="o">|</span> <span class="n">FeatureCollection</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
-<a id="__codelineno-0-702" name="__codelineno-0-702"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
-<a id="__codelineno-0-703" name="__codelineno-0-703"></a><span class="w">    </span><span class="sd">"""Convert coordinates of points to array indices.</span>
-<a id="__codelineno-0-704" name="__codelineno-0-704"></a>
-<a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="sd">    - map_to_array_coordinates locates a point with real coordinates (x, y) or (lon, lat) on the array by finding</span>
-<a id="__codelineno-0-706" name="__codelineno-0-706"></a><span class="sd">        the cell indices (row, column) of the nearest cell in the raster.</span>
-<a id="__codelineno-0-707" name="__codelineno-0-707"></a><span class="sd">    - The point coordinate system of the raster has to be projected to be able to calculate the distance.</span>
-<a id="__codelineno-0-708" name="__codelineno-0-708"></a>
-<a id="__codelineno-0-709" name="__codelineno-0-709"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-710" name="__codelineno-0-710"></a><span class="sd">        points (GeoDataFrame | pandas.DataFrame | FeatureCollection):</span>
-<a id="__codelineno-0-711" name="__codelineno-0-711"></a><span class="sd">            - GeoDataFrame: GeoDataFrame with POINT geometry.</span>
-<a id="__codelineno-0-712" name="__codelineno-0-712"></a><span class="sd">            - DataFrame: DataFrame with x, y columns.</span>
-<a id="__codelineno-0-713" name="__codelineno-0-713"></a>
-<a id="__codelineno-0-714" name="__codelineno-0-714"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-715" name="__codelineno-0-715"></a><span class="sd">        np.ndarray:</span>
-<a id="__codelineno-0-716" name="__codelineno-0-716"></a><span class="sd">            Array with shape (N, 2) containing the row and column indices in the array.</span>
-<a id="__codelineno-0-717" name="__codelineno-0-717"></a>
-<a id="__codelineno-0-718" name="__codelineno-0-718"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-719" name="__codelineno-0-719"></a><span class="sd">        - Create `Dataset` consisting of 2 bands, 10 rows, 10 columns, at the point lon/lat (0, 0).</span>
-<a id="__codelineno-0-720" name="__codelineno-0-720"></a>
-<a id="__codelineno-0-721" name="__codelineno-0-721"></a><span class="sd">          ```python</span>
-<a id="__codelineno-0-722" name="__codelineno-0-722"></a><span class="sd">          &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-723" name="__codelineno-0-723"></a><span class="sd">          &gt;&gt;&gt; import pandas as pd</span>
-<a id="__codelineno-0-724" name="__codelineno-0-724"></a><span class="sd">          &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
-<a id="__codelineno-0-725" name="__codelineno-0-725"></a><span class="sd">          &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(2, 10, 10))</span>
-<a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="sd">          &gt;&gt;&gt; top_left_corner = (0, 0)</span>
-<a id="__codelineno-0-727" name="__codelineno-0-727"></a><span class="sd">          &gt;&gt;&gt; cell_size = 0.05</span>
-<a id="__codelineno-0-728" name="__codelineno-0-728"></a><span class="sd">          &gt;&gt;&gt; dataset = Dataset.from_array(</span>
-<a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">          ...     arr,</span>
-<a id="__codelineno-0-730" name="__codelineno-0-730"></a><span class="sd">          ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
-<a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">          ... )</span>
-<a id="__codelineno-0-732" name="__codelineno-0-732"></a>
-<a id="__codelineno-0-733" name="__codelineno-0-733"></a><span class="sd">          ```</span>
-<a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">        - DataFrame with x, y columns:</span>
-<a id="__codelineno-0-735" name="__codelineno-0-735"></a>
-<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">          - We can give the function a DataFrame with x, y columns to array the coordinates of the points that are located within the dataset domain.</span>
-<a id="__codelineno-0-737" name="__codelineno-0-737"></a>
-<a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">          ```python</span>
-<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">          &gt;&gt;&gt; points = pd.DataFrame({"x": [0.025, 0.175, 0.375], "y": [0.025, 0.225, 0.125]})</span>
-<a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="sd">          &gt;&gt;&gt; indices = dataset.map_to_array_coordinates(points)</span>
-<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">          &gt;&gt;&gt; print(indices)</span>
-<a id="__codelineno-0-742" name="__codelineno-0-742"></a><span class="sd">          [[0 0]</span>
-<a id="__codelineno-0-743" name="__codelineno-0-743"></a><span class="sd">           [0 3]</span>
-<a id="__codelineno-0-744" name="__codelineno-0-744"></a><span class="sd">           [0 7]]</span>
-<a id="__codelineno-0-745" name="__codelineno-0-745"></a>
-<a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">          ```</span>
-<a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="sd">        - GeoDataFrame with POINT geometry:</span>
-<a id="__codelineno-0-748" name="__codelineno-0-748"></a>
-<a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">          - We can give the function a GeoDataFrame with POINT geometry to array the coordinates of the points that locate within the dataset domain.</span>
-<a id="__codelineno-0-750" name="__codelineno-0-750"></a>
-<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">          ```python</span>
-<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">          &gt;&gt;&gt; from shapely.geometry import Point</span>
-<a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">          &gt;&gt;&gt; from geopandas import GeoDataFrame</span>
-<a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">          &gt;&gt;&gt; points = GeoDataFrame({"geometry": [Point(0.025, 0.025), Point(0.175, 0.225), Point(0.375, 0.125)]})</span>
-<a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="sd">          &gt;&gt;&gt; indices = dataset.map_to_array_coordinates(points)</span>
-<a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">          &gt;&gt;&gt; print(indices)</span>
-<a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">          [[0 0]</span>
-<a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="sd">           [0 3]</span>
-<a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">           [0 7]]</span>
-<a id="__codelineno-0-760" name="__codelineno-0-760"></a>
-<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">          ```</span>
-<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">    """</span>
-<a id="__codelineno-0-763" name="__codelineno-0-763"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">FeatureCollection</span><span class="p">):</span>
-<a id="__codelineno-0-764" name="__codelineno-0-764"></a>        <span class="n">verts</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
-<a id="__codelineno-0-765" name="__codelineno-0-765"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-766" name="__codelineno-0-766"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">GeoDataFrame</span><span class="p">):</span>
-<a id="__codelineno-0-767" name="__codelineno-0-767"></a>        <span class="n">verts</span> <span class="o">=</span> <span class="n">FeatureCollection</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
-<a id="__codelineno-0-768" name="__codelineno-0-768"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-769" name="__codelineno-0-769"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">):</span>
-<a id="__codelineno-0-770" name="__codelineno-0-770"></a>        <span class="c1"># `any`, not `all`: a frame carrying only "x" is just as unusable as one</span>
-<a id="__codelineno-0-771" name="__codelineno-0-771"></a>        <span class="c1"># carrying neither, but `all(... not in ...)` only fires when *both* are</span>
-<a id="__codelineno-0-772" name="__codelineno-0-772"></a>        <span class="c1"># missing, so the half-formed case fell through to a KeyError below.</span>
-<a id="__codelineno-0-773" name="__codelineno-0-773"></a>        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">elem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">points</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]):</span>
-<a id="__codelineno-0-774" name="__codelineno-0-774"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-775" name="__codelineno-0-775"></a>                <span class="s2">"If the input is a DataFrame, it should have two columns x, and y"</span>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a>            <span class="p">)</span>
-<a id="__codelineno-0-777" name="__codelineno-0-777"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
-<a id="__codelineno-0-778" name="__codelineno-0-778"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-779" name="__codelineno-0-779"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-<a id="__codelineno-0-780" name="__codelineno-0-780"></a>            <span class="s2">"please check points input it should be GeoDataFrame/DataFrame/FeatureCollection - given"</span>
-<a id="__codelineno-0-781" name="__codelineno-0-781"></a>            <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-782" name="__codelineno-0-782"></a>        <span class="p">)</span>
-<a id="__codelineno-0-783" name="__codelineno-0-783"></a>
-<a id="__codelineno-0-784" name="__codelineno-0-784"></a>    <span class="n">indices</span> <span class="o">=</span> <span class="n">locate_values</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
-<a id="__codelineno-0-785" name="__codelineno-0-785"></a>    <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
-<a id="__codelineno-0-786" name="__codelineno-0-786"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="pyramids.dataset.engines.Cell.array_to_map_coordinates" class="doc doc-heading"><a href="#pyramids.dataset.engines.Cell.array_to_map_coordinates" class="toclink">
-            <code class="highlight language-python"><span class="n">array_to_map_coordinates</span><span class="p">(</span><span class="n">rows_index</span><span class="p">,</span> <span class="n">column_index</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
-
-</a><a href="#pyramids.dataset.engines.Cell.array_to_map_coordinates" class="headerlink" title="Permanent link">#</a></h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Convert array indices to map coordinates.</p>
-<p>array_to_map_coordinates converts the array indices (rows, cols) to real coordinates (x, y) or (lon, lat).</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>rows_index</code>
-            </td>
-            <td>
-                  <code><span title="List">List</span>[<span title="numbers.Number">Number</span>] | <span title="numpy.ndarray">ndarray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The row indices of the cells in the raster array. Any finite
-iterable of indices is accepted (list, tuple, ndarray, generator).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>column_index</code>
-            </td>
-            <td>
-                  <code><span title="List">List</span>[<span title="numbers.Number">Number</span>] | <span title="numpy.ndarray">ndarray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The column indices of the cells in the raster array. Any finite
-iterable of indices is accepted (list, tuple, ndarray, generator).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>center</code>
-            </td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If True, the coordinates will be the center of the cell. Default is False.</p>
-              </div>
-            </td>
-            <td>
-                  <code>False</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="list">list</span>[<span title="numbers.Number">Number</span>], <span title="list">list</span>[<span title="numbers.Number">Number</span>]]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Tuple[List[Number], List[Number]]:
-A tuple of two equal-length lists, the x coordinates and the y
-coordinates of the cells. The elements are plain Python floats
-regardless of whether the inputs were lists or NumPy arrays.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p><code>rows_index</code> and <code>column_index</code> have different
-lengths (the indices are paired element-wise).</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <ul>
-<li>Create <code>Dataset</code> consisting of 1 band, 10 rows, 10 columns, at the point lon/lat (0, 0):</li>
-</ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">GeoReference</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">top_left_corner</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">cell_size</span> <span class="o">=</span> <span class="mf">0.05</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="o">...</span>     <span class="n">arr</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="o">...</span>     <span class="n">geo_ref</span><span class="o">=</span><span class="n">GeoReference</span><span class="p">(</span><span class="n">top_left_corner</span><span class="o">=</span><span class="n">top_left_corner</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="n">cell_size</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">),</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="o">...</span> <span class="p">)</span>
-</code></pre></div>
-<ul>
-<li>Now call the function with two lists of row and column indices:</li>
-</ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">rows_index</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">column_index</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">coords</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">array_to_map_coordinates</span><span class="p">(</span><span class="n">rows_index</span><span class="p">,</span> <span class="n">column_index</span><span class="p">)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">print</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="c1"># doctest: +SKIP</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.15</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.25</span><span class="p">])</span>
-</code></pre></div>
-
-
-<details class="notes" open>
-  <summary>Notes</summary>
-  <p>The conversion is affine-exact: it applies the full geotransform
-(per-axis pixel sizes and the rotation terms), so it is correct on
-non-square and rotated grids rather than assuming square pixels.</p>
-</details>
-
-<details class="see-also" open>
-  <summary>See Also</summary>
-  <ul>
-<li>:meth:<code>map_to_array_coordinates</code>: The inverse direction
-  (map coordinates to the nearest array indices).</li>
-<li>:meth:<code>pyramids.dataset.abstract_dataset.RasterBase.xy</code>: The
-  scalar/array affine companion used by the affine-style API.</li>
-</ul>
-</details>
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>src/pyramids/dataset/engines/cell.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-788">788</a></span>
+<span class="normal"><a href="#__codelineno-0-786">786</a></span>
+<span class="normal"><a href="#__codelineno-0-787">787</a></span>
+<span class="normal"><a href="#__codelineno-0-788">788</a></span>
 <span class="normal"><a href="#__codelineno-0-789">789</a></span>
 <span class="normal"><a href="#__codelineno-0-790">790</a></span>
 <span class="normal"><a href="#__codelineno-0-791">791</a></span>
@@ -10933,191 +10520,94 @@ non-square and rotated grids rather than assuming square pixels.</p>
 <span class="normal"><a href="#__codelineno-0-793">793</a></span>
 <span class="normal"><a href="#__codelineno-0-794">794</a></span>
 <span class="normal"><a href="#__codelineno-0-795">795</a></span>
-<span class="normal"><a href="#__codelineno-0-796">796</a></span>
-<span class="normal"><a href="#__codelineno-0-797">797</a></span>
-<span class="normal"><a href="#__codelineno-0-798">798</a></span>
-<span class="normal"><a href="#__codelineno-0-799">799</a></span>
-<span class="normal"><a href="#__codelineno-0-800">800</a></span>
-<span class="normal"><a href="#__codelineno-0-801">801</a></span>
-<span class="normal"><a href="#__codelineno-0-802">802</a></span>
-<span class="normal"><a href="#__codelineno-0-803">803</a></span>
-<span class="normal"><a href="#__codelineno-0-804">804</a></span>
-<span class="normal"><a href="#__codelineno-0-805">805</a></span>
-<span class="normal"><a href="#__codelineno-0-806">806</a></span>
-<span class="normal"><a href="#__codelineno-0-807">807</a></span>
-<span class="normal"><a href="#__codelineno-0-808">808</a></span>
-<span class="normal"><a href="#__codelineno-0-809">809</a></span>
-<span class="normal"><a href="#__codelineno-0-810">810</a></span>
-<span class="normal"><a href="#__codelineno-0-811">811</a></span>
-<span class="normal"><a href="#__codelineno-0-812">812</a></span>
-<span class="normal"><a href="#__codelineno-0-813">813</a></span>
-<span class="normal"><a href="#__codelineno-0-814">814</a></span>
-<span class="normal"><a href="#__codelineno-0-815">815</a></span>
-<span class="normal"><a href="#__codelineno-0-816">816</a></span>
-<span class="normal"><a href="#__codelineno-0-817">817</a></span>
-<span class="normal"><a href="#__codelineno-0-818">818</a></span>
-<span class="normal"><a href="#__codelineno-0-819">819</a></span>
-<span class="normal"><a href="#__codelineno-0-820">820</a></span>
-<span class="normal"><a href="#__codelineno-0-821">821</a></span>
-<span class="normal"><a href="#__codelineno-0-822">822</a></span>
-<span class="normal"><a href="#__codelineno-0-823">823</a></span>
-<span class="normal"><a href="#__codelineno-0-824">824</a></span>
-<span class="normal"><a href="#__codelineno-0-825">825</a></span>
-<span class="normal"><a href="#__codelineno-0-826">826</a></span>
-<span class="normal"><a href="#__codelineno-0-827">827</a></span>
-<span class="normal"><a href="#__codelineno-0-828">828</a></span>
-<span class="normal"><a href="#__codelineno-0-829">829</a></span>
-<span class="normal"><a href="#__codelineno-0-830">830</a></span>
-<span class="normal"><a href="#__codelineno-0-831">831</a></span>
-<span class="normal"><a href="#__codelineno-0-832">832</a></span>
-<span class="normal"><a href="#__codelineno-0-833">833</a></span>
-<span class="normal"><a href="#__codelineno-0-834">834</a></span>
-<span class="normal"><a href="#__codelineno-0-835">835</a></span>
-<span class="normal"><a href="#__codelineno-0-836">836</a></span>
-<span class="normal"><a href="#__codelineno-0-837">837</a></span>
-<span class="normal"><a href="#__codelineno-0-838">838</a></span>
-<span class="normal"><a href="#__codelineno-0-839">839</a></span>
-<span class="normal"><a href="#__codelineno-0-840">840</a></span>
-<span class="normal"><a href="#__codelineno-0-841">841</a></span>
-<span class="normal"><a href="#__codelineno-0-842">842</a></span>
-<span class="normal"><a href="#__codelineno-0-843">843</a></span>
-<span class="normal"><a href="#__codelineno-0-844">844</a></span>
-<span class="normal"><a href="#__codelineno-0-845">845</a></span>
-<span class="normal"><a href="#__codelineno-0-846">846</a></span>
-<span class="normal"><a href="#__codelineno-0-847">847</a></span>
-<span class="normal"><a href="#__codelineno-0-848">848</a></span>
-<span class="normal"><a href="#__codelineno-0-849">849</a></span>
-<span class="normal"><a href="#__codelineno-0-850">850</a></span>
-<span class="normal"><a href="#__codelineno-0-851">851</a></span>
-<span class="normal"><a href="#__codelineno-0-852">852</a></span>
-<span class="normal"><a href="#__codelineno-0-853">853</a></span>
-<span class="normal"><a href="#__codelineno-0-854">854</a></span>
-<span class="normal"><a href="#__codelineno-0-855">855</a></span>
-<span class="normal"><a href="#__codelineno-0-856">856</a></span>
-<span class="normal"><a href="#__codelineno-0-857">857</a></span>
-<span class="normal"><a href="#__codelineno-0-858">858</a></span>
-<span class="normal"><a href="#__codelineno-0-859">859</a></span>
-<span class="normal"><a href="#__codelineno-0-860">860</a></span>
-<span class="normal"><a href="#__codelineno-0-861">861</a></span>
-<span class="normal"><a href="#__codelineno-0-862">862</a></span>
-<span class="normal"><a href="#__codelineno-0-863">863</a></span>
-<span class="normal"><a href="#__codelineno-0-864">864</a></span>
-<span class="normal"><a href="#__codelineno-0-865">865</a></span>
-<span class="normal"><a href="#__codelineno-0-866">866</a></span>
-<span class="normal"><a href="#__codelineno-0-867">867</a></span>
-<span class="normal"><a href="#__codelineno-0-868">868</a></span>
-<span class="normal"><a href="#__codelineno-0-869">869</a></span>
-<span class="normal"><a href="#__codelineno-0-870">870</a></span>
-<span class="normal"><a href="#__codelineno-0-871">871</a></span>
-<span class="normal"><a href="#__codelineno-0-872">872</a></span>
-<span class="normal"><a href="#__codelineno-0-873">873</a></span>
-<span class="normal"><a href="#__codelineno-0-874">874</a></span>
-<span class="normal"><a href="#__codelineno-0-875">875</a></span>
-<span class="normal"><a href="#__codelineno-0-876">876</a></span>
-<span class="normal"><a href="#__codelineno-0-877">877</a></span>
-<span class="normal"><a href="#__codelineno-0-878">878</a></span>
-<span class="normal"><a href="#__codelineno-0-879">879</a></span>
-<span class="normal"><a href="#__codelineno-0-880">880</a></span>
-<span class="normal"><a href="#__codelineno-0-881">881</a></span>
-<span class="normal"><a href="#__codelineno-0-882">882</a></span>
-<span class="normal"><a href="#__codelineno-0-883">883</a></span>
-<span class="normal"><a href="#__codelineno-0-884">884</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="k">def</span><span class="w"> </span><span class="nf">array_to_map_coordinates</span><span class="p">(</span>
-<a id="__codelineno-0-789" name="__codelineno-0-789"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a>    <span class="n">rows_index</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a>    <span class="n">column_index</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a>    <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Number</span><span class="p">]]:</span>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="w">    </span><span class="sd">"""Convert array indices to map coordinates.</span>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="sd">    array_to_map_coordinates converts the array indices (rows, cols) to real coordinates (x, y) or (lon, lat).</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a>
-<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">        rows_index (List[Number] | np.ndarray):</span>
-<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">            The row indices of the cells in the raster array. Any finite</span>
-<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">            iterable of indices is accepted (list, tuple, ndarray, generator).</span>
-<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">        column_index (List[Number] | np.ndarray):</span>
-<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">            The column indices of the cells in the raster array. Any finite</span>
-<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">            iterable of indices is accepted (list, tuple, ndarray, generator).</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">        center (bool):</span>
-<a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">            If True, the coordinates will be the center of the cell. Default is False.</span>
-<a id="__codelineno-0-807" name="__codelineno-0-807"></a>
-<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">        Tuple[List[Number], List[Number]]:</span>
-<a id="__codelineno-0-810" name="__codelineno-0-810"></a><span class="sd">            A tuple of two equal-length lists, the x coordinates and the y</span>
-<a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">            coordinates of the cells. The elements are plain Python floats</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="sd">            regardless of whether the inputs were lists or NumPy arrays.</span>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a>
-<a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="sd">        ValueError: ``rows_index`` and ``column_index`` have different</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="sd">            lengths (the indices are paired element-wise).</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="sd">        - Create `Dataset` consisting of 1 band, 10 rows, 10 columns, at the point lon/lat (0, 0):</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">          ```python</span>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">          &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">          &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
-<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">          &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(10, 10))</span>
-<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">          &gt;&gt;&gt; top_left_corner = (0, 0)</span>
-<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">          &gt;&gt;&gt; cell_size = 0.05</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">          &gt;&gt;&gt; dataset = Dataset.from_array(</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">          ...     arr,</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a><span class="sd">          ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a><span class="sd">          ... )</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a><span class="sd">          ```</span>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">        - Now call the function with two lists of row and column indices:</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">          ```python</span>
-<a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">          &gt;&gt;&gt; rows_index = [1, 3, 5]</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">          &gt;&gt;&gt; column_index = [2, 4, 6]</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="sd">          &gt;&gt;&gt; coords = dataset.array_to_map_coordinates(rows_index, column_index)</span>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">          &gt;&gt;&gt; print(coords) # doctest: +SKIP</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">          ([0.1, 0.2, 0.3], [-0.05, -0.15, -0.25])</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">          ```</span>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">    Notes:</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a><span class="sd">        The conversion is affine-exact: it applies the full geotransform</span>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="sd">        (per-axis pixel sizes and the rotation terms), so it is correct on</span>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="sd">        non-square and rotated grids rather than assuming square pixels.</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a>
-<a id="__codelineno-0-850" name="__codelineno-0-850"></a><span class="sd">    See Also:</span>
-<a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="sd">        - :meth:`map_to_array_coordinates`: The inverse direction</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="sd">          (map coordinates to the nearest array indices).</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a><span class="sd">        - :meth:`pyramids.dataset.abstract_dataset.RasterBase.xy`: The</span>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a><span class="sd">          scalar/array affine companion used by the affine-style API.</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a><span class="sd">    """</span>
-<a id="__codelineno-0-856" name="__codelineno-0-856"></a>    <span class="c1"># Materialise to 1-D float arrays first. Going through ``list`` accepts</span>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a>    <span class="c1"># any finite iterable of indices (lists, tuples, ndarrays, generators)</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="c1"># and gives one source of truth for the equal-length check.</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>    <span class="n">cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">column_index</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>    <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">rows_index</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="k">if</span> <span class="n">cols</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">rows</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a>            <span class="s2">"rows_index and column_index must have the same length, got "</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rows</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">cols</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">."</span>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a>        <span class="p">)</span>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a>    <span class="c1"># Apply the full affine geotransform (vectorised over the points) so the</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a>    <span class="c1"># y axis uses the pixel height (geotransform[5]) and the rotation terms</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a>    <span class="c1"># are honoured, instead of reusing the pixel width for both axes (issue</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a>    <span class="c1"># #505). The ``center`` half-pixel shift is a +0.5 offset on (col, row).</span>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a>    <span class="p">(</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a>        <span class="n">x_origin</span><span class="p">,</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a>        <span class="n">pixel_width</span><span class="p">,</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a>        <span class="n">row_rotation</span><span class="p">,</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a>        <span class="n">y_origin</span><span class="p">,</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a>        <span class="n">column_rotation</span><span class="p">,</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a>        <span class="n">pixel_height</span><span class="p">,</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>    <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">geotransform</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="n">offset</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="k">if</span> <span class="n">center</span> <span class="k">else</span> <span class="mf">0.0</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>    <span class="n">cols</span> <span class="o">=</span> <span class="n">cols</span> <span class="o">+</span> <span class="n">offset</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>    <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span> <span class="o">+</span> <span class="n">offset</span>
-<a id="__codelineno-0-881" name="__codelineno-0-881"></a>    <span class="n">x_coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_origin</span> <span class="o">+</span> <span class="n">cols</span> <span class="o">*</span> <span class="n">pixel_width</span> <span class="o">+</span> <span class="n">rows</span> <span class="o">*</span> <span class="n">row_rotation</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-<a id="__codelineno-0-882" name="__codelineno-0-882"></a>    <span class="n">y_coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_origin</span> <span class="o">+</span> <span class="n">cols</span> <span class="o">*</span> <span class="n">column_rotation</span> <span class="o">+</span> <span class="n">rows</span> <span class="o">*</span> <span class="n">pixel_height</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-<a id="__codelineno-0-883" name="__codelineno-0-883"></a>
-<a id="__codelineno-0-884" name="__codelineno-0-884"></a>    <span class="k">return</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span>
+<span class="normal"><a href="#__codelineno-0-796">796</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-709" name="__codelineno-0-709"></a><span class="k">def</span><span class="w"> </span><span class="nf">nearest_cell</span><span class="p">(</span>
+<a id="__codelineno-0-710" name="__codelineno-0-710"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-711" name="__codelineno-0-711"></a>    <span class="n">points</span><span class="p">:</span> <span class="n">GeoDataFrame</span> <span class="o">|</span> <span class="n">FeatureCollection</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
+<a id="__codelineno-0-712" name="__codelineno-0-712"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+<a id="__codelineno-0-713" name="__codelineno-0-713"></a><span class="w">    </span><span class="sd">"""Convert coordinates of points to array indices.</span>
+<a id="__codelineno-0-714" name="__codelineno-0-714"></a>
+<a id="__codelineno-0-715" name="__codelineno-0-715"></a><span class="sd">    - nearest_cell locates a point with real coordinates (x, y) or (lon, lat) on the array by finding</span>
+<a id="__codelineno-0-716" name="__codelineno-0-716"></a><span class="sd">        the cell indices (row, column) of the nearest cell in the raster.</span>
+<a id="__codelineno-0-717" name="__codelineno-0-717"></a><span class="sd">    - The point coordinate system of the raster has to be projected to be able to calculate the distance.</span>
+<a id="__codelineno-0-718" name="__codelineno-0-718"></a>
+<a id="__codelineno-0-719" name="__codelineno-0-719"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-720" name="__codelineno-0-720"></a><span class="sd">        points (GeoDataFrame | pandas.DataFrame | FeatureCollection):</span>
+<a id="__codelineno-0-721" name="__codelineno-0-721"></a><span class="sd">            - GeoDataFrame: GeoDataFrame with POINT geometry.</span>
+<a id="__codelineno-0-722" name="__codelineno-0-722"></a><span class="sd">            - DataFrame: DataFrame with x, y columns.</span>
+<a id="__codelineno-0-723" name="__codelineno-0-723"></a>
+<a id="__codelineno-0-724" name="__codelineno-0-724"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-725" name="__codelineno-0-725"></a><span class="sd">        np.ndarray:</span>
+<a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="sd">            Array with shape (N, 2) containing the row and column indices in the array.</span>
+<a id="__codelineno-0-727" name="__codelineno-0-727"></a>
+<a id="__codelineno-0-728" name="__codelineno-0-728"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">        - Create `Dataset` consisting of 2 bands, 10 rows, 10 columns, at the point lon/lat (0, 0).</span>
+<a id="__codelineno-0-730" name="__codelineno-0-730"></a>
+<a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">          ```python</span>
+<a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">          &gt;&gt;&gt; import numpy as np</span>
+<a id="__codelineno-0-733" name="__codelineno-0-733"></a><span class="sd">          &gt;&gt;&gt; import pandas as pd</span>
+<a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">          &gt;&gt;&gt; from pyramids.dataset import Dataset, GeoReference</span>
+<a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="sd">          &gt;&gt;&gt; arr = np.random.randint(1, 3, size=(2, 10, 10))</span>
+<a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">          &gt;&gt;&gt; top_left_corner = (0, 0)</span>
+<a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="sd">          &gt;&gt;&gt; cell_size = 0.05</span>
+<a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">          &gt;&gt;&gt; dataset = Dataset.from_array(</span>
+<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">          ...     arr,</span>
+<a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="sd">          ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),</span>
+<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">          ... )</span>
+<a id="__codelineno-0-742" name="__codelineno-0-742"></a>
+<a id="__codelineno-0-743" name="__codelineno-0-743"></a><span class="sd">          ```</span>
+<a id="__codelineno-0-744" name="__codelineno-0-744"></a><span class="sd">        - DataFrame with x, y columns:</span>
+<a id="__codelineno-0-745" name="__codelineno-0-745"></a>
+<a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">          - We can give the function a DataFrame with x, y columns to array the coordinates of the points that are located within the dataset domain.</span>
+<a id="__codelineno-0-747" name="__codelineno-0-747"></a>
+<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">          ```python</span>
+<a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">          &gt;&gt;&gt; points = pd.DataFrame({"x": [0.025, 0.175, 0.375], "y": [0.025, 0.225, 0.125]})</span>
+<a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">          &gt;&gt;&gt; indices = dataset.nearest_cell(points)</span>
+<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">          &gt;&gt;&gt; print(indices)</span>
+<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">          [[0 0]</span>
+<a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">           [0 3]</span>
+<a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">           [0 7]]</span>
+<a id="__codelineno-0-755" name="__codelineno-0-755"></a>
+<a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">          ```</span>
+<a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">        - GeoDataFrame with POINT geometry:</span>
+<a id="__codelineno-0-758" name="__codelineno-0-758"></a>
+<a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">          - We can give the function a GeoDataFrame with POINT geometry to array the coordinates of the points that locate within the dataset domain.</span>
+<a id="__codelineno-0-760" name="__codelineno-0-760"></a>
+<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">          ```python</span>
+<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">          &gt;&gt;&gt; from shapely.geometry import Point</span>
+<a id="__codelineno-0-763" name="__codelineno-0-763"></a><span class="sd">          &gt;&gt;&gt; from geopandas import GeoDataFrame</span>
+<a id="__codelineno-0-764" name="__codelineno-0-764"></a><span class="sd">          &gt;&gt;&gt; points = GeoDataFrame({"geometry": [Point(0.025, 0.025), Point(0.175, 0.225), Point(0.375, 0.125)]})</span>
+<a id="__codelineno-0-765" name="__codelineno-0-765"></a><span class="sd">          &gt;&gt;&gt; indices = dataset.nearest_cell(points)</span>
+<a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="sd">          &gt;&gt;&gt; print(indices)</span>
+<a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">          [[0 0]</span>
+<a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">           [0 3]</span>
+<a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">           [0 7]]</span>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">          ```</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">    """</span>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">FeatureCollection</span><span class="p">):</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a>        <span class="n">verts</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">GeoDataFrame</span><span class="p">):</span>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a>        <span class="n">verts</span> <span class="o">=</span> <span class="n">FeatureCollection</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">with_coordinates</span><span class="p">()</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">verts</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">):</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a>        <span class="c1"># `any`, not `all`: a frame carrying only "x" is just as unusable as one</span>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a>        <span class="c1"># carrying neither, but `all(... not in ...)` only fires when *both* are</span>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a>        <span class="c1"># missing, so the half-formed case fell through to a KeyError below.</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">elem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">points</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]):</span>
+<a id="__codelineno-0-784" name="__codelineno-0-784"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-785" name="__codelineno-0-785"></a>                <span class="s2">"If the input is a DataFrame, it should have two columns x, and y"</span>
+<a id="__codelineno-0-786" name="__codelineno-0-786"></a>            <span class="p">)</span>
+<a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="n">points</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-0-788" name="__codelineno-0-788"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-789" name="__codelineno-0-789"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a>            <span class="s2">"please check points input it should be GeoDataFrame/DataFrame/FeatureCollection - given"</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a>            <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a>        <span class="p">)</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>    <span class="n">indices</span> <span class="o">=</span> <span class="n">locate_values</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a>    <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
