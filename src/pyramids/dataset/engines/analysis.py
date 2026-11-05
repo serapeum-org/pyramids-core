@@ -4755,8 +4755,8 @@ class Analysis(_Engine["Dataset"]):
         if disjoint:
             raise AlignmentError(
                 "pan-sharpen needs the pan band to overlap the multispectral "
-                f"extent; multispectral bbox {self._ds.total_bounds} and pan bbox "
-                f"{other.total_bounds} are disjoint."
+                f"extent; multispectral bounds {list(self._ds.total_bounds)} and pan "
+                f"bounds {list(other.total_bounds)} are disjoint."
             )
 
     def pan_sharpen(
