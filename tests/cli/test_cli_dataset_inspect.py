@@ -310,19 +310,45 @@ class TestFootprint:
         assert FeatureCollection.feature_count(out) >= 1
 
     def test_text_summary(self, raster, capsys):
-        """Without an output path or --json a one-line polygon summary prints.
+        """A geographic-CRS summary reports the polygon count and omits a bogus area.
 
         Args:
-            raster: Single-band raster fixture with covered cells.
+            raster: Single-band EPSG:4326 (geographic) raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
         assert main(["footprint", raster]) == 0, (
             "summarising the footprint should succeed"
         )
+        captured = capsys.readouterr()
+        assert captured.out.startswith("footprint:"), (
+            "the summary line should be prefixed"
+        )
+        assert "polygon(s)" in captured.out, (
+            "the summary should report the polygon count"
+        )
+        assert "total area" not in captured.out, (
+            "a geographic CRS must not print a degrees-squared area"
+        )
+        assert "Geometry is in a geographic CRS" not in captured.err, (
+            "the geopandas area warning must not fire for a geographic footprint"
+        )
+
+    def test_text_summary_projected(self, tmp_path, capsys):
+        """A projected-CRS summary reports a total area labelled as native units."""
+        path = str(tmp_path / "proj.tif")
+        Dataset.from_array(
+            np.arange(64, dtype="float32").reshape(8, 8),
+            geo_ref=GeoReference(
+                top_left_corner=(0, 8000), cell_size=1000.0, epsg=3857
+            ),
+        ).to_file(path)
+        assert main(["footprint", path]) == 0, (
+            "projected footprint summary must succeed"
+        )
         out = capsys.readouterr().out
-        assert out.startswith("footprint:"), "the summary line should be prefixed"
-        assert "polygon(s), total area" in out, (
-            "the summary should report polygon count and area"
+        assert "total area" in out, "a projected CRS should report a total area"
+        assert "native CRS units" in out, (
+            "the area must be labelled as native CRS units"
         )
 
     def test_all_nodata_json_empty(self, nodata_only, capsys):

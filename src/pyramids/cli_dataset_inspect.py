@@ -269,9 +269,16 @@ def _cmd_footprint(args: argparse.Namespace) -> int:
         info_print(args, f"wrote {args.output}")
     elif args.json:
         print(gdf.to_json())
+    elif gdf.crs is not None and gdf.crs.is_geographic:
+        print(
+            f"footprint: {len(gdf)} polygon(s) (area omitted — CRS is geographic; "
+            f"reproject for a real area, or use --json/--output for the geometry)"
+        )
     else:
         total_area = float(gdf.geometry.area.sum())
-        print(f"footprint: {len(gdf)} polygon(s), total area {total_area}")
+        print(
+            f"footprint: {len(gdf)} polygon(s), total area {total_area} (native CRS units)"
+        )
     return 0
 
 
