@@ -7,9 +7,12 @@ STAC item, and a Mapbox/Terrarium terrain-RGB encode. Each handler maps onto a
 single ``Dataset`` call and produces one output artifact.
 
 Optional dependencies (``pyarrow`` for Parquet, ``zarr``/``dask`` for Zarr) are
-imported lazily by the underlying methods, so importing this module — and
-``pyramids.cli`` — never requires an optional extra; a missing one is remapped to
-a clean ``ValueError`` naming the extra.
+imported lazily by the underlying methods, so this module itself adds no
+optional-extra import at module import time; when a handler needs a missing
+extra at call time, the ``ImportError`` is remapped to a clean ``ValueError``
+naming the extra. (Note: ``import pyramids.dataset`` already pulls some of these
+eagerly on the current build, so this module's cleanliness does not by itself
+guarantee ``import pyramids.cli`` is extra-free — that is tracked separately.)
 
 Deferred:
     - ``Dataset.write_array`` — patches an existing raster in place from an
