@@ -1267,3 +1267,23 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     )
     render.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     render.set_defaults(func=_cmd_render)
+
+    # Imported here, not at module top, to break the import cycle: these sibling
+    # sub-modules import shared helpers/constants back from pyramids.cli_dataset.
+    from pyramids.cli_dataset_analysis import add_dataset_analysis_commands
+    from pyramids.cli_dataset_bands import add_dataset_bands_commands
+    from pyramids.cli_dataset_export import add_dataset_export_commands
+    from pyramids.cli_dataset_inspect import add_dataset_inspect_commands
+    from pyramids.cli_dataset_overviews import add_dataset_overviews_commands
+    from pyramids.cli_dataset_plot import add_dataset_plot_commands
+    from pyramids.cli_dataset_read import add_dataset_read_commands
+    from pyramids.cli_dataset_spatial import add_dataset_spatial_commands
+
+    add_dataset_read_commands(sub)
+    add_dataset_inspect_commands(sub)
+    add_dataset_bands_commands(sub)
+    add_dataset_spatial_commands(sub)
+    add_dataset_analysis_commands(sub)
+    add_dataset_overviews_commands(sub)
+    add_dataset_export_commands(sub)
+    add_dataset_plot_commands(sub)
