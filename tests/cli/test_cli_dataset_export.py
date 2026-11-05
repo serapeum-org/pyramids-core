@@ -191,6 +191,23 @@ class TestToRaster:
         restored = Dataset.read_file(out)
         assert (restored.rows, restored.columns) == (8, 8), "shape wrong"
 
+    def test_in_range_band_exits_0(self, cli_raster, tmp_path):
+        """An in-range --band is accepted (band 0 exists on every raster)."""
+        out = str(tmp_path / "band0.tif")
+        assert main(["to-raster", cli_raster, out, "--band", "0"]) == 0, (
+            "band 0 must exit 0"
+        )
+
+    def test_out_of_range_band_clean_error(self, cli_raster, tmp_path, capsys):
+        """An out-of-range --band exits 1 cleanly instead of silently writing."""
+        rc = main(["to-raster", cli_raster, str(tmp_path / "o.tif"), "--band", "99"])
+        err = capsys.readouterr().err
+        assert rc == 1, "an out-of-range band must exit 1"
+        assert err.startswith("error: "), f"expected a clean error, got: {err!r}"
+        assert "unexpected failure" not in err, (
+            f"band error must be mapped cleanly: {err!r}"
+        )
+
 
 class TestToImage:
     """`pyramids to-image`."""

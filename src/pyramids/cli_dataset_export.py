@@ -202,7 +202,11 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
     """Handle ``pyramids to-raster`` — write a raster via the ``to_raster`` alias.
 
     ``to_raster`` forwards to ``to_file``; unlike ``pyramids convert`` it exposes
-    the band selection, tile length, and raw GDAL creation options.
+    the tile length and raw GDAL creation options. ``--band`` is forwarded as
+    ``to_file``'s ``band`` argument, which selects the single band only for ASCII
+    grid drivers; GeoTIFF and the other raster drivers write every band. It is
+    range-checked here so an out-of-range index errors cleanly rather than being
+    silently ignored.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``band``, ``tile_length``,
@@ -210,10 +214,17 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
 
     Returns:
         int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--band`` is negative or not below the raster's band count.
     """
     refuse_existing(args.output, args.overwrite)
     options = _parse_creation_options(args.creation_option)
     ds = Dataset.read_file(args.input)
+    if not 0 <= args.band < ds.band_count:
+        raise ValueError(
+            f"band {args.band} is out of range for a {ds.band_count}-band raster"
+        )
     ds.to_raster(
         args.output,
         band=args.band,
@@ -395,7 +406,11 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_raster.add_argument("input", help=_HELP_SRC_RASTER)
     to_raster.add_argument("output", help="destination raster path")
     to_raster.add_argument(
-        "--band", type=int, default=0, help=_HELP_BAND + " to write (default 0)"
+        "--band",
+        type=int,
+        default=0,
+        help="band index forwarded to to_file; selects the band only for ASCII grid "
+        "drivers (other drivers write every band). Must be in range (default 0)",
     )
     to_raster.add_argument(
         "--tile-length", type=int, default=None, help="tile edge for a windowed write"
