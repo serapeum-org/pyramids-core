@@ -22,6 +22,7 @@ from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 
 _HELP_OVERWRITE = "replace the output if it exists"
+_HELP_DST_RASTER = "destination raster path"
 
 
 def _cmd_fetch_wms(args: argparse.Namespace) -> int:
@@ -176,7 +177,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
 
     wms = fsub.add_parser("wms", help="render a WMS map window to a raster")
     wms.add_argument("url", help="WMS endpoint URL")
-    wms.add_argument("output", help="destination raster path")
+    wms.add_argument("output", help=_HELP_DST_RASTER)
     wms.add_argument("--layers", required=True, help="WMS layer name")
     _add_bbox(wms, required=True)
     wms.add_argument("--crs", help="request CRS (default: the service default)")
@@ -194,7 +195,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
 
     wcs = fsub.add_parser("wcs", help="pull a WCS coverage window to a raster")
     wcs.add_argument("url", help="WCS endpoint URL")
-    wcs.add_argument("output", help="destination raster path")
+    wcs.add_argument("output", help=_HELP_DST_RASTER)
     wcs.add_argument("--coverage", required=True, help="coverage identifier")
     _add_bbox(wcs, required=True)
     wcs.add_argument("--crs", help="bbox CRS (default: the service default)")
@@ -203,7 +204,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
 
     wmts = fsub.add_parser("wmts", help="crop a WMTS tile-pyramid window to a raster")
     wmts.add_argument("endpoint", help="WMTS GetCapabilities URL")
-    wmts.add_argument("output", help="destination raster path")
+    wmts.add_argument("output", help=_HELP_DST_RASTER)
     wmts.add_argument("--layer", required=True, help="WMTS layer identifier")
     _add_bbox(wmts, required=True)
     wmts.add_argument("--crs", help="CRS of --bbox (default: EPSG:4326)")
@@ -231,7 +232,7 @@ def add_ogc_commands(sub: argparse._SubParsersAction) -> None:
         "ogc-coverages", help="read an OGC API Coverages subset to a raster"
     )
     cov.add_argument("endpoint", help="OGC API landing-page / base URL")
-    cov.add_argument("output", help="destination raster path")
+    cov.add_argument("output", help=_HELP_DST_RASTER)
     cov.add_argument("--coverage", required=True, help="coverage identifier")
     _add_bbox(cov, required=True)
     cov.add_argument(
