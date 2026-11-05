@@ -26,8 +26,9 @@ class TestFillDomainRename:
 
     def test_fill_is_deprecated_alias(self):
         """`fill` still works but warns and points at `fill_domain`."""
+        ds = _ds()
         with pytest.warns(DeprecationWarning, match="fill_domain"):
-            _ds().fill(5)
+            ds.fill(5)
 
     def test_engine_fill_is_deprecated_alias(self):
         """The Analysis-engine `fill` alias also warns and delegates to `fill_domain`."""
@@ -56,16 +57,16 @@ class TestNearestCellRename:
     def test_map_to_array_coordinates_is_deprecated_alias(self):
         """`map_to_array_coordinates` still works but warns and points at `nearest_cell`."""
         ds = _ds()
+        points = pd.DataFrame({"x": [0.5], "y": [-0.5]})
         with pytest.warns(DeprecationWarning, match="nearest_cell"):
-            ds.map_to_array_coordinates(pd.DataFrame({"x": [0.5], "y": [-0.5]}))
+            ds.map_to_array_coordinates(points)
 
     def test_engine_map_to_array_coordinates_is_deprecated_alias(self):
         """The Cell-engine `map_to_array_coordinates` alias also warns and delegates."""
         ds = _ds()
+        points = pd.DataFrame({"x": [0.5], "y": [-0.5]})
         with pytest.warns(DeprecationWarning, match="nearest_cell"):
-            located = ds.cell.map_to_array_coordinates(
-                pd.DataFrame({"x": [0.5], "y": [-0.5]})
-            )
+            located = ds.cell.map_to_array_coordinates(points)
         assert np.asarray(located).tolist() == [[0, 0]]
 
 
@@ -104,18 +105,21 @@ class TestMetadataRename:
 
     def test_meta_data_getter_is_deprecated(self):
         """The old `meta_data` attribute warns and points at `metadata`."""
+        ds = _ds()
         with pytest.warns(DeprecationWarning, match="metadata"):
-            _ = _ds().meta_data
+            _ = ds.meta_data
 
     def test_get_meta_data_is_deprecated(self):
         """The old `get_meta_data` method warns and points at `get_metadata`."""
+        ds = _ds()
         with pytest.warns(DeprecationWarning, match="get_metadata"):
-            _ds().get_meta_data()
+            ds.get_meta_data()
 
     def test_band_meta_data_is_deprecated(self):
         """The old `band_meta_data` attribute warns and points at `band_metadata`."""
+        ds = _ds()
         with pytest.warns(DeprecationWarning, match="band_metadata"):
-            _ = _ds().band_meta_data
+            _ = ds.band_meta_data
 
     def test_metadata_domains_getter_and_deprecated_alias(self):
         """`metadata_domains` returns a list of domain names; the old name warns."""
