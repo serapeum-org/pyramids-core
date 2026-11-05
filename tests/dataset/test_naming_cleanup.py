@@ -115,6 +115,41 @@ class TestMetadataRename:
         with pytest.warns(DeprecationWarning, match="band_metadata"):
             _ = _ds().band_meta_data
 
+    def test_metadata_domains_getter_and_deprecated_alias(self):
+        """`metadata_domains` returns a list of domain names; the old name warns."""
+        ds = _ds()
+        assert isinstance(ds.metadata_domains, list)
+        with pytest.warns(DeprecationWarning, match="metadata_domains"):
+            domains = ds.meta_data_domains
+        assert domains == ds.metadata_domains
+
+    def test_metadata_setter_round_trips_and_old_setter_is_deprecated(self):
+        """The `metadata` setter writes default-domain tags; the `meta_data` setter warns."""
+        ds = _ds()
+        ds.metadata = {"SENSOR": "OLI"}
+        assert ds.metadata["SENSOR"] == "OLI"
+        with pytest.warns(DeprecationWarning, match="metadata"):
+            ds.meta_data = {"SENSOR": "TIRS"}
+        assert ds.metadata["SENSOR"] == "TIRS"
+
+    def test_band_metadata_setter_and_old_setter_is_deprecated(self):
+        """The `band_metadata` setter writes per-band tags; the old setter warns."""
+        ds = _ds()
+        ds.band_metadata = [{"WAVELENGTH": "443"}]
+        assert ds.band_metadata == [{"WAVELENGTH": "443"}]
+        with pytest.warns(DeprecationWarning, match="band_metadata"):
+            ds.band_meta_data = [{"WAVELENGTH": "490"}]
+        assert ds.band_metadata == [{"WAVELENGTH": "490"}]
+
+    def test_set_metadata_writes_a_named_domain_and_old_name_is_deprecated(self):
+        """`set_metadata` replaces a named domain; `set_meta_data` warns and delegates."""
+        ds = _ds()
+        ds.set_metadata({"KEY": "V1"}, domain="MYDOMAIN")
+        assert "MYDOMAIN" in ds.metadata_domains
+        with pytest.warns(DeprecationWarning, match="set_metadata"):
+            ds.set_meta_data({"KEY": "V2"}, domain="MYDOMAIN")
+        assert ds.get_metadata("MYDOMAIN")["KEY"] == "V2"
+
 
 class TestBboxCollapsedIntoTotalBounds:
     """`bbox` is deprecated in favour of the canonical `total_bounds` (same box)."""
