@@ -8317,6 +8317,59 @@ that leaked out of an empty table lookup. Only affects code catching the old typ
 </table>
 <h2 id="dataset"><a class="toclink" href="#dataset">dataset</a><a class="headerlink" href="#dataset" title="Permanent link">#</a></h2>
 <h3 id="unreleased_1"><a class="toclink" href="#unreleased_1">unreleased</a><a class="headerlink" href="#unreleased_1" title="Permanent link">#</a></h3>
+<p><strong>Naming cleanup (issue #1462): several members renamed to a single canonical spelling.</strong> Each old name keeps
+working as a <code>DeprecationWarning</code>-emitting alias (so existing code runs unchanged), except
+<code>Cell.array_to_map_coordinates</code>, which is <strong>removed</strong> — it duplicated <code>Dataset.xy</code>, so call <code>xy</code> instead (note the
+default: <code>array_to_map_coordinates</code> defaulted to cell corners, <code>xy</code> defaults to cell centres, so pass
+<code>center=False</code> for the old behaviour). The renames:</p>
+<table>
+<thead>
+<tr>
+<th>Old name</th>
+<th>New name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fill</code></td>
+<td><code>fill_domain</code> (writes the data cells; <code>fillna</code> still writes the gaps)</td>
+</tr>
+<tr>
+<td><code>map_to_array_coordinates</code></td>
+<td><code>nearest_cell</code></td>
+</tr>
+<tr>
+<td><code>array_to_map_coordinates</code></td>
+<td><strong>removed</strong> — use <code>xy</code></td>
+</tr>
+<tr>
+<td><code>meta_data</code></td>
+<td><code>metadata</code></td>
+</tr>
+<tr>
+<td><code>meta_data_domains</code></td>
+<td><code>metadata_domains</code></td>
+</tr>
+<tr>
+<td><code>get_meta_data</code></td>
+<td><code>get_metadata</code></td>
+</tr>
+<tr>
+<td><code>set_meta_data</code></td>
+<td><code>set_metadata</code></td>
+</tr>
+<tr>
+<td><code>band_meta_data</code></td>
+<td><code>band_metadata</code></td>
+</tr>
+<tr>
+<td><code>bbox</code></td>
+<td><code>total_bounds</code> (returns a NumPy array; <code>bbox</code> still returns a plain <code>list</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>total_bounds</code> is now an abstract property on <code>RasterBase</code>; any third-party subclass that implemented only <code>bbox</code>
+must also provide <code>total_bounds</code>.</p>
 <p><strong>CF-packed data is now unpacked on read, and the keyword is <code>unpack</code>.</strong> Hard change, silent for the values —
 nothing raises. A raster that declares <code>scale_factor</code> / <code>add_offset</code> (GDAL's <code>GetScale</code> / <code>GetOffset</code>) now reads
 back in physical units as <code>float64</code> instead of raw stored counts.</p>
@@ -9264,6 +9317,9 @@ stamp a default; set a CRS on the input first. <code>pyramids georeference</code
 replace the georeference wholesale.</p>
 <h2 id="netcdf"><a class="toclink" href="#netcdf">netcdf</a><a class="headerlink" href="#netcdf" title="Permanent link">#</a></h2>
 <h3 id="unreleased_4"><a class="toclink" href="#unreleased_4">unreleased</a><a class="headerlink" href="#unreleased_4" title="Permanent link">#</a></h3>
+<p><strong><code>NetCDF.meta_data</code> is now <code>NetCDF.metadata</code></strong> (part of the dataset naming cleanup, issue #1462). <code>meta_data</code>
+keeps working as a <code>DeprecationWarning</code>-emitting alias and still returns the same cached <code>NetCDFMetadata</code>. See the
+<a href="#dataset">dataset</a> section's rename table for the full list.</p>
 <p><strong>The unstructured-mesh data model was renamed from <code>Ugrid*</code> / <code>Network1d</code> to <code>Mesh*</code>.</strong> The classes were
 named after the UGRID NetCDF convention and one hydrodynamic use case; they are general GIS mesh types, so the
 names now match the rest of the package (the plugin entry point is already <code>pyramids.mesh_drivers</code>, and the 2D

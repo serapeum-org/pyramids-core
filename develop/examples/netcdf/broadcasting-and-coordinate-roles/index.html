@@ -9236,9 +9236,9 @@ so <code>set_coords</code> is the write side, and needed no new partition.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">len</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">nc</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">len</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">nc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-13">len(nc.variable_names), nc.meta_data.cf.classifications['lsp']</div>
+<div class="clipboard-copy-txt" id="cell-13">len(nc.variable_names), nc.metadata.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>
@@ -9247,14 +9247,6 @@ so <code>set_coords</code> is the write side, and needed no new partition.</p>
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
 <div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3535/1800466409.py:1: DeprecationWarning: `meta_data` is deprecated and will be removed in a future release; use `metadata`.
-  len(nc.variable_names), nc.meta_data.cf.classifications['lsp']
-</pre>
-</div>
-</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[13]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
@@ -9285,11 +9277,11 @@ so <code>set_coords</code> is the write side, and needed no new partition.</p>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">promoted</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">set_coords</span><span class="p">(</span><span class="s1">'lsp'</span><span class="p">)</span>
 
-<span class="nb">len</span><span class="p">(</span><span class="n">promoted</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">promoted</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">promoted</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">promoted</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-14">promoted = nc.set_coords('lsp')
 
-len(promoted.variable_names), promoted.meta_data.cf.classifications['lsp']</div>
+len(promoted.variable_names), promoted.metadata.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>
@@ -9298,14 +9290,6 @@ len(promoted.variable_names), promoted.meta_data.cf.classifications['lsp']</div>
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
 <div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3535/572351304.py:3: DeprecationWarning: `meta_data` is deprecated and will be removed in a future release; use `metadata`.
-  len(promoted.variable_names), promoted.meta_data.cf.classifications['lsp']
-</pre>
-</div>
-</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[14]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
@@ -9461,11 +9445,11 @@ empty string behind:</p>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">restored</span> <span class="o">=</span> <span class="n">promoted</span><span class="o">.</span><span class="n">reset_coords</span><span class="p">(</span><span class="s1">'lsp'</span><span class="p">)</span>
 
-<span class="nb">len</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">restored</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">restored</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-17">restored = promoted.reset_coords('lsp')
 
-len(restored.variable_names), restored.meta_data.cf.classifications['lsp']</div>
+len(restored.variable_names), restored.metadata.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>
@@ -9474,14 +9458,6 @@ len(restored.variable_names), restored.meta_data.cf.classifications['lsp']</div>
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
 <div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3535/2597823712.py:3: DeprecationWarning: `meta_data` is deprecated and will be removed in a future release; use `metadata`.
-  len(restored.variable_names), restored.meta_data.cf.classifications['lsp']
-</pre>
-</div>
-</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[17]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">

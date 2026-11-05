@@ -22676,10 +22676,10 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-4293" name="__codelineno-0-4293"></a>
 <a id="__codelineno-0-4294" name="__codelineno-0-4294"></a>    <span class="nd">@property</span>
 <a id="__codelineno-0-4295" name="__codelineno-0-4295"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GeoDataFrame</span><span class="p">:</span>
-<a id="__codelineno-0-4296" name="__codelineno-0-4296"></a><span class="w">        </span><span class="sd">"""Bounds - the bbox as a geodataframe with a polygon geometry.</span>
+<a id="__codelineno-0-4296" name="__codelineno-0-4296"></a><span class="w">        </span><span class="sd">"""Bounds - the bounding box as a geodataframe with a polygon geometry.</span>
 <a id="__codelineno-0-4297" name="__codelineno-0-4297"></a>
 <a id="__codelineno-0-4298" name="__codelineno-0-4298"></a><span class="sd">        See Also:</span>
-<a id="__codelineno-0-4299" name="__codelineno-0-4299"></a><span class="sd">            - Dataset.bbox: Dataset bounding box.</span>
+<a id="__codelineno-0-4299" name="__codelineno-0-4299"></a><span class="sd">            - Dataset.total_bounds: Dataset bounding box as a NumPy array.</span>
 <a id="__codelineno-0-4300" name="__codelineno-0-4300"></a><span class="sd">        """</span>
 <a id="__codelineno-0-4301" name="__codelineno-0-4301"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_bounds</span><span class="p">()</span>
 <a id="__codelineno-0-4302" name="__codelineno-0-4302"></a>
@@ -26876,13 +26876,13 @@ like it, <code>NetCDF</code> reports the variable's own <code>_offset</code> whe
 
     <div class="doc doc-contents ">
 
-        <p>Bounds - the bbox as a geodataframe with a polygon geometry.</p>
+        <p>Bounds - the bounding box as a geodataframe with a polygon geometry.</p>
 
 
 <details class="see-also" open>
   <summary>See Also</summary>
   <ul>
-<li>Dataset.bbox: Dataset bounding box.</li>
+<li>Dataset.total_bounds: Dataset bounding box as a NumPy array.</li>
 </ul>
 </details>
     </div>
