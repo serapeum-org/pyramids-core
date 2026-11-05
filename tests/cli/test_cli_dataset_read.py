@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -38,6 +39,24 @@ def _band_tif(directory: Path, name: str, value: int, shape=(4, 5)) -> str:
     return path
 
 
+class _FakeDataset:
+    """A stand-in raster whose ``to_file`` just touches the output path."""
+
+    def to_file(self, path: str) -> None:
+        with open(path, "wb"):
+            pass
+
+
+class _FakeStdinBuffer:
+    """A stand-in ``sys.stdin.buffer`` that yields a fixed byte payload once."""
+
+    def __init__(self, payload: bytes):
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return self._payload
+
+
 class TestFromBytes:
     """`pyramids from-bytes`."""
 
@@ -52,6 +71,17 @@ class TestFromBytes:
         """Neither an input path nor --stdin exits 1."""
         argv = ["from-bytes", str(tmp_path / "o.tif")]
         assert main(argv) == 1
+
+    def test_stdin_branch(self, tmp_path, monkeypatch):
+        """With --stdin the raster bytes are read from standard input and written."""
+        payload = Path(_DATA_TIF).read_bytes()
+        monkeypatch.setattr(
+            "sys.stdin", SimpleNamespace(buffer=_FakeStdinBuffer(payload))
+        )
+        out = str(tmp_path / "o.tif")
+        rc = main(["from-bytes", out, "--stdin"])
+        assert rc == 0
+        assert Dataset.read_file(out).band_count == 1
 
 
 class TestFromDataframe:
@@ -96,6 +126,30 @@ class TestFromDataframe:
         Path(out).write_bytes(b"x")
         argv = ["from-dataframe", self._csv(tmp_path), out, "--x", "x", "--y", "y"]
         assert main(argv) == 1
+
+    def test_no_value_with_no_data_value(self, tmp_path):
+        """Omitting --value keeps the lone value column; --no-data-value is parsed."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-dataframe",
+                self._csv(tmp_path),
+                out,
+                "--x",
+                "x",
+                "--y",
+                "y",
+                "--band",
+                "band",
+                "--crs",
+                "4326",
+                "--no-data-value",
+                "-9999",
+            ]
+        )
+        assert rc == 0
+        ds = Dataset.read_file(out)
+        assert (ds.rows, ds.columns) == (2, 2)
 
 
 class TestFromPoints:
@@ -143,6 +197,25 @@ class TestFromPoints:
         ]
         assert main(argv) == 1
 
+    def test_epsg_forwarded(self, tmp_path):
+        """--epsg is forwarded to Dataset.from_points and stamped on the output."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-points",
+                self._vector(tmp_path),
+                out,
+                "--value-column",
+                "rain",
+                "--cell-size",
+                "1.0",
+                "--epsg",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out).epsg == 4326
+
 
 class TestFromPointArrays:
     """`pyramids from-point-arrays`."""
@@ -180,6 +253,37 @@ class TestFromPointArrays:
         )
         assert rc == 0
         assert Dataset.read_file(out).epsg == 4326
+
+    def test_width_height_bbox_and_crs(self, tmp_path):
+        """--width/--height/--bbox size the grid and --crs labels it (no --cell-size)."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-point-arrays",
+                self._csv(tmp_path),
+                out,
+                "--x",
+                "x",
+                "--y",
+                "y",
+                "--z",
+                "z",
+                "--width",
+                "10",
+                "--height",
+                "10",
+                "--bbox",
+                "0",
+                "0",
+                "10",
+                "10",
+                "--crs",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        ds = Dataset.read_file(out)
+        assert (ds.rows, ds.columns) == (10, 10)
 
     def test_bad_column_errors(self, tmp_path):
         """A column name that is not in the CSV exits 1."""
@@ -219,6 +323,27 @@ class TestFromBandFiles:
         Path(out).write_bytes(b"x")
         assert main(["from-band-files", b1, out]) == 1
 
+    def test_align_resampling_and_no_data_value(self, tmp_path):
+        """--align with --resampling and --no-data-value reach Dataset.from_band_files."""
+        b1 = _band_tif(tmp_path, "b1.tif", 2)
+        b2 = _band_tif(tmp_path, "b2.tif", 3)
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-band-files",
+                b1,
+                b2,
+                out,
+                "--align",
+                "--resampling",
+                "nearest",
+                "--no-data-value",
+                "-9999",
+            ]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out).band_count == 2
+
 
 class TestFromArchive:
     """`pyramids from-archive`."""
@@ -244,6 +369,23 @@ class TestFromArchive:
         out = str(tmp_path / "o.tif")
         assert main(["from-archive", str(tmp_path / "nope.zip"), out]) == 1
 
+    def test_no_data_value_forwarded(self, tmp_path):
+        """--no-data-value is parsed and forwarded to Dataset.from_archive."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-archive",
+                self._zip(tmp_path),
+                out,
+                "--member-glob",
+                "*.tif",
+                "--no-data-value",
+                "-9999",
+            ]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out).band_count == 2
+
 
 class TestFromZarr:
     """`pyramids from-zarr`."""
@@ -263,6 +405,45 @@ class TestFromZarr:
         out = str(tmp_path / "o.tif")
         Path(out).write_bytes(b"x")
         assert main(["from-zarr", str(tmp_path / "store.zarr"), out]) == 1
+
+    def test_missing_zarr_extra_is_remapped(self, tmp_path, monkeypatch):
+        """A missing-``zarr`` ImportError becomes a clean user error (exit 1)."""
+
+        def raise_import_error(*args, **kwargs):
+            raise ImportError("No module named 'zarr'")
+
+        monkeypatch.setattr(
+            "pyramids.cli_dataset_read.Dataset.from_zarr",
+            staticmethod(raise_import_error),
+        )
+        out = str(tmp_path / "o.tif")
+        rc = main(["from-zarr", str(tmp_path / "store.zarr"), out])
+        assert rc == 1
+
+    def test_storage_options_parsed(self, tmp_path, monkeypatch, capsys):
+        """--storage-options is JSON-decoded and forwarded to Dataset.from_zarr."""
+        captured: dict = {}
+
+        def fake(store, **kwargs):
+            captured["store"] = store
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr(
+            "pyramids.cli_dataset_read.Dataset.from_zarr", staticmethod(fake)
+        )
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "from-zarr",
+                "store.zarr",
+                out,
+                "--storage-options",
+                '{"anon": true}',
+            ]
+        )
+        assert rc == 0
+        assert captured["storage_options"] == {"anon": True}
 
 
 class TestCreate:
@@ -297,6 +478,36 @@ class TestCreate:
         assert rc == 0
         ds = Dataset.read_file(out)
         assert (ds.rows, ds.columns, ds.band_count) == (3, 4, 1)
+
+    def test_geo_transform_without_no_data(self, tmp_path):
+        """A six-term --geo affine places the raster; no --no-data-value is passed."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "create",
+                out,
+                "--rows",
+                "3",
+                "--columns",
+                "4",
+                "--dtype",
+                "float32",
+                "--bands",
+                "1",
+                "--geo",
+                "0",
+                "1",
+                "0",
+                "10",
+                "0",
+                "-1",
+                "--epsg",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        ds = Dataset.read_file(out)
+        assert (ds.rows, ds.columns, ds.epsg) == (3, 4, 4326)
 
     def test_missing_placement_errors(self, tmp_path):
         """No --geo / --top-left placement exits 1."""
@@ -346,6 +557,47 @@ class TestCreateEmpty:
         Path(out).write_bytes(b"x")
         assert main(["create-empty", out, "--rows", "4", "--cols", "5"]) == 1
 
+    def test_placement_and_none_no_data_value(self, tmp_path):
+        """A --top-left/--cell-size placement is applied; --no-data-value none -> None."""
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "create-empty",
+                out,
+                "--rows",
+                "4",
+                "--cols",
+                "5",
+                "--top-left",
+                "0",
+                "10",
+                "--cell-size",
+                "1.0",
+                "--epsg",
+                "4326",
+                "--no-data-value",
+                "none",
+            ]
+        )
+        assert rc == 0
+        ds = Dataset.read_file(out)
+        assert (ds.rows, ds.columns, ds.epsg) == (4, 5, 4326)
+
+    def test_bad_no_data_value_errors(self, tmp_path):
+        """A --no-data-value that is not a number / nan / none exits 1."""
+        out = str(tmp_path / "o.tif")
+        argv = [
+            "create-empty",
+            out,
+            "--rows",
+            "4",
+            "--cols",
+            "5",
+            "--no-data-value",
+            "notanumber",
+        ]
+        assert main(argv) == 1
+
 
 class TestEmptyLike:
     """`pyramids empty-like`."""
@@ -365,6 +617,25 @@ class TestEmptyLike:
         out = str(tmp_path / "o.tif")
         Path(out).write_bytes(b"x")
         assert main(["empty-like", template, out]) == 1
+
+    def test_no_data_value_forwarded(self, tmp_path):
+        """--no-data-value is parsed and forwarded to Dataset.empty_like."""
+        template = _band_tif(tmp_path, "tmpl.tif", 1)
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "empty-like",
+                template,
+                out,
+                "--dtype",
+                "int16",
+                "--no-data-value",
+                "-9999",
+            ]
+        )
+        assert rc == 0
+        ds = Dataset.read_file(out)
+        assert (ds.rows, ds.columns) == (4, 5)
 
 
 class TestDatasetLike:

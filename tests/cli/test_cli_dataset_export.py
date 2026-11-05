@@ -15,6 +15,7 @@ import json
 import os
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from pyramids.base.georeference import GeoReference
@@ -55,6 +56,12 @@ class TestToBytes:
         assert rc == 1, "missing input must exit 1"
         assert err.startswith("error: "), f"unexpected stderr: {err}"
 
+    def test_writes_to_stdout(self, cli_raster, capsysbinary):
+        """With no output path the payload is written to stdout as a TIFF."""
+        assert main(["to-bytes", cli_raster]) == 0, "stdout to-bytes must exit 0"
+        payload = capsysbinary.readouterr().out
+        assert payload[:2] in (b"II", b"MM"), f"not a TIFF payload: {payload[:2]!r}"
+
 
 class TestToCogBytes:
     """`pyramids to-cog-bytes`."""
@@ -74,6 +81,25 @@ class TestToCogBytes:
             handle.write("x")
         rc = main(["to-cog-bytes", cli_raster, out])
         assert rc == 1, "existing output without --overwrite must exit 1"
+
+    def test_compression_and_blocksize(self, cli_raster, tmp_path):
+        """--compression and --blocksize are forwarded and a COG is written."""
+        out = str(tmp_path / "opts_cog.tif")
+        rc = main(
+            [
+                "to-cog-bytes",
+                cli_raster,
+                out,
+                "--compression",
+                "DEFLATE",
+                "--blocksize",
+                "256",
+            ]
+        )
+        assert rc == 0, "must exit 0 with compression/blocksize set"
+        with open(out, "rb") as handle:
+            marker = handle.read(2)
+        assert marker in (b"II", b"MM"), f"not a TIFF payload: {marker!r}"
 
 
 class TestToDataframe:
@@ -98,6 +124,21 @@ class TestToDataframe:
         out = str(tmp_path / "cells.parquet")
         assert main(["to-dataframe", cli_raster, out]) == 0, "must exit 0"
         assert os.path.getsize(out) > 0, "parquet file must be non-empty"
+
+    def test_missing_parquet_extra_remapped(
+        self, cli_raster, tmp_path, monkeypatch, capsys
+    ):
+        """A missing pyarrow is remapped to a one-line error naming the [parquet] extra."""
+
+        def _raise(*_args, **_kwargs):
+            raise ImportError("no pyarrow")
+
+        monkeypatch.setattr(pd.DataFrame, "to_parquet", _raise, raising=False)
+        out = str(tmp_path / "cells.parquet")
+        rc = main(["to-dataframe", cli_raster, out])
+        err = capsys.readouterr().err
+        assert rc == 1, "missing extra must exit 1"
+        assert "[parquet]" in err, f"error must name the extra: {err}"
 
 
 class TestToPolygons:
@@ -139,6 +180,16 @@ class TestToRaster:
             ]
         )
         assert rc == 1, "malformed creation option must exit 1"
+
+    def test_valid_creation_option(self, cli_raster, tmp_path):
+        """A valid KEY=VALUE creation option is parsed and the raster is written."""
+        out = str(tmp_path / "copy_opt.tif")
+        rc = main(
+            ["to-raster", cli_raster, out, "--creation-option", "COMPRESS=DEFLATE"]
+        )
+        assert rc == 0, "a valid creation option must exit 0"
+        restored = Dataset.read_file(out)
+        assert (restored.rows, restored.columns) == (8, 8), "shape wrong"
 
 
 class TestToImage:
@@ -193,6 +244,21 @@ class TestToZarr:
         os.mkdir(out)
         rc = main(["to-zarr", cli_raster, out])
         assert rc == 1, "existing output without --overwrite must exit 1"
+
+    def test_missing_lazy_extra_remapped(
+        self, cli_raster, tmp_path, monkeypatch, capsys
+    ):
+        """A missing zarr/dask is remapped to a one-line error naming the [lazy] extra."""
+
+        def _raise(*_args, **_kwargs):
+            raise ImportError("no zarr")
+
+        monkeypatch.setattr(Dataset, "to_zarr", _raise, raising=False)
+        out = str(tmp_path / "store.zarr")
+        rc = main(["to-zarr", cli_raster, out])
+        err = capsys.readouterr().err
+        assert rc == 1, "missing extra must exit 1"
+        assert "[lazy]" in err, f"error must name the extra: {err}"
 
 
 class TestToStacItem:

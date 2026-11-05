@@ -178,6 +178,15 @@ class TestCluster:
         rc = main(["cluster", ramp, out, "--lower", "2", "--upper", "40"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
+    def test_labels_and_count_plain(self, ramp, tmp_path, capsys):
+        """Without --json the label raster is written and a count line is printed."""
+        out = str(tmp_path / "clust.tif")
+        rc = main(["cluster", ramp, out, "--lower", "2", "--upper", "40"])
+        captured = capsys.readouterr()
+        assert rc == 0, captured.err
+        assert "cluster label(s)" in captured.out, "plain branch must report the count"
+        assert Dataset.read_file(out).shape[-2:] == (8, 8), "labels keep the grid"
+
 
 class TestZonalStats:
     """`pyramids zonal-stats`."""
@@ -203,6 +212,25 @@ class TestZonalStats:
         """An unknown stat name is a clean one-line error."""
         rc = main(["zonal-stats", ramp, zones, "--stats", "median"])
         _assert_one_line_error(rc, capsys.readouterr().err)
+
+    def test_prints_table(self, ramp, zones, capsys):
+        """Without --output or --json, the records are printed one per line."""
+        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "count"])
+        captured = capsys.readouterr()
+        assert rc == 0, captured.err
+        assert "'count'" in captured.out, "printed record must carry the stat keys"
+
+    def test_reprojects_zones_to_raster_crs(self, ramp, tmp_path, capsys):
+        """Zones in a different CRS are reprojected onto the raster's CRS."""
+        fc = gpd.GeoDataFrame(
+            {"zone": ["a"]}, geometry=[box(0, 0, 4, 4)], crs="EPSG:4326"
+        ).to_crs("EPSG:3857")
+        zones_3857 = str(tmp_path / "zones_3857.geojson")
+        FeatureCollection(fc).to_file(zones_3857)
+        rc = main(["zonal-stats", ramp, zones_3857, "--stats", "count", "--json"])
+        records = json.loads(capsys.readouterr().out)
+        assert rc == 0, "reprojection branch must still exit 0"
+        assert records[0]["count"] == pytest.approx(16.0), "4x4 quadrant = 16 cells"
 
 
 class TestMatchHistogram:
@@ -302,6 +330,36 @@ class TestWhere:
         """A condition outside the arithmetic whitelist is a clean one-line error."""
         out = str(tmp_path / "where.tif")
         rc = main(["where", ramp, out, "--cond", "__import__('os')"])
+        _assert_one_line_error(rc, capsys.readouterr().err)
+
+    def test_other_numeric_fills_unselected(self, ramp, tmp_path, capsys):
+        """--other <number> fills the unselected cells with that constant."""
+        out = str(tmp_path / "where.tif")
+        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "5"])
+        assert rc == 0, capsys.readouterr().err
+        values = Dataset.read_file(out).read_array()
+        assert float(values[0, 0]) == pytest.approx(5.0), "unselected cell must be 5"
+        assert float(values[7, 7]) == pytest.approx(63.0), "selected cell kept"
+
+    def test_other_nan_token(self, ramp, tmp_path, capsys):
+        """--other nan is accepted and masks the unselected cells with NaN."""
+        out = str(tmp_path / "where_nan.tif")
+        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "nan"])
+        assert rc == 0, capsys.readouterr().err
+        values = Dataset.read_file(out).read_array()
+        assert np.isnan(float(values[0, 0])), "unselected cell must be NaN"
+
+    def test_other_none_token(self, ramp, tmp_path, capsys):
+        """--other none is accepted (explicit NaN fill) and writes the raster."""
+        out = str(tmp_path / "where_none.tif")
+        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "none"])
+        assert rc == 0, capsys.readouterr().err
+        assert os.path.exists(out), "output must be written"
+
+    def test_other_bad_token_errors(self, ramp, tmp_path, capsys):
+        """A non-numeric --other that is neither nan nor none is a one-line error."""
+        out = str(tmp_path / "where_bad.tif")
+        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "banana"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 

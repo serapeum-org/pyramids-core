@@ -106,6 +106,47 @@ class TestReadPart:
         rc = main(["read-part", cli_raster, out, "--bbox", "2", "2", "6", "6"])
         assert rc == 1
 
+    def test_gsd_decimates_window(self, cli_raster, tmp_path):
+        """--gsd sets the target cell size for the window read."""
+        out = str(tmp_path / "gsd.tif")
+        rc = main(
+            ["read-part", cli_raster, out, "--bbox", "0", "0", "8", "8", "--gsd", "2"]
+        )
+        assert rc == 0
+        result = Dataset.read_file(out)
+        assert max(result.rows, result.columns) <= 8
+
+    def test_dst_width_height(self, cli_raster, tmp_path):
+        """--dst-width and --dst-height force the output pixel dimensions."""
+        out = str(tmp_path / "dst.tif")
+        rc = main(
+            [
+                "read-part",
+                cli_raster,
+                out,
+                "--bbox",
+                "0",
+                "0",
+                "8",
+                "8",
+                "--dst-width",
+                "4",
+                "--dst-height",
+                "4",
+            ]
+        )
+        assert rc == 0
+        result = Dataset.read_file(out)
+        assert (result.rows, result.columns) == (4, 4)
+
+    def test_out_of_range_band_errors(self, cli_raster, tmp_path):
+        """A band index past the raster's band count exits 1."""
+        out = str(tmp_path / "band.tif")
+        rc = main(
+            ["read-part", cli_raster, out, "--bbox", "2", "2", "6", "6", "--band", "5"]
+        )
+        assert rc == 1
+
 
 class TestPreview:
     """`pyramids preview` writes a whole-image decimated thumbnail."""
@@ -136,6 +177,13 @@ class TestPoint:
     def test_out_of_bounds_errors(self, cli_raster):
         """A point outside the raster extent exits 1."""
         assert main(["point", cli_raster, "100", "100"]) == 1
+
+    def test_samples_value_plain(self, cli_raster, capsys):
+        """Without --json the sampled value is printed as a plain coordinate line."""
+        rc = main(["point", cli_raster, "0.5", "7.5", "--band", "0"])
+        captured = capsys.readouterr()
+        assert rc == 0, captured.err
+        assert "0.5,7.5:" in captured.out, "plain branch must print the coordinate"
 
 
 class TestReadTile:

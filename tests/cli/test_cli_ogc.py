@@ -70,6 +70,36 @@ class TestFetchWcs:
         assert captured["bbox"] == (0.0, 0.0, 1.0, 1.0)
         assert os.path.exists(out)
 
+    def test_crs_forwarded(self, monkeypatch, tmp_path):
+        """--crs is forwarded to Dataset.from_wcs when given."""
+        captured: dict = {}
+
+        def fake(url, **kwargs):
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr("pyramids.cli_ogc.Dataset.from_wcs", staticmethod(fake))
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "wcs",
+                "https://x",
+                out,
+                "--coverage",
+                "dem",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--crs",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        assert captured["crs"] == "4326", "--crs must reach Dataset.from_wcs"
+
 
 class TestFetchWms:
     """`pyramids fetch wms`."""
@@ -257,6 +287,54 @@ class TestFetchWmts:
         with pytest.raises(SystemExit):
             main(argv)
 
+    def test_optional_crs_flags_forwarded_without_resolution(
+        self, monkeypatch, tmp_path
+    ):
+        """--crs / --tile-matrix-set / --layer-crs forward; omitted optionals drop out.
+
+        Exercises the branches where ``--resolution`` and ``--output-crs`` are not
+        given (so neither key is added) while the three CRS/tile flags are.
+        """
+        captured: dict = {}
+
+        def fake(endpoint, **kwargs):
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr("pyramids.cli_ogc.Dataset.from_wmts", staticmethod(fake))
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "wmts",
+                "https://x/WMTSCapabilities.xml",
+                out,
+                "--layer",
+                "truecolor",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--crs",
+                "4326",
+                "--tile-matrix-set",
+                "GoogleMapsCompatible",
+                "--layer-crs",
+                "4326",
+            ]
+        )
+        assert rc == 0
+        assert captured["crs"] == "4326", "--crs must reach from_wmts"
+        assert captured["tile_matrix_set"] == "GoogleMapsCompatible"
+        assert captured["layer_crs"] == "4326"
+        assert "resolution" not in captured, (
+            "omitted --resolution must not be forwarded"
+        )
+        assert "output_crs" not in captured, (
+            "omitted --output-crs must not be forwarded"
+        )
+
     @pytest.mark.live
     def test_live_smoke(self, tmp_path):
         """Live GIBS crop (deselected by default; run with `-m live`)."""
@@ -340,6 +418,52 @@ class TestFetchOgcCoverages:
         ]
         with pytest.raises(SystemExit):
             main(argv)
+
+    def test_output_crs_forwarded_without_resolution_or_coverage_crs(
+        self, monkeypatch, tmp_path
+    ):
+        """--output-crs forwards; omitted --resolution / --coverage-crs drop out.
+
+        Exercises the branches where ``--resolution`` and ``--coverage-crs`` are not
+        given (so neither key is added) while ``--output-crs`` is forwarded.
+        """
+        captured: dict = {}
+
+        def fake(endpoint, **kwargs):
+            captured.update(kwargs)
+            return _FakeDataset()
+
+        monkeypatch.setattr(
+            "pyramids.cli_ogc.Dataset.from_ogc_coverages", staticmethod(fake)
+        )
+        out = str(tmp_path / "o.tif")
+        rc = main(
+            [
+                "fetch",
+                "ogc-coverages",
+                "https://maps.example/ogcapi",
+                out,
+                "--coverage",
+                "dem",
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--output-crs",
+                "3857",
+            ]
+        )
+        assert rc == 0
+        assert captured["output_crs"] == "3857", (
+            "--output-crs must reach from_ogc_coverages"
+        )
+        assert "resolution" not in captured, (
+            "omitted --resolution must not be forwarded"
+        )
+        assert "coverage_crs" not in captured, (
+            "omitted --coverage-crs must not be forwarded"
+        )
 
 
 class TestFetchWfs:

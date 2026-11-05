@@ -317,6 +317,19 @@ class TestSetRpcs:
         rc = main(["set-rpcs", single_band, out, "--rpc-json", rpc_path])
         _assert_clean_error(rc, capsys.readouterr().err)
 
+    def test_non_object_json_error(self, single_band, tmp_path, capsys):
+        """A ``--rpc-json`` holding a JSON array (not an object) exits 1 cleanly."""
+        rpc_path = str(tmp_path / "rpc_list.json")
+        with open(rpc_path, "w", encoding="utf-8") as handle:
+            json.dump(["LINE_OFF", "SAMP_OFF"], handle)
+        out = str(tmp_path / "with_rpc_list.tif")
+        rc = main(["set-rpcs", single_band, out, "--rpc-json", rpc_path])
+        err = capsys.readouterr().err
+        _assert_clean_error(rc, err)
+        assert "JSON object" in err, (
+            f"error should name the JSON-object requirement, got: {err}"
+        )
+
 
 class TestGeolocate:
     """`pyramids geolocate`."""
