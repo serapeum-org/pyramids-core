@@ -171,7 +171,8 @@ class TestMetadataRename:
         offenders = [
             str(w.message)
             for w in caught
-            if issubclass(w.category, DeprecationWarning) and "meta_data" in str(w.message)
+            if issubclass(w.category, DeprecationWarning)
+            and "meta_data" in str(w.message)
         ]
         assert not offenders, f"identical() self-warned on meta_data: {offenders}"
 
