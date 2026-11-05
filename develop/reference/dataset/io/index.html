@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -14405,7 +14405,7 @@ band statistics, a warp -- is comparing two different views of the raster.</p>
 <a id="__codelineno-0-1865" name="__codelineno-0-1865"></a>        <span class="c1"># Map the bbox edges to fractional pixel indices through the geotransform, snapping edges that</span>
 <a id="__codelineno-0-1866" name="__codelineno-0-1866"></a>        <span class="c1"># sit on a cell boundary onto the exact integer first (see `_snap_index`). `min`/`max` keep it</span>
 <a id="__codelineno-0-1867" name="__codelineno-0-1867"></a>        <span class="c1"># correct whichever sign the pixel size has (north-up `pixel_y &lt; 0` or flipped south-up).</span>
-<a id="__codelineno-0-1868" name="__codelineno-0-1868"></a>        <span class="c1"># Deriving the window from nearest_cell instead snapped each corner to the nearest</span>
+<a id="__codelineno-0-1868" name="__codelineno-0-1868"></a>        <span class="c1"># Deriving the window from map_to_array_coordinates instead snapped each corner to the nearest</span>
 <a id="__codelineno-0-1869" name="__codelineno-0-1869"></a>        <span class="c1"># cell centre, which both transposed every non-square window and dropped the boundary</span>
 <a id="__codelineno-0-1870" name="__codelineno-0-1870"></a>        <span class="c1"># row/column of a bbox whose edges fell mid-cell (#719).</span>
 <a id="__codelineno-0-1871" name="__codelineno-0-1871"></a>        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
@@ -17516,12 +17516,12 @@ band statistics, a warp -- is comparing two different views of the raster.</p>
 <a id="__codelineno-0-4976" name="__codelineno-0-4976"></a>            <span class="n">target_band</span><span class="o">.</span><span class="n">SetRasterColorInterpretation</span><span class="p">(</span>
 <a id="__codelineno-0-4977" name="__codelineno-0-4977"></a>                <span class="n">source_band</span><span class="o">.</span><span class="n">GetRasterColorInterpretation</span><span class="p">()</span>
 <a id="__codelineno-0-4978" name="__codelineno-0-4978"></a>            <span class="p">)</span>
-<a id="__codelineno-0-4979" name="__codelineno-0-4979"></a>        <span class="n">meta_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-0-4979" name="__codelineno-0-4979"></a>        <span class="n">meta_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">meta_data</span>
 <a id="__codelineno-0-4980" name="__codelineno-0-4980"></a>        <span class="c1"># A NetCDF exposes meta_data as a NetCDFMetadata, not a mapping, and the Dataset</span>
 <a id="__codelineno-0-4981" name="__codelineno-0-4981"></a>        <span class="c1"># setter iterates .items(). An overview level is a plain raster, so carry only a</span>
 <a id="__codelineno-0-4982" name="__codelineno-0-4982"></a>        <span class="c1"># real mapping and leave a container's structured attributes behind.</span>
 <a id="__codelineno-0-4983" name="__codelineno-0-4983"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">meta_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">meta_data</span><span class="p">:</span>
-<a id="__codelineno-0-4984" name="__codelineno-0-4984"></a>            <span class="n">overview</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">meta_data</span>
+<a id="__codelineno-0-4984" name="__codelineno-0-4984"></a>            <span class="n">overview</span><span class="o">.</span><span class="n">meta_data</span> <span class="o">=</span> <span class="n">meta_data</span>
 <a id="__codelineno-0-4985" name="__codelineno-0-4985"></a>
 <a id="__codelineno-0-4986" name="__codelineno-0-4986"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_overview_dataset_from_file</span><span class="p">(</span>
 <a id="__codelineno-0-4987" name="__codelineno-0-4987"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">band</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">overview_index</span><span class="p">:</span> <span class="nb">int</span>

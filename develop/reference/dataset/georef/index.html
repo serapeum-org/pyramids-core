@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9016,7 +9016,7 @@ attaches both, and warps from them into an affine-geotransform raster.</p>
 <a id="__codelineno-0-518" name="__codelineno-0-518"></a><span class="sd">        metadata domain. Returns the domain mapping (``X_DATASET``/``Y_DATASET``</span>
 <a id="__codelineno-0-519" name="__codelineno-0-519"></a><span class="sd">        pointing at the coordinate arrays, ``SRS``, band/offset/step keys) or</span>
 <a id="__codelineno-0-520" name="__codelineno-0-520"></a><span class="sd">        ``None`` when the dataset carries no such domain. Built on</span>
-<a id="__codelineno-0-521" name="__codelineno-0-521"></a><span class="sd">        :meth:`~pyramids.dataset.Dataset.get_metadata`; on a ``NetCDF`` variable</span>
+<a id="__codelineno-0-521" name="__codelineno-0-521"></a><span class="sd">        :meth:`~pyramids.dataset.Dataset.get_meta_data`; on a ``NetCDF`` variable</span>
 <a id="__codelineno-0-522" name="__codelineno-0-522"></a><span class="sd">        the domain is read from the classic ``NETCDF:`` GDAL handle — on-disk **or**</span>
 <a id="__codelineno-0-523" name="__codelineno-0-523"></a><span class="sd">        ``/vsimem`` (see :meth:`Dataset._geolocation_source`) — so it reflects the</span>
 <a id="__codelineno-0-524" name="__codelineno-0-524"></a><span class="sd">        source file, not any in-place edits (geolocate before other spatial</span>
@@ -9041,7 +9041,7 @@ attaches both, and warps from them into an affine-geotransform raster.</p>
 <a id="__codelineno-0-543" name="__codelineno-0-543"></a><span class="sd">                ```</span>
 <a id="__codelineno-0-544" name="__codelineno-0-544"></a><span class="sd">        """</span>
 <a id="__codelineno-0-545" name="__codelineno-0-545"></a>        <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">_geolocation_source</span><span class="p">()</span>
-<a id="__codelineno-0-546" name="__codelineno-0-546"></a>        <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
+<a id="__codelineno-0-546" name="__codelineno-0-546"></a>        <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_meta_data</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
 <a id="__codelineno-0-547" name="__codelineno-0-547"></a>        <span class="k">return</span> <span class="n">domain</span> <span class="ow">or</span> <span class="kc">None</span>
 <a id="__codelineno-0-548" name="__codelineno-0-548"></a>
 <a id="__codelineno-0-549" name="__codelineno-0-549"></a>    <span class="nd">@property</span>
@@ -9128,7 +9128,7 @@ attaches both, and warps from them into an affine-geotransform raster.</p>
 <a id="__codelineno-0-630" name="__codelineno-0-630"></a><span class="sd">                ```</span>
 <a id="__codelineno-0-631" name="__codelineno-0-631"></a><span class="sd">        """</span>
 <a id="__codelineno-0-632" name="__codelineno-0-632"></a>        <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">_geolocation_source</span><span class="p">()</span>
-<a id="__codelineno-0-633" name="__codelineno-0-633"></a>        <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
+<a id="__codelineno-0-633" name="__codelineno-0-633"></a>        <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_meta_data</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
 <a id="__codelineno-0-634" name="__codelineno-0-634"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">domain</span><span class="p">:</span>
 <a id="__codelineno-0-635" name="__codelineno-0-635"></a>            <span class="k">raise</span> <span class="n">GeolocationArrayError</span><span class="p">(</span>
 <a id="__codelineno-0-636" name="__codelineno-0-636"></a>                <span class="s2">"dataset has no geolocation arrays (no GEOLOCATION metadata domain)."</span>
@@ -9348,7 +9348,7 @@ curvilinear georeferencing model), exposed by GDAL as the <code>GEOLOCATION</cod
 metadata domain. Returns the domain mapping (<code>X_DATASET</code>/<code>Y_DATASET</code>
 pointing at the coordinate arrays, <code>SRS</code>, band/offset/step keys) or
 <code>None</code> when the dataset carries no such domain. Built on
-:meth:<code>~pyramids.dataset.Dataset.get_metadata</code>; on a <code>NetCDF</code> variable
+:meth:<code>~pyramids.dataset.Dataset.get_meta_data</code>; on a <code>NetCDF</code> variable
 the domain is read from the classic <code>NETCDF:</code> GDAL handle — on-disk <strong>or</strong>
 <code>/vsimem</code> (see :meth:<code>Dataset._geolocation_source</code>) — so it reflects the
 source file, not any in-place edits (geolocate before other spatial
@@ -9968,7 +9968,7 @@ domain is missing the required <code>X_DATASET</code> / <code>Y_DATASET</code> a
 <a id="__codelineno-0-630" name="__codelineno-0-630"></a><span class="sd">            ```</span>
 <a id="__codelineno-0-631" name="__codelineno-0-631"></a><span class="sd">    """</span>
 <a id="__codelineno-0-632" name="__codelineno-0-632"></a>    <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">_geolocation_source</span><span class="p">()</span>
-<a id="__codelineno-0-633" name="__codelineno-0-633"></a>    <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
+<a id="__codelineno-0-633" name="__codelineno-0-633"></a>    <span class="n">domain</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"dict[str, str]"</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">get_meta_data</span><span class="p">(</span><span class="s2">"GEOLOCATION"</span><span class="p">))</span>
 <a id="__codelineno-0-634" name="__codelineno-0-634"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">domain</span><span class="p">:</span>
 <a id="__codelineno-0-635" name="__codelineno-0-635"></a>        <span class="k">raise</span> <span class="n">GeolocationArrayError</span><span class="p">(</span>
 <a id="__codelineno-0-636" name="__codelineno-0-636"></a>            <span class="s2">"dataset has no geolocation arrays (no GEOLOCATION metadata domain)."</span>
