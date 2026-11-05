@@ -1628,7 +1628,7 @@ class NetCDFPlot:
         return _render_array(
             RenderRequest(
                 arr=template,
-                extent=nc.total_bounds,
+                extent=list(nc.total_bounds),
                 exclude_value=resolved_exclude,
                 mode=ModeSpec(
                     mode="animate",

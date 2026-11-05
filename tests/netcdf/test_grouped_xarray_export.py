@@ -390,7 +390,7 @@ class TestTheCfPromotionSpeaksTheExportedNamespace:
             coords={"recNum": (("recNum",), np.arange(4.0))},
         )
         container = SimpleNamespace(
-            meta_data=SimpleNamespace(
+            metadata=SimpleNamespace(
                 cf=SimpleNamespace(classifications={"flight_a/CO_bnds": "bounds"})
             )
         )

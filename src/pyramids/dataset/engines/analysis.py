@@ -6523,7 +6523,9 @@ class Analysis(_Engine["Dataset"]):
         # placed at the stack's own spatial domain rather than implicitly
         # trusting that it matches `self._ds.total_bounds`.
         effective_extent = (
-            injected_extent if injected_extent is not None else self._ds.total_bounds
+            injected_extent
+            if injected_extent is not None
+            else list(self._ds.total_bounds)
         )
         # Render a paletted band through its GDAL colour table (#913): build a discrete
         # colormap from the palette and hand it to cleopatra as an explicit ``cmap`` plus a
@@ -6657,7 +6659,7 @@ class Analysis(_Engine["Dataset"]):
         return render_array(
             RenderRequest(
                 arr=stack,
-                extent=self._ds.total_bounds,
+                extent=list(self._ds.total_bounds),
                 exclude_value=masked or None,
                 mode=ModeSpec(mode="animate", animation_axis_values=labels),
                 ax=ax,

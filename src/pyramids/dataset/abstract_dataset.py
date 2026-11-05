@@ -614,6 +614,17 @@ class RasterBase(ABC):
         pass
 
     @property
+    @abstractmethod
+    def total_bounds(self) -> np.typing.NDArray:
+        """Bounding box ``[minx, miny, maxx, maxy]`` as a NumPy array.
+
+        The canonical bounding box, matching ``GeoDataFrame.total_bounds`` and
+        :class:`pyramids.feature.FeatureCollection` so both satisfy the
+        :class:`pyramids.base.protocols.SpatialObject` protocol.
+        """
+        pass
+
+    @property
     def geotransform(self) -> tuple[float, float, float, float, float, float]:
         """WKT projection.(x, cell_size, 0, y, 0, -cell_size)."""
         return self._geotransform
