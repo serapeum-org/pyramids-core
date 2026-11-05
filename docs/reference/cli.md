@@ -165,7 +165,7 @@ which legitimately reprojects the source onto the reference grid.
 
 **Export / convert** — `to-bytes`, `to-cog-bytes`, `to-dataframe` (CSV / Parquet — Parquet needs `[parquet]`),
 `to-polygons` (region-dissolving vectorize), `to-raster` (band/tile/creation-option control over `convert`),
-`to-image` (PNG/JPEG via a colormap), `to-xyz`, `to-zarr` (needs `[lazy]`), `to-stac-item` (needs `[stac]`),
+`to-image` (PNG/JPEG via a colormap — needs `[viz]`), `to-xyz`, `to-zarr` (needs `[lazy]`), `to-stac-item`,
 `to-terrain-rgb` (Mapbox Terrain-RGB encode).
 
 **Plot (headless, via cleopatra)** — `plot-histogram`, `plot-vector-field`, `animate`; the Agg backend is forced so

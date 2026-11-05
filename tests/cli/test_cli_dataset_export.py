@@ -281,7 +281,6 @@ class TestToZarr:
 class TestToStacItem:
     """`pyramids to-stac-item`."""
 
-    @pytest.mark.stac
     def test_writes_item_json(self, cli_raster, tmp_path):
         """A STAC item JSON is written with the given id and an asset."""
         out = str(tmp_path / "item.json")
@@ -292,7 +291,6 @@ class TestToStacItem:
         assert item["id"] == "scene-1", f"id wrong: {item.get('id')}"
         assert item["assets"], "expected at least one asset"
 
-    @pytest.mark.stac
     def test_missing_input_exits_1(self, tmp_path):
         """A missing input exits 1."""
         rc = main(
