@@ -137,13 +137,13 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     if args.output is not None:
         table.to_csv(args.output)
         info_print(args, f"wrote {args.output}")
-        return 0
-    records = json_sanitize(table.reset_index().to_dict(orient="records"))
-    if args.json:
-        print(json.dumps(records))
     else:
-        for record in records:
-            print(record)
+        records = json_sanitize(table.reset_index().to_dict(orient="records"))
+        if args.json:
+            print(json.dumps(records))
+        else:
+            for record in records:
+                print(record)
     return 0
 
 
