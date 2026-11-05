@@ -213,6 +213,15 @@ class TestZonalStats:
         rc = main(["zonal-stats", ramp, zones, "--stats", "median"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
+    def test_out_of_range_band_clean_error(self, ramp, zones, capsys):
+        """An out-of-range --band is a clean user error, not 'unexpected failure'."""
+        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "--band", "99"])
+        err = capsys.readouterr().err
+        _assert_one_line_error(rc, err)
+        assert "unexpected failure" not in err, (
+            f"band error must be mapped cleanly: {err!r}"
+        )
+
     def test_prints_table(self, ramp, zones, capsys):
         """Without --output or --json, the records are printed one per line."""
         rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "count"])

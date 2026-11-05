@@ -186,6 +186,15 @@ class TestOverlay:
         rc = main(["overlay", ramp, ramp_3857])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
+    def test_out_of_range_band_clean_error(self, ramp, classes, capsys):
+        """An out-of-range --band is a clean user error, not 'unexpected failure'."""
+        rc = main(["overlay", ramp, classes, "--band", "99"])
+        err = capsys.readouterr().err
+        _assert_one_line_error(rc, err)
+        assert "unexpected failure" not in err, (
+            f"band error must be mapped cleanly: {err!r}"
+        )
+
 
 class TestCombine:
     """`pyramids combine`."""
@@ -439,3 +448,12 @@ class TestExtract:
         capsys.readouterr()
         rc = main(["extract", ramp, out])
         _assert_one_line_error(rc, capsys.readouterr().err)
+
+    def test_out_of_range_band_clean_error(self, ramp, tmp_path, capsys):
+        """An out-of-range --band is a clean user error, not 'unexpected failure'."""
+        rc = main(["extract", ramp, str(tmp_path / "o.csv"), "--band", "99"])
+        err = capsys.readouterr().err
+        _assert_one_line_error(rc, err)
+        assert "unexpected failure" not in err, (
+            f"band error must be mapped cleanly: {err!r}"
+        )

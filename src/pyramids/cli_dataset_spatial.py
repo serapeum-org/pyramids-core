@@ -35,6 +35,7 @@ from shapely.geometry import LineString
 from pyramids._cli_shared import (
     info_print,
     json_sanitize,
+    map_lookup_errors,
     require_matching_crs,
     resolve_vector_driver,
 )
@@ -105,7 +106,10 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
     base = Dataset.read_file(args.input)
     classes = Dataset.read_file(args.classes)
     require_matching_crs(base, classes)
-    grouped = base.overlay(classes, band=args.band, exclude_value=args.exclude_value)
+    with map_lookup_errors():
+        grouped = base.overlay(
+            classes, band=args.band, exclude_value=args.exclude_value
+        )
     payload = {
         str(key): [float(value) for value in values] for key, values in grouped.items()
     }
@@ -353,11 +357,12 @@ def _cmd_extract(args: argparse.Namespace) -> int:
     mask = None
     if args.mask is not None:
         mask = FeatureCollection.read_file(args.mask)
-    values = np.atleast_2d(
-        np.asarray(
-            ds.extract(band=args.band, exclude_value=args.exclude_value, mask=mask)
+    with map_lookup_errors():
+        values = np.atleast_2d(
+            np.asarray(
+                ds.extract(band=args.band, exclude_value=args.exclude_value, mask=mask)
+            )
         )
-    )
     rows = [
         [None if np.isnan(value) else float(value) for value in row] for row in values
     ]

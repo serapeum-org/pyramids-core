@@ -25,7 +25,12 @@ import json
 
 import numpy as np
 
-from pyramids._cli_shared import info_print, json_sanitize, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_sanitize,
+    map_lookup_errors,
+    refuse_existing,
+)
 from pyramids._cli_shared import resolve_vector_driver as _resolve_vector_driver
 from pyramids.base.crs import crs_spec
 from pyramids.base.georeference import GeoReference
@@ -127,7 +132,8 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     zones = FeatureCollection.read_file(args.zones)
     if zones.crs is not None and ds.crs and zones.epsg != ds.epsg:
         zones = zones.to_crs(ds.epsg)
-    table = ds.zonal_stats(zones, stats=tuple(args.stats), band=args.band)
+    with map_lookup_errors():
+        table = ds.zonal_stats(zones, stats=tuple(args.stats), band=args.band)
     if args.output is not None:
         table.to_csv(args.output)
         info_print(args, f"wrote {args.output}")
