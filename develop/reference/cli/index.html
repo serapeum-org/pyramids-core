@@ -8002,7 +8002,7 @@ which legitimately reprojects the source onto the reference grid.</p>
 (sample at a map coordinate), <code>read-tile z x y</code> (an XYZ/Web-Mercator tile → raster).</p>
 <p><strong>Export / convert</strong> — <code>to-bytes</code>, <code>to-cog-bytes</code>, <code>to-dataframe</code> (CSV / Parquet — Parquet needs <code>[parquet]</code>),
 <code>to-polygons</code> (region-dissolving vectorize), <code>to-raster</code> (band/tile/creation-option control over <code>convert</code>),
-<code>to-image</code> (PNG/JPEG via a colormap), <code>to-xyz</code>, <code>to-zarr</code> (needs <code>[lazy]</code>), <code>to-stac-item</code> (needs <code>[stac]</code>),
+<code>to-image</code> (PNG/JPEG via a colormap — needs <code>[viz]</code>), <code>to-xyz</code>, <code>to-zarr</code> (needs <code>[lazy]</code>), <code>to-stac-item</code>,
 <code>to-terrain-rgb</code> (Mapbox Terrain-RGB encode).</p>
 <p><strong>Plot (headless, via cleopatra)</strong> — <code>plot-histogram</code>, <code>plot-vector-field</code>, <code>animate</code>; the Agg backend is forced so
 these run headless (<code>render</code> remains the quick-look PNG, and <code>contour</code> lives under analysis above).</p>
