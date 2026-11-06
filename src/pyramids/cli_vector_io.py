@@ -15,9 +15,13 @@ import contextlib
 import json
 from collections.abc import Iterator
 
+import pandas as pd
+import shapely
+
 from pyramids._cli_shared import (
     info_print,
     json_sanitize,
+    map_lookup_errors,
     refuse_existing,
     resolve_vector_driver,
 )
@@ -29,6 +33,8 @@ _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_LAYER = "layer name or index in a multi-layer source"
 _HELP_JSON = "emit JSON"
 _HELP_BBOX = "bounding box as MINX MINY MAXX MAXY"
+_HELP_DRIVER = "OGR driver (default: inferred from extension)"
+_HELP_CRS = "CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4)"
 
 
 @contextlib.contextmanager
@@ -278,6 +284,113 @@ def _cmd_vector_from_vectortileserver(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_vector_from_xyz(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-xyz`` — build a point layer from CSV columns.
+
+    Reads the ``--x`` / ``--y`` (and optional ``--z``) columns of a CSV as parallel
+    coordinate arrays and writes the resulting point FeatureCollection.
+
+    Args:
+        args: Parsed args with ``csv``, ``output``, ``x``, ``y``, ``z``, ``crs``,
+            ``z_column``, ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    frame = pd.read_csv(args.csv)
+    with map_lookup_errors():
+        x = frame[args.x].to_numpy()
+        y = frame[args.y].to_numpy()
+        z = frame[args.z].to_numpy() if args.z else None
+    fc = FeatureCollection.from_xyz(x, y, z, crs=args.crs, z_column=args.z_column)
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, args.driver))
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_from_features(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-features`` — build an FC from GeoJSON features.
+
+    Reads a JSON file holding either a GeoJSON ``FeatureCollection`` mapping or a bare
+    list of GeoJSON Feature dicts, and writes the resulting FeatureCollection.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``crs``, ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    with open(args.src, encoding="utf-8") as handle:
+        data = json.load(handle)
+    features = (
+        data["features"] if isinstance(data, dict) and "features" in data else data
+    )
+    fc = FeatureCollection.from_features(features, crs=args.crs)
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, args.driver))
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_from_records(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector from-records`` — build an FC from a CSV with a WKT column.
+
+    Reads a CSV whose ``--geometry`` column holds WKT geometries; every other column
+    becomes an attribute. The WKT is parsed to shapely geometries before the
+    FeatureCollection is assembled and written.
+
+    Args:
+        args: Parsed args with ``csv``, ``output``, ``geometry``, ``crs``, ``driver``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    frame = pd.read_csv(args.csv)
+    with map_lookup_errors():
+        geometries = shapely.from_wkt(frame[args.geometry].to_list())
+    columns = {name: frame[name].to_list() for name in frame.columns}
+    columns[args.geometry] = geometries
+    fc = FeatureCollection.from_records(
+        columns, geometry=args.geometry, crs=args.crs, orient="list"
+    )
+    fc.to_file(args.output, driver=resolve_vector_driver(args.output, args.driver))
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_read_gpx(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector read-gpx`` — write every non-empty GPX sub-layer.
+
+    Reads all non-empty sub-layers of a GPX file (waypoints, routes, tracks,
+    route_points, track_points) and writes each as a named layer in a single
+    multi-layer output (e.g. a GeoPackage).
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: The GPX file has no non-empty sub-layers to write.
+    """
+    refuse_existing(args.output, args.overwrite)
+    layers = FeatureCollection.read_gpx_layers(args.src)
+    if not layers:
+        raise ValueError(f"{args.src!r} has no non-empty GPX sub-layers to write")
+    driver = resolve_vector_driver(args.output, args.driver)
+    names = sorted(layers)
+    for index, name in enumerate(names):
+        layers[name].to_file(
+            args.output, driver=driver, layer=name, mode="w" if index == 0 else "a"
+        )
+    info_print(args, f"wrote {args.output} (layers: {', '.join(names)})")
+    return 0
+
+
 def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     """Register the ``vector`` I/O, export, and remote-reader commands on ``vsub``.
 
@@ -405,3 +518,51 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     )
     v_vts.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_vts.set_defaults(func=_cmd_vector_from_vectortileserver)
+
+    v_xyz = vsub.add_parser(
+        "from-xyz", help="build a point layer from CSV x/y/z columns"
+    )
+    v_xyz.add_argument("csv", help="source CSV path")
+    v_xyz.add_argument("output", help=_HELP_OUTPUT)
+    v_xyz.add_argument("--x", required=True, help="name of the X-coordinate column")
+    v_xyz.add_argument("--y", required=True, help="name of the Y-coordinate column")
+    v_xyz.add_argument("--z", help="name of the optional value column")
+    v_xyz.add_argument("--crs", help=_HELP_CRS)
+    v_xyz.add_argument("--z-column", default="z", help="name to store --z under")
+    v_xyz.add_argument("--driver", help=_HELP_DRIVER)
+    v_xyz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_xyz.set_defaults(func=_cmd_vector_from_xyz)
+
+    v_ff = vsub.add_parser(
+        "from-features", help="build an FC from a GeoJSON features file"
+    )
+    v_ff.add_argument(
+        "src", help="source JSON path (FeatureCollection or feature list)"
+    )
+    v_ff.add_argument("output", help=_HELP_OUTPUT)
+    v_ff.add_argument("--crs", help=_HELP_CRS)
+    v_ff.add_argument("--driver", help=_HELP_DRIVER)
+    v_ff.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_ff.set_defaults(func=_cmd_vector_from_features)
+
+    v_fr = vsub.add_parser(
+        "from-records", help="build an FC from a CSV with a WKT geometry column"
+    )
+    v_fr.add_argument("csv", help="source CSV path")
+    v_fr.add_argument("output", help=_HELP_OUTPUT)
+    v_fr.add_argument(
+        "--geometry", default="geometry", help="name of the WKT geometry column"
+    )
+    v_fr.add_argument("--crs", help=_HELP_CRS)
+    v_fr.add_argument("--driver", help=_HELP_DRIVER)
+    v_fr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_fr.set_defaults(func=_cmd_vector_from_records)
+
+    v_gpx = vsub.add_parser(
+        "read-gpx", help="write every non-empty GPX sub-layer to a multi-layer output"
+    )
+    v_gpx.add_argument("src", help="source .gpx path")
+    v_gpx.add_argument("output", help="destination multi-layer path (e.g. .gpkg)")
+    v_gpx.add_argument("--driver", help=_HELP_DRIVER)
+    v_gpx.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_gpx.set_defaults(func=_cmd_vector_read_gpx)

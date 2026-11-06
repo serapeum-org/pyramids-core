@@ -615,6 +615,42 @@ class TestSetPrecision:
             run(argv)
 
 
+class TestWithCoordinates:
+    """`pyramids vector with-coordinates` — issue #1468."""
+
+    def test_adds_xy_columns(self, tmp_path):
+        """A point layer gains scalar x/y columns, feature count preserved."""
+        out = str(tmp_path / "wc.geojson")
+        assert run(["with-coordinates", POINTS, out]) == 0
+        result = _reread(out)
+        assert {"x", "y"}.issubset(result.columns)
+        assert len(result) == 10
+
+    def test_missing_source_raises(self, tmp_path):
+        """A missing source surfaces as a caught error type."""
+        argv = ["with-coordinates", _missing(tmp_path), str(tmp_path / "o.geojson")]
+        with pytest.raises(CAUGHT):
+            run(argv)
+
+
+class TestWithCentroid:
+    """`pyramids vector with-centroid` — issue #1468."""
+
+    def test_adds_centroid_columns(self, tmp_path):
+        """A polygon layer gains avg_x/avg_y/center_point columns."""
+        out = str(tmp_path / "wcen.geojson")
+        assert run(["with-centroid", POLYGONS, out]) == 0
+        result = _reread(out)
+        assert {"avg_x", "avg_y", "center_point"}.issubset(result.columns)
+        assert len(result) == 10
+
+    def test_missing_source_raises(self, tmp_path):
+        """A missing source surfaces as a caught error type."""
+        argv = ["with-centroid", _missing(tmp_path), str(tmp_path / "o.geojson")]
+        with pytest.raises(CAUGHT):
+            run(argv)
+
+
 def test_snap_mixed_crs_errors(tmp_path):
     """snap on two layers with different CRS raises a clean ValueError (M1)."""
     coello = str(_DATA / "coello_polygons.geojson")  # EPSG:32618
