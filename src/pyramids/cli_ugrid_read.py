@@ -21,14 +21,17 @@ Commands registered here:
 from __future__ import annotations
 
 import argparse
-import contextlib
 import sys
-from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
 
-from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    map_lookup_errors,
+    needs_lazy_extra,
+    refuse_existing,
+)
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf.ugrid import MeshDataset
@@ -37,30 +40,6 @@ _HELP_MESH_OUTPUT = "destination UGRID NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_MESH_NAME = "topology name to stamp on the mesh (default: mesh2d)"
 _HELP_DRIVER = "mesh driver name, bypassing detection (default: detect)"
-
-
-@contextlib.contextmanager
-def _needs_lazy_extra() -> Iterator[None]:
-    """Remap a missing-``zarr`` ``ImportError`` to a clean ``ValueError``.
-
-    ``from_zarr`` imports ``zarr`` from the optional ``[lazy]`` extra; its absence
-    raises ``ImportError``, which :func:`pyramids.cli.main` does not catch (it would
-    leak the "unexpected failure" branch). Turn it into a clean user error naming
-    the extra.
-
-    Yields:
-        None: Control returns to the wrapped block.
-
-    Raises:
-        ValueError: ``zarr`` (the ``[lazy]`` extra) is not installed.
-    """
-    try:
-        yield
-    except ImportError as exc:
-        raise ValueError(
-            "this command needs the optional [lazy] extra (zarr); install it with "
-            "`pip install pyramids-gis[lazy]`"
-        ) from exc
 
 
 def _parse_kv(pairs: list[str] | None) -> dict[str, str]:
@@ -196,7 +175,7 @@ def _cmd_from_zarr(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    with _needs_lazy_extra():
+    with needs_lazy_extra():
         mesh = MeshDataset.from_zarr(args.store)
     mesh.to_file(args.output)
     info_print(args, f"wrote {args.output}")

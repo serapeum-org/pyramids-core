@@ -44,6 +44,29 @@ def needs_lazy_extra() -> Iterator[None]:
         ) from exc
 
 
+@contextlib.contextmanager
+def needs_parquet_extra() -> Iterator[None]:
+    """Remap a missing-``[parquet]`` ``ImportError`` to a clean ``ValueError``.
+
+    Writing Parquet imports ``pyarrow`` from the optional ``[parquet]`` extra; its
+    absence raises a raw ``ImportError`` that :func:`pyramids.cli.main` does not catch.
+    Wrapping the call turns it into a clean user error naming the extra to install.
+
+    Yields:
+        None: Control returns to the wrapped block.
+
+    Raises:
+        ValueError: ``pyarrow`` (the ``[parquet]`` extra) is not installed.
+    """
+    try:
+        yield
+    except ImportError as exc:
+        raise ValueError(
+            "this command needs the optional [parquet] extra (pyarrow); install it "
+            "with `pip install pyramids-gis[parquet]`"
+        ) from exc
+
+
 def validate_index_pattern(pattern: str, **sample: object) -> None:
     """Validate a per-item filename ``--pattern`` before the write loop runs.
 

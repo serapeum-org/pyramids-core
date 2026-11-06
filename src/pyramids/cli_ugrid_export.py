@@ -22,9 +22,7 @@ Deferred:
 from __future__ import annotations
 
 import argparse
-import contextlib
 import sys
-from collections.abc import Iterator
 
 import numpy as np
 
@@ -32,6 +30,7 @@ from pyramids._cli_shared import (
     force_agg_backend,
     info_print,
     map_lookup_errors,
+    needs_parquet_extra,
     refuse_existing,
     resolve_vector_driver,
 )
@@ -42,23 +41,6 @@ _HELP_MESH_FILE = "source UGRID NetCDF path"
 _HELP_MESH_OUTPUT = "destination UGRID NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_VAR = "mesh variable to operate on (default: the only data variable)"
-
-
-@contextlib.contextmanager
-def _needs_parquet_extra() -> Iterator[None]:
-    """Remap a missing-pyarrow ``ImportError`` to a clean ``ValueError``.
-
-    Writing Parquet imports ``pyarrow`` from the optional ``[parquet]`` extra; its
-    absence raises ``ImportError``, which :func:`pyramids.cli.main` does not catch
-    cleanly. Turn it into a user error naming the extra.
-    """
-    try:
-        yield
-    except ImportError as exc:
-        raise ValueError(
-            "this command needs the optional [parquet] extra (pyarrow); install it "
-            "with `pip install pyramids-gis[parquet]`"
-        ) from exc
 
 
 def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
@@ -120,7 +102,7 @@ def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         df = mesh.to_dataframe(variables=variables, dropna=args.dropna)
     if args.output.lower().endswith(".parquet"):
-        with _needs_parquet_extra():
+        with needs_parquet_extra():
             df.to_parquet(args.output)
     else:
         df.to_csv(args.output, index=False)
