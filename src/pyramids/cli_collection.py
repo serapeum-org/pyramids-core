@@ -234,6 +234,16 @@ def _cmd_collection_resample(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     _guard_output_dir(args.output, args.overwrite)
+    # Validate --pattern before opening/reducing anything: only {i} is bound, so any
+    # other placeholder (e.g. {name}) would otherwise raise a raw KeyError mid-loop,
+    # which cli.main() reports as "unexpected failure".
+    try:
+        args.pattern.format(i=0)
+    except (KeyError, IndexError) as exc:
+        raise ValueError(
+            f"--pattern {args.pattern!r} uses an unknown placeholder {exc}; "
+            "only {i} (the window index) is available"
+        ) from exc
     coll = _open_collection(args)
     times = _resolve_times(args, coll)
     windows = coll.reduce_time(

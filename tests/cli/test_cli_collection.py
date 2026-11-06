@@ -498,6 +498,30 @@ class TestCollectionCropRequiresOneTarget:
             )
 
 
+class TestCollectionResamplePattern:
+    """`collection resample` validates --pattern before touching the stack (N2)."""
+
+    def test_unknown_placeholder_is_clean(self, tmp_path, capsys):
+        """A --pattern placeholder other than {i} fails fast with a clean error."""
+        out = str(tmp_path / "rs")
+        rc = main(
+            [
+                "collection",
+                "resample",
+                "no/such/*.tif",
+                out,
+                "--freq",
+                "1D",
+                "--pattern",
+                "{name}.tif",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1, "a bad pattern must exit 1"
+        assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
+        assert "placeholder" in err and "{i}" in err, f"message unclear: {err!r}"
+
+
 class TestCollectionAlign:
     """`pyramids collection align` — align every timestep to a reference grid."""
 
