@@ -1,20 +1,22 @@
 """NetCDF / multidim CLI command group — ``pyramids nc …``.
 
 Thin wrappers over :class:`pyramids.netcdf.NetCDF`. This module owns the core
-verbs — ``info``, ``list-vars``, ``extract``, ``sel``, ``crop`` — and registers the
-rest of the group from sibling modules via :func:`add_netcdf_commands`, each of
-which documents its own commands: ``cli_netcdf_inspect`` (inspection + global
-attributes), ``cli_netcdf_vars`` (variable & dimension management),
-``cli_netcdf_select`` (positional/label selection & subsetting),
-``cli_netcdf_cftime`` (calendar / time / calculus), ``cli_netcdf_io`` (export), and
-``cli_netcdf_plot`` (headless plotting). ``info`` and ``sel`` assume the time axis
-is the CF-standard one named ``time``. No multidim logic lives here — reads go
-through GDAL as the ``NetCDF`` class already does (never xarray).
+verbs — ``info``, ``list-vars``, ``extract``, ``sel``, ``crop``, ``groups``,
+``get-group`` — and registers the rest of the group from sibling modules via
+:func:`add_netcdf_commands`, each of which documents its own commands:
+``cli_netcdf_inspect`` (inspection + global attributes), ``cli_netcdf_vars``
+(variable & dimension management), ``cli_netcdf_select`` (positional/label selection
+& subsetting), ``cli_netcdf_cftime`` (calendar / time / calculus),
+``cli_netcdf_io`` (export, construction & combine), and ``cli_netcdf_plot``
+(headless plotting). ``info`` and ``sel`` assume the time axis is the CF-standard one
+named ``time``. No multidim logic lives here — reads go through GDAL as the ``NetCDF``
+class already does (never xarray).
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 from typing import Any
 
@@ -34,30 +36,80 @@ _HELP_OVERWRITE = "replace the output if it already exists"
 def _cmd_nc_info(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc info`` — print variables, dimensions, CRS, bounds, time.
 
+    The default is a compact summary (optionally ``--json``). ``--full`` instead prints
+    :meth:`NetCDF.info`'s complete ncdump-style report — every dimension, variable with
+    its axes, and global/variable attribute — as text (``--json`` does not apply to it).
+
     Args:
-        args: Parsed args with ``file`` and ``json``.
+        args: Parsed args with ``file``, ``json``, and ``full``.
 
     Returns:
         int: ``0`` on success.
     """
     nc = NetCDF.read_file(args.file)
-    time_var = nc.get_time_variable()
-    minx, miny, maxx, maxy = (float(value) for value in nc.total_bounds)
-    payload = {
-        "path": args.file,
-        "variables": list(nc.variable_names),
-        "dimensions": dict(nc.dimension_sizes),
-        "epsg": nc.epsg,
-        "bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)],
-        "time_steps": 0 if not time_var else len(time_var),
-        "time_start": None if not time_var else time_var[0],
-        "time_end": None if not time_var else time_var[-1],
-    }
-    if args.json:
-        print(json.dumps(payload))
+    if args.full:
+        report = io.StringIO()
+        nc.info(report)
+        print(report.getvalue(), end="")
     else:
-        for key, value in payload.items():
-            print(f"{key}: {value}")
+        time_var = nc.get_time_variable()
+        minx, miny, maxx, maxy = (float(value) for value in nc.total_bounds)
+        payload = {
+            "path": args.file,
+            "variables": list(nc.variable_names),
+            "dimensions": dict(nc.dimension_sizes),
+            "epsg": nc.epsg,
+            "bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)],
+            "time_steps": 0 if not time_var else len(time_var),
+            "time_start": None if not time_var else time_var[0],
+            "time_end": None if not time_var else time_var[-1],
+        }
+        if args.json:
+            print(json.dumps(payload))
+        else:
+            for key, value in payload.items():
+                print(f"{key}: {value}")
+    return 0
+
+
+def _cmd_nc_groups(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc groups`` — list the file's root-level sub-group names.
+
+    Args:
+        args: Parsed args with ``file`` and ``json``.
+
+    Returns:
+        int: ``0`` on success (an empty list for a flat / classic store).
+    """
+    names = list(NetCDF.read_file(args.file).group_names)
+    if args.json:
+        print(json.dumps({"path": args.file, "groups": names}))
+    else:
+        print(f"file: {args.file}")
+        for name in names:
+            print(f"  - {name}")
+    return 0
+
+
+def _cmd_nc_get_group(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc get-group`` — write one sub-group out as its own NetCDF.
+
+    Opens ``--group`` as a zero-copy view (nested paths like ``forecast/surface`` are
+    accepted) and writes it to ``output`` as a standalone container.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``group``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: The group does not exist, or the file has no root group (raised by
+            ``get_group``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    NetCDF.read_file(args.file).get_group(args.group).to_file(args.output)
+    info_print(args, f"wrote {args.output}")
     return 0
 
 
@@ -182,7 +234,26 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_info = ncsub.add_parser("info", help="summarize a NetCDF file")
     nc_info.add_argument("file", help=_HELP_NC_FILE)
     nc_info.add_argument("--json", action="store_true", help="emit JSON")
+    nc_info.add_argument(
+        "--full",
+        action="store_true",
+        help="print the full ncdump-style report (dims/vars/attrs) as text",
+    )
     nc_info.set_defaults(func=_cmd_nc_info)
+
+    nc_groups = ncsub.add_parser("groups", help="list root-level sub-group names")
+    nc_groups.add_argument("file", help=_HELP_NC_FILE)
+    nc_groups.add_argument("--json", action="store_true", help="emit JSON")
+    nc_groups.set_defaults(func=_cmd_nc_groups)
+
+    nc_gg = ncsub.add_parser("get-group", help="write one sub-group out as a NetCDF")
+    nc_gg.add_argument("file", help=_HELP_NC_FILE)
+    nc_gg.add_argument("output", help="destination path (.nc keeps it a NetCDF)")
+    nc_gg.add_argument(
+        "--group", required=True, help="sub-group name (nested 'a/b' accepted)"
+    )
+    nc_gg.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_gg.set_defaults(func=_cmd_nc_get_group)
 
     nc_list = ncsub.add_parser("list-vars", help="list variables/subdatasets")
     nc_list.add_argument("file", help=_HELP_NC_FILE)

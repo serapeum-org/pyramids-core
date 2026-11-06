@@ -265,6 +265,39 @@ def _cmd_nc_pad(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_nc_subset(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc subset`` — read a windowed `(variable, time, bbox)` slice.
+
+    Reads only the requested window of ``--var`` from the gridded cube — a time step via
+    ``--time``, a spatial window via ``--bbox`` (in ``--crs``), and an index per extra
+    non-spatial dimension via ``--dim DIM=IDX`` — and writes the georeferenced single-
+    variable result to ``output``. Selection is by integer index, as the underlying
+    ``subset`` does.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``time``, ``bbox``,
+            ``crs``, ``dim``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is absent or not gridded, a ``--dim`` token is malformed or
+            names a non-selectable dimension, a required non-spatial dimension is
+            unselected, or the bbox selects no cells (raised by ``subset``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    dims = _dim_value_map(args.dim, cast=int) if args.dim else {}
+    bbox = tuple(args.bbox) if args.bbox else None
+    nc = NetCDF.read_file(args.file)
+    result = _selected(
+        lambda: nc.subset(args.var, time=args.time, bbox=bbox, crs=args.crs, **dims)
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     """Register the ``nc`` selection / subset commands on ``ncsub``.
 
@@ -413,3 +446,33 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_pad.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_pad.set_defaults(func=_cmd_nc_pad)
+
+    nc_sub = ncsub.add_parser(
+        "subset", help="read a windowed (variable, time, bbox) slice"
+    )
+    nc_sub.add_argument("file", help=_HELP_NC_FILE)
+    nc_sub.add_argument("output", help=_HELP_OUTPUT)
+    nc_sub.add_argument("--var", required=True, help="data variable to window")
+    nc_sub.add_argument(
+        "--time", type=int, default=None, help="0-based time-step index (default: all)"
+    )
+    nc_sub.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        default=None,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        help="crop window in --crs (default: the full grid)",
+    )
+    nc_sub.add_argument(
+        "--crs", type=int, default=4326, help="EPSG of --bbox (default: 4326)"
+    )
+    nc_sub.add_argument(
+        "--dim",
+        nargs="+",
+        default=None,
+        metavar=_METAVAR_DIM_N,
+        help="DIM=N index per extra non-spatial dimension (e.g. plev=0)",
+    )
+    nc_sub.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_sub.set_defaults(func=_cmd_nc_subset)

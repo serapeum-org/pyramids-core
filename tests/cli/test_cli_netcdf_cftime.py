@@ -12,10 +12,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from pyramids.cli_netcdf_cftime import _parse_coords, add_nc_cftime_commands
-from pyramids.netcdf import NetCDF
+from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 
 pytestmark = pytest.mark.core
 
@@ -26,6 +27,28 @@ _NC_TIME24 = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
 _NC_PLEV = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 # A gridded geographic CF file with no non-spatial axis (Band1..Band4, lon/lat only).
 _NC_FLAT = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
+
+
+def _time_cube(path: str, values: list[float]) -> str:
+    """Write a clean single-variable time cube (no CF bnds aux) and return ``path``.
+
+    Args:
+        path: Where to write the NetCDF.
+        values: One value per time step (a 1x1 grid per step).
+
+    Returns:
+        str: ``path``.
+    """
+    NetCDF.from_array(
+        np.asarray(values, dtype="float64").reshape(len(values), 1, 1),
+        geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 1.0, 0.0, -1.0), epsg=4326),
+        variable_name="t",
+        dims=ExtraDimensions(
+            name="time", values=[float(i) for i in range(len(values))]
+        ),
+    ).to_file(path)
+    return path
+
 
 _DIM = "--dim"
 _TIME = "time"
@@ -328,3 +351,97 @@ class TestOverwriteGuard:
         out = str(tmp_path / "rd.nc")
         assert run(["reduce", str(_NC_TIME24), out, _DIM, _TIME]) == 0
         assert run(["reduce", str(_NC_TIME24), out, _DIM, _TIME, "--overwrite"]) == 0
+
+
+class TestInterpLike:
+    """`pyramids nc interp-like` (issue #1467)."""
+
+    def test_interpolates_onto_target_axis(self, tmp_path):
+        """A 4-step cube interpolated onto a 2-step target keeps the target's length."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0, 3.0, 4.0])
+        tgt = _time_cube(str(tmp_path / "tgt.nc"), [0.0, 0.0])
+        out = str(tmp_path / "il.nc")
+        rc = run(["interp-like", src, out, "--target", tgt])
+        assert rc == 0
+        assert _dims(out)["time"] == 2
+
+    def test_no_shared_band_dim_raises(self, tmp_path):
+        """Two flat (band-less) cubes share no dimension to interpolate onto."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["interp-like", str(_NC_FLAT), out, "--target", str(_NC_FLAT)])
+
+
+class TestCoarsen:
+    """`pyramids nc coarsen` (issue #1467)."""
+
+    def test_block_reduces_time(self, tmp_path):
+        """A window of 2 over a 4-step axis yields 2 blocks."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0, 3.0, 4.0])
+        out = str(tmp_path / "co.nc")
+        rc = run(
+            ["coarsen", src, out, _DIM, _TIME, "--window", "2", "--boundary", "trim"]
+        )
+        assert rc == 0
+        assert _dims(out)["time"] == 2
+
+    def test_bad_dimension_raises(self, tmp_path):
+        """An unknown --dim surfaces as a caught ValueError."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0])
+        with pytest.raises(ValueError):
+            run(
+                [
+                    "coarsen",
+                    src,
+                    str(tmp_path / "o.nc"),
+                    _DIM,
+                    _BAD_DIM,
+                    "--window",
+                    "2",
+                ]
+            )
+
+
+class TestCumulative:
+    """`pyramids nc cumulative` (issue #1467)."""
+
+    def test_running_sum(self, tmp_path):
+        """--how sum writes the running total [1, 3, 6] along time."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0, 3.0])
+        out = str(tmp_path / "cum.nc")
+        rc = run(["cumulative", src, out, _DIM, _TIME, "--how", "sum"])
+        assert rc == 0
+        values = NetCDF.read_file(out).get_variable("t").read_array().ravel().tolist()
+        assert values == [1.0, 3.0, 6.0]
+
+    def test_running_prod(self, tmp_path):
+        """--how prod writes the running product [1, 2, 6] along time."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0, 3.0])
+        out = str(tmp_path / "cum.nc")
+        rc = run(["cumulative", src, out, _DIM, _TIME, "--how", "prod"])
+        assert rc == 0
+        values = NetCDF.read_file(out).get_variable("t").read_array().ravel().tolist()
+        assert values == [1.0, 2.0, 6.0]
+
+    def test_bad_dimension_raises(self, tmp_path):
+        """An unknown --dim surfaces as a caught ValueError."""
+        src = _time_cube(str(tmp_path / "src.nc"), [1.0, 2.0])
+        with pytest.raises(ValueError):
+            run(["cumulative", src, str(tmp_path / "o.nc"), _DIM, _BAD_DIM])
+
+
+class TestWeighted:
+    """`pyramids nc weighted` (issue #1467)."""
+
+    def test_area_weighted_mean(self, tmp_path):
+        """--weights area reduces the spatial axes to a single cell per band."""
+        out = str(tmp_path / "w.nc")
+        rc = run(["weighted", str(_NC_PLEV), out, "--weights", "area"])
+        assert rc == 0
+        assert NetCDF.read_file(out) is not None
+
+    def test_unknown_how_raises(self, tmp_path):
+        """An unknown --how surfaces as a caught ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["weighted", str(_NC_PLEV), out, "--weights", "area", "--how", "nope"])

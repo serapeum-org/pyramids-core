@@ -1,15 +1,18 @@
 """NetCDF variable- and dimension-management commands for the ``pyramids nc`` group.
 
 Thin wrappers over :class:`pyramids.netcdf.NetCDF`: rename or remove a variable
-(`rename-var`/`remove-var`), reproject or resample one variable in place
-(`reproject-var`/`resample-var`), and the xarray-style dimension/coordinate verbs —
-rename band dimensions (`rename-dims`), drop them (`drop-dims`), promote or demote CF
-auxiliary coordinates (`set-coords`/`reset-coords`) and drop length-one band
-dimensions (`squeeze`). Every command writes a new file and never touches the source:
-the variable mutators (`rename-var`/`remove-var`/`reproject-var`/`resample-var`)
-mutate a read-only read's in-memory copy and write it out, while the dimension verbs
-return a new cube that is written out. No xarray is imported here — reads go through
-the ``NetCDF`` class.
+(`rename-var`/`remove-var`), copy a variable in from another NetCDF (`add-var`), write a
+raster in as a variable (`set-var`), crop one variable to a vector mask (`crop-var`),
+reproject or resample one variable in place (`reproject-var`/`resample-var`), lift one
+variable onto a new length-one band dimension (`expand-dims`), restamp existing band
+dimensions (`assign-coords`), and the xarray-style dimension/coordinate verbs — rename
+band dimensions (`rename-dims`), drop them (`drop-dims`), promote or demote CF auxiliary
+coordinates (`set-coords`/`reset-coords`) and drop length-one band dimensions
+(`squeeze`). Every command writes a new file and never touches the source: the variable
+mutators (`rename-var`/`remove-var`/`add-var`/`set-var`/`crop-var`/`reproject-var`/
+`resample-var`) mutate a read-only read's in-memory copy and write it out, while the
+dimension/coordinate verbs return a new cube that is written out. No xarray is imported
+here — reads go through the ``NetCDF`` class.
 """
 
 from __future__ import annotations
@@ -17,6 +20,8 @@ from __future__ import annotations
 import argparse
 
 from pyramids._cli_shared import info_print, refuse_existing
+from pyramids.dataset import Dataset
+from pyramids.feature import FeatureCollection
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -45,6 +50,40 @@ def _parse_pairs(items: list[str]) -> dict[str, str]:
             raise ValueError(f"expected KEY=VALUE, got {item!r}")
         pairs[key] = value
     return pairs
+
+
+def _parse_coord_lists(items: list[str]) -> dict[str, list[float]]:
+    """Parse ``DIM=v1,v2,...`` tokens into a ``{dim: [float, ...]}`` mapping.
+
+    Each token names a band dimension and the comma-separated coordinate values to
+    restamp it with; the values are coerced to ``float`` (band-dimension coordinates
+    are numeric, e.g. hours-since or pressure levels).
+
+    Args:
+        items: ``--coord`` tokens, each ``DIM=v1,v2,...`` (e.g. ``time=0,6,12,18``).
+
+    Returns:
+        dict[str, list[float]]: Dimension name mapped to its list of coordinate values.
+
+    Raises:
+        ValueError: A token has no ``=``, an empty dimension name, an empty value list,
+            or a value that is not a float.
+    """
+    mapping: dict[str, list[float]] = {}
+    for item in items:
+        name, sep, raw = item.partition("=")
+        if not sep or not name:
+            raise ValueError(f"expected DIM=v1,v2,..., got {item!r}")
+        tokens = [piece for piece in raw.split(",") if piece != ""]
+        if not tokens:
+            raise ValueError(f"--coord token {item!r} lists no values")
+        try:
+            mapping[name] = [float(piece) for piece in tokens]
+        except ValueError as exc:
+            raise ValueError(
+                f"--coord {item!r} has a non-numeric value in {raw!r}"
+            ) from exc
+    return mapping
 
 
 def _cmd_nc_rename_var(args: argparse.Namespace) -> int:
@@ -269,6 +308,140 @@ def _cmd_nc_squeeze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_nc_add_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc add-var`` — copy variables in from another NetCDF.
+
+    The base file is read read-only; ``add_variable`` copies the requested variable(s)
+    of ``--source`` into an in-memory copy of it, which is written to ``output`` (the
+    source and base files are never modified). Omitting ``--var`` copies every variable
+    of the source; a leaf name that collides with one already present is suffixed.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``source``, ``var``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` does not resolve in the source, or either file is not a
+            multidimensional container (raised by ``add_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    nc = NetCDF.read_file(args.file)
+    source = NetCDF.read_file(args.source)
+    nc.add_variable(source, args.var)
+    nc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_set_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc set-var`` — write a raster in as a NetCDF variable.
+
+    The base file is read read-only; ``set_variable`` stores the ``--raster`` dataset as
+    a variable named ``--var`` on an in-memory copy, which is written to ``output`` (a
+    variable of that name already present is replaced). The source files are untouched.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``raster``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: The base file is not a multidimensional container (raised by
+            ``set_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    nc = NetCDF.read_file(args.file)
+    nc.set_variable(args.var, Dataset.read_file(args.raster))
+    nc.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_crop_var(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc crop-var`` — crop one variable to a vector mask.
+
+    ``crop_variable`` crops the variable to the ``--mask`` polygons and stores the result
+    back on an in-memory copy of the container, which is written to ``output``; the source
+    is read read-only and left untouched. ``--no-touch`` excludes cells that only touch the
+    mask boundary.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``mask``, ``no_touch``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is not a valid variable, or the mask does not overlap the
+            variable (raised by ``crop_variable``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    mask = FeatureCollection.read_file(args.mask)
+    result = NetCDF.read_file(args.file).crop_variable(
+        args.var, mask, touch=not args.no_touch
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_expand_dims(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc expand-dims`` — lift one variable onto a new band dimension.
+
+    ``expand_dims`` acts on a single variable's bands, so the command resolves ``--var``
+    first and adds a new outermost band dimension of length one, with ``--value`` its sole
+    coordinate (omitted leaves the dimension without coordinates). The lifted variable is
+    written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``var``, ``dim``, ``value``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--var`` is not a valid variable, or ``--dim`` is already a band
+            dimension or names a spatial axis (raised by ``expand_dims``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    variable = NetCDF.read_file(args.file).get_variable(args.var)
+    result = variable.expand_dims(args.dim, args.value)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_assign_coords(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc assign-coords`` — restamp existing band dimensions.
+
+    ``assign_coords`` is non-mutating and returns a new cube in which each named band
+    dimension carries the given coordinate values (a pure re-label; no cells move); that
+    cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``coord``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: A ``--coord`` token is malformed (raised by
+            :func:`_parse_coord_lists`), or a name is not an existing band dimension or
+            its value count does not match the dimension length (raised by
+            ``assign_coords``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).assign_coords(_parse_coord_lists(args.coord))
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     """Register the ``nc`` variable- and dimension-management commands on ``ncsub``.
 
@@ -366,3 +539,65 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_sqz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_sqz.set_defaults(func=_cmd_nc_squeeze)
+
+    nc_adv = ncsub.add_parser("add-var", help="copy variables in from another NetCDF")
+    nc_adv.add_argument("file", help=_HELP_NC_FILE)
+    nc_adv.add_argument("output", help=_HELP_OUTPUT)
+    nc_adv.add_argument("--source", required=True, help="NetCDF to copy variables from")
+    nc_adv.add_argument(
+        "--var", default=None, help="one variable to copy (default: all of the source)"
+    )
+    nc_adv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_adv.set_defaults(func=_cmd_nc_add_var)
+
+    nc_sev = ncsub.add_parser("set-var", help="write a raster in as a variable")
+    nc_sev.add_argument("file", help=_HELP_NC_FILE)
+    nc_sev.add_argument("output", help=_HELP_OUTPUT)
+    nc_sev.add_argument("--var", required=True, help="name for the new variable")
+    nc_sev.add_argument(
+        "--raster", required=True, help="raster to store as the variable"
+    )
+    nc_sev.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_sev.set_defaults(func=_cmd_nc_set_var)
+
+    nc_cpv = ncsub.add_parser("crop-var", help="crop one variable to a vector mask")
+    nc_cpv.add_argument("file", help=_HELP_NC_FILE)
+    nc_cpv.add_argument("output", help=_HELP_OUTPUT)
+    nc_cpv.add_argument("--var", required=True, help=_HELP_VAR)
+    nc_cpv.add_argument("--mask", required=True, help="polygon vector mask to crop to")
+    nc_cpv.add_argument(
+        "--no-touch",
+        action="store_true",
+        help="exclude cells that only touch the mask boundary",
+    )
+    nc_cpv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_cpv.set_defaults(func=_cmd_nc_crop_var)
+
+    nc_exd = ncsub.add_parser("expand-dims", help="lift a variable onto a new band dim")
+    nc_exd.add_argument("file", help=_HELP_NC_FILE)
+    nc_exd.add_argument("output", help=_HELP_OUTPUT)
+    nc_exd.add_argument("--var", required=True, help=_HELP_VAR)
+    nc_exd.add_argument(
+        "--dim", required=True, help="name of the new length-one band dim"
+    )
+    nc_exd.add_argument(
+        "--value",
+        type=float,
+        default=None,
+        help="the new dimension's single coordinate value (default: none)",
+    )
+    nc_exd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_exd.set_defaults(func=_cmd_nc_expand_dims)
+
+    nc_asc = ncsub.add_parser("assign-coords", help="restamp existing band dimensions")
+    nc_asc.add_argument("file", help=_HELP_NC_FILE)
+    nc_asc.add_argument("output", help=_HELP_OUTPUT)
+    nc_asc.add_argument(
+        "--coord",
+        nargs="+",
+        required=True,
+        metavar="DIM=v1,v2,...",
+        help="one or more DIM=v1,v2,... band-dimension restamps",
+    )
+    nc_asc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_asc.set_defaults(func=_cmd_nc_assign_coords)
