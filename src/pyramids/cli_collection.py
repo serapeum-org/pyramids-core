@@ -24,7 +24,7 @@ import argparse
 import glob as _glob
 import json
 import os
-from typing import Any
+from typing import Any, cast
 
 from pyramids._cli_shared import (
     info_print,
@@ -383,8 +383,15 @@ def _cmd_collection_reproject(args: argparse.Namespace) -> int:
     """
     _guard_output_dir(args.output, args.overwrite)
     coll = _open_collection(args)
-    reprojected = coll.to_crs(
-        args.crs, method=args.resampling, maintain_alignment=args.maintain_alignment
+    # Eager collection (opened from files), so to_crs returns a DatasetCollection,
+    # never the lazy Delayed / in-place None the union type also allows.
+    reprojected = cast(
+        DatasetCollection,
+        coll.to_crs(
+            args.crs,
+            method=args.resampling,
+            maintain_alignment=args.maintain_alignment,
+        ),
     )
     reprojected.to_file(args.output)
     info_print(args, f"wrote {args.output}")
@@ -404,11 +411,14 @@ def _cmd_collection_crop(args: argparse.Namespace) -> int:
     _guard_output_dir(args.output, args.overwrite)
     coll = _open_collection(args)
     mask = Dataset.read_file(args.mask) if args.mask else None
-    cropped = coll.crop(
-        mask=mask,
-        touch=args.touch,
-        bbox=tuple(args.bbox) if args.bbox else None,
-        epsg=args.epsg,
+    cropped = cast(
+        DatasetCollection,
+        coll.crop(
+            mask=mask,
+            touch=args.touch,
+            bbox=tuple(args.bbox) if args.bbox else None,
+            epsg=args.epsg,
+        ),
     )
     cropped.to_file(args.output)
     info_print(args, f"wrote {args.output}")
@@ -428,7 +438,7 @@ def _cmd_collection_align(args: argparse.Namespace) -> int:
     _guard_output_dir(args.output, args.overwrite)
     coll = _open_collection(args)
     reference = Dataset.read_file(args.reference)
-    aligned = coll.align(reference, method=args.resampling)
+    aligned = cast(DatasetCollection, coll.align(reference, method=args.resampling))
     aligned.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

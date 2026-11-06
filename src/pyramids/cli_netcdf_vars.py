@@ -410,6 +410,11 @@ def _cmd_nc_expand_dims(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     variable = NetCDF.read_file(args.file).get_variable(args.var)
+    if not isinstance(variable, NetCDF):
+        raise ValueError(
+            f"variable {args.var!r} is not a raster plane, so a dimension cannot be "
+            "added to it"
+        )
     result = variable.expand_dims(args.dim, args.value)
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")

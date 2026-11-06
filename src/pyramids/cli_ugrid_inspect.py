@@ -35,14 +35,14 @@ from pyramids._cli_shared import (
     resolve_vector_driver,
 )
 from pyramids.feature import FeatureCollection
-from pyramids.netcdf.ugrid import MeshDataset
+from pyramids.netcdf.ugrid import MeshDataset, MeshVariable
 
 _HELP_MESH_FILE = "UGRID NetCDF path"
 _HELP_JSON = "emit JSON"
 _HELP_VAR = "mesh variable name"
 
 
-def _describe_variable(variable: object) -> dict:
+def _describe_variable(variable: MeshVariable) -> dict:
     """Return the JSON-safe metadata of a :class:`MeshVariable`.
 
     Args:

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+from typing import Any
 
 from pyramids._cli_shared import (
     info_print,
@@ -114,6 +115,7 @@ def _cmd_nc_time_values(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     nc = NetCDF.read_file(args.file)
+    listed: list[Any]
     if args.raw:
         values = nc.get_time_values(var_name=args.var)
         listed = [] if values is None else [json_safe(v) for v in values.tolist()]

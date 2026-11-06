@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from typing import cast
 
 import pandas as pd
 from pandas import DataFrame
@@ -387,16 +388,18 @@ def _cmd_checksum(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         result = ds.checksum(band=args.band)
     if args.band is None:
-        payload = {"checksums": [int(value) for value in result]}
+        checksums = [int(value) for value in cast("list[int]", result)]
+        if args.json:
+            print(json.dumps({"checksums": checksums}))
+        else:
+            for index, value in enumerate(checksums):
+                print(f"band {index}: {value}")
     else:
-        payload = {"band": args.band, "checksum": int(result)}
-    if args.json:
-        print(json.dumps(payload))
-    elif args.band is None:
-        for index, value in enumerate(payload["checksums"]):
-            print(f"band {index}: {value}")
-    else:
-        print(payload["checksum"])
+        single = int(cast("int", result))
+        if args.json:
+            print(json.dumps({"band": args.band, "checksum": single}))
+        else:
+            print(single)
     return 0
 
 
