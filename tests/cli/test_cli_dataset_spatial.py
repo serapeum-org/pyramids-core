@@ -342,7 +342,14 @@ class TestTransect:
         with open(out, newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
         assert [row["value"] for row in rows] == [str(float(v)) for v in range(8)]
-        assert float(rows[0]["distance"]) == pytest.approx(0.0), "first distance wrong"
+        # The first densified point coincides with the line's start, so its
+        # cumulative distance is 0. macOS PROJ returns tiny geodesic noise
+        # (~1e-11) rather than a hard 0.0, and pytest.approx against an exact-0
+        # target only honours its absolute tolerance (default 1e-12 — too tight
+        # for that noise), so pin an explicit, generous abs tolerance.
+        assert float(rows[0]["distance"]) == pytest.approx(0.0, abs=1e-6), (
+            "first distance wrong"
+        )
         assert float(rows[-1]["distance"]) > 0.0, "distance must rise"
 
     def test_json_prints_profile(self, ramp, capsys):
