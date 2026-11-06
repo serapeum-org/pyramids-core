@@ -34,6 +34,9 @@ jobs:
       matrix:
         environment: [py311, py312, py313, py314, py315]
     steps:
+      # No fetch-depth: the job only runs `pip freeze` + `pip-audit` and reads no git
+      # history, so the default shallow checkout is correct and keeps the large gh-pages
+      # branch out of the fetch (see #1417). Mirrors the same note in tests.yml.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
