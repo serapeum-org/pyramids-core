@@ -61,13 +61,15 @@ class TestCalc:
 
     def test_unknown_name_raises(self):
         """A name not bound to an input raster is rejected."""
+        ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         with pytest.raises(ValueError, match="unknown name"):
-            _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).calc("A + Z")
+            ds.calc("A + Z")
 
     def test_disallowed_expression_raises(self):
         """Anything outside the arithmetic/np whitelist is rejected, never executed."""
+        ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         with pytest.raises(ValueError, match="disallowed element"):
-            _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).calc("__import__('os').getcwd()")
+            ds.calc("__import__('os').getcwd()")
 
     def test_too_many_inputs_raises(self):
         """At most 26 inputs (A..Z) are allowed."""
