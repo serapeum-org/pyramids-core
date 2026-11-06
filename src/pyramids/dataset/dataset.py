@@ -540,11 +540,15 @@ def _remap_nodata_to(arr: np.ndarray, src_nd: Any, dst_nd: Any) -> np.typing.NDA
 if TYPE_CHECKING:
     import dask.array as da
     from cleopatra.basemap.geo import Basemap
-    from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph, PlotKwargs, PointOverlay
-    from dask.delayed import Delayed
+    from cleopatra.glyphs.gridded.array_glyph import (
+        ArrayGlyph,
+        PlotKwargs,
+        PointOverlay,
+    )
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import CellValues, Contour, DataStyle
     from cleopatra.styling.scaling import ColorScaling
+    from dask.delayed import Delayed
     from geopandas import GeoDataFrame
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
@@ -1724,7 +1728,9 @@ class Dataset(RasterBase):
                 title=title,
                 kind=None if kind == "auto" else kind,
             )
-            return cast("ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs))
+            return cast(
+                "ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs)
+            )
         rgb, surface_reflectance, cutoff, percentile = self._unpack_rgb_options(
             rgb_options
         )

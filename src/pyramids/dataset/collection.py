@@ -2043,7 +2043,10 @@ class DatasetCollection:
         codec_kwargs = normalize_compressors(compressor)
 
         if append_dim is not None:
-            return cast("Delayed | None", self._append_to_zarr(resolved_store, data, append_dim, compute))
+            return cast(
+                "Delayed | None",
+                self._append_to_zarr(resolved_store, data, append_dim, compute),
+            )
         if region is not None:
             # Write the cube into a region of an existing store; geobox /
             # time_length already exist there, so no finalize is needed. dask's

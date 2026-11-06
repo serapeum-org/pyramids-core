@@ -131,7 +131,11 @@ from pyramids.netcdf.utils import (
 
 if TYPE_CHECKING:
     from cleopatra.basemap.geo import Basemap
-    from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph, PlotKwargs, PointOverlay
+    from cleopatra.glyphs.gridded.array_glyph import (
+        ArrayGlyph,
+        PlotKwargs,
+        PointOverlay,
+    )
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import CellValues, Contour, DataStyle
     from cleopatra.styling.scaling import ColorScaling
@@ -5869,7 +5873,9 @@ class NetCDF(Dataset):
                 kind=None if kind == "auto" else kind,
                 animate=animate,
             )
-            return cast("ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs))
+            return cast(
+                "ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs)
+            )
         # ``colorbar``/``points`` and the typed render groups (``color`` / ``contour`` /
         # ``cells`` / ``data_style``) are hoisted to explicit params for parity with
         # ``Dataset.plot``. Spread the explicitly-set ones as their own ``**`` — kept in a
