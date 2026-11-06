@@ -95,6 +95,22 @@ class TestCalc:
         assert result is sentinel
         spy.assert_called_once_with("A + 1", dtype="int16")
 
+    def test_comparison_returns_a_uint8_mask(self):
+        """A bare comparison yields a 0/1 uint8 mask, not a bool-dtype crash."""
+        ds = _ds([[1.0, 2.0, 4.0], [0.0, 3.0, 5.0]])
+        out = ds.calc("A > 2")
+        arr = np.asarray(out.read_array())
+        assert arr.dtype == np.uint8, f"expected uint8 mask, got {arr.dtype}"
+        assert arr.ravel().tolist() == [0, 0, 1, 0, 1, 1]
+
+    def test_scalar_expression_broadcasts_to_the_grid(self):
+        """A constant/0-d expression fills the whole grid instead of raising."""
+        ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        out = ds.calc("1 + 2")
+        arr = np.asarray(out.read_array())
+        assert arr.shape[-2:] == (2, 3), f"expected the template grid, got {arr.shape}"
+        assert set(arr.ravel().tolist()) == {3.0}
+
     def test_multi_band_result_keeps_the_band_axis(self):
         """A multi-band input yields a multi-band result (the ndim-3 path)."""
         arr = np.arange(12.0, dtype="float64").reshape(2, 2, 3)

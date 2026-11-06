@@ -1826,6 +1826,15 @@ class Analysis(_Engine["Dataset"]):
         out = np.asarray(eval_calc(expr, variables))
         if dtype is not None:
             out = out.astype(dtype)
+        elif out.dtype == bool:
+            # GDAL has no boolean band type, so a comparison / mask expression
+            # (e.g. ``A > 0.3``) becomes a 0/1 ``uint8`` raster rather than a
+            # cryptic "numpy data type is not supported: bool" from the writer.
+            out = out.astype("uint8")
+        if out.ndim == 0:
+            # A scalar expression (e.g. ``"1"``) fills the whole template grid
+            # instead of raising on ``out.shape[0]``.
+            out = np.full((template.rows, template.columns), out, dtype=out.dtype)
         result = self._ds.__class__._build_dataset(
             template.columns,
             template.rows,
@@ -1833,6 +1842,11 @@ class Analysis(_Engine["Dataset"]):
             numpy_to_gdal_dtype(out),
             template.geotransform,
             template.crs,
+            # A computed array has no inherent no-data sentinel, so the result
+            # declares none -- rather than stamping the ``-9999`` factory default
+            # on values the expression may legitimately produce (and which is out
+            # of range for an integer/bool cast anyway).
+            no_data_value=None,
             array=out,
         )
         # Dataset-level tags travel (like `combine`); band-level scale/offset/units
