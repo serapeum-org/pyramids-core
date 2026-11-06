@@ -1724,7 +1724,7 @@ class Dataset(RasterBase):
                 title=title,
                 kind=None if kind == "auto" else kind,
             )
-            return render_via_backend(self, backend, **forwarded, **kwargs)
+            return cast("ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs))
         rgb, surface_reflectance, cutoff, percentile = self._unpack_rgb_options(
             rgb_options
         )
@@ -2598,7 +2598,7 @@ class Dataset(RasterBase):
                 ```
         """
         resolved_chunks = chunks if chunks is not None else "auto"
-        return write_dataset_to_zarr(
+        result: Delayed | None = write_dataset_to_zarr(
             self,
             store,
             compute=compute,
@@ -2609,6 +2609,7 @@ class Dataset(RasterBase):
             overview_factors=overview_factors,
             overview_resampling=overview_resampling,
         )
+        return result
 
     @classmethod
     def from_zarr(

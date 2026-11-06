@@ -31,6 +31,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from cleopatra.glyphs.gridded.array_glyph import PointOverlay
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import Classify, Contour

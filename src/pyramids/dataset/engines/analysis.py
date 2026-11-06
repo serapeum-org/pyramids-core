@@ -6429,7 +6429,7 @@ class Analysis(_Engine["Dataset"]):
         # cleopatra (>=0.39.0) to keep the host's existing artists instead of
         # clearing the axes; when we create our own axes there is nothing to
         # preserve, so composition stays off.
-        result = glyph.plot(kind=kind, compose=ax is not None)
+        result: tuple[Figure, Axes, Any] = glyph.plot(kind=kind, compose=ax is not None)
         return result
 
     def plot(

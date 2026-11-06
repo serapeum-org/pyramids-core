@@ -58,6 +58,7 @@ import site
 import sys
 import threading
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
 from osgeo import gdal, ogr
@@ -602,7 +603,7 @@ class Config:
         """
         config_file = Path(root_path[0]) / "base/data" / self.config_file
         with open(config_file) as file:
-            return yaml.safe_load(file)
+            return cast("dict[str, Any]", yaml.safe_load(file))
 
     def initialize_gdal(self):
         """Initialize GDAL/OGR options and register drivers.

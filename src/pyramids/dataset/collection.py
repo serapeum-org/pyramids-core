@@ -2043,7 +2043,7 @@ class DatasetCollection:
         codec_kwargs = normalize_compressors(compressor)
 
         if append_dim is not None:
-            return self._append_to_zarr(resolved_store, data, append_dim, compute)
+            return cast("Delayed | None", self._append_to_zarr(resolved_store, data, append_dim, compute))
         if region is not None:
             # Write the cube into a region of an existing store; geobox /
             # time_length already exist there, so no finalize is needed. dask's
@@ -2051,11 +2051,14 @@ class DatasetCollection:
             import zarr
 
             existing = zarr.open_group(resolved_store, mode="a")["data"]
-            return data.to_zarr(
-                existing,
-                region=_region_to_slices(region, data.ndim),
-                overwrite=False,
-                compute=compute,
+            return cast(
+                "Delayed | None",
+                data.to_zarr(
+                    existing,
+                    region=_region_to_slices(region, data.ndim),
+                    overwrite=False,
+                    compute=compute,
+                ),
             )
 
         write_result = data.to_zarr(
@@ -2067,7 +2070,7 @@ class DatasetCollection:
         )
         if compute:
             _finalize_collection_metadata(resolved_store, self._meta, files)
-            result: Any = None
+            result: Delayed | None = None
         else:
             import dask
 
