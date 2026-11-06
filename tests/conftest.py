@@ -2,9 +2,41 @@ import gc
 import os
 import random
 import re
+import sys
 import warnings
 from pathlib import Path
 from typing import Iterator, List, Tuple
+
+
+def _wire_lazy_backend_for_tests() -> None:
+    """Make the ``pyramids-lazy`` compute backend importable during the test run.
+
+    Core's lazy operations now dispatch to the backend via ``require_compute_backend``; the real
+    plugin lives in the sibling ``pyramids-lazy`` repo. If it is not already importable, add its
+    ``src`` to ``sys.path`` so the seam's first-party fallback resolves it. Resolution order:
+    an installed ``pyramids_lazy``; else ``$PYRAMIDS_LAZY_SRC``; else the sibling checkout
+    ``<repos>/gis/pyramids-lazy/src``. When none is found the lazy ops raise the branded
+    ``OptionalPackageDoesNotExist`` (the bare-core contract), which the branded-error tests assert.
+    """
+    try:
+        import pyramids_lazy  # noqa: F401
+
+        return
+    except ModuleNotFoundError:
+        pass
+    candidates = []
+    env_src = os.environ.get("PYRAMIDS_LAZY_SRC")
+    if env_src:
+        candidates.append(Path(env_src))
+    # Normal (non-worktree) layout: pyramids and pyramids-lazy are siblings under repos/gis/.
+    candidates.append(Path(__file__).resolve().parents[1].parent / "pyramids-lazy" / "src")
+    for candidate in candidates:
+        if candidate.is_dir() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+            return
+
+
+_wire_lazy_backend_for_tests()
 
 import numpy as np
 import pandas as pd

@@ -576,37 +576,13 @@ class Interop(_Engine["NetCDF"]):
 
               ```
         """
-        import_dask("to_dask_dataframe() needs dask; install the `lazy` extra.")
-        # dask.dataframe (dask-expr) imports pyarrow, which ships in the `parquet` extra rather than
-        # `lazy`; guard it so a lazy-only install gets a clear hint instead of a raw ModuleNotFound.
-        require_optional(
-            "dask.dataframe",
-            "to_dask_dataframe() needs dask.dataframe, which requires pyarrow — install the "
-            "`parquet` extra (e.g. `pip install pyramids-core[parquet]`).",
-        )
-        import dask.array as da
-        import dask.dataframe as dd
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        nc = self._ds
-        names = self._frame_variables(variables)
-        first = nc._require_raster_variable(names[0]) if _is_container(nc) else nc
-        # An in-memory store (no on-disk / VSI path) has nothing to stream, so its values are
-        # wrapped eagerly in a dask array; a file-backed store is read lazily through the MDArray
-        # chunk reader. The shared `_is_in_memory` predicate keeps this in step with `NetCDF.chunk`.
-        in_memory = _is_in_memory(nc)
-        value_arrays = _lazy_value_columns(nc, names, first, in_memory, chunks, da)
-        ref_chunks = next(iter(value_arrays.values())).chunks
-        columns = _lazy_dimension_columns(first, ref_chunks, da)
-        for name, array in value_arrays.items():
-            columns[name] = array.rechunk(ref_chunks)
-        frame = dd.concat(
-            [
-                dd.from_dask_array(col, columns=[label])
-                for label, col in columns.items()
-            ],
-            axis=1,
+        return require_compute_backend().to_dask_dataframe(
+            self._ds, variables=variables, dropna=dropna, chunks=chunks
         )
-        return frame.dropna(subset=list(names), how="all") if dropna else frame
 
     def _frame_variables(self, variables: Any) -> list[str]:
         """The data variables that become columns, in order.

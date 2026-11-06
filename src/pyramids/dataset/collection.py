@@ -1963,9 +1963,9 @@ class DatasetCollection:
                 f"files: {geotiff_files[:3]}"
                 f"{' ...' if len(geotiff_files) > 3 else ''}"
             )
-        from pyramids.netcdf._kerchunk_facade import combine_kerchunk
+        from pyramids.base._compute_backend import require_compute_backend
 
-        return combine_kerchunk(
+        return require_compute_backend().combine_kerchunk(
             files,
             output_path,
             concat_dims=(concat_dim,),
@@ -2026,60 +2026,20 @@ class DatasetCollection:
                 installed.
             RuntimeError: When the collection has no files list.
         """
-        files = self._require_files("to_zarr")
-        import_zarr(
-            lazy_extra_hint(
-                "DatasetCollection.to_zarr requires the optional 'zarr' dependency."
-            )
-        )
-        if mode == "a" and append_dim is None and region is None:
-            raise ValueError(
-                "mode='a' requires append_dim='time' or region=... (append_dim / "
-                "region semantics); use mode='w' to (over)write the whole cube."
-            )
-        data = self.data
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.dataset.ops._zarr import _resolve_store
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        resolved_store = _resolve_store(store, storage_options)
-        codec_kwargs = normalize_compressors(compressor)
-
-        if append_dim is not None:
-            return self._append_to_zarr(resolved_store, data, append_dim, compute)
-        if region is not None:
-            # Write the cube into a region of an existing store; geobox /
-            # time_length already exist there, so no finalize is needed. dask's
-            # region write targets the zarr.Array directly.
-            import zarr
-
-            existing = zarr.open_group(resolved_store, mode="a")["data"]
-            return data.to_zarr(
-                existing,
-                region=_region_to_slices(region, data.ndim),
-                overwrite=False,
-                compute=compute,
-            )
-
-        write_result = data.to_zarr(
-            resolved_store,
-            component="data",
-            overwrite=(mode == "w"),
+        return require_compute_backend().write_collection_to_zarr(
+            self,
+            store,
             compute=compute,
-            **codec_kwargs,
+            mode=mode,
+            storage_options=storage_options,
+            compressor=compressor,
+            append_dim=append_dim,
+            region=region,
         )
-        if compute:
-            _finalize_collection_metadata(resolved_store, self._meta, files)
-            result: Any = None
-        else:
-            import dask
-
-            result = dask.delayed(_finalize_after_write)(
-                write_result,
-                resolved_store,
-                self._meta,
-                files,
-            )
-        return result
 
     def _append_to_zarr(self, resolved_store, data, append_dim: str, compute: bool):
         """Append this cube's timesteps to an existing store along ``append_dim``.
@@ -2966,59 +2926,13 @@ class DatasetCollection:
         Raises:
             OptionalPackageDoesNotExist: When the ``[lazy]`` extra is missing.
         """
-        import_zarr(
-            lazy_extra_hint(
-                "DatasetCollection.from_zarr requires the optional 'zarr' dependency."
-            )
-        )
-        import zarr
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.dataset.ops._zarr import _resolve_store
-
-        resolved = _resolve_store(store, storage_options)
-        root = zarr.open_group(resolved, mode="r")
-        data_arr = root["data"]
-        if not isinstance(data_arr, zarr.Array):
-            raise TypeError(
-                f"expected the 'data' node in {resolved!r} to be a zarr Array, "
-                f"got a Group -- the store is not a pyramids cube"
-            )
-        data_attrs = dict(data_arr.attrs)
-        geobox = read_geobox(root, data_name="data")
-        time_length, bands, rows, cols = (int(v) for v in data_arr.shape)
-        # These attrs are always written by _finalize_collection_metadata /
-        # _finalize_append_metadata with the concrete types cast here, never any
-        # other JSON shape. The int() is kept (a cast is a no-op at runtime) so a
-        # legacy store holding time_length as a JSON float/str still coerces.
-        time_length = int(
-            cast("int | float | str", root.attrs.get("time_length", time_length))
+        return require_compute_backend().read_collection_from_zarr(
+            cls, store, storage_options=storage_options
         )
-
-        nodata_list = cast("list | None", data_attrs.get("nodata"))
-        if nodata_list and any(v is not None for v in nodata_list):
-            no_data_value: Any = list(nodata_list)
-        else:
-            no_data_value = None
-        dtype = np.dtype(cast(str, data_attrs.get("dtype", "float32")))
-        template_arr = np.zeros((bands, rows, cols), dtype=dtype)
-        geo_6 = cast(
-            "tuple[float, float, float, float, float, float]",
-            tuple(float(v) for v in geobox["geotransform"]),
-        )
-        template = Dataset.from_array(
-            template_arr if bands > 1 else template_arr[0],
-            no_data_value=no_data_value,
-            geo_ref=GeoReference(geo=geo_6, epsg=geobox_crs(geobox)),
-        )
-        if geobox["crs_wkt"]:
-            template.crs = geobox["crs_wkt"]
-        template.bands.apply_names(
-            cast("list | None", data_attrs.get("band_names")),
-            source="cube Zarr store",
-        )
-        meta = RasterMeta.from_dataset(template)
-        return cls(template, time_length, meta=meta, zarr_store=resolved)
 
     @classmethod
     def from_archive(

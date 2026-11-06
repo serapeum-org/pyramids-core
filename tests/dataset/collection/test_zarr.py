@@ -324,7 +324,7 @@ class TestAppendAtomicity:
         self._col(tmp_path, [1, 2], "a").to_zarr(store)
         before = zarr.open_group(store, mode="r")["data"].shape
         monkeypatch.setattr(
-            "pyramids.dataset.collection._finalize_append_metadata", self._boom
+            "pyramids_lazy._collection_zarr._finalize_append_metadata", self._boom
         )
         col = self._col(tmp_path, [3, 4, 5], "b")
         with pytest.raises(RuntimeError, match="boom"):
@@ -345,7 +345,7 @@ class TestAppendAtomicity:
         self._col(tmp_path, [1, 2], "a").to_zarr(store)
         before = zarr.open_group(store, mode="r")["data"].shape
         monkeypatch.setattr(
-            "pyramids.dataset.collection._finalize_append_metadata", self._boom
+            "pyramids_lazy._collection_zarr._finalize_append_metadata", self._boom
         )
         delayed = self._col(tmp_path, [3, 4, 5], "b").to_zarr(
             store, mode="a", append_dim="time", compute=False

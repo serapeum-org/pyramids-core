@@ -9806,10 +9806,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The manifest dict that was written.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.netcdf._kerchunk_facade import to_kerchunk
+        from pyramids.base._compute_backend import require_compute_backend
 
-        return to_kerchunk(
+        return require_compute_backend().to_kerchunk(
             self._file_name,
             output_path,
             inline_threshold=inline_threshold,
@@ -9845,10 +9844,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The combined manifest.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.netcdf._kerchunk_facade import combine_kerchunk
+        from pyramids.base._compute_backend import require_compute_backend
 
-        return combine_kerchunk(
+        return require_compute_backend().combine_kerchunk(
             paths,
             output_path,
             concat_dims=concat_dims,
@@ -9886,10 +9884,9 @@ class NetCDF(Dataset):
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.netcdf._mfdataset import open_mfdataset
+        from pyramids.base._compute_backend import require_compute_backend
 
-        return open_mfdataset(
+        return require_compute_backend().open_mfdataset(
             paths,
             variable,
             chunks=chunks,

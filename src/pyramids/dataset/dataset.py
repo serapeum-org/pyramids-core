@@ -2551,11 +2551,12 @@ class Dataset(RasterBase):
 
                 ```
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.dataset.ops._zarr import write_dataset_to_zarr
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
         resolved_chunks = chunks if chunks is not None else "auto"
-        return write_dataset_to_zarr(
+        return require_compute_backend().write_dataset_to_zarr(
             self,
             store,
             compute=compute,
@@ -2596,10 +2597,11 @@ class Dataset(RasterBase):
                 from a foreign GeoZarr store whose auto-detect picks the wrong
                 array.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.dataset.ops._zarr import read_dataset_from_zarr
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        return read_dataset_from_zarr(
+        return require_compute_backend().read_dataset_from_zarr(
             store,
             chunks=chunks,
             storage_options=storage_options,
