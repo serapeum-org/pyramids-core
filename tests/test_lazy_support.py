@@ -38,6 +38,7 @@ _ORIGINS = {
     "import_dask": "pyramids.base._utils",
     "import_dask_geopandas": "pyramids.base._utils",
     "import_h5py": "pyramids.base._utils",
+    "import_pyarrow": "pyramids.base._utils",
     "import_xarray": "pyramids.base._utils",
     "import_zarr": "pyramids.base._utils",
     "lazy_extra_hint": "pyramids.base._utils",
