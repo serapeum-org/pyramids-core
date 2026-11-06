@@ -11,11 +11,8 @@ together — every handler still maps 1:1 onto an existing `Dataset` call.
 from __future__ import annotations
 
 import argparse
-import ast
 import json
-import operator
 import sys
-from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
 
@@ -31,6 +28,7 @@ from pyramids.base._utils import DEFAULT_RESAMPLING, carry_packing
 from pyramids.base.crs import crs_spec, sr_from_user_input, sr_from_wkt
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
+from pyramids.dataset._calc import eval_calc
 from pyramids.dataset._gcp import GroundControlPoint
 from pyramids.dataset.abstract_dataset import OVERVIEW_LEVELS
 from pyramids.dataset.cog import PROFILES, Compression, Layout, cog_info, validate
@@ -460,105 +458,6 @@ def _cmd_orthorectify(args: argparse.Namespace) -> int:
     return 0
 
 
-_CALC_BINOPS: dict[type[ast.operator], Callable[[Any, Any], Any]] = {
-    ast.Add: operator.add,
-    ast.Sub: operator.sub,
-    ast.Mult: operator.mul,
-    ast.Div: operator.truediv,
-    ast.Pow: operator.pow,
-    ast.Mod: operator.mod,
-    ast.FloorDiv: operator.floordiv,
-}
-_CALC_UNARYOPS: dict[type[ast.unaryop], Callable[[Any], Any]] = {
-    ast.UAdd: operator.pos,
-    ast.USub: operator.neg,
-}
-_CALC_COMPARE: dict[type[ast.cmpop], Callable[[Any, Any], Any]] = {
-    ast.Lt: operator.lt,
-    ast.Gt: operator.gt,
-    ast.LtE: operator.le,
-    ast.GtE: operator.ge,
-    ast.Eq: operator.eq,
-    ast.NotEq: operator.ne,
-}
-# The only function calls a `calc` expression may use, all from numpy.
-_CALC_NP_FUNCS = frozenset(
-    {
-        "where",
-        "clip",
-        "log",
-        "log10",
-        "exp",
-        "sqrt",
-        "abs",
-        "minimum",
-        "maximum",
-        "power",
-    }
-)
-
-
-def _safe_calc_eval(node: ast.AST, variables: dict) -> object:
-    """Evaluate one node of a `calc` expression AST against a whitelist.
-
-    This is a deliberately small interpreter — it never uses ``eval``/``exec``,
-    so a hostile expression (``__import__('os')``, attribute access, comprehensions,
-    ...) is rejected with a ``ValueError`` rather than executed.
-
-    Args:
-        node: The AST node to evaluate.
-        variables: Band arrays bound to their names (``A``, ``B``, ...).
-
-    Returns:
-        The numeric / ndarray value of the node.
-
-    Raises:
-        ValueError: The node is not in the allowed grammar.
-    """
-    if isinstance(node, ast.Expression):
-        result = _safe_calc_eval(node.body, variables)
-    elif isinstance(node, ast.BinOp) and type(node.op) in _CALC_BINOPS:
-        result = _CALC_BINOPS[type(node.op)](
-            _safe_calc_eval(node.left, variables),
-            _safe_calc_eval(node.right, variables),
-        )
-    elif isinstance(node, ast.UnaryOp) and type(node.op) in _CALC_UNARYOPS:
-        result = _CALC_UNARYOPS[type(node.op)](_safe_calc_eval(node.operand, variables))
-    elif (
-        isinstance(node, ast.Compare)
-        and len(node.ops) == 1
-        and type(node.ops[0]) in _CALC_COMPARE
-    ):
-        result = _CALC_COMPARE[type(node.ops[0])](
-            _safe_calc_eval(node.left, variables),
-            _safe_calc_eval(node.comparators[0], variables),
-        )
-    elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
-        result = node.value
-    elif isinstance(node, ast.Name):
-        if node.id not in variables:
-            raise ValueError(f"unknown name in calc expression: {node.id!r}")
-        result = variables[node.id]
-    elif (
-        isinstance(node, ast.Call)
-        and not node.keywords
-        and isinstance(node.func, ast.Attribute)
-        and isinstance(node.func.value, ast.Name)
-        and node.func.value.id == "np"
-        and node.func.attr in _CALC_NP_FUNCS
-    ):
-        result = getattr(np, node.func.attr)(
-            *[_safe_calc_eval(arg, variables) for arg in node.args]
-        )
-    else:
-        raise ValueError(
-            "disallowed element in calc expression; only arithmetic over the "
-            "input bands (A, B, ...), comparisons, and a small set of np.<func> "
-            "calls are permitted."
-        )
-    return result
-
-
 def _cmd_calc(args: argparse.Namespace) -> int:
     """Handle `pyramids calc` — evaluate a band expression into a new raster.
 
@@ -639,7 +538,7 @@ def _cmd_calc(args: argparse.Namespace) -> int:
         name: np.asarray(ds.read_array(squeeze=True))
         for name, ds in zip(names, datasets)
     }
-    result = np.asarray(_safe_calc_eval(ast.parse(args.expr, mode="eval"), variables))
+    result = eval_calc(args.expr, variables)
     if args.dtype:
         result = result.astype(args.dtype)
     # `geo=` (the whole geotransform), not `top_left_corner` + `cell_size`:

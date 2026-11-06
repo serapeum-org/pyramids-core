@@ -68,6 +68,7 @@ if TYPE_CHECKING:
 from pyramids.base.crs import crs_from_user_input, crs_spec, reproject_coordinates
 from pyramids.base.geodesy import geodesic_distance
 from pyramids.base.georeference import GeoReference
+from pyramids.dataset._calc import eval_calc
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._validate import (
     resolve_band_indices,
@@ -1750,6 +1751,133 @@ class Analysis(_Engine["Dataset"]):
             no_data_value=no_data_value,
             folded=True,
         )
+
+    def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
+        """Evaluate a string band-algebra expression over this and other rasters.
+
+        The Python counterpart of the ``pyramids calc`` CLI: ``self`` is bound to
+        ``A`` and each dataset in ``others`` to ``B``, ``C``, ... (up to ``Z``), then
+        ``expr`` is evaluated cell by cell by a small AST whitelist -- never
+        ``eval`` / ``exec``. Only arithmetic over the bound arrays, comparisons, and a
+        short list of ``np.<func>`` calls (``where``, ``clip``, ``log``, ``log10``,
+        ``exp``, ``sqrt``, ``abs``, ``minimum``, ``maximum``, ``power``) are allowed.
+
+        The expression sees the arrays as ``read_array(squeeze=True)`` returns them --
+        in **physical units** (CF ``scale_factor`` / ``add_offset`` packing is already
+        undone, like any ``read_array``). Unlike :meth:`combine`, no-data cells take
+        part in the arithmetic and no domain masking is applied. A comparison / mask
+        expression (a bool result, e.g. ``"A > 0.3"``) is cast to ``uint8`` (0/1); a
+        scalar expression (e.g. ``"1"``) fills the whole grid. The result is wrapped
+        into a dataset of this one's class, carrying this dataset's geotransform, CRS
+        and dataset-level metadata, and declares **no** no-data value -- a computed
+        array has no inherent sentinel.
+
+        It therefore differs on purpose from the ``pyramids calc`` CLI in three ways:
+        the CLI refuses a CRS-less input, writes no metadata, and stamps the ``-9999``
+        no-data default; the engine permits an un-georeferenced in-memory result,
+        carries metadata (like :meth:`combine`), and leaves the result sentinel-free.
+
+        Args:
+            expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI
+                with ``self`` = red (``A``) and ``others[0]`` = near-infrared (``B``).
+            *others: Additional rasters bound to ``B``, ``C``, ...; each must already
+                sit on this dataset's grid (``calc`` does not resample). At most 25
+                others (26 inputs total, ``A``..``Z``).
+            dtype: Optional NumPy dtype string to cast the result to.
+
+        Returns:
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array,
+            with no no-data value declared (bool results are ``uint8`` 0/1 masks).
+
+        Raises:
+            ValueError: More than 26 inputs total, an unknown name in ``expr``, or a
+                disallowed expression element.
+            SyntaxError: ``expr`` is not a valid Python expression.
+            AlignmentError: An operand does not share this dataset's grid.
+
+        Notes:
+            - Band names and NetCDF band-dimension labels are **not** preserved
+              (unlike :meth:`combine`): the result uses the classic
+              ``(bands, rows, cols)`` layout with default band names, because an
+              expression can change the band count and what the bands mean.
+            - Compatible band counts broadcast (a 1-band operand against an N-band
+              one); genuinely incompatible counts surface NumPy's own broadcast
+              ``ValueError`` rather than a pyramids-worded one.
+            - Comparisons must be single (``A > 0``); chained comparisons
+              (``0 < A < 5``) are rejected.
+            - The result carries no sentinel, so division-by-zero cells (``inf`` /
+              ``NaN`` -- e.g. an NDVI where ``B + A == 0``) are stored as ordinary
+              values; post-process with :meth:`fillna` / :meth:`where` to mask them.
+
+        Examples:
+            - NDVI from a red and a near-infrared single-band raster:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> red = Dataset.from_array(np.array([[[1.0, 2.0]]]), geo_ref=ref)
+                >>> nir = Dataset.from_array(np.array([[[3.0, 6.0]]]), geo_ref=ref)
+                >>> ndvi = red.calc("(B - A) / (B + A)", nir)
+                >>> np.asarray(ndvi.read_array()).ravel().tolist()
+                [0.5, 0.5]
+
+                ```
+            - Scale a single raster with a scalar and an ``np`` call:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> ds = Dataset.from_array(np.array([[[1.0, 4.0]]]), geo_ref=ref)
+                >>> np.asarray(ds.calc("np.sqrt(A) * 10").read_array()).ravel().tolist()
+                [10.0, 20.0]
+
+                ```
+        """
+        datasets = [self._ds, *others]
+        if len(datasets) > 26:
+            raise ValueError("calc supports at most 26 input rasters (bound A..Z).")
+        template = self._ds
+        for other in others:
+            if not template.same_grid(other, compare_crs=bool(other.crs)):
+                raise AlignmentError(
+                    "a calc operand does not share this dataset's grid; align the "
+                    "inputs first (Dataset.align) and re-run."
+                )
+        names = [chr(ord("A") + index) for index in range(len(datasets))]
+        variables = {
+            name: np.asarray(ds.read_array(squeeze=True))
+            for name, ds in zip(names, datasets)
+        }
+        out = np.asarray(eval_calc(expr, variables))
+        if dtype is not None:
+            out = out.astype(dtype)
+        elif out.dtype == bool:
+            # GDAL has no boolean band type, so a comparison / mask expression
+            # (e.g. ``A > 0.3``) becomes a 0/1 ``uint8`` raster rather than a
+            # cryptic "numpy data type is not supported: bool" from the writer.
+            out = out.astype("uint8")
+        if out.ndim == 0:
+            # A scalar expression (e.g. ``"1"``) fills the whole template grid
+            # instead of raising on ``out.shape[0]``.
+            out = np.full((template.rows, template.columns), out, dtype=out.dtype)
+        result = self._ds.__class__._build_dataset(
+            template.columns,
+            template.rows,
+            1 if out.ndim == 2 else out.shape[0],
+            numpy_to_gdal_dtype(out),
+            template.geotransform,
+            template.crs,
+            # A computed array has no inherent no-data sentinel, so the result
+            # declares none -- rather than stamping the ``-9999`` factory default
+            # on values the expression may legitimately produce (and which is out
+            # of range for an integer/bool cast anyway).
+            no_data_value=None,
+            array=out,
+        )
+        # Dataset-level tags travel (like `combine`); band-level scale/offset/units
+        # do not -- the expression can change what the numbers mean.
+        result.metadata = template.metadata
+        return result
 
     def _combine(
         self,
