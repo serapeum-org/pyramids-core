@@ -3,7 +3,7 @@
 A *signer* mediates between a STAC consumer and the three auth boundaries a
 cloud-hosted STAC archive can have: the **search request**, the returned
 **Item** (asset-href rewrite), and the **asset read** (GDAL env). Every signer
-satisfies the [`Signer`](#signer) protocol — `name` plus `sign_request`,
+satisfies the [`Signer`](#pyramids.stac.signers.Signer) protocol — `name` plus `sign_request`,
 `sign_item`, `sign_href`, and `gdal_env` — so a custom signer need not subclass
 anything.
 

@@ -60,10 +60,10 @@ Two STAC entry points live on the raster classes (documented there):
   `AssetRead(rescale=True)` returns physical units, `AssetRead(cfg=...)` supplies missing
   metadata and band aliases, and `ReadTolerance(errors_as_nodata=True)` fills a nodata
   plane for an unreadable asset instead of losing the cube.
-  See [DatasetCollection](../dataset_collection.md).
+  See [DatasetCollection](../dataset/collection.md).
 - **`DatasetCollection.from_point(lat, lon, *, collection, bands, start_date, end_date, edge_size, resolution)`**
   — a cubo-style point + edge-size convenience cube. See
-  [DatasetCollection](../dataset_collection.md).
+  [DatasetCollection](../dataset/collection.md).
 - **`Dataset.to_stac_item(item_id, *, asset_href, …, bands, footprint, extensions)`** —
   describe a raster as a STAC Item dict, with `BandMetadata` choosing how much per-band
   metadata is published, `Footprint` how the geometry and bbox are derived, and
@@ -83,10 +83,8 @@ pip install 'pyramids-core[stac,parquet]'   # + GeoParquet round-trip
 
 See the [STAC tutorial](../../tutorials/stac.md) for an end-to-end walkthrough,
 the [offline STAC notebook](../../examples/stac/stac-local.ipynb), and the
-live-endpoint notebooks for
-[Earth Search](../../examples/stac/stac-cloud-earth-search.ipynb) (anonymous) and
-the [Planetary Computer](../../examples/stac/stac-cloud-planetary-computer.ipynb)
-(signed).
+live-endpoint notebook for
+[Earth Search](../../examples/stac/stac-cloud-earth-search.ipynb) (anonymous).
 
 ## Option objects
 

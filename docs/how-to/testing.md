@@ -29,7 +29,7 @@ SHA and shows the combined coverage on the dashboard.
 ## The optional-dependency groups
 
 pyramids ships a minimal core plus five opt-in extras declared in
-[`pyproject.toml`](../../pyproject.toml) under
+[`pyproject.toml`](https://github.com/serapeum-org/pyramids-core/blob/main/pyproject.toml) under
 `[project.optional-dependencies]`. Each extra turns on a feature family:
 
 | Extra | Headline dep(s) | Turns on |

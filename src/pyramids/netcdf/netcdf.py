@@ -131,7 +131,11 @@ from pyramids.netcdf.utils import (
 
 if TYPE_CHECKING:
     from cleopatra.basemap.geo import Basemap
-    from cleopatra.glyphs.gridded.array_glyph import PlotKwargs, PointOverlay
+    from cleopatra.glyphs.gridded.array_glyph import (
+        ArrayGlyph,
+        PlotKwargs,
+        PointOverlay,
+    )
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import CellValues, Contour, DataStyle
     from cleopatra.styling.scaling import ColorScaling
@@ -2820,7 +2824,7 @@ class NetCDF(Dataset):
         # source, and the crop falls back to reading the raster it was actually given.
         self._raster_diverged_from_source = True
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a human-readable summary, or a `<Dataset: closed>` sentinel when closed.
 
         The summary is chosen by **type**, through :meth:`_summary_text`, which
@@ -3060,7 +3064,7 @@ class NetCDF(Dataset):
         return self.lat
 
     @property
-    def geotransform(self):
+    def geotransform(self) -> tuple[float, float, float, float, float, float]:
         """Geotransform, derived from the coordinate arrays and then cached.
 
         Deriving it reads the `lon` / `lat` MDArrays, which costs about 13 ms
@@ -3072,7 +3076,7 @@ class NetCDF(Dataset):
 
         Returns:
             tuple[float, float, float, float, float, float]: The GDAL
-            geotransform.
+                geotransform.
         """
         if self._derived_geotransform is None:
             self._derived_geotransform = self._compute_geotransform()
@@ -5114,7 +5118,7 @@ class NetCDF(Dataset):
         return self._cached_variables
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         """File path, with the `NETCDF:"path":var` prefix stripped if present.
 
         Returns:
@@ -5127,7 +5131,7 @@ class NetCDF(Dataset):
         return name
 
     @property
-    def time_stamp(self):
+    def time_stamp(self) -> list[str] | None:
         """Time coordinate values parsed from the CF-compliant `time` variable.
 
         Returns:
@@ -5353,7 +5357,7 @@ class NetCDF(Dataset):
         fig: Figure | None = None,
         ax: Axes | None = None,
         **kwargs: Unpack[PlotKwargs],
-    ):
+    ) -> ArrayGlyph:
         """Plot a 2-D slice of a NetCDF variable using the plot vocabulary.
 
         The public surface is shaped around **variables** and **dimensions** — ``band``
@@ -5869,7 +5873,9 @@ class NetCDF(Dataset):
                 kind=None if kind == "auto" else kind,
                 animate=animate,
             )
-            return render_via_backend(self, backend, **forwarded, **kwargs)
+            return cast(
+                "ArrayGlyph", render_via_backend(self, backend, **forwarded, **kwargs)
+            )
         # ``colorbar``/``points`` and the typed render groups (``color`` / ``contour`` /
         # ``cells`` / ``data_style``) are hoisted to explicit params for parity with
         # ``Dataset.plot``. Spread the explicitly-set ones as their own ``**`` — kept in a
@@ -5885,7 +5891,7 @@ class NetCDF(Dataset):
             group_kwargs["colorbar"] = colorbar
         if points is not None:
             group_kwargs["points"] = points
-        return NetCDFPlot(self).run(
+        result: ArrayGlyph = NetCDFPlot(self).run(
             variable,
             selectors=selectors,
             facet=facet,
@@ -5901,6 +5907,7 @@ class NetCDF(Dataset):
             **group_kwargs,
             **kwargs,
         )
+        return result
 
     # NetCDF adds a leading `variable` selector (and unpack/bbox/masked
     # options) on top of the RasterBase read_array contract; the wider
@@ -9778,7 +9785,7 @@ class NetCDF(Dataset):
 
     def to_kerchunk(
         self,
-        output_path,
+        output_path: str | Path,
         *,
         inline_threshold: int = 500,
         vlen_encode: str = "embed",
@@ -9808,11 +9815,11 @@ class NetCDF(Dataset):
     @classmethod
     def combine_kerchunk(
         cls,
-        paths,
-        output_path,
+        paths: Sequence[str | Path],
+        output_path: str | Path,
         *,
-        concat_dims=("time",),
-        identical_dims=("lat", "lon"),
+        concat_dims: Sequence[str] = ("time",),
+        identical_dims: Sequence[str] = ("lat", "lon"),
         inline_threshold: int = 500,
     ) -> dict:
         """Emit a combined kerchunk manifest spanning many NetCDFs.
@@ -9845,13 +9852,13 @@ class NetCDF(Dataset):
     @classmethod
     def open_mfdataset(
         cls,
-        paths,
+        paths: str | Sequence[str | Path],
         variable: str,
         *,
-        chunks=None,
+        chunks: dict | str | None = None,
         parallel: bool = False,
-        preprocess=None,
-    ):
+        preprocess: Callable[[NetCDF], NetCDF] | None = None,
+    ) -> Any:
         """Open many NetCDFs and stack `variable` into one lazy dask array.
 
         Thin forwarder to
@@ -12956,7 +12963,7 @@ class NetCDF(Dataset):
         return self._is_subset
 
     @property
-    def is_md_array(self):
+    def is_md_array(self) -> bool:
         """Whether this dataset was opened in multidimensional mode.
 
         Returns:

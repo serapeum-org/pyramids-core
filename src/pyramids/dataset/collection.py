@@ -1450,7 +1450,7 @@ class DatasetCollection:
         """
         return cls(dataset, time_length)
 
-    def groupby(self, time_labels) -> _GroupedCollection:
+    def groupby(self, time_labels: Sequence[Hashable]) -> _GroupedCollection:
         """Group time steps by per-timestep label.
 
         Returns a view exposing the same reduction surface as
@@ -1919,7 +1919,7 @@ class DatasetCollection:
 
     def to_kerchunk(
         self,
-        output_path,
+        output_path: str | Path,
         *,
         concat_dim: str = "time",
     ) -> dict:
@@ -1975,7 +1975,7 @@ class DatasetCollection:
 
     def to_zarr(
         self,
-        store,
+        store: str | Path,
         *,
         compute: bool = True,
         mode: str = "w",
@@ -1983,7 +1983,7 @@ class DatasetCollection:
         compressor: Any = "auto",
         append_dim: str | None = None,
         region: dict | None = None,
-    ):
+    ) -> None | Delayed:
         """Serialise the 4-D `(T, B, R, C)` cube to a Zarr store.
 
         Each dask chunk in `self.data` lands in an independent Zarr
@@ -2043,7 +2043,10 @@ class DatasetCollection:
         codec_kwargs = normalize_compressors(compressor)
 
         if append_dim is not None:
-            return self._append_to_zarr(resolved_store, data, append_dim, compute)
+            return cast(
+                "Delayed | None",
+                self._append_to_zarr(resolved_store, data, append_dim, compute),
+            )
         if region is not None:
             # Write the cube into a region of an existing store; geobox /
             # time_length already exist there, so no finalize is needed. dask's
@@ -2051,11 +2054,14 @@ class DatasetCollection:
             import zarr
 
             existing = zarr.open_group(resolved_store, mode="a")["data"]
-            return data.to_zarr(
-                existing,
-                region=_region_to_slices(region, data.ndim),
-                overwrite=False,
-                compute=compute,
+            return cast(
+                "Delayed | None",
+                data.to_zarr(
+                    existing,
+                    region=_region_to_slices(region, data.ndim),
+                    overwrite=False,
+                    compute=compute,
+                ),
             )
 
         write_result = data.to_zarr(
@@ -2067,7 +2073,7 @@ class DatasetCollection:
         )
         if compute:
             _finalize_collection_metadata(resolved_store, self._meta, files)
-            result: Any = None
+            result: Delayed | None = None
         else:
             import dask
 
@@ -2293,10 +2299,10 @@ class DatasetCollection:
     @classmethod
     def from_stac(
         cls,
-        items,
+        items: Any,
         asset: str | Sequence[str],
         *,
-        patch_url=None,
+        patch_url: Callable[[str], str] | None = None,
         bbox: tuple | None = None,
         max_items: int | None = None,
         signer: Any = None,
@@ -2565,7 +2571,7 @@ class DatasetCollection:
         lon: float,
         *,
         collection: str,
-        bands,
+        bands: str | Sequence[str],
         start_date: str,
         end_date: str,
         edge_size: int,
@@ -3262,7 +3268,7 @@ class DatasetCollection:
         del band  # unused
         return None
 
-    def __getitem__(self, key) -> np.typing.NDArray:
+    def __getitem__(self, key: int | slice) -> np.typing.NDArray:
         """Return one or more timestep arrays, indexed along the time axis.
 
         Equivalent to ``self.values[key]`` but with one slight

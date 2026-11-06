@@ -9,9 +9,8 @@ dicts work as well as `pystac.Item` objects.
 
 For the API reference see [STAC subpackage](../reference/stac/index.md). Runnable
 notebooks: a fully offline one ([STAC offline](../examples/stac/stac-local.ipynb))
-and two live-endpoint ones —
-[Earth Search (anonymous)](../examples/stac/stac-cloud-earth-search.ipynb) and
-[Planetary Computer (signed)](../examples/stac/stac-cloud-planetary-computer.ipynb).
+and a live-endpoint one —
+[Earth Search (anonymous)](../examples/stac/stac-cloud-earth-search.ipynb).
 
 ## Install
 

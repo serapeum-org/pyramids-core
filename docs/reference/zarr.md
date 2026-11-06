@@ -217,5 +217,5 @@ reading will be removed in a future release.
 
 ## See also
 
-- [`DatasetCollection`](dataset_collection.md) — the cube API the zarr writer/reader build on.
+- [`DatasetCollection`](dataset/collection.md) — the cube API the zarr writer/reader build on.
 - The architecture review in `planning/zarr/zarr-architecture-review.md` for the design rationale.

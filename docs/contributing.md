@@ -16,6 +16,24 @@ Please note we have a code of conduct, please follow it in all your interactions
 4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you
    do not have permission to do that, you may request the second reviewer to merge it for you.
 
+## Keeping your clone small
+
+The documentation site is published to the shared `gh-pages` branch, which carries a full build of the site and is
+large. A normal `git clone` does **not** check it out, but if your clone has ever fetched it (for example from an
+older remote configuration), those objects stay in your `.git` and bloat it. You never need `gh-pages` for
+development, so stop tracking it and let git reclaim the space:
+
+```bash
+git remote set-branches origin main                 # track only main, not every remote branch
+git fetch --prune origin
+git update-ref -d refs/remotes/origin/gh-pages       # not optional — see below
+git gc --prune=now
+```
+
+The `update-ref` line is the one people miss. `git fetch --prune` removes only refs the refspec still covers, and
+the first command narrowed that refspec to `main` — so `origin/gh-pages` is left orphaned, and while it exists its
+objects stay reachable and `git gc` reclaims nothing.
+
 ## Code of Conduct
 
 ### Our Pledge

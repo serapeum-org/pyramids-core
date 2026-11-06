@@ -2,12 +2,12 @@
 
 This page explains the pyramids [pre-commit](https://pre-commit.com/) setup: what the hooks are, how to install them,
 how to trigger them (all, a subset, or one), and how to skip the slow ones. The hook definitions live in
-[`.pre-commit-config.yaml`](../../.pre-commit-config.yaml); the fast checks run in isolated tool environments while a few
+[`.pre-commit-config.yaml`](https://github.com/serapeum-org/pyramids-core/blob/main/.pre-commit-config.yaml); the fast checks run in isolated tool environments while a few
 heavier hooks (`mypy`, `pytest-check`, `doctest`, `notebook-check`, `pixi-lock-check`) shell out to the pixi **dev**
 environment.
 
 The same config is the local mirror of CI: the `pre-commit` job in
-[`.github/workflows/lint.yml`](../../.github/workflows/lint.yml) runs `pre-commit run --all-files` with the slow test
+[`.github/workflows/lint.yml`](https://github.com/serapeum-org/pyramids-core/blob/main/.github/workflows/lint.yml) runs `pre-commit run --all-files` with the slow test
 hooks skipped, so getting a clean local run is the fastest way to keep that job green.
 
 ## Install (one-time)
@@ -151,4 +151,4 @@ git commit --no-verify -m "wip"
 ## See also
 
 - [Testing & CI](testing.md) — how the test suite is sliced across CI jobs and reproduced locally.
-- [`.pre-commit-config.yaml`](../../.pre-commit-config.yaml) — the source of truth for every hook.
+- [`.pre-commit-config.yaml`](https://github.com/serapeum-org/pyramids-core/blob/main/.pre-commit-config.yaml) — the source of truth for every hook.
