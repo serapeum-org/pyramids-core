@@ -1795,6 +1795,20 @@ class Analysis(_Engine["Dataset"]):
             SyntaxError: ``expr`` is not a valid Python expression.
             AlignmentError: An operand does not share this dataset's grid.
 
+        Notes:
+            - Band names and NetCDF band-dimension labels are **not** preserved
+              (unlike :meth:`combine`): the result uses the classic
+              ``(bands, rows, cols)`` layout with default band names, because an
+              expression can change the band count and what the bands mean.
+            - Compatible band counts broadcast (a 1-band operand against an N-band
+              one); genuinely incompatible counts surface NumPy's own broadcast
+              ``ValueError`` rather than a pyramids-worded one.
+            - Comparisons must be single (``A > 0``); chained comparisons
+              (``0 < A < 5``) are rejected.
+            - The result carries no sentinel, so division-by-zero cells (``inf`` /
+              ``NaN`` -- e.g. an NDVI where ``B + A == 0``) are stored as ordinary
+              values; post-process with :meth:`fillna` / :meth:`where` to mask them.
+
         Examples:
             - NDVI from a red and a near-infrared single-band raster:
                 ```python
