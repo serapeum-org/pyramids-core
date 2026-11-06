@@ -203,7 +203,12 @@ class FeatureCollection(GeoDataFrame):
         """
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> Literal[False]:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
         """Exit the context-managed block. Calls :meth:`close`.
 
         Args:

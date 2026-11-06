@@ -540,7 +540,8 @@ def _remap_nodata_to(arr: np.ndarray, src_nd: Any, dst_nd: Any) -> np.typing.NDA
 if TYPE_CHECKING:
     import dask.array as da
     from cleopatra.basemap.geo import Basemap
-    from cleopatra.glyphs.gridded.array_glyph import PlotKwargs, PointOverlay
+    from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph, PlotKwargs, PointOverlay
+    from dask.delayed import Delayed
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import CellValues, Contour, DataStyle
     from cleopatra.styling.scaling import ColorScaling
@@ -1533,7 +1534,7 @@ class Dataset(RasterBase):
         fig: Figure | None = None,
         ax: Axes | None = None,
         **kwargs: Unpack[PlotKwargs],
-    ):
+    ) -> ArrayGlyph:
         """Plot the values/overviews of a band.
 
         Facade for :meth:`Analysis.plot <pyramids.dataset.engines.Analysis.plot>`. Resolves
@@ -2476,12 +2477,12 @@ class Dataset(RasterBase):
 
     def zonal_stats(
         self,
-        fc,
+        fc: FeatureCollection,
         *,
-        stats=("mean",),
+        stats: Sequence[str] = ("mean",),
         method: str = "rasterize",
         band: int = 0,
-    ):
+    ) -> pd.DataFrame:
         """Compute zonal statistics of this dataset over a polygon FeatureCollection.
 
         Thin forwarder to
@@ -2507,16 +2508,16 @@ class Dataset(RasterBase):
 
     def to_zarr(
         self,
-        store,
+        store: str | Path,
         *,
         compute: bool = True,
         mode: str = "w",
-        chunks=None,
+        chunks: int | dict[str, int] | None = None,
         storage_options: dict | None = None,
-        compressor="auto",
+        compressor: Any = "auto",
         overview_factors: list | None = None,
         overview_resampling: str = "average",
-    ):
+    ) -> None | Delayed:
         """Serialise this Dataset to a Zarr store (parallel writes per chunk).
 
         Thin forwarder to
@@ -2612,9 +2613,9 @@ class Dataset(RasterBase):
     @classmethod
     def from_zarr(
         cls,
-        store,
+        store: str | Path,
         *,
-        chunks=None,
+        chunks: int | dict[str, int] | None = None,
         storage_options: dict | None = None,
         level: int = 1,
         data_name: str | None = None,
@@ -4285,7 +4286,7 @@ class Dataset(RasterBase):
         self.bands.scale = value
 
     @property
-    def offset(self):
+    def offset(self) -> list[float]:
         """Facade — delegates to :attr:`Bands.offset <pyramids.dataset.engines.Bands.offset>`.
 
         The additive half of the CF packing, `real = stored * scale + offset`. See
@@ -4369,9 +4370,9 @@ class Dataset(RasterBase):
         item_id: str,
         *,
         asset_href: str,
-        datetime=None,
-        start_datetime=None,
-        end_datetime=None,
+        datetime: str | None = None,
+        start_datetime: str | None = None,
+        end_datetime: str | None = None,
         asset_key: str = "data",
         asset_media_type: str | None = None,
         asset_roles: Sequence[str] = ("data",),
@@ -5595,23 +5596,23 @@ class Dataset(RasterBase):
             Dataset:
 
             * `path is None` (in-memory copy) → `"write"`. The copy is a
-              fresh MEM raster that nothing else references, so refusing
-              writes on it protects nothing: the source file is untouched
-              either way. Propagating the source's mode instead meant a
-              `copy()` taken specifically to get a mutable working copy of
-              a read-only file could not be written to, and the resulting
-              `ReadOnlyError` advised reopening the *source* with
-              `read_only=False`, which is not what the caller wanted.
+                fresh MEM raster that nothing else references, so refusing
+                writes on it protects nothing: the source file is untouched
+                either way. Propagating the source's mode instead meant a
+                `copy()` taken specifically to get a mutable working copy of
+                a read-only file could not be written to, and the resulting
+                `ReadOnlyError` advised reopening the *source* with
+                `read_only=False`, which is not what the caller wanted.
             * `path is not None` and the format supports `Create`
-              (GTiff, netCDF, HFA, …) → `"write"`, because the caller
-              has just made a new file they presumably want to
-              populate.
+                (GTiff, netCDF, HFA, …) → `"write"`, because the caller
+                has just made a new file they presumably want to
+                populate.
             * `path is not None` and the format is write-by-copy only
-              (`.png`, `.jpg` / `.jpeg`, `.jp2` / `.j2k`, `.asc`) →
-              `"read_only"`. `CreateCopy` hands back a read-only
-              dataset for those, so claiming otherwise would let a
-              write fail inside GDAL instead of raising
-              :class:`~pyramids.errors.ReadOnlyError` here.
+                (`.png`, `.jpg` / `.jpeg`, `.jp2` / `.j2k`, `.asc`) →
+                `"read_only"`. `CreateCopy` hands back a read-only
+                dataset for those, so claiming otherwise would let a
+                write fail inside GDAL instead of raising
+                :class:`~pyramids.errors.ReadOnlyError` here.
 
         Raises:
             DriverNotExistError: `path` has no extension, or one the driver

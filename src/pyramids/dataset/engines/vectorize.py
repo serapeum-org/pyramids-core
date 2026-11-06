@@ -546,7 +546,7 @@ class Vectorize(_Engine["Dataset"]):
         gdf = gdf.set_crs(coords.crs)
         return gdf
 
-    def translate(self, path: str | Path | None = None, **kwargs) -> Dataset:
+    def translate(self, path: str | Path | None = None, **kwargs: Any) -> Dataset:
         """Convert, subset, resample, or rescale the raster via `gdal.Translate`.
 
         The translate function can be used to

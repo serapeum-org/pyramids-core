@@ -571,7 +571,7 @@ class Config:
         self.settings = self.load_config()
         self.initialize_gdal()
 
-    def load_config(self):
+    def load_config(self) -> dict[str, Any]:
         """Load configuration from the package YAML file.
 
         The YAML file is expected to live under pyramids/base/<config_file>.

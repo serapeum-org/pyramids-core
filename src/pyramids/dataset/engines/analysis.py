@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+    from PIL.Image import Image
 
     from pyramids.dataset.dataset import Dataset
 
@@ -5778,7 +5779,7 @@ class Analysis(_Engine["Dataset"]):
         *,
         max_samples: int | None = None,
         **kwargs: Any,
-    ):
+    ) -> tuple[Figure, Axes, dict]:
         """Plot the value distribution of a band as a histogram.
 
         Backed by cleopatra's
@@ -6154,7 +6155,7 @@ class Analysis(_Engine["Dataset"]):
         band: int = 0,
         cmap: str = "viridis",
         exclude_value: Any | None = None,
-    ):
+    ) -> Image:
         """Export a band as a colour-mapped RGB image.
 
         Reads the band, masks the no-data value (and an optional
@@ -6255,7 +6256,7 @@ class Analysis(_Engine["Dataset"]):
         kind: str = "quiver",
         ax: Axes | None = None,
         **kwargs: Any,
-    ):
+    ) -> tuple[Figure, Axes, Any]:
         """Plot two bands as a 2-component vector field.
 
         Reads ``u_band`` and ``v_band`` as the vector components over the

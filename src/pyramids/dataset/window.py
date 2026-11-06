@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 import numbers
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -481,7 +482,7 @@ class Window:
             rows=data["rows"],
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[int]:
         """Iterate ``(col_off, row_off, cols, rows)`` so ``tuple(window)`` works.
 
         Yields:

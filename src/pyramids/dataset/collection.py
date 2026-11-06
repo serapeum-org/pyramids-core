@@ -1450,7 +1450,7 @@ class DatasetCollection:
         """
         return cls(dataset, time_length)
 
-    def groupby(self, time_labels) -> _GroupedCollection:
+    def groupby(self, time_labels: Sequence[Hashable]) -> _GroupedCollection:
         """Group time steps by per-timestep label.
 
         Returns a view exposing the same reduction surface as
@@ -1919,7 +1919,7 @@ class DatasetCollection:
 
     def to_kerchunk(
         self,
-        output_path,
+        output_path: str | Path,
         *,
         concat_dim: str = "time",
     ) -> dict:
@@ -1975,7 +1975,7 @@ class DatasetCollection:
 
     def to_zarr(
         self,
-        store,
+        store: str | Path,
         *,
         compute: bool = True,
         mode: str = "w",
@@ -1983,7 +1983,7 @@ class DatasetCollection:
         compressor: Any = "auto",
         append_dim: str | None = None,
         region: dict | None = None,
-    ):
+    ) -> None | Delayed:
         """Serialise the 4-D `(T, B, R, C)` cube to a Zarr store.
 
         Each dask chunk in `self.data` lands in an independent Zarr
@@ -2293,10 +2293,10 @@ class DatasetCollection:
     @classmethod
     def from_stac(
         cls,
-        items,
+        items: Any,
         asset: str | Sequence[str],
         *,
-        patch_url=None,
+        patch_url: Callable[[str], str] | None = None,
         bbox: tuple | None = None,
         max_items: int | None = None,
         signer: Any = None,
@@ -2565,7 +2565,7 @@ class DatasetCollection:
         lon: float,
         *,
         collection: str,
-        bands,
+        bands: str | Sequence[str],
         start_date: str,
         end_date: str,
         edge_size: int,
@@ -3262,7 +3262,7 @@ class DatasetCollection:
         del band  # unused
         return None
 
-    def __getitem__(self, key) -> np.typing.NDArray:
+    def __getitem__(self, key: int | slice) -> np.typing.NDArray:
         """Return one or more timestep arrays, indexed along the time axis.
 
         Equivalent to ``self.values[key]`` but with one slight
