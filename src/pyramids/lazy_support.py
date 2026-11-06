@@ -45,6 +45,7 @@ from pyramids.base._axes import AXIS_NAMES
 from pyramids.base._errors import OptionalPackageDoesNotExist, OverviewTargetError
 from pyramids.base._file_manager import CachingFileManager, gdal_mdarray_open
 from pyramids.base._locks import DummyLock, default_lock
+from pyramids.base._raster_meta import RasterMeta
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
@@ -95,6 +96,7 @@ __all__ = [
     "GeoTransform",
     "OptionalPackageDoesNotExist",
     "OverviewTargetError",
+    "RasterMeta",
     "ZARR_SCHEMA_VERSION",
     "_dtype_to_str",
     "_is_identity_packing",

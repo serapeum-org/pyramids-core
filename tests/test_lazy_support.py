@@ -31,6 +31,7 @@ _ORIGINS = {
     "gdal_mdarray_open": "pyramids.base._file_manager",
     "DummyLock": "pyramids.base._locks",
     "default_lock": "pyramids.base._locks",
+    "RasterMeta": "pyramids.base._raster_meta",
     "_is_identity_packing": "pyramids.base._utils",
     "apply_unpack": "pyramids.base._utils",
     "extra_hint": "pyramids.base._utils",
