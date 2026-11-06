@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8012,7 +8012,7 @@ which legitimately reprojects the source onto the reference grid.</p>
 <p><strong>Plot (headless, via cleopatra)</strong> — <code>plot-histogram</code>, <code>plot-vector-field</code>, <code>animate</code>; the Agg backend is forced so
 these run headless (<code>render</code> remains the quick-look PNG, and <code>contour</code> lives under analysis above).</p>
 <p><strong>Network readers</strong> — the <code>fetch</code> group gains <code>fetch wmts</code> and <code>fetch ogc-coverages</code> alongside <code>fetch wms</code> / <code>wcs</code>
-/ <code>wfs</code> (see <a href="#remote--ogc-services">Remote / OGC services</a>).</p>
+/ <code>wfs</code> (see <a href="#remote-ogc-services">Remote / OGC services</a>).</p>
 <p>Deferred to the Python API (documented in each sub-module): the callable-taking methods (<code>apply</code>, <code>map_blocks</code>,
 <code>focal_apply</code>), the low-level coordinate/block primitives (<code>array_to_map_coordinates</code>, <code>rowcol</code>, <code>xy</code>,
 <code>block_windows</code>, <code>read_windows</code>, <code>iter_blocks</code>, <code>get_overview</code> / <code>get_overview_dataset</code>), the in-place

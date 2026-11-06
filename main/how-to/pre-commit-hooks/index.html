@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7849,11 +7849,11 @@
 <h1 id="pre-commit-hooks"><a class="toclink" href="#pre-commit-hooks">Pre-commit hooks</a><a class="headerlink" href="#pre-commit-hooks" title="Permanent link">#</a></h1>
 <p>This page explains the pyramids <a href="https://pre-commit.com/">pre-commit</a> setup: what the hooks are, how to install them,
 how to trigger them (all, a subset, or one), and how to skip the slow ones. The hook definitions live in
-<a href="../../.pre-commit-config.yaml"><code>.pre-commit-config.yaml</code></a>; the fast checks run in isolated tool environments while a few
+<a href="https://github.com/serapeum-org/pyramids-core/blob/main/.pre-commit-config.yaml"><code>.pre-commit-config.yaml</code></a>; the fast checks run in isolated tool environments while a few
 heavier hooks (<code>mypy</code>, <code>pytest-check</code>, <code>doctest</code>, <code>notebook-check</code>, <code>pixi-lock-check</code>) shell out to the pixi <strong>dev</strong>
 environment.</p>
 <p>The same config is the local mirror of CI: the <code>pre-commit</code> job in
-<a href="../../.github/workflows/lint.yml"><code>.github/workflows/lint.yml</code></a> runs <code>pre-commit run --all-files</code> with the slow test
+<a href="https://github.com/serapeum-org/pyramids-core/blob/main/.github/workflows/lint.yml"><code>.github/workflows/lint.yml</code></a> runs <code>pre-commit run --all-files</code> with the slow test
 hooks skipped, so getting a clean local run is the fastest way to keep that job green.</p>
 <h2 id="install-one-time"><a class="toclink" href="#install-one-time">Install (one-time)</a><a class="headerlink" href="#install-one-time" title="Permanent link">#</a></h2>
 <p>Register the git hook so it fires on every <code>git commit</code>:</p>
@@ -8035,7 +8035,7 @@ lint that keep the diff clean:</p>
 <h2 id="see-also"><a class="toclink" href="#see-also">See also</a><a class="headerlink" href="#see-also" title="Permanent link">#</a></h2>
 <ul>
 <li><a href="../testing/">Testing &amp; CI</a> — how the test suite is sliced across CI jobs and reproduced locally.</li>
-<li><a href="../../.pre-commit-config.yaml"><code>.pre-commit-config.yaml</code></a> — the source of truth for every hook.</li>
+<li><a href="https://github.com/serapeum-org/pyramids-core/blob/main/.pre-commit-config.yaml"><code>.pre-commit-config.yaml</code></a> — the source of truth for every hook.</li>
 </ul>
 
 

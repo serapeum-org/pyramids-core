@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7107,6 +7107,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#keeping-your-clone-small" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping your clone small
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-of-conduct" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7609,6 +7620,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#keeping-your-clone-small" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping your clone small
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-of-conduct" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7739,6 +7761,19 @@ email, or any other method with the owners of this repository before making a ch
 <li>You may merge the Pull Request in once you have the sign-off of two other developers, or if you
    do not have permission to do that, you may request the second reviewer to merge it for you.</li>
 </ol>
+<h2 id="keeping-your-clone-small"><a class="toclink" href="#keeping-your-clone-small">Keeping your clone small</a><a class="headerlink" href="#keeping-your-clone-small" title="Permanent link">#</a></h2>
+<p>The documentation site is published to the shared <code>gh-pages</code> branch, which carries a full build of the site and is
+large. A normal <code>git clone</code> does <strong>not</strong> check it out, but if your clone has ever fetched it (for example from an
+older remote configuration), those objects stay in your <code>.git</code> and bloat it. You never need <code>gh-pages</code> for
+development, so stop tracking it and let git reclaim the space:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>remote<span class="w"> </span>set-branches<span class="w"> </span>origin<span class="w"> </span>main<span class="w">                 </span><span class="c1"># track only main, not every remote branch</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>fetch<span class="w"> </span>--prune<span class="w"> </span>origin
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>update-ref<span class="w"> </span>-d<span class="w"> </span>refs/remotes/origin/gh-pages<span class="w">       </span><span class="c1"># not optional — see below</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>gc<span class="w"> </span>--prune<span class="o">=</span>now
+</code></pre></div>
+<p>The <code>update-ref</code> line is the one people miss. <code>git fetch --prune</code> removes only refs the refspec still covers, and
+the first command narrowed that refspec to <code>main</code> — so <code>origin/gh-pages</code> is left orphaned, and while it exists its
+objects stay reachable and <code>git gc</code> reclaims nothing.</p>
 <h2 id="code-of-conduct"><a class="toclink" href="#code-of-conduct">Code of Conduct</a><a class="headerlink" href="#code-of-conduct" title="Permanent link">#</a></h2>
 <h3 id="our-pledge"><a class="toclink" href="#our-pledge">Our Pledge</a><a class="headerlink" href="#our-pledge" title="Permanent link">#</a></h3>
 <p>In the interest of fostering an open and welcoming environment, we as

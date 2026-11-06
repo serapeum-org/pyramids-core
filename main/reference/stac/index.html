@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8164,10 +8164,10 @@ Hold "Ctrl" to enable pan &amp; zoom
   <code>AssetRead(rescale=True)</code> returns physical units, <code>AssetRead(cfg=...)</code> supplies missing
   metadata and band aliases, and <code>ReadTolerance(errors_as_nodata=True)</code> fills a nodata
   plane for an unreadable asset instead of losing the cube.
-  See <a href="../dataset_collection.md">DatasetCollection</a>.</li>
+  See <a href="../dataset/collection/">DatasetCollection</a>.</li>
 <li><strong><code>DatasetCollection.from_point(lat, lon, *, collection, bands, start_date, end_date, edge_size, resolution)</code></strong>
   — a cubo-style point + edge-size convenience cube. See
-  <a href="../dataset_collection.md">DatasetCollection</a>.</li>
+  <a href="../dataset/collection/">DatasetCollection</a>.</li>
 <li><strong><code>Dataset.to_stac_item(item_id, *, asset_href, …, bands, footprint, extensions)</code></strong> —
   describe a raster as a STAC Item dict, with <code>BandMetadata</code> choosing how much per-band
   metadata is published, <code>Footprint</code> how the geometry and bbox are derived, and
@@ -8183,10 +8183,8 @@ asset downloader <code>stac-asset</code>); <code>read_extension_metadata</code>,
 </code></pre></div>
 <p>See the <a href="../../tutorials/stac/">STAC tutorial</a> for an end-to-end walkthrough,
 the <a href="../../examples/stac/stac-local/">offline STAC notebook</a>, and the
-live-endpoint notebooks for
-<a href="../../examples/stac/stac-cloud-earth-search/">Earth Search</a> (anonymous) and
-the <a href="../../examples/stac/stac-cloud-planetary-computer.ipynb">Planetary Computer</a>
-(signed).</p>
+live-endpoint notebook for
+<a href="../../examples/stac/stac-cloud-earth-search/">Earth Search</a> (anonymous).</p>
 <h2 id="option-objects"><a class="toclink" href="#option-objects">Option objects</a><a class="headerlink" href="#option-objects" title="Permanent link">#</a></h2>
 <p>The frozen, all-defaulted groups the two entry points take. Each is re-exported
 from <code>pyramids.stac</code>, so <code>from pyramids.stac import Alignment, Footprint</code> is the

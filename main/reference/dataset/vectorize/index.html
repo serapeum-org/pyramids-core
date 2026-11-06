@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9337,7 +9337,7 @@ Hold "Ctrl" to enable pan &amp; zoom
 <a id="__codelineno-0-546" name="__codelineno-0-546"></a>        <span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">set_crs</span><span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
 <a id="__codelineno-0-547" name="__codelineno-0-547"></a>        <span class="k">return</span> <span class="n">gdf</span>
 <a id="__codelineno-0-548" name="__codelineno-0-548"></a>
-<a id="__codelineno-0-549" name="__codelineno-0-549"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-0-549" name="__codelineno-0-549"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 <a id="__codelineno-0-550" name="__codelineno-0-550"></a><span class="w">        </span><span class="sd">"""Convert, subset, resample, or rescale the raster via `gdal.Translate`.</span>
 <a id="__codelineno-0-551" name="__codelineno-0-551"></a>
 <a id="__codelineno-0-552" name="__codelineno-0-552"></a><span class="sd">        The translate function can be used to</span>
@@ -11100,6 +11100,7 @@ write-by-copy-only format such as PNG or JPEG is accepted here even though the
                 <code>**kwargs</code>
             </td>
             <td>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -11663,7 +11664,7 @@ print(scaled_dataset.read_array()) # doctest: +SKIP
 <span class="normal"><a href="#__codelineno-0-816">816</a></span>
 <span class="normal"><a href="#__codelineno-0-817">817</a></span>
 <span class="normal"><a href="#__codelineno-0-818">818</a></span>
-<span class="normal"><a href="#__codelineno-0-819">819</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-549" name="__codelineno-0-549"></a><span class="k">def</span><span class="w"> </span><span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-819">819</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-549" name="__codelineno-0-549"></a><span class="k">def</span><span class="w"> </span><span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 <a id="__codelineno-0-550" name="__codelineno-0-550"></a><span class="w">    </span><span class="sd">"""Convert, subset, resample, or rescale the raster via `gdal.Translate`.</span>
 <a id="__codelineno-0-551" name="__codelineno-0-551"></a>
 <a id="__codelineno-0-552" name="__codelineno-0-552"></a><span class="sd">    The translate function can be used to</span>

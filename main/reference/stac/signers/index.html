@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7664,7 +7664,7 @@
 <p>A <em>signer</em> mediates between a STAC consumer and the three auth boundaries a
 cloud-hosted STAC archive can have: the <strong>search request</strong>, the returned
 <strong>Item</strong> (asset-href rewrite), and the <strong>asset read</strong> (GDAL env). Every signer
-satisfies the <a href="#signer"><code>Signer</code></a> protocol — <code>name</code> plus <code>sign_request</code>,
+satisfies the <a href="#pyramids.stac.signers.Signer"><code>Signer</code></a> protocol — <code>name</code> plus <code>sign_request</code>,
 <code>sign_item</code>, <code>sign_href</code>, and <code>gdal_env</code> — so a custom signer need not subclass
 anything.</p>
 <p>Pick by where the credential lives:</p>
