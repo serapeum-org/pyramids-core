@@ -465,7 +465,9 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
         help="crop window in --crs (default: the full grid)",
     )
     nc_sub.add_argument(
-        "--crs", type=int, default=4326, help="EPSG of --bbox (default: 4326)"
+        "--crs",
+        default=4326,
+        help="CRS of --bbox: an EPSG code or a CRS string (e.g. EPSG:4326); default 4326",
     )
     nc_sub.add_argument(
         "--dim",

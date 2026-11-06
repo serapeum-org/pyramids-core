@@ -294,6 +294,30 @@ class TestNcSubset:
         )
         assert rc == 0
 
+    def test_bbox_string_crs_window(self, tmp_path):
+        """--crs accepts a CRS string (e.g. 'EPSG:4326'), not only an EPSG int (L1)."""
+        out = str(tmp_path / "subset_strcrs.nc")
+        rc = run(
+            [
+                "subset",
+                str(_NC_WIDE),
+                out,
+                "--var",
+                "ua",
+                "--dim",
+                "plev=0",
+                "--bbox",
+                "-50",
+                "-50",
+                "50",
+                "50",
+                "--crs",
+                "EPSG:4326",
+                OVERWRITE,
+            ]
+        )
+        assert rc == 0, "a string CRS must be accepted, not rejected by argparse"
+
     def test_unselected_dimension_raises(self, tmp_path):
         """Leaving the length>1 plev dimension unselected surfaces as a ValueError."""
         out = str(tmp_path / "o.nc")
