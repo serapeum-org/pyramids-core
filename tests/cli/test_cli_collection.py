@@ -470,6 +470,34 @@ class TestCollectionCrop:
         assert len(os.listdir(out)) == 3
 
 
+class TestCollectionCropRequiresOneTarget:
+    """`collection crop` requires exactly one of --mask / --bbox up front (N1)."""
+
+    def test_neither_is_an_argparse_error(self):
+        """Passing neither --mask nor --bbox fails at argparse (SystemExit 2)."""
+        with pytest.raises(SystemExit):
+            main(["collection", "crop", "stack/*.tif", "out"])
+
+    def test_both_is_an_argparse_error(self):
+        """Passing both --mask and --bbox is rejected as mutually exclusive."""
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "collection",
+                    "crop",
+                    "stack/*.tif",
+                    "out",
+                    "--mask",
+                    "m.tif",
+                    "--bbox",
+                    "0",
+                    "0",
+                    "2",
+                    "2",
+                ]
+            )
+
+
 class TestCollectionAlign:
     """`pyramids collection align` — align every timestep to a reference grid."""
 

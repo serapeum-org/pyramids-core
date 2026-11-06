@@ -651,10 +651,11 @@ def _add_crop(csub: argparse._SubParsersAction) -> None:
     c = csub.add_parser("crop", help="crop every timestep to a mask or bbox")
     _add_open_args(c)
     c.add_argument("output", help="destination directory (one file per timestep)")
-    c.add_argument(
+    target = c.add_mutually_exclusive_group(required=True)
+    target.add_argument(
         "--mask", default=None, help="raster whose footprint crops the stack"
     )
-    c.add_argument(
+    target.add_argument(
         "--bbox",
         nargs=4,
         type=float,
