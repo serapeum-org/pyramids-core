@@ -407,7 +407,7 @@ verbs take `--json`. The original Phase-1 `extract` (rasterize onto a `--like` g
 pyramids mesh info mesh.nc --json                            # node/face/edge counts, CRS, bounds, variables
 pyramids mesh extract mesh.nc z.tif --like grid.tif --var mesh2d_node_z   # rasterize a variable onto a grid
 pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z --location node  # mesh -> vector
-pyramids mesh sample-point mesh.nc --var mesh2d_node_z --points "4.1,51.9;4.6,52.2" --json  # sample at x/y
+pyramids mesh sample-point mesh.nc --var mesh2d_node_z --x 4.1 4.6 --y 51.9 52.2 --json  # sample at x/y
 ```
 
 **Read / construct** — `from-arrays` (node/face `.npy` arrays), `from-structured` (a quad mesh from a raster),
