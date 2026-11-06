@@ -138,6 +138,15 @@ jobs:
             paths: "tests/stac tests/dataset/stac"
             markexpr: "not live"
             strict: "--strict-extra-skips"
+          # e2e: run the end-to-end suites as a dedicated leg, selected by the marker, in the dev env
+          # (which carries every extra, so the lazy/parquet_lazy-tagged e2e suites execute here too).
+          # This gives the `e2e` marker a CI job that selects on it; the core e2e tests also still run
+          # in the main matrix, so this is a consolidated signal, not a coverage move.
+          - name: e2e
+            env: dev
+            paths: ""
+            markexpr: "e2e and not live"
+            strict: ""
 
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.

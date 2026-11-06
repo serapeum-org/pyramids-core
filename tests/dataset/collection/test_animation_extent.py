@@ -10,11 +10,13 @@ so a three-timestep animation of the same rasters came back on pixel indices
 `basemap=` was accepted on that path all the same, with no extent to place it
 against.
 
-The extent is the base raster's `bbox`, which every timestep shares -- a
+The extent is the base raster's `total_bounds`, which every timestep shares -- a
 collection is co-registered by construction, and `align` is what enforces it.
 """
 
 from __future__ import annotations
+
+import warnings
 
 import numpy as np
 import pytest
@@ -145,3 +147,26 @@ class TestTheAnimationIsGeoreferenced:
 
         assert tuple(round(float(v), 3) for v in axes.get_xlim()) == (-8.0, 0.0)
         assert tuple(round(float(v), 3) for v in axes.get_ylim()) == (44.0, 50.0)
+
+    def test_it_does_not_self_warn_on_the_deprecated_bbox(self, collection):
+        """Animating reads the extent via `total_bounds`, not the deprecated `bbox`.
+
+        Args:
+            collection: The stack under test.
+
+        Test scenario:
+            The extent is read from the base raster. Reading it through the
+            deprecated `bbox` alias would fire pyramids' own DeprecationWarning
+            at the user during an ordinary animate (and raise under
+            `-W error::DeprecationWarning`); the canonical `total_bounds` must
+            be used instead.
+        """
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            collection.plot()
+        offenders = [
+            str(w.message)
+            for w in caught
+            if issubclass(w.category, DeprecationWarning) and "bbox" in str(w.message)
+        ]
+        assert not offenders, f"collection.plot() self-warned on bbox: {offenders}"

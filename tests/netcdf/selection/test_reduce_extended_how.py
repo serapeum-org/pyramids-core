@@ -23,7 +23,7 @@ from osgeo import gdal
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import _read_no_data, _reduces_as_a_variable
 from pyramids.netcdf.netcdf import Container, Variable
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -862,7 +862,7 @@ class TestReduceOnAVariable:
         assert_allclose(doubled.read_array(), np.asarray(plain.read_array()) * 2.0)
 
 
-@requires_dask
+@requires_lazy
 class TestTheChunkedPathAgrees:
     """A file-backed variable reduces through dask and must answer what memory answers."""
 
@@ -1053,7 +1053,7 @@ class TestReduceOnADerivedVariable:
         assert_allclose(values, expected)
 
 
-@requires_dask
+@requires_lazy
 class TestWhichVariablesStream:
     """Only a variable still reading as its store is streamed; anything derived is read eagerly."""
 
@@ -1852,7 +1852,7 @@ class TestTimeAttrCandidates:
             attrs["calendar"] = calendar
         dimension = SimpleNamespace(attrs=attrs)
         owner = SimpleNamespace(
-            meta_data=SimpleNamespace(
+            metadata=SimpleNamespace(
                 get_dimension=lambda name: dimension if name == "time" else None
             ),
             _parent_nc=parent,
@@ -1928,7 +1928,7 @@ class TestTimeAttrCandidates:
             raise AssertionError(f"the parent's metadata was read for {name!r}")
 
         parent = SimpleNamespace(
-            meta_data=SimpleNamespace(get_dimension=unreadable), _raster=object()
+            metadata=SimpleNamespace(get_dimension=unreadable), _raster=object()
         )
         child = self._owner("hours since 2000-01-01", parent=parent)
         nearest = next(iter(NetCDF._time_attr_candidates(child, "time")))
@@ -1954,7 +1954,7 @@ class TestTimeAttrCandidates:
             raise AssertionError(f"the closed parent's metadata was read for {name!r}")
 
         parent = SimpleNamespace(
-            meta_data=SimpleNamespace(get_dimension=unreadable),
+            metadata=SimpleNamespace(get_dimension=unreadable),
             _raster=None,
             _band_dim_time_attrs={"time": HOURS_2000},
         )
@@ -2087,7 +2087,7 @@ class TestDeclaredTimeAttrs:
             raise AssertionError(f"a closed owner's metadata was read for {name!r}")
 
         owner = SimpleNamespace(
-            meta_data=SimpleNamespace(get_dimension=unreadable), _raster=None
+            metadata=SimpleNamespace(get_dimension=unreadable), _raster=None
         )
         assert NetCDF._declared_time_attrs(owner, "time") is None
 

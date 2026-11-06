@@ -5,7 +5,7 @@ import re
 import sys
 import warnings
 from pathlib import Path
-from typing import Iterator, List, Tuple
+from typing import Iterator, List
 
 
 def _wire_lazy_backend_for_tests() -> None:
@@ -61,8 +61,6 @@ from osgeo import gdal
 from osgeo.gdal import Dataset
 import geopandas as gpd
 from geopandas import GeoDataFrame
-from shapely import wkt
-from shapely.geometry import Polygon
 
 # isort: on
 from tests._marks import EXTRA_MARKERS
@@ -290,112 +288,6 @@ def raster_to_df_arr(raster_1band_coello_gdal_dataset: Dataset) -> np.ndarray:
 @pytest.fixture(scope="session")
 def arr() -> np.ndarray:
     return np.array([[1, 2], [3, 4]], dtype=np.float32)
-
-
-@pytest.fixture(scope="session")
-def lat_lon() -> Tuple[float, float]:
-    return 89.83, -157.30
-
-
-@pytest.fixture(scope="session")
-def h3_resolution() -> int:
-    return 5
-
-
-@pytest.fixture(scope="session")
-def hex_index() -> str:
-    return "8503262bfffffff"
-
-
-@pytest.fixture(scope="session")
-def hex_8503262bfffffff_res5_wkt() -> str:
-    return "POLYGON ((-172.2805493519069 89.93768444958565, 174.22059417805994 89.84926816814777, -166.73742982292657 89.77732549241466, -144.1902385971999 89.75925746884819, -123.07348396782385 89.80388603154616, -112.33490395174248 89.8939283971607, -172.2805493519069 89.93768444958565))"
-
-
-@pytest.fixture(scope="session")
-def hex_8503262bfffffff_res5_polygon(hex_8503262bfffffff_res5_wkt: str) -> Polygon:
-    return wkt.loads(hex_8503262bfffffff_res5_wkt)
-
-
-@pytest.fixture(scope="session")
-def index_column() -> str:
-    return "hex"
-
-
-@pytest.fixture(scope="session")
-def point_gdf() -> GeoDataFrame:
-    geom_list = [
-        "POINT (-75.13333 21.93333)",
-        "POINT (108.00000 3.00000)",
-        "POINT (90.00000 -1.00000)",
-        "POINT (42.00000 14.00000)",
-    ]
-    hex_index = [
-        "854c91cffffffff",
-        "854c91cffffffff",
-        "854c91cffffffff",
-        "854c91cffffffff",
-    ]
-    geoms = list(map(wkt.loads, geom_list))
-    gdf = GeoDataFrame(geometry=geoms)
-    gdf["hex"] = hex_index
-    gdf.set_crs(epsg=4326, inplace=True)
-    return gdf
-
-
-@pytest.fixture(scope="module")
-def one_compressed_file_gzip() -> str:
-    return "tests/data/virtual-file-system/one_compressed_file.gz"
-
-
-@pytest.fixture(scope="module")
-def unzip_gzip_file_name() -> str:
-    return "tests/data/chirps-v2.0.2009.01.01.tif"
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_gzip() -> str:
-    return "tests/data/virtual-file-system/multiple_compressed_files.gz"
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_gzip_content() -> List[str]:
-    return ["1.asc", "2.asc"]
-
-
-@pytest.fixture(scope="module")
-def one_compressed_file_zip() -> str:
-    return "tests/data/virtual-file-system/one_compressed_file.zip"
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_zip() -> str:
-    return "tests/data/virtual-file-system/multiple_compressed_files.zip"
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_zip_content() -> List[str]:
-    return ["1.asc", "2.asc"]
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_7z() -> str:
-    return "tests/data/virtual-file-system/multiple_compressed_files.7z"
-
-
-@pytest.fixture(scope="module")
-def multiple_compressed_file_tar() -> str:
-    return "tests/data/virtual-file-system/multiple_compressed_files.tar"
-
-
-@pytest.fixture(scope="module")
-def one_compressed_file_7z() -> str:
-    return "tests/data/virtual-file-system/one_compressed_file.7z"
-
-
-@pytest.fixture(scope="module")
-def one_compressed_file_tar() -> str:
-    return "tests/data/virtual-file-system/one_compressed_file.tar"
 
 
 @pytest.fixture(scope="module")

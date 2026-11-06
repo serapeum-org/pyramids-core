@@ -804,8 +804,8 @@ class NetCDFPlot:
             analysis_kwargs["_facet_stack"] = stack
             # The facet stack is built here from `pinned`; the engine
             # renders it but can't derive the extent from its own
-            # `self._ds`, so pass `pinned.bbox` explicitly (M6).
-            analysis_kwargs["_extent"] = pinned.bbox
+            # `self._ds`, so pass `pinned.total_bounds` explicitly (M6).
+            analysis_kwargs["_extent"] = list(pinned.total_bounds)
             result = pinned.analysis.plot(
                 band=0,
                 exclude_value=exclude_value,
@@ -1026,7 +1026,7 @@ class NetCDFPlot:
         # 1. Explicit user `coords=` (via `axes=CoordinateSpec(coords=...)`).
         # 2. CF `coordinates` attribute + well-known conventions
         #    (XLAT/XLONG, lat_rho/lon_rho, nav_lat/nav_lon, yc/xc).
-        # When nothing resolves the engine falls back to `extent=bbox`.
+        # When nothing resolves the engine falls back to `extent=total_bounds`.
         resolved_coords = self._resolve_curvilinear_coords(pinned, coords=coords)
         if resolved_coords is not None:
             out["coords"] = resolved_coords
@@ -1628,7 +1628,7 @@ class NetCDFPlot:
         return _render_array(
             RenderRequest(
                 arr=template,
-                extent=nc.bbox,
+                extent=list(nc.total_bounds),
                 exclude_value=resolved_exclude,
                 mode=ModeSpec(
                     mode="animate",

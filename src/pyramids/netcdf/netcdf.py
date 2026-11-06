@@ -1212,7 +1212,7 @@ def _global_attribute_count(nc: NetCDF, published: bool) -> int:
         int: The number of global attributes.
     """
     if published:
-        count = len(nc.meta_data.global_attributes or {})
+        count = len(nc.metadata.global_attributes or {})
     else:
         raster = getattr(nc, "_raster", None)
         metadata = (raster.GetMetadata() if raster is not None else None) or {}
@@ -1675,7 +1675,7 @@ def _container_summary(nc: NetCDF) -> str:
     # Classic mode never populates `meta_data.variables` -- true for all 22 classic-openable
     # corpus fixtures -- so the table branch is unreachable there and the fallback is the
     # only listing; skipping the lookup keeps that explicit rather than incidental.
-    variables = (nc.meta_data.variables or {}) if published else {}
+    variables = (nc.metadata.variables or {}) if published else {}
     if variables:
         lines.extend(_variable_table_lines(variables))
     else:
@@ -5376,7 +5376,7 @@ class NetCDF(Dataset):
                 matching ``(rows, cols)``); when omitted, curvilinear coords are auto-detected
                 from the CF ``coordinates`` attribute, then the well-known conventions (WRF
                 ``XLAT``/``XLONG``, ROMS ``lat_rho``/``lon_rho``, NEMO ``nav_lat``/``nav_lon``),
-                else the renderer falls back to ``extent=self.bbox`` (imshow). ``x_dim`` /
+                else the renderer falls back to ``extent=self.total_bounds`` (imshow). ``x_dim`` /
                 ``y_dim`` set the lon/lat dimensions for variables whose axes aren't trailing
                 and carry no CF metadata (e.g. CAM ``T(time, lat, lev, lon)``). Defaults to
                 None.
@@ -9842,6 +9842,26 @@ class NetCDF(Dataset):
 
     @property
     def meta_data(self) -> NetCDFMetadata:
+        """Deprecated alias for :attr:`metadata`."""
+        warnings.warn(
+            "`meta_data` is deprecated and will be removed in a future release; use `metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.metadata
+
+    @meta_data.setter
+    def meta_data(self, value: dict[str, str] | NetCDFMetadata) -> None:
+        """Deprecated alias for the :attr:`metadata` setter."""
+        warnings.warn(
+            "`meta_data` is deprecated and will be removed in a future release; use `metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.metadata = value
+
+    @property
+    def metadata(self) -> NetCDFMetadata:
         """Structured metadata for this NetCDF.
 
         Uses the GDAL Multidimensional API (groups, arrays, dimensions) when
@@ -9870,14 +9890,14 @@ class NetCDF(Dataset):
             )
         return self._cached_meta_data
 
-    @meta_data.setter
-    def meta_data(self, value: dict[str, str] | NetCDFMetadata) -> None:
+    @metadata.setter
+    def metadata(self, value: dict[str, str] | NetCDFMetadata) -> None:
         """Set metadata on this NetCDF dataset.
 
         Raises:
             ReadOnlyError: The dataset is opened read-only on-disk (a bare
                 `SetMetadataItem` would otherwise silently spill a PAM sidecar),
-                matching `Dataset.meta_data`.
+                matching `Dataset.metadata`.
         """
         if isinstance(value, dict):
             self._require_writable("set metadata")
@@ -9926,7 +9946,7 @@ class NetCDF(Dataset):
             for a spatial dimension, whose units are `degrees_north`).
         """
         time_stamp = None
-        time_dim = self.meta_data.get_dimension(var_name)
+        time_dim = self.metadata.get_dimension(var_name)
         if time_dim is not None:
             units = time_dim.attrs.get("units")
             if units is not None:
@@ -10073,7 +10093,7 @@ class NetCDF(Dataset):
         time_dim = (
             None
             if owner is None or owner._raster is None
-            else owner.meta_data.get_dimension(var_name)
+            else owner.metadata.get_dimension(var_name)
         )
         pair: tuple[str, str] | None = None
         if time_dim is not None and is_cf_time_units(time_dim.attrs.get("units")):
@@ -10828,7 +10848,7 @@ class NetCDF(Dataset):
             if self._group_path is not None:
                 names = declared
             else:
-                cf = self.meta_data.cf
+                cf = self.metadata.cf
                 classified = set(cf.data_variable_names) if cf is not None else set()
                 # The classification says *which* names are data variables; the
                 # store says in what order. Reporting the classification's own

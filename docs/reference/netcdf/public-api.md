@@ -1,17 +1,17 @@
 # `NetCDF` — public API
 
-A one-line map of every public member the `NetCDF` class itself defines — 136 in all: 100 methods, 27 properties,
+A one-line map of every public member the `NetCDF` class itself defines — 137 in all: 100 methods, 28 properties,
 8 classmethods and 1 staticmethod, plus the four mapping dunders (`__getitem__`, `__contains__`, `__iter__`,
 `__len__`). `concat` and `merge` are counted among the methods: each is callable on the class
 (`NetCDF.concat([a, b], dim)`) and on a cube (`a.concat([b], dim)`, which joins the
 receiver first). For the full signatures, arguments and examples, see the rendered
 [NetCDF Class](index.md) reference; this page is the index you scan to find the member you want.
 
-`NetCDF` extends `Dataset`, so it also inherits a further 145 public members it does not redefine — band
+`NetCDF` extends `Dataset`, so it also inherits a further 151 public members it does not redefine — band
 handling, the COG surface, the missing-data members (`where`, `fillna`, `isnull`, `notnull`, `equals`,
 `identical`), the cell-wise members (`clip`, `round`, `astype`, `isin`) and the rest of the raster API.
-132 of those are declared in `Dataset`'s own body and the
-remaining 13 come from `RasterBase` above it. They live in the
+136 of those are declared in `Dataset`'s own body and the
+remaining 15 come from `RasterBase` above it. They live in the
 [Dataset reference](../dataset/index.md) — the missing-data six under
 [Missing data and comparison](../dataset/analysis.md#missing-data-and-comparison) and the four cell-wise
 members under [Cell-wise transforms](../dataset/analysis.md#cell-wise-transforms).
@@ -188,7 +188,8 @@ A variable with no raster plane is the exception — see each member's docstring
 
 | Member                      | What it does                                                    |
 |-----------------------------|-----------------------------------------------------------------|
-| `meta_data`                 | Structured metadata for this NetCDF (cached).                   |
+| `metadata`                  | Structured metadata for this NetCDF (cached).                   |
+| `meta_data`                 | Deprecated alias for `metadata`.                                |
 | `get_all_metadata()`        | The same, re-traversed from GDAL rather than served from cache. |
 | `global_attributes`         | Global attributes on the root group.                            |
 | `set_global_attribute()`    | Sets one global attribute on the root group.                    |

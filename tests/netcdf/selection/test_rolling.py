@@ -16,7 +16,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.netcdf import Variable
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -474,7 +474,7 @@ class TestRollingRefusals:
             container.rolling("time", 2, "sum")  # type: ignore[misc]
 
 
-@requires_dask
+@requires_lazy
 class TestRollingStreamed:
     """A file-backed variable streamed through dask rolls the same cells as an eager read."""
 

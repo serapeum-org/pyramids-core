@@ -804,7 +804,7 @@ class Bands(_Engine["Dataset"]):
     def metadata(self) -> list[dict[str, str]]:
         """Per-band metadata (default domain), one mapping per band, in band order.
 
-        This is the per-band sibling of the dataset-level :attr:`Dataset.meta_data`.
+        This is the per-band sibling of the dataset-level :attr:`Dataset.metadata`.
         It is where GDAL stores what a band physically *is* — for a Sentinel-2 band,
         the centre wavelength, bandwidth, and solar irradiance; for Sentinel-1, the
         swath and polarization; and so on for any format's per-band tags. Only the
@@ -828,7 +828,7 @@ class Bands(_Engine["Dataset"]):
               ...     arr,
               ...     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
               ... )
-              >>> dataset.band_meta_data = [{"WAVELENGTH": "443"}, {"WAVELENGTH": "490"}]
+              >>> dataset.band_metadata = [{"WAVELENGTH": "443"}, {"WAVELENGTH": "490"}]
               >>> dataset.bands.metadata[0]["WAVELENGTH"]
               '443'
               >>> dataset.bands.metadata[1]["WAVELENGTH"]
@@ -863,7 +863,7 @@ class Bands(_Engine["Dataset"]):
         consistent with the other per-band list setters (``band_units``, ``scale``,
         ``offset``). Assigning an empty mapping to a band therefore clears it. To edit
         a single key without disturbing the rest, read the mapping, update it, and
-        assign the list back. (The dataset-level :attr:`Dataset.meta_data` setter
+        assign the list back. (The dataset-level :attr:`Dataset.metadata` setter
         merges instead, because it is a single dict, not a per-band list.)
 
         Args:

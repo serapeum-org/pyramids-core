@@ -18,7 +18,7 @@ from pyramids.base._errors import AlignmentError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.dataset._reduce_ops import resolve_dask_op
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -58,7 +58,7 @@ def daily_times():
 class TestReduceTime:
     """Tests for ``DatasetCollection.reduce_time``."""
 
-    @requires_dask
+    @requires_lazy
     def test_monthly_collapses_to_one_window(self, daily_files, daily_times):
         """All four January days fall in one month → a single mean window.
 
@@ -75,7 +75,7 @@ class TestReduceTime:
             "mean(0,1,2,3) should be 1.5"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_window_grid_is_preserved(self, daily_files, daily_times):
         """The reduced Dataset carries the collection's geotransform/CRS/no-data.
 
@@ -90,7 +90,7 @@ class TestReduceTime:
             f"no-data not preserved: {ds.no_data_value[0]}"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_two_day_windows_split_and_sorted(self, daily_files, daily_times):
         """A 2-day frequency makes two windows, sorted by window label.
 
@@ -105,7 +105,7 @@ class TestReduceTime:
         values = [float(ds.read_array()[0, 0]) for _, ds in result]
         assert values == pytest.approx([0.5, 2.5]), f"Unexpected window means: {values}"
 
-    @requires_dask
+    @requires_lazy
     def test_window_labels_are_timestamps(self, daily_files, daily_times):
         """Each returned label is the window's left-edge pandas Timestamp.
 
@@ -119,7 +119,7 @@ class TestReduceTime:
         )
         assert label == pd.Timestamp("2022-01-01"), f"Unexpected window label: {label}"
 
-    @requires_dask
+    @requires_lazy
     def test_sum_op(self, daily_files, daily_times):
         """The sum reduction sums each window's timesteps.
 
@@ -132,7 +132,7 @@ class TestReduceTime:
             "sum(0,1,2,3) should be 6"
         )
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize("op, expected", [("min", 0.0), ("max", 3.0)])
     def test_min_max_ops(self, daily_files, daily_times, op, expected):
         """min/max reductions pick the extreme over the window.
@@ -148,7 +148,7 @@ class TestReduceTime:
         _, ds = coll.reduce_time(daily_times, freq="1MS", op=op)[0]
         assert float(ds.read_array()[0, 0]) == pytest.approx(expected), f"{op} mismatch"
 
-    @requires_dask
+    @requires_lazy
     def test_accepts_string_times(self, daily_files):
         """times may be plain date strings (anything pandas.to_datetime accepts).
 
@@ -166,7 +166,7 @@ class TestReduceTime:
             "Feb mean of 2,3"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_invalid_op_raises(self, daily_files, daily_times):
         """An unsupported op raises ValueError before any reduction.
 
@@ -178,7 +178,7 @@ class TestReduceTime:
         with pytest.raises(ValueError, match="op must be one of"):
             coll.reduce_time(daily_times, freq="1MS", op="bogus")
 
-    @requires_dask
+    @requires_lazy
     def test_times_length_mismatch_raises(self, daily_files):
         """A times length not matching time_length raises ValueError.
 
@@ -191,7 +191,7 @@ class TestReduceTime:
                 ["2022-01-01", "2022-01-02", "2022-01-03"], freq="1MS", op="mean"
             )
 
-    @requires_dask
+    @requires_lazy
     def test_nat_times_raises(self, daily_files):
         """A NaT entry in times raises a clear ValueError, not an opaque TypeError.
 
@@ -296,7 +296,7 @@ class TestReduceTimeOps:
         assert len(result) == 1, f"one January window expected, got {len(result)}"
         return result[0][1].read_array().astype(float)
 
-    @requires_dask
+    @requires_lazy
     def test_median_matches_numpy(self, varied_files, daily_times):
         """median equals np.nanmedian per pixel; the all-gap pixel is NaN.
 
@@ -309,7 +309,7 @@ class TestReduceTimeOps:
         np.testing.assert_allclose(got, ref, equal_nan=True)
         assert np.isnan(got[1, 1]), "all-gap pixel must be NaN"
 
-    @requires_dask
+    @requires_lazy
     def test_mode_smallest_value_on_tie(self, varied_files, daily_times):
         """mode is the modal value, NaN-aware, smallest value breaking a tie.
 
@@ -324,7 +324,7 @@ class TestReduceTimeOps:
         assert got[1, 0] == 2.0, f"all-distinct (gap skipped) -> 2.0, got {got[1, 0]}"
         assert np.isnan(got[1, 1]), "all-gap pixel must be NaN"
 
-    @requires_dask
+    @requires_lazy
     def test_percentile_matches_numpy(self, varied_files, daily_times):
         """percentile with q=90 equals np.nanpercentile per pixel.
 
@@ -335,7 +335,7 @@ class TestReduceTimeOps:
         ref = _nan_ref(np.nanpercentile, _stack(), 90, axis=0)
         np.testing.assert_allclose(got, ref, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_quantile_spelling_matches_percentile(self, varied_files, daily_times):
         """op='quantile' with q in (0,1] equals op='percentile' with q*100.
 
@@ -346,7 +346,7 @@ class TestReduceTimeOps:
         p = self._one_window(varied_files, daily_times, "percentile", q=90)
         np.testing.assert_allclose(q, p, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_trend_matches_least_squares(self, varied_files, daily_times):
         """trend is the per-pixel OLS slope in value-units per day.
 
@@ -364,7 +364,7 @@ class TestReduceTimeOps:
         )
         np.testing.assert_allclose(got, ref, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_sens_slope_matches_theil_sen(self, varied_files, daily_times):
         """sens_slope is the per-pixel Theil-Sen median pairwise slope.
 
@@ -379,7 +379,7 @@ class TestReduceTimeOps:
         )
         np.testing.assert_allclose(got, ref, equal_nan=True)
 
-    @requires_dask
+    @requires_lazy
     def test_trend_skipna_false_makes_gap_pixels_nodata(
         self, varied_files, daily_times
     ):
@@ -394,7 +394,7 @@ class TestReduceTimeOps:
         assert np.isnan(got[1, 0]), "one-gap pixel -> NaN under skipna=False"
         assert np.isnan(got[1, 1]), "all-gap pixel -> NaN"
 
-    @requires_dask
+    @requires_lazy
     def test_sens_slope_skipna_false_makes_gap_pixels_nodata(
         self, varied_files, daily_times
     ):
@@ -409,14 +409,14 @@ class TestReduceTimeOps:
         assert np.isnan(got[1, 0]), "one-gap pixel -> NaN under skipna=False"
         assert np.isnan(got[1, 1]), "all-gap pixel -> NaN"
 
-    @requires_dask
+    @requires_lazy
     def test_percentile_requires_q(self, varied_files, daily_times):
         """percentile without q raises ValueError before any reduction."""
         coll = DatasetCollection.from_files(varied_files)
         with pytest.raises(ValueError, match="requires a level q"):
             coll.reduce_time(daily_times, freq="1MS", op="percentile")
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize(
         "op, q", [("percentile", 150), ("percentile", 0), ("quantile", 9)]
     )
@@ -426,7 +426,7 @@ class TestReduceTimeOps:
         with pytest.raises(ValueError, match="q must satisfy"):
             coll.reduce_time(daily_times, freq="1MS", op=op, q=q)
 
-    @requires_dask
+    @requires_lazy
     def test_q_refused_for_non_quantile_op(self, varied_files, daily_times):
         """Passing q to an op that takes none raises ValueError."""
         coll = DatasetCollection.from_files(varied_files)
@@ -487,7 +487,7 @@ class TestReduceTimeNoData:
             paths.append(p)
         return paths
 
-    @requires_dask
+    @requires_lazy
     def test_numeric_sentinel_is_treated_as_data_not_skipped(
         self, sentinel_gap_files, daily_times
     ):
@@ -530,7 +530,7 @@ class TestReduceTimeInMemory:
             scenes[0], time_length=4, datasets=scenes, time=list(times)
         )
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_reduce_does_not_raise(self, in_memory_scenes, daily_times):
         """The exact issue #1349 scenario: a datasets=-backed reduce used to raise."""
         col = self._in_memory(in_memory_scenes, daily_times)
@@ -540,7 +540,7 @@ class TestReduceTimeInMemory:
             "median of 0,1,2,3 is 1.5"
         )
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_data_is_the_time_cube(self, in_memory_scenes):
         """.data stacks the resident scenes into the lazy (T, B, R, C) cube."""
         col = self._in_memory(in_memory_scenes, pd.date_range("2022-01-01", periods=4))
@@ -548,7 +548,7 @@ class TestReduceTimeInMemory:
         assert cube.shape == (4, 1, 3, 3)
         assert np.asarray(cube[:, 0, 0, 0].compute()).tolist() == [0.0, 1.0, 2.0, 3.0]
 
-    @requires_dask
+    @requires_lazy
     @pytest.mark.parametrize(
         "op, kw",
         [
@@ -572,7 +572,7 @@ class TestReduceTimeInMemory:
             np.asarray(got, dtype=float), np.asarray(want, dtype=float), equal_nan=True
         )
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_multi_band_keeps_band_axis(self):
         """A multi-band in-memory stack yields a (T, B, R, C) cube, band axis kept."""
         geo = GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326)
@@ -588,7 +588,7 @@ class TestReduceTimeInMemory:
         mean = col.reduce_time(times, freq="1MS", op="mean")[0][1].read_array()
         np.testing.assert_allclose(np.asarray(mean), np.full((2, 3, 3), 2.0))
 
-    @requires_dask
+    @requires_lazy
     def test_empty_in_memory_collection_raises(self):
         """An in-memory collection with no timesteps raises a clear RuntimeError."""
         geo = GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326)
@@ -597,7 +597,7 @@ class TestReduceTimeInMemory:
         with pytest.raises(RuntimeError, match="no datasets"):
             _ = col.data
 
-    @requires_dask
+    @requires_lazy
     def test_mismatched_scene_shape_raises(self):
         """A non-co-registered scene raises AlignmentError at .data, not a silent transpose.
 
@@ -618,7 +618,7 @@ class TestReduceTimeInMemory:
         with pytest.raises(AlignmentError, match="shape"):
             _ = col.data
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_matches_file_backed_with_nodata(self, tmp_path):
         """A -9999 sentinel cell reduces identically in-memory and file-backed.
 
@@ -649,7 +649,7 @@ class TestReduceTimeInMemory:
         )
         assert float(np.asarray(got)[0, 0]) == pytest.approx((-9999.0 + 1.0 + 2.0) / 3)
 
-    @requires_dask
+    @requires_lazy
     def test_in_memory_matches_file_backed_packed(self, tmp_path):
         """A CF-packed scene gives the same physical cube in-memory and file-backed.
 
@@ -683,7 +683,7 @@ class TestReduceTimeInMemory:
         assert got.dtype == np.float64, "packed data unpacks to float64 physical"
         assert float(got[0, 0, 0, 0]) == pytest.approx(1.0), "100 * 0.01 scale"
 
-    @requires_dask
+    @requires_lazy
     def test_replicate_base_stacks_identical_frames(self):
         """A replicate-base DatasetCollection(src, time_length=N>1) stacks N copies.
 
@@ -701,7 +701,7 @@ class TestReduceTimeInMemory:
         assert cube.shape == (3, 1, 2, 2)
         assert np.all(cube == cube[0]), "replicate-base frames are identical"
 
-    @requires_dask
+    @requires_lazy
     def test_mismatched_band_count_raises(self):
         """A scene whose band count differs from the template raises AlignmentError."""
         geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)

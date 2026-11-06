@@ -24,7 +24,7 @@ from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import _resize_axis, _window_coordinates
 from pyramids.netcdf.engines.selection import _coarsen_windows
 from pyramids.netcdf.netcdf import Variable
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -745,7 +745,7 @@ class TestWindowHelpers:
         assert labels[1] == 15.0, labels
 
 
-@requires_dask
+@requires_lazy
 class TestTheChunkedPathAgrees:
     """A file-backed variable coarsens through dask and must answer what memory answers."""
 

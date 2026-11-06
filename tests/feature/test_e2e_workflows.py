@@ -38,7 +38,7 @@ from pyramids.base.protocols import SpatialObject
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection, create_polygon, get_coords
 
-pytestmark = pytest.mark.core
+pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
 
 @pytest.fixture

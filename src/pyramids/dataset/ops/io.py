@@ -256,7 +256,7 @@ def _write_to_file_sync(
         # has to name the value that actually appears among them. Writing the stored
         # `-9999` over a grid holding `-98.49` declared a fill that occurs nowhere.
         no_data_value = ds.analysis._physical_no_data(band)
-        xmin, ymin, _, _ = ds.bbox
+        xmin, ymin, _, _ = ds.total_bounds
         _io.to_ascii(arr, ds.cell_size, xmin, ymin, no_data_value, path)
     else:
         # Only this branch hands the bands to a GDAL driver. The ascii

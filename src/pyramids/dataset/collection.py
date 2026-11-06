@@ -3593,7 +3593,7 @@ class DatasetCollection:
         # collection rendered on pixel indices where the identical single-raster
         # call rendered on world coordinates. `basemap=` was accepted here all
         # the same, with no extent to place it against.
-        extent = self.base.bbox
+        extent = list(self.base.total_bounds)
         if rgb is not None:
             # RGB time-lapse: read the FULL multi-band array per timestep and
             # stack to (time, bands, rows, cols); render_array composites the

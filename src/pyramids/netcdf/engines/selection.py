@@ -6380,7 +6380,7 @@ def _cf_roles(nc: NetCDF) -> dict[str, str]:
     Returns:
         dict[str, str]: Array name to role, empty when the store declares no CF roles.
     """
-    cf = nc.meta_data.cf
+    cf = nc.metadata.cf
     return dict(cf.classifications or {}) if cf is not None else {}
 
 

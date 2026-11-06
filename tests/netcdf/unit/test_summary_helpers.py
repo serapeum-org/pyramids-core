@@ -434,7 +434,7 @@ class TestContainerSummary:
         """
         nc = NetCDF.read_file(_write_store(str(tmp_path / "fallback.nc")))
         try:
-            monkeypatch.setattr(nc.meta_data, "variables", {})
+            monkeypatch.setattr(nc.metadata, "variables", {})
             assert "variables  : v0" in _container_summary(nc), _container_summary(nc)
         finally:
             nc.close()
@@ -450,7 +450,7 @@ class TestContainerSummary:
         """
         nc = NetCDF.read_file(_write_store(str(tmp_path / "empty.nc")))
         try:
-            monkeypatch.setattr(nc.meta_data, "variables", {})
+            monkeypatch.setattr(nc.metadata, "variables", {})
             _override(nc, variable_names=[])
             summary = _container_summary(nc)
             assert "variables  : none" in summary, summary

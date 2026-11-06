@@ -48,7 +48,7 @@ from pyramids.netcdf.engines._along_dim import (
     _variable_from_applied,
 )
 from pyramids.netcdf.netcdf import Variable
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -855,7 +855,7 @@ class TestSliceAxis:
         assert _slice_axis(arr, 0, 0, 3).shape == (3, 2, 1), "shape after a full cut"
 
 
-@requires_dask
+@requires_lazy
 class TestDaskHelpers:
     """The helpers stay lazy on a dask array and compute to the numpy answer."""
 
@@ -1567,7 +1567,7 @@ class TestTheSentinelIsComparedAsStored:
         assert masked.dtype == np.float64, masked.dtype
         assert not np.isnan(masked).any(), masked
 
-    @requires_dask
+    @requires_lazy
     def test_a_dask_band_masks_only_the_sentinel(self):
         """The comparison stays in the stored type for a lazy array too.
 

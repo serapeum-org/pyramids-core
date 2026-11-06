@@ -42,7 +42,7 @@ def _cmd_nc_info(args: argparse.Namespace) -> int:
     """
     nc = NetCDF.read_file(args.file)
     time_var = nc.get_time_variable()
-    minx, miny, maxx, maxy = (float(value) for value in nc.bbox)
+    minx, miny, maxx, maxy = (float(value) for value in nc.total_bounds)
     payload = {
         "path": args.file,
         "variables": list(nc.variable_names),

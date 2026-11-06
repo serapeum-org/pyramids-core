@@ -501,7 +501,7 @@ classDiagram
     }
     class engines_Cell {
         +get_cell_coords · cell_area
-        +map_to_array_coordinates · array_to_map_coordinates
+        +nearest_cell
     }
     class engines_Vectorize {
         +to_geodataframe · translate

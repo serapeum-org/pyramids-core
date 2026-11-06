@@ -68,6 +68,7 @@ if TYPE_CHECKING:
 from pyramids.base.crs import crs_from_user_input, crs_spec, reproject_coordinates
 from pyramids.base.geodesy import geodesic_distance
 from pyramids.base.georeference import GeoReference
+from pyramids.dataset._calc import eval_calc
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._validate import (
     resolve_band_indices,
@@ -1751,6 +1752,133 @@ class Analysis(_Engine["Dataset"]):
             folded=True,
         )
 
+    def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
+        """Evaluate a string band-algebra expression over this and other rasters.
+
+        The Python counterpart of the ``pyramids calc`` CLI: ``self`` is bound to
+        ``A`` and each dataset in ``others`` to ``B``, ``C``, ... (up to ``Z``), then
+        ``expr`` is evaluated cell by cell by a small AST whitelist -- never
+        ``eval`` / ``exec``. Only arithmetic over the bound arrays, comparisons, and a
+        short list of ``np.<func>`` calls (``where``, ``clip``, ``log``, ``log10``,
+        ``exp``, ``sqrt``, ``abs``, ``minimum``, ``maximum``, ``power``) are allowed.
+
+        The expression sees the arrays as ``read_array(squeeze=True)`` returns them --
+        in **physical units** (CF ``scale_factor`` / ``add_offset`` packing is already
+        undone, like any ``read_array``). Unlike :meth:`combine`, no-data cells take
+        part in the arithmetic and no domain masking is applied. A comparison / mask
+        expression (a bool result, e.g. ``"A > 0.3"``) is cast to ``uint8`` (0/1); a
+        scalar expression (e.g. ``"1"``) fills the whole grid. The result is wrapped
+        into a dataset of this one's class, carrying this dataset's geotransform, CRS
+        and dataset-level metadata, and declares **no** no-data value -- a computed
+        array has no inherent sentinel.
+
+        It therefore differs on purpose from the ``pyramids calc`` CLI in three ways:
+        the CLI refuses a CRS-less input, writes no metadata, and stamps the ``-9999``
+        no-data default; the engine permits an un-georeferenced in-memory result,
+        carries metadata (like :meth:`combine`), and leaves the result sentinel-free.
+
+        Args:
+            expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI
+                with ``self`` = red (``A``) and ``others[0]`` = near-infrared (``B``).
+            *others: Additional rasters bound to ``B``, ``C``, ...; each must already
+                sit on this dataset's grid (``calc`` does not resample). At most 25
+                others (26 inputs total, ``A``..``Z``).
+            dtype: Optional NumPy dtype string to cast the result to.
+
+        Returns:
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array,
+            with no no-data value declared (bool results are ``uint8`` 0/1 masks).
+
+        Raises:
+            ValueError: More than 26 inputs total, an unknown name in ``expr``, or a
+                disallowed expression element.
+            SyntaxError: ``expr`` is not a valid Python expression.
+            AlignmentError: An operand does not share this dataset's grid.
+
+        Notes:
+            - Band names and NetCDF band-dimension labels are **not** preserved
+              (unlike :meth:`combine`): the result uses the classic
+              ``(bands, rows, cols)`` layout with default band names, because an
+              expression can change the band count and what the bands mean.
+            - Compatible band counts broadcast (a 1-band operand against an N-band
+              one); genuinely incompatible counts surface NumPy's own broadcast
+              ``ValueError`` rather than a pyramids-worded one.
+            - Comparisons must be single (``A > 0``); chained comparisons
+              (``0 < A < 5``) are rejected.
+            - The result carries no sentinel, so division-by-zero cells (``inf`` /
+              ``NaN`` -- e.g. an NDVI where ``B + A == 0``) are stored as ordinary
+              values; post-process with :meth:`fillna` / :meth:`where` to mask them.
+
+        Examples:
+            - NDVI from a red and a near-infrared single-band raster:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> red = Dataset.from_array(np.array([[[1.0, 2.0]]]), geo_ref=ref)
+                >>> nir = Dataset.from_array(np.array([[[3.0, 6.0]]]), geo_ref=ref)
+                >>> ndvi = red.calc("(B - A) / (B + A)", nir)
+                >>> np.asarray(ndvi.read_array()).ravel().tolist()
+                [0.5, 0.5]
+
+                ```
+            - Scale a single raster with a scalar and an ``np`` call:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> ds = Dataset.from_array(np.array([[[1.0, 4.0]]]), geo_ref=ref)
+                >>> np.asarray(ds.calc("np.sqrt(A) * 10").read_array()).ravel().tolist()
+                [10.0, 20.0]
+
+                ```
+        """
+        datasets = [self._ds, *others]
+        if len(datasets) > 26:
+            raise ValueError("calc supports at most 26 input rasters (bound A..Z).")
+        template = self._ds
+        for other in others:
+            if not template.same_grid(other, compare_crs=bool(other.crs)):
+                raise AlignmentError(
+                    "a calc operand does not share this dataset's grid; align the "
+                    "inputs first (Dataset.align) and re-run."
+                )
+        names = [chr(ord("A") + index) for index in range(len(datasets))]
+        variables = {
+            name: np.asarray(ds.read_array(squeeze=True))
+            for name, ds in zip(names, datasets)
+        }
+        out = np.asarray(eval_calc(expr, variables))
+        if dtype is not None:
+            out = out.astype(dtype)
+        elif out.dtype == bool:
+            # GDAL has no boolean band type, so a comparison / mask expression
+            # (e.g. ``A > 0.3``) becomes a 0/1 ``uint8`` raster rather than a
+            # cryptic "numpy data type is not supported: bool" from the writer.
+            out = out.astype("uint8")
+        if out.ndim == 0:
+            # A scalar expression (e.g. ``"1"``) fills the whole template grid
+            # instead of raising on ``out.shape[0]``.
+            out = np.full((template.rows, template.columns), out, dtype=out.dtype)
+        result = self._ds.__class__._build_dataset(
+            template.columns,
+            template.rows,
+            1 if out.ndim == 2 else out.shape[0],
+            numpy_to_gdal_dtype(out),
+            template.geotransform,
+            template.crs,
+            # A computed array has no inherent no-data sentinel, so the result
+            # declares none -- rather than stamping the ``-9999`` factory default
+            # on values the expression may legitimately produce (and which is out
+            # of range for an integer/bool cast anyway).
+            no_data_value=None,
+            array=out,
+        )
+        # Dataset-level tags travel (like `combine`); band-level scale/offset/units
+        # do not -- the expression can change what the numbers mean.
+        result.metadata = template.metadata
+        return result
+
     def _combine(
         self,
         other: Dataset,
@@ -1869,11 +1997,11 @@ class Analysis(_Engine["Dataset"]):
         # than the arrays it was built from. Band-level scale, offset and units
         # are deliberately not carried -- `func` can change what the numbers
         # mean, and a ratio of two scaled bands is not on either input's scale.
-        # Assigned through, not `dict(...)`: `Dataset.meta_data` is a plain dict
-        # but `NetCDF.meta_data` is a `NetCDFMetadata`, which is not iterable --
+        # Assigned through, not `dict(...)`: `Dataset.metadata` is a plain dict
+        # but `NetCDF.metadata` is a `NetCDFMetadata`, which is not iterable --
         # coercing it turned every operator on a NetCDF variable into a
         # TypeError. Both setters accept their own type.
-        combined.meta_data = self._ds.meta_data
+        combined.metadata = self._ds.metadata
         # Band identity is half the reason to keep the operation inside the
         # Dataset: an NDVI or change-detection stack whose bands come back as
         # `Band_1`, `Band_2` has lost what told the caller which is which.
@@ -2326,6 +2454,22 @@ class Analysis(_Engine["Dataset"]):
     def fill(
         self, value: float | int, inplace: bool = False, path: str | Path | None = None
     ) -> Dataset | None:
+        """Deprecated alias for :meth:`fill_domain`.
+
+        Renamed to `fill_domain` because it writes the *domain* (the cells that
+        already hold data), not the gaps -- the opposite of :meth:`fillna`.
+        """
+        warnings.warn(
+            "`fill` is deprecated and will be removed in a future release; use "
+            "`fill_domain` (it writes the data cells, not the gaps -- `fillna` writes the gaps).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fill_domain(value, inplace=inplace, path=path)
+
+    def fill_domain(
+        self, value: float | int, inplace: bool = False, path: str | Path | None = None
+    ) -> Dataset | None:
         """Fill the domain cells with a certain value.
 
         Every cell the no-data sentinel does not mark takes `value`; the gaps keep the
@@ -2371,7 +2515,7 @@ class Analysis(_Engine["Dataset"]):
                [2 2 3 1 3]
                [3 4 3 3 4]
                [4 4 2 1 1]]
-              >>> new_dataset = dataset.fill(10)
+              >>> new_dataset = dataset.fill_domain(10)
               >>> print(new_dataset.read_array())
               [[10 10 10 10 10]
                [10 10 10 10 10]
@@ -2393,7 +2537,7 @@ class Analysis(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> filled = packed.fill(7.5)
+              >>> filled = packed.fill_domain(7.5)
               >>> filled.read_array().tolist(), filled.dtype, filled.scale
               ([[7.5, 7.5], [7.5, -9999.0]], ['float64'], [1.0])
 
@@ -2769,7 +2913,7 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             dict: The tags, empty when the raster carries none.
         """
-        tags = getattr(ds, "meta_data", None)
+        tags = getattr(ds, "metadata", None)
         if not isinstance(tags, Mapping):
             tags = getattr(ds, "attrs", None)
         return dict(tags) if isinstance(tags, Mapping) else {}
@@ -3580,7 +3724,7 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             Dataset: `result`.
         """
-        result.meta_data = self._ds.meta_data
+        result.metadata = self._ds.metadata
         result.band_names = list(self._ds.band_names)
         # Duck-typed: only a NetCDF variable carries one, and a plain raster has no name
         # to lose.
@@ -3893,7 +4037,7 @@ class Analysis(_Engine["Dataset"]):
                     "Dataset.crop(); explode MultiPoint masks into single points "
                     "first."
                 )
-            indices = self._ds.map_to_array_coordinates(mask)
+            indices = self._ds.nearest_cell(mask)
             if arr.ndim > 2:
                 values = arr[:, indices[:, 0], indices[:, 1]]
             else:
@@ -4725,22 +4869,22 @@ class Analysis(_Engine["Dataset"]):
     def _require_overlap(self, other: Dataset) -> None:
         """Raise ``AlignmentError`` unless ``other``'s extent overlaps this one's.
 
-        Uses a planar axis-aligned bounding-box test on ``Dataset.bbox``
+        Uses a planar axis-aligned bounding-box test on ``Dataset.total_bounds``
         (``minx < maxx``, ``miny < maxy``); extents that merely touch at an edge
         count as disjoint. It does not special-case a geographic bbox that wraps
         the antimeridian (a ±180 longitude wrap would be mis-tested) — normalise
         such a dataset's longitudes before pan-sharpening.
         """
-        a_minx, a_miny, a_maxx, a_maxy = self._ds.bbox
-        b_minx, b_miny, b_maxx, b_maxy = other.bbox
+        a_minx, a_miny, a_maxx, a_maxy = self._ds.total_bounds
+        b_minx, b_miny, b_maxx, b_maxy = other.total_bounds
         disjoint = (
             b_maxx <= a_minx or b_minx >= a_maxx or b_maxy <= a_miny or b_miny >= a_maxy
         )
         if disjoint:
             raise AlignmentError(
                 "pan-sharpen needs the pan band to overlap the multispectral "
-                f"extent; multispectral bbox {self._ds.bbox} and pan bbox "
-                f"{other.bbox} are disjoint."
+                f"extent; multispectral bounds {list(self._ds.total_bounds)} and pan "
+                f"bounds {list(other.total_bounds)} are disjoint."
             )
 
     def pan_sharpen(
@@ -6483,7 +6627,7 @@ class Analysis(_Engine["Dataset"]):
         # `mode="facet"` branch; the pre-built stack arrives alongside as
         # `_facet_stack` and its spatial extent as `_extent` (the facet
         # stack is *injected*, not read from `self._ds`, so the engine
-        # can't derive the extent from `self._ds.bbox` — the caller must
+        # can't derive the extent from `self._ds.total_bounds` — the caller must
         # supply it). `_chunks` (PR-5) is injected by `NetCDF.plot` to
         # switch the static-plot read path to the dask-backed lazy read;
         # only the rendered slice is materialised.
@@ -6505,9 +6649,11 @@ class Analysis(_Engine["Dataset"]):
         # the extent both come from `self._ds`. On the injected-stack path
         # (`mode="facet"`) the caller passes `_extent` so the panels are
         # placed at the stack's own spatial domain rather than implicitly
-        # trusting that it matches `self._ds.bbox`.
+        # trusting that it matches `self._ds.total_bounds`.
         effective_extent = (
-            injected_extent if injected_extent is not None else self._ds.bbox
+            injected_extent
+            if injected_extent is not None
+            else list(self._ds.total_bounds)
         )
         # Render a paletted band through its GDAL colour table (#913): build a discrete
         # colormap from the palette and hand it to cleopatra as an explicit ``cmap`` plus a
@@ -6641,7 +6787,7 @@ class Analysis(_Engine["Dataset"]):
         return render_array(
             RenderRequest(
                 arr=stack,
-                extent=self._ds.bbox,
+                extent=list(self._ds.total_bounds),
                 exclude_value=masked or None,
                 mode=ModeSpec(mode="animate", animation_axis_values=labels),
                 ax=ax,

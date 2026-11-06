@@ -364,6 +364,7 @@ markers = [
     "vfs: mark a test as a virtual file system (deselect with '-m \"not vfs\"')",
     "slow: mark test as slow (deselect with '-m \"not slow\"')",
     "fast: mark test as fast (deselect with '-m \"not fast\"')",
+    "e2e: end-to-end test (full read/write/compute path); select '-m e2e', deselect '-m \"not e2e\"'",
     "core: extras-free test (auto-applied when no extras marker is present)",
     "plot: tests requiring the [viz] extra (cleopatra) — plotting tests (deselect with '-m \"not plot\"')",
     # One marker per [project.optional-dependencies] group. Each marker
@@ -372,9 +373,13 @@ markers = [
     # spelled ``plot`` above; don't register a duplicate.
     "lazy: tests requiring the [lazy] extra (dask, distributed, zarr, fsspec)",
     "interop: tests requiring the optional interop peer dependency",
-    "netcdf_lazy: tests requiring kerchunk + h5py (now part of the [lazy] extra)",
+    # netcdf_lazy / parquet_lazy are deliberately NOT folded into lazy / parquet: each
+    # gates on EXTRA modules beyond the base extra's headline dep, so a test marked merely
+    # `lazy` would not skip when kerchunk/h5py (or dask-geopandas) are the missing piece.
+    # Kept distinct so the skip is precise; see tests/_marks.py.
+    "netcdf_lazy: tests needing kerchunk + h5py on top of the [lazy] stack (zarr/dask); stricter than `lazy`",
     "parquet: tests requiring the [parquet] extra (pyarrow)",
-    "parquet_lazy: tests requiring dask-geopandas (now part of the [parquet] extra)",
+    "parquet_lazy: tests needing dask-geopandas on top of [parquet] (pyarrow) + [lazy]; stricter than `parquet`/`lazy`",
     "stac: tests requiring the [stac] extra (pystac-client)",
     "live: live network test against a real external service (deselect with '-m \"not live\"', run with '-m live')",
 ]

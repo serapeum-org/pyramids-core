@@ -12,7 +12,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -33,7 +33,7 @@ def three_files_4x5_ramp(tmp_path):
 
 
 class TestMean:
-    @requires_dask
+    @requires_lazy
     def test_mean_all_cells_equal_2(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.mean()
@@ -42,7 +42,7 @@ class TestMean:
 
 
 class TestSum:
-    @requires_dask
+    @requires_lazy
     def test_sum_is_six(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.sum()
@@ -50,7 +50,7 @@ class TestSum:
 
 
 class TestMin:
-    @requires_dask
+    @requires_lazy
     def test_min_is_one(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.min()
@@ -58,7 +58,7 @@ class TestMin:
 
 
 class TestMax:
-    @requires_dask
+    @requires_lazy
     def test_max_is_three(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.max()
@@ -66,14 +66,14 @@ class TestMax:
 
 
 class TestStdVar:
-    @requires_dask
+    @requires_lazy
     def test_std(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.std()
         expected = np.std([1.0, 2.0, 3.0])
         assert np.allclose(result, expected)
 
-    @requires_dask
+    @requires_lazy
     def test_var(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result = collection.var()
@@ -82,7 +82,7 @@ class TestStdVar:
 
 
 class TestSkipNaFalse:
-    @requires_dask
+    @requires_lazy
     def test_skipna_false_dispatches_non_nan_op(self, three_files_4x5_ramp):
         collection = DatasetCollection.from_files(three_files_4x5_ramp)
         result_skipna = collection.mean(skipna=True)

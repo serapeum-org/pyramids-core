@@ -12,7 +12,7 @@ from osgeo import gdal, osr
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from tests._marks import requires_dask
+from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
 
@@ -52,7 +52,7 @@ class TestComputeTrueUnchanged:
 class TestComputeFalseReturnsDelayed:
     """``compute=False`` returns a :class:`dask.delayed.Delayed`."""
 
-    @requires_dask
+    @requires_lazy
     def test_returns_delayed(self, tiny_dataset, tmp_path):
         out = tmp_path / "delayed.tif"
         delayed = tiny_dataset.to_file(str(out), compute=False)
@@ -61,14 +61,14 @@ class TestComputeFalseReturnsDelayed:
         assert isinstance(delayed, Delayed)
         assert not out.exists()
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_compute_writes_file(self, tiny_dataset, tmp_path):
         out = tmp_path / "after_compute.tif"
         delayed = tiny_dataset.to_file(str(out), compute=False)
         delayed.compute()
         assert out.exists()
 
-    @requires_dask
+    @requires_lazy
     def test_delayed_output_readable(self, tiny_dataset, tmp_path):
         out = tmp_path / "readable.tif"
         tiny_dataset.to_file(str(out), compute=False).compute()
@@ -85,7 +85,7 @@ class TestToRasterAlias:
         tiny_dataset.to_raster(str(out))
         assert out.exists()
 
-    @requires_dask
+    @requires_lazy
     def test_to_raster_compute_false(self, tiny_dataset, tmp_path):
         out = tmp_path / "via_alias_delayed.tif"
         delayed = tiny_dataset.to_raster(str(out), compute=False)
@@ -99,7 +99,7 @@ class TestToRasterAlias:
 class TestEarlyPicklingError:
     """L2: MEM-driver Dataset raises PicklingError at schedule time, not compute."""
 
-    @requires_dask
+    @requires_lazy
     def test_mem_dataset_raises_at_schedule(self, tmp_path):
         import pickle
 

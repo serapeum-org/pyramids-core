@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator
 from contextlib import AbstractContextManager
@@ -504,7 +505,7 @@ class RasterBase(ABC):
     def _require_writable(self, action: str) -> None:
         """Guard a metadata write that would spill a PAM sidecar to a read-only file.
 
-        The metadata setters (crs, epsg, scale, offset, band_units, meta_data) call
+        The metadata setters (crs, epsg, scale, offset, band_units, metadata) call
         GDAL `Set*` with no access check, so on a read-only **on-disk** file GDAL
         silently mutates the in-memory object and spills a PAM `.aux.xml` sidecar next
         to it. Call this at the top of every metadata setter so they fail loudly
@@ -552,7 +553,7 @@ class RasterBase(ABC):
         first so every such member raises the same clear error instead.
 
         Scope: this guard is wired into the members ARC-43 flagged — the ones that
-        misbehaved most visibly (`meta_data`, `driver_type`, `_iloc`), plus
+        misbehaved most visibly (`metadata`, `driver_type`, `_iloc`), plus
         `__str__`/`__repr__` (which return the `<Dataset: closed>` sentinel). It is
         deliberately not applied to every GDAL-dereferencing reader (`crs`, `bbox`,
         `scale`, `offset`, ...); those still raise a bare `AttributeError` on a closed
@@ -605,8 +606,28 @@ class RasterBase(ABC):
     @property
     @abstractmethod
     def bbox(self) -> list:
-        """Bound box [xmin, ymin, xmax, ymax]."""
+        """Bounding box ``[xmin, ymin, xmax, ymax]``.
+
+        Deprecated: use :attr:`total_bounds`, which returns the same box as a
+        NumPy array. ``bbox`` is kept as a thin, warning-emitting alias.
+        """
         pass
+
+    @property
+    @abstractmethod
+    def total_bounds(self) -> np.typing.NDArray:
+        """Bounding box ``[minx, miny, maxx, maxy]`` as a NumPy array.
+
+        The canonical bounding box, matching ``GeoDataFrame.total_bounds`` and
+        :class:`pyramids.feature.FeatureCollection` so both satisfy the
+        :class:`pyramids.base.protocols.SpatialObject` protocol. The deprecated
+        :attr:`bbox` returns the same box as a plain ``list``.
+
+        Returns:
+            numpy.ndarray: The box ``[minx, miny, maxx, maxy]``, normalised
+            min-before-max on each axis regardless of grid orientation.
+        """
+        pass  # pragma: no cover
 
     @property
     def geotransform(self) -> tuple[float, float, float, float, float, float]:
@@ -659,8 +680,7 @@ class RasterBase(ABC):
         The array-style companion of :meth:`rowcol`. Computed from the
         exact affine :attr:`transform`, so non-square pixels and rotated
         grids are handled; scalar input returns scalars, sequence input
-        returns lists. (For point-table workflows use the cell engine's
-        :meth:`array_to_map_coordinates`, which is also affine-exact.)
+        returns lists.
 
         Args:
             rows: Row index (or indices) of the cell(s).
@@ -727,10 +747,9 @@ class RasterBase(ABC):
         inverse affine :attr:`transform`, so non-square pixels and rotated
         grids are handled; scalar input returns scalar ints, sequence input
         returns index arrays. (For point-table workflows use the cell
-        engine's :meth:`map_to_array_coordinates`, which handles non-square
-        pixels via the per-axis coordinate arrays but matches the nearest
-        cell rather than inverting the affine, so it does not resolve
-        rotated grids.)
+        engine's :meth:`nearest_cell`, which handles non-square pixels via
+        the per-axis coordinate arrays but matches the nearest cell rather
+        than inverting the affine, so it does not resolve rotated grids.)
 
         Args:
             x: X (longitude/easting) coordinate(s).
@@ -844,8 +863,22 @@ class RasterBase(ABC):
         pass
 
     @property
-    def meta_data(self):
-        """Meta data."""
+    def metadata(self):
+        """Dataset-level GDAL metadata from the default domain.
+
+        The canonical spelling of this accessor; the old ``meta_data`` name is kept
+        on :class:`~pyramids.dataset.Dataset` / :class:`~pyramids.netcdf.NetCDF` as a
+        deprecated alias. Read a non-default domain with :meth:`get_metadata`, and
+        list the domains that exist with :attr:`metadata_domains`.
+
+        Returns:
+            dict[str, str]: The default-domain ``KEY=VALUE`` tags, ``{}`` when none
+            are set.
+
+        See Also:
+            - get_metadata: Read a specific (possibly non-default) metadata domain.
+            - metadata_domains: The metadata domains this dataset exposes.
+        """
         self._require_open()
         return self._raster.GetMetadata()
 
@@ -882,7 +915,7 @@ class RasterBase(ABC):
         return subdatasets_of(self._raster)
 
     @property
-    def meta_data_domains(self) -> list[str]:
+    def metadata_domains(self) -> list[str]:
         """The GDAL metadata domains this dataset actually exposes.
 
         Returns:
@@ -894,16 +927,37 @@ class RasterBase(ABC):
         self._require_open()
         return cast("list[str]", self._raster.GetMetadataDomainList() or [])
 
+    @property
+    def meta_data_domains(self) -> list[str]:
+        """Deprecated alias for :attr:`metadata_domains`."""
+        warnings.warn(
+            "`meta_data_domains` is deprecated and will be removed in a future release; "
+            "use `metadata_domains`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.metadata_domains
+
     def get_meta_data(self, domain: str = "") -> dict[str, str] | list[str]:
+        """Deprecated alias for :meth:`get_metadata`."""
+        warnings.warn(
+            "`get_meta_data` is deprecated and will be removed in a future release; "
+            "use `get_metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_metadata(domain)
+
+    def get_metadata(self, domain: str = "") -> dict[str, str] | list[str]:
         """Read this dataset's metadata from a specific GDAL domain.
 
-        The domain-aware companion to :attr:`meta_data`. On a base :class:`Dataset`,
-        ``get_meta_data("")`` returns the same mapping as :attr:`meta_data`; on a
-        ``NetCDF`` the two differ — there :attr:`meta_data` is a processed
+        The domain-aware companion to :attr:`metadata`. On a base :class:`Dataset`,
+        ``get_metadata("")`` returns the same mapping as :attr:`metadata`; on a
+        ``NetCDF`` the two differ — there :attr:`metadata` is a processed
         ``NetCDFMetadata`` while this returns the raw default-domain dict. Other
         domains expose GDAL's named metadata, e.g. ``"IMAGE_STRUCTURE"``
         (``COMPRESSION`` / ``INTERLEAVE`` / ``NBITS``) or ``"RPC"``. Use
-        :attr:`meta_data_domains` to see which domains exist.
+        :attr:`metadata_domains` to see which domains exist.
 
         Args:
             domain: The GDAL metadata domain to read; ``""`` (default) is the
@@ -915,7 +969,7 @@ class RasterBase(ABC):
             domain returns a list of one XML string, mirroring GDAL's ``GetMetadata``.
 
         Examples:
-            - The default domain matches :attr:`meta_data` on a base ``Dataset``:
+            - The default domain matches :attr:`metadata` on a base ``Dataset``:
                 ```python
                 >>> import numpy as np
                 >>> from pyramids.dataset import Dataset, GeoReference
@@ -923,7 +977,7 @@ class RasterBase(ABC):
                 ...     np.zeros((2, 2)),
                 ...     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
                 ... )
-                >>> ds.get_meta_data() == ds.meta_data
+                >>> ds.get_metadata() == ds.metadata
                 True
 
                 ```

@@ -937,13 +937,19 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Cell.cell_area <pyramids.dataset.engines.Cell.cell_area>`."""
         return self.cell.cell_area(*args, **kwargs)
 
-    def map_to_array_coordinates(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Cell.map_to_array_coordinates <pyramids.dataset.engines.Cell.map_to_array_coordinates>`."""
-        return self.cell.map_to_array_coordinates(*args, **kwargs)
+    def nearest_cell(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Cell.nearest_cell <pyramids.dataset.engines.Cell.nearest_cell>`."""
+        return self.cell.nearest_cell(*args, **kwargs)
 
-    def array_to_map_coordinates(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Cell.array_to_map_coordinates <pyramids.dataset.engines.Cell.array_to_map_coordinates>`."""
-        return self.cell.array_to_map_coordinates(*args, **kwargs)
+    def map_to_array_coordinates(self, *args, **kwargs):
+        """Deprecated alias for :meth:`nearest_cell`."""
+        warnings.warn(
+            "`map_to_array_coordinates` is deprecated and will be removed in a future "
+            "release; use `nearest_cell`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.nearest_cell(*args, **kwargs)
 
     def to_cog(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.to_cog <pyramids.dataset.engines.COG.to_cog>`."""
@@ -1079,14 +1085,49 @@ class Dataset(RasterBase):
             other, func, band=band, no_data_value=no_data_value
         )
 
-    def fill(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Analysis.fill <pyramids.dataset.engines.Analysis.fill>`.
+    def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
+        """Facade — delegates to :meth:`Analysis.calc <pyramids.dataset.engines.Analysis.calc>`.
 
-        The collaborator returns `None` for `inplace=True`; see
-        :meth:`apply` for the rationale.
+        Evaluate a string band-algebra expression (``self`` bound to ``A``, each of
+        ``others`` to ``B``, ``C``, ...) and return the result as a new dataset on
+        this one's grid/CRS. The Python counterpart of the ``pyramids calc`` CLI; see
+        the engine method for the allowed grammar and alignment rules.
+
+        Args:
+            expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI.
+            *others: Additional rasters bound to ``B``, ``C``, ...; each on this grid.
+            dtype: Optional NumPy dtype string to cast the result to.
+
+        Returns:
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array.
+
+        Raises:
+            ValueError: More than 26 inputs total, an unknown name, or a disallowed
+                expression element.
+            SyntaxError: ``expr`` is not a valid Python expression.
+            AlignmentError: An operand does not share this dataset's grid.
         """
-        result = self.analysis.fill(*args, **kwargs)
+        return self.analysis.calc(expr, *others, dtype=dtype)
+
+    def fill_domain(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Analysis.fill_domain <pyramids.dataset.engines.Analysis.fill_domain>`.
+
+        Writes `value` to the cells that already hold data (the domain) and leaves
+        the gaps alone -- the opposite of :meth:`fillna`. The collaborator returns
+        `None` for `inplace=True`; see :meth:`apply` for the rationale.
+        """
+        result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
+
+    def fill(self, *args, **kwargs):
+        """Deprecated alias for :meth:`fill_domain`."""
+        warnings.warn(
+            "`fill` is deprecated and will be removed in a future release; use "
+            "`fill_domain` (it writes the data cells, not the gaps -- `fillna` writes the gaps).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fill_domain(*args, **kwargs)
 
     def where(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.where <pyramids.dataset.engines.Analysis.where>`.
@@ -3993,13 +4034,13 @@ class Dataset(RasterBase):
                 self.bands._change_no_data_value_attr(i, value)
 
     @property
-    def meta_data(self):
-        """Meta-data."""
-        return super().meta_data
+    def metadata(self):
+        """Dataset-level GDAL metadata (default domain)."""
+        return super().metadata
 
-    @meta_data.setter
-    def meta_data(self, value: dict[str, str]):
-        """Meta-data.
+    @metadata.setter
+    def metadata(self, value: dict[str, str]):
+        """Set dataset-level GDAL metadata (default domain).
 
         Raises:
             ReadOnlyError: The dataset is opened read-only.
@@ -4015,9 +4056,39 @@ class Dataset(RasterBase):
         self.__dict__.pop("_cf_crs_cache", None)
         self._epsg = self._get_epsg()
 
+    @property
+    def meta_data(self):
+        """Deprecated alias for :attr:`metadata`."""
+        warnings.warn(
+            "`meta_data` is deprecated and will be removed in a future release; use `metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.metadata
+
+    @meta_data.setter
+    def meta_data(self, value: dict[str, str]):
+        """Deprecated alias for the :attr:`metadata` setter."""
+        warnings.warn(
+            "`meta_data` is deprecated and will be removed in a future release; use `metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.metadata = value
+
     def set_meta_data(
         self, value: dict[str, str] | list[str], domain: str = ""
     ) -> None:
+        """Deprecated alias for :meth:`set_metadata`."""
+        warnings.warn(
+            "`set_meta_data` is deprecated and will be removed in a future release; "
+            "use `set_metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_metadata(value, domain)
+
+    def set_metadata(self, value: dict[str, str] | list[str], domain: str = "") -> None:
         """Replace a *named* GDAL metadata domain.
 
         Writes ``value`` into ``domain`` with ``SetMetadata`` — a **replace**, not a
@@ -4127,10 +4198,10 @@ class Dataset(RasterBase):
         )
 
     @property
-    def band_meta_data(self) -> list[dict[str, str]]:
+    def band_metadata(self) -> list[dict[str, str]]:
         """Per-band metadata, one mapping per band, in band order.
 
-        The per-band sibling of :attr:`meta_data`. Facade — delegates to
+        The per-band sibling of :attr:`metadata`. Facade — delegates to
         :attr:`Bands.metadata <pyramids.dataset.engines.Bands.metadata>`; see it for
         the empty-band and default-domain conventions.
 
@@ -4140,8 +4211,8 @@ class Dataset(RasterBase):
         """
         return self.bands.metadata
 
-    @band_meta_data.setter
-    def band_meta_data(self, value: list[dict[str, str]]) -> None:
+    @band_metadata.setter
+    def band_metadata(self, value: list[dict[str, str]]) -> None:
         """Replace each band's metadata (one mapping per band).
 
         Facade setter — delegates to
@@ -4153,6 +4224,28 @@ class Dataset(RasterBase):
             ValueError: ``value`` does not carry exactly one mapping per band.
         """
         self.bands.metadata = value
+
+    @property
+    def band_meta_data(self) -> list[dict[str, str]]:
+        """Deprecated alias for :attr:`band_metadata`."""
+        warnings.warn(
+            "`band_meta_data` is deprecated and will be removed in a future release; "
+            "use `band_metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.band_metadata
+
+    @band_meta_data.setter
+    def band_meta_data(self, value: list[dict[str, str]]) -> None:
+        """Deprecated alias for the :attr:`band_metadata` setter."""
+        warnings.warn(
+            "`band_meta_data` is deprecated and will be removed in a future release; "
+            "use `band_metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.band_metadata = value
 
     @property
     def file_name(self) -> str:
@@ -4231,53 +4324,51 @@ class Dataset(RasterBase):
 
     @property
     def bounds(self) -> GeoDataFrame:
-        """Bounds - the bbox as a geodataframe with a polygon geometry.
+        """Bounds - the bounding box as a geodataframe with a polygon geometry.
 
         See Also:
-            - Dataset.bbox: Dataset bounding box.
+            - Dataset.total_bounds: Dataset bounding box as a NumPy array.
         """
         return self._calculate_bounds()
 
     @property
     def bbox(self) -> list:
-        """The raster's map-space bounding box, ``[xmin, ymin, xmax, ymax]``.
+        """Deprecated alias for :attr:`total_bounds`.
 
-        Always normalised min-before-max on each axis, whatever the
-        geotransform's orientation: a south-up (positive ``geotransform[5]``),
-        east-left (negative ``geotransform[1]``) or rotated grid returns a proper
-        box, not an inverted one. Derived from
-        :meth:`~pyramids.dataset.transform.GeoTransform.extent`.
+        Returns the same ``[xmin, ymin, xmax, ymax]`` map-space box as
+        :attr:`total_bounds` — always normalised min-before-max on each axis,
+        whatever the geotransform's orientation — but as a plain ``list``.
+        :attr:`total_bounds` is the canonical member and returns the box as a
+        NumPy array (matching ``GeoDataFrame.total_bounds`` and
+        :class:`pyramids.feature.FeatureCollection`); use it instead.
 
         Examples:
-            - A north-up raster spans its cells:
+            - Still returns the box (shown with the deprecation warning silenced):
                 ```python
+                >>> import warnings
                 >>> import numpy as np
                 >>> from pyramids.dataset import Dataset, GeoReference
                 >>> ds = Dataset.from_array(
                 ...     np.zeros((2, 3)),
                 ...     geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=3857),
                 ... )
-                >>> ds.bbox
-                [0.0, 0.0, 3.0, 2.0]
-
-                ```
-            - A south-up raster (positive y step) reports the same box, not an
-              inverted one:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.dataset import Dataset, GeoReference
-                >>> ds = Dataset.from_array(
-                ...     np.zeros((2, 3)),
-                ...     geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0), epsg=3857),
-                ... )
-                >>> ds.bbox
+                >>> with warnings.catch_warnings():
+                ...     warnings.simplefilter("ignore", DeprecationWarning)
+                ...     ds.bbox
                 [0.0, 0.0, 3.0, 2.0]
 
                 ```
 
         See Also:
+            - Dataset.total_bounds: The canonical bounding box (NumPy array).
             - Dataset.bounds: Dataset bounding polygon.
         """
+        warnings.warn(
+            "`bbox` is deprecated and will be removed in a future release; use `total_bounds` "
+            "(it returns the same box as a NumPy array).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._calculate_bbox()
 
     def to_stac_item(
@@ -4431,11 +4522,12 @@ class Dataset(RasterBase):
     def total_bounds(self) -> np.typing.NDArray:
         """Bounding box `[minx, miny, maxx, maxy]` as a NumPy array.
 
-        introduced this property so that `Dataset` and
+        This property was introduced so that `Dataset` and
         :class:`pyramids.feature.FeatureCollection` expose the same
         shape (`GeoDataFrame.total_bounds` is the geopandas name
         for exactly this array), letting both classes satisfy the
-        :class:`pyramids.base.protocols.SpatialObject` protocol.
+        :class:`pyramids.base.protocols.SpatialObject` protocol. The
+        deprecated :attr:`bbox` returns the same box as a plain `list`.
         """
         return np.asarray(self._calculate_bbox())
 
