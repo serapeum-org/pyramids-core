@@ -394,7 +394,8 @@ STAC and point-cloud sources are deferred to the Python API.
   and `align --reference` (resample each step onto a reference raster's grid).
 - **Export** — `to-file` (every step to a directory), `to-cog` (each step as its own COG), `to-netcdf` /
   `to-zarr` (the whole `(T, B, R, C)` cube to one store), `to-kerchunk` (a reference JSON over NetCDF/HDF5
-  sources), and `merge` (mosaic every timestep into one raster, with `--bbox`/`--method`).
+  sources), and `merge` (mosaic every timestep into one raster, with `--bbox`/`--method`). `to-zarr` and
+  `to-kerchunk` (and the `--source zarr` opener) need the `[lazy]` extra.
 
 ## UGRID mesh
 
