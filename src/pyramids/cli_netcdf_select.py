@@ -466,8 +466,8 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_sub.add_argument(
         "--crs",
-        default=4326,
-        help="CRS of --bbox: an EPSG code or a CRS string (e.g. EPSG:4326); default 4326",
+        default="EPSG:4326",
+        help="CRS of --bbox: an EPSG code or a CRS string (e.g. EPSG:4326); default EPSG:4326",
     )
     nc_sub.add_argument(
         "--dim",
