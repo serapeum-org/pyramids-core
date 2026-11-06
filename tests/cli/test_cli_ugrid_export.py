@@ -222,8 +222,9 @@ class TestToDataframe:
         assert rc == 0
         assert len(pd.read_csv(out)) > 0
 
+    @pytest.mark.parquet
     def test_writes_parquet(self, tmp_path):
-        """A .parquet extension is written through the Parquet writer."""
+        """A .parquet extension is written through the Parquet writer (needs [parquet])."""
         out = str(tmp_path / "t.parquet")
         assert _dispatch(["mesh", "to-dataframe", str(_MESH), out, "--dropna"]) == 0
         assert len(pd.read_parquet(out)) >= 0
