@@ -39,6 +39,20 @@ jobs:
       # No fetch-depth: the test suite reads the working tree, not git history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Integration: core's lazy ops dispatch to the pyramids-lazy compute backend. Check out the
+      # (public) plugin and put its src on PYTHONPATH so core's lazy suites run through the real
+      # backend; tests/conftest.py reads PYRAMIDS_LAZY_SRC. Bare-core behaviour is still covered by
+      # the branded-error seam tests, which need no backend.
+      - name: Check out the pyramids-lazy compute backend
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: serapeum-org/pyramids-lazy
+          ref: feat/compute-backend
+          path: .pyramids-lazy
+      - name: Wire the lazy backend onto PYTHONPATH
+        shell: bash
+        run: echo "PYRAMIDS_LAZY_SRC=${{ github.workspace }}/.pyramids-lazy/src" >> "$GITHUB_ENV"
+
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
         with:
@@ -128,6 +142,19 @@ jobs:
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Integration: core's lazy ops dispatch to the pyramids-lazy compute backend. Check out the
+      # (public) plugin and put its src on PYTHONPATH so the extras lazy suites run through the real
+      # backend; tests/conftest.py reads PYRAMIDS_LAZY_SRC.
+      - name: Check out the pyramids-lazy compute backend
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: serapeum-org/pyramids-lazy
+          ref: feat/compute-backend
+          path: .pyramids-lazy
+      - name: Wire the lazy backend onto PYTHONPATH
+        shell: bash
+        run: echo "PYRAMIDS_LAZY_SRC=${{ github.workspace }}/.pyramids-lazy/src" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
