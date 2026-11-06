@@ -519,7 +519,8 @@ class TestCollectionResamplePattern:
         err = capsys.readouterr().err
         assert rc == 1, "a bad pattern must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
-        assert "placeholder" in err and "{i}" in err, f"message unclear: {err!r}"
+        assert "placeholder" in err, f"message unclear: {err!r}"
+        assert "{i}" in err, f"message unclear: {err!r}"
 
     def test_fixed_pattern_without_index_rejected(self, tmp_path, capsys):
         """A --pattern lacking {i} is rejected so windows cannot collide (L1)."""

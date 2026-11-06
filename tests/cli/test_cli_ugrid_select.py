@@ -187,7 +187,8 @@ class TestHelpers:
     def test_cond_pattern_bare_operator(self):
         """A bare 'OP NUMBER' matches with no variable captured."""
         match = _COND_PATTERN.match("> 3")
-        assert match is not None and match.group("var") is None
+        assert match is not None
+        assert match.group("var") is None
 
 
 class TestTimeSelect:

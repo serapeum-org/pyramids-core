@@ -252,7 +252,8 @@ class TestSummaries:
             capsys,
         )
         assert rc == 0
-        assert "mean" in records[0] and "sum" in records[0]
+        assert "mean" in records[0]
+        assert "sum" in records[0]
 
     def test_zonal_stats_csv(self, ramp_file, zones_file, tmp_path):
         out = str(tmp_path / "zs.csv")

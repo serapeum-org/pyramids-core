@@ -569,7 +569,8 @@ class TestRenameVariable:
         )
         assert rc == 0
         names = MeshDataset.read_file(out).data_variable_names
-        assert "zz" in names and "mesh2d_node_z" not in names
+        assert "zz" in names
+        assert "mesh2d_node_z" not in names
 
     def test_unknown_old_name_raises(self, tmp_path):
         """Renaming a variable that does not exist is a clean error."""
