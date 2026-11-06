@@ -122,6 +122,64 @@ pyramids render dem.tif quicklook.png --band 0 --title "DEM" --dpi 150   # headl
   [cleopatra](https://github.com/serapeum-org/cleopatra) (the Agg backend is forced, so it is headless); reach for
   `Dataset.plot` in Python for anything beyond a quick look.
 
+## Full raster (`Dataset`) surface
+
+Beyond the core verbs above, the CLI wraps the full GIS/raster surface of `Dataset` — each command is a thin 1:1
+wrapper over an existing method, grouped here by theme. Commands that write a file refuse to clobber an existing
+output without `--overwrite`; inspection commands take `--json`.
+
+**Read / construct** — build a raster from another representation, writing the result to the output path:
+`from-bytes` (`--stdin` or a bytes file), `from-dataframe` (a `(band, y, x)` CSV), `from-points` (a point vector),
+`from-point-arrays` (an `x,y,z` CSV), `from-band-files` (stack single-band rasters), `from-archive` (a member of a
+zip/tar/gzip), `from-zarr` (needs the `[lazy]` extra), and the blank-canvas constructors `create`, `create-empty`,
+`empty-like`, `dataset-like` (stamp a template's georeference onto a `.npy` array).
+
+```bash
+pyramids from-band-files red.tif green.tif blue.tif rgb.tif        # stack bands into one raster
+pyramids create-empty blank.tif --rows 512 --columns 512 --epsg 4326 --cell-size 0.01
+```
+
+**Inspect / metadata** (`--json`) — `stats` (`--exact`), `histogram`, `get-meta-data` (`--domain`),
+`get-attribute-table` / `set-attribute-table`, `mask-flags`, `footprint` (valid-data polygon → an optional vector
+output), `cell-area`, `domain-area`, `count-domain-cells`, and `same-grid` (compare two rasters' grids).
+
+**Bands / georeferencing edit** (`SRC OUT`) — `add-band` (`--source`), `select-bands` (`--bands`, 1-based),
+`get-band-by-color`, `create-mask-band`, `read-masks` / `get-mask` (write the mask as a raster), `set-color-ramp`,
+`set-rpcs` (`--rpc-json`), `geolocate` (warp from the GDAL geolocation domain). The metadata-mutating commands edit
+an in-memory copy and save to a new output, leaving the input untouched.
+
+**Spatial ops** — `align` (resample onto a reference grid), `overlay` / `combine` (two aligned rasters;
+`combine --op add|subtract|...`), `warped-view` (materialise a reprojected view), `wrap-longitude`, `translate`
+(gdal_translate-style `--src-win` / `--proj-win` / `--scale` / ...), `transect --line` (profile along a line → CSV
+or vector), `extract` (values, optional `--mask`). Two-raster ops raise cleanly on a CRS mismatch, except `align`,
+which legitimately reprojects the source onto the reference grid.
+
+**Analysis / terrain** — `proximity`, `cluster`, `zonal-stats` (`--stats`; CSV / JSON), `match-histogram`,
+`percentile-stretch`, `pan-sharpen`, `fillna`, `where --cond`, `convert-units`, and `contour` (`--interval` or
+`--fixed-levels` → a vector of contour lines). The fixed-kernel terrain operators `slope`, `aspect`, `hillshade`,
+`resample`, `fill`, `sieve`, `focal-mean`, `focal-std` are reached through the existing `apply` command.
+
+**Overviews / windowed reads** — `recreate-overviews`, `read-overview-array` (a decimated level → raster or
+`--json`), `read-part --bbox` (a pixel/geo window → raster), `preview --max-size` (a decimated thumbnail), `point`
+(sample at a map coordinate), `read-tile z x y` (an XYZ/Web-Mercator tile → raster).
+
+**Export / convert** — `to-bytes`, `to-cog-bytes`, `to-dataframe` (CSV / Parquet — Parquet needs `[parquet]`),
+`to-polygons` (region-dissolving vectorize), `to-raster` (band/tile/creation-option control over `convert`),
+`to-image` (PNG/JPEG via a colormap — needs `[viz]`), `to-xyz`, `to-zarr` (needs `[lazy]`), `to-stac-item`,
+`to-terrain-rgb` (Mapbox Terrain-RGB encode).
+
+**Plot (headless, via cleopatra)** — `plot-histogram`, `plot-vector-field`, `animate`; the Agg backend is forced so
+these run headless (`render` remains the quick-look PNG, and `contour` lives under analysis above).
+
+**Network readers** — the `fetch` group gains `fetch wmts` and `fetch ogc-coverages` alongside `fetch wms` / `wcs`
+/ `wfs` (see [Remote / OGC services](#remote--ogc-services)).
+
+Deferred to the Python API (documented in each sub-module): the callable-taking methods (`apply`, `map_blocks`,
+`focal_apply`), the low-level coordinate/block primitives (`array_to_map_coordinates`, `rowcol`, `xy`,
+`block_windows`, `read_windows`, `iter_blocks`, `get_overview` / `get_overview_dataset`), the in-place
+`write_array`, the deprecated `cluster2`, the internal `fill_gaps`, and the array predicates / lifecycle helpers
+(`isnull`, `astype`, `round`, `copy`, ...), which compose in Python.
+
 ## Vector
 
 ```bash
