@@ -17,6 +17,15 @@ from pyramids._cli_shared import (
     refuse_existing,
     resolve_vector_driver,
 )
+from pyramids.cli_ugrid_analysis import add_ugrid_analysis_commands
+from pyramids.cli_ugrid_attrs import add_ugrid_attrs_commands
+from pyramids.cli_ugrid_export import add_ugrid_export_commands
+from pyramids.cli_ugrid_inspect import add_ugrid_inspect_commands
+from pyramids.cli_ugrid_interp import add_ugrid_interp_commands
+from pyramids.cli_ugrid_join import add_ugrid_join_commands
+from pyramids.cli_ugrid_plot import add_ugrid_plot_commands
+from pyramids.cli_ugrid_read import add_ugrid_read_commands
+from pyramids.cli_ugrid_select import add_ugrid_select_commands
 from pyramids.dataset import Dataset
 from pyramids.netcdf.ugrid import MeshDataset
 
@@ -167,3 +176,13 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
         "--overwrite", action="store_true", help="replace the output if it exists"
     )
     m_conv.set_defaults(func=_cmd_mesh_convert)
+
+    add_ugrid_read_commands(msub)
+    add_ugrid_inspect_commands(msub)
+    add_ugrid_select_commands(msub)
+    add_ugrid_export_commands(msub)
+    add_ugrid_analysis_commands(msub)
+    add_ugrid_interp_commands(msub)
+    add_ugrid_plot_commands(msub)
+    add_ugrid_attrs_commands(msub)
+    add_ugrid_join_commands(msub)
