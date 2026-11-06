@@ -38,6 +38,7 @@ from pyramids.base._summary import DEFAULT_METRICS, variable_summary
 from pyramids.base._utils import (
     DEFAULT_RESAMPLING,
     _is_identity_packing,
+    apply_unpack,
     carry_packing,
     gdal_to_numpy_dtype,
     numpy_to_gdal_dtype,
@@ -70,9 +71,6 @@ from pyramids.dataset.engines.io import _caller_stacklevel
 from pyramids.dataset.transform import GeoTransform
 from pyramids.netcdf import dict_io as _dict_io
 from pyramids.netcdf._axis import detect_axis_indices
-from pyramids.netcdf._kerchunk_facade import combine_kerchunk, to_kerchunk
-from pyramids.netcdf._lazy import apply_unpack, build_lazy_array, mask_no_data
-from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf._mdim import (
     GEOSTATIONARY_PROJECTION,
     axis_flips,
@@ -89,7 +87,6 @@ from pyramids.netcdf._mdim import (
     x_axis_is_right_to_left,
     y_axis_is_bottom_up,
 )
-from pyramids.netcdf._mfdataset import open_mfdataset
 from pyramids.netcdf._plot import NetCDFPlot
 from pyramids.netcdf.array_options import (
     CFAttributes,
@@ -137,6 +134,10 @@ if TYPE_CHECKING:
     from cleopatra.styling.scaling import ColorScaling
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+
+    # The lazy cube lives in the pyramids-lazy backend now; typing-only import (mypy treats it as
+    # Any via ignore_missing_imports), used for the `chunk()` return annotation.
+    from pyramids_lazy import LazyNetCDF
 
 _SPATIAL_DIM_NAMES = _SPATIAL_AXIS_NAMES
 """Dimension names that are a horizontal axis rather than a band one.
@@ -938,43 +939,6 @@ def _store_label(nc: NetCDF) -> tuple[str, bool]:
     if group:
         label = f"{label}:/{group}"
     return label, in_memory
-
-
-def _lazy_cube_dim_names(var: NetCDF, ndim: int) -> tuple[str, ...]:
-    """Dimension names for a lazily-read variable, sized to the dask array's `ndim`.
-
-    The spatial plane is the trailing two axes; the leading axes are the band dimensions. A lazy
-    read may collapse several band dimensions into one leading axis (#1226), so the band-name list
-    is sized to the actual leading-axis count rather than to `_band_dim_names` — keeping the names
-    aligned with the array's axes so `LazyNetCDF.chunks` zips cleanly.
-
-    Args:
-        var: The gridded variable the array was read from.
-        ndim: The dask array's number of axes.
-
-    Returns:
-        tuple[str, ...]: One name per axis, outermost first — band names then the row and column
-        names (the public row/column names, which hide the y-ascending read's internal rename).
-    """
-    row, col = _interop._public_spatial_names(var)
-    leading = max(ndim - 2, 0)
-    band_names = list(var._band_dim_names)
-    if leading == len(band_names):
-        bands = band_names
-    elif leading == 0:
-        bands = []
-    elif leading == 1:
-        # Every band dimension collapsed into one axis (#1226, unreached in v1 — lazy reads keep one
-        # axis per band dim): join the names into a single display-only label so none is silently
-        # dropped. The joined label is not a canonical dimension name; when #1226 lands, carry the
-        # component names structurally and guarantee uniqueness of the chunks keys.
-        bands = ["+".join(band_names)] if band_names else ["band"]
-    else:
-        bands = [
-            band_names[i] if i < len(band_names) else f"band{i}" for i in range(leading)
-        ]
-    tail = (row, col) if ndim >= 2 else ()
-    return (*bands, *tail)
 
 
 def _same_value(left: Any, right: Any) -> bool:
@@ -6205,6 +6169,9 @@ class NetCDF(Dataset):
         Returns:
             Any: The lazy `dask` array (a masked dask array when `masked`), still uncomputed.
         """
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
+        from pyramids.netcdf._lazy import mask_no_data
+
         result = self._read_array_lazy(chunks, lock)
         if window is not None:
             # Slice the oriented `(*band_sizes, y, x)` array to the pixel window so a chunked read
@@ -6597,6 +6564,9 @@ class NetCDF(Dataset):
                 rather than a variable — or the variable was rebuilt in memory, so the
                 store no longer holds these cells. Read it eagerly instead.
         """
+        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
+        from pyramids.base._compute_backend import require_compute_backend
+
         parent = self._parent_nc if self._parent_nc is not None else self
         # Prefer the real /vsimem backing path over a cosmetic from_bytes `name=` that shadows
         # _file_name, so a named in-memory lazy read reopens the true source (#1058; same family as
@@ -6629,7 +6599,8 @@ class NetCDF(Dataset):
             flips = (bool(self._md_y_flipped), bool(self._md_x_flipped))
         return cast(
             ArrayLike,
-            build_lazy_array(
+            require_compute_backend().read_array_lazy(
+                self,
                 path=path,
                 variable_name=var_name,
                 chunks=chunks,
@@ -8250,28 +8221,11 @@ class NetCDF(Dataset):
             ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
             OptionalPackageDoesNotExist: dask is not installed — install the `lazy` extra.
         """
-        if _interop._is_in_memory(self):
-            raise ValueError(
-                "chunk() needs a file-backed cube: the lazy read reopens the store per block, and "
-                "this cube has no on-disk path. Write it with to_file() first, or operate eagerly."
-            )
-        pinned = self._source_var_name
-        if pinned is None:
-            names = list(self._spatial_variable_names())
-        else:
-            names = [pinned]
-        arrays: dict[str, Any] = {}
-        dim_names: dict[str, tuple[str, ...]] = {}
-        for name in names:
-            var = self if pinned is not None else self._require_raster_variable(name)
-            array = (
-                self.read_array(chunks=chunks, squeeze=False)
-                if pinned is not None
-                else self.read_array(name, chunks=chunks, squeeze=False)
-            )
-            arrays[name] = array
-            dim_names[name] = _lazy_cube_dim_names(var, array.ndim)
-        return LazyNetCDF(self, arrays, dim_names)
+        # Dispatch to the lazy compute backend (pyramids-lazy), which does the per-variable lazy
+        # read + builds the LazyNetCDF; raises the branded OptionalPackageDoesNotExist when absent.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().build_lazy_cube(self, chunks)
 
     @_joins_cubes
     def concat(self, objs: Any, dim: str) -> NetCDF:
@@ -9798,7 +9752,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The manifest dict that was written.
         """
-        return to_kerchunk(
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().to_kerchunk(
             self._file_name,
             output_path,
             inline_threshold=inline_threshold,
@@ -9834,7 +9790,9 @@ class NetCDF(Dataset):
         Returns:
             dict: The combined manifest.
         """
-        return combine_kerchunk(
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().combine_kerchunk(
             paths,
             output_path,
             concat_dims=concat_dims,
@@ -9872,7 +9830,9 @@ class NetCDF(Dataset):
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
         """
-        return open_mfdataset(
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().open_mfdataset(
             paths,
             variable,
             chunks=chunks,

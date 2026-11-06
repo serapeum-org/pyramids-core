@@ -27,13 +27,13 @@ from typing import Any
 import numpy as np
 from pyproj import CRS as PyProjCRS
 
+from pyramids.base._compute_backend import require_compute_backend
 from pyramids.base._utils import (
     extra_hint,
     import_dask,
     import_xarray,
     require_optional,
 )
-from pyramids.netcdf._lazy import build_lazy_array
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import (
@@ -808,7 +808,13 @@ def chunked_variables(
             continue
         source_path = var._source_path
         if source_path is not None:
-            result[name] = build_lazy_array(source_path, var.name, chunks, orient=False)
+            result[name] = require_compute_backend().read_array_lazy(
+                None,
+                path=source_path,
+                variable_name=var.name,
+                chunks=chunks,
+                orient=False,
+            )
         else:
             data = var.data
             if data is None:

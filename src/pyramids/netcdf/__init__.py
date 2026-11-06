@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import warnings
 
-from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf.array_options import (
     CFAttributes,
     Encoding,
@@ -60,7 +59,10 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    """Resolve the renamed `UgridDataset` name at the `pyramids.netcdf` level, warning once.
+    """Resolve lazily-exposed `pyramids.netcdf` names (`LazyNetCDF`, legacy `UgridDataset`).
+
+    `LazyNetCDF` is resolved here rather than imported at module top so `import pyramids.netcdf`
+    does not eagerly pull the lazy `_lazy_cube` submodule (extraction-readiness, plan #2).
 
     `UgridDataset` was renamed to :class:`~pyramids.netcdf.ugrid.MeshDataset`; this top-level
     re-export kept the old name importable for one release so `from pyramids.netcdf import
@@ -76,6 +78,17 @@ def __getattr__(name: str):
         AttributeError: Any other unknown name.
     """
 
+    if name == "LazyNetCDF":
+        # The lazy cube now lives in the pyramids-lazy compute backend. Forward the public name to
+        # the backend's class so `pyramids.netcdf.LazyNetCDF` and `isinstance(x, LazyNetCDF)` keep
+        # working; require_compute_backend() raises the branded OptionalPackageDoesNotExist when no
+        # backend is installed (bare core), instead of an ImportError.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        require_compute_backend()
+        from pyramids_lazy import LazyNetCDF
+
+        return LazyNetCDF
     if name == "UgridDataset":
         warnings.warn(
             "UgridDataset is renamed to MeshDataset; import MeshDataset instead. "

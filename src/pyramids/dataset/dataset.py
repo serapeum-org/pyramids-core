@@ -112,10 +112,6 @@ from pyramids.dataset.ops._focal import (
     hillshade,
     slope,
 )
-from pyramids.dataset.ops._zarr import (
-    read_dataset_from_zarr,
-    write_dataset_to_zarr,
-)
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.units import convert_array
@@ -2596,8 +2592,12 @@ class Dataset(RasterBase):
 
                 ```
         """
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
         resolved_chunks = chunks if chunks is not None else "auto"
-        return write_dataset_to_zarr(
+        return require_compute_backend().write_dataset_to_zarr(
             self,
             store,
             compute=compute,
@@ -2638,12 +2638,19 @@ class Dataset(RasterBase):
                 from a foreign GeoZarr store whose auto-detect picks the wrong
                 array.
         """
-        return read_dataset_from_zarr(
-            store,
-            chunks=chunks,
-            storage_options=storage_options,
-            level=level,
-            data_name=data_name,
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return cast(
+            "Dataset",
+            require_compute_backend().read_dataset_from_zarr(
+                store,
+                chunks=chunks,
+                storage_options=storage_options,
+                level=level,
+                data_name=data_name,
+            ),
         )
 
     def __str__(self) -> str:

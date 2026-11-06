@@ -88,23 +88,8 @@ jobs:
           # the main matrix (whose envs omit these extras). `strict` appends --strict-extra-skips
           # (turn a missing-dependency skip into a failure) on the jobs whose env is verified to
           # carry every dependency the selected tests need. See docs/how-to/testing.md.
-          - name: netcdf_lazy
-            env: lazy
-            paths: tests/netcdf/lazy
-            markexpr: "not live"
-            strict: ""
-          - name: parquet_lazy
-            env: parquet
-            paths: tests/feature/lazy
-            markexpr: "not live"
-            strict: ""
-          # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
-          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute.
-          - name: netcdf_parquet
-            env: parquet
-            paths: tests/netcdf/lazy/test_to_dask_dataframe.py
-            markexpr: "not live"
-            strict: ""
+          # The netcdf_lazy / parquet_lazy / to_dask_dataframe suites moved to the pyramids-lazy repo
+          # with the op bodies; they run in that repo's CI now.
           # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
           # stac/test_geoparquet_spec) ran in NO CI job; select them in the parquet env, which carries
           # pyarrow and every other dep they need, so --strict-extra-skips is safe here.

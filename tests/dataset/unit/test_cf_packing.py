@@ -24,6 +24,14 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
+# _metadata_dict moved to the pyramids-lazy backend. This is a `core` packing module (128 tests);
+# only TestAZarrStoreDescribesEveryBand needs it, so guard the import and skip just that class when
+# the backend is absent — never abort collection of the core packing tests.
+try:
+    from pyramids_lazy._zarr import _metadata_dict
+except ModuleNotFoundError:  # pragma: no cover - lazy backend not installed
+    _metadata_dict = None
+
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
@@ -40,7 +48,6 @@ from pyramids.dataset.collection import (
 )
 from pyramids.dataset.engines.analysis import Analysis
 from pyramids.dataset.engines.io import IO
-from pyramids.dataset.ops._zarr import _metadata_dict
 from pyramids.netcdf import NetCDF
 from pyramids.netcdf._plot import NetCDFPlot
 
@@ -2349,6 +2356,10 @@ class TestUnpackingOneLazyTimestep:
         np.testing.assert_allclose(got[1], counts[1])
 
 
+@pytest.mark.skipif(
+    _metadata_dict is None,
+    reason="requires the pyramids-lazy backend (_metadata_dict moved there)",
+)
 class TestAZarrStoreDescribesEveryBand:
     """`_metadata_dict` on packed rasters whose bands cannot share one fill value."""
 

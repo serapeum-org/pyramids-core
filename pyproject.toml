@@ -106,6 +106,9 @@ dev = [
     "pytest >=8.2.2",
     "pytest-cov >= 5.0.0",
     "pytest-env>=1.6.0",
+    # The lazy compute backend core dispatches to. Test-only: never in [project]/extras, since
+    # pyramids-lazy depends on pyramids-core. Branch pin until its first release.
+    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@feat/compute-backend",
     "coverage",
     "build>=1.0.0",
     "twine>=5.0.0",

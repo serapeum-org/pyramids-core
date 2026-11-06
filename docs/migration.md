@@ -1568,8 +1568,12 @@ from pyramids.netcdf.labeled import _LabeledArray
 from pyramids.netcdf._lazy import _apply_unpack
 # After
 from pyramids.netcdf import LabeledArray
-from pyramids.netcdf._lazy import apply_unpack
+from pyramids.base._utils import apply_unpack  # canonical home
 ```
+
+The `pyramids.netcdf._lazy.apply_unpack` / `_apply_unpack` re-export still resolves but is **deprecated** — import
+`apply_unpack` from `pyramids.base._utils`. The `_lazy` alias ships with the lazy layer and will leave core when that
+layer is extracted (see the lazy-plugin extraction plan, issue #1455).
 
 Also: the private modules `_kerchunk.py` -> `_kerchunk_facade.py` and `_kerchunk_native.py` -> `_kerchunk_builder.py`
 were renamed. They are internal — use `NetCDF.to_kerchunk` / `NetCDF.combine_kerchunk` rather than importing them.

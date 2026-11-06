@@ -288,9 +288,10 @@ def configure_lazy_vector(
         dask.config.set(scheduler=scheduler)
         applied["scheduler"] = scheduler
     if target_bytes_per_partition is not None:
-        from pyramids.feature import _read as _fc_mod
-
-        _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(target_bytes_per_partition)
+        # The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. A bare core
+        # (no backend) makes this a no-op, which is harmless since the dask read then raises the
+        # branded error anyway.
+        _set_lazy_backend_partition_bytes(int(target_bytes_per_partition))
         applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
     logger.debug(
         "configure_lazy_vector applied %d setting(s)",
@@ -299,6 +300,20 @@ def configure_lazy_vector(
     if client is not None:
         _register_lazy_vector_worker_plugin(client, applied)
     return applied
+
+
+def _set_lazy_backend_partition_bytes(value: int) -> None:
+    """Set the pyramids-lazy backend's lazy-vector partition-size knob, if the backend is present.
+
+    ``configure_lazy_vector`` tunes ``pyramids.feature._read`` (core's copy), but the live
+    partitioning runs in ``pyramids_lazy._vector_read``; mirror the value there so the setting is
+    effective. A no-op when the backend is not installed.
+    """
+    try:
+        from pyramids_lazy import _vector_read as _lazy_fc_mod
+    except Exception:  # pragma: no cover - no backend installed
+        return
+    _lazy_fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(value)
 
 
 def _register_lazy_vector_worker_plugin(
@@ -322,10 +337,8 @@ def _register_lazy_vector_worker_plugin(
 
                 dask.config.set(scheduler=self._settings["scheduler"])
             if "target_bytes_per_partition" in self._settings:
-                from pyramids.feature import _read as _fc_mod
-
-                _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(
-                    self._settings["target_bytes_per_partition"]
+                _set_lazy_backend_partition_bytes(
+                    int(self._settings["target_bytes_per_partition"])
                 )
 
     _register_plugin(
