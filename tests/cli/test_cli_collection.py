@@ -482,3 +482,20 @@ class TestCollectionAlign:
         rc = main(["collection", "align", cli_stack, out, "--reference", reference])
         assert rc == 0
         assert len(os.listdir(out)) == 3
+
+
+class TestLazyExtraContract:
+    """A missing [lazy] extra exits 1 cleanly, never 'unexpected failure' (M1)."""
+
+    def test_source_zarr_missing_extra_is_clean(self, monkeypatch, capsys):
+        """A raw ImportError from from_zarr becomes a clean one-line error."""
+
+        def _raise_import(*_a, **_k):
+            raise ImportError("No module named 'zarr'")
+
+        monkeypatch.setattr(DatasetCollection, "from_zarr", _raise_import)
+        rc = main(["collection", "info", "store.zarr", "--source", "zarr"])
+        err = capsys.readouterr().err
+        assert rc == 1, "a missing extra must exit 1"
+        assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
+        assert "[lazy]" in err, f"error should name the [lazy] extra, got: {err!r}"

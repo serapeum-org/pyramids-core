@@ -17,7 +17,12 @@ import json
 
 import pandas as pd
 
-from pyramids._cli_shared import info_print, json_sanitize, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_sanitize,
+    needs_lazy_extra,
+    refuse_existing,
+)
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -123,11 +128,12 @@ def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    NetCDF.read_file(args.file).to_kerchunk(
-        args.output,
-        inline_threshold=args.inline_threshold,
-        vlen_encode=args.vlen_encode,
-    )
+    with needs_lazy_extra():
+        NetCDF.read_file(args.file).to_kerchunk(
+            args.output,
+            inline_threshold=args.inline_threshold,
+            vlen_encode=args.vlen_encode,
+        )
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -146,13 +152,14 @@ def _cmd_nc_combine_kerchunk(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    NetCDF.combine_kerchunk(
-        args.inputs,
-        args.output,
-        concat_dims=tuple(args.concat_dims),
-        identical_dims=tuple(args.identical_dims),
-        inline_threshold=args.inline_threshold,
-    )
+    with needs_lazy_extra():
+        NetCDF.combine_kerchunk(
+            args.inputs,
+            args.output,
+            concat_dims=tuple(args.concat_dims),
+            identical_dims=tuple(args.identical_dims),
+            inline_threshold=args.inline_threshold,
+        )
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -169,7 +176,8 @@ def _cmd_nc_open_mf(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    stack = NetCDF.open_mfdataset(args.paths, args.var)
+    with needs_lazy_extra():
+        stack = NetCDF.open_mfdataset(args.paths, args.var)
     payload = {
         "variable": args.var,
         "files": len(args.paths),

@@ -18,6 +18,32 @@ from collections.abc import Iterator
 from typing import Any
 
 
+@contextlib.contextmanager
+def needs_lazy_extra() -> Iterator[None]:
+    """Remap a missing-``[lazy]`` ``ImportError`` to a clean ``ValueError``.
+
+    The kerchunk / multi-file / Zarr readers and writers import ``zarr`` / ``kerchunk``
+    from the optional ``[lazy]`` extra; its absence raises a raw ``ImportError``, which
+    :func:`pyramids.cli.main` does not catch — it would surface as the internal-bug
+    "unexpected failure" branch. Wrapping the call turns that into a clean user error
+    naming the extra to install.
+
+    Yields:
+        None: Control returns to the wrapped block.
+
+    Raises:
+        ValueError: A dependency from the ``[lazy]`` extra (``zarr`` / ``kerchunk``) is
+            not installed.
+    """
+    try:
+        yield
+    except ImportError as exc:
+        raise ValueError(
+            "this command needs the optional [lazy] extra (zarr/kerchunk); install it "
+            "with `pip install pyramids-gis[lazy]`"
+        ) from exc
+
+
 def require_matching_crs(left: Any, right: Any) -> None:
     """Raise if two layers carry a different CRS.
 

@@ -26,7 +26,12 @@ import json
 import os
 from typing import Any
 
-from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids._cli_shared import (
+    info_print,
+    json_safe,
+    needs_lazy_extra,
+    refuse_existing,
+)
 from pyramids.base._utils import DEFAULT_RESAMPLING
 from pyramids.base.crs import crs_spec
 from pyramids.base.georeference import GeoReference
@@ -84,7 +89,8 @@ def _open_collection(args: argparse.Namespace) -> DatasetCollection:
     source = getattr(args, "source", "files")
     pattern = args.glob
     if source == "zarr":
-        coll = DatasetCollection.from_zarr(pattern)
+        with needs_lazy_extra():
+            coll = DatasetCollection.from_zarr(pattern)
     elif source == "archive":
         coll = DatasetCollection.from_archive(
             pattern, member_glob=getattr(args, "member_glob", "*")
@@ -328,7 +334,8 @@ def _cmd_collection_to_zarr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     coll = _open_collection(args)
-    coll.to_zarr(args.output, mode=args.mode)
+    with needs_lazy_extra():
+        coll.to_zarr(args.output, mode=args.mode)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -348,7 +355,8 @@ def _cmd_collection_to_kerchunk(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     coll = _open_collection(args)
-    coll.to_kerchunk(args.output, concat_dim=args.concat_dim)
+    with needs_lazy_extra():
+        coll.to_kerchunk(args.output, concat_dim=args.concat_dim)
     info_print(args, f"wrote {args.output}")
     return 0
 
