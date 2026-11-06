@@ -23,7 +23,9 @@ from pyramids.feature import FeatureCollection
 @pytest.fixture
 def no_backend(monkeypatch):
     """Force ``require_compute_backend`` to find nothing: empty registry + absent first-party plugin."""
-    monkeypatch.setattr(_cb, "extra_missing", lambda name: True)  # pyramids_lazy "not installed"
+    monkeypatch.setattr(
+        _cb, "extra_missing", lambda name: True
+    )  # pyramids_lazy "not installed"
     _cb.clear_compute_backend_cache()
     monkeypatch.setattr(_cb, "_discover", dict)  # no entry-point backends
     _cb.clear_compute_backend_cache()

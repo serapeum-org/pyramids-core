@@ -18,11 +18,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyramids import configure_lazy_vector
-
 # The partition-size knob configure_lazy_vector tunes now lives in the pyramids-lazy backend's
-# vector-read module (the lazy bodies moved there); assert against it.
-from pyramids_lazy import _vector_read as _fc_mod
+# vector-read module (the lazy bodies moved there); assert against it. Skip this whole module (it is
+# entirely lazy-vector config) when the backend is absent, rather than erroring at collection.
+pytest.importorskip("pyramids_lazy")
+
+from pyramids_lazy import _vector_read as _fc_mod  # noqa: E402
+
+from pyramids import configure_lazy_vector  # noqa: E402
 
 # The whole module exercises dask internals. The ``lazy`` marker gates
 # the tests to the env where dask is installed; we therefore cannot

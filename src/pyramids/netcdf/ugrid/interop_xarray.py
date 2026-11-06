@@ -809,7 +809,11 @@ def chunked_variables(
         source_path = var._source_path
         if source_path is not None:
             result[name] = require_compute_backend().read_array_lazy(
-                None, path=source_path, variable_name=var.name, chunks=chunks, orient=False
+                None,
+                path=source_path,
+                variable_name=var.name,
+                chunks=chunks,
+                orient=False,
             )
         else:
             data = var.data

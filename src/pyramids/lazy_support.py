@@ -46,6 +46,7 @@ from pyramids.base._errors import OptionalPackageDoesNotExist, OverviewTargetErr
 from pyramids.base._file_manager import CachingFileManager, gdal_mdarray_open
 from pyramids.base._locks import DummyLock, default_lock
 from pyramids.base._raster_meta import RasterMeta
+from pyramids.base._reductions import COUNTING_REDUCERS, REDUCERS
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
@@ -66,10 +67,21 @@ from pyramids.base.crs import (
     sr_from_epsg,
     sr_from_wkt,
 )
-from pyramids.base._reductions import COUNTING_REDUCERS, REDUCERS
 from pyramids.base.georeference import GeoReference
 from pyramids.base.protocols import ArrayLike, as_numpy, is_lazy
 from pyramids.base.remote import cloud_config_from_env, to_fsspec_url
+from pyramids.dataset.ops._geobox_zarr import (
+    ZARR_SCHEMA_VERSION,
+    detect_data_var,
+    finalize_zarr_metadata,
+    geobox_crs,
+    normalize_compressors,
+    read_geobox,
+)
+from pyramids.dataset.ops._zarr import _resolve_store
+from pyramids.dataset.transform import GeoTransform
+from pyramids.netcdf._mdim import axis_flips, no_data_value_of, open_mdarray
+
 # The lazy NetCDF cube (LazyNetCDF, moved to pyramids-lazy) delegates its along-dimension cube
 # operations (rolling / diff / cumsum / shift / rank / interpolate / pad / reduce / extremum) to
 # these shared core engine primitives, which the EAGER NetCDF surface uses too -- so they stay in
@@ -97,8 +109,10 @@ from pyramids.netcdf.engines.interop import (
     _public_spatial_names,
 )
 from pyramids.netcdf.engines.selection import (
-    _assert_band_dimension,
     _BOUNDARIES,
+    _DIFF_LABELS,
+    _INTERP_MIN_POINTS,
+    _assert_band_dimension,
     _check_fill_value,
     _check_how,
     _check_limit,
@@ -108,9 +122,7 @@ from pyramids.netcdf.engines.selection import (
     _check_quantile,
     _check_window,
     _coarsen_windows,
-    _DIFF_LABELS,
     _interp_targets,
-    _INTERP_MIN_POINTS,
     _pad_before_after,
     _refuse_spatial_band_op,
     _resolve_interp_kind,
@@ -118,17 +130,6 @@ from pyramids.netcdf.engines.selection import (
     _resolve_positional_indices,
     _transpose_order,
 )
-from pyramids.dataset.ops._geobox_zarr import (
-    ZARR_SCHEMA_VERSION,
-    detect_data_var,
-    finalize_zarr_metadata,
-    geobox_crs,
-    normalize_compressors,
-    read_geobox,
-)
-from pyramids.dataset.ops._zarr import _resolve_store
-from pyramids.dataset.transform import GeoTransform
-from pyramids.netcdf._mdim import axis_flips, no_data_value_of, open_mdarray
 from pyramids.netcdf.utils import _dtype_to_str
 
 #: Contract version of this re-export surface. Bump ONLY on a breaking change; additions do not

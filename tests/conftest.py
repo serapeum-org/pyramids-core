@@ -29,7 +29,9 @@ def _wire_lazy_backend_for_tests() -> None:
     if env_src:
         candidates.append(Path(env_src))
     # Normal (non-worktree) layout: pyramids and pyramids-lazy are siblings under repos/gis/.
-    candidates.append(Path(__file__).resolve().parents[1].parent / "pyramids-lazy" / "src")
+    candidates.append(
+        Path(__file__).resolve().parents[1].parent / "pyramids-lazy" / "src"
+    )
     for candidate in candidates:
         if candidate.is_dir() and str(candidate) not in sys.path:
             sys.path.insert(0, str(candidate))
