@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -40,6 +41,27 @@ class TestNetCDFPlotFaceting:
         assert grid.axes.shape == (1, 4)
         assert len(grid.name_dicts) == 4
         assert all("time" in d for d in grid.name_dicts)
+
+    def test_faceting_does_not_self_warn_on_the_deprecated_bbox(self):
+        """Faceted plotting injects the extent via `total_bounds`, not `bbox`.
+
+        Test scenario:
+            The facet path passes the pinned dataset's extent to the engine.
+            Reading it through the deprecated `bbox` alias would fire pyramids'
+            own DeprecationWarning at the user on every faceted NetCDF plot (and
+            raise under `-W error::DeprecationWarning`); the canonical
+            `total_bounds` must be used instead.
+        """
+        nc = make_plot_3d_nc(n_times=4)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            nc.plot(variable="t2m", facet=FacetSpec(col="time"))
+        offenders = [
+            str(w.message)
+            for w in caught
+            if issubclass(w.category, DeprecationWarning) and "bbox" in str(w.message)
+        ]
+        assert not offenders, f"faceted plot self-warned on bbox: {offenders}"
 
     def test_col_and_row_on_4d_returns_2d_grid(self):
         """`col="time"` + `row="pressure_level"` on a 4-D var → 2-D grid."""

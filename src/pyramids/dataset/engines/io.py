@@ -1865,7 +1865,7 @@ class IO(_Engine["Dataset"]):
         # Map the bbox edges to fractional pixel indices through the geotransform, snapping edges that
         # sit on a cell boundary onto the exact integer first (see `_snap_index`). `min`/`max` keep it
         # correct whichever sign the pixel size has (north-up `pixel_y < 0` or flipped south-up).
-        # Deriving the window from map_to_array_coordinates instead snapped each corner to the nearest
+        # Deriving the window from nearest_cell instead snapped each corner to the nearest
         # cell centre, which both transposed every non-square window and dropped the boundary
         # row/column of a bbox whose edges fell mid-cell (#719).
         cols = [
@@ -4976,12 +4976,12 @@ class IO(_Engine["Dataset"]):
             target_band.SetRasterColorInterpretation(
                 source_band.GetRasterColorInterpretation()
             )
-        meta_data = self._ds.meta_data
+        meta_data = self._ds.metadata
         # A NetCDF exposes meta_data as a NetCDFMetadata, not a mapping, and the Dataset
         # setter iterates .items(). An overview level is a plain raster, so carry only a
         # real mapping and leave a container's structured attributes behind.
         if isinstance(meta_data, dict) and meta_data:
-            overview.meta_data = meta_data
+            overview.metadata = meta_data
 
     def _overview_dataset_from_file(
         self, file_name: str, band: int | None, overview_index: int

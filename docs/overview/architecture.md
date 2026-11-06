@@ -87,7 +87,7 @@ graph LR
         DS_create["<b>Create</b><br/>read_file<br/>from_array<br/>dataset_like"]
         DS_spatial["<b>Spatial</b><br/>crop · to_crs · align<br/>resample · overlay"]
         DS_data["<b>Data Access</b><br/>read_array · extract<br/>get_variables"]
-        DS_math["<b>Math</b><br/>apply · fill · normalize"]
+        DS_math["<b>Math</b><br/>apply · fill_domain · normalize"]
         DS_convert["<b>Convert</b><br/>to_polygon<br/>to_geodataframe"]
         DS_io["<b>I/O</b><br/>to_file · plot"]
     end

@@ -250,7 +250,7 @@ def _antimeridian_halves(
     Returns:
         One or two ``west < east`` sub-bboxes, in west-to-east order.
     """
-    return _split_lon_bbox(bbox, float(ds.bbox[2]), abs(ds.geotransform[1]))
+    return _split_lon_bbox(bbox, float(ds.total_bounds[2]), abs(ds.geotransform[1]))
 
 
 def _reaches_antimeridian_seam(ds: RasterBase) -> bool:
@@ -270,7 +270,7 @@ def _reaches_antimeridian_seam(ds: RasterBase) -> bool:
     Returns:
         True when the extent reaches the seam; False otherwise.
     """
-    lon_min, lon_max = float(ds.bbox[0]), float(ds.bbox[2])
+    lon_min, lon_max = float(ds.total_bounds[0]), float(ds.total_bounds[2])
     cell_x = abs(ds.geotransform[1])
     if lon_max > 180.0 + cell_x:
         # 0..360 frame: the wrap is at the 0/360 edge, so require a near-full span.
@@ -332,7 +332,7 @@ def _crop_seam_halves(
     Raises:
         ValueError: The bbox does not overlap the dataset's longitude extent.
     """
-    xmin, xmax = float(ds.bbox[0]), float(ds.bbox[2])
+    xmin, xmax = float(ds.total_bounds[0]), float(ds.total_bounds[2])
     halves = _antimeridian_halves(ds, bbox)
     parts: list = []
     try:
@@ -3332,7 +3332,7 @@ class Spatial(_Engine["Dataset"]):
               >>> strip = grid.crop(bbox=(170.0, -10.0, -170.0, 10.0))
               >>> strip.shape
               (1, 20, 20)
-              >>> strip.bbox
+              >>> strip.total_bounds.tolist()
               [170.0, -10.0, 190.0, 10.0]
 
               ```

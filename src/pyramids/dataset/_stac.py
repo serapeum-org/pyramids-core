@@ -3500,7 +3500,7 @@ def _data_footprint_4326(
             # warning still lands on the caller of `to_stac_item`.
             stacklevel=4,
         )
-        result = _footprint_4326(list(dataset.bbox), epsg, precision)
+        result = _footprint_4326(list(dataset.total_bounds), epsg, precision)
     else:
         native = gdf.geometry.union_all()
         # Taken before the reprojection, from the native geometry, so it is
@@ -4006,7 +4006,7 @@ def to_stac_item(
     # WKT-only CRS whose `epsg` is None) makes the world-bbox branch fire and the
     # proj:epsg field be omitted; the WKT stays available on `dataset.crs`.
     epsg = dataset.epsg if dataset.crs else None
-    native_bbox = list(dataset.bbox)
+    native_bbox = list(dataset.total_bounds)
     geometry, bbox_4326 = _resolve_footprint(
         footprint_options, dataset, epsg, native_bbox
     )

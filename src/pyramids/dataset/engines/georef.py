@@ -518,7 +518,7 @@ class Georef(_Engine["Dataset"]):
         metadata domain. Returns the domain mapping (``X_DATASET``/``Y_DATASET``
         pointing at the coordinate arrays, ``SRS``, band/offset/step keys) or
         ``None`` when the dataset carries no such domain. Built on
-        :meth:`~pyramids.dataset.Dataset.get_meta_data`; on a ``NetCDF`` variable
+        :meth:`~pyramids.dataset.Dataset.get_metadata`; on a ``NetCDF`` variable
         the domain is read from the classic ``NETCDF:`` GDAL handle — on-disk **or**
         ``/vsimem`` (see :meth:`Dataset._geolocation_source`) — so it reflects the
         source file, not any in-place edits (geolocate before other spatial
@@ -543,7 +543,7 @@ class Georef(_Engine["Dataset"]):
                 ```
         """
         source = self._ds._geolocation_source()
-        domain = cast("dict[str, str]", source.get_meta_data("GEOLOCATION"))
+        domain = cast("dict[str, str]", source.get_metadata("GEOLOCATION"))
         return domain or None
 
     @property
@@ -630,7 +630,7 @@ class Georef(_Engine["Dataset"]):
                 ```
         """
         source = self._ds._geolocation_source()
-        domain = cast("dict[str, str]", source.get_meta_data("GEOLOCATION"))
+        domain = cast("dict[str, str]", source.get_metadata("GEOLOCATION"))
         if not domain:
             raise GeolocationArrayError(
                 "dataset has no geolocation arrays (no GEOLOCATION metadata domain)."

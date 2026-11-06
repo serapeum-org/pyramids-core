@@ -7,7 +7,7 @@ Owns the Cell family of operations on a Dataset. Accessed as
 
 from __future__ import annotations
 
-from numbers import Number
+import warnings
 from typing import TYPE_CHECKING, Any
 
 import geopandas as gpd
@@ -42,8 +42,8 @@ class Cell(_Engine["Dataset"]):
 
     Owns the real implementations of `get_cell_coords`, the private cell-geometry
     cores `_cell_polygons` / `_cell_points` (public entry point:
-    `Dataset.to_geodataframe`), `map_to_array_coordinates`, and
-    `array_to_map_coordinates`. `Dataset` exposes a same-named facade for the public
+    `Dataset.to_geodataframe`), and `nearest_cell` (points -> nearest array indices).
+    `Dataset` exposes a same-named facade for the public
     methods, so `ds.get_cell_coords(...)` and `ds.cell.get_cell_coords(...)` are
     equivalent.
     """
@@ -696,13 +696,23 @@ class Cell(_Engine["Dataset"]):
         gdf["id"] = gdf.index
         return gdf
 
-    def map_to_array_coordinates(
+    def map_to_array_coordinates(self, points):
+        """Deprecated alias for :meth:`nearest_cell`."""
+        warnings.warn(
+            "`map_to_array_coordinates` is deprecated and will be removed in a future "
+            "release; use `nearest_cell`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.nearest_cell(points)
+
+    def nearest_cell(
         self,
         points: GeoDataFrame | FeatureCollection | DataFrame,
     ) -> np.typing.NDArray:
         """Convert coordinates of points to array indices.
 
-        - map_to_array_coordinates locates a point with real coordinates (x, y) or (lon, lat) on the array by finding
+        - nearest_cell locates a point with real coordinates (x, y) or (lon, lat) on the array by finding
             the cell indices (row, column) of the nearest cell in the raster.
         - The point coordinate system of the raster has to be projected to be able to calculate the distance.
 
@@ -737,7 +747,7 @@ class Cell(_Engine["Dataset"]):
 
               ```python
               >>> points = pd.DataFrame({"x": [0.025, 0.175, 0.375], "y": [0.025, 0.225, 0.125]})
-              >>> indices = dataset.map_to_array_coordinates(points)
+              >>> indices = dataset.nearest_cell(points)
               >>> print(indices)
               [[0 0]
                [0 3]
@@ -752,7 +762,7 @@ class Cell(_Engine["Dataset"]):
               >>> from shapely.geometry import Point
               >>> from geopandas import GeoDataFrame
               >>> points = GeoDataFrame({"geometry": [Point(0.025, 0.025), Point(0.175, 0.225), Point(0.375, 0.125)]})
-              >>> indices = dataset.map_to_array_coordinates(points)
+              >>> indices = dataset.nearest_cell(points)
               >>> print(indices)
               [[0 0]
                [0 3]
@@ -784,101 +794,3 @@ class Cell(_Engine["Dataset"]):
         indices = locate_values(points, self._ds.x, self._ds.y)
         indices = indices[:, [1, 0]]
         return np.asarray(indices)
-
-    def array_to_map_coordinates(
-        self,
-        rows_index: list[Number] | np.ndarray,
-        column_index: list[Number] | np.ndarray,
-        center: bool = False,
-    ) -> tuple[list[Number], list[Number]]:
-        """Convert array indices to map coordinates.
-
-        array_to_map_coordinates converts the array indices (rows, cols) to real coordinates (x, y) or (lon, lat).
-
-        Args:
-            rows_index (List[Number] | np.ndarray):
-                The row indices of the cells in the raster array. Any finite
-                iterable of indices is accepted (list, tuple, ndarray, generator).
-            column_index (List[Number] | np.ndarray):
-                The column indices of the cells in the raster array. Any finite
-                iterable of indices is accepted (list, tuple, ndarray, generator).
-            center (bool):
-                If True, the coordinates will be the center of the cell. Default is False.
-
-        Returns:
-            Tuple[List[Number], List[Number]]:
-                A tuple of two equal-length lists, the x coordinates and the y
-                coordinates of the cells. The elements are plain Python floats
-                regardless of whether the inputs were lists or NumPy arrays.
-
-        Raises:
-            ValueError: ``rows_index`` and ``column_index`` have different
-                lengths (the indices are paired element-wise).
-
-        Examples:
-            - Create `Dataset` consisting of 1 band, 10 rows, 10 columns, at the point lon/lat (0, 0):
-
-              ```python
-              >>> import numpy as np
-              >>> from pyramids.dataset import Dataset, GeoReference
-              >>> arr = np.random.randint(1, 3, size=(10, 10))
-              >>> top_left_corner = (0, 0)
-              >>> cell_size = 0.05
-              >>> dataset = Dataset.from_array(
-              ...     arr,
-              ...     geo_ref=GeoReference(top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326),
-              ... )
-
-              ```
-
-            - Now call the function with two lists of row and column indices:
-
-              ```python
-              >>> rows_index = [1, 3, 5]
-              >>> column_index = [2, 4, 6]
-              >>> coords = dataset.array_to_map_coordinates(rows_index, column_index)
-              >>> print(coords) # doctest: +SKIP
-              ([0.1, 0.2, 0.3], [-0.05, -0.15, -0.25])
-
-              ```
-
-        Notes:
-            The conversion is affine-exact: it applies the full geotransform
-            (per-axis pixel sizes and the rotation terms), so it is correct on
-            non-square and rotated grids rather than assuming square pixels.
-
-        See Also:
-            - :meth:`map_to_array_coordinates`: The inverse direction
-              (map coordinates to the nearest array indices).
-            - :meth:`pyramids.dataset.abstract_dataset.RasterBase.xy`: The
-              scalar/array affine companion used by the affine-style API.
-        """
-        # Materialise to 1-D float arrays first. Going through ``list`` accepts
-        # any finite iterable of indices (lists, tuples, ndarrays, generators)
-        # and gives one source of truth for the equal-length check.
-        cols = np.asarray(list(column_index), dtype=float)
-        rows = np.asarray(list(rows_index), dtype=float)
-        if cols.shape != rows.shape:
-            raise ValueError(
-                "rows_index and column_index must have the same length, got "
-                f"{rows.size} and {cols.size}."
-            )
-        # Apply the full affine geotransform (vectorised over the points) so the
-        # y axis uses the pixel height (geotransform[5]) and the rotation terms
-        # are honoured, instead of reusing the pixel width for both axes (issue
-        # #505). The ``center`` half-pixel shift is a +0.5 offset on (col, row).
-        (
-            x_origin,
-            pixel_width,
-            row_rotation,
-            y_origin,
-            column_rotation,
-            pixel_height,
-        ) = self._ds.geotransform
-        offset = 0.5 if center else 0.0
-        cols = cols + offset
-        rows = rows + offset
-        x_coords = (x_origin + cols * pixel_width + rows * row_rotation).tolist()
-        y_coords = (y_origin + cols * column_rotation + rows * pixel_height).tolist()
-
-        return x_coords, y_coords

@@ -1869,11 +1869,11 @@ class Analysis(_Engine["Dataset"]):
         # than the arrays it was built from. Band-level scale, offset and units
         # are deliberately not carried -- `func` can change what the numbers
         # mean, and a ratio of two scaled bands is not on either input's scale.
-        # Assigned through, not `dict(...)`: `Dataset.meta_data` is a plain dict
-        # but `NetCDF.meta_data` is a `NetCDFMetadata`, which is not iterable --
+        # Assigned through, not `dict(...)`: `Dataset.metadata` is a plain dict
+        # but `NetCDF.metadata` is a `NetCDFMetadata`, which is not iterable --
         # coercing it turned every operator on a NetCDF variable into a
         # TypeError. Both setters accept their own type.
-        combined.meta_data = self._ds.meta_data
+        combined.metadata = self._ds.metadata
         # Band identity is half the reason to keep the operation inside the
         # Dataset: an NDVI or change-detection stack whose bands come back as
         # `Band_1`, `Band_2` has lost what told the caller which is which.
@@ -2326,6 +2326,22 @@ class Analysis(_Engine["Dataset"]):
     def fill(
         self, value: float | int, inplace: bool = False, path: str | Path | None = None
     ) -> Dataset | None:
+        """Deprecated alias for :meth:`fill_domain`.
+
+        Renamed to `fill_domain` because it writes the *domain* (the cells that
+        already hold data), not the gaps -- the opposite of :meth:`fillna`.
+        """
+        warnings.warn(
+            "`fill` is deprecated and will be removed in a future release; use "
+            "`fill_domain` (it writes the data cells, not the gaps -- `fillna` writes the gaps).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fill_domain(value, inplace=inplace, path=path)
+
+    def fill_domain(
+        self, value: float | int, inplace: bool = False, path: str | Path | None = None
+    ) -> Dataset | None:
         """Fill the domain cells with a certain value.
 
         Every cell the no-data sentinel does not mark takes `value`; the gaps keep the
@@ -2371,7 +2387,7 @@ class Analysis(_Engine["Dataset"]):
                [2 2 3 1 3]
                [3 4 3 3 4]
                [4 4 2 1 1]]
-              >>> new_dataset = dataset.fill(10)
+              >>> new_dataset = dataset.fill_domain(10)
               >>> print(new_dataset.read_array())
               [[10 10 10 10 10]
                [10 10 10 10 10]
@@ -2393,7 +2409,7 @@ class Analysis(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> filled = packed.fill(7.5)
+              >>> filled = packed.fill_domain(7.5)
               >>> filled.read_array().tolist(), filled.dtype, filled.scale
               ([[7.5, 7.5], [7.5, -9999.0]], ['float64'], [1.0])
 
@@ -2769,7 +2785,7 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             dict: The tags, empty when the raster carries none.
         """
-        tags = getattr(ds, "meta_data", None)
+        tags = getattr(ds, "metadata", None)
         if not isinstance(tags, Mapping):
             tags = getattr(ds, "attrs", None)
         return dict(tags) if isinstance(tags, Mapping) else {}
@@ -3580,7 +3596,7 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             Dataset: `result`.
         """
-        result.meta_data = self._ds.meta_data
+        result.metadata = self._ds.metadata
         result.band_names = list(self._ds.band_names)
         # Duck-typed: only a NetCDF variable carries one, and a plain raster has no name
         # to lose.
@@ -3893,7 +3909,7 @@ class Analysis(_Engine["Dataset"]):
                     "Dataset.crop(); explode MultiPoint masks into single points "
                     "first."
                 )
-            indices = self._ds.map_to_array_coordinates(mask)
+            indices = self._ds.nearest_cell(mask)
             if arr.ndim > 2:
                 values = arr[:, indices[:, 0], indices[:, 1]]
             else:
@@ -4725,22 +4741,22 @@ class Analysis(_Engine["Dataset"]):
     def _require_overlap(self, other: Dataset) -> None:
         """Raise ``AlignmentError`` unless ``other``'s extent overlaps this one's.
 
-        Uses a planar axis-aligned bounding-box test on ``Dataset.bbox``
+        Uses a planar axis-aligned bounding-box test on ``Dataset.total_bounds``
         (``minx < maxx``, ``miny < maxy``); extents that merely touch at an edge
         count as disjoint. It does not special-case a geographic bbox that wraps
         the antimeridian (a ±180 longitude wrap would be mis-tested) — normalise
         such a dataset's longitudes before pan-sharpening.
         """
-        a_minx, a_miny, a_maxx, a_maxy = self._ds.bbox
-        b_minx, b_miny, b_maxx, b_maxy = other.bbox
+        a_minx, a_miny, a_maxx, a_maxy = self._ds.total_bounds
+        b_minx, b_miny, b_maxx, b_maxy = other.total_bounds
         disjoint = (
             b_maxx <= a_minx or b_minx >= a_maxx or b_maxy <= a_miny or b_miny >= a_maxy
         )
         if disjoint:
             raise AlignmentError(
                 "pan-sharpen needs the pan band to overlap the multispectral "
-                f"extent; multispectral bbox {self._ds.bbox} and pan bbox "
-                f"{other.bbox} are disjoint."
+                f"extent; multispectral bounds {list(self._ds.total_bounds)} and pan "
+                f"bounds {list(other.total_bounds)} are disjoint."
             )
 
     def pan_sharpen(
@@ -6483,7 +6499,7 @@ class Analysis(_Engine["Dataset"]):
         # `mode="facet"` branch; the pre-built stack arrives alongside as
         # `_facet_stack` and its spatial extent as `_extent` (the facet
         # stack is *injected*, not read from `self._ds`, so the engine
-        # can't derive the extent from `self._ds.bbox` — the caller must
+        # can't derive the extent from `self._ds.total_bounds` — the caller must
         # supply it). `_chunks` (PR-5) is injected by `NetCDF.plot` to
         # switch the static-plot read path to the dask-backed lazy read;
         # only the rendered slice is materialised.
@@ -6505,9 +6521,11 @@ class Analysis(_Engine["Dataset"]):
         # the extent both come from `self._ds`. On the injected-stack path
         # (`mode="facet"`) the caller passes `_extent` so the panels are
         # placed at the stack's own spatial domain rather than implicitly
-        # trusting that it matches `self._ds.bbox`.
+        # trusting that it matches `self._ds.total_bounds`.
         effective_extent = (
-            injected_extent if injected_extent is not None else self._ds.bbox
+            injected_extent
+            if injected_extent is not None
+            else list(self._ds.total_bounds)
         )
         # Render a paletted band through its GDAL colour table (#913): build a discrete
         # colormap from the palette and hand it to cleopatra as an explicit ``cmap`` plus a
@@ -6641,7 +6659,7 @@ class Analysis(_Engine["Dataset"]):
         return render_array(
             RenderRequest(
                 arr=stack,
-                extent=self._ds.bbox,
+                extent=list(self._ds.total_bounds),
                 exclude_value=masked or None,
                 mode=ModeSpec(mode="animate", animation_axis_values=labels),
                 ax=ax,

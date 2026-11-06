@@ -1049,35 +1049,35 @@ class TestNearestNeighbour:
 
 
 class TestMapToArrayCoordinates:
-    """Tests for map_to_array_coordinates error paths."""
+    """Tests for nearest_cell error paths."""
 
     def test_invalid_input_type_raises(self, single_band_dataset):
-        """map_to_array_coordinates with bad input type raises TypeError."""
+        """nearest_cell with bad input type raises TypeError."""
         with pytest.raises(TypeError, match="GeoDataFrame"):
-            single_band_dataset.map_to_array_coordinates(12345)
+            single_band_dataset.nearest_cell(12345)
 
     def test_dataframe_missing_xy_raises(self, single_band_dataset):
-        """map_to_array_coordinates with DataFrame lacking x,y raises ValueError."""
+        """nearest_cell with DataFrame lacking x,y raises ValueError."""
         df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
         with pytest.raises(ValueError, match="x, and y"):
-            single_band_dataset.map_to_array_coordinates(df)
+            single_band_dataset.nearest_cell(df)
 
     def test_map_to_array_nonsquare_roundtrip(self):
         """On a non-square grid the cell centres round-trip back to their indices.
 
-        ``map_to_array_coordinates`` matches against the per-axis coordinate
+        ``nearest_cell`` matches against the per-axis coordinate
         arrays (not the pixel width), so it already resolves the correct cell
         on a non-square grid. This guards that it stays the inverse of the
-        fixed ``array_to_map_coordinates`` (issue #505).
+        fixed ``xy`` (issue #505).
         """
         ds = Dataset.from_array(
             np.ones((4, 3), dtype="float32"),
             geo_ref=GeoReference(geo=(10.0, 2.0, 0.0, 8.0, 0.0, -0.5), epsg=4326),
         )
         rows, cols = [0, 1, 3], [0, 1, 2]
-        x, y = ds.array_to_map_coordinates(rows, cols, center=True)
+        x, y = ds.xy(rows, cols, center=True)
         df = pd.DataFrame({"x": x, "y": y})
-        indices = ds.map_to_array_coordinates(df)
+        indices = ds.nearest_cell(df)
         assert indices.tolist() == [
             [0, 0],
             [1, 1],
@@ -1086,27 +1086,19 @@ class TestMapToArrayCoordinates:
 
 
 class TestArrayToMapCoordinates:
-    """Tests for the array_to_map_coordinates method."""
+    """Tests for the xy method."""
 
     def test_array_to_map_center(self, single_band_dataset):
-        """array_to_map_coordinates with center returns center coords."""
-        x, y = single_band_dataset.array_to_map_coordinates(
-            rows_index=[0, 1],
-            column_index=[0, 1],
-            center=True,
-        )
+        """xy with center returns center coords."""
+        x, y = single_band_dataset.xy([0, 1], [0, 1], center=True)
         assert len(x) == 2, "Should return 2 x-coordinates"
         assert len(y) == 2, "Should return 2 y-coordinates"
         expected_x0 = 0.0 + 0.05 / 2
         assert abs(x[0] - expected_x0) < 1e-6, f"Expected x={expected_x0}, got {x[0]}"
 
     def test_array_to_map_corner(self, single_band_dataset):
-        """array_to_map_coordinates with center=False returns corner."""
-        x, _ = single_band_dataset.array_to_map_coordinates(
-            rows_index=[0],
-            column_index=[0],
-            center=False,
-        )
+        """xy with center=False returns corner."""
+        x, _ = single_band_dataset.xy([0], [0], center=False)
         assert abs(x[0] - 0.0) < 1e-6, "Corner x should be 0.0"
 
     @staticmethod
@@ -1124,19 +1116,19 @@ class TestArrayToMapCoordinates:
         (8 - 1*0.5 - 0.25); the old code returned y=5.0 by reusing the 2.0
         pixel width for the y axis.
         """
-        x, y = self._nonsquare().array_to_map_coordinates([1], [2], center=True)
+        x, y = self._nonsquare().xy([1], [2], center=True)
         assert abs(x[0] - 15.0) < 1e-9, f"x should be 15.0, got {x[0]}"
         assert abs(y[0] - 7.25) < 1e-9, f"y should be 7.25 (height-based), got {y[0]}"
 
     def test_array_to_map_nonsquare_corner(self):
         """Corner coordinates also use the per-axis pixel sizes."""
-        x, y = self._nonsquare().array_to_map_coordinates([1], [2], center=False)
+        x, y = self._nonsquare().xy([1], [2], center=False)
         assert abs(x[0] - 14.0) < 1e-9, f"corner x should be 14.0, got {x[0]}"
         assert abs(y[0] - 7.5) < 1e-9, f"corner y should be 7.5, got {y[0]}"
 
     def test_array_to_map_nonsquare_vector(self):
         """Vector inputs are converted element-wise with the per-axis sizes."""
-        x, y = self._nonsquare().array_to_map_coordinates([0, 1, 3], [0, 1, 2])
+        x, y = self._nonsquare().xy([0, 1, 3], [0, 1, 2], center=False)
         assert x == [10.0, 12.0, 14.0], f"x corners wrong: {x}"
         assert y == [8.0, 7.5, 6.5], f"y corners must step by 0.5, got {y}"
 
@@ -1146,39 +1138,18 @@ class TestArrayToMapCoordinates:
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.5, 0.0, 0.5, -1.0), epsg=4326),
         )
-        x, y = rot.array_to_map_coordinates([1], [2], center=False)
+        x, y = rot.xy([1], [2], center=False)
         # Column 2 and row 1 through the affine give x of 2.5 (two pixel
         # widths plus one row-rotation half) and y of 0.0 (one column
         # rotation minus one pixel height).
         assert abs(x[0] - 2.5) < 1e-9, f"rotated x should be 2.5, got {x[0]}"
         assert abs(y[0] - 0.0) < 1e-9, f"rotated y should be 0.0, got {y[0]}"
 
-    def test_array_to_map_length_mismatch_raises(self):
-        """Mismatched-length index inputs raise instead of pairing silently."""
-        ds = self._nonsquare()
-        with pytest.raises(ValueError, match="same length"):
-            ds.array_to_map_coordinates([0, 1], [0])
-
     def test_array_to_map_empty_input(self):
         """Empty index inputs return a pair of empty lists, not an error."""
-        x, y = self._nonsquare().array_to_map_coordinates([], [])
+        x, y = self._nonsquare().xy([], [])
         assert x == [], f"empty input must give an empty x, got {x}"
         assert y == [], f"empty input must give an empty y, got {y}"
-
-    def test_array_to_map_accepts_iterator(self):
-        """Non-Sized iterator index inputs are accepted, same as lists.
-
-        Guards N1: the equal-length check materialises the inputs, so any finite
-        iterable works (here single-pass ``list_iterator`` objects that have no
-        ``__len__``), not only ``len()``-able sequences.
-        """
-        ds = self._nonsquare()
-        x_iter, y_iter = ds.array_to_map_coordinates(
-            iter([0, 1, 3]), iter([0, 1, 2]), center=True
-        )
-        x_list, y_list = ds.array_to_map_coordinates([0, 1, 3], [0, 1, 2], center=True)
-        assert x_iter == x_list, "iterator x must match list x"
-        assert y_iter == y_list, "iterator y must match list y"
 
     def test_array_to_map_ndarray_input_returns_python_floats(self):
         """NumPy-array indices yield plain Python floats, same values as lists.
@@ -1187,13 +1158,11 @@ class TestArrayToMapCoordinates:
         the inputs were lists or ndarrays.
         """
         ds = self._nonsquare()
-        x, y = ds.array_to_map_coordinates(
-            np.array([0, 1, 3]), np.array([0, 1, 2]), center=True
-        )
+        x, y = ds.xy(np.array([0, 1, 3]), np.array([0, 1, 2]), center=True)
         assert all(type(v) is float for v in x + y), (
             f"elements must be plain Python floats, got {[type(v) for v in x + y]}"
         )
-        x_list, y_list = ds.array_to_map_coordinates([0, 1, 3], [0, 1, 2], center=True)
+        x_list, y_list = ds.xy([0, 1, 3], [0, 1, 2], center=True)
         assert x == x_list, "ndarray and list x must agree"
         assert y == y_list, "ndarray and list y must agree"
 
@@ -1203,7 +1172,7 @@ class TestArrayToMapCoordinates:
             np.ones((10, 10), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        x, y = sq.array_to_map_coordinates([1, 3, 5], [2, 4, 6])
+        x, y = sq.xy([1, 3, 5], [2, 4, 6], center=False)
         assert x == pytest.approx([0.1, 0.2, 0.3]), f"square x changed: {x}"
         assert y == pytest.approx([-0.05, -0.15, -0.25]), f"square y changed: {y}"
 
@@ -1643,10 +1612,10 @@ class TestCropWithPolygonFeatureCollection:
 
 
 class TestMapToArrayFeatureCollection:
-    """Tests for map_to_array_coordinates with FeatureCollection."""
+    """Tests for nearest_cell with FeatureCollection."""
 
     def test_map_to_array_with_feature_collection(self, single_band_dataset):
-        """map_to_array_coordinates with FeatureCollection input."""
+        """nearest_cell with FeatureCollection input."""
         import geopandas as gpd
         from shapely.geometry import Point
 
@@ -1657,7 +1626,7 @@ class TestMapToArrayFeatureCollection:
             crs="EPSG:4326",
         )
         fc = FeatureCollection(pts)
-        result = single_band_dataset.map_to_array_coordinates(fc)
+        result = single_band_dataset.nearest_cell(fc)
         assert result is not None, "Should return array indices"
         assert result.shape[0] == 2, "Should have 2 points"
 

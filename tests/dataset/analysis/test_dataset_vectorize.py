@@ -387,7 +387,7 @@ class TestExtract:
         values = dataset.extract(mask=points)
         np.testing.assert_array_equal(values, arr_extracted_values)
 
-    def test_array_to_map_coordinates(self):
+    def test_xy_from_array_indices(self):
         arr = np.random.default_rng(0).integers(1, 5, size=(15, 15))
         top_left_corner = (432968.1206170588, 520007.787999178)
         cell_size = 4000
@@ -399,7 +399,7 @@ class TestExtract:
         )
         tile_xoff = [0, 0, 0, 6, 6, 6, 12, 12, 12]
         tile_yoff = [0, 6, 12, 0, 6, 12, 0, 6, 12]
-        x_coords, y_coords = dataset.array_to_map_coordinates(
+        x_coords, y_coords = dataset.xy(
             tile_yoff,
             tile_xoff,
             center=False,

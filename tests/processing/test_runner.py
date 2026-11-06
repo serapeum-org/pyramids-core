@@ -10,6 +10,8 @@ deselectable with ``-m "not slow"``. These are the tests whose stability depends
 OS process spawning + per-worker GDAL init.
 """
 
+import warnings
+
 import geopandas as gpd
 import numpy as np
 import pytest
@@ -247,6 +249,29 @@ class TestRun:
         result = run(Pipeline([(tool, parameters)]), raster_ds, on_error="raise")
         assert result.ok, result.failures
         assert isinstance(result.outputs[0], Dataset), result.outputs
+
+    def test_the_fill_tool_does_not_self_warn(self, raster_ds):
+        """The `fill` tool dispatches to `fill_domain`, not the deprecated `fill` alias.
+
+        Args:
+            raster_ds: small raster fixture.
+
+        Test scenario:
+            The tool's `method_name` fell back to its name `"fill"`, so the runner
+            called the deprecated alias and emitted pyramids' own DeprecationWarning
+            on every run. Pinning `method="fill_domain"` routes it to the canonical
+            method with no warning.
+        """
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            run(Pipeline([("fill", {"value": 1.0})]), raster_ds, on_error="raise")
+        offenders = [
+            str(w.message)
+            for w in caught
+            if issubclass(w.category, DeprecationWarning)
+            and "fill_domain" in str(w.message)
+        ]
+        assert not offenders, f"fill tool self-warned: {offenders}"
 
     @pytest.mark.parametrize(
         "tool, parameters",

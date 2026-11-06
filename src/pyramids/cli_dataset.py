@@ -225,7 +225,7 @@ def _cmd_raster_info(args: argparse.Namespace) -> int:
         # Same guard as `bounds --json`: a degenerate geotransform can yield a
         # non-finite cell size or bound, and `json.dumps` writes those as bare
         # `Infinity` / `NaN`, which is not valid JSON.
-        "bounds": [_json_safe(float(value)) for value in ds.bbox],
+        "bounds": [_json_safe(float(value)) for value in ds.total_bounds],
     }
     if args.json:
         print(json.dumps(payload))
@@ -295,7 +295,7 @@ def _cmd_bounds(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    min_x, min_y, max_x, max_y = (float(value) for value in ds.bbox)
+    min_x, min_y, max_x, max_y = (float(value) for value in ds.total_bounds)
     if args.crs:
         if not ds.crs:
             raise ValueError(
@@ -343,10 +343,10 @@ def _cmd_clip(args: argparse.Namespace) -> int:
         mask_extent = mask.total_bounds
         if mask.crs is not None and ds.crs and mask.epsg != ds.epsg:
             mask_extent = mask.to_crs(ds.epsg).total_bounds
-        if _bbox_disjoint(mask_extent, ds.bbox):
+        if _bbox_disjoint(mask_extent, ds.total_bounds):
             raise ValueError(
                 f"clip --vector mask extent {tuple(mask_extent)} does not "
-                f"intersect the raster extent {tuple(ds.bbox)}; nothing to clip."
+                f"intersect the raster extent {tuple(ds.total_bounds)}; nothing to clip."
             )
         _refuse_existing(args.output, args.overwrite)
         clipped = ds.crop(mask)
@@ -357,10 +357,10 @@ def _cmd_clip(args: argparse.Namespace) -> int:
                 "bbox, but it has none; clip with a --vector mask instead."
             )
         clip_bbox = tuple(args.bbox)
-        if _bbox_disjoint(clip_bbox, ds.bbox):
+        if _bbox_disjoint(clip_bbox, ds.total_bounds):
             raise ValueError(
                 f"clip --bbox {clip_bbox} does not intersect the raster extent "
-                f"{tuple(ds.bbox)}; nothing to clip."
+                f"{tuple(ds.total_bounds)}; nothing to clip."
             )
         _refuse_existing(args.output, args.overwrite)
         # Use crop's native bbox path (epsg defaults to the dataset CRS) rather
