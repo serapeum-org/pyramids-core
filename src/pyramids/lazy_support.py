@@ -67,6 +67,15 @@ from pyramids.base.crs import (
 from pyramids.base.georeference import GeoReference
 from pyramids.base.protocols import ArrayLike, as_numpy, is_lazy
 from pyramids.base.remote import cloud_config_from_env, to_fsspec_url
+from pyramids.dataset.ops._geobox_zarr import (
+    ZARR_SCHEMA_VERSION,
+    detect_data_var,
+    finalize_zarr_metadata,
+    geobox_crs,
+    normalize_compressors,
+    read_geobox,
+)
+from pyramids.dataset.ops._zarr import _resolve_store
 from pyramids.dataset.transform import GeoTransform
 from pyramids.netcdf._mdim import axis_flips, no_data_value_of, open_mdarray
 from pyramids.netcdf.utils import _dtype_to_str
@@ -86,8 +95,10 @@ __all__ = [
     "GeoTransform",
     "OptionalPackageDoesNotExist",
     "OverviewTargetError",
+    "ZARR_SCHEMA_VERSION",
     "_dtype_to_str",
     "_is_identity_packing",
+    "_resolve_store",
     "apply_unpack",
     "as_numpy",
     "axis_flips",
@@ -95,9 +106,12 @@ __all__ = [
     "crs_from_user_input",
     "crs_spec",
     "default_lock",
+    "detect_data_var",
     "epsg_from_user_input",
     "extra_hint",
+    "finalize_zarr_metadata",
     "gdal_mdarray_open",
+    "geobox_crs",
     "import_dask",
     "import_dask_geopandas",
     "import_h5py",
@@ -106,7 +120,9 @@ __all__ = [
     "is_lazy",
     "lazy_extra_hint",
     "no_data_value_of",
+    "normalize_compressors",
     "open_mdarray",
+    "read_geobox",
     "require_optional",
     "sr_from_epsg",
     "sr_from_wkt",
