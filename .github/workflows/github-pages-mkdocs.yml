@@ -17,57 +17,60 @@ on:
     workflows: ['github-release']
     types: [completed]
 
-# All jobs in this workflow push the built docs to the single shared `gh-pages`
-# branch via `mike deploy --push`. Without a concurrency guard, deploys from
-# concurrent PRs (and main pushes) race to push `gh-pages` and the loser gets a
-# non-fast-forward rejection ("Updates were rejected because the remote contains
-# work that you do not have locally"). Serialize every run of this workflow onto
-# one lane so the pushes queue instead of colliding. `cancel-in-progress: false`
-# keeps a queued run rather than cancelling an in-flight push (a cancelled
-# `gh-pages` push can leave the branch half-updated).
-concurrency:
-  group: mkdocs-gh-pages-deploy
-  cancel-in-progress: false
+# No workflow-level concurrency on purpose. deploy-main / deploy-release push the
+# shared `gh-pages` branch, but the mkdocs-deploy action retries that push
+# (mike_push.sh re-fetches and rebases), so concurrent deploys each complete
+# without a serialising lane. A workflow-level concurrency group would also queue
+# or evict the build-strict gate, which must run on every PR (see earthlens #1150).
 
 jobs:
-  deploy-pr:
-      if: github.event_name == 'pull_request'
-      runs-on: ubuntu-latest
-      timeout-minutes: 30
-      permissions:
-        contents: write
-        pages: write
-      steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
+  # Gate every deploy on a warnings-as-errors build. The deploy action builds
+  # non-strict, so a broken nav entry, a dangling anchor or a malformed docstring
+  # would publish silently — this fails the run instead. A pull request runs this
+  # gate but no longer publishes a preview to gh-pages (#1475): each per-PR deploy
+  # was a full site commit on the shared branch, growing it without bound.
+  build-strict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only reads the tree; the write scopes are for the deploy jobs, not this one.
+    permissions:
+      contents: read
+    steps:
+    # No explicit ref: checkout's default is the merge commit on a pull_request
+    # rather than the fork's head, so fork-controlled code never reaches this job.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
 
-      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # mkdocs/v1.5.1
-        with:
-          trigger: 'pull_request'
-          package-manager: 'pixi'
-          package-manager-version: 'v0.73.0'
-          install-groups: 'docs'
-          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
-          # Execute the example notebooks in CI so the rendered docs show real
-          # outputs (plots/tables). Excluded (the notebooks-exclude list below):
-          # the first four need extras envs or live endpoints; the last two are
-          # heavy notebooks whose executed outputs (live map tiles / mesh renders
-          # + an inline jshtml animation) are multi-MB and byte-different on every
-          # run, which bloats the shared gh-pages branch (see #761).
-          notebooks-path: 'docs/examples'
-          notebooks-exclude: |
-            netcdf/dask-lazy-netcdf.ipynb
-            feature/dask-lazy-features.ipynb
-            stac/stac-cloud-earth-search.ipynb
-            dataset/wms-wmts-readers.ipynb
-            basemap/basemap-example.ipynb
-            netcdf/ugrid/ugrid-mesh-exploration.ipynb
-            dataset/plotting-gallery.ipynb
-          notebooks-continue-on-error: 'true'
+    # The same pixi `docs` environment the deploy jobs build from, so the gate and
+    # the deploy stay on one environment instead of drifting.
+    - uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda # pixi/v1.5.1
+      with:
+        environments: docs
+        cache: true
+        version: v0.73.0
+
+    # --strict turns warnings into errors. This build does not execute the example
+    # notebooks (mkdocs-jupyter runs with execute: false); notebook execution still
+    # happens in the deploy jobs via the action's notebooks-path input.
+    - name: Build docs with --strict
+      run: pixi run -e docs mkdocs build --strict --site-dir /tmp/site
+
+    # A pull request builds the site but no longer publishes it (#1475). The
+    # --strict build above is the gate; reviewers who want to see the rendered
+    # pages download them from here instead of a published preview.
+    - name: Upload the built site for review
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: site-pr-${{ github.event.pull_request.number }}
+        path: /tmp/site
+        retention-days: 7
 
   deploy-main:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-strict
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -85,10 +88,8 @@ jobs:
         install-groups: 'docs'
         deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
         notebooks-path: 'docs/examples'
-        # See the deploy-pr job above for the rationale: the last two entries
-        # in notebooks-exclude below are the heavy notebooks kept out of CI
-        # execution so their multi-MB, non-deterministic outputs no longer
-        # bloat the shared gh-pages branch (see #761).
+        # The last two entries are the heavy notebooks kept out of CI execution so
+        # their multi-MB, non-deterministic outputs no longer bloat gh-pages (#761).
         notebooks-exclude: |
           netcdf/dask-lazy-netcdf.ipynb
           feature/dask-lazy-features.ipynb
@@ -104,6 +105,7 @@ jobs:
       github.event_name == 'release' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_repository.full_name == github.repository)
+    needs: build-strict
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -137,10 +139,8 @@ jobs:
         release-tag: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
         mike-alias: 'latest'
         notebooks-path: 'docs/examples'
-        # See the deploy-pr job above for the rationale: the last two entries
-        # in notebooks-exclude below are the heavy notebooks kept out of CI
-        # execution so their multi-MB, non-deterministic outputs no longer
-        # bloat the shared gh-pages branch (see #761).
+        # The last two entries are the heavy notebooks kept out of CI execution so
+        # their multi-MB, non-deterministic outputs no longer bloat gh-pages (#761).
         notebooks-exclude: |
           netcdf/dask-lazy-netcdf.ipynb
           feature/dask-lazy-features.ipynb
@@ -150,3 +150,63 @@ jobs:
           netcdf/ugrid/ugrid-mesh-exploration.ipynb
           dataset/plotting-gallery.ipynb
         notebooks-continue-on-error: 'true'
+
+    # Retain `main` plus the RETAIN_RELEASES most recent releases, and delete
+    # anything else — older releases, and the now-frozen preview versions the
+    # removed deploy-pr job used to publish.
+    #
+    # Why a cap at all: each version directory is a full copy of the site, so
+    # retaining every release grows gh-pages without bound. earthlens let it reach
+    # 9.7 GB, at which point GitHub Pages stopped building entirely and the current
+    # release's docs were never published despite being on the branch (#1475). If a
+    # release ever fails to publish, lower RETAIN_RELEASES before anything else.
+    #
+    # `main` is always retained: deploy-main republishes it on every push, so
+    # deleting it here would only have it return minutes later.
+    #
+    # mike is on PATH because the mkdocs-deploy step above runs python-setup/pixi,
+    # which puts the environment on GITHUB_PATH for subsequent steps in this job.
+    - name: Prune superseded documentation versions
+      env:
+        KEEP_VERSION: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
+        RETAIN_RELEASES: '5'
+      run: |
+        if [ -z "$KEEP_VERSION" ]; then
+          echo "::error::no release version resolved; refusing to prune"
+          exit 1
+        fi
+        # Re-sync, recompute and retry as a unit: a concurrent main deploy moves
+        # gh-pages, which makes mike's fast-forward push lose the race, and the
+        # stale list computed against the old tip must not be reused.
+        for attempt in 1 2 3; do
+          git fetch origin gh-pages
+          git branch -f gh-pages FETCH_HEAD
+
+          mike list | awk '{print $1}' | sort -u > /tmp/mike-all
+          # `sort -V` is load-bearing: a lexical sort ranks 0.9.0 above 0.11.0
+          # and would retain the wrong five. Only X.Y.Z entries count as
+          # releases, so any alias-only row falls through to the delete set
+          # rather than consuming a retention slot.
+          grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' /tmp/mike-all \
+            | sort -rV | head -n "$RETAIN_RELEASES" > /tmp/mike-keep-releases
+          # KEEP_VERSION is listed explicitly as a floor: the release that was
+          # just deployed must survive even if it somehow sorts outside the top
+          # RETAIN_RELEASES.
+          { echo main; echo "$KEEP_VERSION"; cat /tmp/mike-keep-releases; } \
+            | grep -v '^$' | sort -u > /tmp/mike-keep
+          stale=$(comm -23 /tmp/mike-all /tmp/mike-keep | tr '\n' ' ')
+
+          if [ -z "$stale" ]; then
+            echo "nothing to prune; retaining $(tr '\n' ' ' < /tmp/mike-keep)"
+            exit 0
+          fi
+          echo "retaining $(tr '\n' ' ' < /tmp/mike-keep)"
+          echo "deleting: $stale"
+          if mike delete --push $stale; then
+            exit 0
+          fi
+          echo "::warning::prune lost a gh-pages push race (attempt ${attempt}/3); retrying"
+          sleep $(( attempt * 3 ))
+        done
+        echo "::error::could not prune superseded documentation versions after 3 attempts"
+        exit 1
