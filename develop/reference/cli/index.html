@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8182,7 +8182,8 @@ STAC and point-cloud sources are deferred to the Python API.</p>
   and <code>align --reference</code> (resample each step onto a reference raster's grid).</li>
 <li><strong>Export</strong> — <code>to-file</code> (every step to a directory), <code>to-cog</code> (each step as its own COG), <code>to-netcdf</code> /
   <code>to-zarr</code> (the whole <code>(T, B, R, C)</code> cube to one store), <code>to-kerchunk</code> (a reference JSON over NetCDF/HDF5
-  sources), and <code>merge</code> (mosaic every timestep into one raster, with <code>--bbox</code>/<code>--method</code>).</li>
+  sources), and <code>merge</code> (mosaic every timestep into one raster, with <code>--bbox</code>/<code>--method</code>). <code>to-zarr</code> and
+  <code>to-kerchunk</code> (and the <code>--source zarr</code> opener) need the <code>[lazy]</code> extra.</li>
 </ul>
 <h2 id="ugrid-mesh"><a class="toclink" href="#ugrid-mesh">UGRID mesh</a><a class="headerlink" href="#ugrid-mesh" title="Permanent link">#</a></h2>
 <p>The <code>mesh</code> group now wraps the full <code>MeshDataset</code> surface (the earlier "Phase 1" label is obsolete) — each command
