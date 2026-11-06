@@ -897,7 +897,9 @@ def _register_sampling(msub: argparse._SubParsersAction) -> None:
         "sample-random", help="draw spatially random samples from the domain"
     )
     sample_random.add_argument("file", help=_HELP_MESH_FILE)
-    sample_random.add_argument("-n", type=int, required=True, help="number of samples")
+    sample_random.add_argument(
+        "-n", "--n", type=int, required=True, help="number of samples"
+    )
     _add_var(sample_random)
     sample_random.add_argument("--seed", type=int, help="RNG seed for reproducibility")
     sample_random.add_argument("--output", help="write x/y/value to this CSV path")

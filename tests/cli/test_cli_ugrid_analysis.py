@@ -485,6 +485,15 @@ class TestSampling:
         assert rc == 0
         assert len(records) == 5
 
+    def test_sample_random_long_n_flag(self, ramp_file, capsys):
+        """--n is accepted as the long spelling of -n (parity with head/tail) (N2)."""
+        rc, records = _run_capture(
+            ["mesh", "sample-random", ramp_file, "--n", "4", "--seed", "1", "--json"],
+            capsys,
+        )
+        assert rc == 0, "the --n long flag must be accepted"
+        assert len(records) == 4
+
     def test_sample_random_csv(self, ramp_file, tmp_path):
         out = str(tmp_path / "sr.csv")
         assert (
