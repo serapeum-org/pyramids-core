@@ -1089,6 +1089,24 @@ class Dataset(RasterBase):
             other, func, band=band, no_data_value=no_data_value
         )
 
+    def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
+        """Facade — delegates to :meth:`Analysis.calc <pyramids.dataset.engines.Analysis.calc>`.
+
+        Evaluate a string band-algebra expression (``self`` bound to ``A``, each of
+        ``others`` to ``B``, ``C``, ...) and return the result as a new dataset on
+        this one's grid/CRS. The Python counterpart of the ``pyramids calc`` CLI; see
+        the engine method for the allowed grammar and alignment rules.
+
+        Args:
+            expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI.
+            *others: Additional rasters bound to ``B``, ``C``, ...; each on this grid.
+            dtype: Optional NumPy dtype string to cast the result to.
+
+        Returns:
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array.
+        """
+        return self.analysis.calc(expr, *others, dtype=dtype)
+
     def fill_domain(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.fill_domain <pyramids.dataset.engines.Analysis.fill_domain>`.
 

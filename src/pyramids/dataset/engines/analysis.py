@@ -68,6 +68,7 @@ if TYPE_CHECKING:
 from pyramids.base.crs import crs_from_user_input, crs_spec, reproject_coordinates
 from pyramids.base.geodesy import geodesic_distance
 from pyramids.base.georeference import GeoReference
+from pyramids.dataset._calc import eval_calc
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._validate import (
     resolve_band_indices,
@@ -1750,6 +1751,94 @@ class Analysis(_Engine["Dataset"]):
             no_data_value=no_data_value,
             folded=True,
         )
+
+    def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
+        """Evaluate a string band-algebra expression over this and other rasters.
+
+        The Python counterpart of the ``pyramids calc`` CLI: ``self`` is bound to
+        ``A`` and each dataset in ``others`` to ``B``, ``C``, ... (up to ``Z``), then
+        ``expr`` is evaluated cell by cell by a small AST whitelist -- never
+        ``eval`` / ``exec``. Only arithmetic over the bound arrays, comparisons, and a
+        short list of ``np.<func>`` calls (``where``, ``clip``, ``log``, ``log10``,
+        ``exp``, ``sqrt``, ``abs``, ``minimum``, ``maximum``, ``power``) are allowed.
+
+        Unlike :meth:`combine`, the expression sees the **raw** arrays
+        (``read_array(squeeze=True)``): no-data cells take part in the arithmetic and
+        no packing or domain masking is applied. The result is wrapped back into a
+        dataset of this one's class, carrying this dataset's geotransform, CRS and
+        dataset-level metadata.
+
+        Args:
+            expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI
+                with ``self`` = red (``A``) and ``others[0]`` = near-infrared (``B``).
+            *others: Additional rasters bound to ``B``, ``C``, ...; each must already
+                sit on this dataset's grid (``calc`` does not resample). At most 25
+                others (26 inputs total, ``A``..``Z``).
+            dtype: Optional NumPy dtype string to cast the result to.
+
+        Returns:
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array.
+
+        Raises:
+            ValueError: More than 26 inputs total, an unknown name in ``expr``, or a
+                disallowed expression element.
+            AlignmentError: An operand does not share this dataset's grid.
+
+        Examples:
+            - NDVI from a red and a near-infrared single-band raster:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> red = Dataset.from_array(np.array([[[1.0, 2.0]]]), geo_ref=ref)
+                >>> nir = Dataset.from_array(np.array([[[3.0, 6.0]]]), geo_ref=ref)
+                >>> ndvi = red.calc("(B - A) / (B + A)", nir)
+                >>> np.asarray(ndvi.read_array()).ravel().tolist()
+                [0.5, 0.5]
+
+                ```
+            - Scale a single raster with a scalar and an ``np`` call:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ref = GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
+                >>> ds = Dataset.from_array(np.array([[[1.0, 4.0]]]), geo_ref=ref)
+                >>> np.asarray(ds.calc("np.sqrt(A) * 10").read_array()).ravel().tolist()
+                [10.0, 20.0]
+
+                ```
+        """
+        datasets = [self._ds, *others]
+        if len(datasets) > 26:
+            raise ValueError("calc supports at most 26 input rasters (bound A..Z).")
+        template = self._ds
+        for other in others:
+            if not template.same_grid(other, compare_crs=bool(other.crs)):
+                raise AlignmentError(
+                    "a calc operand does not share this dataset's grid; align the "
+                    "inputs first (Dataset.align) and re-run."
+                )
+        names = [chr(ord("A") + index) for index in range(len(datasets))]
+        variables = {
+            name: np.asarray(ds.read_array(squeeze=True))
+            for name, ds in zip(names, datasets)
+        }
+        out = np.asarray(eval_calc(expr, variables))
+        if dtype is not None:
+            out = out.astype(dtype)
+        result = self._ds.__class__._build_dataset(
+            template.columns,
+            template.rows,
+            1 if out.ndim == 2 else out.shape[0],
+            numpy_to_gdal_dtype(out),
+            template.geotransform,
+            template.crs,
+            array=out,
+        )
+        # Dataset-level tags travel (like `combine`); band-level scale/offset/units
+        # do not -- the expression can change what the numbers mean.
+        result.metadata = template.metadata
+        return result
 
     def _combine(
         self,
