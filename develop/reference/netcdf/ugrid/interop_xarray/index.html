@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9528,13 +9528,7 @@ install hint rather than failing with a bare import error.</p>
 <span class="normal"><a href="#__codelineno-0-814">814</a></span>
 <span class="normal"><a href="#__codelineno-0-815">815</a></span>
 <span class="normal"><a href="#__codelineno-0-816">816</a></span>
-<span class="normal"><a href="#__codelineno-0-817">817</a></span>
-<span class="normal"><a href="#__codelineno-0-818">818</a></span>
-<span class="normal"><a href="#__codelineno-0-819">819</a></span>
-<span class="normal"><a href="#__codelineno-0-820">820</a></span>
-<span class="normal"><a href="#__codelineno-0-821">821</a></span>
-<span class="normal"><a href="#__codelineno-0-822">822</a></span>
-<span class="normal"><a href="#__codelineno-0-823">823</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="k">def</span><span class="w"> </span><span class="nf">chunked_variables</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-817">817</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="k">def</span><span class="w"> </span><span class="nf">chunked_variables</span><span class="p">(</span>
 <a id="__codelineno-0-774" name="__codelineno-0-774"></a>    <span class="n">data_variables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MeshVariable</span><span class="p">],</span> <span class="n">chunks</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="s2">"auto"</span>
 <a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="w">    </span><span class="sd">"""Return dask-backed arrays for the given mesh variables, for out-of-core reads.</span>
@@ -9572,19 +9566,13 @@ install hint rather than failing with a bare import error.</p>
 <a id="__codelineno-0-808" name="__codelineno-0-808"></a>            <span class="k">continue</span>
 <a id="__codelineno-0-809" name="__codelineno-0-809"></a>        <span class="n">source_path</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">_source_path</span>
 <a id="__codelineno-0-810" name="__codelineno-0-810"></a>        <span class="k">if</span> <span class="n">source_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-811" name="__codelineno-0-811"></a>            <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">require_compute_backend</span><span class="p">()</span><span class="o">.</span><span class="n">read_array_lazy</span><span class="p">(</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a>                <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a>                <span class="n">path</span><span class="o">=</span><span class="n">source_path</span><span class="p">,</span>
-<a id="__codelineno-0-814" name="__codelineno-0-814"></a>                <span class="n">variable_name</span><span class="o">=</span><span class="n">var</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-<a id="__codelineno-0-815" name="__codelineno-0-815"></a>                <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">,</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a>                <span class="n">orient</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>            <span class="p">)</span>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a>            <span class="n">data</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">data</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a>            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a>                <span class="k">continue</span>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a>            <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">da_mod</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a>    <span class="k">return</span> <span class="n">result</span>
+<a id="__codelineno-0-811" name="__codelineno-0-811"></a>            <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">build_lazy_array</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">var</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">chunks</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-812" name="__codelineno-0-812"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-813" name="__codelineno-0-813"></a>            <span class="n">data</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">data</span>
+<a id="__codelineno-0-814" name="__codelineno-0-814"></a>            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-815" name="__codelineno-0-815"></a>                <span class="k">continue</span>
+<a id="__codelineno-0-816" name="__codelineno-0-816"></a>            <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">da_mod</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
+<a id="__codelineno-0-817" name="__codelineno-0-817"></a>    <span class="k">return</span> <span class="n">result</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
