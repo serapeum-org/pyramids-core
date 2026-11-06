@@ -25,14 +25,22 @@ jobs:
   pip-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Audit the resolved tree on every supported Python. Each pixi env pins its own
+    # Python (py311..py315) and can resolve a slightly different dependency set, so the
+    # matrix catches a version-specific vulnerable dependency. fail-fast off so one
+    # version's result never hides another's. The set mirrors the tests.yml matrix.
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [py311, py312, py313, py314, py315]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
         with:
-          environments: py311
-          activate-environment: py311
+          environments: ${{ matrix.environment }}
+          activate-environment: ${{ matrix.environment }}
           cache: true
           version: v0.73.0
 
@@ -45,7 +53,11 @@ jobs:
         # rather than failing the run — the job fails only when a real vulnerability is
         # reported (pip-audit exits non-zero).
         run: |
-          pixi run -e py311 python -m pip freeze --exclude-editable \
+          # Pin pip-audit to the SAME interpreter as the matrix env so it never tries to
+          # resolve a package the freeze pinned for a different Python (e.g. a cp314/cp315
+          # -only wheel) against pipx's default interpreter.
+          PYBIN="$(pixi run -e ${{ matrix.environment }} python -c 'import sys; print(sys.executable)')"
+          pixi run -e ${{ matrix.environment }} python -m pip freeze --exclude-editable \
             | grep -E '^[A-Za-z0-9_.-]+==' > "${RUNNER_TEMP}/pip-audit-reqs.txt"
-          echo "Auditing $(wc -l < "${RUNNER_TEMP}/pip-audit-reqs.txt") pinned packages against the advisory DB"
-          pipx run pip-audit --requirement "${RUNNER_TEMP}/pip-audit-reqs.txt" --desc
+          echo "Auditing $(wc -l < "${RUNNER_TEMP}/pip-audit-reqs.txt") pinned packages on ${{ matrix.environment }}"
+          pipx run --python "$PYBIN" pip-audit --requirement "${RUNNER_TEMP}/pip-audit-reqs.txt" --desc
