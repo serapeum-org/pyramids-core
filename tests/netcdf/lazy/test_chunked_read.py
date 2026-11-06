@@ -35,7 +35,7 @@ from numpy.testing import assert_allclose
 from osgeo import gdal, osr
 
 from pyramids.base._file_manager import FILE_CACHE
-from pyramids.netcdf import _lazy as lazy_mod
+from pyramids_lazy import _lazy as lazy_mod
 from pyramids.netcdf.netcdf import NetCDF
 from tests._marks import requires_dask
 

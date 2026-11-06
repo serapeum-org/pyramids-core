@@ -40,7 +40,7 @@ from pyramids.dataset.collection import (
 )
 from pyramids.dataset.engines.analysis import Analysis
 from pyramids.dataset.engines.io import IO
-from pyramids.dataset.ops._zarr import _metadata_dict
+from pyramids_lazy._zarr import _metadata_dict
 from pyramids.netcdf import NetCDF
 from pyramids.netcdf._plot import NetCDFPlot
 

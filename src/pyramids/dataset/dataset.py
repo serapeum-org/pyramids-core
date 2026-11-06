@@ -2601,12 +2601,15 @@ class Dataset(RasterBase):
         # OptionalPackageDoesNotExist when no backend is installed.
         from pyramids.base._compute_backend import require_compute_backend
 
-        return require_compute_backend().read_dataset_from_zarr(
-            store,
-            chunks=chunks,
-            storage_options=storage_options,
-            level=level,
-            data_name=data_name,
+        return cast(
+            "Dataset",
+            require_compute_backend().read_dataset_from_zarr(
+                store,
+                chunks=chunks,
+                storage_options=storage_options,
+                level=level,
+                data_name=data_name,
+            ),
         )
 
     def __str__(self) -> str:

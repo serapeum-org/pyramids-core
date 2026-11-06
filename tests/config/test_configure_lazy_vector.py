@@ -19,7 +19,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from pyramids import configure_lazy_vector
-from pyramids.feature import _read as _fc_mod
+
+# The partition-size knob configure_lazy_vector tunes now lives in the pyramids-lazy backend's
+# vector-read module (the lazy bodies moved there); assert against it.
+from pyramids_lazy import _vector_read as _fc_mod
 
 # The whole module exercises dask internals. The ``lazy`` marker gates
 # the tests to the env where dask is installed; we therefore cannot

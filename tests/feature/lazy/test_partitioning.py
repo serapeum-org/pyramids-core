@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from pyramids.feature._read import (
+from pyramids_lazy._vector_read import (
     _LAZY_TARGET_BYTES_PER_PARTITION,
     _resolve_lazy_partitioning,
 )

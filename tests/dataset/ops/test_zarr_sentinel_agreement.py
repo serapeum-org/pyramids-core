@@ -39,7 +39,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.ops._zarr import (
+from pyramids_lazy._zarr import (
     _agreed_sentinel,
     _is_nan,
     _json_sentinel,

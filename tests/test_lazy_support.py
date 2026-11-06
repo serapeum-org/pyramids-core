@@ -108,15 +108,12 @@ _ORIGINS = {
     "_dtype_to_str": "pyramids.netcdf.utils",
 }
 
-#: Lazy submodules whose top-level import defers dask, so they must import even on a bare core
-#: install. ``feature._lazy_collection`` is excluded: it hard-imports ``dask_geopandas`` at module
-#: top (needs the ``[parquet]`` extra), so it is not import-clean without that extra.
+#: The lazy op *bodies* moved to pyramids-lazy; what remains in core are the small shared helpers
+#: still used by eager paths. These must import even on a bare core install (no dask): ``_lazy`` keeps
+#: only ``mask_no_data`` (the post-read mask), ``_zarr`` keeps only ``_resolve_store``, and
+#: ``_geobox_zarr`` is the geobox helper set the eager STAC/collection paths share.
 _LAZY_SUBMODULES = [
     "pyramids.netcdf._lazy",
-    "pyramids.netcdf._lazy_cube",
-    "pyramids.netcdf._mfdataset",
-    "pyramids.netcdf._kerchunk_facade",
-    "pyramids.netcdf._kerchunk_builder",
     "pyramids.dataset.ops._zarr",
     "pyramids.dataset.ops._geobox_zarr",
 ]

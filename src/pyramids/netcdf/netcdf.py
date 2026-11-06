@@ -135,7 +135,9 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from pyramids.netcdf._lazy_cube import LazyNetCDF
+    # The lazy cube lives in the pyramids-lazy backend now; typing-only import (mypy treats it as
+    # Any via ignore_missing_imports), used for the `chunk()` return annotation.
+    from pyramids_lazy import LazyNetCDF
 
 _SPATIAL_DIM_NAMES = _SPATIAL_AXIS_NAMES
 """Dimension names that are a horizontal axis rather than a band one.
@@ -937,43 +939,6 @@ def _store_label(nc: NetCDF) -> tuple[str, bool]:
     if group:
         label = f"{label}:/{group}"
     return label, in_memory
-
-
-def _lazy_cube_dim_names(var: NetCDF, ndim: int) -> tuple[str, ...]:
-    """Dimension names for a lazily-read variable, sized to the dask array's `ndim`.
-
-    The spatial plane is the trailing two axes; the leading axes are the band dimensions. A lazy
-    read may collapse several band dimensions into one leading axis (#1226), so the band-name list
-    is sized to the actual leading-axis count rather than to `_band_dim_names` — keeping the names
-    aligned with the array's axes so `LazyNetCDF.chunks` zips cleanly.
-
-    Args:
-        var: The gridded variable the array was read from.
-        ndim: The dask array's number of axes.
-
-    Returns:
-        tuple[str, ...]: One name per axis, outermost first — band names then the row and column
-        names (the public row/column names, which hide the y-ascending read's internal rename).
-    """
-    row, col = _interop._public_spatial_names(var)
-    leading = max(ndim - 2, 0)
-    band_names = list(var._band_dim_names)
-    if leading == len(band_names):
-        bands = band_names
-    elif leading == 0:
-        bands = []
-    elif leading == 1:
-        # Every band dimension collapsed into one axis (#1226, unreached in v1 — lazy reads keep one
-        # axis per band dim): join the names into a single display-only label so none is silently
-        # dropped. The joined label is not a canonical dimension name; when #1226 lands, carry the
-        # component names structurally and guarantee uniqueness of the chunks keys.
-        bands = ["+".join(band_names)] if band_names else ["band"]
-    else:
-        bands = [
-            band_names[i] if i < len(band_names) else f"band{i}" for i in range(leading)
-        ]
-    tail = (row, col) if ndim >= 2 else ()
-    return (*bands, *tail)
 
 
 def _same_value(left: Any, right: Any) -> bool:

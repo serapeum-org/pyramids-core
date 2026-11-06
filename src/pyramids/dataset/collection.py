@@ -40,7 +40,6 @@ from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
     import_dask,
-    import_zarr,
     lazy_extra_hint,
     resolve_resampling,
 )
@@ -70,13 +69,6 @@ from pyramids.dataset._stac import from_stac as _from_stac
 from pyramids.dataset.abstract_dataset import CATALOG
 from pyramids.dataset.dataset import Dataset
 from pyramids.dataset.merge import merge_rasters
-from pyramids.dataset.ops._geobox_zarr import (
-    ZARR_SCHEMA_VERSION,
-    finalize_zarr_metadata,
-    geobox_crs,
-    normalize_compressors,
-    read_geobox,
-)
 from pyramids.dataset.ops.io import _read_chunk
 from pyramids.dataset.stac_options import (
     Alignment,
@@ -354,42 +346,6 @@ def _grouped_reduce_time(
     }
 
 
-def _finalize_collection_metadata(resolved_store, meta, files: list) -> None:
-    """Write pyramids GeoTransform / CRS root attrs on a freshly-written cube Zarr.
-
-    Module-level so the :func:`dask.delayed` path can pickle it
-    cleanly. Sets `crs_wkt`, `GeoTransform`, `epsg`, `nodata`,
-    `band_names`, `time_length` + a pyramids version marker on the
-    `data` array + root group.
-    """
-    # Shared finalize (root + data attrs, GeoZarr geobox, consolidate). The cube
-    # is 4-D (time, band, y, x); the geobox x/y come from the spatial grid.
-    finalize_zarr_metadata(
-        resolved_store,
-        root_attrs={
-            "pyramids_zarr_version": ZARR_SCHEMA_VERSION,
-            "time_length": int(len(files)),
-            "pyramids_file_list": list(files),
-        },
-        data_attrs={
-            # 0 is the geobox's documented "no authority code" sentinel; emit
-            # it here too so a store does not record absence two ways.
-            "epsg": int(meta.epsg) if meta.epsg is not None else 0,
-            "GeoTransform": " ".join(str(v) for v in meta.geotransform),
-            "crs_wkt": meta.crs.to_wkt() if meta.crs is not None else "",
-            "nodata": [None if v is None else float(v) for v in meta.nodata],
-            "band_names": list(meta.band_names) if meta.band_names else [],
-            "dtype": str(meta.dtype),
-        },
-        epsg=int(meta.epsg) if meta.epsg is not None else None,
-        geotransform=tuple(float(v) for v in meta.geotransform),
-        crs_wkt=meta.crs.to_wkt() if meta.crs is not None else "",
-        rows=int(meta.rows),
-        cols=int(meta.columns),
-        dims=["time", "band", "y", "x"],
-    )
-
-
 def _crs_equal(a: CRS | None, b: CRS | None) -> bool:
     """Return True if two CRS describe the same reference system (N2).
 
@@ -410,114 +366,6 @@ def _crs_equal(a: CRS | None, b: CRS | None) -> bool:
         return True
     epsg_a, epsg_b = a.to_epsg(), b.to_epsg()
     return epsg_a is not None and epsg_a == epsg_b
-
-
-def _finalize_append_metadata(
-    resolved_store, new_time_length: int, added_files: list
-) -> None:
-    """Update root attrs after appending timesteps to an existing cube store.
-
-    Bumps ``time_length`` to the new total and extends ``pyramids_file_list``;
-    the geobox / data attrs already exist from the initial write. Module-level
-    so the :func:`dask.delayed` (``compute=False``) path can pickle it.
-    """
-    import zarr
-
-    root = zarr.open_group(resolved_store, mode="a")
-    root.attrs["time_length"] = int(new_time_length)
-    # pyramids_file_list is always written as list(files) by
-    # _finalize_collection_metadata, never any other JSON shape.
-    existing_files = list(cast(list, root.attrs.get("pyramids_file_list", [])))
-    root.attrs["pyramids_file_list"] = existing_files + list(added_files)
-    # zarr v3 emits a ZarrUserWarning that consolidated metadata isn't yet in the
-    # spec; suppress it here so the append finalizer matches the other writer
-    # paths (L1 follow-up to L4).
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", message="Consolidated metadata is currently not part"
-        )
-        zarr.consolidate_metadata(resolved_store)
-
-
-def _append_region(
-    data, resolved_store, old_t: int, new_total: int, slices, added_files
-) -> None:
-    """Atomically grow, stream-write, and finalize a zarr time-append (ARC-75a).
-
-    The deferred (``compute=False``) append routes through this single task so the
-    store's ``data`` shape only grows when the append actually runs; on any failure
-    the resize is rolled back, so the store never advertises a larger shape than it
-    holds. ``data`` stays a lazy dask array and is **streamed** into the region via
-    ``to_zarr(..., compute=False)`` (never materialising the whole appended cube, M2).
-    The caller must keep ``data`` lazy (capture it in a closure), not pass it as a
-    delayed argument (which dask would compute up front).
-
-    This function runs *inside* a ``dask.delayed`` task, so it drives the region write
-    with an explicit ``scheduler="synchronous"`` compute: a nested threaded /
-    distributed compute from within a running task can deadlock (a worker thread
-    blocking on the same pool while several deferred appends are computed together).
-    The synchronous scheduler runs the write inline in this task's thread — still
-    streaming tile-by-tile — so the deferred append is safe under any outer scheduler
-    (M1). Passing the scheduler to ``.compute`` keeps the choice call-local (no global
-    ``dask.config`` mutation that could race with sibling tasks).
-
-    Idempotent under recompute: a dask ``Delayed`` re-executes on every ``.compute()``.
-    If a prior successful compute already grew the store to ``new_total``, this returns
-    early instead of re-writing and double-appending to ``pyramids_file_list`` (L2); a
-    prior *failed* compute rolled the resize back to ``old_t``, so a retry proceeds.
-    """
-    import zarr
-
-    root = zarr.open_group(resolved_store, mode="a")
-    arr = root["data"]
-    if not isinstance(
-        arr, zarr.Array
-    ):  # to_zarr writes 'data' as an Array, not a Group
-        raise TypeError(f"expected a zarr Array at 'data' in {resolved_store!r}")
-    if int(arr.shape[0]) == new_total:
-        # dask Delayeds re-execute on every .compute(); a prior successful compute of
-        # THIS append already grew the store to new_total and finalized. Make a
-        # recompute a no-op so it doesn't double-append to pyramids_file_list (L2). A
-        # failed prior compute rolled the resize back to old_t, so a retry still finds
-        # old_t here and proceeds normally.
-        return
-    arr.resize((new_total, *arr.shape[1:]))
-    try:
-        store_task = data.to_zarr(arr, region=slices, overwrite=False, compute=False)
-        store_task.compute(scheduler="synchronous")
-        _finalize_append_metadata(resolved_store, new_total, added_files)
-    except Exception:
-        arr.resize((old_t, *arr.shape[1:]))
-        raise
-
-
-def _region_to_slices(region: dict, ndim: int) -> tuple:
-    """Convert a ``{dim: slice}`` region dict to a positional slice tuple.
-
-    Maps the cube's named axes (``time``/``band``/``y``/``x``) to positions
-    0..3; unmentioned dims default to ``slice(None)`` (the whole axis).
-    """
-    dim_axis = {"time": 0, "band": 1, "y": 2, "x": 3}
-    slices: list = [slice(None)] * ndim
-    for dim, sl in region.items():
-        if dim not in dim_axis:
-            raise ValueError(
-                f"unknown region dim {dim!r}; expected one of {tuple(dim_axis)}"
-            )
-        slices[dim_axis[dim]] = sl
-    return tuple(slices)
-
-
-def _finalize_after_write(data_result, resolved_store, meta, files) -> None:
-    """run metadata finalize AFTER data write completes.
-
-    Wrapping both in one dask.delayed makes the dependency explicit:
-    `_finalize_collection_metadata` cannot start until
-    `data_result` is materialised, so there is no race between the
-    data writer and the attribute writer.
-    """
-    del data_result  # consumed as a dependency only
-    _finalize_collection_metadata(resolved_store, meta, files)
 
 
 def _lazy_timestep(
@@ -2041,63 +1889,6 @@ class DatasetCollection:
             region=region,
         )
 
-    def _append_to_zarr(self, resolved_store, data, append_dim: str, compute: bool):
-        """Append this cube's timesteps to an existing store along ``append_dim``.
-
-        Resizes the existing ``data`` array along the time axis and writes the
-        new block into the appended region (the per-timestep time chunks are
-        size 1, so the region aligns with chunk boundaries), then bumps
-        ``time_length`` and extends ``pyramids_file_list``.
-        """
-        import dask
-        import zarr
-
-        # to_zarr (the only caller) already checked self._files is non-empty.
-        assert self._files is not None
-
-        if append_dim != "time":
-            raise ValueError(
-                f"append_dim must be 'time' for a (T, B, Y, X) cube; got {append_dim!r}"
-            )
-        root = zarr.open_group(resolved_store, mode="a")
-        existing = root["data"]
-        if not isinstance(existing, zarr.Array):
-            raise TypeError(
-                f"expected the 'data' node in {resolved_store!r} to be a zarr "
-                f"Array, got a Group -- the store is not a pyramids cube"
-            )
-        old_t = int(existing.shape[0])
-        new_total = old_t + int(data.shape[0])
-        slices = (slice(old_t, new_total),) + (slice(None),) * (data.ndim - 1)
-
-        if compute:
-            # Grow the time axis, stream the append, then finalize. On any failure
-            # roll the resize back so the store never advertises a larger shape than
-            # it holds (ARC-75a). dask's region write targets the zarr.Array directly.
-            existing.resize((new_total, *existing.shape[1:]))
-            try:
-                data.to_zarr(existing, region=slices, overwrite=False, compute=True)
-                _finalize_append_metadata(resolved_store, new_total, self._files)
-            except Exception:
-                existing.resize((old_t, *existing.shape[1:]))
-                raise
-            return None
-
-        # compute=False: defer the resize+write+finalize into one task, capturing
-        # `data` in a closure so it stays a lazy dask array streamed inside the write
-        # (M2) — passing it as a delayed argument would make dask compute the whole
-        # appended cube into memory first. No window where a grown-but-empty store is
-        # visible, and rollback on failure (ARC-75a). _append_region drives the inner
-        # write with scheduler="synchronous" so computing this Delayed can't deadlock
-        # under a threaded/distributed outer scheduler (M1).
-        files = self._files
-
-        @dask.delayed
-        def _deferred_append() -> None:
-            _append_region(data, resolved_store, old_t, new_total, slices, files)
-
-        return _deferred_append()
-
     def to_netcdf(
         self,
         path: str | Path,
@@ -2930,8 +2721,11 @@ class DatasetCollection:
         # OptionalPackageDoesNotExist when no backend is installed.
         from pyramids.base._compute_backend import require_compute_backend
 
-        return require_compute_backend().read_collection_from_zarr(
-            cls, store, storage_options=storage_options
+        return cast(
+            "DatasetCollection",
+            require_compute_backend().read_collection_from_zarr(
+                cls, store, storage_options=storage_options
+            ),
         )
 
     @classmethod

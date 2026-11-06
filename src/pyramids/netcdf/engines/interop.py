@@ -30,10 +30,8 @@ from osgeo import gdal, osr
 
 from pyramids.base._errors import TimeDecodingWarning
 from pyramids.base._utils import (
-    import_dask,
     import_xarray,
     numpy_to_gdal_dtype,
-    require_optional,
 )
 from pyramids.base.remote import is_remote
 from pyramids.dataset.engines._base import _Engine

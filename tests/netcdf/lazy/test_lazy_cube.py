@@ -254,7 +254,7 @@ class TestLazyCubeDimNames:
 
     def test_separate_band_axes_use_the_band_names(self):
         """When the lazy array keeps each band axis, the names are the band dims then row/col."""
-        from pyramids.netcdf.netcdf import _lazy_cube_dim_names
+        from pyramids_lazy._lazy_cube import _lazy_cube_dim_names
 
         ua = NetCDF.read_file(str(MULTIVAR)).get_variable("ua")
         names = _lazy_cube_dim_names(ua, 4)
@@ -263,7 +263,7 @@ class TestLazyCubeDimNames:
 
     def test_two_dimensional_variable_has_only_spatial_names(self):
         """A variable with no band dimensions names only the row and column axes."""
-        from pyramids.netcdf.netcdf import _lazy_cube_dim_names
+        from pyramids_lazy._lazy_cube import _lazy_cube_dim_names
 
         area = NetCDF.read_file(str(MULTIVAR)).get_variable("area")
         assert len(_lazy_cube_dim_names(area, 2)) == 2, (
@@ -272,14 +272,14 @@ class TestLazyCubeDimNames:
 
     def test_collapsed_band_axis_joins_the_names(self):
         """A single leading axis for several band dims joins their names, dropping none — L4."""
-        from pyramids.netcdf.netcdf import _lazy_cube_dim_names
+        from pyramids_lazy._lazy_cube import _lazy_cube_dim_names
 
         ua = NetCDF.read_file(str(MULTIVAR)).get_variable("ua")
         assert _lazy_cube_dim_names(ua, 3)[0] == "time+plev"
 
     def test_extra_leading_axes_fall_back_to_positional_names(self):
         """More leading axes than band dimensions get deterministic positional names."""
-        from pyramids.netcdf.netcdf import _lazy_cube_dim_names
+        from pyramids_lazy._lazy_cube import _lazy_cube_dim_names
 
         ua = NetCDF.read_file(str(MULTIVAR)).get_variable("ua")
         assert _lazy_cube_dim_names(ua, 5)[:3] == ("time", "plev", "band2")

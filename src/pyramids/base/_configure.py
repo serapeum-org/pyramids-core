@@ -288,12 +288,9 @@ def configure_lazy_vector(
         dask.config.set(scheduler=scheduler)
         applied["scheduler"] = scheduler
     if target_bytes_per_partition is not None:
-        from pyramids.feature import _read as _fc_mod
-
-        _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(target_bytes_per_partition)
-        # The lazy-vector partitioning now runs in the pyramids-lazy backend; tune its knob too so
-        # the setting actually takes effect. Guarded: a bare core (no backend) just keeps the
-        # core-side value, which is harmless since the dask read then raises the branded error.
+        # The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. A bare core
+        # (no backend) makes this a no-op, which is harmless since the dask read then raises the
+        # branded error anyway.
         _set_lazy_backend_partition_bytes(int(target_bytes_per_partition))
         applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
     logger.debug(
@@ -340,11 +337,6 @@ def _register_lazy_vector_worker_plugin(
 
                 dask.config.set(scheduler=self._settings["scheduler"])
             if "target_bytes_per_partition" in self._settings:
-                from pyramids.feature import _read as _fc_mod
-
-                _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(
-                    self._settings["target_bytes_per_partition"]
-                )
                 _set_lazy_backend_partition_bytes(
                     int(self._settings["target_bytes_per_partition"])
                 )

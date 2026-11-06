@@ -27,13 +27,13 @@ from typing import Any
 import numpy as np
 from pyproj import CRS as PyProjCRS
 
+from pyramids.base._compute_backend import require_compute_backend
 from pyramids.base._utils import (
     extra_hint,
     import_dask,
     import_xarray,
     require_optional,
 )
-from pyramids.base._compute_backend import require_compute_backend
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.models import (
