@@ -9236,9 +9236,9 @@ so <code>set_coords</code> is the write side, and needed no new partition.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">len</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">nc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">len</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">nc</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-13">len(nc.variable_names), nc.metadata.cf.classifications['lsp']</div>
+<div class="clipboard-copy-txt" id="cell-13">len(nc.variable_names), nc.meta_data.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>
@@ -9277,11 +9277,11 @@ so <code>set_coords</code> is the write side, and needed no new partition.</p>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">promoted</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">set_coords</span><span class="p">(</span><span class="s1">'lsp'</span><span class="p">)</span>
 
-<span class="nb">len</span><span class="p">(</span><span class="n">promoted</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">promoted</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">promoted</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">promoted</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-14">promoted = nc.set_coords('lsp')
 
-len(promoted.variable_names), promoted.metadata.cf.classifications['lsp']</div>
+len(promoted.variable_names), promoted.meta_data.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>
@@ -9445,11 +9445,11 @@ empty string behind:</p>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">restored</span> <span class="o">=</span> <span class="n">promoted</span><span class="o">.</span><span class="n">reset_coords</span><span class="p">(</span><span class="s1">'lsp'</span><span class="p">)</span>
 
-<span class="nb">len</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">restored</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">variable_names</span><span class="p">),</span> <span class="n">restored</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">cf</span><span class="o">.</span><span class="n">classifications</span><span class="p">[</span><span class="s1">'lsp'</span><span class="p">]</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-17">restored = promoted.reset_coords('lsp')
 
-len(restored.variable_names), restored.metadata.cf.classifications['lsp']</div>
+len(restored.variable_names), restored.meta_data.cf.classifications['lsp']</div>
 </div>
 </div>
 </div>

@@ -8550,7 +8550,7 @@ ds.shape, ds.no_data_value</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x77a935b63b60&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7665354ffb60&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8644,11 +8644,11 @@ ds.no_data_value[0], '-&gt;', relabelled.no_data_value[0]</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">filled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">fill_domain</span><span class="p">(</span><span class="mf">5.0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">filled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mf">5.0</span><span class="p">)</span>
 <span class="n">valid</span> <span class="o">=</span> <span class="n">filled</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span>
 <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">valid</span> <span class="o">==</span> <span class="n">filled</span><span class="o">.</span><span class="n">no_data_value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">valid</span><span class="p">)))</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">filled = ds.fill_domain(5.0)
+<div class="clipboard-copy-txt" id="cell-5">filled = ds.fill(5.0)
 valid = filled.read_array()
 float(np.nanmax(np.where(valid == filled.no_data_value[0], np.nan, valid)))</div>
 </div>
@@ -8809,7 +8809,7 @@ The repaired array is wrapped back into a <code>Dataset</code> so it can be plot
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x77a92d6f1f90&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76652cd3de50&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8864,7 +8864,7 @@ repaired_ds.plot(band=0, title="Gaps filled (fill_gaps)", cmap="viridis")</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[8]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x77a92d404690&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76652cf24550&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

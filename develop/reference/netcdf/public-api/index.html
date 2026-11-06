@@ -7781,17 +7781,17 @@
 
 
 <h1 id="netcdf-public-api"><a class="toclink" href="#netcdf-public-api"><code>NetCDF</code> — public API</a><a class="headerlink" href="#netcdf-public-api" title="Permanent link">#</a></h1>
-<p>A one-line map of every public member the <code>NetCDF</code> class itself defines — 137 in all: 100 methods, 28 properties,
+<p>A one-line map of every public member the <code>NetCDF</code> class itself defines — 136 in all: 100 methods, 27 properties,
 8 classmethods and 1 staticmethod, plus the four mapping dunders (<code>__getitem__</code>, <code>__contains__</code>, <code>__iter__</code>,
 <code>__len__</code>). <code>concat</code> and <code>merge</code> are counted among the methods: each is callable on the class
 (<code>NetCDF.concat([a, b], dim)</code>) and on a cube (<code>a.concat([b], dim)</code>, which joins the
 receiver first). For the full signatures, arguments and examples, see the rendered
 <a href="../">NetCDF Class</a> reference; this page is the index you scan to find the member you want.</p>
-<p><code>NetCDF</code> extends <code>Dataset</code>, so it also inherits a further 150 public members it does not redefine — band
+<p><code>NetCDF</code> extends <code>Dataset</code>, so it also inherits a further 145 public members it does not redefine — band
 handling, the COG surface, the missing-data members (<code>where</code>, <code>fillna</code>, <code>isnull</code>, <code>notnull</code>, <code>equals</code>,
 <code>identical</code>), the cell-wise members (<code>clip</code>, <code>round</code>, <code>astype</code>, <code>isin</code>) and the rest of the raster API.
-135 of those are declared in <code>Dataset</code>'s own body and the
-remaining 15 come from <code>RasterBase</code> above it. They live in the
+132 of those are declared in <code>Dataset</code>'s own body and the
+remaining 13 come from <code>RasterBase</code> above it. They live in the
 <a href="../../dataset/">Dataset reference</a> — the missing-data six under
 <a href="../../dataset/analysis/#missing-data-and-comparison">Missing data and comparison</a> and the four cell-wise
 members under <a href="../../dataset/analysis/#cell-wise-transforms">Cell-wise transforms</a>.</p>
@@ -8360,12 +8360,8 @@ A variable with no raster plane is the exception — see each member's docstring
 </thead>
 <tbody>
 <tr>
-<td><code>metadata</code></td>
-<td>Structured metadata for this NetCDF (cached).</td>
-</tr>
-<tr>
 <td><code>meta_data</code></td>
-<td>Deprecated alias for <code>metadata</code>.</td>
+<td>Structured metadata for this NetCDF (cached).</td>
 </tr>
 <tr>
 <td><code>get_all_metadata()</code></td>
