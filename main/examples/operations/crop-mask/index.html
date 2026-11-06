@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8549,7 +8549,7 @@ ds.shape, ds.epsg, (len(polys), polys.epsg)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a18371d7e00&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7876c7c13e00&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8665,7 +8665,7 @@ clipped.shape, clipped.epsg</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a182ed46c10&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7876bf736e90&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8707,12 +8707,12 @@ clipped.shape, clipped.epsg</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">bbox</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span>
 <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
 <span class="n">inner</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
 <span class="n">inner</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">xmin, ymin, xmax, ymax = ds.bbox
+<div class="clipboard-copy-txt" id="cell-6">xmin, ymin, xmax, ymax = ds.total_bounds
 dx, dy = (xmax - xmin) / 4, (ymax - ymin) / 4
 inner = ds.crop(bbox=(xmin + dx, ymin + dy, xmax - dx, ymax - dy), epsg=ds.epsg)
 inner.shape</div>
@@ -8785,7 +8785,7 @@ inner.shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a18ac1d7610&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x78773ccd7110&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
