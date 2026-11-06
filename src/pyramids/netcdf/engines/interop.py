@@ -1518,12 +1518,16 @@ def _lazy_var_data(ds: NetCDF, var_name: str, chunks: Any, md_arr: Any) -> Any:
     path = _reopenable_path(ds)
     if path is None:
         return ds._md_array_to_numpy(md_arr)
-    # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-    from pyramids.netcdf._lazy import build_lazy_array
+    from pyramids.base._compute_backend import require_compute_backend
 
     try:
-        return build_lazy_array(
-            path, var_name, chunks, orient=False, gdal_env=ds._gdal_env or None
+        return require_compute_backend().read_array_lazy(
+            ds,
+            path=path,
+            variable_name=var_name,
+            chunks=chunks,
+            orient=False,
+            gdal_env=ds._gdal_env or None,
         )
     except ValueError:
         return ds._md_array_to_numpy(md_arr)

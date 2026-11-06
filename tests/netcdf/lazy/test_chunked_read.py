@@ -203,7 +203,7 @@ class TestDefaultChunks:
         three_d_var,
     ):
         """Default chunks match the MDArray's native ``GetBlockSize``."""
-        from pyramids.netcdf._lazy import (
+        from pyramids_lazy._lazy import (
             _default_chunks,
             _mdarray_shape_and_dtype,
         )

@@ -79,10 +79,14 @@ def __getattr__(name: str):
     """
 
     if name == "LazyNetCDF":
-        # Resolved lazily so importing `pyramids.netcdf` does not pull the lazy `_lazy_cube`
-        # module (extraction-readiness, plan #2); the class itself imports without the [lazy] extra.
-        # Mirrors feature/__init__'s PEP-562 deferral of LazyFeatureCollection.
-        from pyramids.netcdf._lazy_cube import LazyNetCDF
+        # The lazy cube now lives in the pyramids-lazy compute backend. Forward the public name to
+        # the backend's class so `pyramids.netcdf.LazyNetCDF` and `isinstance(x, LazyNetCDF)` keep
+        # working; require_compute_backend() raises the branded OptionalPackageDoesNotExist when no
+        # backend is installed (bare core), instead of an ImportError.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        require_compute_backend()
+        from pyramids_lazy import LazyNetCDF
 
         return LazyNetCDF
     if name == "UgridDataset":

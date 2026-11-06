@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from pyramids.netcdf._lazy_cube import LazyNetCDF
+from pyramids_lazy._lazy_cube import LazyNetCDF
 from tests._marks import requires_dask
 
 pytestmark = pytest.mark.netcdf_lazy

@@ -57,8 +57,8 @@ class TestApplyUnpack:
 
     def test_reexported_identity(self):
         """`_lazy` re-exports the canonical `base._utils` primitive (deprecated alias; one object)."""
-        from pyramids.netcdf._lazy import _apply_unpack
-        from pyramids.netcdf._lazy import apply_unpack as lazy_fn
+        from pyramids_lazy._lazy import _apply_unpack
+        from pyramids_lazy._lazy import apply_unpack as lazy_fn
 
         assert apply_unpack is lazy_fn is _apply_unpack, "one shared primitive"
 

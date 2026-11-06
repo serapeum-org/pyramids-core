@@ -55,7 +55,7 @@ class TestToKerchunkSingleFile:
         translator rather than crash. A non-existent path stands in for a remote
         URL without needing the network.
         """
-        from pyramids.netcdf._kerchunk_facade import to_kerchunk
+        from pyramids_lazy._kerchunk_facade import to_kerchunk
 
         missing = tmp_path / "does_not_exist.nc"  # os.path.exists -> False
         missing_str = str(missing)
@@ -75,7 +75,7 @@ class TestToKerchunkSingleFile:
         """
         import warnings
 
-        from pyramids.netcdf._kerchunk_facade import to_kerchunk
+        from pyramids_lazy._kerchunk_facade import to_kerchunk
 
         not_hdf5 = tmp_path / "plain.txt"
         not_hdf5.write_text("this is not an HDF5 file")
@@ -152,7 +152,7 @@ class TestImportError:
         """Explicitly forcing the kerchunk backend still requires kerchunk."""
         import builtins
 
-        from pyramids.netcdf._kerchunk_facade import to_kerchunk
+        from pyramids_lazy._kerchunk_facade import to_kerchunk
 
         real_import = builtins.__import__
 
@@ -171,7 +171,7 @@ class TestImportError:
         """Forcing the kerchunk backend on combine still requires kerchunk."""
         import builtins
 
-        from pyramids.netcdf._kerchunk_facade import combine_kerchunk
+        from pyramids_lazy._kerchunk_facade import combine_kerchunk
 
         real_import = builtins.__import__
 

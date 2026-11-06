@@ -6600,7 +6600,7 @@ class NetCDF(Dataset):
                 store no longer holds these cells. Read it eagerly instead.
         """
         # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.netcdf._lazy import build_lazy_array
+        from pyramids.base._compute_backend import require_compute_backend
 
         parent = self._parent_nc if self._parent_nc is not None else self
         # Prefer the real /vsimem backing path over a cosmetic from_bytes `name=` that shadows
@@ -6634,7 +6634,8 @@ class NetCDF(Dataset):
             flips = (bool(self._md_y_flipped), bool(self._md_x_flipped))
         return cast(
             ArrayLike,
-            build_lazy_array(
+            require_compute_backend().read_array_lazy(
+                self,
                 path=path,
                 variable_name=var_name,
                 chunks=chunks,
@@ -8255,31 +8256,11 @@ class NetCDF(Dataset):
             ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
             OptionalPackageDoesNotExist: dask is not installed — install the `lazy` extra.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
-        from pyramids.netcdf._lazy_cube import LazyNetCDF
+        # Dispatch to the lazy compute backend (pyramids-lazy), which does the per-variable lazy
+        # read + builds the LazyNetCDF; raises the branded OptionalPackageDoesNotExist when absent.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        if _interop._is_in_memory(self):
-            raise ValueError(
-                "chunk() needs a file-backed cube: the lazy read reopens the store per block, and "
-                "this cube has no on-disk path. Write it with to_file() first, or operate eagerly."
-            )
-        pinned = self._source_var_name
-        if pinned is None:
-            names = list(self._spatial_variable_names())
-        else:
-            names = [pinned]
-        arrays: dict[str, Any] = {}
-        dim_names: dict[str, tuple[str, ...]] = {}
-        for name in names:
-            var = self if pinned is not None else self._require_raster_variable(name)
-            array = (
-                self.read_array(chunks=chunks, squeeze=False)
-                if pinned is not None
-                else self.read_array(name, chunks=chunks, squeeze=False)
-            )
-            arrays[name] = array
-            dim_names[name] = _lazy_cube_dim_names(var, array.ndim)
-        return LazyNetCDF(self, arrays, dim_names)
+        return require_compute_backend().build_lazy_cube(self, chunks)
 
     @_joins_cubes
     def concat(self, objs: Any, dim: str) -> NetCDF:

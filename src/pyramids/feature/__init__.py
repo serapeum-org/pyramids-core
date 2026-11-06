@@ -70,7 +70,13 @@ def __getattr__(name: str) -> object:
     """
     if name == "LazyFeatureCollection":
         if _HAS_DASK_GEOPANDAS:
-            from pyramids.feature._lazy_collection import LazyFeatureCollection
+            # The lazy vector collection now lives in the pyramids-lazy compute backend; forward the
+            # public name to it. require_compute_backend() raises the branded
+            # OptionalPackageDoesNotExist when no backend is installed.
+            from pyramids.base._compute_backend import require_compute_backend
+
+            require_compute_backend()
+            from pyramids_lazy import LazyFeatureCollection
 
             return LazyFeatureCollection
         raise ImportError(_LAZY_FC_INSTALL_HINT)
@@ -143,8 +149,12 @@ def is_lazy_fc(obj: object) -> bool:
     """
     if not _HAS_DASK_GEOPANDAS:
         return False
-    from pyramids.feature._lazy_collection import LazyFeatureCollection
-
+    # Check against the backend's class (the lazy collection moved to pyramids-lazy). Stay safe on a
+    # no-backend install: no object can be a LazyFeatureCollection there, so return False.
+    try:
+        from pyramids_lazy import LazyFeatureCollection
+    except Exception:
+        return False
     return isinstance(obj, LazyFeatureCollection)
 
 

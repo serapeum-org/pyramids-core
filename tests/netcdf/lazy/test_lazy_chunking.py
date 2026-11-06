@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import NetCDF
-from pyramids.netcdf._lazy import (
+from pyramids_lazy._lazy import (
     _auto_chunks,
     _default_chunks,
     _expand_chunks,

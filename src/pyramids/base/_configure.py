@@ -291,6 +291,10 @@ def configure_lazy_vector(
         from pyramids.feature import _read as _fc_mod
 
         _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(target_bytes_per_partition)
+        # The lazy-vector partitioning now runs in the pyramids-lazy backend; tune its knob too so
+        # the setting actually takes effect. Guarded: a bare core (no backend) just keeps the
+        # core-side value, which is harmless since the dask read then raises the branded error.
+        _set_lazy_backend_partition_bytes(int(target_bytes_per_partition))
         applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
     logger.debug(
         "configure_lazy_vector applied %d setting(s)",
@@ -299,6 +303,20 @@ def configure_lazy_vector(
     if client is not None:
         _register_lazy_vector_worker_plugin(client, applied)
     return applied
+
+
+def _set_lazy_backend_partition_bytes(value: int) -> None:
+    """Set the pyramids-lazy backend's lazy-vector partition-size knob, if the backend is present.
+
+    ``configure_lazy_vector`` tunes ``pyramids.feature._read`` (core's copy), but the live
+    partitioning runs in ``pyramids_lazy._vector_read``; mirror the value there so the setting is
+    effective. A no-op when the backend is not installed.
+    """
+    try:
+        from pyramids_lazy import _vector_read as _lazy_fc_mod
+    except Exception:  # pragma: no cover - no backend installed
+        return
+    _lazy_fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(value)
 
 
 def _register_lazy_vector_worker_plugin(
@@ -326,6 +344,9 @@ def _register_lazy_vector_worker_plugin(
 
                 _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(
                     self._settings["target_bytes_per_partition"]
+                )
+                _set_lazy_backend_partition_bytes(
+                    int(self._settings["target_bytes_per_partition"])
                 )
 
     _register_plugin(

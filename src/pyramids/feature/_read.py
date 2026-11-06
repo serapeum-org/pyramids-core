@@ -890,7 +890,10 @@ def read_file(
         return _read_remote_geojson_staged(fc_cls, path, passthrough)
     resolved = _pyramids_io._parse_path(path)
     if backend == "dask":
-        return read_file_dask(
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded error when absent.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().read_vector_lazy(
             resolved,
             layer=layer,
             bbox=bbox,
@@ -1391,7 +1394,10 @@ def read_parquet(
         else _pyramids_io._parse_path(path)
     )
     if backend == "dask":
-        return read_parquet_dask(
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded error when absent.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().read_vector_parquet_lazy(
             resolved,
             columns=columns,
             split_row_groups=split_row_groups,

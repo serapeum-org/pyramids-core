@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from pyramids.netcdf import GeoReference, LabeledArray, NetCDF
-from pyramids.netcdf._kerchunk_facade import _normalize_backend
+from pyramids_lazy._kerchunk_facade import _normalize_backend
 from pyramids.netcdf.labeled import _is_zarr_store, _LabeledArray
 from pyramids.netcdf.models import CFInfo
 
