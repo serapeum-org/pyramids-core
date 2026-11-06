@@ -314,6 +314,11 @@ class TestNcInfoFull:
         assert "variables" in payload
         assert "dimensions" in payload
 
+    def test_full_and_json_are_mutually_exclusive(self):
+        """--full and --json together are rejected at argparse, not silently merged (N3)."""
+        with pytest.raises(SystemExit):
+            main(["nc", "info", str(_NC_TIME), "--full", "--json"])
+
 
 class TestNcGroups:
     """`pyramids nc groups` (issue #1467)."""

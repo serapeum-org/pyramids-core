@@ -38,7 +38,8 @@ def _cmd_nc_info(args: argparse.Namespace) -> int:
 
     The default is a compact summary (optionally ``--json``). ``--full`` instead prints
     :meth:`NetCDF.info`'s complete ncdump-style report — every dimension, variable with
-    its axes, and global/variable attribute — as text (``--json`` does not apply to it).
+    its axes, and global/variable attribute — as text. ``--full`` and ``--json`` are
+    mutually exclusive (the full report is text-only), so the parser rejects both.
 
     Args:
         args: Parsed args with ``file``, ``json``, and ``full``.
@@ -233,8 +234,11 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
 
     nc_info = ncsub.add_parser("info", help="summarize a NetCDF file")
     nc_info.add_argument("file", help=_HELP_NC_FILE)
-    nc_info.add_argument("--json", action="store_true", help="emit JSON")
-    nc_info.add_argument(
+    info_fmt = nc_info.add_mutually_exclusive_group()
+    info_fmt.add_argument(
+        "--json", action="store_true", help="emit the compact summary as JSON"
+    )
+    info_fmt.add_argument(
         "--full",
         action="store_true",
         help="print the full ncdump-style report (dims/vars/attrs) as text",
