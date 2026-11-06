@@ -300,6 +300,9 @@ def _cmd_collection_to_cog(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
+    # Refuse a non-empty output dir up front for parity with the other collection
+    # writers (to_cog_stack still owns per-file overwrite semantics below).
+    _guard_output_dir(args.output, args.overwrite)
     # Validate --pattern up front: to_cog_stack formats it with {name}/{i}, so an
     # unknown placeholder or a missing {i} would otherwise collide/leak mid-loop.
     validate_index_pattern(args.pattern, name=args.name)

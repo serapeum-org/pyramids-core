@@ -567,6 +567,16 @@ class TestCollectionToCogPattern:
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
         assert "{i}" in err, f"message should require {{i}}, got: {err!r}"
 
+    def test_nonempty_output_dir_refused(self, tmp_path, capsys):
+        """A non-empty output dir is refused up front, for parity with siblings (L2)."""
+        out = tmp_path / "cog"
+        out.mkdir()
+        (out / "stale.txt").write_text("x", encoding="utf-8")
+        rc = main(["collection", "to-cog", "no/such/*.tif", str(out)])
+        err = capsys.readouterr().err
+        assert rc == 1, "a non-empty output dir must be refused"
+        assert "not empty" in err, f"should be the output-dir guard, got: {err!r}"
+
 
 class TestCollectionAlign:
     """`pyramids collection align` — align every timestep to a reference grid."""
