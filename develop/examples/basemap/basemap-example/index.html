@@ -9037,7 +9037,12 @@ print(f"\nAvailable provider groups: {list(xyz.keys())}")</div>
 <span class="n">arr</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span>
     <span class="n">arr</span><span class="p">,</span>
-    <span class="n">extent</span><span class="o">=</span><span class="p">[</span><span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+    <span class="n">extent</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+    <span class="p">],</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"coolwarm"</span><span class="p">,</span>
     <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
     <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -9059,7 +9064,12 @@ fig, ax = plt.subplots(figsize=(10, 8))
 arr = ds.read_array(band=0)
 ax.imshow(
     arr,
-    extent=[ds.total_bounds[0], ds.total_bounds[2], ds.total_bounds[1], ds.total_bounds[3]],
+    extent=[
+        ds.total_bounds[0],
+        ds.total_bounds[2],
+        ds.total_bounds[1],
+        ds.total_bounds[3],
+    ],
     cmap="coolwarm",
     alpha=0.7,
     zorder=1,
