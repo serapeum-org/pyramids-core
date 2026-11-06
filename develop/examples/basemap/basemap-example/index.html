@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8741,13 +8741,13 @@ plt.show()</div>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"../../../examples/data/geotiff/coello-without-color-table.tif"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CRS: EPSG:</span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Shape: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BBox: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">bbox</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BBox: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5"># Load a raster dataset (UTM projection, EPSG:32618)
 ds = Dataset.read_file("../../../examples/data/geotiff/coello-without-color-table.tif")
 print(f"CRS: EPSG:{ds.epsg}")
 print(f"Shape: {ds.shape}")
-print(f"BBox: {ds.bbox}")</div>
+print(f"BBox: {ds.total_bounds}")</div>
 </div>
 </div>
 </div>
@@ -9037,7 +9037,12 @@ print(f"\nAvailable provider groups: {list(xyz.keys())}")</div>
 <span class="n">arr</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span>
     <span class="n">arr</span><span class="p">,</span>
-    <span class="n">extent</span><span class="o">=</span><span class="p">[</span><span class="n">ds</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+    <span class="n">extent</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+    <span class="p">],</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"coolwarm"</span><span class="p">,</span>
     <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
     <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -9059,7 +9064,12 @@ fig, ax = plt.subplots(figsize=(10, 8))
 arr = ds.read_array(band=0)
 ax.imshow(
     arr,
-    extent=[ds.bbox[0], ds.bbox[2], ds.bbox[1], ds.bbox[3]],
+    extent=[
+        ds.total_bounds[0],
+        ds.total_bounds[2],
+        ds.total_bounds[1],
+        ds.total_bounds[3],
+    ],
     cmap="coolwarm",
     alpha=0.7,
     zorder=1,

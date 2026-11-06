@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8710,7 +8710,7 @@ print(dataset)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x769b12aeb8c0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7fe981117770&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9332,9 +9332,9 @@ print(dataset.top_left_corner)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">bbox</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-15">print(dataset.bbox)</div>
+<div class="clipboard-copy-txt" id="cell-15">print(dataset.total_bounds)</div>
 </div>
 </div>
 </div>
@@ -9346,7 +9346,7 @@ print(dataset.top_left_corner)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>[-110.0, -59.9, -25.0, 18.1]
+<pre>[-110.   -59.9  -25.    18.1]
 </pre>
 </div>
 </div>
@@ -10139,9 +10139,9 @@ source file name, and any key/value metadata tags.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">meta_data</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-22">print(dataset.meta_data)</div>
+<div class="clipboard-copy-txt" id="cell-22">print(dataset.metadata)</div>
 </div>
 </div>
 </div>
