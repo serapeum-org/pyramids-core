@@ -19,6 +19,7 @@ import pytest
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli import main
 from pyramids.cli_vector_tess import add_vector_tess_commands
+from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
 
 pytestmark = pytest.mark.core
@@ -207,6 +208,123 @@ class TestFishnet:
         argv = ["fishnet", out, "--bounds", "0", "0", "10", "10", "--cell-size", "0"]
         with pytest.raises(_CAUGHT):
             run([*argv, "--epsg", "4326"])
+
+
+class TestVoronoi:
+    """`pyramids vector voronoi` (the pyramids-own value-add form) — issue #1468."""
+
+    def test_writes_cells_with_values(self, tmp_path):
+        """One Thiessen cell per point, carrying the copied --values column."""
+        out = str(tmp_path / "vor.geojson")
+        assert run(["voronoi", _POINTS, out, "--values", "id"]) == 0
+        written = FeatureCollection.read_file(out)
+        assert written.__len__() == 6
+        assert "id" in written.columns
+        assert _geom_types(out) == {"Polygon"}
+
+    def test_clips_to_boundary(self, tmp_path):
+        """--clip intersects every cell with the boundary layer's polygons."""
+        out = str(tmp_path / "vorc.geojson")
+        assert run(["voronoi", _POINTS, out, "--clip", _POLYGONS]) == 0
+        assert _geom_types(out) == {"Polygon"}
+
+    def test_bad_values_column_raises(self, tmp_path):
+        """A --values column that is absent surfaces a caught error."""
+        out = str(tmp_path / "vor.geojson")
+        with pytest.raises(_CAUGHT):
+            run(["voronoi", _POINTS, out, "--values", "nope"])
+
+    def test_refuses_existing(self, tmp_path):
+        """An existing output without --overwrite is refused."""
+        out = _touch(tmp_path / "vor.geojson")
+        with pytest.raises(_CAUGHT):
+            run(["voronoi", _POINTS, out])
+
+
+class TestQuadtree:
+    """`pyramids vector quadtree` — issue #1468."""
+
+    def test_count_cells(self, tmp_path):
+        """With nmax=1 the per-cell counts total the input points."""
+        out = str(tmp_path / "qt.geojson")
+        assert run(["quadtree", _POINTS, out, "--nmax", "1"]) == 0
+        written = FeatureCollection.read_file(out)
+        assert int(written["count"].sum()) == 6
+        assert _geom_types(out) == {"Polygon"}
+
+    def test_aggregate_column(self, tmp_path):
+        """--column with --agg attaches the aggregate under the column name."""
+        out = str(tmp_path / "qtc.geojson")
+        assert run(["quadtree", _POINTS, out, "--column", "id", "--agg", "mean"]) == 0
+        assert "id" in FeatureCollection.read_file(out).columns
+
+    def test_clips_to_boundary(self, tmp_path):
+        """--clip intersects every kept cell with the boundary layer."""
+        out = str(tmp_path / "qtclip.geojson")
+        assert run(["quadtree", _POINTS, out, "--nmax", "1", "--clip", _POLYGONS]) == 0
+        assert _geom_types(out) == {"Polygon"}
+
+    def test_bad_nmax_raises(self, tmp_path):
+        """A non-positive --nmax surfaces a caught error."""
+        out = str(tmp_path / "qt.geojson")
+        with pytest.raises(_CAUGHT):
+            run(["quadtree", _POINTS, out, "--nmax", "0"])
+
+    def test_refuses_existing(self, tmp_path):
+        """An existing output without --overwrite is refused."""
+        out = _touch(tmp_path / "qt.geojson")
+        with pytest.raises(_CAUGHT):
+            run(["quadtree", _POINTS, out])
+
+
+class TestInterpolateToRaster:
+    """`pyramids vector interpolate-to-raster` — issue #1468."""
+
+    def test_writes_single_band_raster(self, tmp_path):
+        """IDW gridding a numeric column yields a one-band raster in the layer CRS."""
+        out = str(tmp_path / "idw.tif")
+        argv = ["interpolate-to-raster", _POINTS, out, "--column", "id"]
+        assert run([*argv, "--cell-size", "1000"]) == 0
+        surface = Dataset.read_file(out)
+        assert surface.band_count == 1
+        assert surface.epsg == 32618
+
+    def test_explicit_bounds_and_neighbors(self, tmp_path):
+        """--bounds and --n-neighbors are forwarded and still yield a one-band raster."""
+        out = str(tmp_path / "idwb.tif")
+        argv = [
+            "interpolate-to-raster",
+            _POINTS,
+            out,
+            "--column",
+            "id",
+            "--cell-size",
+            "2000",
+            "--bounds",
+            "440000",
+            "480000",
+            "466000",
+            "504000",
+            "--n-neighbors",
+            "3",
+            "--power",
+            "1.5",
+        ]
+        assert run(argv) == 0
+        assert Dataset.read_file(out).band_count == 1
+
+    def test_bad_method_raises(self, tmp_path):
+        """A --method other than idw surfaces a caught error."""
+        out = str(tmp_path / "idw.tif")
+        argv = ["interpolate-to-raster", _POINTS, out, "--column", "id"]
+        with pytest.raises(_CAUGHT):
+            run([*argv, "--method", "kriging"])
+
+    def test_refuses_existing(self, tmp_path):
+        """An existing output without --overwrite is refused."""
+        out = _touch(tmp_path / "idw.tif")
+        with pytest.raises(_CAUGHT):
+            run(["interpolate-to-raster", _POINTS, out, "--column", "id"])
 
 
 class TestGeodesicArea:

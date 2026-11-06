@@ -218,3 +218,141 @@ class TestParquetExtraMissing:
         assert rc == 1
         assert "parquet" in err
         assert "unexpected failure" not in err
+
+
+_GPX = (
+    '<?xml version="1.0"?>\n'
+    '<gpx version="1.1" creator="t" xmlns="http://www.topografix.com/GPX/1/1">'
+    '<wpt lat="1.0" lon="2.0"><name>wp1</name></wpt>'
+    "<trk><name>t1</name><trkseg>"
+    '<trkpt lat="1.0" lon="2.0"/><trkpt lat="1.1" lon="2.1"/>'
+    "</trkseg></trk></gpx>"
+)
+
+
+class TestFromXyz:
+    """`vector from-xyz` — issue #1468."""
+
+    def test_builds_point_layer_with_value(self, tmp_path):
+        """The x/y/z columns of a CSV become a point layer carrying the z column."""
+        csv = tmp_path / "xyz.csv"
+        csv.write_text("x,y,z\n0,0,10\n1,1,20\n2,2,30\n", encoding="utf-8")
+        out = tmp_path / "pts.geojson"
+        argv = ["from-xyz", str(csv), str(out), "--x", "x", "--y", "y", "--z", "z"]
+        assert _run([*argv, "--crs", "EPSG:4326"]) == 0
+        fc = FeatureCollection.read_file(str(out))
+        assert len(fc) == 3
+        assert "z" in fc.columns
+
+    def test_without_z_is_bare_point_layer(self, tmp_path):
+        """Omitting --z builds a point layer with no value column."""
+        csv = tmp_path / "xy.csv"
+        csv.write_text("lon,lat\n0,0\n1,1\n", encoding="utf-8")
+        out = tmp_path / "bare.geojson"
+        assert _run(["from-xyz", str(csv), str(out), "--x", "lon", "--y", "lat"]) == 0
+        assert len(FeatureCollection.read_file(str(out))) == 2
+
+    def test_missing_column_errors(self, tmp_path):
+        """A --x naming an absent column exits 1 cleanly (lookup error remapped)."""
+        csv = tmp_path / "xy.csv"
+        csv.write_text("a,b\n0,0\n", encoding="utf-8")
+        out = tmp_path / "o.geojson"
+        assert _run(["from-xyz", str(csv), str(out), "--x", "nope", "--y", "b"]) == 1
+
+
+class TestFromFeatures:
+    """`vector from-features` — issue #1468."""
+
+    def test_feature_collection_mapping(self, tmp_path):
+        """A GeoJSON FeatureCollection mapping is read into an FC."""
+        data = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"name": "a"},
+                },
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [1, 1]},
+                    "properties": {"name": "b"},
+                },
+            ],
+        }
+        src = tmp_path / "fc.json"
+        src.write_text(json.dumps(data), encoding="utf-8")
+        out = tmp_path / "ff.geojson"
+        assert _run(["from-features", str(src), str(out), "--crs", "EPSG:4326"]) == 0
+        assert len(FeatureCollection.read_file(str(out))) == 2
+
+    def test_bare_feature_list(self, tmp_path):
+        """A bare list of feature dicts is also accepted (the else branch)."""
+        feats = [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [0, 0]},
+                "properties": {"name": "a"},
+            }
+        ]
+        src = tmp_path / "list.json"
+        src.write_text(json.dumps(feats), encoding="utf-8")
+        out = tmp_path / "ffl.geojson"
+        assert _run(["from-features", str(src), str(out)]) == 0
+        assert len(FeatureCollection.read_file(str(out))) == 1
+
+
+class TestFromRecords:
+    """`vector from-records` — issue #1468."""
+
+    def test_builds_from_wkt_csv(self, tmp_path):
+        """A CSV whose geometry column holds WKT becomes a point FC with attributes."""
+        csv = tmp_path / "rec.csv"
+        csv.write_text("id,geometry\n1,POINT (0 0)\n2,POINT (1 1)\n", encoding="utf-8")
+        out = tmp_path / "rec.geojson"
+        assert _run(["from-records", str(csv), str(out), "--crs", "EPSG:4326"]) == 0
+        fc = FeatureCollection.read_file(str(out))
+        assert len(fc) == 2
+        assert "id" in fc.columns
+
+    def test_missing_geometry_column_errors(self, tmp_path):
+        """A CSV with no geometry column exits 1 cleanly (lookup error remapped)."""
+        csv = tmp_path / "norec.csv"
+        csv.write_text("id,value\n1,5\n", encoding="utf-8")
+        out = tmp_path / "o.geojson"
+        assert _run(["from-records", str(csv), str(out)]) == 1
+
+
+class TestReadGpx:
+    """`vector read-gpx` — issue #1468."""
+
+    def test_writes_sublayers_to_gpkg(self, tmp_path):
+        """Each non-empty GPX sub-layer becomes a named layer in the output GPKG."""
+        src = tmp_path / "t.gpx"
+        src.write_text(_GPX, encoding="utf-8")
+        out = tmp_path / "g.gpkg"
+        assert _run(["read-gpx", str(src), str(out)]) == 0
+        waypoints = FeatureCollection.read_file(str(out), layer="waypoints")
+        assert len(waypoints) == 1
+
+    def test_refuses_existing(self, tmp_path):
+        """An existing output without --overwrite is refused."""
+        src = tmp_path / "t.gpx"
+        src.write_text(_GPX, encoding="utf-8")
+        out = tmp_path / "g.gpkg"
+        out.write_text("placeholder", encoding="utf-8")
+        assert _run(["read-gpx", str(src), str(out)]) == 1
+
+    def test_no_sublayers_errors(self, tmp_path, monkeypatch, capsys):
+        """A GPX with no non-empty sub-layers exits 1 cleanly, not the catch-all."""
+        src = tmp_path / "t.gpx"
+        src.write_text(_GPX, encoding="utf-8")
+        monkeypatch.setattr(
+            cli_vector_io.FeatureCollection,
+            "read_gpx_layers",
+            classmethod(lambda cls, path: {}),
+        )
+        rc = _run(["read-gpx", str(src), str(tmp_path / "g.gpkg")])
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "unexpected failure" not in err

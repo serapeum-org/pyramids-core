@@ -18,6 +18,93 @@ from collections.abc import Iterator
 from typing import Any
 
 
+@contextlib.contextmanager
+def needs_lazy_extra() -> Iterator[None]:
+    """Remap a missing-``[lazy]`` ``ImportError`` to a clean ``ValueError``.
+
+    The kerchunk / multi-file / Zarr readers and writers import ``zarr`` / ``kerchunk``
+    from the optional ``[lazy]`` extra; its absence raises a raw ``ImportError``, which
+    :func:`pyramids.cli.main` does not catch — it would surface as the internal-bug
+    "unexpected failure" branch. Wrapping the call turns that into a clean user error
+    naming the extra to install.
+
+    Yields:
+        None: Control returns to the wrapped block.
+
+    Raises:
+        ValueError: A dependency from the ``[lazy]`` extra (``zarr`` / ``kerchunk``) is
+            not installed.
+    """
+    try:
+        yield
+    except ImportError as exc:
+        raise ValueError(
+            "this command needs the optional [lazy] extra (zarr/kerchunk); install it "
+            "with `pip install pyramids-gis[lazy]`"
+        ) from exc
+
+
+@contextlib.contextmanager
+def needs_parquet_extra() -> Iterator[None]:
+    """Remap a missing-``[parquet]`` ``ImportError`` to a clean ``ValueError``.
+
+    Writing Parquet imports ``pyarrow`` from the optional ``[parquet]`` extra; its
+    absence raises a raw ``ImportError`` that :func:`pyramids.cli.main` does not catch.
+    Wrapping the call turns it into a clean user error naming the extra to install.
+
+    Yields:
+        None: Control returns to the wrapped block.
+
+    Raises:
+        ValueError: ``pyarrow`` (the ``[parquet]`` extra) is not installed.
+    """
+    try:
+        yield
+    except ImportError as exc:
+        raise ValueError(
+            "this command needs the optional [parquet] extra (pyarrow); install it "
+            "with `pip install pyramids-gis[parquet]`"
+        ) from exc
+
+
+def validate_index_pattern(pattern: str, **sample: object) -> None:
+    """Validate a per-item filename ``--pattern`` before the write loop runs.
+
+    A per-slice/-window writer formats ``pattern`` with a ``{i}`` index (plus any
+    ``sample`` placeholders, e.g. ``{name}``). Two failure modes are caught here, up
+    front, so neither surfaces mid-loop:
+
+    - an unknown placeholder would raise a raw ``KeyError`` / ``IndexError`` that
+      :func:`pyramids.cli.main` does not catch (it reports "unexpected failure");
+    - a pattern with no ``{i}`` formats identically for every item, so the loop would
+      silently overwrite every item onto one path and exit 0 with only the last kept.
+
+    Args:
+        pattern: The user's ``--pattern`` template.
+        **sample: Sample values for the non-index placeholders the writer also binds
+            (e.g. ``name="slice"``); ``i`` is always probed and need not be passed.
+
+    Raises:
+        ValueError: ``pattern`` uses a placeholder outside ``{i}`` / ``sample``, or it
+            does not include ``{i}`` (so items would collide on one path).
+    """
+    probe = {"i": 0, **sample}
+    allowed = ", ".join("{" + key + "}" for key in sorted(probe))
+    try:
+        first = pattern.format(**probe)
+        second = pattern.format(**{**probe, "i": 1})
+    except (KeyError, IndexError) as exc:
+        raise ValueError(
+            f"--pattern {pattern!r} uses an unknown placeholder {exc}; "
+            f"available placeholders: {allowed}"
+        ) from exc
+    if first == second:
+        raise ValueError(
+            f"--pattern {pattern!r} must include the {{i}} index placeholder so each "
+            "item is written to a distinct path"
+        )
+
+
 def require_matching_crs(left: Any, right: Any) -> None:
     """Raise if two layers carry a different CRS.
 

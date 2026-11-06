@@ -24,6 +24,8 @@ _DATA = Path(__file__).parents[1] / "data" / "netcdf"
 _NC_MULTI = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
 # Four data variables (Band1..Band4), no time axis — to exercise the single-variable guard.
 _NC_MULTIVAR = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
+# CF file whose `ua` is (time, plev, lat, lon) — a non-spatial `plev` to select in `subset`.
+_NC_WIDE = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 
 MULTI = str(_NC_MULTI)
 OVERWRITE = "--overwrite"
@@ -254,3 +256,87 @@ class TestSingleVariableGuard:
         out = str(tmp_path / "thin.nc")
         with pytest.raises(ValueError, match="single-variable"):
             run(["thin", str(_NC_MULTIVAR), out, "--step", "lat=2", OVERWRITE])
+
+
+class TestNcSubset:
+    """`pyramids nc subset` (issue #1467)."""
+
+    def test_selects_variable_and_extra_dim(self, tmp_path):
+        """--var ua --dim plev=0 writes a single-variable georeferenced raster."""
+        out = str(tmp_path / "subset.nc")
+        rc = run(
+            ["subset", str(_NC_WIDE), out, "--var", "ua", "--dim", "plev=0", OVERWRITE]
+        )
+        assert rc == 0
+        assert NetCDF.read_file(out).epsg is not None
+
+    def test_bbox_and_crs_window(self, tmp_path):
+        """A --bbox in --crs crops the selected plane without error."""
+        out = str(tmp_path / "subset_bbox.nc")
+        rc = run(
+            [
+                "subset",
+                str(_NC_WIDE),
+                out,
+                "--var",
+                "ua",
+                "--dim",
+                "plev=0",
+                "--bbox",
+                "-50",
+                "-50",
+                "50",
+                "50",
+                "--crs",
+                "4326",
+                OVERWRITE,
+            ]
+        )
+        assert rc == 0
+
+    def test_bbox_string_crs_window(self, tmp_path):
+        """--crs accepts a CRS string (e.g. 'EPSG:4326'), not only an EPSG int (L1)."""
+        out = str(tmp_path / "subset_strcrs.nc")
+        rc = run(
+            [
+                "subset",
+                str(_NC_WIDE),
+                out,
+                "--var",
+                "ua",
+                "--dim",
+                "plev=0",
+                "--bbox",
+                "-50",
+                "-50",
+                "50",
+                "50",
+                "--crs",
+                "EPSG:4326",
+                OVERWRITE,
+            ]
+        )
+        assert rc == 0, "a string CRS must be accepted, not rejected by argparse"
+
+    def test_unselected_dimension_raises(self, tmp_path):
+        """Leaving the length>1 plev dimension unselected surfaces as a ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["subset", str(_NC_WIDE), out, "--var", "ua", OVERWRITE])
+
+    def test_bad_dim_token_raises(self, tmp_path):
+        """A malformed --dim token is refused with a ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(
+                [
+                    "subset",
+                    str(_NC_WIDE),
+                    out,
+                    "--var",
+                    "ua",
+                    "--dim",
+                    "plev",
+                    OVERWRITE,
+                ]
+            )

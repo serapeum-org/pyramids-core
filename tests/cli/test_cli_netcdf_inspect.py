@@ -173,6 +173,31 @@ class TestNcTimeValues:
         assert main(["nc", "time-values", str(_NC)]) == 0
         assert "time:" in capsys.readouterr().out
 
+    def test_raw_emits_numeric_offsets(self, capsys):
+        """--raw emits the stored numeric offsets instead of decoded labels (issue #1467)."""
+        assert main(["nc", "time-values", str(_NC), "--raw", "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["values"]
+        assert all(isinstance(value, (int, float)) for value in payload["values"])
+
+    def test_raw_non_time_var_is_empty(self, capsys):
+        """--raw on a non-time variable yields an empty list and exits 0 (issue #1467)."""
+        assert (
+            main(
+                [
+                    "nc",
+                    "time-values",
+                    str(_NC),
+                    "--var",
+                    "nosuchtime",
+                    "--raw",
+                    "--json",
+                ]
+            )
+            == 0
+        )
+        assert json.loads(capsys.readouterr().out)["values"] == []
+
 
 class TestNcSetAttr:
     """`pyramids nc set-attr`."""

@@ -27,6 +27,7 @@ _HELP_SRC = "source vector path"
 _HELP_OUT = "destination vector path"
 _HELP_LAYER = "layer name/index for multi-layer sources"
 _HELP_OVERWRITE = "replace the output if it already exists"
+_HELP_DRIVER = "OGR driver (default: inferred from extension)"
 
 
 def _write_result(args: argparse.Namespace, result: object) -> None:
@@ -462,6 +463,48 @@ def _cmd_vector_set_precision(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_vector_with_coordinates(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector with-coordinates`` — attach per-vertex x/y columns.
+
+    Writes a copy of the source with ``x`` and ``y`` coordinate columns added (scalar
+    for points, per-vertex sequences for lines/polygons).
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``driver``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    result = fc.with_coordinates()
+    result.to_file(args.output, driver=resolve_vector_driver(args.output, args.driver))
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_vector_with_centroid(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector with-centroid`` — attach per-feature centroid columns.
+
+    Writes a copy of the source with ``x``/``y``/``avg_x``/``avg_y`` and a
+    ``center_point`` column (the per-feature center point) added.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``driver``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    result = fc.with_centroid()
+    result.to_file(args.output, driver=resolve_vector_driver(args.output, args.driver))
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def _add_io(parser: argparse.ArgumentParser) -> None:
     """Add the shared ``src``/``output``/``--layer``/``--overwrite`` arguments.
 
@@ -656,3 +699,15 @@ def add_vector_geom_commands(vsub: argparse._SubParsersAction) -> None:
         "--grid-size", type=float, required=True, help="coordinate grid size"
     )
     prec.set_defaults(func=_cmd_vector_set_precision)
+
+    wc = vsub.add_parser(
+        "with-coordinates", help="attach per-vertex x/y coordinate columns"
+    )
+    _add_io(wc)
+    wc.add_argument("--driver", help=_HELP_DRIVER)
+    wc.set_defaults(func=_cmd_vector_with_coordinates)
+
+    wcen = vsub.add_parser("with-centroid", help="attach per-feature centroid columns")
+    _add_io(wcen)
+    wcen.add_argument("--driver", help=_HELP_DRIVER)
+    wcen.set_defaults(func=_cmd_vector_with_centroid)
