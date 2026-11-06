@@ -294,3 +294,13 @@ class TestNcOpenMf:
         assert payload["files"] == 2
         assert payload["shape"][0] == 2
         assert payload["variable"] == "t"
+
+    @pytest.mark.lazy
+    def test_text_output_reports_stack(self, tmp_path, capsys):
+        """Without --json the stack report prints as 'key: value' lines."""
+        a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
+        b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
+        assert main(["nc", "open-mf", "--paths", a, b, "--var", "t"]) == 0
+        out = capsys.readouterr().out
+        assert "variable: t" in out
+        assert "files: 2" in out

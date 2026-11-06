@@ -96,6 +96,11 @@ class TestParseCoords:
         with pytest.raises(ValueError, match="non-numeric"):
             _parse_coords(["time=abc"])
 
+    def test_empty_dimension_name_raises(self):
+        """A token whose dimension name is empty (e.g. '=5') is rejected."""
+        with pytest.raises(ValueError, match="empty dimension name"):
+            _parse_coords(["=5"])
+
 
 class TestConvertCalendar:
     """`pyramids nc convert-calendar`."""

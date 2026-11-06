@@ -329,6 +329,13 @@ class TestNcGroups:
         assert main(["nc", "groups", str(_NC), "--json"]) == 0
         assert json.loads(capsys.readouterr().out)["groups"] == []
 
+    def test_text_output_lists_names(self, capsys):
+        """Without --json the group names print as an indented bullet list."""
+        assert main(["nc", "groups", str(_NC_GROUPS)]) == 0
+        out = capsys.readouterr().out
+        assert out.startswith(f"file: {_NC_GROUPS}")
+        assert "  - " in out, "each group name prints as an indented bullet"
+
 
 class TestNcGetGroup:
     """`pyramids nc get-group` (issue #1467)."""
