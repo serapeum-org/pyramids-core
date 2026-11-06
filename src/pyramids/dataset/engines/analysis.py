@@ -1762,11 +1762,20 @@ class Analysis(_Engine["Dataset"]):
         short list of ``np.<func>`` calls (``where``, ``clip``, ``log``, ``log10``,
         ``exp``, ``sqrt``, ``abs``, ``minimum``, ``maximum``, ``power``) are allowed.
 
-        Unlike :meth:`combine`, the expression sees the **raw** arrays
-        (``read_array(squeeze=True)``): no-data cells take part in the arithmetic and
-        no packing or domain masking is applied. The result is wrapped back into a
-        dataset of this one's class, carrying this dataset's geotransform, CRS and
-        dataset-level metadata.
+        The expression sees the arrays as ``read_array(squeeze=True)`` returns them --
+        in **physical units** (CF ``scale_factor`` / ``add_offset`` packing is already
+        undone, like any ``read_array``). Unlike :meth:`combine`, no-data cells take
+        part in the arithmetic and no domain masking is applied. A comparison / mask
+        expression (a bool result, e.g. ``"A > 0.3"``) is cast to ``uint8`` (0/1); a
+        scalar expression (e.g. ``"1"``) fills the whole grid. The result is wrapped
+        into a dataset of this one's class, carrying this dataset's geotransform, CRS
+        and dataset-level metadata, and declares **no** no-data value -- a computed
+        array has no inherent sentinel.
+
+        It therefore differs on purpose from the ``pyramids calc`` CLI in three ways:
+        the CLI refuses a CRS-less input, writes no metadata, and stamps the ``-9999``
+        no-data default; the engine permits an un-georeferenced in-memory result,
+        carries metadata (like :meth:`combine`), and leaves the result sentinel-free.
 
         Args:
             expr: The band-algebra expression, e.g. ``"(B - A) / (B + A)"`` for NDVI
@@ -1777,11 +1786,13 @@ class Analysis(_Engine["Dataset"]):
             dtype: Optional NumPy dtype string to cast the result to.
 
         Returns:
-            Dataset: A new dataset on this one's grid/CRS holding the evaluated array.
+            Dataset: A new dataset on this one's grid/CRS holding the evaluated array,
+            with no no-data value declared (bool results are ``uint8`` 0/1 masks).
 
         Raises:
             ValueError: More than 26 inputs total, an unknown name in ``expr``, or a
                 disallowed expression element.
+            SyntaxError: ``expr`` is not a valid Python expression.
             AlignmentError: An operand does not share this dataset's grid.
 
         Examples:

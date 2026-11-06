@@ -1104,6 +1104,12 @@ class Dataset(RasterBase):
 
         Returns:
             Dataset: A new dataset on this one's grid/CRS holding the evaluated array.
+
+        Raises:
+            ValueError: More than 26 inputs total, an unknown name, or a disallowed
+                expression element.
+            SyntaxError: ``expr`` is not a valid Python expression.
+            AlignmentError: An operand does not share this dataset's grid.
         """
         return self.analysis.calc(expr, *others, dtype=dtype)
 
