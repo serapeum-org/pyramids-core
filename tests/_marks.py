@@ -60,19 +60,17 @@ HAS_PYSTAC_CLIENT = _has("pystac_client")
 # kerchunk AND h5py AND the lazy stack, all of which now ship in
 # `pip install pyramids-core[lazy]`.
 #
-# Why `netcdf_lazy`/`parquet_lazy` are kept distinct from `lazy`/`parquet` rather than
-# collapsed: each gates on EXTRA modules on top of the base extra's headline dependency
-# (`netcdf_lazy` additionally needs kerchunk + h5py; `parquet_lazy` additionally needs
-# dask-geopandas). The modules ship inside the [lazy]/[parquet] extras, but an install can
-# still carry the base stack (zarr/dask, or pyarrow) without them. A test re-marked plain
-# `lazy`/`parquet` would then FAIL to skip when kerchunk/h5py (or dask-geopandas) is the
-# missing piece — so the finer-grained markers are retained to keep the skip precise.
+# Why `netcdf_lazy` is kept distinct from `lazy` rather than collapsed into it: it gates on
+# EXTRA modules on top of the base extra's headline dependency (kerchunk + h5py). Those ship
+# inside the [lazy] extra, but an install can still carry the base stack (zarr/dask) without
+# them. A test re-marked plain `lazy` would then FAIL to skip when kerchunk/h5py is the
+# missing piece — so the finer-grained marker is retained to keep the skip precise. The
+# matching `parquet_lazy` marker went to pyramids-lazy with the lazy vector tests.
 _HAS_VIZ = HAS_CLEOPATRA
 _HAS_LAZY = HAS_DASK_ARRAY and HAS_ZARR
 _HAS_INTEROP = HAS_INTEROP
 _HAS_NETCDF_LAZY = _HAS_LAZY and HAS_KERCHUNK and HAS_H5PY
 _HAS_PARQUET = HAS_PYARROW
-_HAS_PARQUET_LAZY = _HAS_LAZY and _HAS_PARQUET and HAS_DASK_GEOPANDAS
 _HAS_STAC = HAS_PYSTAC_CLIENT
 
 
@@ -90,10 +88,6 @@ requires_netcdf_lazy = pytest.mark.skipif(
 )
 requires_parquet = pytest.mark.skipif(
     not _HAS_PARQUET, reason="pyramids-core[parquet] not installed"
-)
-requires_parquet_lazy = pytest.mark.skipif(
-    not _HAS_PARQUET_LAZY,
-    reason="dask-geopandas (pyramids-core[parquet]) not installed",
 )
 requires_stac = pytest.mark.skipif(
     not _HAS_STAC, reason="pyramids-core[stac] not installed"
@@ -125,6 +119,5 @@ EXTRA_MARKERS: dict[str, pytest.MarkDecorator] = {
     "interop": requires_interop,
     "netcdf_lazy": requires_netcdf_lazy,
     "parquet": requires_parquet,
-    "parquet_lazy": requires_parquet_lazy,
     "stac": requires_stac,
 }
