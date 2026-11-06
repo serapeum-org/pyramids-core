@@ -19,11 +19,11 @@ from unittest.mock import MagicMock
 import pytest
 
 # The partition-size knob configure_lazy_vector tunes now lives in the pyramids-lazy backend's
-# vector-read module (the lazy bodies moved there); assert against it. Skip this whole module (it is
-# entirely lazy-vector config) when the backend is absent, rather than erroring at collection.
-pytest.importorskip("pyramids_lazy")
-
-from pyramids_lazy import _vector_read as _fc_mod  # noqa: E402
+# vector-read module (the lazy bodies moved there); assert against it. Importing _vector_read pulls
+# dask-geopandas (the [parquet] extra), so importorskip the submodule itself: this skips the whole
+# module both when the backend is absent and when dask-geopandas is (e.g. the lazy-but-not-parquet
+# env), rather than erroring at collection.
+_fc_mod = pytest.importorskip("pyramids_lazy._vector_read")
 
 from pyramids import configure_lazy_vector  # noqa: E402
 

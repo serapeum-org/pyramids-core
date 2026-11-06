@@ -39,20 +39,6 @@ jobs:
       # No fetch-depth: the test suite reads the working tree, not git history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Integration: core's lazy ops dispatch to the pyramids-lazy compute backend. Check out the
-      # (public) plugin and put its src on PYTHONPATH so core's lazy suites run through the real
-      # backend; tests/conftest.py reads PYRAMIDS_LAZY_SRC. Bare-core behaviour is still covered by
-      # the branded-error seam tests, which need no backend.
-      - name: Check out the pyramids-lazy compute backend
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: serapeum-org/pyramids-lazy
-          ref: feat/compute-backend
-          path: .pyramids-lazy
-      - name: Wire the lazy backend onto PYTHONPATH
-        shell: bash
-        run: echo "PYRAMIDS_LAZY_SRC=${{ github.workspace }}/.pyramids-lazy/src" >> "$GITHUB_ENV"
-
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
         with:
@@ -102,23 +88,8 @@ jobs:
           # the main matrix (whose envs omit these extras). `strict` appends --strict-extra-skips
           # (turn a missing-dependency skip into a failure) on the jobs whose env is verified to
           # carry every dependency the selected tests need. See docs/how-to/testing.md.
-          - name: netcdf_lazy
-            env: lazy
-            paths: tests/netcdf/lazy
-            markexpr: "not live"
-            strict: ""
-          - name: parquet_lazy
-            env: parquet
-            paths: tests/feature/lazy
-            markexpr: "not live"
-            strict: ""
-          # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
-          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute.
-          - name: netcdf_parquet
-            env: parquet
-            paths: tests/netcdf/lazy/test_to_dask_dataframe.py
-            markexpr: "not live"
-            strict: ""
+          # The netcdf_lazy / parquet_lazy / to_dask_dataframe suites moved to the pyramids-lazy repo
+          # with the op bodies; they run in that repo's CI now.
           # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
           # stac/test_geoparquet_spec) ran in NO CI job; select them in the parquet env, which carries
           # pyarrow and every other dep they need, so --strict-extra-skips is safe here.
@@ -151,19 +122,6 @@ jobs:
     steps:
       # No fetch-depth: the test suite reads the working tree, not git history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Integration: core's lazy ops dispatch to the pyramids-lazy compute backend. Check out the
-      # (public) plugin and put its src on PYTHONPATH so the extras lazy suites run through the real
-      # backend; tests/conftest.py reads PYRAMIDS_LAZY_SRC.
-      - name: Check out the pyramids-lazy compute backend
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: serapeum-org/pyramids-lazy
-          ref: feat/compute-backend
-          path: .pyramids-lazy
-      - name: Wire the lazy backend onto PYTHONPATH
-        shell: bash
-        run: echo "PYRAMIDS_LAZY_SRC=${{ github.workspace }}/.pyramids-lazy/src" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
