@@ -44,6 +44,44 @@ def needs_lazy_extra() -> Iterator[None]:
         ) from exc
 
 
+def validate_index_pattern(pattern: str, **sample: object) -> None:
+    """Validate a per-item filename ``--pattern`` before the write loop runs.
+
+    A per-slice/-window writer formats ``pattern`` with a ``{i}`` index (plus any
+    ``sample`` placeholders, e.g. ``{name}``). Two failure modes are caught here, up
+    front, so neither surfaces mid-loop:
+
+    - an unknown placeholder would raise a raw ``KeyError`` / ``IndexError`` that
+      :func:`pyramids.cli.main` does not catch (it reports "unexpected failure");
+    - a pattern with no ``{i}`` formats identically for every item, so the loop would
+      silently overwrite every item onto one path and exit 0 with only the last kept.
+
+    Args:
+        pattern: The user's ``--pattern`` template.
+        **sample: Sample values for the non-index placeholders the writer also binds
+            (e.g. ``name="slice"``); ``i`` is always probed and need not be passed.
+
+    Raises:
+        ValueError: ``pattern`` uses a placeholder outside ``{i}`` / ``sample``, or it
+            does not include ``{i}`` (so items would collide on one path).
+    """
+    probe = {"i": 0, **sample}
+    allowed = ", ".join("{" + key + "}" for key in sorted(probe))
+    try:
+        first = pattern.format(**probe)
+        second = pattern.format(**{**probe, "i": 1})
+    except (KeyError, IndexError) as exc:
+        raise ValueError(
+            f"--pattern {pattern!r} uses an unknown placeholder {exc}; "
+            f"available placeholders: {allowed}"
+        ) from exc
+    if first == second:
+        raise ValueError(
+            f"--pattern {pattern!r} must include the {{i}} index placeholder so each "
+            "item is written to a distinct path"
+        )
+
+
 def require_matching_crs(left: Any, right: Any) -> None:
     """Raise if two layers carry a different CRS.
 

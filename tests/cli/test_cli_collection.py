@@ -521,6 +521,52 @@ class TestCollectionResamplePattern:
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
         assert "placeholder" in err and "{i}" in err, f"message unclear: {err!r}"
 
+    def test_fixed_pattern_without_index_rejected(self, tmp_path, capsys):
+        """A --pattern lacking {i} is rejected so windows cannot collide (L1)."""
+        out = str(tmp_path / "rs")
+        rc = main(
+            [
+                "collection",
+                "resample",
+                "no/such/*.tif",
+                out,
+                "--freq",
+                "1D",
+                "--pattern",
+                "fixed.tif",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1, "a fixed pattern must exit 1"
+        assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
+        assert "{i}" in err, f"message should require {{i}}, got: {err!r}"
+
+
+class TestCollectionToCogPattern:
+    """`collection to-cog` validates --pattern up front, like resample (M1/L1)."""
+
+    def test_unknown_placeholder_is_clean(self, tmp_path, capsys):
+        """An unknown --pattern placeholder fails fast with a clean error (M1)."""
+        out = str(tmp_path / "cog")
+        rc = main(
+            ["collection", "to-cog", "no/such/*.tif", out, "--pattern", "{bad}.tif"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1, "a bad pattern must exit 1"
+        assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
+        assert "placeholder" in err, f"message unclear: {err!r}"
+
+    def test_fixed_pattern_without_index_rejected(self, tmp_path, capsys):
+        """A --pattern lacking {i} is rejected so slices cannot collide (L1)."""
+        out = str(tmp_path / "cog")
+        rc = main(
+            ["collection", "to-cog", "no/such/*.tif", out, "--pattern", "{name}.tif"]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1, "a fixed pattern must exit 1"
+        assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
+        assert "{i}" in err, f"message should require {{i}}, got: {err!r}"
+
 
 class TestCollectionAlign:
     """`pyramids collection align` — align every timestep to a reference grid."""
