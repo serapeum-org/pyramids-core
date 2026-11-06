@@ -20,7 +20,6 @@ Deferred:
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 
 import numpy as np
@@ -34,8 +33,8 @@ from pyramids._cli_shared import (
 from pyramids._cli_shared import resolve_vector_driver as _resolve_vector_driver
 from pyramids.base.crs import crs_spec
 from pyramids.base.georeference import GeoReference
-from pyramids.cli_dataset import _safe_calc_eval
 from pyramids.dataset import Dataset
+from pyramids.dataset._calc import eval_calc
 from pyramids.feature import FeatureCollection
 
 _HELP_SRC_RASTER = "source raster path"
@@ -279,7 +278,7 @@ def _cmd_where(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     values = np.asarray(ds.read_array(squeeze=True))
-    mask = np.asarray(_safe_calc_eval(ast.parse(args.cond, mode="eval"), {"A": values}))
+    mask = eval_calc(args.cond, {"A": values})
     given, other = _parse_other(args.other)
     if given:
         out = ds.where(mask, other, drop=args.drop)
