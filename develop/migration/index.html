@@ -9816,11 +9816,8 @@ parameters (<code>coords</code>, <code>x_dim</code>, <code>y_dim</code>) into th
 <a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf._lazy</span><span class="w"> </span><span class="kn">import</span> <span class="n">_apply_unpack</span>
 <a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="c1"># After</span>
 <a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">LabeledArray</span>
-<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.base._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_unpack</span>  <span class="c1"># canonical home</span>
+<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf._lazy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_unpack</span>
 </code></pre></div>
-<p>The <code>pyramids.netcdf._lazy.apply_unpack</code> / <code>_apply_unpack</code> re-export still resolves but is <strong>deprecated</strong> — import
-<code>apply_unpack</code> from <code>pyramids.base._utils</code>. The <code>_lazy</code> alias ships with the lazy layer and will leave core when that
-layer is extracted (see the lazy-plugin extraction plan, issue #1455).</p>
 <p>Also: the private modules <code>_kerchunk.py</code> -&gt; <code>_kerchunk_facade.py</code> and <code>_kerchunk_native.py</code> -&gt; <code>_kerchunk_builder.py</code>
 were renamed. They are internal — use <code>NetCDF.to_kerchunk</code> / <code>NetCDF.combine_kerchunk</code> rather than importing them.</p>
 <h4 id="new-opt-in-capabilities-not-breaking"><a class="toclink" href="#new-opt-in-capabilities-not-breaking">New, opt-in capabilities (not breaking)</a><a class="headerlink" href="#new-opt-in-capabilities-not-breaking" title="Permanent link">#</a></h4>
