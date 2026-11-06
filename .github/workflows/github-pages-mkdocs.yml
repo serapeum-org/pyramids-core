@@ -19,9 +19,10 @@ on:
 
 # No workflow-level concurrency on purpose. deploy-main / deploy-release push the
 # shared `gh-pages` branch, but the mkdocs-deploy action retries that push
-# (mike_push.sh re-fetches and rebases), so concurrent deploys each complete
-# without a serialising lane. A workflow-level concurrency group would also queue
-# or evict the build-strict gate, which must run on every PR (see earthlens #1150).
+# (mike_push.sh re-fetches and rebases onto the current tip), so concurrent
+# deploys each complete without a serialising lane. A workflow-level concurrency
+# group would also queue or evict the build-strict gate, which must run on every
+# PR — so it is left off and the per-push retry is what prevents a lost update.
 
 jobs:
   # Gate every deploy on a warnings-as-errors build. The deploy action builds
@@ -48,6 +49,7 @@ jobs:
     - uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda # pixi/v1.5.1
       with:
         environments: docs
+        activate-environment: docs
         cache: true
         version: v0.73.0
 
@@ -178,7 +180,7 @@ jobs:
         # Re-sync, recompute and retry as a unit: a concurrent main deploy moves
         # gh-pages, which makes mike's fast-forward push lose the race, and the
         # stale list computed against the old tip must not be reused.
-        for attempt in 1 2 3; do
+        for attempt in 1 2 3 4 5; do
           git fetch origin gh-pages
           git branch -f gh-pages FETCH_HEAD
 
@@ -205,8 +207,8 @@ jobs:
           if mike delete --push $stale; then
             exit 0
           fi
-          echo "::warning::prune lost a gh-pages push race (attempt ${attempt}/3); retrying"
+          echo "::warning::prune lost a gh-pages push race (attempt ${attempt}/5); retrying"
           sleep $(( attempt * 3 ))
         done
-        echo "::error::could not prune superseded documentation versions after 3 attempts"
+        echo "::error::could not prune superseded documentation versions after 5 attempts"
         exit 1
