@@ -55,8 +55,16 @@ jobs:
         run: |
           # Pin pip-audit to the SAME interpreter as the matrix env so it never tries to
           # resolve a package the freeze pinned for a different Python (e.g. a cp314/cp315
-          # -only wheel) against pipx's default interpreter.
-          PYBIN="$(pixi run -e ${{ matrix.environment }} python -c 'import sys; print(sys.executable)')"
+          # -only wheel) against pipx's default interpreter. The capture is failure-safe: a
+          # command substitution inside an assignment is masked under `set -e`, so a broken
+          # probe would otherwise leave PYBIN empty and surface as a confusing pipx error —
+          # validate it explicitly, and take only the last stdout line in case a future pixi
+          # prints a banner to stdout.
+          PYBIN="$(pixi run -e ${{ matrix.environment }} python -c 'import sys; print(sys.executable)' | tail -n1)"
+          if [ ! -x "$PYBIN" ]; then
+            echo "::error::could not locate the ${{ matrix.environment }} interpreter (got '$PYBIN')"
+            exit 1
+          fi
           pixi run -e ${{ matrix.environment }} python -m pip freeze --exclude-editable \
             | grep -E '^[A-Za-z0-9_.-]+==' > "${RUNNER_TEMP}/pip-audit-reqs.txt"
           echo "Auditing $(wc -l < "${RUNNER_TEMP}/pip-audit-reqs.txt") pinned packages on ${{ matrix.environment }}"
