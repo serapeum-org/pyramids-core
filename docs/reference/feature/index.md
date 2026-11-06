@@ -82,7 +82,7 @@ classDiagram
 - [`FeatureCollection`](#featurecollection-class) — the public class, a direct subclass of
   `geopandas.GeoDataFrame`.
 - [`geometry`](geometry.md) — shape factories and coordinate-extraction helpers.
-- [`crs`](crs.md) — CRS / EPSG / reprojection helpers.
+- [`crs`](../base/crs.md) — CRS / EPSG / reprojection helpers.
 - `_ogr` — private OGR bridge (OGR `DataSource` never leaves the subpackage).
 
 ## When to reach for which

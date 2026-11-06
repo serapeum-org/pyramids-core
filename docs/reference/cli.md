@@ -172,7 +172,7 @@ which legitimately reprojects the source onto the reference grid.
 these run headless (`render` remains the quick-look PNG, and `contour` lives under analysis above).
 
 **Network readers** — the `fetch` group gains `fetch wmts` and `fetch ogc-coverages` alongside `fetch wms` / `wcs`
-/ `wfs` (see [Remote / OGC services](#remote--ogc-services)).
+/ `wfs` (see [Remote / OGC services](#remote-ogc-services)).
 
 Deferred to the Python API (documented in each sub-module): the callable-taking methods (`apply`, `map_blocks`,
 `focal_apply`), the low-level coordinate/block primitives (`array_to_map_coordinates`, `rowcol`, `xy`,
