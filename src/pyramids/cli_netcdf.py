@@ -31,6 +31,7 @@ from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
+_HELP_DST_NC = "destination path (.nc keeps it a NetCDF)"
 
 
 def _cmd_nc_info(args: argparse.Namespace) -> int:
@@ -252,7 +253,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
 
     nc_gg = ncsub.add_parser("get-group", help="write one sub-group out as a NetCDF")
     nc_gg.add_argument("file", help=_HELP_NC_FILE)
-    nc_gg.add_argument("output", help="destination path (.nc keeps it a NetCDF)")
+    nc_gg.add_argument("output", help=_HELP_DST_NC)
     nc_gg.add_argument(
         "--group", required=True, help="sub-group name (nested 'a/b' accepted)"
     )
@@ -275,7 +276,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
 
     nc_sel = ncsub.add_parser("sel", help="select along time into a new NetCDF")
     nc_sel.add_argument("file", help=_HELP_NC_FILE)
-    nc_sel.add_argument("output", help="destination path (.nc keeps it a NetCDF)")
+    nc_sel.add_argument("output", help=_HELP_DST_NC)
     nc_sel.add_argument(
         "--time",
         required=True,
@@ -288,7 +289,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
 
     nc_crop = ncsub.add_parser("crop", help="spatially subset to a bbox")
     nc_crop.add_argument("file", help=_HELP_NC_FILE)
-    nc_crop.add_argument("output", help="destination path (.nc keeps it a NetCDF)")
+    nc_crop.add_argument("output", help=_HELP_DST_NC)
     nc_crop.add_argument(
         "--bbox",
         nargs=4,

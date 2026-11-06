@@ -45,6 +45,7 @@ _HELP_MESH_FILE = "UGRID NetCDF path"
 _HELP_MESH_OUT = "destination mesh (NetCDF) path"
 _HELP_VECTOR_OUT = "destination vector path"
 _HELP_VAR = "mesh variable to act on; defaults to the only data variable"
+_HELP_CSV_OUT = "write x/y/value to this CSV path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_JSON = "emit JSON"
 _HELP_DRIVER = "OGR vector driver (default: inferred from the output extension)"
@@ -840,7 +841,7 @@ def _register_sampling(msub: argparse._SubParsersAction) -> None:
         "--y", nargs="+", type=float, required=True, help="query y-coordinate(s)"
     )
     _add_var(sample_point)
-    sample_point.add_argument("--output", help="write x/y/value to this CSV path")
+    sample_point.add_argument("--output", help=_HELP_CSV_OUT)
     sample_point.add_argument("--json", action="store_true", help=_HELP_JSON)
     _add_overwrite(sample_point)
     sample_point.set_defaults(func=_cmd_sample_point)
@@ -869,7 +870,7 @@ def _register_sampling(msub: argparse._SubParsersAction) -> None:
         default=0,
         help="time step to sample (default: 0)",
     )
-    sample.add_argument("--output", help="write x/y/value to this CSV path")
+    sample.add_argument("--output", help=_HELP_CSV_OUT)
     sample.add_argument("--json", action="store_true", help=_HELP_JSON)
     _add_overwrite(sample)
     sample.set_defaults(func=_cmd_sample)
@@ -902,7 +903,7 @@ def _register_sampling(msub: argparse._SubParsersAction) -> None:
     )
     _add_var(sample_random)
     sample_random.add_argument("--seed", type=int, help="RNG seed for reproducibility")
-    sample_random.add_argument("--output", help="write x/y/value to this CSV path")
+    sample_random.add_argument("--output", help=_HELP_CSV_OUT)
     sample_random.add_argument("--json", action="store_true", help=_HELP_JSON)
     _add_overwrite(sample_random)
     sample_random.set_defaults(func=_cmd_sample_random)

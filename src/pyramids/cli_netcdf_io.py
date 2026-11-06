@@ -28,6 +28,7 @@ from pyramids.netcdf import NetCDF
 _HELP_NC_FILE = "NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_INPUTS = "two or more NetCDF paths"
+_HELP_DST_NETCDF = "destination NetCDF path"
 
 
 def _cmd_nc_convert(args: argparse.Namespace) -> int:
@@ -309,7 +310,7 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     """
     nc_conv = ncsub.add_parser("convert", help="re-write a file as a NetCDF")
     nc_conv.add_argument("file", help=_HELP_NC_FILE)
-    nc_conv.add_argument("output", help="destination NetCDF path")
+    nc_conv.add_argument("output", help=_HELP_DST_NETCDF)
     nc_conv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_conv.set_defaults(func=_cmd_nc_convert)
 
@@ -400,7 +401,7 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
         "from-dataframe", help="build a cube from a MultiIndex CSV"
     )
     nc_fdf.add_argument("file", help="source CSV path")
-    nc_fdf.add_argument("output", help="destination NetCDF path")
+    nc_fdf.add_argument("output", help=_HELP_DST_NETCDF)
     nc_fdf.add_argument(
         "--index-col",
         nargs="+",
@@ -434,12 +435,12 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
         "from-dict", help="build a cube from a JSON structure dump"
     )
     nc_fd.add_argument("file", help="source JSON path (as 'nc to-dict --json --data')")
-    nc_fd.add_argument("output", help="destination NetCDF path")
+    nc_fd.add_argument("output", help=_HELP_DST_NETCDF)
     nc_fd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_fd.set_defaults(func=_cmd_nc_from_dict)
 
     nc_cat = ncsub.add_parser("concat", help="join cubes end to end along a dimension")
-    nc_cat.add_argument("output", help="destination NetCDF path")
+    nc_cat.add_argument("output", help=_HELP_DST_NETCDF)
     nc_cat.add_argument("--inputs", nargs="+", required=True, help=_HELP_INPUTS)
     nc_cat.add_argument("--dim", required=True, help="dimension to join along")
     nc_cat.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
@@ -448,7 +449,7 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_mg = ncsub.add_parser(
         "merge", help="put the variables of several cubes together"
     )
-    nc_mg.add_argument("output", help="destination NetCDF path")
+    nc_mg.add_argument("output", help=_HELP_DST_NETCDF)
     nc_mg.add_argument("--inputs", nargs="+", required=True, help=_HELP_INPUTS)
     nc_mg.add_argument(
         "--compat",

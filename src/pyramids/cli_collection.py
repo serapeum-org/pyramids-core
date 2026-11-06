@@ -60,6 +60,7 @@ _TIME_OPS = (
 
 # Overlap-resolution rules accepted by DatasetCollection.merge / merge_rasters.
 _MERGE_METHODS = ("first", "last", "min", "max", "sum", "count", "mean")
+_HELP_DST_DIR = "destination directory (one file per timestep)"
 
 _HELP_SOURCE_PATH = (
     "glob (quote it) or directory of co-registered rasters; with --source zarr it "
@@ -560,7 +561,7 @@ def _add_to_file(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-file`` command (write every timestep to a directory)."""
     c = csub.add_parser("to-file", help="write every timestep to a directory")
     _add_open_args(c)
-    c.add_argument("output", help="destination directory (one file per timestep)")
+    c.add_argument("output", help=_HELP_DST_DIR)
     c.add_argument(
         "--driver",
         default="geotiff",
@@ -642,7 +643,7 @@ def _add_reproject(csub: argparse._SubParsersAction) -> None:
     """Register the ``reproject`` command (reproject every timestep)."""
     c = csub.add_parser("reproject", help="reproject every timestep to a target CRS")
     _add_open_args(c)
-    c.add_argument("output", help="destination directory (one file per timestep)")
+    c.add_argument("output", help=_HELP_DST_DIR)
     c.add_argument("--crs", required=True, help="target CRS (EPSG code, WKT, PROJ4)")
     c.add_argument("--resampling", default=DEFAULT_RESAMPLING, help=_HELP_RESAMPLING)
     c.add_argument(
@@ -659,7 +660,7 @@ def _add_crop(csub: argparse._SubParsersAction) -> None:
     """Register the ``crop`` command (crop every timestep)."""
     c = csub.add_parser("crop", help="crop every timestep to a mask or bbox")
     _add_open_args(c)
-    c.add_argument("output", help="destination directory (one file per timestep)")
+    c.add_argument("output", help=_HELP_DST_DIR)
     target = c.add_mutually_exclusive_group(required=True)
     target.add_argument(
         "--mask", default=None, help="raster whose footprint crops the stack"
@@ -688,7 +689,7 @@ def _add_align(csub: argparse._SubParsersAction) -> None:
     """Register the ``align`` command (align every timestep to a reference grid)."""
     c = csub.add_parser("align", help="align every timestep to a reference raster grid")
     _add_open_args(c)
-    c.add_argument("output", help="destination directory (one file per timestep)")
+    c.add_argument("output", help=_HELP_DST_DIR)
     c.add_argument(
         "--reference", required=True, help="reference raster whose grid to adopt"
     )
