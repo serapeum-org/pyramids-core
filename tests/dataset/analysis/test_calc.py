@@ -111,6 +111,37 @@ class TestCalc:
         assert arr.shape[-2:] == (2, 3), f"expected the template grid, got {arr.shape}"
         assert set(arr.ravel().tolist()) == {3.0}
 
+    def test_scalar_bool_expression_fills_a_uint8_grid(self):
+        """A 0-d bool expression is cast to uint8 *then* filled to the grid (order lock)."""
+        ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        arr = np.asarray(ds.calc("2 > 1").read_array())
+        assert arr.dtype == np.uint8, f"expected uint8, got {arr.dtype}"
+        assert arr.shape[-2:] == (2, 3), f"expected the grid, got {arr.shape}"
+        assert set(arr.ravel().tolist()) == {1}, (
+            f"expected all-ones, got {arr.ravel().tolist()}"
+        )
+
+    def test_result_declares_no_no_data(self):
+        """A computed result carries no no-data sentinel (by design)."""
+        ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        assert ds.calc("A + 1").no_data_value == (None,)
+
+    def test_no_data_cells_participate_in_the_arithmetic(self):
+        """Unlike `combine`, a no-data cell takes part (its stored value is used)."""
+        arr = np.array([[[-9999.0, 2.0, 3.0], [4.0, 5.0, 6.0]]])
+        ds = Dataset.from_array(arr, geo_ref=REF, no_data_value=-9999.0)
+        out = np.asarray(ds.calc("A + 1").read_array())
+        assert out.ravel().tolist()[0] == -9998.0, (
+            f"no-data cell did not participate: {out.ravel()[0]}"
+        )
+
+    def test_cf_packed_input_is_read_in_physical_units(self):
+        """A CF-packed input is unpacked (scale/offset) before the expression sees it."""
+        ds = _ds([[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]])
+        ds.scale = [0.1]
+        out = np.asarray(ds.calc("A").read_array())
+        assert out.ravel().tolist() == pytest.approx([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+
     def test_multi_band_result_keeps_the_band_axis(self):
         """A multi-band input yields a multi-band result (the ndim-3 path)."""
         arr = np.arange(12.0, dtype="float64").reshape(2, 2, 3)
