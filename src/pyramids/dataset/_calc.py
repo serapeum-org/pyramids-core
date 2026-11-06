@@ -132,5 +132,26 @@ def eval_calc(expr: str, variables: dict) -> np.ndarray:
         ValueError: The expression uses a name not in ``variables`` or an element
             outside the allowed grammar.
         SyntaxError: ``expr`` is not a valid Python expression.
+
+    Examples:
+        - Evaluate a two-band ratio over bound arrays:
+            ```python
+            >>> import numpy as np
+            >>> from pyramids.dataset._calc import eval_calc
+            >>> variables = {"A": np.array([1.0, 2.0]), "B": np.array([3.0, 6.0])}
+            >>> eval_calc("(B - A) / (B + A)", variables).tolist()
+            [0.5, 0.5]
+
+            ```
+        - An unknown name is rejected rather than treated as zero:
+            ```python
+            >>> import numpy as np
+            >>> from pyramids.dataset._calc import eval_calc
+            >>> eval_calc("A + C", {"A": np.array([1.0])})
+            Traceback (most recent call last):
+                ...
+            ValueError: unknown name in calc expression: 'C'
+
+            ```
     """
     return np.asarray(_safe_calc_eval(ast.parse(expr, mode="eval"), variables))
