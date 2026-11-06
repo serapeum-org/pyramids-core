@@ -35,8 +35,9 @@ jobs:
         environment: [py311, py312, py313, py314, py315]
     steps:
       # No fetch-depth: the job only runs `pip freeze` + `pip-audit` and reads no git
-      # history, so the default shallow checkout is correct and keeps the large gh-pages
-      # branch out of the fetch (see #1417). Mirrors the same note in tests.yml.
+      # history, so the default shallow checkout is right. It also avoids `fetch-depth: 0`,
+      # which would fetch every branch incl. the large gh-pages docs branch (see #1417).
+      # See the analogous note on tests.yml's checkout step.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
@@ -60,9 +61,10 @@ jobs:
           # resolve a package the freeze pinned for a different Python (e.g. a cp314/cp315
           # -only wheel) against pipx's default interpreter. The capture is failure-safe: a
           # command substitution inside an assignment is masked under `set -e`, so a broken
-          # probe would otherwise leave PYBIN empty and surface as a confusing pipx error —
-          # validate it explicitly, and take only the last stdout line in case a future pixi
-          # prints a banner to stdout.
+          # probe would otherwise leave PYBIN empty and surface as a confusing pipx error.
+          # The `[ -x "$PYBIN" ]` check is the real guard (it also catches that masked
+          # failure); `| tail -n1` additionally drops a leading banner line should a future
+          # pixi print one to stdout.
           PYBIN="$(pixi run -e ${{ matrix.environment }} python -c 'import sys; print(sys.executable)' | tail -n1)"
           if [ ! -x "$PYBIN" ]; then
             echo "::error::could not locate the ${{ matrix.environment }} interpreter (got '$PYBIN')"
