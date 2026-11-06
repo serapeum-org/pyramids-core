@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -546,12 +547,115 @@ class TestConvertCommand:
         assert "Traceback" not in err, "tracebacks must not leak to users"
 
 
+# A classic-mode NetCDF whose GDAL handle exposes 4 subdatasets (Band1..Band4).
+_NETCDF_CONTAINER = str(
+    Path(__file__).parents[1] / "data" / "netcdf" / "cf__6v__1d2-2d4__geog__y-asc.nc"
+)
+
+
+class TestSubdatasetCommand:
+    """`pyramids subdataset` — extract one subdataset of a container to a raster."""
+
+    def test_extract_by_index(self, tmp_path, capsys):
+        """A 0-based index extracts that subdataset and writes a readable raster.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        out_path = str(tmp_path / "band0.tif")
+        assert main(["subdataset", _NETCDF_CONTAINER, "0", out_path]) == 0
+        assert Dataset.read_file(out_path).band_count == 1, "one band extracted"
+
+    def test_extract_by_name(self, tmp_path, capsys):
+        """A full GDAL subdataset name extracts the same subdataset as its index.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        name = Dataset.read_file(_NETCDF_CONTAINER).subdatasets[1].name
+        out_path = str(tmp_path / "by_name.tif")
+        assert main(["subdataset", _NETCDF_CONTAINER, name, out_path]) == 0
+        assert os.path.exists(out_path), "extraction by name writes the output"
+
+    def test_extract_by_negative_index(self, tmp_path, capsys):
+        """A negative index counts from the end, per Python list semantics.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        out_path = str(tmp_path / "last.tif")
+        assert main(["subdataset", _NETCDF_CONTAINER, "-1", out_path]) == 0
+        assert os.path.exists(out_path), "a negative index resolves to the last one"
+
+    def test_refuses_existing_without_overwrite(self, tmp_path, capsys):
+        """An existing output is refused unless --overwrite is passed.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        out_path = str(tmp_path / "exists.tif")
+        Path(out_path).write_text("", encoding="utf-8")
+        assert main(["subdataset", _NETCDF_CONTAINER, "0", out_path]) == 1
+        err = capsys.readouterr().err
+        assert "already exists" in err, "the overwrite guard must fire"
+        assert (
+            main(["subdataset", _NETCDF_CONTAINER, "0", out_path, "--overwrite"]) == 0
+        )
+
+    def test_out_of_range_index_one_line_error(self, tmp_path, capsys):
+        """An out-of-range index is a clean error (IndexError remapped), not a crash.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        rc = main(["subdataset", _NETCDF_CONTAINER, "99", str(tmp_path / "o.tif")])
+        err = capsys.readouterr().err
+        assert rc == 1, "an out-of-range index must exit 1"
+        assert err.startswith("error: "), f"unexpected stderr: {err}"
+        assert "unexpected failure" not in err, "IndexError must be remapped cleanly"
+
+    def test_unknown_name_one_line_error(self, tmp_path, capsys):
+        """An unknown subdataset name exits 1 with a clean message.
+
+        Args:
+            tmp_path: Pytest temporary-directory fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        rc = main(
+            [
+                "subdataset",
+                _NETCDF_CONTAINER,
+                'NETCDF:"nope.nc":x',
+                str(tmp_path / "o.tif"),
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1, "an unknown name must exit 1"
+        assert err.startswith("error: "), f"unexpected stderr: {err}"
+        assert "Traceback" not in err, "tracebacks must not leak to users"
+
+
 class TestHelpSurface:
     """--help wiring for every new command."""
 
     @pytest.mark.parametrize(
         "command",
-        ["info", "bounds", "clip", "warp", "merge", "overview", "sample", "convert"],
+        [
+            "info",
+            "bounds",
+            "clip",
+            "warp",
+            "merge",
+            "overview",
+            "sample",
+            "convert",
+            "subdataset",
+        ],
     )
     def test_help_exits_zero(self, command, capsys):
         """Each subcommand exposes --help (argparse exits 0).

@@ -21,8 +21,9 @@ Commands registered by :func:`add_dataset_inspect_commands`:
 - ``domain-area`` → :meth:`Dataset.domain_area`
 - ``count-domain-cells`` → :meth:`Dataset.count_domain_cells`
 - ``same-grid`` → :meth:`Dataset.same_grid`
+- ``checksum`` → :meth:`Dataset.checksum`
 
-No methods are deferred — each of the eleven is a natural one-shot verb.
+No methods are deferred — each of the twelve is a natural one-shot verb.
 """
 
 from __future__ import annotations
@@ -369,6 +370,36 @@ def _cmd_same_grid(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_checksum(args: argparse.Namespace) -> int:
+    """Handle `pyramids checksum` — per-band GDAL checksum for integrity checks.
+
+    Reports the GDAL checksum of every band, or of a single `--band`; two rasters
+    that read back the same values share the same checksum(s), so it is a cheap
+    integrity / round-trip verification.
+
+    Args:
+        args: Parsed arguments with `file`, `band` (default: all bands), and `json`.
+
+    Returns:
+        int: `0` on success.
+    """
+    ds = Dataset.read_file(args.file)
+    with map_lookup_errors():
+        result = ds.checksum(band=args.band)
+    if args.band is None:
+        payload = {"checksums": [int(value) for value in result]}
+    else:
+        payload = {"band": args.band, "checksum": int(result)}
+    if args.json:
+        print(json.dumps(payload))
+    elif args.band is None:
+        for index, value in enumerate(payload["checksums"]):
+            print(f"band {index}: {value}")
+    else:
+        print(payload["checksum"])
+    return 0
+
+
 def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     """Register the raster inspection commands on ``sub``.
 
@@ -530,3 +561,13 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     )
     same.add_argument("--json", action="store_true", help=_HELP_JSON)
     same.set_defaults(func=_cmd_same_grid)
+
+    checksum = sub.add_parser(
+        "checksum", help="per-band GDAL checksum for integrity verification"
+    )
+    checksum.add_argument("file", help=_HELP_INSPECT_RASTER)
+    checksum.add_argument(
+        "--band", type=int, default=None, help=f"{_HELP_BAND} (default: all bands)"
+    )
+    checksum.add_argument("--json", action="store_true", help=_HELP_JSON)
+    checksum.set_defaults(func=_cmd_checksum)
