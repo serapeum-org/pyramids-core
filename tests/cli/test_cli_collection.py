@@ -1,8 +1,11 @@
-"""Tests for the ``pyramids collection`` command group (M-5)."""
+"""Tests for the ``pyramids collection`` command group (M-5, #1469)."""
 
 from __future__ import annotations
 
+import glob as _glob
 import json
+import os
+import zipfile
 
 import numpy as np
 import pytest
@@ -10,6 +13,7 @@ import pytest
 from pyramids.base.georeference import GeoReference
 from pyramids.cli import main
 from pyramids.dataset import Dataset
+from pyramids.dataset.collection import DatasetCollection
 
 
 def _stack_with(tmp_path, *, epsg: int, no_data: float) -> str:
@@ -32,6 +36,23 @@ def _stack_with(tmp_path, *, epsg: int, no_data: float) -> str:
     return str(tmp_path / "s*.tif")
 
 
+def _dated_stack(tmp_path) -> str:
+    """Write three dated 4x4 rasters whose names carry a parseable timestamp.
+
+    Args:
+        tmp_path: pytest temp dir.
+
+    Returns:
+        str: A glob matching the three ``YYYY.MM.DD.tif`` rasters.
+    """
+    for day in (1, 2, 3):
+        Dataset.from_array(
+            np.full((4, 4), float(day), dtype="float32"),
+            geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=4326),
+        ).to_file(str(tmp_path / f"2022.01.0{day}.tif"))
+    return str(tmp_path / "2022.01.0*.tif")
+
+
 class TestCollectionInfo:
     """`pyramids collection info` — metadata only, so it runs in the core wheel env."""
 
@@ -45,11 +66,52 @@ class TestCollectionInfo:
         assert payload["epsg"] == 4326
         assert (payload["rows"], payload["columns"]) == (4, 4)
 
+    def test_text_summary(self, cli_stack, capsys):
+        """The default (non-JSON) form prints one key per line."""
+        assert main(["collection", "info", cli_stack]) == 0
+        out = capsys.readouterr().out
+        assert "rasters: 3" in out
+        assert "epsg: 4326" in out
+
     def test_empty_glob_errors(self, tmp_path, capsys):
         """A glob matching nothing exits 1 with a clear message."""
         rc = main(["collection", "info", str(tmp_path / "none*.tif")])
         assert rc == 1
         assert "no rasters matched" in capsys.readouterr().err
+
+
+class TestCollectionInfoSources:
+    """`collection info --source {zarr,archive}` — the alternate offline openers."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_source_zarr(self, cli_stack, tmp_path, capsys):
+        """A Zarr store written from the stack reads back through --source zarr."""
+        store = str(tmp_path / "cube.zarr")
+        DatasetCollection.from_files(sorted(_glob.glob(cli_stack))).to_zarr(store)
+        assert main(["collection", "info", store, "--source", "zarr", "--json"]) == 0
+        assert json.loads(capsys.readouterr().out)["rasters"] == 3
+
+    def test_source_archive(self, cli_stack, tmp_path, capsys):
+        """A zip of the stack reads back through --source archive."""
+        archive = str(tmp_path / "stack.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            for path in sorted(_glob.glob(cli_stack)):
+                zf.write(path, os.path.basename(path))
+        rc = main(
+            [
+                "collection",
+                "info",
+                archive,
+                "--source",
+                "archive",
+                "--member-glob",
+                "*.tif",
+                "--json",
+            ]
+        )
+        assert rc == 0
+        assert json.loads(capsys.readouterr().out)["rasters"] == 3
 
 
 class TestCollectionStats:
@@ -92,3 +154,331 @@ class TestCollectionStats:
         out = str(tmp_path / "utm.tif")
         assert main(["collection", "stats", glob, out, "--reduce", "sum"]) == 0
         assert Dataset.read_file(out).epsg == 32633, "output CRS must match the stack"
+
+
+class TestCollectionResample:
+    """`pyramids collection resample` — calendar-frequency reduce_time (needs dask)."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_writes_one_raster_per_window(self, cli_stack, tmp_path):
+        """Daily windows over three days write three per-window rasters."""
+        out = str(tmp_path / "windows")
+        rc = main(
+            [
+                "collection",
+                "resample",
+                cli_stack,
+                out,
+                "--freq",
+                "1D",
+                "--op",
+                "mean",
+                "--times",
+                "2022-01-01,2022-01-02,2022-01-03",
+            ]
+        )
+        assert rc == 0
+        assert sorted(os.listdir(out)) == [
+            "window_0000.tif",
+            "window_0001.tif",
+            "window_0002.tif",
+        ]
+
+    def test_percentile_needs_q(self, cli_stack, tmp_path):
+        """--op percentile --q 90 reduces one monthly window without error."""
+        out = str(tmp_path / "p90")
+        rc = main(
+            [
+                "collection",
+                "resample",
+                cli_stack,
+                out,
+                "--freq",
+                "1MS",
+                "--op",
+                "percentile",
+                "--q",
+                "90",
+                "--times",
+                "2022-01-01,2022-01-02,2022-01-03",
+            ]
+        )
+        assert rc == 0
+        assert os.listdir(out) == ["window_0000.tif"]
+
+    def test_falls_back_to_stack_time_axis(self, tmp_path):
+        """With --date-format the stack carries a time axis, so --times is optional."""
+        glob = _dated_stack(tmp_path)
+        out = str(tmp_path / "auto")
+        rc = main(
+            [
+                "collection",
+                "resample",
+                glob,
+                out,
+                "--source",
+                "files",
+                "--date-format",
+                "%Y.%m.%d",
+                "--freq",
+                "1D",
+            ]
+        )
+        assert rc == 0
+        assert len(os.listdir(out)) == 3
+
+    def test_no_time_axis_errors(self, cli_stack, tmp_path, capsys):
+        """Without --times and without a parsed time axis, resample refuses cleanly."""
+        out = str(tmp_path / "none")
+        rc = main(["collection", "resample", cli_stack, out, "--freq", "1D"])
+        assert rc == 1
+        assert "no time axis" in capsys.readouterr().err
+
+    def test_refuses_non_empty_dir(self, cli_stack, tmp_path):
+        """A second write into a populated dir is refused unless --overwrite."""
+        out = str(tmp_path / "win")
+        argv = [
+            "collection",
+            "resample",
+            cli_stack,
+            out,
+            "--freq",
+            "1D",
+            "--times",
+            "2022-01-01,2022-01-02,2022-01-03",
+        ]
+        assert main(argv) == 0
+        assert main(argv) == 1
+        assert main([*argv, "--overwrite"]) == 0
+
+
+class TestCollectionMerge:
+    """`pyramids collection merge` — mosaic every timestep into one raster."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_merge_mean(self, cli_stack, tmp_path):
+        """--method mean mosaics the aligned stack into one raster."""
+        out = str(tmp_path / "mosaic.tif")
+        assert main(["collection", "merge", cli_stack, out, "--method", "mean"]) == 0
+        assert np.allclose(np.asarray(Dataset.read_file(out).read_array()), 1.0)
+
+    def test_merge_bbox_and_nodata(self, cli_stack, tmp_path):
+        """--bbox and --nodata are forwarded to the mosaic."""
+        out = str(tmp_path / "win_mosaic.tif")
+        rc = main(
+            [
+                "collection",
+                "merge",
+                cli_stack,
+                out,
+                "--method",
+                "last",
+                "--nodata",
+                "-5",
+                "--bbox",
+                "0",
+                "0",
+                "2",
+                "2",
+            ]
+        )
+        assert rc == 0
+        assert os.path.exists(out)
+
+    def test_refuses_existing(self, cli_stack, tmp_path):
+        """A second merge without --overwrite is refused."""
+        out = str(tmp_path / "m.tif")
+        assert main(["collection", "merge", cli_stack, out]) == 0
+        assert main(["collection", "merge", cli_stack, out]) == 1
+
+
+class TestCollectionToFile:
+    """`pyramids collection to-file` — write every timestep to a directory."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_writes_each_timestep(self, cli_stack, tmp_path):
+        """Each timestep lands as its own file in the output directory."""
+        out = str(tmp_path / "steps")
+        assert main(["collection", "to-file", cli_stack, out]) == 0
+        assert sorted(os.listdir(out)) == ["0.tif", "1.tif", "2.tif"]
+
+    def test_refuses_non_empty_dir(self, cli_stack, tmp_path):
+        """A second write into a populated dir is refused unless --overwrite."""
+        out = str(tmp_path / "steps")
+        assert main(["collection", "to-file", cli_stack, out]) == 0
+        assert main(["collection", "to-file", cli_stack, out]) == 1
+        assert main(["collection", "to-file", cli_stack, out, "--overwrite"]) == 0
+
+
+class TestCollectionToCog:
+    """`pyramids collection to-cog` — each timestep as its own COG."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_writes_cogs(self, cli_stack, tmp_path):
+        """Each timestep is written as a COG under the slice-named pattern."""
+        out = str(tmp_path / "cogs")
+        assert main(["collection", "to-cog", cli_stack, out]) == 0
+        assert sorted(os.listdir(out)) == [
+            "slice_0000.tif",
+            "slice_0001.tif",
+            "slice_0002.tif",
+        ]
+
+    def test_overwrite_guard(self, cli_stack, tmp_path):
+        """A re-run is refused unless --overwrite, which the method enforces."""
+        out = str(tmp_path / "cogs")
+        assert main(["collection", "to-cog", cli_stack, out]) == 0
+        assert main(["collection", "to-cog", cli_stack, out]) == 1
+        assert main(["collection", "to-cog", cli_stack, out, "--overwrite"]) == 0
+
+
+class TestCollectionToNetcdf:
+    """`pyramids collection to-netcdf` — write the (T,B,R,C) cube to NetCDF."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_writes_netcdf(self, cli_stack, tmp_path):
+        """The cube is written to a single NetCDF file."""
+        out = str(tmp_path / "cube.nc")
+        assert main(["collection", "to-netcdf", cli_stack, out]) == 0
+        assert os.path.exists(out)
+
+    def test_single_variable(self, cli_stack, tmp_path):
+        """--no-var-per-band writes one variable for all bands."""
+        out = str(tmp_path / "single.nc")
+        assert (
+            main(["collection", "to-netcdf", cli_stack, out, "--no-var-per-band"]) == 0
+        )
+        assert os.path.exists(out)
+
+    def test_refuses_existing(self, cli_stack, tmp_path):
+        """A second write without --overwrite is refused."""
+        out = str(tmp_path / "c.nc")
+        assert main(["collection", "to-netcdf", cli_stack, out]) == 0
+        assert main(["collection", "to-netcdf", cli_stack, out]) == 1
+
+
+class TestCollectionToZarr:
+    """`pyramids collection to-zarr` — write the (T,B,R,C) cube to a Zarr store."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_writes_zarr(self, cli_stack, tmp_path):
+        """The cube is written to a Zarr store readable back through --source zarr."""
+        store = str(tmp_path / "cube.zarr")
+        assert main(["collection", "to-zarr", cli_stack, store]) == 0
+        assert os.path.isdir(store)
+
+    def test_refuses_existing(self, cli_stack, tmp_path):
+        """A second write without --overwrite is refused."""
+        store = str(tmp_path / "c.zarr")
+        assert main(["collection", "to-zarr", cli_stack, store]) == 0
+        assert main(["collection", "to-zarr", cli_stack, store]) == 1
+
+
+class TestCollectionToKerchunk:
+    """`pyramids collection to-kerchunk` — write a kerchunk reference JSON."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_forwards_arguments(self, cli_stack, tmp_path, monkeypatch):
+        """The handler forwards the output path and --concat-dim to the method.
+
+        The GeoTIFF fixtures cannot be kerchunked (that path needs NetCDF/HDF5
+        sources and the kerchunk+h5py stack), so the real call is replaced by a
+        stub that records its arguments and writes a placeholder reference — this
+        exercises the thin wrapper's success path deterministically offline.
+        """
+        out = str(tmp_path / "ref.json")
+        captured: dict = {}
+
+        def _fake_to_kerchunk(self, output_path, *, concat_dim="time"):
+            captured["output_path"] = str(output_path)
+            captured["concat_dim"] = concat_dim
+            with open(output_path, "w", encoding="utf-8") as handle:
+                handle.write("{}")
+            return {}
+
+        monkeypatch.setattr(DatasetCollection, "to_kerchunk", _fake_to_kerchunk)
+        rc = main(["collection", "to-kerchunk", cli_stack, out, "--concat-dim", "t"])
+        assert rc == 0
+        assert captured == {"output_path": out, "concat_dim": "t"}
+        assert os.path.exists(out)
+
+    def test_geotiff_sources_error(self, cli_stack, tmp_path, capsys):
+        """A GeoTIFF-backed stack reports the NetCDF/HDF5-only limit cleanly."""
+        out = str(tmp_path / "ref.json")
+        rc = main(["collection", "to-kerchunk", cli_stack, out])
+        assert rc == 1
+        assert "kerchunk" in capsys.readouterr().err.lower()
+
+
+class TestCollectionReproject:
+    """`pyramids collection reproject` — reproject every timestep."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_reprojects_each_timestep(self, cli_stack, tmp_path):
+        """--crs reprojects every timestep onto the target CRS."""
+        out = str(tmp_path / "rep")
+        assert main(["collection", "reproject", cli_stack, out, "--crs", "3857"]) == 0
+        files = sorted(os.listdir(out))
+        assert len(files) == 3
+        assert Dataset.read_file(os.path.join(out, files[0])).epsg == 3857
+
+    def test_maintain_alignment(self, cli_stack, tmp_path):
+        """--maintain-alignment is accepted and still writes a file per timestep."""
+        out = str(tmp_path / "rep2")
+        rc = main(
+            [
+                "collection",
+                "reproject",
+                cli_stack,
+                out,
+                "--crs",
+                "3857",
+                "--maintain-alignment",
+            ]
+        )
+        assert rc == 0
+        assert len(os.listdir(out)) == 3
+
+
+class TestCollectionCrop:
+    """`pyramids collection crop` — crop every timestep to a mask or bbox."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_crop_bbox(self, cli_stack, tmp_path):
+        """--bbox crops every timestep to the window."""
+        out = str(tmp_path / "crp")
+        rc = main(["collection", "crop", cli_stack, out, "--bbox", "0", "0", "2", "2"])
+        assert rc == 0
+        assert len(os.listdir(out)) == 3
+        assert Dataset.read_file(os.path.join(out, "0.tif")).rows <= 4
+
+    def test_crop_mask_raster(self, cli_stack, tmp_path):
+        """--mask crops every timestep to a mask raster's footprint."""
+        mask = sorted(_glob.glob(cli_stack))[0]
+        out = str(tmp_path / "crp_mask")
+        rc = main(["collection", "crop", cli_stack, out, "--mask", mask, "--no-touch"])
+        assert rc == 0
+        assert len(os.listdir(out)) == 3
+
+
+class TestCollectionAlign:
+    """`pyramids collection align` — align every timestep to a reference grid."""
+
+    pytestmark = pytest.mark.lazy
+
+    def test_aligns_to_reference(self, cli_stack, tmp_path):
+        """--reference aligns every timestep onto the reference raster's grid."""
+        reference = sorted(_glob.glob(cli_stack))[0]
+        out = str(tmp_path / "ali")
+        rc = main(["collection", "align", cli_stack, out, "--reference", reference])
+        assert rc == 0
+        assert len(os.listdir(out)) == 3
