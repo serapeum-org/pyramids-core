@@ -58,11 +58,15 @@ ENTRY_POINT_GROUP = "pyramids.compute_backend"
 #: (``>=`` this value). Bumped only on a breaking change to :class:`ComputeBackend`; a backend
 #: declaring an older version is rejected with a clear "upgrade" message rather than an
 #: :class:`AttributeError` deep in a lazy call.
-COMPUTE_BACKEND_API_VERSION = 1
+#:
+#: v2 added the required ``lazy_netcdf_type`` / ``lazy_feature_collection_type`` accessors (the
+#: public-class forwarding seam). A v1 backend lacks them, so this bump turns that mismatch into the
+#: up-front "upgrade" message instead of a later structural rejection naming individual members.
+COMPUTE_BACKEND_API_VERSION = 2
 
 #: The import name of the first-party lazy backend, probed as the optional-import fallback (the
-#: ``digitalearth`` analogue of the plot-backend seam). It does not exist yet; the fallback is inert
-#: until ``pyramids-lazy`` ships.
+#: ``digitalearth`` analogue of the plot-backend seam) when no entry point is registered — e.g. an
+#: editable ``pyramids-lazy`` checkout on ``PYTHONPATH`` with no installed metadata.
 _FALLBACK_DISTRIBUTION = "pyramids_lazy"
 
 
@@ -232,13 +236,39 @@ def _load(entry_point: EntryPoint) -> ComputeBackend | None:
         if isinstance(candidate, ComputeBackend):
             backend = candidate
         else:
+            missing = _missing_protocol_members(candidate)
+            detail = f" (missing: {', '.join(missing)})" if missing else ""
             warnings.warn(
                 f"Compute backend {entry_point.name!r} ({entry_point.value}) does not implement the "
-                f"ComputeBackend protocol; it was skipped.",
+                f"ComputeBackend protocol{detail}; it was skipped. If it targets an older contract, "
+                f"upgrade it to one declaring api_version >= {COMPUTE_BACKEND_API_VERSION}.",
                 RuntimeWarning,
                 stacklevel=2,
             )
     return backend
+
+
+def _missing_protocol_members(candidate: object) -> list[str]:
+    """Return the :class:`ComputeBackend` members ``candidate`` does not expose, for diagnostics.
+
+    ``runtime_checkable`` isinstance only answers yes/no, so this re-derives which names were absent
+    to make the rejection actionable instead of "it was skipped".
+
+    Args:
+        candidate: The object that failed the structural check.
+
+    Returns:
+        The Protocol member names missing from ``candidate``, in declaration order.
+    """
+    # Derive the Protocol's member names without a version-specific typing internal
+    # (``get_protocol_members`` is 3.13+, ``__protocol_attrs__`` is unpopulated on 3.11): the
+    # members are exactly this class's own annotations plus the methods it declares. Guarded so a
+    # diagnostic can never raise over the real rejection.
+    members = set(getattr(ComputeBackend, "__annotations__", {}))
+    for name, value in vars(ComputeBackend).items():
+        if callable(value) and not name.startswith("__"):
+            members.add(name)
+    return sorted(name for name in members if not hasattr(candidate, name))
 
 
 def _fill(resolved: dict[str, ComputeBackend]) -> None:

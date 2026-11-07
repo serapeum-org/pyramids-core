@@ -61,7 +61,8 @@ def __getattr__(name: str):
     """Resolve lazily-exposed `pyramids.netcdf` names (`LazyNetCDF`, legacy `UgridDataset`).
 
     `LazyNetCDF` is resolved here rather than imported at module top so `import pyramids.netcdf`
-    does not eagerly pull the lazy `_lazy_cube` submodule (extraction-readiness, plan #2).
+    does not eagerly pull the lazy backend; it is provided by `pyramids-lazy` and forwarded
+    through the compute-backend seam.
 
     `UgridDataset` was renamed to :class:`~pyramids.netcdf.ugrid.MeshDataset`; this top-level
     re-export kept the old name importable for one release so `from pyramids.netcdf import

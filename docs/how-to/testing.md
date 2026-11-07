@@ -90,10 +90,11 @@ specific `netcdf4` build string so the HDF5 shared library matches
 | `tests/dataset/ops/test_zonal_stats.py` | core | ✅ | — | `dev` |
 | `tests/dataset/stac/test_stac.py` | core (duck-typed, no pystac dep) | ✅ | — | `dev` |
 | `tests/feature/` (excl. `lazy/`) | core + `parquet` (some) | ✅ | — | `dev` |
-| `tests/feature/lazy/` | `parquet` | ✅ (skips) | ✅ `parquet` | `parquet` |
 | `tests/netcdf/` (excl. `lazy/`) | `interop` | ✅ (interop-tests step) | — | `dev` |
-| `tests/netcdf/lazy/` | `lazy` | ✅ (most skip without kerchunk) | ✅ `lazy` | `lazy` |
 | `tests/netcdf/ugrid/` | `interop` | ✅ | — | `dev` |
+
+The dask-vector and NetCDF-lazy suites (`tests/feature/lazy/`, `tests/netcdf/lazy/`) moved to the
+`pyramids-lazy` repository with the op bodies and run in that repository's CI.
 
 "Skips" in the main-package column means the tests are tagged or guarded so
 they self-skip when the extra's headline dep is missing. They *run* fully
@@ -143,8 +144,7 @@ pixi run -e dev test-all             # everything in one go
 ### Each extras env, scoped to the directory CI runs there
 
 ```bash
-pixi run -e lazy    pytest -vvv tests/netcdf/lazy
-pixi run -e parquet pytest -vvv tests/feature/lazy
+pixi run -e lazy    pytest -vvv tests/dataset/ops/lazy
 pixi run -e parquet pytest -vvv -m "parquet and not live" --strict-extra-skips
 pixi run -e dev     pytest -vvv tests/stac tests/dataset/stac --strict-extra-skips
 ```
@@ -178,7 +178,6 @@ identifiers):
 | `@pytest.mark.interop` | the interop peer dep (pixi feature, not an extra) |
 | `@pytest.mark.netcdf_lazy` | `lazy` (kerchunk + h5py) |
 | `@pytest.mark.parquet` | `parquet` |
-| `@pytest.mark.parquet_lazy` | `parquet` (dask-geopandas) |
 
 `tests/conftest.py` runs a `pytest_collection_modifyitems` hook that, for each
 test tagged with one of these markers, auto-applies the matching
@@ -195,16 +194,17 @@ and it runs wherever `[lazy]` is installed (the `lazy` env, and `dev` —
 `lazy` now ships kerchunk + h5py), auto-skipping only where those are
 absent. No manual `try/except ImportError` + `skipif` boilerplate required.
 
-The skip-decorator aliases (`requires_netcdf_lazy`, `requires_parquet_lazy`, …)
-live in `tests/_marks.py` and are still available for inline use on individual
-test methods when a full class-level marker is overkill.
+The skip-decorator aliases (`requires_netcdf_lazy`, …) live in `tests/_marks.py` and are
+still available for inline use on individual test methods when a full class-level marker is
+overkill. (The `parquet_lazy` marker was retired from core when the lazy vector tests moved to
+`pyramids-lazy`; it lives there now.)
 
 ### Filtering
 
 ```bash
 pytest -m netcdf_lazy                           # only netcdf-lazy-tagged tests
 pytest -m "not (viz or lazy or interop or ...)"  # drop every extras-gated test
-pytest -m "parquet_lazy and not slow"           # compose with other markers
+pytest -m "netcdf_lazy and not slow"            # compose with other markers
 ```
 
 ## Coverage

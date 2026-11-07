@@ -1007,7 +1007,9 @@ def _load_zarr(href: str):
     )
     import zarr
 
-    # Deferred so core still imports once these bodies move to pyramids-lazy (plan #2).
+    # These Zarr helpers stayed in core (the eager STAC loader uses them); only the lazy op
+    # bodies moved to pyramids-lazy. Imported here, not at module top, to keep `import
+    # pyramids.stac` off the zarr dependency.
     from pyramids.dataset.ops._geobox_zarr import detect_data_var
     from pyramids.dataset.ops._zarr import _resolve_store
 

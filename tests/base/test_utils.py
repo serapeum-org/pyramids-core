@@ -57,6 +57,11 @@ class TestApplyUnpack:
 
     def test_reexported_identity(self):
         """`_lazy` re-exports the canonical `base._utils` primitive (deprecated alias; one object)."""
+        # This asserts a property of the pyramids-lazy backend, so it can only run where the backend
+        # is installed. importorskip(exc_type=ImportError) skips — rather than errors — in a bare
+        # core and in a backend without its [parquet] extra (whose guard raises a branded
+        # ImportError, which importorskip re-raises unless told it is an "absent" signal).
+        pytest.importorskip("pyramids_lazy._lazy", exc_type=ImportError)
         from pyramids_lazy._lazy import _apply_unpack
         from pyramids_lazy._lazy import apply_unpack as lazy_fn
 
