@@ -76,15 +76,14 @@ def __getattr__(name: str) -> object:
         # every caller matching the branded type. Raised from the flag rather than by re-running
         # import_dask_geopandas, so the module-scope probe stays the single source of truth.
         raise OptionalPackageDoesNotExist(_LAZY_FC_INSTALL_HINT)
-    # The lazy vector collection now lives in the pyramids-lazy compute backend; forward the
-    # public name to it. require_compute_backend() raises the branded
-    # OptionalPackageDoesNotExist when no backend is installed.
-    from pyramids.base._compute_backend import require_compute_backend
+    # The lazy vector collection lives in the compute backend; forward the public name to whichever
+    # backend is installed, resolved through the seam rather than by importing pyramids_lazy, so a
+    # conforming third-party backend is honoured. Raises the branded error on a bare core.
+    from pyramids.base._compute_backend import backend_lazy_type
 
-    require_compute_backend()
-    from pyramids_lazy import LazyFeatureCollection
-
-    return LazyFeatureCollection
+    return backend_lazy_type(
+        "lazy_feature_collection_type", "pyramids.feature.LazyFeatureCollection"
+    )
 
 
 def has_lazy_backend() -> bool:
@@ -153,20 +152,26 @@ def is_lazy_fc(obj: object) -> bool:
     """
     if not _HAS_DASK_GEOPANDAS:
         return False
-    # Check against the backend's class (the lazy collection moved to pyramids-lazy). Stay safe on a
-    # no-backend install: no object can be a LazyFeatureCollection there, so return False.
+    # Check against the installed backend's class, resolved through the seam. Importing
+    # pyramids_lazy directly would answer False for a conforming third-party backend's own lazy
+    # frames -- silently, which is the worst failure mode for a dispatch predicate. On a
+    # no-backend install the branded error is the expected outcome and False is the right answer:
+    # no object can be a lazy collection there.
+    from pyramids.base._compute_backend import backend_lazy_type
+
     try:
-        from pyramids_lazy import LazyFeatureCollection
-    except Exception:
+        lazy_cls = backend_lazy_type(
+            "lazy_feature_collection_type", "pyramids.feature.LazyFeatureCollection"
+        )
+    except OptionalPackageDoesNotExist:
         return False
-    return isinstance(obj, LazyFeatureCollection)
+    return isinstance(obj, lazy_cls)
 
 
 __all__ = [
     "Coords",
     "FeatureCollection",
     "GeometryCoords",
-    "LazyFeatureCollection",
     "VectorInfo",
     "create_points",
     "create_polygon",

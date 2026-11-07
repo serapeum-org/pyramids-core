@@ -36,6 +36,10 @@ def _make_backend(api_version: int = cb.COMPUTE_BACKEND_API_VERSION):
 
     backend = _Backend()
     backend.api_version = api_version
+    # The protocol's two data members (the lazy class types) are part of structural conformance:
+    # runtime_checkable isinstance checks attribute presence, not just methods.
+    backend.lazy_netcdf_type = type("_FakeLazyNetCDF", (), {})
+    backend.lazy_feature_collection_type = type("_FakeLazyFrame", (), {})
     for name in _METHODS:
         setattr(backend, name, lambda *a, **k: None)
     return backend
@@ -137,6 +141,8 @@ class TestComputeBackends:
         """
         members = {name: (lambda self, *a, **k: None) for name in _METHODS}
         members["api_version"] = cb.COMPUTE_BACKEND_API_VERSION
+        members["lazy_netcdf_type"] = type("_FakeLazyNetCDF", (), {})
+        members["lazy_feature_collection_type"] = type("_FakeLazyFrame", (), {})
         backend_cls = type("ClassBackend", (), members)
         monkeypatch.setattr(
             cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:C", backend_cls)]
@@ -262,3 +268,79 @@ class TestRequireComputeBackend:
         )
         with pytest.raises(OptionalPackageDoesNotExist, match="needs >="):
             cb.require_compute_backend()
+
+
+class TestAThirdPartyBackendIsHonoured:
+    """Core's public lazy names resolve through the seam, not through a hard-coded distribution."""
+
+    @pytest.fixture
+    def third_party_backend(self, monkeypatch):
+        """Register a conforming backend that is not pyramids-lazy."""
+
+        class _OtherLazyNetCDF:
+            pass
+
+        class _OtherLazyFrame:
+            pass
+
+        class _OtherBackend:
+            api_version = cb.COMPUTE_BACKEND_API_VERSION
+            lazy_netcdf_type = _OtherLazyNetCDF
+            lazy_feature_collection_type = _OtherLazyFrame
+
+        backend = _OtherBackend()
+        monkeypatch.setattr(cb, "_discover", lambda: {"other": backend})
+        cb.clear_compute_backend_cache()
+        yield backend
+        cb.clear_compute_backend_cache()
+
+    def test_netcdf_public_name_comes_from_the_backend(self, third_party_backend):
+        """``pyramids.netcdf.LazyNetCDF`` is the registered backend's class."""
+        import pyramids.netcdf as netcdf_pkg
+
+        assert netcdf_pkg.LazyNetCDF is third_party_backend.lazy_netcdf_type, (
+            "forwarding ignored the registered backend"
+        )
+
+    def test_feature_public_name_comes_from_the_backend(self, third_party_backend):
+        """``pyramids.feature.LazyFeatureCollection`` is the registered backend's class."""
+        import pyramids.feature as feature_pkg
+
+        assert (
+            feature_pkg.LazyFeatureCollection
+            is third_party_backend.lazy_feature_collection_type
+        ), "forwarding ignored the registered backend"
+
+    def test_is_lazy_fc_recognises_the_backends_frame(self, third_party_backend):
+        """``is_lazy_fc`` answers True for the registered backend's own lazy frame.
+
+        Test scenario:
+            A dispatch predicate that answered False here would be silently wrong — the worst
+            failure mode, since callers would route a lazy frame down the eager path.
+        """
+        from pyramids.feature import is_lazy_fc
+
+        frame = third_party_backend.lazy_feature_collection_type()
+        assert is_lazy_fc(frame) is True, "is_lazy_fc did not recognise the backend's frame"
+
+    def test_a_backend_missing_the_type_is_branded(self, monkeypatch):
+        """A backend that omits the attribute gets a branded error naming it.
+
+        Test scenario:
+            ``lazy_netcdf_type`` is a Protocol *data* member, and ``runtime_checkable`` isinstance
+            checks only methods, so its absence cannot be caught structurally and must be reported
+            at resolution.
+        """
+
+        backend = _make_backend()
+        del backend.lazy_netcdf_type
+        assert not isinstance(backend, cb.ComputeBackend), (
+            "a backend without the type must fail the structural check"
+        )
+        monkeypatch.setattr(cb, "_discover", lambda: {"other": backend})
+        cb.clear_compute_backend_cache()
+        import pyramids.netcdf as netcdf_pkg
+
+        with pytest.raises(OptionalPackageDoesNotExist, match="lazy_netcdf_type"):
+            netcdf_pkg.LazyNetCDF
+        cb.clear_compute_backend_cache()

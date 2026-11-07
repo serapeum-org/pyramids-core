@@ -15,10 +15,15 @@ It mirrors the raster/vector driver seam (:mod:`pyramids.dataset._drivers`) and 
 seam — same caching, publish lock, re-entrancy guard and first-wins collision rule — so there is
 one provider in practice (``pyramids-lazy``) but a third party *could* register its own.
 
-**Status:** the resolver and contract are defined here in Phase 1; the core method bodies are wired
-to :func:`require_compute_backend` in the Phase 2 cutover, when ``pyramids-lazy`` ships the backend.
-Until then nothing in core calls :func:`require_compute_backend`, and a bare install resolves no
-backend (its lazy features keep working through the in-core implementations that still live in core).
+**Status:** the Phase 2 cutover has landed. Core's cube (``NetCDF``), vector
+(``FeatureCollection``) and Zarr/kerchunk lazy bodies now dispatch through
+:func:`require_compute_backend`, and ``pyramids-lazy`` ships the backend that serves them. On a
+bare install those operations raise the branded error.
+
+One lazy surface has **not** moved: ``Dataset.read_array(chunks=)`` and ``DatasetCollection.data``
+still build their dask arrays inside core (``dataset/engines/io.py``, ``dataset/collection.py``), so
+a bare core with dask installed keeps a working lazy raster path that never reaches this seam. See
+:class:`ComputeBackend` for the exact split.
 """
 
 from __future__ import annotations
@@ -71,11 +76,22 @@ class ComputeBackend(Protocol):
     straight delegation. ``@runtime_checkable`` so :func:`require_compute_backend` can verify the
     object structurally.
 
-    Scope: the v1 contract covers the raster (``Dataset``), raster-cube (``NetCDF``) and vector
-    (``FeatureCollection``) lazy ops. ``MeshDataset``'s own lazy surface (``open_mfdataset`` /
-    ``to_dask_dataframe`` / ``to_zarr`` / ``from_zarr``) is **intentionally out of v1** — mesh lazy
-    parity is deferred to FR-B (issue #1458); its methods are added (additively, no api_version bump)
-    when the mesh lazy bodies move to the backend.
+    Scope: the v1 contract covers the raster-cube (``NetCDF``) and vector (``FeatureCollection``)
+    lazy ops, plus the Zarr/kerchunk writers and readers.
+
+    What is **not** dispatched yet, despite being lazy: ``Dataset.read_array(chunks=)`` and
+    ``DatasetCollection.data`` still construct dask arrays inside core
+    (``dataset/engines/io.py``, ``dataset/collection.py``), guarded by a local ``import
+    dask.array`` and a plain ``ImportError`` rather than this seam's branded error. So a bare core
+    with dask installed still has a working lazy raster path, and :meth:`read_array_lazy` is
+    reached only from the ``NetCDF`` read and the xarray/UGRID interop readers. Completing that
+    move is follow-up work; this docstring previously claimed the raster surface was covered, which
+    it is not.
+
+    ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
+    ``from_zarr``) is **intentionally out of v1** — mesh lazy parity is deferred to FR-B (issue
+    #1458); its methods are added (additively, no api_version bump) when the mesh lazy bodies move
+    to the backend.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
@@ -84,10 +100,23 @@ class ComputeBackend(Protocol):
 
     api_version: int
 
+    #: The class ``build_lazy_cube`` returns, published so core can forward its public
+    #: ``pyramids.netcdf.LazyNetCDF`` name (and its ``isinstance`` checks) to this backend.
+    lazy_netcdf_type: type
+
+    #: The class the lazy vector reads return, published so core can forward its public
+    #: ``pyramids.feature.LazyFeatureCollection`` name and back ``is_lazy_fc``.
+    lazy_feature_collection_type: type
+
     def read_array_lazy(
         self, dataset: Any, *, chunks: Any, lock: Any = None, **kwargs: Any
     ) -> ArrayLike:
-        """Lazy dask-backed read of a raster/variable (``Dataset``/``NetCDF`` ``read_array(chunks=)``)."""
+        """Lazy dask-backed read of a cube variable (``NetCDF.read_array(chunks=)``).
+
+        Reached from the ``NetCDF`` read path and the xarray/UGRID interop readers.
+        ``Dataset.read_array(chunks=)`` does **not** route here — it still builds its dask array in
+        core (see the class docstring).
+        """
         ...  # pragma: no cover - protocol
 
     def build_lazy_cube(self, netcdf: Any, chunks: Any) -> Any:
@@ -299,7 +328,7 @@ def _fallback_backend() -> ComputeBackend | None:
         if not isinstance(backend, ComputeBackend):
             raise OptionalPackageDoesNotExist(
                 "The installed pyramids-lazy returned a backend that does not implement the "
-                "ComputeBackend protocol (missing required methods). Upgrade with "
+                "ComputeBackend protocol (missing required members). Upgrade with "
                 "`pip install -U pyramids-lazy`."
             )
     return backend
@@ -353,9 +382,10 @@ def require_compute_backend() -> ComputeBackend:
     backend = next(iter(registered.values())) if registered else _fallback_backend()
     if backend is None:
         raise OptionalPackageDoesNotExist(
-            "pyramids' lazy/dask operations require the lazy backend, which is not installed. "
-            "Install it with `pip install pyramids-lazy` (or the `pyramids-core[lazy]` / "
-            "`[parquet]` extras)."
+            "pyramids' lazy/dask operations require the pyramids-lazy backend, which is not "
+            "installed. Install it with `pip install pyramids-lazy`. The `pyramids-core[lazy]` / "
+            "`[parquet]` extras install the dask/zarr stack the backend builds on, but not the "
+            "backend itself, so they alone do not resolve this error."
         )
     declared = getattr(backend, "api_version", None)
     # `bool` subclasses `int`, so exclude it explicitly: `api_version = True` must not pass as 1.
@@ -369,3 +399,37 @@ def require_compute_backend() -> ComputeBackend:
             f">= {COMPUTE_BACKEND_API_VERSION}. Upgrade with `pip install -U pyramids-lazy`."
         )
     return backend
+
+
+def backend_lazy_type(attribute: str, public_name: str) -> type:
+    """Resolve a public lazy class from the *installed* backend, whichever one that is.
+
+    Core's public lazy names (``pyramids.netcdf.LazyNetCDF``,
+    ``pyramids.feature.LazyFeatureCollection``) are provided by the backend, not by core. Resolving
+    them by importing ``pyramids_lazy`` directly would defeat the entry-point seam: a conforming
+    third-party backend would be discovered by :func:`require_compute_backend` and then ignored,
+    failing with a raw ``ModuleNotFoundError`` naming a distribution the user never installed.
+
+    Args:
+        attribute: The backend attribute holding the class (e.g. ``"lazy_netcdf_type"``).
+        public_name: The core-public name being resolved, for the error message.
+
+    Returns:
+        The class the installed backend publishes under `attribute`.
+
+    Raises:
+        OptionalPackageDoesNotExist: No backend is installed (from
+            :func:`require_compute_backend`), or the installed backend does not publish
+            `attribute`. The second case is normally caught earlier — the attribute is part of the
+            Protocol, and ``runtime_checkable`` isinstance does check data members — so this guard
+            is the backstop for a backend that bypassed discovery's structural check.
+    """
+    backend = require_compute_backend()
+    resolved = getattr(backend, attribute, None)
+    if resolved is None:
+        raise OptionalPackageDoesNotExist(
+            f"The installed lazy backend ({type(backend).__module__}) does not publish "
+            f"`{attribute}`, so `{public_name}` cannot be resolved. Upgrade the backend "
+            f"(for the first-party one: `pip install -U pyramids-lazy`)."
+        )
+    return resolved

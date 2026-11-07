@@ -45,7 +45,6 @@ __all__ = [
     "GroupInfo",
     "LabeledArray",
     "LabeledDataset",
-    "LazyNetCDF",
     "NetCDF",
     "NetCDFMetadata",
     "Selectors",
@@ -79,16 +78,13 @@ def __getattr__(name: str):
     """
 
     if name == "LazyNetCDF":
-        # The lazy cube now lives in the pyramids-lazy compute backend. Forward the public name to
-        # the backend's class so `pyramids.netcdf.LazyNetCDF` and `isinstance(x, LazyNetCDF)` keep
-        # working; require_compute_backend() raises the branded OptionalPackageDoesNotExist when no
-        # backend is installed (bare core), instead of an ImportError.
-        from pyramids.base._compute_backend import require_compute_backend
+        # The lazy cube lives in the compute backend. Forward the public name to whichever backend
+        # is installed -- resolved through the seam rather than by importing pyramids_lazy, so a
+        # conforming third-party backend is honoured instead of failing on a distribution the user
+        # never installed. Raises the branded OptionalPackageDoesNotExist on a bare core.
+        from pyramids.base._compute_backend import backend_lazy_type
 
-        require_compute_backend()
-        from pyramids_lazy import LazyNetCDF
-
-        return LazyNetCDF
+        return backend_lazy_type("lazy_netcdf_type", "pyramids.netcdf.LazyNetCDF")
     if name == "UgridDataset":
         warnings.warn(
             "UgridDataset is renamed to MeshDataset; import MeshDataset instead. "
