@@ -554,7 +554,11 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     )
     _add_io_arguments(m_st)
     m_st.add_argument(
-        "--index", type=int, required=True, help="0-based time step index"
+        "--index",
+        type=int,
+        required=True,
+        help="0-based time step position (positional, not a coordinate value; "
+        "use 'sel --time' to select by coordinate)",
     )
     m_st.set_defaults(func=_cmd_mesh_sel_time)
 
