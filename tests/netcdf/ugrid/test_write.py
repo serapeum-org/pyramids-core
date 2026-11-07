@@ -20,6 +20,56 @@ pytestmark = pytest.mark.core
 class TestWriteUgrid:
     """Tests for MeshDataset.to_file() (UGRID-15)."""
 
+    @staticmethod
+    def _temporal_ramp():
+        """A two-face mesh carrying a 3-step linear ramp (slope 10 / 20 per face)."""
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            data={"v": np.array([[0.0, 0.0], [10.0, 20.0], [20.0, 40.0]])},
+            data_locations={"v": "face"},
+        )
+        ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
+        return ds
+
+    def test_to_file_round_trips_a_polyfit_coefficient_dim(self, tmp_path):
+        """A polyfit result writes and reads back its non-time `coefficient` axis (#1478).
+
+        Test scenario:
+            `polyfit` replaces the time axis with a `coefficient` axis, giving a
+            `(deg + 1, n_face)` variable whose leading axis is neither time nor the element
+            axis. The writer assembled only a time-or-nothing + element dimension list, so it
+            built a rank-1 array for a rank-2 variable and GDAL raised
+            `RuntimeError: Illegal numpy array rank 2`. The result must now write and read
+            back with the coefficient axis and values intact.
+        """
+        fit = self._temporal_ramp().polyfit(1)
+        assert fit["v"].dimensions == ("coefficient", "face")
+        out = tmp_path / "polyfit.nc"
+
+        fit.to_file(out)
+
+        back = MeshDataset.read_file(out)
+        read = back["v"]
+        assert np.asarray(read.data).shape == (2, 2), (
+            "the coefficient axis must survive"
+        )
+        assert read.dimensions[0] == "coefficient", f"got {read.dimensions}"
+        np.testing.assert_allclose(np.asarray(read.data), np.asarray(fit["v"].data))
+
+    def test_to_file_round_trips_a_curvefit_parameter_dim(self, tmp_path):
+        """The sibling case: `curvefit`'s non-time `parameter` axis also writes (#1478)."""
+        fit = self._temporal_ramp().curvefit(lambda x, a, b: a * x + b)
+        assert fit["v"].dimensions == ("parameter", "face")
+        out = tmp_path / "curvefit.nc"
+
+        fit.to_file(out)
+
+        read = MeshDataset.read_file(out)["v"]
+        assert np.asarray(read.data).shape == (2, 2)
+        assert read.dimensions[0] == "parameter", f"got {read.dimensions}"
+
     def test_write_and_read_round_trip(self, tmp_path):
         """Test write then read produces consistent data.
 

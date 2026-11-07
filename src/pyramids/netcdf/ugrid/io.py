@@ -643,6 +643,42 @@ def _write_connectivity_array(
     )
 
 
+def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int) -> Any:
+    """GDAL dimension for a non-time, non-element axis of a data variable.
+
+    A variable may carry a leading axis that is neither time nor the mesh-element axis -- the
+    ``coefficient`` axis a :meth:`MeshDataset.polyfit` / ``curvefit`` result replaces the time
+    axis with, or a layer axis. Without a dimension for it the variable's array rank exceeds
+    the dimension list and GDAL rejects the write with ``RuntimeError: Illegal numpy array
+    rank N`` (issue #1478).
+
+    A dimension already created under `name` at the same `size` is reused, so variables that
+    share such an axis share one dimension. When the group already holds a dimension of that
+    name at a different size -- two fits of different degree in one dataset -- a size suffix
+    keeps the name unique, since a GDAL group cannot hold two dimensions with the same name.
+
+    Args:
+        rg: The GDAL root group the dimension is created in.
+        dims: The name→dimension cache shared across the write; updated in place.
+        name: The dimension's intended on-disk name (e.g. ``"coefficient"``).
+        size: The axis length.
+
+    Returns:
+        The GDAL dimension object to index this axis with.
+    """
+    existing = dims.get(name)
+    if existing is not None and existing.GetSize() == size:
+        return existing
+    unique = name
+    suffix = 1
+    while unique in dims:
+        suffix += 1
+        unique = f"{name}{suffix}"
+    created = rg.CreateDimension(unique, None, None, size)
+    dims[unique] = created
+    return created
+
+
 def write_ugrid_data_variable(
     rg: gdal.Group,
     var: MeshVariable,
@@ -660,9 +696,22 @@ def write_ugrid_data_variable(
     if var.data is None:
         return
 
+    data = var.data
+    # One GDAL dimension per array axis, built positionally so a variable with a leading axis
+    # that is neither time nor the element axis -- e.g. the `coefficient` axis a polyfit result
+    # carries -- is written with the right rank instead of tripping GDAL's "Illegal numpy array
+    # rank N" (issue #1478). The trailing axis is always the mesh-element (location) axis; a
+    # leading axis is the shared time dimension when it is the time axis, otherwise a dimension
+    # named from `var.dimensions` (or synthesised when the variable carries no names).
+    names = var.dimensions if len(var.dimensions) == data.ndim else ()
+    time_axis = var.time_index if var.has_time else None
     dim_list = []
-    if var.has_time and "time" in dims:
-        dim_list.append(dims["time"])
+    for axis in range(data.ndim - 1):
+        if axis == time_axis and "time" in dims:
+            dim_list.append(dims["time"])
+        else:
+            dim_name = names[axis] if names else f"{var.name}_dim{axis}"
+            dim_list.append(_extra_dimension(rg, dims, dim_name, data.shape[axis]))
 
     loc_dim_name = f"{mesh_name}_n{var.location.capitalize()}s"
     if loc_dim_name in dims:
