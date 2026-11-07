@@ -622,7 +622,8 @@ class TestVoronoiPolygons:
         src = self._mesh_file(tmp_path)
         out = tmp_path / "vor.geojson"
         assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
-        assert out.exists() and out.stat().st_size > 0
+        assert out.exists(), "the .geojson output must be created"
+        assert out.stat().st_size > 0, "the output must not be empty"
 
     def test_voronoi_polygons_refuses_an_existing_output(self, tmp_path):
         """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""

@@ -41,6 +41,8 @@ _HELP_MESH_FILE = "source UGRID NetCDF path"
 _HELP_MESH_OUTPUT = "destination UGRID NetCDF path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_VAR = "mesh variable to operate on (default: the only data variable)"
+_HELP_VECTOR_OUTPUT = "destination vector path"
+_HELP_DRIVER = "OGR driver (default: inferred from the extension)"
 
 
 def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
@@ -457,16 +459,14 @@ def _add_to_geodataframe(msub: argparse._SubParsersAction) -> None:
         "to-geodataframe", help="write the mesh elements as a vector file"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
-    parser.add_argument("output", help="destination vector path")
+    parser.add_argument("output", help=_HELP_VECTOR_OUTPUT)
     parser.add_argument("--var", help=_HELP_VAR + " (carried as a column)")
     parser.add_argument(
         "--location",
         default="face",
         help="mesh location: face / node / edge (default: face)",
     )
-    parser.add_argument(
-        "--driver", help="OGR driver (default: inferred from the extension)"
-    )
+    parser.add_argument("--driver", help=_HELP_DRIVER)
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     parser.set_defaults(func=_cmd_mesh_to_geodataframe)
 
@@ -704,14 +704,12 @@ def _add_polygonize(msub: argparse._SubParsersAction) -> None:
         "polygonize", help="dissolve equal-valued faces into polygons (vector file)"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
-    parser.add_argument("output", help="destination vector path")
+    parser.add_argument("output", help=_HELP_VECTOR_OUTPUT)
     parser.add_argument("--var", help=_HELP_VAR + " (the face field to dissolve by)")
     parser.add_argument(
         "--decimals", type=int, help="round to this many decimals before grouping"
     )
-    parser.add_argument(
-        "--driver", help="OGR driver (default: inferred from the extension)"
-    )
+    parser.add_argument("--driver", help=_HELP_DRIVER)
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     parser.set_defaults(func=_cmd_mesh_polygonize)
 
@@ -796,10 +794,8 @@ def _add_voronoi_polygons(msub: argparse._SubParsersAction) -> None:
         help="Voronoi (Thiessen) cells of the mesh nodes, as a vector file",
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
-    parser.add_argument("output", help="destination vector path")
-    parser.add_argument(
-        "--driver", help="OGR driver (default: inferred from the extension)"
-    )
+    parser.add_argument("output", help=_HELP_VECTOR_OUTPUT)
+    parser.add_argument("--driver", help=_HELP_DRIVER)
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     parser.set_defaults(func=_cmd_mesh_voronoi_polygons)
 

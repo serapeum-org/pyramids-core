@@ -476,7 +476,8 @@ class TestVoronoiPolygons:
 
         self._strip_mesh().voronoi_polygons().to_file(str(out))
 
-        assert out.exists() and out.stat().st_size > 0, "the cells must write to a file"
+        assert out.exists(), "the cells must write to a file"
+        assert out.stat().st_size > 0, "the written file must not be empty"
 
     def test_the_raw_voronoi_primitive_is_unchanged(self):
         """`voronoi()` still returns the low-level scipy tessellation (non-breaking)."""
