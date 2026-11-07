@@ -16,7 +16,7 @@ import pytest
 # import and skip just that class when the backend is absent, rather than aborting collection.
 try:
     from pyramids_lazy._kerchunk_facade import _normalize_backend
-except ModuleNotFoundError:  # pragma: no cover - lazy backend not installed
+except ImportError:  # pragma: no cover - backend absent, or its optional deps are
     _normalize_backend = None
 
 from pyramids.netcdf import GeoReference, LabeledArray, NetCDF

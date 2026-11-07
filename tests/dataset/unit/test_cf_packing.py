@@ -29,7 +29,7 @@ from osgeo import gdal
 # the backend is absent — never abort collection of the core packing tests.
 try:
     from pyramids_lazy._zarr import _metadata_dict
-except ModuleNotFoundError:  # pragma: no cover - lazy backend not installed
+except ImportError:  # pragma: no cover - backend absent, or its optional deps are
     _metadata_dict = None
 
 from pyramids.base._utils import (

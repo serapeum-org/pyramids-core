@@ -23,7 +23,11 @@ import pytest
 # dask-geopandas (the [parquet] extra), so importorskip the submodule itself: this skips the whole
 # module both when the backend is absent and when dask-geopandas is (e.g. the lazy-but-not-parquet
 # env), rather than erroring at collection.
-_fc_mod = pytest.importorskip("pyramids_lazy._vector_read")
+# exc_type=ImportError is required: importorskip only skips on ModuleNotFoundError and
+# re-raises other ImportErrors, and this module's dask-geopandas guard raises a branded
+# ImportError (not ModuleNotFoundError), which aborted collection in every env without the
+# [parquet] extra.
+_fc_mod = pytest.importorskip("pyramids_lazy._vector_read", exc_type=ImportError)
 
 from pyramids import configure_lazy_vector  # noqa: E402
 
