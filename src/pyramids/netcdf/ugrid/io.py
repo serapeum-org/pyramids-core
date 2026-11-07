@@ -650,7 +650,7 @@ def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int)
     ``coefficient`` axis a :meth:`MeshDataset.polyfit` / ``curvefit`` result replaces the time
     axis with, or a layer axis. Without a dimension for it the variable's array rank exceeds
     the dimension list and GDAL rejects the write with ``RuntimeError: Illegal numpy array
-    rank N`` (issue #1478).
+    rank N``.
 
     A dimension already created under `name` at the same `size` is reused, so variables that
     share such an axis share one dimension. When the group already holds a dimension of that
@@ -700,7 +700,7 @@ def write_ugrid_data_variable(
     # One GDAL dimension per array axis, built positionally so a variable with a leading axis
     # that is neither time nor the element axis -- e.g. the `coefficient` axis a polyfit result
     # carries -- is written with the right rank instead of tripping GDAL's "Illegal numpy array
-    # rank N" (issue #1478). The trailing axis is always the mesh-element (location) axis; a
+    # rank N". The trailing axis is always the mesh-element (location) axis; a
     # leading axis is the shared time dimension when it is the time axis, otherwise a dimension
     # named from `var.dimensions` (or synthesised when the variable carries no names).
     names = var.dimensions if len(var.dimensions) == data.ndim else ()

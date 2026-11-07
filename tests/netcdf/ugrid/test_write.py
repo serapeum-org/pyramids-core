@@ -34,7 +34,7 @@ class TestWriteUgrid:
         return ds
 
     def test_to_file_round_trips_a_polyfit_coefficient_dim(self, tmp_path):
-        """A polyfit result writes and reads back its non-time `coefficient` axis (#1478).
+        """A polyfit result writes and reads back its non-time `coefficient` axis.
 
         Test scenario:
             `polyfit` replaces the time axis with a `coefficient` axis, giving a
@@ -59,7 +59,7 @@ class TestWriteUgrid:
         np.testing.assert_allclose(np.asarray(read.data), np.asarray(fit["v"].data))
 
     def test_to_file_round_trips_a_curvefit_parameter_dim(self, tmp_path):
-        """The sibling case: `curvefit`'s non-time `parameter` axis also writes (#1478)."""
+        """The sibling case: `curvefit`'s non-time `parameter` axis also writes."""
         fit = self._temporal_ramp().curvefit(lambda x, a, b: a * x + b)
         assert fit["v"].dimensions == ("parameter", "face")
         out = tmp_path / "curvefit.nc"
