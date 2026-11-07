@@ -1878,15 +1878,20 @@ class DatasetCollection:
         # OptionalPackageDoesNotExist when no backend is installed.
         from pyramids.base._compute_backend import require_compute_backend
 
-        return require_compute_backend().write_collection_to_zarr(
-            self,
-            store,
-            compute=compute,
-            mode=mode,
-            storage_options=storage_options,
-            compressor=compressor,
-            append_dim=append_dim,
-            region=region,
+        # The backend is structurally typed, so its return widens to Any; this method's contract
+        # (kept from main's annotation) is `Delayed | None`.
+        return cast(
+            "Delayed | None",
+            require_compute_backend().write_collection_to_zarr(
+                self,
+                store,
+                compute=compute,
+                mode=mode,
+                storage_options=storage_options,
+                compressor=compressor,
+                append_dim=append_dim,
+                region=region,
+            ),
         )
 
     def to_netcdf(

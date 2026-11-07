@@ -33,7 +33,7 @@ import threading
 import warnings
 from importlib import import_module
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from pyramids.base._driver_discovery import extra_missing
 from pyramids.base._errors import OptionalPackageDoesNotExist
@@ -432,4 +432,5 @@ def backend_lazy_type(attribute: str, public_name: str) -> type:
             f"`{attribute}`, so `{public_name}` cannot be resolved. Upgrade the backend "
             f"(for the first-party one: `pip install -U pyramids-lazy`)."
         )
-    return resolved
+    # getattr widens to Any; the Protocol declares both attributes as `type`.
+    return cast("type", resolved)
