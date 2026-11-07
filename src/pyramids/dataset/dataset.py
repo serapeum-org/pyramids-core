@@ -2561,6 +2561,9 @@ class Dataset(RasterBase):
             performs the write when `compute=False`.
 
         Raises:
+            OptionalPackageDoesNotExist: No lazy compute backend is installed. Zarr writing
+                dispatches to pyramids-lazy; install it with `pip install pyramids-lazy`. This
+                check runs first, so it precedes the argument checks below.
             OverviewTargetError: `overview_factors` was given and this dataset cannot
                 hold overviews — a plain VRT whose description is not a path: an empty
                 one, a blank one, or inline VRT XML. The levels are built through

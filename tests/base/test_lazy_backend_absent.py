@@ -96,3 +96,91 @@ def test_public_lazy_fc_without_dask_geopandas_is_branded(monkeypatch):
     monkeypatch.setattr(feature_pkg, "_HAS_DASK_GEOPANDAS", False)
     with pytest.raises(OptionalPackageDoesNotExist):
         _ = feature_pkg.LazyFeatureCollection
+
+
+def test_netcdf_to_kerchunk_branded(no_backend, tmp_path):
+    """NetCDF.to_kerchunk raises the branded error (covers the to_kerchunk op)."""
+    from pyramids.netcdf import GeoReference as NCGeoRef
+    from pyramids.netcdf import NetCDF
+
+    nc = NetCDF.from_array(
+        np.zeros((1, 2, 2), dtype="float32"),
+        geo_ref=NCGeoRef(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        variable_name="v",
+    )
+    with pytest.raises(OptionalPackageDoesNotExist):
+        nc.to_kerchunk(str(tmp_path / "ref.json"))
+
+
+def test_netcdf_chunk_branded(no_backend, tmp_path):
+    """NetCDF.chunk raises the branded error (covers the build_lazy_cube op)."""
+    from pyramids.netcdf import GeoReference as NCGeoRef
+    from pyramids.netcdf import NetCDF
+
+    path = str(tmp_path / "c.nc")
+    nc = NetCDF.from_array(
+        np.zeros((1, 2, 2), dtype="float32"),
+        geo_ref=NCGeoRef(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        variable_name="v",
+    )
+    nc.to_file(path)
+    with pytest.raises(OptionalPackageDoesNotExist):
+        NetCDF.read_file(path).chunk()
+
+
+def test_netcdf_to_dask_dataframe_branded(no_backend):
+    """NetCDF.to_dask_dataframe raises the branded error (covers the to_dask_dataframe op)."""
+    from pyramids.netcdf import GeoReference as NCGeoRef
+    from pyramids.netcdf import NetCDF
+
+    nc = NetCDF.from_array(
+        np.zeros((1, 2, 2), dtype="float32"),
+        geo_ref=NCGeoRef(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        variable_name="v",
+    )
+    with pytest.raises(OptionalPackageDoesNotExist):
+        nc.to_dask_dataframe()
+
+
+def test_collection_zarr_roundtrip_branded(no_backend, tmp_path):
+    """DatasetCollection.from_zarr raises the branded error (covers read_collection_from_zarr).
+
+    The write side (write_collection_to_zarr, via DatasetCollection.to_zarr) dispatches through the
+    same ``require_compute_backend`` gate — which this fixture makes raise before any backend work —
+    so the read-side check is representative; the write path's compute behaviour is exercised in the
+    backend's own repo where a collection can be built cheaply.
+    """
+    from pyramids.dataset.collection import DatasetCollection
+
+    with pytest.raises(OptionalPackageDoesNotExist):
+        DatasetCollection.from_zarr(str(tmp_path / "c.zarr"))
+
+
+def test_feature_read_parquet_dask_branded(no_backend, tmp_path):
+    """FeatureCollection.read_parquet(backend='dask') raises the branded error.
+
+    Covers the read_vector_parquet_lazy op, distinct from read_vector_lazy (read_file).
+    """
+    with pytest.raises(OptionalPackageDoesNotExist):
+        FeatureCollection.read_parquet(str(tmp_path / "x.parquet"), backend="dask")
+
+
+@pytest.mark.skipif(
+    _cb.extra_missing("pyramids_lazy") is False,
+    reason="a backend IS installed; this check is for the genuinely-bare environment",
+)
+def test_genuinely_bare_core_is_branded_without_monkeypatch():
+    """With no backend actually installed, the public lazy names raise branded — no fixture.
+
+    The other tests simulate absence with the ``no_backend`` fixture; this one takes no fixture and
+    asserts the real contract, so core's CI ``bare`` environment (no pyramids_lazy, no dask) proves
+    it for real rather than only under a monkeypatch.
+    """
+    import pyramids.feature as feature_pkg
+    import pyramids.netcdf as netcdf_pkg
+
+    _cb.clear_compute_backend_cache()
+    with pytest.raises(OptionalPackageDoesNotExist):
+        _ = netcdf_pkg.LazyNetCDF
+    with pytest.raises(OptionalPackageDoesNotExist):
+        _ = feature_pkg.LazyFeatureCollection

@@ -460,6 +460,10 @@ description = "Run the main suite in parallel (pytest-xdist); no coverage"
 # Every env lists the shared `gdal` feature so the single GDAL pin reaches all of
 # them, incl. no-default-feature wheel-build. tests/test_gdal_pin.py enforces it.
 default = {features = ["gdal", "viz"], solve-group = "default" }
+# Bare core with a test runner but NO lazy backend and NO dask stack: the environment shape the
+# branded-absent suite (tests/base/test_lazy_backend_absent.py) asserts against, so it runs in CI for
+# real rather than only under a monkeypatched fixture. Deliberately omits `lazy-backend` and `lazy`.
+bare = { features = ["gdal", "dev"], solve-group = "bare" }
 dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "default" }
 lazy = { features = ["gdal", "viz", "dev", "lazy", "lazy-backend"], solve-group = "default" }
 parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet", "lazy-backend"], solve-group = "default" }

@@ -8226,8 +8226,9 @@ class NetCDF(Dataset):
             LazyNetCDF: A lazy view over this cube's gridded variables.
 
         Raises:
+            OptionalPackageDoesNotExist: No lazy compute backend is installed; the dask-dataframe
+                build dispatches to pyramids-lazy (`pip install pyramids-lazy`).
             ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
-            OptionalPackageDoesNotExist: dask is not installed — install the `lazy` extra.
         """
         # Dispatch to the lazy compute backend (pyramids-lazy), which does the per-variable lazy
         # read + builds the LazyNetCDF; raises the branded OptionalPackageDoesNotExist when absent.
