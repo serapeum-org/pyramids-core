@@ -666,12 +666,15 @@ def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int)
     Returns:
         The GDAL dimension object to index this axis with.
     """
-    existing = dims.get(name)
-    if existing is not None and existing.GetSize() == size:
-        return existing
+    # Walk the base name and its size-suffixed variants (`coefficient`, `coefficient2`, ...):
+    # reuse the first whose size matches, otherwise create at the first name not yet taken.
+    # Keying reuse on the base name alone would miss a `coefficient2` already created for this
+    # size and make a redundant third dimension.
     unique = name
     suffix = 1
     while unique in dims:
+        if dims[unique].GetSize() == size:
+            return dims[unique]
         suffix += 1
         unique = f"{name}{suffix}"
     created = rg.CreateDimension(unique, None, None, size)

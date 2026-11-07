@@ -526,6 +526,27 @@ class TestExtraDimension:
         assert second is not first, "a different size must not reuse the dimension"
         assert second.GetName() == "coefficient2", f"got {second.GetName()}"
 
+    def test_reuse_finds_a_size_suffixed_variant(self, tmp_path):
+        """After a size clash, a later same-size request reuses the suffixed dim (R1 L1).
+
+        Test scenario:
+            `coefficient` (size 2) then `coefficient` (size 3 -> `coefficient2`); a third
+            request at size 3 must reuse `coefficient2`, not create a third dimension. Keying
+            reuse on the base name alone missed the suffixed variant.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        size2 = _extra_dimension(rg, dims, "coefficient", 2)
+        size3 = _extra_dimension(rg, dims, "coefficient", 3)
+        assert _extra_dimension(rg, dims, "coefficient", 3) is size3, (
+            "size-3 must reuse coefficient2"
+        )
+        assert _extra_dimension(rg, dims, "coefficient", 2) is size2, (
+            "size-2 must reuse coefficient"
+        )
+
     def test_two_fitted_variables_share_the_coefficient_dim(self, tmp_path):
         """Through the real writer: two temporal vars fit at one degree share the axis.
 
@@ -557,3 +578,47 @@ class TestExtraDimension:
         assert back["a"].dimensions[0] == "coefficient"
         assert back["b"].dimensions[0] == "coefficient"
         assert np.asarray(back["a"].data).shape == (2, 2)
+
+    def test_an_unnamed_extra_axis_gets_a_synthesised_dim_name(self, tmp_path):
+        """A variable with a non-time leading axis and no dim names gets `<var>_dim<axis>` (R1 L4).
+
+        Test scenario:
+            `polyfit`/`curvefit` always set `dimensions`, so the synthesised-name fallback in
+            `write_ugrid_data_variable` was untested. A hand-built 3-D variable with empty
+            `dimensions` (time axis 0 by fallback, an unnamed axis 1) exercises it: the written
+            file must carry a `<var>_dim1` dimension between `time` and the element axis.
+        """
+        from osgeo import gdal
+
+        from pyramids.netcdf.ugrid.connectivity import Connectivity
+        from pyramids.netcdf.ugrid.mesh import Mesh2d
+        from pyramids.netcdf.ugrid.models import MeshVariable
+
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=Connectivity(
+                data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+                fill_value=-1,
+                cf_role="face_node_connectivity",
+                original_start_index=0,
+            ),
+        )
+        var = MeshVariable(
+            name="v",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3, 2),
+            _data=np.arange(12, dtype="float64").reshape(2, 3, 2),
+        )
+        out = tmp_path / "unnamed_axis.nc"
+
+        MeshDataset(mesh=mesh, data_variables={"v": var}, global_attributes={}).to_file(
+            out
+        )
+
+        ds = gdal.OpenEx(str(out), gdal.OF_MULTIDIM_RASTER)
+        names = [
+            d.GetName() for d in ds.GetRootGroup().OpenMDArray("v").GetDimensions()
+        ]
+        assert names == ["time", "v_dim1", "mesh2d_nFaces"], f"got {names}"
