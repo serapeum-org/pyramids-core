@@ -688,6 +688,29 @@ class MeshVariable:
             return None
         return np.asarray(self.active)[..., elements]
 
+    def _dimensions_for(self, data: np.ndarray | None) -> tuple[str, ...]:
+        """Reconcile this variable's dimension names with a replacement array's rank.
+
+        A ``MeshVariable``'s ``dimensions`` must have one name per data axis. A derivation
+        that collapses a leading axis — ``sel_time`` dropping the time axis is the only one
+        today — leaves fewer axes than named dimensions; keeping the stale tuple makes
+        :meth:`~pyramids.netcdf.ugrid.io.write_ugrid_data_variable` size the output array by
+        the old rank and GDAL rejects the write (``RuntimeError: Illegal numpy array rank
+        N``). The removed axes are leading, so the trailing ``data.ndim`` names are kept.
+
+        When ``data`` is ``None`` (shape retained), the names are unknown, or they already
+        match the new rank, the tuple is returned unchanged.
+
+        Args:
+            data: The replacement array, or ``None`` to keep the original shape.
+
+        Returns:
+            tuple[str, ...]: The dimension names that match ``data``'s rank.
+        """
+        if data is None or not self.dimensions or len(self.dimensions) <= data.ndim:
+            return self.dimensions
+        return self.dimensions[len(self.dimensions) - data.ndim :]
+
     def with_data(
         self, data: np.ndarray | None, *, active: np.ndarray | None = _KEEP_ACTIVE
     ) -> MeshVariable:
@@ -721,7 +744,7 @@ class MeshVariable:
             nodata=self.nodata,
             units=self.units,
             standard_name=self.standard_name,
-            dimensions=self.dimensions,
+            dimensions=self._dimensions_for(data),
             # Implicit carry is validated against the new shape (dropped if it no longer
             # lines up); an explicitly supplied mask is trusted as given.
             active=(

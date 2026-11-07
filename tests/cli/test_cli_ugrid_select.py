@@ -244,18 +244,28 @@ class TestTimeSelect:
     def test_isel_single_time_collapses(self, tmp_path):
         """isel with one --time value collapses the axis and still serialises.
 
-        This is the serialising counterpart of the intentionally-unwrapped ``sel_time``
-        (whose result cannot be written back — see the module docstring).
+        ``sel-time`` is the dedicated single-step counterpart; both collapse the time axis
+        and write back cleanly.
         """
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "isel", src, out, "--time", "0"]) == 0
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
-    def test_sel_time_is_not_registered(self):
-        """``sel-time`` is deliberately absent (its result cannot be serialised)."""
-        with pytest.raises(SystemExit):
-            _run(["mesh", "sel-time", "x.nc", "y.nc", "--index", "0"])
+    def test_sel_time_collapses_and_serialises(self, tmp_path):
+        """sel-time picks one step by position, collapses the axis, and round-trips."""
+        src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
+        out = str(tmp_path / "o.nc")
+        assert _run(["mesh", "sel-time", src, out, "--index", "1"]) == 0
+        written = MeshDataset.read_file(out)
+        assert written.get_data("d").data.ndim == 1
+        assert written.get_data("d").data.tolist() == [2.0, 3.0]
+
+    def test_sel_time_bad_index_is_value_error(self, tmp_path):
+        """An out-of-range --index is remapped to a clean ValueError."""
+        src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
+        with pytest.raises(ValueError):
+            _run(["mesh", "sel-time", src, str(tmp_path / "o.nc"), "--index", "9"])
 
     def test_sel_time_range(self, tmp_path):
         """sel-time-range keeps the half-open [start, stop) window."""

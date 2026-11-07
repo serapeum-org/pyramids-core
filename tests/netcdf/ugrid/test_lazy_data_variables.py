@@ -175,6 +175,26 @@ class TestWindowedTimeSelection:
         np.testing.assert_array_equal(result, temporal[1])
         assert var._data is None, "a windowed read must not cache the full array"
 
+    def test_sel_time_result_round_trips_from_a_file_backed_mesh(
+        self, temporal_file, tmp_path
+    ):
+        """A file-read `sel_time` result writes back without a stale-rank write error.
+
+        Test scenario:
+            A file-backed variable carries explicit dimension names (``(time, …)``). Before
+            the ``with_data`` dimension reconciliation, collapsing the time axis left those
+            names in place, so ``to_file`` sized the output array by the old rank and GDAL
+            rejected the rank-1 write (``RuntimeError: Illegal numpy array rank 1``). The
+            collapsed step must serialise and re-read as a 1-D field.
+        """
+        path, temporal = temporal_file
+        picked = MeshDataset.read_file(path).sel_time(1)
+        out = tmp_path / "sel_time_out.nc"
+        picked.to_file(out)
+        reread = MeshDataset.read_file(out).get_data("h")
+        assert np.asarray(reread.data).ndim == 1
+        np.testing.assert_array_equal(np.asarray(reread.data), temporal[1])
+
     def test_sel_time_range_reads_a_range_slab(self, temporal_file, monkeypatch):
         """`sel_time_range(a, b)` issues one `(a, b)` slab read and returns `array[a:b]`."""
         path, temporal = temporal_file
