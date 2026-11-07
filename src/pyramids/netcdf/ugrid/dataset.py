@@ -1362,8 +1362,8 @@ class MeshDataset(_MeshFacades):
             New MeshDataset holding the single step, with the time dimension dropped.
 
         Raises:
-            ValueError: No variable has a time dimension, or the temporal variables disagree
-                on their time length.
+            ValueError: No variable has a time dimension, the temporal variables disagree on
+                their time length, or a temporal variable has no readable data.
             IndexError: ``index`` is out of range for the time axis.
         """
         self._time_length("sel_time")
@@ -4426,8 +4426,8 @@ class MeshDataset(_MeshFacades):
             # The implicit carry is what decides: a static mask survives the collapse (as it
             # does through `reduce`), while a per-step one cannot follow an axis that is gone.
             # Passing `active=None` here force-dropped both.
+            # `_static_from` already strips the time coordinate, so no second strip is needed.
             collapsed = _static_from(var, total, axis)
-            collapsed.attributes = _without_time_metadata(collapsed.attributes)
             # The total is in value-seconds, not the input's units, so the input's sentinel
             # does not describe it.
             collapsed.nodata = None
@@ -6729,8 +6729,7 @@ def _without_time_metadata(attributes: dict) -> dict:
     """``attributes`` with the time-coordinate keys removed.
 
     A time-collapsing operation leaves a result that is no longer indexed by time, so its
-    stamps, CF units and calendar describe nothing — and leaving the units behind is worse than
-    untidy, because the on-disk coordinate writer re-encodes against whatever units it finds.
+    stamps, CF units and calendar describe nothing on the now-static variable and are dropped.
 
     Args:
         attributes: A variable's attributes.
@@ -6997,8 +6996,7 @@ def _static_from(
     )
     # Copy the attributes (never alias — the same invariant MeshVariable.with_data keeps),
     # and drop the whole time coordinate (`time_values`, CF units, calendar): the time axis
-    # is gone, so they describe nothing — and a left-behind `time_units` is worse than untidy,
-    # because the on-disk coordinate writer re-encodes against whatever units it finds.
+    # is gone, so they describe nothing on the now-static variable.
     attributes = _without_time_metadata(var.attributes)
     return MeshVariable(
         name=var.name,
