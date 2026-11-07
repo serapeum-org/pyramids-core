@@ -688,41 +688,17 @@ class MeshVariable:
             return None
         return np.asarray(self.active)[..., elements]
 
-    def _dimensions_for(self, data: np.ndarray | None) -> tuple[str, ...]:
-        """Reconcile this variable's dimension names with a replacement array's rank.
-
-        A ``MeshVariable``'s ``dimensions`` must have one name per data axis. A derivation
-        that collapses a leading axis — ``sel_time`` dropping the time axis is the only one
-        today — leaves fewer axes than named dimensions; keeping the stale tuple makes
-        :meth:`~pyramids.netcdf.ugrid.io.write_ugrid_data_variable` size the output array by
-        the old rank and GDAL rejects the write (``RuntimeError: Illegal numpy array rank
-        N``). The removed axes are leading, so the trailing ``data.ndim`` names are kept.
-
-        When ``data`` is ``None`` (shape retained), the names are unknown, or they already
-        match the new rank, the tuple is returned unchanged.
-
-        Args:
-            data: The replacement array, or ``None`` to keep the original shape.
-
-        Returns:
-            tuple[str, ...]: The dimension names that match ``data``'s rank.
-        """
-        if data is None or not self.dimensions or len(self.dimensions) <= data.ndim:
-            return self.dimensions
-        return self.dimensions[len(self.dimensions) - data.ndim :]
-
     def with_data(
         self, data: np.ndarray | None, *, active: np.ndarray | None = _KEEP_ACTIVE
     ) -> MeshVariable:
         """Return a copy of this variable carrying ``data``, keeping all other metadata.
 
         The new variable is eager (``_data`` set, no loader); its ``shape`` is taken from
-        ``data`` when provided, else the original ``shape`` is retained. Its ``dimensions``
-        are reconciled to the new rank the same way — a derivation that collapses a leading
-        axis (e.g. ``sel_time``) drops the matching leading name via :meth:`_dimensions_for`,
-        so the names stay one-per-axis and the result serialises back through ``to_file``.
-        Used wherever a derived dataset (time selection, spatial clip, …) replaces a
-        variable's array while preserving its name / location / mesh / attributes.
+        ``data`` when provided, else the original ``shape`` is retained. Used wherever a
+        derived dataset (time selection, spatial clip, …) replaces a variable's array while
+        preserving its name / location / mesh / attributes. A derivation that *reduces* rank
+        (collapsing an axis) must set ``dimensions`` itself — ``with_data`` keeps the source
+        tuple, so a time collapse goes through :func:`_static_from` instead.
 
         Args:
             data: The replacement data array, or ``None`` to keep the original shape with
@@ -747,7 +723,7 @@ class MeshVariable:
             nodata=self.nodata,
             units=self.units,
             standard_name=self.standard_name,
-            dimensions=self._dimensions_for(data),
+            dimensions=self.dimensions,
             # Implicit carry is validated against the new shape (dropped if it no longer
             # lines up); an explicitly supplied mask is trusted as given.
             active=(

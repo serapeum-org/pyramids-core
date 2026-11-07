@@ -181,11 +181,11 @@ class TestWindowedTimeSelection:
         """A file-read `sel_time` result writes back without a stale-rank write error.
 
         Test scenario:
-            A file-backed variable carries explicit dimension names (``(time, …)``). Before
-            the ``with_data`` dimension reconciliation, collapsing the time axis left those
-            names in place, so ``to_file`` sized the output array by the old rank and GDAL
-            rejected the rank-1 write (``RuntimeError: Illegal numpy array rank 1``). The
-            collapsed step must serialise and re-read as a 1-D field.
+            A file-backed variable carries explicit dimension names (``(time, …)``). Unless
+            the collapse drops the time name, ``to_file`` sizes the output array by the old
+            rank and GDAL rejects the rank-1 write (``RuntimeError: Illegal numpy array rank
+            1``). Routing `sel_time` through ``_static_from`` drops the collapsed axis by
+            position, so the single step serialises and re-reads as a 1-D field.
         """
         path, temporal = temporal_file
         picked = MeshDataset.read_file(path).sel_time(1)

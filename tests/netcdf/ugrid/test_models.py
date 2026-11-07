@@ -611,9 +611,6 @@ class TestMeshVariable:
     def named_temporal_var(self):
         """A temporal face variable carrying explicit ``(time, face)`` dimension names.
 
-        A file-read variable always carries dimension names; the in-memory fixtures above
-        leave ``dimensions`` empty, so this one exercises the name-reconciliation path.
-
         Returns:
             MeshVariable: shape ``(3, 5)`` with ``dimensions=("time", "mesh2d_nFaces")``.
         """
@@ -626,57 +623,33 @@ class TestMeshVariable:
             _data=np.arange(15.0).reshape(3, 5),
         )
 
-    def test_dimensions_for_none_data_keeps_names(self, named_temporal_var):
-        """``_dimensions_for(None)`` keeps the names (shape is retained, not recomputed).
+    def test_with_data_same_rank_keeps_names(self, named_temporal_var):
+        """A same-rank replacement keeps both ``shape`` and dimension names.
 
         Test scenario:
-            No replacement array means the rank is unchanged, so the tuple is returned
-            verbatim.
+            Replacing the ``(3, 5)`` array with another 2-D array (a trimmed time range)
+            keeps the two names, matching the new shape.
         """
-        result = named_temporal_var._dimensions_for(None)
-        assert result == ("time", "mesh2d_nFaces"), f"names changed unexpectedly: {result}"
+        trimmed = named_temporal_var.with_data(np.zeros((2, 5)))
+        assert trimmed.shape == (2, 5), f"expected shape (2, 5), got {trimmed.shape}"
+        assert trimmed.dimensions == ("time", "mesh2d_nFaces"), (
+            f"names changed unexpectedly: {trimmed.dimensions}"
+        )
 
-    def test_dimensions_for_empty_names_stay_empty(self, temporal_var):
-        """A variable with no dimension names reconciles to the empty tuple.
+    def test_with_data_keeps_source_dimensions_on_rank_drop(self, named_temporal_var):
+        """``with_data`` does NOT reconcile names on a rank drop — the caller must.
 
         Test scenario:
-            An array-built variable carries ``dimensions=()``; reconciling against any rank
-            leaves it empty (``to_file`` then infers the rank from the data).
+            Handing a 1-D array keeps the source's 2-name tuple (the result is intentionally
+            inconsistent). A rank-reducing derivation is expected to go through
+            ``_static_from``, which drops the collapsed axis by position; ``with_data`` keeping
+            the tuple means a non-leading collapse fails loudly rather than being silently
+            mis-named.
         """
-        assert temporal_var.dimensions == (), "fixture should carry no dimension names"
-        result = temporal_var._dimensions_for(np.zeros(5))
-        assert result == (), f"empty names should stay empty, got {result}"
-
-    def test_dimensions_for_matching_rank_unchanged(self, named_temporal_var):
-        """When the new rank already matches the name count, names are unchanged.
-
-        Test scenario:
-            A ``(time, face)`` variable sliced to another 2-D array keeps both names.
-        """
-        result = named_temporal_var._dimensions_for(np.zeros((2, 5)))
-        assert result == ("time", "mesh2d_nFaces"), f"names changed unexpectedly: {result}"
-
-    def test_dimensions_for_collapsed_rank_trims_leading(self, named_temporal_var):
-        """Collapsing a leading axis drops the matching leading dimension name.
-
-        Test scenario:
-            A single time step is 1-D ``(5,)``; the leading ``time`` name is dropped so the
-            names line up with the data rank, which is what lets ``to_file`` write it back.
-        """
-        result = named_temporal_var._dimensions_for(np.zeros(5))
-        assert result == ("mesh2d_nFaces",), f"expected the time name dropped, got {result}"
-
-    def test_with_data_reconciles_dimensions_on_collapse(self, named_temporal_var):
-        """``with_data`` carries the reconciled names, not the stale originals.
-
-        Test scenario:
-            Replacing the 2-D array with a single collapsed step yields a variable whose
-            ``shape`` and ``dimensions`` both describe one axis.
-        """
-        collapsed = named_temporal_var.with_data(np.zeros(5))
-        assert collapsed.shape == (5,), f"expected shape (5,), got {collapsed.shape}"
-        assert collapsed.dimensions == ("mesh2d_nFaces",), (
-            f"dimensions not reconciled: {collapsed.dimensions}"
+        kept = named_temporal_var.with_data(np.zeros(5))
+        assert kept.shape == (5,), f"expected shape (5,), got {kept.shape}"
+        assert kept.dimensions == ("time", "mesh2d_nFaces"), (
+            f"with_data should keep the source names, got {kept.dimensions}"
         )
 
     def test_with_data_none_keeps_shape_and_names(self, named_temporal_var):
