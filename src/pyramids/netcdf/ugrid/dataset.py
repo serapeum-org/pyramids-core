@@ -1746,6 +1746,39 @@ class MeshDataset(_MeshFacades):
         result = FeatureCollection(gdf)
         return result
 
+    def voronoi_polygons(
+        self, *, clip: FeatureCollection | None = None
+    ) -> FeatureCollection:
+        """Voronoi (Thiessen) cells of the mesh nodes as a vector `FeatureCollection`.
+
+        The file-serializable counterpart of :meth:`voronoi`, which returns a bare
+        :class:`scipy.spatial.Voronoi` with no geospatial form. This returns one polygon per
+        node -- the cells of the mesh dual -- in the mesh CRS, so unlike the raw tessellation
+        it can be written with :meth:`FeatureCollection.to_file` and wrapped as a CLI verb.
+
+        The cells come from :meth:`FeatureCollection.voronoi`, so the outer (unbounded) cells
+        are bounded to an envelope by default; pass `clip` to intersect every cell with a
+        boundary instead (e.g. the mesh domain).
+
+        Args:
+            clip: A boundary `FeatureCollection` each cell is intersected with, or `None` for
+                shapely's default bounded cells.
+
+        Returns:
+            FeatureCollection: One polygon per node, in the mesh CRS.
+
+        Raises:
+            InvalidGeometryError: Fewer than two distinct nodes with finite coordinates.
+
+        See Also:
+            voronoi: The low-level `scipy.spatial.Voronoi` primitive this builds on.
+        """
+        nodes = gpd.GeoDataFrame(
+            geometry=list(shapely.points(self._mesh.node_x, self._mesh.node_y)),
+            crs=self.crs,
+        )
+        return FeatureCollection(nodes).voronoi(clip=clip)
+
     @classmethod
     def from_arrays(
         cls,

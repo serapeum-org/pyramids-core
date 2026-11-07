@@ -407,3 +407,51 @@ class TestTemporalWrite:
             temporal_data,
             err_msg="Temporal data should survive round-trip",
         )
+
+
+class TestVoronoiPolygons:
+    """`MeshDataset.voronoi_polygons` — the file-serializable Voronoi output (#1479)."""
+
+    @staticmethod
+    def _square_mesh():
+        """A four-node two-triangle mesh in EPSG:4326."""
+        return MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            epsg=4326,
+        )
+
+    def test_returns_polygon_cells_in_the_mesh_crs(self):
+        """One polygon per node, carrying the mesh CRS (not a bare scipy object).
+
+        Test scenario:
+            `voronoi()` returns a `scipy.spatial.Voronoi` with no geospatial form;
+            `voronoi_polygons()` returns a `FeatureCollection` of the dual cells so the result
+            has a CRS and a vector geometry.
+        """
+        cells = self._square_mesh().voronoi_polygons()
+
+        assert isinstance(cells, FeatureCollection), f"got {type(cells).__name__}"
+        assert len(cells) == 4, "one cell per node"
+        assert set(cells.geometry.geom_type) == {"Polygon"}, "cells must be polygons"
+        assert cells.epsg == 4326, "the mesh CRS must carry onto the cells"
+
+    def test_cells_are_writable_to_a_file(self, tmp_path):
+        """The whole point of the method: the output can be serialized (#1479).
+
+        Test scenario:
+            The raw `voronoi()` scipy object cannot be written to a file; the polygon
+            `FeatureCollection` can, which is what unblocks a CLI verb.
+        """
+        out = tmp_path / "voronoi.gpkg"
+
+        self._square_mesh().voronoi_polygons().to_file(str(out))
+
+        assert out.exists() and out.stat().st_size > 0, "the cells must write to a file"
+
+    def test_the_raw_voronoi_primitive_is_unchanged(self):
+        """`voronoi()` still returns the low-level scipy tessellation (non-breaking)."""
+        from scipy.spatial import Voronoi
+
+        assert isinstance(self._square_mesh().voronoi(), Voronoi)
