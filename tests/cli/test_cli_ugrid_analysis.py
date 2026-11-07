@@ -584,3 +584,11 @@ class TestPolyfit:
         src = self._ramp_file(tmp_path)
         with pytest.raises(SystemExit):
             _run(["mesh", "polyfit", src, str(tmp_path / "pf.nc")])
+
+    def test_polyfit_refuses_an_existing_output(self, tmp_path):
+        """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "pf.nc")
+        assert _run(["mesh", "polyfit", src, out, "--degree", "1"]) == 0
+        with pytest.raises(ValueError, match="already exists"):
+            _run(["mesh", "polyfit", src, out, "--degree", "1"])

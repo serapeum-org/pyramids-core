@@ -413,8 +413,8 @@ class TestVoronoiPolygons:
     """`MeshDataset.voronoi_polygons` — the file-serializable Voronoi output (#1479)."""
 
     @staticmethod
-    def _square_mesh():
-        """A four-node two-triangle mesh in EPSG:4326."""
+    def _strip_mesh():
+        """A four-node two-triangle zig-zag strip mesh in EPSG:4326."""
         return MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 2.0, 3.0]),
             node_y=np.array([0.0, 1.0, 0.0, 1.0]),
@@ -430,7 +430,7 @@ class TestVoronoiPolygons:
             `voronoi_polygons()` returns a `FeatureCollection` of the dual cells so the result
             has a CRS and a vector geometry.
         """
-        cells = self._square_mesh().voronoi_polygons()
+        cells = self._strip_mesh().voronoi_polygons()
 
         assert isinstance(cells, FeatureCollection), f"got {type(cells).__name__}"
         assert len(cells) == 4, "one cell per distinct node"
@@ -470,7 +470,7 @@ class TestVoronoiPolygons:
         """
         out = tmp_path / "voronoi.gpkg"
 
-        self._square_mesh().voronoi_polygons().to_file(str(out))
+        self._strip_mesh().voronoi_polygons().to_file(str(out))
 
         assert out.exists() and out.stat().st_size > 0, "the cells must write to a file"
 
@@ -478,7 +478,7 @@ class TestVoronoiPolygons:
         """`voronoi()` still returns the low-level scipy tessellation (non-breaking)."""
         from scipy.spatial import Voronoi
 
-        assert isinstance(self._square_mesh().voronoi(), Voronoi)
+        assert isinstance(self._strip_mesh().voronoi(), Voronoi)
 
 
 class TestExtraDimension:

@@ -616,3 +616,18 @@ class TestVoronoiPolygons:
         cells = FeatureCollection.read_file(str(out))
         assert len(cells) == 4
         assert set(cells.geometry.geom_type) == {"Polygon"}
+
+    def test_voronoi_polygons_infers_driver_from_geojson(self, tmp_path):
+        """The output driver is inferred from the extension (R1 N4)."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.geojson"
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        assert out.exists() and out.stat().st_size > 0
+
+    def test_voronoi_polygons_refuses_an_existing_output(self, tmp_path):
+        """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.gpkg"
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        with pytest.raises(ValueError, match="already exists"):
+            _dispatch(["mesh", "voronoi-polygons", src, str(out)])
