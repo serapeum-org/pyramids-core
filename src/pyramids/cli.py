@@ -19,7 +19,9 @@ Command groups:
   the full `nc` surface across six sub-modules: inspection + global attributes, variable & dimension
   management, positional/label selection & subsetting, CF/time/calendar/calculus, I/O export, and headless
   plotting (each sub-module documents its own commands; `pyramids nc --help` lists them)
-- collection (`pyramids.cli_collection`) — `collection info|stats`
+- collection (`pyramids.cli_collection`) — the full `DatasetCollection` surface:
+  `collection info|stats|resample|merge|to-file|to-cog|to-netcdf|to-zarr|to-kerchunk|reproject|crop|align`
+  (each verb opens via `--source files|zarr|archive`)
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`
 - UGRID mesh (`pyramids.cli_ugrid`) — `mesh info|extract|convert`

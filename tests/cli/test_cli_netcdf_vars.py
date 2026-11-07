@@ -12,9 +12,17 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import geopandas as gpd
 import pytest
+from shapely.geometry import box
 
-from pyramids.cli_netcdf_vars import _parse_pairs, add_nc_vars_commands
+from pyramids.cli_netcdf_vars import (
+    _parse_coord_lists,
+    _parse_pairs,
+    add_nc_vars_commands,
+)
+from pyramids.dataset import Dataset
+from pyramids.feature import FeatureCollection
 from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
@@ -26,6 +34,27 @@ _NC_BANDS = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
 _NC_WIDE = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 # CF file with a 24-step time band dimension and one data variable (tos).
 _NC_TIME = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
+
+
+def _half_extent_mask(nc_path: str, out_path: str) -> str:
+    """Write a polygon vector covering the lower-left quarter of ``nc_path``'s extent.
+
+    Args:
+        nc_path: The NetCDF whose extent the mask is derived from.
+        out_path: Where the GeoJSON mask is written.
+
+    Returns:
+        str: ``out_path``.
+    """
+    nc = NetCDF.read_file(nc_path)
+    minx, miny, maxx, maxy = (float(value) for value in nc.total_bounds)
+    gdf = gpd.GeoDataFrame(
+        {"id": [1]},
+        geometry=[box(minx, miny, (minx + maxx) / 2, (miny + maxy) / 2)],
+        crs=f"EPSG:{nc.epsg}",
+    )
+    FeatureCollection(gdf).to_file(out_path)
+    return out_path
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -272,6 +301,214 @@ class TestSqueeze:
         out = str(tmp_path / "o.nc")
         with pytest.raises(ValueError):
             run(["squeeze", str(_NC_WIDE), out, "--dim", "plev"])
+
+
+class TestParseCoordLists:
+    """The local ``_parse_coord_lists`` helper (issue #1467)."""
+
+    def test_parses_comma_separated_floats(self):
+        """Each DIM=v1,v2,... token yields a list of floats."""
+        parsed = _parse_coord_lists(["time=0,6,12", "plev=1000"])
+        assert parsed == {"time": [0.0, 6.0, 12.0], "plev": [1000.0]}
+
+    def test_missing_equals_raises(self):
+        """A token with no ``=`` is refused."""
+        with pytest.raises(ValueError, match="DIM=v1,v2"):
+            _parse_coord_lists(["noequals"])
+
+    def test_empty_value_list_raises(self):
+        """A token whose value list is empty is refused."""
+        with pytest.raises(ValueError, match="lists no values"):
+            _parse_coord_lists(["time="])
+
+    def test_non_numeric_value_raises(self):
+        """A non-numeric coordinate value is refused."""
+        with pytest.raises(ValueError, match="non-numeric"):
+            _parse_coord_lists(["time=a,b"])
+
+
+class TestAddVar:
+    """`pyramids nc add-var` (issue #1467)."""
+
+    def test_copies_variable_in(self, tmp_path):
+        """Copying Band1 from a source adds a suffixed copy alongside the original."""
+        out = str(tmp_path / "added.nc")
+        rc = run(
+            [
+                "add-var",
+                str(_NC_BANDS),
+                out,
+                "--source",
+                str(_NC_BANDS),
+                "--var",
+                "Band1",
+            ]
+        )
+        names = list(NetCDF.read_file(out).variable_names)
+        assert rc == 0
+        assert "Band1" in names
+        assert any(n != "Band1" and n.startswith("Band1") for n in names)
+
+    def test_unknown_source_var_raises(self, tmp_path):
+        """An unknown ``--var`` in the source surfaces as a caught ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(
+                [
+                    "add-var",
+                    str(_NC_BANDS),
+                    out,
+                    "--source",
+                    str(_NC_BANDS),
+                    "--var",
+                    "Nope",
+                ]
+            )
+
+
+class TestSetVar:
+    """`pyramids nc set-var` (issue #1467)."""
+
+    def test_writes_raster_as_variable(self, tmp_path, cli_raster):
+        """The raster is stored under the requested variable name."""
+        out = str(tmp_path / "setvar.nc")
+        rc = run(
+            ["set-var", str(_NC_BANDS), out, "--var", "ramp", "--raster", cli_raster]
+        )
+        assert rc == 0
+        assert "ramp" in list(NetCDF.read_file(out).variable_names)
+
+    def test_refuses_existing(self, tmp_path, cli_raster):
+        """A second set-var without --overwrite is refused."""
+        out = str(tmp_path / "setvar.nc")
+        assert (
+            run(
+                [
+                    "set-var",
+                    str(_NC_BANDS),
+                    out,
+                    "--var",
+                    "ramp",
+                    "--raster",
+                    cli_raster,
+                ]
+            )
+            == 0
+        )
+        with pytest.raises(ValueError):
+            run(
+                [
+                    "set-var",
+                    str(_NC_BANDS),
+                    out,
+                    "--var",
+                    "ramp",
+                    "--raster",
+                    cli_raster,
+                ]
+            )
+
+
+class TestCropVar:
+    """`pyramids nc crop-var` (issue #1467)."""
+
+    def test_crops_variable_to_mask(self, tmp_path):
+        """A mask over the lower-left quarter shrinks the cropped variable's grid."""
+        mask = _half_extent_mask(str(_NC_BANDS), str(tmp_path / "mask.geojson"))
+        out = str(tmp_path / "cropvar.nc")
+        rc = run(["crop-var", str(_NC_BANDS), out, "--var", "Band1", "--mask", mask])
+        cropped = NetCDF.read_file(out).get_variable("Band1").columns
+        full = NetCDF.read_file(str(_NC_BANDS)).get_variable("Band1").columns
+        assert rc == 0
+        assert cropped < full
+
+    def test_no_touch_flag_accepted(self, tmp_path):
+        """``--no-touch`` is honoured and still writes a valid output."""
+        mask = _half_extent_mask(str(_NC_BANDS), str(tmp_path / "mask.geojson"))
+        out = str(tmp_path / "cropvar_nt.nc")
+        rc = run(
+            [
+                "crop-var",
+                str(_NC_BANDS),
+                out,
+                "--var",
+                "Band1",
+                "--mask",
+                mask,
+                "--no-touch",
+            ]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out) is not None
+
+    def test_unknown_var_raises(self, tmp_path):
+        """An unknown ``--var`` surfaces as a caught ValueError."""
+        mask = _half_extent_mask(str(_NC_BANDS), str(tmp_path / "mask.geojson"))
+        with pytest.raises(ValueError):
+            run(
+                [
+                    "crop-var",
+                    str(_NC_BANDS),
+                    str(tmp_path / "o.nc"),
+                    "--var",
+                    "Nope",
+                    "--mask",
+                    mask,
+                ]
+            )
+
+
+class TestExpandDims:
+    """`pyramids nc expand-dims` (issue #1467)."""
+
+    def test_lifts_variable(self, tmp_path):
+        """A variable lifted onto a new band dim writes a re-readable NetCDF."""
+        out = str(tmp_path / "expanded.nc")
+        rc = run(
+            [
+                "expand-dims",
+                str(_NC_WIDE),
+                out,
+                "--var",
+                "tas",
+                "--dim",
+                "member",
+                "--value",
+                "0",
+            ]
+        )
+        assert rc == 0
+        assert Dataset.read_file(out) is not None
+
+    def test_existing_dim_raises(self, tmp_path):
+        """Expanding onto an existing band dimension surfaces as a caught ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["expand-dims", str(_NC_WIDE), out, "--var", "ua", "--dim", "plev"])
+
+
+class TestAssignCoords:
+    """`pyramids nc assign-coords` (issue #1467)."""
+
+    def test_restamps_band_dimension(self, tmp_path):
+        """The time axis is restamped with the supplied coordinate values."""
+        out = str(tmp_path / "restamped.nc")
+        values = ",".join(str(i) for i in range(24))
+        rc = run(["assign-coords", str(_NC_TIME), out, "--coord", f"time={values}"])
+        assert rc == 0
+        assert NetCDF.read_file(out).dimension_sizes["time"] == 24
+
+    def test_wrong_length_raises(self, tmp_path):
+        """A value count that mismatches the dimension length is refused."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["assign-coords", str(_NC_TIME), out, "--coord", "time=0,1,2"])
+
+    def test_unknown_dim_raises(self, tmp_path):
+        """Restamping a non-band dimension surfaces as a caught ValueError."""
+        out = str(tmp_path / "o.nc")
+        with pytest.raises(ValueError):
+            run(["assign-coords", str(_NC_TIME), out, "--coord", "nope=1,2"])
 
 
 class TestOverwriteGuard:

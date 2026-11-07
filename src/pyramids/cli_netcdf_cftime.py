@@ -2,12 +2,13 @@
 
 Thin wrappers over :class:`pyramids.netcdf.NetCDF`: calendar conversion
 (`convert-calendar`, `interp-calendar`), binned / rolling / windowed reductions
-(`groupby-bins`, `rolling`, `rolling-exp`, `shift`, `reduce`), the along-dimension
-calculus (`integrate`, `cumulative-integrate`, `differentiate`, `polyfit`), and
-coordinate interpolation (`interp`, `interpolate-na`). Each command reads a NetCDF,
-applies one :class:`~pyramids.netcdf.NetCDF` method along a dimension, and writes the
-resulting NetCDF to a new file. Reads go through the ``NetCDF`` class; no xarray is
-imported here (the methods may use it internally).
+(`groupby-bins`, `rolling`, `rolling-exp`, `shift`, `reduce`, `coarsen`, `weighted`),
+the along-dimension calculus (`integrate`, `cumulative-integrate`, `differentiate`,
+`polyfit`, `cumulative`), and coordinate interpolation (`interp`, `interpolate-na`,
+`interp-like`). Each command reads a NetCDF, applies one
+:class:`~pyramids.netcdf.NetCDF` method along a dimension, and writes the resulting
+NetCDF to a new file. Reads go through the ``NetCDF`` class; no xarray is imported here
+(the methods may use it internally).
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from __future__ import annotations
 import argparse
 
 from pyramids._cli_shared import info_print, refuse_existing
+from pyramids.dataset import Dataset
 from pyramids.netcdf import NetCDF
 
 _HELP_NC_FILE = "NetCDF path"
@@ -23,6 +25,7 @@ _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_DIM = "the dimension to operate along"
 _HELP_HOW = "aggregation to apply (mean, sum, min, max, std, median, ...)"
 _HELP_METHOD = "interpolation method (default: linear)"
+_WEIGHTS_AREA = "area"
 
 
 def _parse_coords(items: list[str]) -> dict[str, float]:
@@ -331,6 +334,123 @@ def _cmd_nc_reduce(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_nc_interp_like(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc interp-like`` — interpolate onto a target cube's band axes.
+
+    ``interp_like`` interpolates this file's variables onto the band coordinates of the
+    ``--target`` cube (the band dimensions the two share), and writes the result to
+    ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``target``, ``method``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: The two cubes share no band dimension, or a shared dimension is
+            incompatible (raised by ``interp_like``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    target = NetCDF.read_file(args.target)
+    result = NetCDF.read_file(args.file).interp_like(target, method=args.method)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_coarsen(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc coarsen`` — block-reduce a dimension by a window.
+
+    ``coarsen`` groups ``--dim`` into non-overlapping blocks of ``--window`` steps and
+    reduces each block with ``--how``; ``--boundary`` decides how a trailing partial
+    block is handled, and ``--q`` supplies the quantile when ``--how quantile``. The
+    result is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``dim``, ``window``, ``how``,
+            ``boundary``, ``q``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--dim`` is not a dimension of the file, ``--how`` is unknown, or a
+            trailing partial block is left with ``--boundary exact`` (raised by
+            ``coarsen``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    result = NetCDF.read_file(args.file).coarsen(
+        args.dim, args.window, how=args.how, boundary=args.boundary, q=args.q
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_cumulative(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc cumulative`` — a running total or product along a dimension.
+
+    Builds the ``cumulative(dim)`` accessor and applies ``--how`` (``sum`` for the running
+    total, ``prod`` for the running product), writing the accumulated cube to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``dim``, ``how``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--dim`` is not an accumulable band dimension (raised by
+            ``cumulative``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    # Keep a strong reference to the container: the accessor holds only a weak one, so a
+    # temporary `NetCDF.read_file(...).cumulative(dim)` would be collected before .sum().
+    nc = NetCDF.read_file(args.file)
+    accessor = nc.cumulative(args.dim)
+    result = accessor.sum() if args.how == "sum" else accessor.prod()
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_nc_weighted(args: argparse.Namespace) -> int:
+    """Handle ``pyramids nc weighted`` — a weighted reduction over one or more dimensions.
+
+    ``--weights`` is either the literal keyword ``area`` (``cos(latitude)`` cell weights
+    for a regional/global mean over the spatial axes) or a path to a raster of weights on
+    the same grid. ``--dims`` names the dimension(s) to reduce (default: both spatial
+    axes), ``--how`` the statistic, and ``--q`` the quantile when ``--how quantile``. The
+    reduced cube is written to ``output``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``weights``, ``dims``, ``how``,
+            ``q``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+
+    Raises:
+        ValueError: ``--how`` is unknown, ``area`` weights are asked of a non-geographic
+            grid, or the weights raster is not on the file's grid (raised by
+            ``weighted``).
+    """
+    refuse_existing(args.output, args.overwrite)
+    weights = (
+        args.weights
+        if args.weights == _WEIGHTS_AREA
+        else Dataset.read_file(args.weights)
+    )
+    result = NetCDF.read_file(args.file).weighted(
+        weights, args.dims, how=args.how, q=args.q
+    )
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     """Register the ``nc`` CF-time / calendar / calculus commands on ``ncsub``.
 
@@ -486,3 +606,73 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_rd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rd.set_defaults(func=_cmd_nc_reduce)
+
+    nc_il = ncsub.add_parser(
+        "interp-like", help="interpolate onto a target cube's band axes"
+    )
+    nc_il.add_argument("file", help=_HELP_NC_FILE)
+    nc_il.add_argument("output", help=_HELP_OUTPUT)
+    nc_il.add_argument(
+        "--target",
+        required=True,
+        help="NetCDF whose band coordinates to interpolate onto",
+    )
+    nc_il.add_argument("--method", default="linear", help=_HELP_METHOD)
+    nc_il.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_il.set_defaults(func=_cmd_nc_interp_like)
+
+    nc_co = ncsub.add_parser("coarsen", help="block-reduce a dimension by a window")
+    nc_co.add_argument("file", help=_HELP_NC_FILE)
+    nc_co.add_argument("output", help=_HELP_OUTPUT)
+    nc_co.add_argument("--dim", required=True, help=_HELP_DIM)
+    nc_co.add_argument(
+        "--window", type=int, required=True, help="number of steps per block"
+    )
+    nc_co.add_argument("--how", default="mean", help=_HELP_HOW)
+    nc_co.add_argument(
+        "--boundary",
+        default="exact",
+        choices=("exact", "trim", "pad"),
+        help="how to treat a trailing partial block (default: exact)",
+    )
+    nc_co.add_argument(
+        "--q", type=float, default=None, help="quantile in [0, 1] when --how quantile"
+    )
+    nc_co.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_co.set_defaults(func=_cmd_nc_coarsen)
+
+    nc_cu = ncsub.add_parser(
+        "cumulative", help="running total/product along a dimension"
+    )
+    nc_cu.add_argument("file", help=_HELP_NC_FILE)
+    nc_cu.add_argument("output", help=_HELP_OUTPUT)
+    nc_cu.add_argument("--dim", required=True, help=_HELP_DIM)
+    nc_cu.add_argument(
+        "--how",
+        default="sum",
+        choices=("sum", "prod"),
+        help="'sum' for a running total (default) or 'prod' for a running product",
+    )
+    nc_cu.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_cu.set_defaults(func=_cmd_nc_cumulative)
+
+    nc_we = ncsub.add_parser("weighted", help="weighted reduction over dimension(s)")
+    nc_we.add_argument("file", help=_HELP_NC_FILE)
+    nc_we.add_argument("output", help=_HELP_OUTPUT)
+    nc_we.add_argument(
+        "--weights",
+        required=True,
+        help="the keyword 'area' (cos-latitude cell weights) or a weights-raster path",
+    )
+    nc_we.add_argument(
+        "--dims",
+        nargs="+",
+        default=None,
+        help="dimension(s) to reduce over (default: both spatial axes)",
+    )
+    nc_we.add_argument("--how", default="mean", help=_HELP_HOW)
+    nc_we.add_argument(
+        "--q", type=float, default=None, help="quantile in [0, 1] when --how quantile"
+    )
+    nc_we.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    nc_we.set_defaults(func=_cmd_nc_weighted)

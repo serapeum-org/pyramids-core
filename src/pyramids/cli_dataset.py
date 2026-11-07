@@ -1,8 +1,8 @@
 """Raster (`Dataset`) and COG CLI command group.
 
 Holds the single-shot raster commands (`info`, `bounds`, `clip`, `warp`, `merge`,
-`overview`, `sample`, `convert`, `georeference`, `orthorectify`, `edit-info`,
-`calc`, `shapes`, `rasterize`, `render`) and the Cloud Optimized GeoTIFF group
+`overview`, `sample`, `convert`, `subdataset`, `georeference`, `orthorectify`,
+`edit-info`, `calc`, `shapes`, `rasterize`, `render`) and the Cloud Optimized GeoTIFF group
 (`cog create|validate|info`). Extracted from `pyramids.cli` so each command group
 lives in its own `cli_<domain>.py` and the top-level parser only wires them
 together — every handler still maps 1:1 onto an existing `Dataset` call.
@@ -20,7 +20,7 @@ import numpy as np
 from osgeo import osr
 from pandas import DataFrame
 
-from pyramids._cli_shared import force_agg_backend, info_print
+from pyramids._cli_shared import force_agg_backend, info_print, map_lookup_errors
 from pyramids._cli_shared import json_safe as _json_safe
 from pyramids._cli_shared import refuse_existing as _refuse_existing
 from pyramids.base._errors import AlignmentError
@@ -861,6 +861,49 @@ def _cmd_convert(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_subdataset_key(raw: str) -> int | str:
+    """Interpret a ``subdataset`` key token as an index or a subdataset name.
+
+    An all-integer token (including a negative one) is an index into the
+    container's :attr:`~pyramids.dataset.Dataset.subdatasets` list; anything else —
+    a GDAL connection string such as ``NETCDF:"f.nc":temp`` — is a name, which
+    never parses as an ``int``, so the two forms cannot collide.
+
+    Args:
+        raw: The raw ``key`` positional.
+
+    Returns:
+        int | str: The parsed index, or ``raw`` unchanged as a name.
+    """
+    try:
+        result: int | str = int(raw)
+    except ValueError:
+        result = raw
+    return result
+
+
+def _cmd_subdataset(args: argparse.Namespace) -> int:
+    """Handle `pyramids subdataset` — extract one subdataset to a raster.
+
+    Opens one nested raster of a multi-subdataset container (a NetCDF/HDF store, a
+    multi-subdataset GeoTIFF, a Sentinel product, …) by index or name via
+    :meth:`Dataset.open_subdataset` and writes it to `output`.
+
+    Args:
+        args: Parsed arguments with `input`, `key`, `output`, and `overwrite`.
+
+    Returns:
+        int: `0` on success.
+    """
+    _refuse_existing(args.output, args.overwrite)
+    ds = Dataset.read_file(args.input)
+    with map_lookup_errors():
+        sub = ds.open_subdataset(_parse_subdataset_key(args.key))
+    sub.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     """Handle `pyramids render` — save a quick-look PNG via cleopatra (headless).
 
@@ -1020,6 +1063,17 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     )
     convert.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     convert.set_defaults(func=_cmd_convert)
+
+    subdataset = sub.add_parser(
+        "subdataset", help="extract one subdataset of a container to a raster"
+    )
+    subdataset.add_argument("input", help="container raster path (NetCDF/HDF, …)")
+    subdataset.add_argument(
+        "key", help="0-based subdataset index (negatives allowed) or its full name"
+    )
+    subdataset.add_argument("output", help=_HELP_DST_RASTER)
+    subdataset.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    subdataset.set_defaults(func=_cmd_subdataset)
 
     georeference = sub.add_parser(
         "georeference", help="warp a raster from ground-control points"

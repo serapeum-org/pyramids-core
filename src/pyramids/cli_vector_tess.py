@@ -48,6 +48,8 @@ _HELP_RESOLUTION = "H3 resolution, 0 (coarsest) to 15 (finest)"
 _HELP_TOLERANCE = "snap input coordinates to this grid before tessellating"
 _HELP_ONLY_EDGES = "return the tessellation edges as lines instead of polygons"
 _HELP_OTHER = "second vector file, compared element-wise against the source"
+_HELP_DRIVER = "OGR driver (default: inferred from extension)"
+_HELP_CLIP = "boundary vector file each cell is intersected with"
 
 
 def _as_collection(result: Any) -> FeatureCollection:
@@ -280,6 +282,94 @@ def _cmd_vector_fishnet(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_vector_voronoi(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector voronoi`` — Thiessen tessellation of a point layer.
+
+    The pyramids-own tessellator (distinct from the geopandas-delegated
+    ``voronoi-polygons``): one cell per distinct point, with an optional ``--values``
+    column copied onto each cell (choropleth) and an optional ``--clip`` boundary each
+    cell is intersected with.
+
+    Args:
+        args: Parsed args with ``src``, ``dst``, ``layer``, ``values``, ``clip``,
+            ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.dst, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    clip = FeatureCollection.read_file(args.clip) if args.clip else None
+    with map_lookup_errors():
+        result = fc.voronoi(values=args.values, clip=clip)
+    result.to_file(args.dst, driver=resolve_vector_driver(args.dst, args.driver))
+    info_print(args, f"wrote {args.dst}")
+    return 0
+
+
+def _cmd_vector_quadtree(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector quadtree`` — adaptive quad-tree binning of points.
+
+    Splits the points' bounding box into quadrants until each cell holds at most
+    ``--nmax`` points, then attaches a per-cell aggregate of ``--column`` (or the
+    point count when no column is given) to each cell polygon.
+
+    Args:
+        args: Parsed args with ``src``, ``dst``, ``layer``, ``column``, ``agg``,
+            ``nmax``, ``nmin``, ``clip``, ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.dst, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    clip = FeatureCollection.read_file(args.clip) if args.clip else None
+    with map_lookup_errors():
+        result = fc.quadtree(
+            column=args.column,
+            agg=args.agg,
+            nmax=args.nmax,
+            nmin=args.nmin,
+            clip=clip,
+        )
+    result.to_file(args.dst, driver=resolve_vector_driver(args.dst, args.driver))
+    info_print(args, f"wrote {args.dst}")
+    return 0
+
+
+def _cmd_vector_interpolate_to_raster(args: argparse.Namespace) -> int:
+    """Handle ``pyramids vector interpolate-to-raster`` — grid a point column via IDW.
+
+    Reads ``--column`` as the z-value at each point and interpolates it onto a
+    continuous raster surface with ``gdal.Grid`` (inverse-distance weighting). The
+    output is a single-band GeoTIFF written through :meth:`Dataset.to_file`.
+
+    Args:
+        args: Parsed args with ``src``, ``output``, ``layer``, ``column``, ``method``,
+            ``cell_size``, ``bounds``, ``power``, ``n_neighbors``, ``nodata``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    fc = FeatureCollection.read_file(args.src, layer=args.layer)
+    bounds = tuple(args.bounds) if args.bounds else None
+    with map_lookup_errors():
+        surface = fc.interpolate_to_raster(
+            args.column,
+            method=args.method,
+            cell_size=args.cell_size,
+            bounds=bounds,
+            power=args.power,
+            n_neighbors=args.n_neighbors,
+            nodata=args.nodata,
+        )
+    surface.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def _cmd_vector_geodesic_area(args: argparse.Namespace) -> int:
     """Handle ``pyramids vector geodesic-area`` — ellipsoidal area per feature.
 
@@ -506,6 +596,62 @@ def _add_tessellation_commands(vsub: argparse._SubParsersAction) -> None:
     )
     v_fish.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_fish.set_defaults(func=_cmd_vector_fishnet)
+
+    v_vor2 = vsub.add_parser(
+        "voronoi", help="Thiessen tessellation with optional values/clip"
+    )
+    _add_write_args(v_vor2)
+    v_vor2.add_argument("--values", help="column copied onto each cell (choropleth)")
+    v_vor2.add_argument("--clip", help=_HELP_CLIP)
+    v_vor2.add_argument("--driver", help=_HELP_DRIVER)
+    v_vor2.set_defaults(func=_cmd_vector_voronoi)
+
+    v_qt = vsub.add_parser("quadtree", help="adaptive quad-tree binning of points")
+    _add_write_args(v_qt)
+    v_qt.add_argument("--column", help="numeric column to aggregate (default: count)")
+    v_qt.add_argument(
+        "--agg", default="mean", help="per-cell reducer applied to --column"
+    )
+    v_qt.add_argument(
+        "--nmax", type=int, default=100, help="max points in a cell before it splits"
+    )
+    v_qt.add_argument(
+        "--nmin",
+        type=int,
+        default=0,
+        help="drop cells with fewer than this many points",
+    )
+    v_qt.add_argument("--clip", help=_HELP_CLIP)
+    v_qt.add_argument("--driver", help=_HELP_DRIVER)
+    v_qt.set_defaults(func=_cmd_vector_quadtree)
+
+    v_itr = vsub.add_parser(
+        "interpolate-to-raster", help="grid a point column onto a raster via IDW"
+    )
+    v_itr.add_argument("src", help=_HELP_SRC_VECTOR)
+    v_itr.add_argument("output", help="destination raster path (GeoTIFF)")
+    v_itr.add_argument("--layer", help=_HELP_LAYER)
+    v_itr.add_argument("--column", required=True, help="numeric column to interpolate")
+    v_itr.add_argument(
+        "--method", default="idw", help="interpolation method (only idw)"
+    )
+    v_itr.add_argument("--cell-size", type=float, help="output pixel size (CRS units)")
+    v_itr.add_argument(
+        "--bounds",
+        nargs=4,
+        type=float,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        help="output extent (default: the points' total bounds)",
+    )
+    v_itr.add_argument("--power", type=float, default=2.0, help="IDW distance exponent")
+    v_itr.add_argument(
+        "--n-neighbors", type=int, help="limit each estimate to the nearest N points"
+    )
+    v_itr.add_argument(
+        "--nodata", type=float, default=-9999.0, help="value for un-interpolable cells"
+    )
+    v_itr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    v_itr.set_defaults(func=_cmd_vector_interpolate_to_raster)
 
 
 def _add_measurement_commands(vsub: argparse._SubParsersAction) -> None:

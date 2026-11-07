@@ -514,3 +514,73 @@ class TestSameGrid:
     def test_missing_file_errors(self, raster, capsys):
         """A missing second raster exits 1."""
         assert main(["same-grid", raster, _MISSING]) == 1
+
+
+class TestChecksum:
+    """`pyramids checksum` reports per-band GDAL checksums."""
+
+    def test_json_all_bands(self, multiband, capsys):
+        """--json with no --band emits one checksum per band.
+
+        Args:
+            multiband: Two-band raster fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", multiband, "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert set(payload) == {"checksums"}, "all-band JSON has only 'checksums'"
+        assert len(payload["checksums"]) == 2, "one checksum per band"
+        assert all(isinstance(value, int) for value in payload["checksums"])
+
+    def test_json_single_band(self, multiband, capsys):
+        """--json with --band emits that band's single checksum.
+
+        Args:
+            multiband: Two-band raster fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", multiband, "--band", "0", "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["band"] == 0
+        assert isinstance(payload["checksum"], int)
+
+    def test_text_all_bands(self, multiband, capsys):
+        """The text form prints one ``band N: <checksum>`` line per band.
+
+        Args:
+            multiband: Two-band raster fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", multiband]) == 0
+        out = capsys.readouterr().out
+        assert out.count("\n") == 2, "one line per band"
+        assert out.startswith("band 0: "), "text lists each band index"
+
+    def test_text_single_band(self, raster, capsys):
+        """A --band selection prints just that band's checksum as a bare integer.
+
+        Args:
+            raster: Single-band raster fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", raster, "--band", "0"]) == 0
+        assert capsys.readouterr().out.strip().isdigit(), "a single band prints an int"
+
+    def test_bad_band_errors(self, raster, capsys):
+        """An out-of-range band is a clean error (IndexError remapped), not a crash.
+
+        Args:
+            raster: Single-band raster fixture.
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", raster, "--band", "9"]) == 1
+        assert "unexpected failure" not in capsys.readouterr().err
+
+    def test_missing_file_errors(self, capsys):
+        """A missing input exits 1 without a traceback.
+
+        Args:
+            capsys: Pytest stdout/stderr capture fixture.
+        """
+        assert main(["checksum", _MISSING]) == 1
+        assert "Traceback" not in capsys.readouterr().err

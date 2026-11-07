@@ -184,15 +184,15 @@ def read_extension_metadata(item: Any, asset_key: str | None = None) -> dict[str
 
         * ``epsg`` — ``proj:epsg`` (int) or ``None``.
         * ``crs`` — ``proj:code`` (e.g. ``"EPSG:32633"``) when present, else
-          derived from ``proj:epsg``, else ``None``.
+            derived from ``proj:epsg``, else ``None``.
         * ``transform`` — raw ``proj:transform`` list or ``None``.
         * ``geotransform`` — the GDAL geotransform derived from ``transform``,
-          or ``None`` when no transform is present.
+            or ``None`` when no transform is present.
         * ``shape`` — ``proj:shape`` ``[rows, cols]`` or ``None``.
         * ``raster_bands`` — ``raster:bands`` list or ``None``.
         * ``eo_bands`` — ``eo:bands`` list or ``None``.
         * ``band_names`` — names derived from ``eo:bands`` (``name`` or
-          ``common_name``) when every band has one, else ``None``.
+            ``common_name``) when every band has one, else ``None``.
 
     Raises:
         StacAssetError: When `asset_key` is given but absent from the item.

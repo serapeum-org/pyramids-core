@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+from typing import Any
 
 from pyramids._cli_shared import (
     info_print,
@@ -101,18 +102,25 @@ def _cmd_nc_dim_values(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_time_values(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc time-values`` — the formatted time axis labels.
+    """Handle ``pyramids nc time-values`` — the time axis values.
+
+    The default emits the decoded, ``--format``-formatted labels (``get_time_variable``).
+    ``--raw`` instead emits the stored numeric offsets (``get_time_values``), i.e. the
+    axis as the file holds it before CF decoding.
 
     Args:
-        args: Parsed args with ``file``, ``var``, ``format``, ``json``.
+        args: Parsed args with ``file``, ``var``, ``format``, ``raw``, ``json``.
 
     Returns:
         int: ``0`` on success.
     """
-    labels = NetCDF.read_file(args.file).get_time_variable(
-        var_name=args.var, time_format=args.format
-    )
-    listed = labels or []
+    nc = NetCDF.read_file(args.file)
+    listed: list[Any]
+    if args.raw:
+        values = nc.get_time_values(var_name=args.var)
+        listed = [] if values is None else [json_safe(v) for v in values.tolist()]
+    else:
+        listed = nc.get_time_variable(var_name=args.var, time_format=args.format) or []
     if args.json:
         print(json.dumps({"var": args.var, "values": listed}))
     else:
@@ -196,6 +204,11 @@ def add_nc_inspect_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_time.add_argument(
         "--format", default="%Y-%m-%d", help="strftime format for the labels"
+    )
+    nc_time.add_argument(
+        "--raw",
+        action="store_true",
+        help="emit the stored numeric offsets instead of decoded labels",
     )
     nc_time.add_argument("--json", action="store_true", help=_HELP_JSON)
     nc_time.set_defaults(func=_cmd_nc_time_values)

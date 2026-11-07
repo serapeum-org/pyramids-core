@@ -21,6 +21,8 @@ _NC = _DATA / "cf__6v__1d2-2d4__geog__y-asc.nc"
 _NC_TIME = _DATA / "cf__12v__1d4-2d5-3d2-4d1__y-asc.nc"
 # A CF file with a multi-step time axis (24 monthly steps) for selection tests.
 _NC_MULTI = _DATA / "cf__7v__1d3-2d3-3d1__y-asc.nc"
+# A netCDF-4 file carrying several named sub-groups (per-flight profiles).
+_NC_GROUPS = _DATA / "none__35v__1d35__groups-nc4.nc"
 _UNEXPECTED = "unexpected failure"
 
 
@@ -292,3 +294,84 @@ class TestNcCrop:
         assert "no valid pixels" in err
         assert _UNEXPECTED not in err
         assert "Traceback" not in err
+
+
+class TestNcInfoFull:
+    """`pyramids nc info --full` (issue #1467)."""
+
+    def test_full_prints_ncdump_report(self, capsys):
+        """--full prints NetCDF.info()'s ncdump-style report (dims/vars/attrs)."""
+        assert main(["nc", "info", str(_NC_TIME), "--full"]) == 0
+        out = capsys.readouterr().out
+        assert "pyramids.NetCDF {" in out
+        assert "dimensions:" in out
+        assert "variables:" in out
+
+    def test_default_summary_unchanged(self, capsys):
+        """Without --full the compact JSON summary still works."""
+        assert main(["nc", "info", str(_NC_TIME), "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert "variables" in payload
+        assert "dimensions" in payload
+
+    def test_full_and_json_are_mutually_exclusive(self):
+        """--full and --json together are rejected at argparse, not silently merged (N3)."""
+        with pytest.raises(SystemExit):
+            main(["nc", "info", str(_NC_TIME), "--full", "--json"])
+
+
+class TestNcGroups:
+    """`pyramids nc groups` (issue #1467)."""
+
+    def test_json_lists_group_names(self, capsys):
+        """--json lists the file's sub-group names."""
+        assert main(["nc", "groups", str(_NC_GROUPS), "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert len(payload["groups"]) > 0
+
+    def test_flat_file_lists_no_groups(self, capsys):
+        """A flat file reports an empty group list and still exits 0."""
+        assert main(["nc", "groups", str(_NC), "--json"]) == 0
+        assert json.loads(capsys.readouterr().out)["groups"] == []
+
+    def test_text_output_lists_names(self, capsys):
+        """Without --json the group names print as an indented bullet list."""
+        assert main(["nc", "groups", str(_NC_GROUPS)]) == 0
+        out = capsys.readouterr().out
+        assert out.startswith(f"file: {_NC_GROUPS}")
+        assert "  - " in out, "each group name prints as an indented bullet"
+
+
+class TestNcGetGroup:
+    """`pyramids nc get-group` (issue #1467)."""
+
+    def test_writes_subgroup(self, tmp_path):
+        """A named sub-group is written out as its own readable NetCDF container."""
+        group = NetCDF.read_file(str(_NC_GROUPS)).group_names[0]
+        out = str(tmp_path / "grp.nc")
+        assert main(["nc", "get-group", str(_NC_GROUPS), out, "--group", group]) == 0
+        assert len(list(NetCDF.read_file(out).variable_names)) > 0
+
+    def test_unknown_group_errors(self, tmp_path, capsys):
+        """An unknown group exits 1 with a clean error, not a traceback."""
+        rc = main(
+            [
+                "nc",
+                "get-group",
+                str(_NC_GROUPS),
+                str(tmp_path / "o.nc"),
+                "--group",
+                "nope",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert _UNEXPECTED not in err
+        assert "Traceback" not in err
+
+    def test_refuses_existing(self, tmp_path):
+        """A second get-group without --overwrite is refused."""
+        group = NetCDF.read_file(str(_NC_GROUPS)).group_names[0]
+        out = str(tmp_path / "grp.nc")
+        assert main(["nc", "get-group", str(_NC_GROUPS), out, "--group", group]) == 0
+        assert main(["nc", "get-group", str(_NC_GROUPS), out, "--group", group]) == 1

@@ -42,7 +42,7 @@ ds = Dataset.read_file("scene.zip", vsi="zip", file_i=0)
 ds = Dataset.from_bytes(downloaded_bytes, name="scene-A")
 ```
 
-See the [Recipes](../../how-to/recipes.md#read-a-raster-held-in-memory-as-bytes)
+See the [Recipes](../../how-to/recipes.md)
 page for the bytes / archive / cloud-HTTP-retry recipes.
 
 ## Windowed reads — `bbox=` / `epsg=`

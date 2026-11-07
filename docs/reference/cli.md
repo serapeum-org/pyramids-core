@@ -45,8 +45,12 @@ pyramids overview dem.tif --levels 2 4 8 --resampling average      # build image
 ```
 
 - **`convert`** — re-save a raster in another format (driver inferred from the extension, or `--driver`).
+- **`subdataset`** — extract one subdataset of a container (NetCDF/HDF store, multi-subdataset GeoTIFF, Sentinel
+  product, …) to a standalone raster, selected by 0-based index (negatives allowed) or by its full GDAL name.
 - **`warp`** — reproject to `--crs` with an optional `--resampling`.
-- **`clip`** — crop by `--bbox MINX MINY MAXX MAXY` (in the raster CRS) **or** by a polygon `--vector`.
+- **`clip`** — crop by `--bbox MINX MINY MAXX MAXY` (in the raster CRS) **or** by a polygon `--vector`. This is a
+  *spatial* crop (it wraps `Dataset.crop`); it is **not** the numpy value-clamp `Dataset.clip` (clamp values to a
+  `[min, max]` range), which has no CLI verb — use `calc` with `np.clip(A, lo, hi)` for that.
 - **`merge`** — mosaic two-or-more rasters; the **last** positional argument is the output. `--bbox MINX MINY
   MAXX MAXY` restricts the mosaic to that window and reads only it, which is what makes a small area of interest
   cheap to pull from remote sources instead of transferring every source in full. The window is in the mosaic's
@@ -141,7 +145,8 @@ pyramids create-empty blank.tif --rows 512 --columns 512 --epsg 4326 --cell-size
 
 **Inspect / metadata** (`--json`) — `stats` (`--exact`), `histogram`, `get-meta-data` (`--domain`),
 `get-attribute-table` / `set-attribute-table`, `mask-flags`, `footprint` (valid-data polygon → an optional vector
-output), `cell-area`, `domain-area`, `count-domain-cells`, and `same-grid` (compare two rasters' grids).
+output), `cell-area`, `domain-area`, `count-domain-cells`, `same-grid` (compare two rasters' grids), and
+`checksum` (per-band GDAL checksum for integrity / round-trip verification).
 
 **Bands / georeferencing edit** (`SRC OUT`) — `add-band` (`--source`), `select-bands` (`--bands`, 1-based),
 `get-band-by-color`, `create-mask-band`, `read-masks` / `get-mask` (write the mask as a raster), `set-color-ramp`,
@@ -172,7 +177,7 @@ which legitimately reprojects the source onto the reference grid.
 these run headless (`render` remains the quick-look PNG, and `contour` lives under analysis above).
 
 **Network readers** — the `fetch` group gains `fetch wmts` and `fetch ogc-coverages` alongside `fetch wms` / `wcs`
-/ `wfs` (see [Remote / OGC services](#remote--ogc-services)).
+/ `wfs` (see [Remote / OGC services](#remote-ogc-services)).
 
 Deferred to the Python API (documented in each sub-module): the callable-taking methods (`apply`, `map_blocks`,
 `focal_apply`), the low-level coordinate/block primitives (`array_to_map_coordinates`, `rowcol`, `xy`,
@@ -225,6 +230,19 @@ pyramids vector filter parcels.geojson in_aoi.geojson --predicate intersects --m
 `constrained-delaunay-triangles`, `fishnet --bounds --cell-size --epsg`, `to-h3 --resolution`,
 `h3-bin --resolution`, `sample-points --size`, `polygonize`.
 
+**Interpolate / tessellate / build** — the value-add constructors and in-memory readers now exposed as one-shot
+verbs: `interpolate-to-raster --column` (IDW-grid a point column onto a raster → GeoTIFF), `voronoi` (pyramids'
+own Thiessen tessellation of a point layer, with optional `--values` choropleth and `--clip` boundary — distinct
+from the geopandas-delegated `voronoi-polygons`), `quadtree` (adaptive quad-tree point binning, `--nmax`/`--nmin`),
+`with-coordinates` / `with-centroid` (append per-vertex / per-feature coordinate columns), and the readers
+`from-xyz` (CSV `--x`/`--y`/`--z` columns → points), `from-features` (a GeoJSON features file), `from-records`
+(a CSV with a WKT `--geometry` column), and `read-gpx` (every non-empty GPX sub-layer → one multi-layer file).
+
+```bash
+pyramids vector voronoi stations.geojson cells.geojson --values rainfall --clip aoi.geojson
+pyramids vector interpolate-to-raster stations.geojson surface.tif --column rainfall --cell-size 100
+```
+
 **Measurements** (print; `--json`) — `geodesic-area` / `geodesic-length` / `geodesic-distance`, `distance`,
 `hausdorff-distance`, `frechet-distance`, `minimum-clearance`, `hilbert-distance`, `get-coordinates` (to CSV).
 
@@ -239,11 +257,9 @@ measurements) require both layers in the **same CRS** and exit 1 with a clear me
 one first with `vector warp`. (The exception is `clip --mask`, which reprojects the mask to the source CRS for
 convenience; `geodesic-distance` is CRS-agnostic.) A GEOS geometry error on the input (e.g. `shared-paths` on
 non-lineal geometry) exits 1 with a one-line message, not a traceback. Not exposed as one-shot CLI verbs (use
-Python): `from-features` / `from-dict` / `from-records` /
-`from-arrow` / `from-xyz` (need in-memory objects), `transform` (needs a callable), `to-arrow` / `to-xarray` /
-`iter-features` (return Python objects), `read-gpx-layers` (returns a layer dict), and `from-postgis` /
-`to-postgis` (need a live PostGIS connection). Inherited pandas/GeoDataFrame tabular and arithmetic methods are
-out of scope.
+Python): `from-dict` / `from-arrow` (need in-memory objects), `transform` (needs a callable), `to-arrow` /
+`to-xarray` / `iter-features` (return Python objects), and `from-postgis` / `to-postgis` (need a live PostGIS
+connection). Inherited pandas/GeoDataFrame tabular and arithmetic methods are out of scope.
 
 ## NetCDF
 
@@ -262,6 +278,9 @@ pyramids nc dim-values climate.nc --dim lat     # a dimension's coordinate value
 pyramids nc time-values climate.nc --json       # the formatted time-axis labels
 ```
 
+- **`nc info --full`** adds the per-variable detail to the summary; **`nc time-values --raw`** emits the raw
+  numeric time offsets instead of the formatted calendar labels.
+
 **Select & subset** (each writes a new NetCDF)
 
 ```bash
@@ -278,6 +297,8 @@ pyramids nc pad climate.nc out.nc --width time=2 --mode constant --value 0
 
 - **`nc sel`** matches by a `--time` date label (sub-daily axes may match several steps); `info`/`sel` assume the
   CF-standard time axis named `time`. `nc info` shows the step count and the first/last labels.
+- **`nc subset`** reads one windowed slice in a single call — combine any of `--var`, `--time`, and `--bbox`
+  (`--crs` sets the bbox CRS) instead of chaining `sel` / `crop` / `extract`.
 
 **Variables, dimensions & coordinates** (each writes a new NetCDF)
 
@@ -293,6 +314,11 @@ pyramids nc set-coords climate.nc out.nc --names lat lon    # also: reset-coords
 pyramids nc squeeze climate.nc out.nc --dim time            # drop length-one dimensions
 ```
 
+**Variable mutation** (each writes a new NetCDF) — `add-var --source` (copy variables in from another NetCDF),
+`set-var --raster --var` (write a raster in as a named variable), `crop-var --var --mask` (crop one variable to a
+vector mask), `expand-dims --var --dim` (lift a variable onto a new band dimension), `assign-coords --coord`
+(restamp existing band dimensions).
+
 **CF / time / calendar / calculus** (each writes a new NetCDF)
 
 ```bash
@@ -307,6 +333,21 @@ pyramids nc interp climate.nc out.nc --coord plev=50000 --method linear
 pyramids nc interpolate-na climate.nc out.nc --dim time
 pyramids nc reduce climate.nc out.nc --dim time --how mean
 ```
+
+**More reductions & interpolation** (each writes a new NetCDF) — `coarsen --dim --window --how` (block-reduce a
+dimension by a window), `cumulative --dim --how` (running total/product), `weighted --weights --dims --how`
+(weighted reduction), and `interp-like --target` (interpolate onto a target cube's band axes).
+
+**Sub-groups** — `groups` lists a file's root-level sub-group names (`--json`); `get-group --group` writes one
+sub-group out as a standalone NetCDF.
+
+**Construct & combine** (each writes a new NetCDF) — `from-dataframe` (a MultiIndex CSV → a cube, `--x`/`--y`/
+`--vars`), `from-dict` (a JSON structure dump → a cube), `concat --inputs --dim` (join cubes end to end along a
+dimension), `merge --inputs` (put several cubes' variables together).
+
+**Kerchunk / multi-file** — `to-kerchunk` writes a reference manifest for a single file, `combine-kerchunk
+--inputs` a combined manifest over many files, and `open-mf --paths` reports a lazy variable stack across files
+(`--json`).
 
 **I/O export**
 
@@ -325,32 +366,88 @@ pyramids nc plot-histogram climate.nc hist.png --var tas
 pyramids nc animate climate.nc anim.gif --var tas --dim time --fps 4
 ```
 
-Not exposed as one-shot CLI verbs (use Python): `where`/`isin` (boolean-array conditions), `subset` (slice/tuple
-arguments), `expand-dims`/`open-subdataset` (no container-level target on the shipped files), `interp-like`/
-`convert-units` (operate per gridded variable, which this group selects by other means), `curvefit`/`weighted`/
-`cumulative` (need a Python callable or weights array), and the array/arithmetic methods inherited from `Dataset`
-(reachable via the top-level raster commands once a variable is `extract`ed). Generic raster ops on a NetCDF plane
-(warp, slope, COG, …) are the top-level raster commands, not duplicated here.
+Not exposed as one-shot CLI verbs (use Python): `where`/`isin` (boolean-array conditions), `convert-units`
+(per-variable unit metadata), `curvefit` (needs a Python callable), `open-subdataset` (no container-level target
+on the shipped files), the xarray bridges `to_xarray`/`from_xarray`, the in-memory
+constructors/combiners `from_array`/`combine`/`create_main_dimension`, and the array/arithmetic/reduction methods
+inherited from `Dataset` (reachable via the top-level raster commands once a variable is `extract`ed). Generic
+raster ops on a NetCDF plane (warp, slope, COG, …) are the top-level raster commands, not duplicated here.
 
 ## Raster stacks
 
 ```bash
 pyramids collection info "tiles/*.tif" --json                # count, CRS, grid of a co-registered stack
 pyramids collection stats "tiles/*.tif" mean.tif --reduce mean   # time reduction (mean|sum|min|max|std|var)
+pyramids collection resample "tiles/*.tif" monthly/ --freq 1MS --op mean   # calendar-frequency binning
 ```
 
+The `collection` group wraps the full `DatasetCollection` surface over a folder/glob of co-registered GeoTIFFs.
+Every opening verb takes a shared `--source {files,zarr,archive}` option (default `files` — a glob or directory;
+`zarr` a Zarr store; `archive` a zip/tar), plus `--member-glob` / `--date-format` to pick and stamp the members.
+STAC and point-cloud sources are deferred to the Python API.
+
+- **Inspect** — `info` (count, CRS, grid; `--json`).
+- **Time reduction** — `stats` (one reduction → one raster; `mean|sum|min|max|std|var`) and `resample`, which
+  bins the time axis to a pandas `--freq` (e.g. `1MS`, `7D`, `6h`) and reduces each window with a rich `--op`
+  (`mean|sum|min|max|std|var|median|quantile|percentile|mode|trend|sens_slope`), writing one raster per window.
+- **Batch geoprocessing** (applied to every timestep) — `reproject --crs`, `crop` (`--mask` or `--bbox`/`--epsg`),
+  and `align --reference` (resample each step onto a reference raster's grid).
+- **Export** — `to-file` (every step to a directory), `to-cog` (each step as its own COG), `to-netcdf` /
+  `to-zarr` (the whole `(T, B, R, C)` cube to one store), `to-kerchunk` (a reference JSON over NetCDF/HDF5
+  sources), and `merge` (mosaic every timestep into one raster, with `--bbox`/`--method`). `to-zarr` and
+  `to-kerchunk` (and the `--source zarr` opener) need the `[lazy]` extra.
+
 ## UGRID mesh
+
+The `mesh` group now wraps the full `MeshDataset` surface (the earlier "Phase 1" label is obsolete) — each command
+is a thin 1:1 wrapper over a `MeshDataset` method. Writes refuse to clobber without `--overwrite`; inspection
+verbs take `--json`. The original Phase-1 `extract` (rasterize onto a `--like` grid) now coexists with the new
+`sample-point` (sample a variable at arbitrary x/y coordinates).
 
 ```bash
 pyramids mesh info mesh.nc --json                            # node/face/edge counts, CRS, bounds, variables
 pyramids mesh extract mesh.nc z.tif --like grid.tif --var mesh2d_node_z   # rasterize a variable onto a grid
 pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z --location node  # mesh -> vector
+pyramids mesh sample-point mesh.nc --var mesh2d_node_z --x 4.1 4.6 --y 51.9 52.2 --json  # sample at x/y
 ```
 
-- **`mesh info`** — summarise a UGRID mesh (`--json` for a machine-readable dump).
-- **`mesh extract`** — rasterize a mesh variable onto the `--like` template raster's grid/CRS.
-- **`mesh convert`** — write the mesh as a vector file (`--location face|node|edge`; driver inferred from the
-  extension or `--driver`).
+**Read / construct** — `from-arrays` (node/face `.npy` arrays), `from-structured` (a quad mesh from a raster),
+`from-geodataframe` (from a polygon layer), `from-bytes`, `from-zarr` (needs `[lazy]`), `read-all` (write every
+topology to its own NetCDF), `open-mf` (concatenate several files), `mesh-names` (list topologies in a file).
+
+**Inspect** — `info`, `summary`, `get` / `items` / `keys` / `values` (describe variables), `masked-values`,
+`active-mask`, `histogram`, `count-domain-cells`, `domain-area`, `circumcenters`, `sparse-adjacency` (adjacency
+matrix summary / `.npz`).
+
+**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time-range`, `head` / `tail` /
+`thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` / `drop-duplicates` /
+`drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or bbox),
+`subset-by-bounds`, and the samplers `sample`, `sample-line`, `sample-point`, `sample-random`.
+
+**Convert / export** — `convert` / `to-file` / `to-bytes` (UGRID NetCDF or a driver), `to-crs` (reproject) /
+`set-crs` (declare only), `to-geodataframe` / `to-dataframe` / `to-image` / `to-zarr`, `to-dataset` (rasterize to
+GeoTIFF), `to-location` (remap onto another facet), `polygonize` / `contour` / `bounding-polygon` /
+`exterior-edges` / `exterior-faces` / `footprint`, `burn` (a vector onto faces), `with-variable` /
+`rename-variable` / `attach-data`.
+
+**Analysis / terrain** — `slope`, `aspect`, `hillshade`, `proximity`, `cluster`, `connected-components`,
+`zonal-stats`, `sieve`, `binary-dilation` / `binary-erosion`, `focal-mean` / `focal-std`, `regrid`.
+
+**Interp / fill / time / calculus** — `interp-like` / `interp-time` / `interp-calendar`, `interpolate-na` /
+`fill-na-spatial` / `laplace-interpolate` / `ffill` / `bfill` / `fillna`, `clip-values`, `convert-units`,
+`coarsen` / `resample` / `rolling` / `shift`, `integrate` / `cumulative-integrate` / `differentiate`,
+`convert-calendar`.
+
+**Plot (headless, via cleopatra)** — `plot`, `plot-histogram`, `plot-outline`, `plot-vector-field`, `animate`;
+the Agg backend is forced so these run headless.
+
+**Global attributes** — `set-attr` / `del-attr` (edit a global attribute into a new mesh file).
+
+**Multi-mesh join** — `concat` (stack several same-topology meshes) and `merge` (combine their variables).
+
+Not exposed (use Python, or pending a library fix): `voronoi`, `polyfit`, `curvefit` and `focal_apply` take a
+Python callable or are not one-shot-shaped, and `sel-time` is held back by a known writer-serialization
+limitation.
 
 ## STAC
 
