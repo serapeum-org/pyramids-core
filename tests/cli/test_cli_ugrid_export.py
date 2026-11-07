@@ -588,3 +588,31 @@ class TestRenameVariable:
                     "zz",
                 ]
             )
+
+
+class TestVoronoiPolygons:
+    """``mesh voronoi-polygons`` — Voronoi cells of the mesh nodes, as a vector file (#1479)."""
+
+    @staticmethod
+    def _mesh_file(tmp_path):
+        """A written four-node two-triangle mesh in EPSG:4326."""
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            epsg=4326,
+        )
+        path = tmp_path / "m.nc"
+        ds.to_file(str(path))
+        return str(path)
+
+    def test_voronoi_polygons_writes_a_vector_file(self, tmp_path):
+        """The verb writes one polygon per node to a vector file."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.gpkg"
+
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+
+        cells = FeatureCollection.read_file(str(out))
+        assert len(cells) == 4
+        assert set(cells.geometry.geom_type) == {"Polygon"}

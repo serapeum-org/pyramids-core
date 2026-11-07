@@ -13,7 +13,8 @@ sub-parser by the top-level CLI. The existing ``mesh convert`` already wraps
 sibling (``MeshDataset.to_geodataframe``) and does not duplicate it.
 
 Deferred:
-    - ``MeshDataset.voronoi`` — returns a :class:`scipy.spatial.Voronoi` object
+    - ``MeshDataset.voronoi`` — returns a :class:`scipy.spatial.Voronoi` object; the
+      serialising form is ``voronoi_polygons`` (the ``voronoi-polygons`` verb here)
       (vertices, ridges, regions), which has no single sensible geospatial file
       form; writing it would mean inventing a serialization rather than wrapping a
       method, so there is no 1:1 export verb for it.
@@ -78,6 +79,28 @@ def _cmd_mesh_to_geodataframe(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         gdf = mesh.to_geodataframe(variable_name=args.var, location=args.location)
     FeatureCollection(gdf).to_file(args.output, driver=driver)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_mesh_voronoi_polygons(args: argparse.Namespace) -> int:
+    """Handle ``pyramids mesh voronoi-polygons`` — Voronoi cells of the mesh nodes.
+
+    Writes the dual cells as a vector file. The serialising counterpart of
+    :meth:`MeshDataset.voronoi`, whose bare :class:`scipy.spatial.Voronoi` has no file form.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``driver``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    driver = resolve_vector_driver(args.output, args.driver)
+    mesh = MeshDataset.read_file(args.file)
+    with map_lookup_errors():
+        cells = mesh.voronoi_polygons()
+    cells.to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -763,6 +786,25 @@ def _add_rename_variable(msub: argparse._SubParsersAction) -> None:
     parser.set_defaults(func=_cmd_mesh_rename_variable)
 
 
+def _add_voronoi_polygons(msub: argparse._SubParsersAction) -> None:
+    """Register ``mesh voronoi-polygons``.
+
+    Args:
+        msub: The ``mesh`` sub-parser action.
+    """
+    parser = msub.add_parser(
+        "voronoi-polygons",
+        help="Voronoi (Thiessen) cells of the mesh nodes, as a vector file",
+    )
+    parser.add_argument("file", help=_HELP_MESH_FILE)
+    parser.add_argument("output", help="destination vector path")
+    parser.add_argument(
+        "--driver", help="OGR driver (default: inferred from the extension)"
+    )
+    parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    parser.set_defaults(func=_cmd_mesh_voronoi_polygons)
+
+
 def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
     """Register the mesh convert/export commands on the ``mesh`` sub-parser.
 
@@ -772,6 +814,7 @@ def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
     """
     _add_to_file(msub)
     _add_to_geodataframe(msub)
+    _add_voronoi_polygons(msub)
     _add_to_dataframe(msub)
     _add_to_dataset(msub)
     _add_to_zarr(msub)
