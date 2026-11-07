@@ -253,6 +253,40 @@ class TestTimeDimension:
         np.testing.assert_array_equal(picked["wl"].data, [3.0, 4.0])
         np.testing.assert_array_equal(picked["bed"].data, [-9.0, -8.0])
 
+    def test_sel_time_trailing_time_slices_per_step_mask_on_time_axis(self):
+        """A per-step active mask is sliced on the real time axis, not axis 0.
+
+        Test scenario:
+            A ``(face, time)`` variable with a per-step ``(face, time)`` mask: sel_time(1)
+            must keep the column ``mask[:, 1]`` (one value per face), not row ``mask[1]``.
+        """
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+        var = MeshVariable(
+            name="wl",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3),
+            dimensions=("mesh2d_nFaces", "time"),
+            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
+            active=np.array([[True, False, False], [True, True, False]]),
+        )
+        collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
+        np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
+        assert collapsed.active.shape == (2,), f"mask sliced on wrong axis: {collapsed.active.shape}"
+        np.testing.assert_array_equal(collapsed.active, [False, True])
+
     def test_sel_time_trailing_time_without_data_raises(self):
         """A trailing-time variable with no loaded data raises instead of guessing.
 

@@ -652,30 +652,36 @@ class MeshVariable:
     def _time_sliced_active(self, start: int, stop: int | None) -> np.ndarray | None:
         """The active mask reduced the same way :meth:`_read_time_window` reduces the data.
 
-        A per-step mask (:attr:`active_has_time`) is indexed on its leading time axis — ``[start]``
-        for a single step (``stop is None``), ``[start:stop]`` for a range — so it stays aligned
-        with the sliced data. A static mask has no time axis and is returned unchanged. ``None``
-        stays ``None``.
+        A per-step mask (:attr:`active_has_time`) is indexed on the variable's own time axis
+        (:attr:`time_index`, not assumed leading) — one step for ``stop is None``, the
+        ``[start, stop)`` range otherwise — so it stays aligned with the collapsed/sliced data
+        even when time is a trailing axis. A static mask has no time axis and is returned
+        unchanged. ``None`` stays ``None``.
         """
         if self.active is None:
             return None
         mask = np.asarray(self.active)
         if not self.active_has_time:
             return mask
-        return mask[start] if stop is None else mask[start:stop]
+        axis = self.time_index if self.time_index is not None else 0
+        if stop is None:
+            return np.take(mask, start, axis=axis)
+        return np.take(mask, np.arange(start, stop), axis=axis)
 
     def _time_indexed_active(self, indices: np.ndarray) -> np.ndarray | None:
-        """The active mask taking the time steps at ``indices`` (for :meth:`np.take` on axis 0).
+        """The active mask taking the time steps at ``indices`` on the variable's time axis.
 
         The counterpart of :meth:`_time_sliced_active` for an arbitrary index sequence rather
-        than a contiguous range. A static mask is returned unchanged; ``None`` stays ``None``.
+        than a contiguous range. Indexes :attr:`time_index` (not assumed leading). A static
+        mask is returned unchanged; ``None`` stays ``None``.
         """
         if self.active is None:
             return None
         mask = np.asarray(self.active)
         if not self.active_has_time:
             return mask
-        return np.take(mask, np.asarray(indices, dtype=np.intp), axis=0)
+        axis = self.time_index if self.time_index is not None else 0
+        return np.take(mask, np.asarray(indices, dtype=np.intp), axis=axis)
 
     def _element_sliced_active(self, elements: np.ndarray) -> np.ndarray | None:
         """The active mask restricted to ``elements`` along its (last) element axis.
