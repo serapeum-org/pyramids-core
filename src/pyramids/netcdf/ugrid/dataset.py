@@ -1369,21 +1369,10 @@ class MeshDataset(_MeshFacades):
         self._time_length("sel_time")
         new_data_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
-            if not var.has_time:
-                new_data_vars[name] = var
-                continue
-            axis = cast("int", var.time_index)
-            if axis == 0:
-                # Leading time: the windowed read pulls only this slab from disk (#982).
-                step = np.asarray(var.sel_time(index))
+            if var.has_time:
+                new_data_vars[name] = _collapse_variable_to_step(var, index)
             else:
-                data = var.data
-                if data is None:
-                    raise ValueError(f"Variable {name!r} has no loaded data to select.")
-                step = np.take(np.asarray(data), index, axis=axis)
-            new_data_vars[name] = _static_from(
-                var, step, axis, active=var._time_sliced_active(index, None)
-            )
+                new_data_vars[name] = var
 
         # See `to_crs`: `type(self)` keeps a subclass, and `file_name` is carried.
         result = type(self)(
@@ -5301,7 +5290,10 @@ class MeshDataset(_MeshFacades):
         """Take one time step from every temporal variable, dropping the time dimension.
 
         The single-step half of :meth:`isel`: each temporal variable becomes static, as
-        :meth:`reduce` produces, while a static variable is carried through untouched.
+        :meth:`reduce` produces, while a static variable is carried through untouched. Shares
+        the per-variable collapse (:func:`_collapse_variable_to_step`) with
+        :meth:`sel_time`, so both read only the requested slab from disk for a leading-time
+        file-backed variable (#982).
 
         Args:
             index: The time position to take.
@@ -5311,23 +5303,14 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             ValueError: A temporal variable has no loaded data.
+            IndexError: ``index`` is out of range for the time axis.
         """
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
-            if not var.has_time:
+            if var.has_time:
+                new_vars[name] = _collapse_variable_to_step(var, index)
+            else:
                 new_vars[name] = var
-                continue
-            axis = cast("int", var.time_index)
-            data = var.data
-            if data is None:
-                raise ValueError(f"Variable {name!r} has no loaded data to select.")
-            step = np.take(np.asarray(data), index, axis=axis)
-            new_vars[name] = _static_from(
-                var,
-                np.asarray(step),
-                axis,
-                active=var._time_sliced_active(index, None),
-            )
         return self._rebuild(new_vars)
 
     def head(self, n: int = 5) -> MeshDataset:
@@ -7032,6 +7015,40 @@ def _static_from(
             _consistent_active(var.active, data) if active is _KEEP_ACTIVE else active
         ),
         _data=data,
+    )
+
+
+def _collapse_variable_to_step(var: MeshVariable, index: int) -> MeshVariable:
+    """One time step of a temporal variable, as a static (time-collapsed) variable.
+
+    The shared body of the two single-step collapses — :meth:`MeshDataset.sel_time` and
+    :meth:`MeshDataset._collapse_to_step` (reached by ``isel(time=index)``) — so they cannot
+    drift. A leading-time variable reads only the requested slab from disk (the lazy
+    single-step read of #982); a variable whose time axis is not leading is taken with
+    :func:`numpy.take` on its own ``time_index``. The result drops the time dimension via
+    :func:`_static_from`, which also strips the now-meaningless time coordinate.
+
+    Args:
+        var: The temporal variable to collapse (caller has checked ``var.has_time``).
+        index: The time position to take (0-based; a negative index counts from the end).
+
+    Returns:
+        MeshVariable: The static variable holding that step.
+
+    Raises:
+        ValueError: The variable has neither eager data nor a loader to read from.
+        IndexError: ``index`` is out of range for the time axis.
+    """
+    if not var.has_data_source:
+        raise ValueError(f"Variable {var.name!r} has no loaded data to select.")
+    axis = cast("int", var.time_index)
+    if axis == 0:
+        # Leading time: the windowed read pulls only this slab from disk (#982).
+        step = np.asarray(var.sel_time(index))
+    else:
+        step = np.take(np.asarray(var.data), index, axis=axis)
+    return _static_from(
+        var, step, axis, active=var._time_sliced_active(index, None)
     )
 
 
