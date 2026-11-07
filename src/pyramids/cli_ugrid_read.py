@@ -330,7 +330,8 @@ def _add_from_structured(msub: argparse._SubParsersAction) -> None:
 def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
     """Register ``from-zarr``."""
     parser = msub.add_parser(
-        "from-zarr", help="read a pyramids-written Zarr store (needs the pyramids-lazy backend)"
+        "from-zarr",
+        help="read a pyramids-written Zarr store (needs the pyramids-lazy backend)",
     )
     parser.add_argument("store", help="input Zarr store (path / fsspec URL)")
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
