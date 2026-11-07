@@ -1770,6 +1770,27 @@ class MeshDataset(_MeshFacades):
         Raises:
             InvalidGeometryError: Fewer than two distinct nodes with finite coordinates.
 
+        Examples:
+            - Tessellate a four-node mesh and inspect the cells:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> mesh = MeshDataset.from_arrays(
+                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
+                ...     epsg=4326,
+                ... )
+                >>> cells = mesh.voronoi_polygons()
+                >>> len(cells)
+                4
+                >>> sorted(set(cells.geometry.geom_type))
+                ['Polygon']
+                >>> cells.epsg
+                4326
+
+                ```
+
         See Also:
             voronoi: The low-level `scipy.spatial.Voronoi` primitive this builds on.
         """
