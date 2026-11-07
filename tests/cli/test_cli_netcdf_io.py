@@ -91,7 +91,7 @@ class TestNcToDict:
 
 
 class TestNcToZarr:
-    """`pyramids nc to-zarr` (needs the [lazy] extra for zarr)."""
+    """`pyramids nc to-zarr` (needs the pyramids-lazy backend)."""
 
     @pytest.mark.lazy
     def test_writes_zarr_store(self, tmp_path):

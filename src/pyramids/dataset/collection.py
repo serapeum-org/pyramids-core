@@ -1352,7 +1352,7 @@ class DatasetCollection:
         The per-timestep timestamps are supplied by the caller (``times``)
         because a :class:`DatasetCollection` does not itself carry a time
         coordinate. The reduction runs through :attr:`data`, so the optional
-        ``[lazy]`` extra (dask) is required.
+        pyramids-lazy backend is required.
 
         Every window is evaluated in a single :func:`dask.compute`, so each
         source chunk is read once regardless of op.
@@ -1870,7 +1870,7 @@ class DatasetCollection:
             store; use :meth:`to_netcdf` when the calendar axis must round-trip.
 
         Raises:
-            OptionalPackageDoesNotExist: When the `[lazy]` extra is not
+            OptionalPackageDoesNotExist: When the pyramids-lazy backend is not
                 installed.
             RuntimeError: When the collection has no files list.
         """

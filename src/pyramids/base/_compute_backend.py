@@ -42,6 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only, avoids importing the lazy l
     from pyramids.base.protocols import ArrayLike
 
 __all__ = [
+    "backend_lazy_type",
     "COMPUTE_BACKEND_API_VERSION",
     "ENTRY_POINT_GROUP",
     "ComputeBackend",
@@ -397,8 +398,9 @@ def require_compute_backend() -> ComputeBackend:
             ...     api_version = _compute_backend.COMPUTE_BACKEND_API_VERSION
             ...     def __getattr__(self, name): return lambda *a, **k: None
             >>> _compute_backend._CACHE = {"pyramids-lazy": _Fake()}
-            >>> _compute_backend.require_compute_backend().api_version
-            1
+            >>> got = _compute_backend.require_compute_backend()
+            >>> got.api_version == _compute_backend.COMPUTE_BACKEND_API_VERSION
+            True
             >>> _compute_backend.clear_compute_backend_cache()
 
             ```

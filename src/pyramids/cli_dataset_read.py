@@ -64,8 +64,8 @@ def _needs_zarr_extra() -> Iterator[None]:
         raise ValueError(str(exc)) from exc
     except ImportError as exc:
         raise ValueError(
-            "this command needs the optional [lazy] extra (zarr); install it with "
-            "`pip install pyramids-core[lazy]`"
+            "this command needs the pyramids-lazy backend; install it with "
+            "`pip install pyramids-lazy`"
         ) from exc
 
 

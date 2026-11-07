@@ -249,7 +249,7 @@ class TestToZarr:
 
     @pytest.mark.lazy
     def test_writes_store(self, cli_raster, tmp_path):
-        """A Zarr store directory is created (needs the [lazy] extra)."""
+        """A Zarr store directory is created (needs the pyramids-lazy backend)."""
         out = str(tmp_path / "store.zarr")
         assert main(["to-zarr", cli_raster, out]) == 0, "must exit 0"
         assert os.path.isdir(out), "expected a Zarr store directory"
@@ -265,7 +265,11 @@ class TestToZarr:
     def test_missing_lazy_extra_remapped(
         self, cli_raster, tmp_path, monkeypatch, capsys
     ):
-        """A missing zarr/dask is remapped to a one-line error naming the [lazy] extra."""
+        """A missing zarr/dask is remapped to a one-line error naming the pyramids-lazy backend.
+
+        `to-zarr` dispatches to the compute backend, so the actionable install target is
+        `pyramids-lazy`, not the `[lazy]` extra (which pulls the stack but not the backend).
+        """
 
         def _raise(*_args, **_kwargs):
             raise ImportError("no zarr")
@@ -274,8 +278,8 @@ class TestToZarr:
         out = str(tmp_path / "store.zarr")
         rc = main(["to-zarr", cli_raster, out])
         err = capsys.readouterr().err
-        assert rc == 1, "missing extra must exit 1"
-        assert "[lazy]" in err, f"error must name the extra: {err}"
+        assert rc == 1, "missing backend must exit 1"
+        assert "pyramids-lazy" in err, f"error must name the backend: {err}"
 
 
 class TestToStacItem:

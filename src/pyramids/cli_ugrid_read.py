@@ -13,7 +13,7 @@ Commands registered here:
 - ``from-arrays`` → :meth:`MeshDataset.from_arrays` (node/face ``.npy`` arrays)
 - ``from-geodataframe`` → :meth:`MeshDataset.from_geodataframe` (a polygon vector layer)
 - ``from-structured`` → :meth:`MeshDataset.from_structured` (a raster, one quad per cell)
-- ``from-zarr`` → :meth:`MeshDataset.from_zarr` (optional ``[lazy]`` extra)
+- ``from-zarr`` → :meth:`MeshDataset.from_zarr` (needs the pyramids-lazy backend)
 - ``from-bytes`` → :meth:`MeshDataset.from_bytes` (a file or stdin)
 - ``open-mf`` → :meth:`MeshDataset.open_mfdataset` (concatenate several files)
 """
@@ -330,7 +330,7 @@ def _add_from_structured(msub: argparse._SubParsersAction) -> None:
 def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
     """Register ``from-zarr``."""
     parser = msub.add_parser(
-        "from-zarr", help="read a pyramids-written Zarr store (needs the [lazy] extra)"
+        "from-zarr", help="read a pyramids-written Zarr store (needs the pyramids-lazy backend)"
     )
     parser.add_argument("store", help="input Zarr store (path / fsspec URL)")
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
