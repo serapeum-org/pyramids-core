@@ -239,12 +239,20 @@ def compute_backends() -> dict[str, ComputeBackend]:
         back to importing ``pyramids_lazy``.
 
     Examples:
-        - A bare install registers no compute backend:
+        - The registry maps each installed backend's entry-point name to its object. What it
+          holds depends on what is installed — empty on a bare install, `{'lazy': ...}` once
+          `pyramids-lazy` is present — so the example pins the shape rather than the contents.
+          An example asserting `{}` passes only where no backend happens to be installed, and
+          fails the moment one is (as it did once core's own test environments gained the
+          plugin):
             ```python
             >>> from pyramids.base import _compute_backend
             >>> _compute_backend.clear_compute_backend_cache()
-            >>> _compute_backend.compute_backends()
-            {}
+            >>> backends = _compute_backend.compute_backends()
+            >>> isinstance(backends, dict)
+            True
+            >>> all(isinstance(name, str) for name in backends)
+            True
 
             ```
     """
