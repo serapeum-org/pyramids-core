@@ -688,31 +688,29 @@ def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int)
     return created
 
 
-def write_ugrid_data_variable(
-    rg: gdal.Group,
-    var: MeshVariable,
-    mesh_name: str,
-    dims: dict[str, Any],
-) -> None:
-    """Write a single data variable to the GDAL group.
+def _dimension_list(
+    rg: gdal.Group, var: MeshVariable, mesh_name: str, dims: dict[str, Any]
+) -> list:
+    """GDAL dimension list for a data variable's axes (one per axis, element axis last).
+
+    Built positionally so a variable with extra leading axes that are neither time nor the
+    element axis -- e.g. the ``coefficient`` axis a :meth:`MeshDataset.polyfit` result carries,
+    or a ``(time, layer, element)`` stack with both -- is written with the right rank instead of
+    tripping GDAL's ``Illegal numpy array rank N``. The trailing axis is always the mesh-element
+    (location) axis; each non-trailing axis is the shared ``time`` dimension when it is the time
+    axis, otherwise a dimension named from ``var.dimensions`` (or synthesised when the variable
+    carries no names).
 
     Args:
-        rg: GDAL root group.
-        var: MeshVariable instance.
-        mesh_name: Name of the mesh topology variable.
-        dims: Dict mapping dimension names to GDAL dimension objects.
-    """
-    if var.data is None:
-        return
+        rg: The GDAL root group dimensions are created in.
+        var: The variable whose axes are being mapped (``var.data`` is not ``None``).
+        mesh_name: Name of the mesh topology variable (used for the element dim name).
+        dims: The name->dimension cache shared across the write; updated in place.
 
+    Returns:
+        The GDAL dimension objects for the variable's axes, element axis last.
+    """
     data = var.data
-    # One GDAL dimension per array axis, built positionally so a variable with extra leading
-    # axes that are neither time nor the element axis -- e.g. the `coefficient` axis a polyfit
-    # result carries, or a (time, layer, element) stack with both -- is written with the right
-    # rank instead of tripping GDAL's "Illegal numpy array rank N". The trailing axis is always
-    # the mesh-element (location) axis; each non-trailing axis is the shared time dimension when
-    # it is the time axis, otherwise a dimension named from `var.dimensions` (or synthesised
-    # when the variable carries no names).
     names = var.dimensions if len(var.dimensions) == data.ndim else ()
     time_axis = var.time_index if var.has_time else None
     dim_list = []
@@ -730,6 +728,27 @@ def write_ugrid_data_variable(
         loc_dim = rg.CreateDimension(loc_dim_name, None, None, var.n_elements)
         dims[loc_dim_name] = loc_dim
         dim_list.append(loc_dim)
+    return dim_list
+
+
+def write_ugrid_data_variable(
+    rg: gdal.Group,
+    var: MeshVariable,
+    mesh_name: str,
+    dims: dict[str, Any],
+) -> None:
+    """Write a single data variable to the GDAL group.
+
+    Args:
+        rg: GDAL root group.
+        var: MeshVariable instance.
+        mesh_name: Name of the mesh topology variable.
+        dims: Dict mapping dimension names to GDAL dimension objects.
+    """
+    if var.data is None:
+        return
+
+    dim_list = _dimension_list(rg, var, mesh_name, dims)
 
     dtype_map = {
         np.dtype("float64"): gdal.GDT_Float64,
