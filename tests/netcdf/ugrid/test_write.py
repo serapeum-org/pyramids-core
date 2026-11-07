@@ -455,3 +455,81 @@ class TestVoronoiPolygons:
         from scipy.spatial import Voronoi
 
         assert isinstance(self._square_mesh().voronoi(), Voronoi)
+
+
+class TestExtraDimension:
+    """`io._extra_dimension` — reuse vs. size-suffix for non-time axes (#1479)."""
+
+    @staticmethod
+    def _root_group(tmp_path):
+        """A fresh GDAL multidimensional root group to create dimensions in."""
+        from osgeo import gdal
+
+        ds = gdal.GetDriverByName("netCDF").CreateMultiDimensional(
+            str(tmp_path / "dims.nc")
+        )
+        return ds.GetRootGroup()
+
+    def test_same_name_and_size_is_reused(self, tmp_path):
+        """A second request for the same name+size returns the same dimension object.
+
+        Test scenario:
+            Two variables that share an extra axis (e.g. both polyfit degree-1 results, each a
+            `coefficient` axis of length 2) must share one GDAL dimension, not create two.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        first = _extra_dimension(rg, dims, "coefficient", 2)
+        second = _extra_dimension(rg, dims, "coefficient", 2)
+        assert second is first, "same name+size must reuse the dimension"
+
+    def test_same_name_different_size_is_suffixed(self, tmp_path):
+        """A clash on name with a different size gets a unique size-suffixed name.
+
+        Test scenario:
+            A GDAL group cannot hold two dimensions of the same name. A degree-1 fit
+            (`coefficient`, size 2) and a degree-2 fit (size 3) in one dataset must not
+            collide; the second becomes `coefficient2`.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        first = _extra_dimension(rg, dims, "coefficient", 2)
+        second = _extra_dimension(rg, dims, "coefficient", 3)
+        assert second is not first, "a different size must not reuse the dimension"
+        assert second.GetName() == "coefficient2", f"got {second.GetName()}"
+
+    def test_two_fitted_variables_share_the_coefficient_dim(self, tmp_path):
+        """Through the real writer: two temporal vars fit at one degree share the axis.
+
+        Test scenario:
+            `polyfit(1)` on a mesh with two temporal variables gives both a `coefficient`
+            axis of length 2; writing must reuse the one dimension (the `_extra_dimension`
+            same-size path) and round-trip both.
+        """
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            data={
+                "a": np.array([[0.0, 0.0], [10.0, 20.0], [20.0, 40.0]]),
+                "b": np.array([[1.0, 1.0], [2.0, 3.0], [3.0, 5.0]]),
+            },
+            data_locations={"a": "face", "b": "face"},
+        )
+        for name in ("a", "b"):
+            ds[name].attributes = {
+                **ds[name].attributes,
+                "time_values": [0.0, 1.0, 2.0],
+            }
+        out = tmp_path / "twofit.nc"
+
+        ds.polyfit(1).to_file(out)
+
+        back = MeshDataset.read_file(out)
+        assert back["a"].dimensions[0] == "coefficient"
+        assert back["b"].dimensions[0] == "coefficient"
+        assert np.asarray(back["a"].data).shape == (2, 2)
