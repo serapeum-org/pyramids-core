@@ -607,6 +607,90 @@ class TestMeshVariable:
         with pytest.raises(ValueError, match="no time dimension"):
             face_var_1d.sel_time_range(0, 1)
 
+    @pytest.fixture
+    def named_temporal_var(self):
+        """A temporal face variable carrying explicit ``(time, face)`` dimension names.
+
+        A file-read variable always carries dimension names; the in-memory fixtures above
+        leave ``dimensions`` empty, so this one exercises the name-reconciliation path.
+
+        Returns:
+            MeshVariable: shape ``(3, 5)`` with ``dimensions=("time", "mesh2d_nFaces")``.
+        """
+        return MeshVariable(
+            name="water_level",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(3, 5),
+            dimensions=("time", "mesh2d_nFaces"),
+            _data=np.arange(15.0).reshape(3, 5),
+        )
+
+    def test_dimensions_for_none_data_keeps_names(self, named_temporal_var):
+        """``_dimensions_for(None)`` keeps the names (shape is retained, not recomputed).
+
+        Test scenario:
+            No replacement array means the rank is unchanged, so the tuple is returned
+            verbatim.
+        """
+        result = named_temporal_var._dimensions_for(None)
+        assert result == ("time", "mesh2d_nFaces"), f"names changed unexpectedly: {result}"
+
+    def test_dimensions_for_empty_names_stay_empty(self, temporal_var):
+        """A variable with no dimension names reconciles to the empty tuple.
+
+        Test scenario:
+            An array-built variable carries ``dimensions=()``; reconciling against any rank
+            leaves it empty (``to_file`` then infers the rank from the data).
+        """
+        assert temporal_var.dimensions == (), "fixture should carry no dimension names"
+        result = temporal_var._dimensions_for(np.zeros(5))
+        assert result == (), f"empty names should stay empty, got {result}"
+
+    def test_dimensions_for_matching_rank_unchanged(self, named_temporal_var):
+        """When the new rank already matches the name count, names are unchanged.
+
+        Test scenario:
+            A ``(time, face)`` variable sliced to another 2-D array keeps both names.
+        """
+        result = named_temporal_var._dimensions_for(np.zeros((2, 5)))
+        assert result == ("time", "mesh2d_nFaces"), f"names changed unexpectedly: {result}"
+
+    def test_dimensions_for_collapsed_rank_trims_leading(self, named_temporal_var):
+        """Collapsing a leading axis drops the matching leading dimension name.
+
+        Test scenario:
+            A single time step is 1-D ``(5,)``; the leading ``time`` name is dropped so the
+            names line up with the data rank, which is what lets ``to_file`` write it back.
+        """
+        result = named_temporal_var._dimensions_for(np.zeros(5))
+        assert result == ("mesh2d_nFaces",), f"expected the time name dropped, got {result}"
+
+    def test_with_data_reconciles_dimensions_on_collapse(self, named_temporal_var):
+        """``with_data`` carries the reconciled names, not the stale originals.
+
+        Test scenario:
+            Replacing the 2-D array with a single collapsed step yields a variable whose
+            ``shape`` and ``dimensions`` both describe one axis.
+        """
+        collapsed = named_temporal_var.with_data(np.zeros(5))
+        assert collapsed.shape == (5,), f"expected shape (5,), got {collapsed.shape}"
+        assert collapsed.dimensions == ("mesh2d_nFaces",), (
+            f"dimensions not reconciled: {collapsed.dimensions}"
+        )
+
+    def test_with_data_none_keeps_shape_and_names(self, named_temporal_var):
+        """``with_data(None)`` keeps the original shape and dimension names.
+
+        Test scenario:
+            Passing no array retains the source shape, so the names must be retained too.
+        """
+        kept = named_temporal_var.with_data(None)
+        assert kept.shape == (3, 5), f"expected shape (3, 5), got {kept.shape}"
+        assert kept.dimensions == ("time", "mesh2d_nFaces"), (
+            f"names changed unexpectedly: {kept.dimensions}"
+        )
+
 
 class TestUgridMetadata:
     """Tests for the MeshMetadata frozen dataclass."""

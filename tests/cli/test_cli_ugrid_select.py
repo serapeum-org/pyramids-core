@@ -267,6 +267,16 @@ class TestTimeSelect:
         with pytest.raises(ValueError):
             _run(["mesh", "sel-time", src, str(tmp_path / "o.nc"), "--index", "9"])
 
+    def test_sel_time_refuses_existing_output(self, tmp_path):
+        """sel-time refuses to clobber an existing output unless --overwrite is given."""
+        src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
+        out = tmp_path / "o.nc"
+        out.write_text("sentinel")
+        with pytest.raises(ValueError, match="exists"):
+            _run(["mesh", "sel-time", src, str(out), "--index", "0"])
+        assert _run(["mesh", "sel-time", src, str(out), "--index", "0", "--overwrite"]) == 0
+        assert MeshDataset.read_file(str(out)).get_data("d").data.ndim == 1
+
     def test_sel_time_range(self, tmp_path):
         """sel-time-range keeps the half-open [start, stop) window."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
