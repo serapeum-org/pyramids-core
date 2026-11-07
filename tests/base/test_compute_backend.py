@@ -329,7 +329,9 @@ class TestAThirdPartyBackendIsHonoured:
         from pyramids.feature import is_lazy_fc
 
         frame = third_party_backend.lazy_feature_collection_type()
-        assert is_lazy_fc(frame) is True, "is_lazy_fc did not recognise the backend's frame"
+        assert is_lazy_fc(frame) is True, (
+            "is_lazy_fc did not recognise the backend's frame"
+        )
 
     def test_a_backend_missing_the_type_is_branded(self, monkeypatch):
         """A backend that omits the attribute gets a branded error naming it.
