@@ -1764,8 +1764,12 @@ class MeshDataset(_MeshFacades):
 
         One cell per **distinct** node: coincident nodes, and cells emptied by `clip`, are
         dropped, so the result can have fewer rows than the mesh has nodes -- use the `node`
-        column, not row position, to map a cell back to its node. If the mesh has no CRS
-        (:attr:`crs` is `None`) the output carries none either.
+        column, not row position, to map a cell back to its node. A `clip` boundary that
+        splits one cell into disjoint pieces yields several rows that share a single `node`
+        value, so with such a `clip` the result can instead have *more* rows than nodes and
+        `node` is not unique; without `clip` (or with a convex one) each surviving node has
+        exactly one row. If the mesh has no CRS (:attr:`crs` is `None`) the output carries
+        none either.
 
         Args:
             clip: A boundary `FeatureCollection` each cell is intersected with, or `None` for

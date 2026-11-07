@@ -670,6 +670,12 @@ def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int)
     # reuse the first whose size matches, otherwise create at the first name not yet taken.
     # Keying reuse on the base name alone would miss a `coefficient2` already created for this
     # size and make a redundant third dimension.
+    #
+    # Reuse keys on name + size only, so two conceptually distinct axes that happen to share a
+    # name and length share one dimension. That is safe here because these extra dimensions are
+    # bare axis labels with no coordinate values attached -- a shared label of equal length is
+    # interchangeable. If coordinate values are ever attached to such an axis, switch to an
+    # identity that cannot alias (e.g. a per-axis key) instead of this name+size match.
     unique = name
     suffix = 1
     while unique in dims:
@@ -700,12 +706,13 @@ def write_ugrid_data_variable(
         return
 
     data = var.data
-    # One GDAL dimension per array axis, built positionally so a variable with a leading axis
-    # that is neither time nor the element axis -- e.g. the `coefficient` axis a polyfit result
-    # carries -- is written with the right rank instead of tripping GDAL's "Illegal numpy array
-    # rank N". The trailing axis is always the mesh-element (location) axis; a
-    # leading axis is the shared time dimension when it is the time axis, otherwise a dimension
-    # named from `var.dimensions` (or synthesised when the variable carries no names).
+    # One GDAL dimension per array axis, built positionally so a variable with extra leading
+    # axes that are neither time nor the element axis -- e.g. the `coefficient` axis a polyfit
+    # result carries, or a (time, layer, element) stack with both -- is written with the right
+    # rank instead of tripping GDAL's "Illegal numpy array rank N". The trailing axis is always
+    # the mesh-element (location) axis; each non-trailing axis is the shared time dimension when
+    # it is the time axis, otherwise a dimension named from `var.dimensions` (or synthesised
+    # when the variable carries no names).
     names = var.dimensions if len(var.dimensions) == data.ndim else ()
     time_axis = var.time_index if var.has_time else None
     dim_list = []
