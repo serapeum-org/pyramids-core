@@ -86,6 +86,15 @@ def __getattr__(name: str) -> object:
     )
 
 
+def __dir__() -> list[str]:
+    """List the module's names including the PEP-562 lazily-forwarded `LazyFeatureCollection`.
+
+    `__getattr__`-provided names are invisible to the default `dir()`, so autocomplete and
+    `dir(pyramids.feature)` would otherwise omit `LazyFeatureCollection`.
+    """
+    return sorted(set(globals()) | {"LazyFeatureCollection"})
+
+
 def has_lazy_backend() -> bool:
     """Return True when the `[parquet]` extra is installed.
 

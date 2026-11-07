@@ -421,6 +421,17 @@ def require_compute_backend() -> ComputeBackend:
             ```
     """
     registered = compute_backends()
+    if len(registered) > 1:
+        # More than one backend registered under distinct names. Discovery order decides which wins,
+        # which is a silent, environment-dependent choice, so say which one is used and which are
+        # ignored rather than letting it pass unremarked.
+        names = list(registered)
+        warnings.warn(
+            f"Multiple compute backends are registered ({names}); using {names[0]!r} and ignoring "
+            f"the rest. Install only one lazy backend to make this deterministic.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     backend = next(iter(registered.values())) if registered else _fallback_backend()
     if backend is None:
         raise OptionalPackageDoesNotExist(

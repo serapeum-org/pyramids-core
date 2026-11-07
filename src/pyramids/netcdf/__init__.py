@@ -95,3 +95,12 @@ def __getattr__(name: str):
         )
         return MeshDataset
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module's names including the PEP-562 lazily-forwarded ones (`LazyNetCDF`).
+
+    `__getattr__`-provided names are invisible to the default `dir()`, so autocomplete and
+    `dir(pyramids.netcdf)` would omit `LazyNetCDF` (and the deprecated `UgridDataset` alias).
+    """
+    return sorted(set(globals()) | {"LazyNetCDF", "UgridDataset"})

@@ -6571,7 +6571,8 @@ class NetCDF(Dataset):
                 rather than a variable — or the variable was rebuilt in memory, so the
                 store no longer holds these cells. Read it eagerly instead.
         """
-        # Deferred so core still imports once this body moves to pyramids-lazy (plan #2).
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
         from pyramids.base._compute_backend import require_compute_backend
 
         parent = self._parent_nc if self._parent_nc is not None else self

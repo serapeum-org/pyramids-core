@@ -104,6 +104,7 @@ from pyramids.netcdf.engines._along_dim import (
 from pyramids.netcdf.engines.interop import (
     _frame_axes,
     _frame_values,
+    _frame_variables,
     _is_container,
     _is_in_memory,
     _public_spatial_names,
@@ -176,6 +177,7 @@ __all__ = [
     "_dtype_to_str",
     "_frame_axes",
     "_frame_values",
+    "_frame_variables",
     "_interp_targets",
     "_is_container",
     "_is_identity_packing",

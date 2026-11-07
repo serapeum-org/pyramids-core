@@ -364,3 +364,18 @@ class TestAThirdPartyBackendIsHonoured:
         with pytest.raises(OptionalPackageDoesNotExist, match="lazy_netcdf_type"):
             netcdf_pkg.LazyNetCDF
         cb.clear_compute_backend_cache()
+
+
+class TestMultipleBackendsWarn:
+    """Two backends under distinct names must not resolve silently (review L14)."""
+
+    def test_two_backends_warn_and_first_wins(self, monkeypatch):
+        """With two registered backends, resolution warns and uses the first by discovery order."""
+        first = _make_backend()
+        second = _make_backend()
+        monkeypatch.setattr(cb, "_discover", lambda: {"first": first, "second": second})
+        cb.clear_compute_backend_cache()
+        with pytest.warns(RuntimeWarning, match="Multiple compute backends"):
+            resolved = cb.require_compute_backend()
+        assert resolved is first, "first-by-discovery-order must win"
+        cb.clear_compute_backend_cache()

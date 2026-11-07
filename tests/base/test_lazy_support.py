@@ -74,6 +74,7 @@ _ORIGINS = {
     "_is_container": "pyramids.netcdf.engines.interop",
     "_frame_values": "pyramids.netcdf.engines.interop",
     "_frame_axes": "pyramids.netcdf.engines.interop",
+    "_frame_variables": "pyramids.netcdf.engines.interop",
     "_public_spatial_names": "pyramids.netcdf.engines.interop",
     "_assert_band_dimension": "pyramids.netcdf.engines.selection",
     "_BOUNDARIES": "pyramids.netcdf.engines.selection",
@@ -206,8 +207,12 @@ def test_core_packages_import_without_the_extra_and_do_not_pull_lazy_cube():
         import importlib, sys
         for pkg in ("pyramids", "pyramids.dataset", "pyramids.netcdf", "pyramids.feature"):
             importlib.import_module(pkg)
-        assert "pyramids.netcdf._lazy_cube" not in sys.modules, (
-            "importing pyramids.netcdf eagerly pulled the lazy _lazy_cube module"
+        # The lazy cube bodies live in the pyramids-lazy backend now, so asserting the old in-core
+        # `pyramids.netcdf._lazy_cube` is absent would be vacuous (it no longer exists). The live
+        # contract is that importing core must not eagerly pull the backend distribution at all.
+        pulled = [m for m in sys.modules if m == "pyramids_lazy" or m.startswith("pyramids_lazy.")]
+        assert not pulled, (
+            f"importing core eagerly pulled the lazy backend: {pulled}"
         )
         """
     )
@@ -229,14 +234,38 @@ def test_core_never_imports_lazy_support():
     """Core code must never import ``pyramids.lazy_support`` -- only an external backend does (plan 0.3-A).
 
     A hard rule of the facade: keeping core off it is what keeps the facade out of every core import
-    cycle. This scans the installed ``pyramids`` source tree (excluding the facade itself) for any
-    reference to ``lazy_support``.
+    cycle. This parses the installed ``pyramids`` source tree (excluding the facade itself) and
+    flags any real ``import`` of ``pyramids.lazy_support`` — AST-based, not a substring scan, so a
+    mention in a comment or docstring does not false-positive and an aliased/``from`` import cannot
+    slip past.
     """
+    import ast
+
     pkg_root = Path(ls.__file__).parent
+
+    def _imports_lazy_support(source: str) -> bool:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:  # pragma: no cover - a parse failure is caught by other tooling
+            return False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                if any(a.name == "pyramids.lazy_support" for a in node.names):
+                    return True
+            elif isinstance(node, ast.ImportFrom):
+                if node.module == "pyramids.lazy_support":
+                    return True
+                # `from pyramids import lazy_support`
+                if node.module == "pyramids" and any(
+                    a.name == "lazy_support" for a in node.names
+                ):
+                    return True
+        return False
+
     offenders = [
         path.relative_to(pkg_root).as_posix()
         for path in pkg_root.rglob("*.py")
         if path.name != "lazy_support.py"
-        and "lazy_support" in path.read_text(encoding="utf-8")
+        and _imports_lazy_support(path.read_text(encoding="utf-8"))
     ]
     assert not offenders, f"core modules reference lazy_support (must not): {offenders}"
