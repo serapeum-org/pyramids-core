@@ -162,6 +162,108 @@ class TestTimeDimension:
         assert not var.has_time, "Selected time step should not have time dimension"
         np.testing.assert_array_equal(var.data, [3.0, 4.0])
 
+    def test_sel_time_non_temporal_raises(self):
+        """sel_time on a mesh with no temporal variable raises, like isel.
+
+        Test scenario:
+            A static (non-temporal) mesh has no time axis to index; sel_time must refuse it
+            with a clear ValueError rather than silently returning the mesh unchanged.
+        """
+        static = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
+            data={"depth": np.array([2.0, 4.0])},
+            data_locations={"depth": "face"},
+        )
+        with pytest.raises(ValueError, match="time dimension"):
+            static.sel_time(0)
+
+    def test_sel_time_strips_time_metadata(self, temporal_dataset):
+        """A collapsed step drops the stale time coordinate, units and calendar.
+
+        Test scenario:
+            The time axis is gone after sel_time, so its coordinate values / CF units /
+            calendar describe nothing and must not ride along (they would mislead the
+            on-disk coordinate writer).
+        """
+        var = temporal_dataset["water_level"]
+        var.attributes = {
+            **var.attributes,
+            "time_values": [0.0, 1.0, 2.0],
+            "time_units": "days since 2001-01-01",
+            "calendar": "standard",
+        }
+        collapsed = temporal_dataset.sel_time(1)["water_level"]
+        assert "time_values" not in collapsed.attributes, "stale time_values carried over"
+        assert "time_units" not in collapsed.attributes, "stale time_units carried over"
+        assert "calendar" not in collapsed.attributes, "stale calendar carried over"
+
+    def test_sel_time_trailing_time_axis(self):
+        """sel_time collapses the real time axis, not axis 0, for trailing-time data.
+
+        Test scenario:
+            A variable dimensioned ``(face, time)`` keeps time last. sel_time(1) must return
+            every face at step 1 (the column ``data[:, 1]``), not row 1 (``data[1]``).
+        """
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+        var = MeshVariable(
+            name="wl",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3),
+            dimensions=("mesh2d_nFaces", "time"),
+            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
+        )
+        collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
+        assert collapsed.shape == (2,), f"expected one value per face, got {collapsed.shape}"
+        np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
+
+    def test_sel_time_mismatched_time_lengths_raises(self):
+        """sel_time refuses temporal variables that disagree on their time length.
+
+        Test scenario:
+            Two temporal variables with 3 and 2 steps cannot share one index set, so sel_time
+            raises rather than taking a step that is in range for one and out of range for the
+            other.
+        """
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+        long_var = MeshVariable(
+            name="a", location="face", mesh_name="mesh2d", shape=(3, 2),
+            dimensions=("time", "mesh2d_nFaces"), _data=np.zeros((3, 2)),
+        )
+        short_var = MeshVariable(
+            name="b", location="face", mesh_name="mesh2d", shape=(2, 2),
+            dimensions=("time", "mesh2d_nFaces"), _data=np.zeros((2, 2)),
+        )
+        ds = MeshDataset(mesh, {"a": long_var, "b": short_var}, {})
+        with pytest.raises(ValueError, match="time length"):
+            ds.sel_time(0)
+
     def test_sel_time_range(self, temporal_dataset):
         """Test selecting a time range.
 

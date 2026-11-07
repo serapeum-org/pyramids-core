@@ -1348,22 +1348,42 @@ class MeshDataset(_MeshFacades):
     def sel_time(self, index: int) -> MeshDataset:
         """Select a single time step from all temporal variables.
 
-        Non-temporal variables are kept unchanged.
+        Non-temporal variables are kept unchanged; each temporal variable is collapsed to the
+        chosen step and becomes static. This is the single-step half of ``isel(time=index)``
+        and shares its axis-aware :func:`_static_from` collapse, so the two validate the same
+        way and drop the now-meaningless time coordinate. A leading-time variable still reads
+        only the requested slab from disk (the lazy single-step read of #982); a variable whose
+        time axis is not leading is taken on its own ``time_index``.
 
         Args:
-            index: Time step index.
+            index: Time step index (0-based; a negative index counts from the end).
 
         Returns:
-            New MeshDataset with single time step data.
+            New MeshDataset holding the single step, with the time dimension dropped.
+
+        Raises:
+            ValueError: No variable has a time dimension, or the temporal variables disagree
+                on their time length.
+            IndexError: ``index`` is out of range for the time axis.
         """
+        self._time_length("sel_time")
         new_data_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
-            if var.has_time:
-                new_data_vars[name] = var.with_data(
-                    var.sel_time(index), active=var._time_sliced_active(index, None)
-                )
-            else:
+            if not var.has_time:
                 new_data_vars[name] = var
+                continue
+            axis = cast("int", var.time_index)
+            if axis == 0:
+                # Leading time: the windowed read pulls only this slab from disk (#982).
+                step = np.asarray(var.sel_time(index))
+            else:
+                data = var.data
+                if data is None:
+                    raise ValueError(f"Variable {name!r} has no loaded data to select.")
+                step = np.take(np.asarray(data), index, axis=axis)
+            new_data_vars[name] = _static_from(
+                var, step, axis, active=var._time_sliced_active(index, None)
+            )
 
         # See `to_crs`: `type(self)` keeps a subclass, and `file_name` is carried.
         result = type(self)(
@@ -6993,11 +7013,10 @@ def _static_from(
         else ()
     )
     # Copy the attributes (never alias — the same invariant MeshVariable.with_data keeps),
-    # and drop `time_values`: the time axis is gone, so a coordinate for it would be a
-    # stale, wrong-length list on a now-static variable.
-    attributes = {
-        key: value for key, value in var.attributes.items() if key != "time_values"
-    }
+    # and drop the whole time coordinate (`time_values`, CF units, calendar): the time axis
+    # is gone, so they describe nothing — and a left-behind `time_units` is worse than untidy,
+    # because the on-disk coordinate writer re-encodes against whatever units it finds.
+    attributes = _without_time_metadata(var.attributes)
     return MeshVariable(
         name=var.name,
         location=var.location,
