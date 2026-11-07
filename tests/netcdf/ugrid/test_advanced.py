@@ -362,8 +362,9 @@ class TestTimeDimension:
             name="wl", location="face", mesh_name="mesh2d", shape=(2, 3),
             dimensions=("mesh2d_nFaces", "time"),
         )
+        ds = MeshDataset(mesh, {"wl": var}, {})
         with pytest.raises(ValueError, match="no loaded data"):
-            MeshDataset(mesh, {"wl": var}, {}).sel_time(1)
+            ds.sel_time(1)
 
     def test_sel_time_mismatched_time_lengths_raises(self):
         """sel_time refuses temporal variables that disagree on their time length.
