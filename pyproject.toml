@@ -80,6 +80,13 @@ dependencies = [
 # the newest compatible release (0.45.0 today), so CI tests at or above the floor,
 # never below it.
 viz = ["cleopatra[tiles]>=0.44.0"]
+# DEPRECATED (removed next major). These are the libraries the lazy layer builds on, but the lazy
+# implementation now lives in the separate `pyramids-lazy` distribution, so installing this extra
+# alone yields no working lazy operations -- they raise the branded error from
+# `base/_compute_backend.py` pointing at `pip install pyramids-lazy`. Kept for one release so
+# existing installs keep resolving. It cannot simply be re-pointed at `pyramids-lazy` yet: that
+# package is not on PyPI (404), so the alias would turn a working install into a failing one.
+# Flip it to `lazy = ["pyramids-lazy"]` once the backend has its first release.
 lazy = [
     "dask>=2024.1.0",
     "distributed>=2024.1.0",
@@ -90,6 +97,10 @@ lazy = [
     "kerchunk>=0.2.10",
     "h5py>=3.8.0",
 ]
+# pyarrow is core's own: eager GeoParquet (`read_parquet` / `to_parquet`) goes through pyarrow
+# and geopandas and needs no backend, so that part stays here. The `pyramids-core[lazy]` and
+# dask-geopandas entries are DEPRECATED on the same schedule as `[lazy]`: the lazy vector path
+# they serve moved to `pyramids-lazy[parquet]`.
 parquet = ["pyarrow>=10.0.0", "pyramids-core[lazy]", "dask-geopandas>=0.5.0"]
 stac = ["pystac-client>=0.8.4", "stac-asset>=0.4.7"]
 

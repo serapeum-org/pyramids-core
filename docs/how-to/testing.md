@@ -46,8 +46,9 @@ directly. It is still wired as a pixi *feature* (`[tool.pixi.feature.interop]`) 
 End-users install exactly what they need:
 
 ```bash
-pip install "pyramids-core[lazy]"          # lazy raster + NetCDF + kerchunk
-pip install "pyramids-core[parquet]"       # eager + lazy GeoParquet (pyarrow + dask-geopandas)
+pip install "pyramids-lazy"                # lazy raster + NetCDF + kerchunk (the backend)
+pip install "pyramids-core[parquet]"       # eager GeoParquet (pyarrow)
+pip install "pyramids-lazy[parquet]"       # lazy vector / GeoParquet (dask-geopandas)
 ```
 
 ## The pixi environments

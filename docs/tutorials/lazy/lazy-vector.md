@@ -246,7 +246,7 @@ follow-up against DASK-25.
 `LazyFeatureCollection` requires the `[parquet]` extra:
 
 ```bash
-pip install 'pyramids-core[parquet]'
+pip install 'pyramids-lazy[parquet]'
 ```
 
 That pulls `pyarrow`, `dask`, `dask-geopandas`, `zarr`, and `fsspec`.
