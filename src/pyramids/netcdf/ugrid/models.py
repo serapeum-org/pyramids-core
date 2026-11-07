@@ -717,9 +717,12 @@ class MeshVariable:
         """Return a copy of this variable carrying ``data``, keeping all other metadata.
 
         The new variable is eager (``_data`` set, no loader); its ``shape`` is taken from
-        ``data`` when provided, else the original ``shape`` is retained. Used wherever a
-        derived dataset (time selection, spatial clip, …) replaces a variable's array while
-        preserving its name / location / mesh / attributes.
+        ``data`` when provided, else the original ``shape`` is retained. Its ``dimensions``
+        are reconciled to the new rank the same way — a derivation that collapses a leading
+        axis (e.g. ``sel_time``) drops the matching leading name via :meth:`_dimensions_for`,
+        so the names stay one-per-axis and the result serialises back through ``to_file``.
+        Used wherever a derived dataset (time selection, spatial clip, …) replaces a
+        variable's array while preserving its name / location / mesh / attributes.
 
         Args:
             data: The replacement data array, or ``None`` to keep the original shape with
