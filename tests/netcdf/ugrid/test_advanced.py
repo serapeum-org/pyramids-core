@@ -287,6 +287,57 @@ class TestTimeDimension:
         assert collapsed.active.shape == (2,), f"mask sliced on wrong axis: {collapsed.active.shape}"
         np.testing.assert_array_equal(collapsed.active, [False, True])
 
+    @staticmethod
+    def _trailing_time_mesh_with_mask():
+        """A 2-face mesh with a trailing-time ``(face, time)`` variable and per-step mask."""
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+        var = MeshVariable(
+            name="wl",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3),
+            dimensions=("mesh2d_nFaces", "time"),
+            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
+            active=np.array([[True, False, False], [True, True, False]]),
+        )
+        return MeshDataset(mesh, {"wl": var}, {})
+
+    def test_time_sliced_active_range_uses_time_axis(self):
+        """`_time_sliced_active(start, stop)` slices a per-step mask on the time axis.
+
+        Test scenario:
+            A ``(face, time)`` per-step mask, range [1, 3): the helper keeps columns 1..2
+            (``mask[:, 1:3]``), not rows — exercising the range branch of the axis-aware fix
+            directly (sel_time_range's own data path is unrelated and unchanged here).
+        """
+        var = self._trailing_time_mesh_with_mask()["wl"]
+        np.testing.assert_array_equal(
+            var._time_sliced_active(1, 3), [[False, False], [True, False]]
+        )
+
+    def test_isel_time_list_trailing_time_slices_mask_on_time_axis(self):
+        """isel over a time list slices a per-step mask on the trailing time axis.
+
+        Test scenario:
+            ``(face, time)`` data+mask, isel(time=[0, 2]): the mask keeps columns 0 and 2
+            (``mask[:, [0, 2]]``).
+        """
+        picked = self._trailing_time_mesh_with_mask().isel(time=[0, 2])["wl"]
+        np.testing.assert_array_equal(picked.data, [[10.0, 12.0], [20.0, 22.0]])
+        np.testing.assert_array_equal(picked.active, [[True, False], [True, False]])
+
     def test_sel_time_trailing_time_without_data_raises(self):
         """A trailing-time variable with no loaded data raises instead of guessing.
 
