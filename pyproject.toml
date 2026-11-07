@@ -206,7 +206,7 @@ docs = [
 # what happens when the plugin PR merges) breaks the release outright. Replace this entry with an
 # ordinary version floor as soon as pyramids-lazy has a release.
 lazy-backend = [
-    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@455121dd8335c6f55ba5c709ee64433cc5b8fc52",
+    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@10cb4d84b70d493956a02f42cfb274d101e7d19d",
 ]
 [project.scripts]
 pyramids = "pyramids.cli:main"

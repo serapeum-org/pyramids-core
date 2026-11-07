@@ -38,8 +38,12 @@ def _make_backend(api_version: int = cb.COMPUTE_BACKEND_API_VERSION):
     backend.api_version = api_version
     # The protocol's two data members (the lazy class types) are part of structural conformance:
     # runtime_checkable isinstance checks attribute presence, not just methods.
-    backend.lazy_netcdf_type = type("_FakeLazyNetCDF", (), {})
-    backend.lazy_feature_collection_type = type("_FakeLazyFrame", (), {})
+    # Accessors, matching the Protocol: isinstance only checks that the method exists, which is
+    # exactly why they are methods (a property would be executed by the type check itself).
+    _fake_nc = type("_FakeLazyNetCDF", (), {})
+    _fake_fc = type("_FakeLazyFrame", (), {})
+    backend.lazy_netcdf_type = lambda _cls=_fake_nc: _cls
+    backend.lazy_feature_collection_type = lambda _cls=_fake_fc: _cls
     for name in _METHODS:
         setattr(backend, name, lambda *a, **k: None)
     return backend
@@ -141,8 +145,10 @@ class TestComputeBackends:
         """
         members = {name: (lambda self, *a, **k: None) for name in _METHODS}
         members["api_version"] = cb.COMPUTE_BACKEND_API_VERSION
-        members["lazy_netcdf_type"] = type("_FakeLazyNetCDF", (), {})
-        members["lazy_feature_collection_type"] = type("_FakeLazyFrame", (), {})
+        _fake_nc = type("_FakeLazyNetCDF", (), {})
+        _fake_fc = type("_FakeLazyFrame", (), {})
+        members["lazy_netcdf_type"] = lambda self, _cls=_fake_nc: _cls
+        members["lazy_feature_collection_type"] = lambda self, _cls=_fake_fc: _cls
         backend_cls = type("ClassBackend", (), members)
         monkeypatch.setattr(
             cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:C", backend_cls)]
@@ -285,8 +291,12 @@ class TestAThirdPartyBackendIsHonoured:
 
         class _OtherBackend:
             api_version = cb.COMPUTE_BACKEND_API_VERSION
-            lazy_netcdf_type = _OtherLazyNetCDF
-            lazy_feature_collection_type = _OtherLazyFrame
+
+            def lazy_netcdf_type(self):
+                return _OtherLazyNetCDF
+
+            def lazy_feature_collection_type(self):
+                return _OtherLazyFrame
 
         backend = _OtherBackend()
         monkeypatch.setattr(cb, "_discover", lambda: {"other": backend})
@@ -306,7 +316,7 @@ class TestAThirdPartyBackendIsHonoured:
         """``pyramids.netcdf.LazyNetCDF`` is the registered backend's class."""
         import pyramids.netcdf as netcdf_pkg
 
-        assert netcdf_pkg.LazyNetCDF is third_party_backend.lazy_netcdf_type, (
+        assert netcdf_pkg.LazyNetCDF is third_party_backend.lazy_netcdf_type(), (
             "forwarding ignored the registered backend"
         )
 
@@ -316,7 +326,7 @@ class TestAThirdPartyBackendIsHonoured:
 
         assert (
             feature_pkg.LazyFeatureCollection
-            is third_party_backend.lazy_feature_collection_type
+            is third_party_backend.lazy_feature_collection_type()
         ), "forwarding ignored the registered backend"
 
     def test_is_lazy_fc_recognises_the_backends_frame(self, third_party_backend):
@@ -328,7 +338,7 @@ class TestAThirdPartyBackendIsHonoured:
         """
         from pyramids.feature import is_lazy_fc
 
-        frame = third_party_backend.lazy_feature_collection_type()
+        frame = third_party_backend.lazy_feature_collection_type()()
         assert is_lazy_fc(frame) is True, (
             "is_lazy_fc did not recognise the backend's frame"
         )

@@ -37,6 +37,7 @@ from pyramids._cli_shared import (
     require_matching_crs,
     resolve_vector_driver,
 )
+from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.feature import FeatureCollection
 
 _HELP_SRC_VECTOR = "source vector path"
@@ -219,6 +220,11 @@ def _cmd_vector_sample_points(args: argparse.Namespace) -> int:
     fc = FeatureCollection.read_file(args.src, layer=args.layer)
     try:
         result = fc.sample_points(size=args.size, method=args.method, rng=args.seed)
+    except OptionalPackageDoesNotExist as exc:
+        # Pass the seam's own message through. It already names the distribution that provides the
+        # backend and how to install it; replacing it with an extras hint hands the user advice
+        # that cannot fix the problem (the extras install the stack, not the backend).
+        raise ValueError(str(exc)) from exc
     except ImportError as exc:
         # Every method other than "uniform" imports the optional `pointpats`
         # package; turn its absence into a clean user error instead of the

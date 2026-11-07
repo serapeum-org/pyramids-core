@@ -33,7 +33,7 @@ import threading
 import warnings
 from importlib import import_module
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from pyramids.base._driver_discovery import extra_missing
 from pyramids.base._errors import OptionalPackageDoesNotExist
@@ -100,13 +100,23 @@ class ComputeBackend(Protocol):
 
     api_version: int
 
-    #: The class ``build_lazy_cube`` returns, published so core can forward its public
-    #: ``pyramids.netcdf.LazyNetCDF`` name (and its ``isinstance`` checks) to this backend.
-    lazy_netcdf_type: type
+    def lazy_netcdf_type(self) -> type:
+        """Return the class ``build_lazy_cube`` produces (backs ``pyramids.netcdf.LazyNetCDF``)."""
+        ...  # pragma: no cover - protocol
 
-    #: The class the lazy vector reads return, published so core can forward its public
-    #: ``pyramids.feature.LazyFeatureCollection`` name and back ``is_lazy_fc``.
-    lazy_feature_collection_type: type
+    def lazy_feature_collection_type(self) -> type:
+        """Return the class the lazy vector reads produce.
+
+        Backs ``pyramids.feature.LazyFeatureCollection`` and ``is_lazy_fc``. A **method**, not a
+        property or a plain attribute, and that is load-bearing: ``runtime_checkable`` isinstance
+        evaluates data members with ``getattr``, so a property here would be executed by the mere
+        act of type-checking the backend. Resolving this class needs the backend's vector
+        dependency, so that turned a type check into an import error in every environment without
+        it -- and core, which treats any backend failure as "skip this backend", then silently fell
+        back to eager execution. A method is only checked for presence, so the import happens when
+        core actually asks for the class.
+        """
+        ...  # pragma: no cover - protocol
 
     def read_array_lazy(
         self, dataset: Any, *, chunks: Any, lock: Any = None, **kwargs: Any
@@ -411,7 +421,10 @@ def backend_lazy_type(attribute: str, public_name: str) -> type:
     failing with a raw ``ModuleNotFoundError`` naming a distribution the user never installed.
 
     Args:
-        attribute: The backend attribute holding the class (e.g. ``"lazy_netcdf_type"``).
+        attribute: The backend accessor returning the class (e.g. ``"lazy_netcdf_type"``). Called
+            here rather than read, because these are Protocol *methods* -- see
+            :meth:`ComputeBackend.lazy_feature_collection_type` for why they must not be
+            attributes.
         public_name: The core-public name being resolved, for the error message.
 
     Returns:
@@ -425,12 +438,21 @@ def backend_lazy_type(attribute: str, public_name: str) -> type:
             is the backstop for a backend that bypassed discovery's structural check.
     """
     backend = require_compute_backend()
-    resolved = getattr(backend, attribute, None)
-    if resolved is None:
+    accessor = getattr(backend, attribute, None)
+    resolved: object
+    if isinstance(accessor, type):
+        # A backend that publishes the class directly rather than via the accessor. Taken as-is:
+        # a class is callable, so calling it would hand back an *instance* and the mistake would
+        # be silent.
+        resolved = accessor
+    elif callable(accessor):
+        resolved = accessor()
+    else:
+        resolved = accessor
+    if not isinstance(resolved, type):
         raise OptionalPackageDoesNotExist(
-            f"The installed lazy backend ({type(backend).__module__}) does not publish "
-            f"`{attribute}`, so `{public_name}` cannot be resolved. Upgrade the backend "
-            f"(for the first-party one: `pip install -U pyramids-lazy`)."
+            f"The installed lazy backend ({type(backend).__module__}) does not publish a usable "
+            f"`{attribute}` (got {resolved!r}), so `{public_name}` cannot be resolved. Upgrade the "
+            f"backend (for the first-party one: `pip install -U pyramids-lazy`)."
         )
-    # getattr widens to Any; the Protocol declares both attributes as `type`.
-    return cast("type", resolved)
+    return resolved
