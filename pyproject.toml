@@ -212,7 +212,7 @@ docs = [
 # away. Until then, do not delete the plugin branch, and do not cut a core release. Tracked as the
 # release blocker in planning/dask/lazy-plugin-extraction-plan.md (task 7) and serapeum-org/pyramids-lazy#3.
 lazy-backend = [
-    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@1626b3f51d44e9df8c5b3c60c6c93352fd4d93bf",
+    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@d0d4c39729851e716dcb773323289015e90b44d7",
 ]
 
 [project.scripts]
