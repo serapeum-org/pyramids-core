@@ -16,7 +16,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
-from PIL import Image
 from shapely.geometry import box
 
 from pyramids.cli_ugrid_export import add_ugrid_export_commands
@@ -319,6 +318,11 @@ class TestToImage:
 
     def test_writes_png(self, tmp_path):
         """to-image writes a readable colour-mapped image."""
+        # Pillow — and the cleopatra/matplotlib viz stack the `to-image` command renders
+        # with — only ships in the [viz] extra. Import it here, not at module top level, so
+        # this module still *collects* (and its non-viz export tests still run) in the core /
+        # lazy / interop wheel envs, which have no Pillow.
+        Image = pytest.importorskip("PIL.Image")
         out = str(tmp_path / "m.png")
         rc = _dispatch(
             [
