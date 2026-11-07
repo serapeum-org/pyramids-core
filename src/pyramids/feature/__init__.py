@@ -68,19 +68,23 @@ def __getattr__(name: str) -> object:
     Only `LazyFeatureCollection` is handled here. Any other unknown
     attribute falls through to the default :class:`AttributeError`.
     """
-    if name == "LazyFeatureCollection":
-        if _HAS_DASK_GEOPANDAS:
-            # The lazy vector collection now lives in the pyramids-lazy compute backend; forward the
-            # public name to it. require_compute_backend() raises the branded
-            # OptionalPackageDoesNotExist when no backend is installed.
-            from pyramids.base._compute_backend import require_compute_backend
+    if name != "LazyFeatureCollection":
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    if not _HAS_DASK_GEOPANDAS:
+        # Brand this like every other optional-dependency path. OptionalPackageDoesNotExist is an
+        # ImportError *subclass*, so the plain ImportError raised here before was invisible to
+        # every caller matching the branded type. Raised from the flag rather than by re-running
+        # import_dask_geopandas, so the module-scope probe stays the single source of truth.
+        raise OptionalPackageDoesNotExist(_LAZY_FC_INSTALL_HINT)
+    # The lazy vector collection now lives in the pyramids-lazy compute backend; forward the
+    # public name to it. require_compute_backend() raises the branded
+    # OptionalPackageDoesNotExist when no backend is installed.
+    from pyramids.base._compute_backend import require_compute_backend
 
-            require_compute_backend()
-            from pyramids_lazy import LazyFeatureCollection
+    require_compute_backend()
+    from pyramids_lazy import LazyFeatureCollection
 
-            return LazyFeatureCollection
-        raise ImportError(_LAZY_FC_INSTALL_HINT)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return LazyFeatureCollection
 
 
 def has_lazy_backend() -> bool:

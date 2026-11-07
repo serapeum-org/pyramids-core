@@ -80,3 +80,19 @@ def test_public_lazy_classes_branded(no_backend):
         _ = netcdf_pkg.LazyNetCDF
     with pytest.raises(OptionalPackageDoesNotExist):
         _ = feature_pkg.LazyFeatureCollection
+
+
+def test_public_lazy_fc_without_dask_geopandas_is_branded(monkeypatch):
+    """Without dask-geopandas the public name raises the BRANDED error, not a plain ImportError.
+
+    Test scenario:
+        This is the shape of the ``py311``-``py315`` matrix legs: the backend is installed but
+        ``dask-geopandas`` (the ``[parquet]`` extra) is not. ``OptionalPackageDoesNotExist`` is an
+        ``ImportError`` subclass, so a plain ``ImportError`` here is invisible to every caller that
+        matches the branded type.
+    """
+    import pyramids.feature as feature_pkg
+
+    monkeypatch.setattr(feature_pkg, "_HAS_DASK_GEOPANDAS", False)
+    with pytest.raises(OptionalPackageDoesNotExist):
+        _ = feature_pkg.LazyFeatureCollection
