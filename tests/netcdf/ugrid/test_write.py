@@ -433,9 +433,33 @@ class TestVoronoiPolygons:
         cells = self._square_mesh().voronoi_polygons()
 
         assert isinstance(cells, FeatureCollection), f"got {type(cells).__name__}"
-        assert len(cells) == 4, "one cell per node"
+        assert len(cells) == 4, "one cell per distinct node"
         assert set(cells.geometry.geom_type) == {"Polygon"}, "cells must be polygons"
         assert cells.epsg == 4326, "the mesh CRS must carry onto the cells"
+        assert sorted(cells["node"].tolist()) == [0, 1, 2, 3], (
+            "each cell must carry its source node index"
+        )
+
+    def test_coincident_nodes_drop_cells_but_keep_the_node_index(self):
+        """A duplicate node yields fewer cells; the `node` column still maps survivors (R1 M1).
+
+        Test scenario:
+            `voronoi_polygons` delegates to `FeatureCollection.voronoi`, which skips coincident
+            points -- so a five-node mesh with two coincident nodes produces four cells, not
+            five, and the result must not pretend to be node-aligned by row. The `node` column
+            is the safe way back to the source node.
+        """
+        mesh = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 0.0, 1.0, 1.0, 0.5]),
+            node_y=np.array([0.0, 0.0, 0.0, 1.0, 0.5]),
+            face_node_connectivity=np.array([[0, 2, 3], [0, 3, 1]]),
+            epsg=4326,
+        )
+
+        cells = mesh.voronoi_polygons()
+
+        assert len(cells) < 5, "a coincident node must not produce its own cell"
+        assert "node" in cells.columns, "survivors must stay traceable by node index"
 
     def test_cells_are_writable_to_a_file(self, tmp_path):
         """The whole point of the method: the output can be serialized (#1479).
