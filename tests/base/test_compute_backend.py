@@ -290,6 +290,14 @@ class TestAThirdPartyBackendIsHonoured:
 
         backend = _OtherBackend()
         monkeypatch.setattr(cb, "_discover", lambda: {"other": backend})
+        # These assertions are about which backend the seam resolves, not about whether the
+        # [parquet] extra is installed. Core short-circuits both the LazyFeatureCollection
+        # forwarding and is_lazy_fc on this flag before consulting any backend, so without it the
+        # tests would only pass in an env that happens to carry dask-geopandas — and the fake
+        # backend's frame is a plain class that needs none of it.
+        import pyramids.feature as feature_pkg
+
+        monkeypatch.setattr(feature_pkg, "_HAS_DASK_GEOPANDAS", True)
         cb.clear_compute_backend_cache()
         yield backend
         cb.clear_compute_backend_cache()
