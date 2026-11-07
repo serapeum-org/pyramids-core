@@ -458,8 +458,12 @@ class TestVoronoiPolygons:
 
         cells = mesh.voronoi_polygons()
 
-        assert len(cells) < 5, "a coincident node must not produce its own cell"
-        assert "node" in cells.columns, "survivors must stay traceable by node index"
+        assert len(cells) == 4, "the coincident node must not produce its own cell"
+        assert set(cells["node"].tolist()) == {0, 2, 3, 4}, (
+            "survivors must carry their ORIGINAL node index -- node 1 (the coincident "
+            "duplicate) is dropped and node 0 is retained; a post-filter re-index would give "
+            "{0, 1, 2, 3} and fail here"
+        )
 
     def test_cells_are_writable_to_a_file(self, tmp_path):
         """The whole point of the method: the output can be serialized (#1479).
