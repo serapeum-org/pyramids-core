@@ -231,6 +231,55 @@ class TestTimeDimension:
         assert collapsed.shape == (2,), f"expected one value per face, got {collapsed.shape}"
         np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
 
+    def test_sel_time_keeps_static_variables(self):
+        """sel_time collapses temporal variables and carries static ones through unchanged.
+
+        Test scenario:
+            A mesh with one temporal (3 steps) and one static variable: the temporal one
+            becomes a single static step, the static one is returned as-is.
+        """
+        mixed = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
+            data={
+                "wl": np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
+                "bed": np.array([-9.0, -8.0]),
+            },
+            data_locations={"wl": "face", "bed": "face"},
+        )
+        picked = mixed.sel_time(1)
+        assert not picked["wl"].has_time, "temporal variable should be collapsed"
+        np.testing.assert_array_equal(picked["wl"].data, [3.0, 4.0])
+        np.testing.assert_array_equal(picked["bed"].data, [-9.0, -8.0])
+
+    def test_sel_time_trailing_time_without_data_raises(self):
+        """A trailing-time variable with no loaded data raises instead of guessing.
+
+        Test scenario:
+            The non-leading branch must materialise the array to take the step; with neither
+            eager data nor a loader there is nothing to select, so it raises ValueError.
+        """
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+        var = MeshVariable(
+            name="wl", location="face", mesh_name="mesh2d", shape=(2, 3),
+            dimensions=("mesh2d_nFaces", "time"),
+        )
+        with pytest.raises(ValueError, match="no loaded data"):
+            MeshDataset(mesh, {"wl": var}, {}).sel_time(1)
+
     def test_sel_time_mismatched_time_lengths_raises(self):
         """sel_time refuses temporal variables that disagree on their time length.
 
