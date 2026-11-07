@@ -12,12 +12,11 @@ sub-parser by the top-level CLI. The existing ``mesh convert`` already wraps
 ``to_feature_collection``; the ``to-geodataframe`` verb here is its distinct
 sibling (``MeshDataset.to_geodataframe``) and does not duplicate it.
 
-Deferred:
-    - ``MeshDataset.voronoi`` — returns a :class:`scipy.spatial.Voronoi` object; the
-      serialising form is ``voronoi_polygons`` (the ``voronoi-polygons`` verb here)
-      (vertices, ridges, regions), which has no single sensible geospatial file
-      form; writing it would mean inventing a serialization rather than wrapping a
-      method, so there is no 1:1 export verb for it.
+Voronoi:
+    - ``MeshDataset.voronoi`` returns a raw :class:`scipy.spatial.Voronoi` (vertices,
+      ridges, regions) with no geospatial file form, so it has no verb of its own.
+      Its serialising counterpart ``MeshDataset.voronoi_polygons`` — the Voronoi cells
+      of the nodes as a vector layer — is what the ``voronoi-polygons`` verb here wraps.
 """
 
 from __future__ import annotations
