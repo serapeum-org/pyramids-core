@@ -665,7 +665,7 @@ class MeshVariable:
             return mask
         axis = self.time_index if self.time_index is not None else 0
         if stop is None:
-            return np.take(mask, start, axis=axis)
+            return np.asarray(np.take(mask, start, axis=axis))
         return np.take(mask, np.arange(start, stop), axis=axis)
 
     def _time_indexed_active(self, indices: np.ndarray) -> np.ndarray | None:
