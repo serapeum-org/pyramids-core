@@ -7045,9 +7045,7 @@ def _collapse_variable_to_step(var: MeshVariable, index: int) -> MeshVariable:
         step = np.asarray(var.sel_time(index))
     else:
         step = np.take(np.asarray(var.data), index, axis=axis)
-    return _static_from(
-        var, step, axis, active=var._time_sliced_active(index, None)
-    )
+    return _static_from(var, step, axis, active=var._time_sliced_active(index, None))
 
 
 def _concat_temporal_variable(

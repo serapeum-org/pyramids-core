@@ -287,7 +287,10 @@ class TestTimeSelect:
         out.write_text("sentinel")
         with pytest.raises(ValueError, match="exists"):
             _run(["mesh", "sel-time", src, str(out), "--index", "0"])
-        assert _run(["mesh", "sel-time", src, str(out), "--index", "0", "--overwrite"]) == 0
+        assert (
+            _run(["mesh", "sel-time", src, str(out), "--index", "0", "--overwrite"])
+            == 0
+        )
         assert MeshDataset.read_file(str(out)).get_data("d").data.ndim == 1
 
     def test_sel_time_range(self, tmp_path):

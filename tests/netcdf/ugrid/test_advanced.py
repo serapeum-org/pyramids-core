@@ -195,7 +195,9 @@ class TestTimeDimension:
             "calendar": "standard",
         }
         collapsed = temporal_dataset.sel_time(1)["water_level"]
-        assert "time_values" not in collapsed.attributes, "stale time_values carried over"
+        assert "time_values" not in collapsed.attributes, (
+            "stale time_values carried over"
+        )
         assert "time_units" not in collapsed.attributes, "stale time_units carried over"
         assert "calendar" not in collapsed.attributes, "stale calendar carried over"
 
@@ -228,7 +230,9 @@ class TestTimeDimension:
             _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
         )
         collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
-        assert collapsed.shape == (2,), f"expected one value per face, got {collapsed.shape}"
+        assert collapsed.shape == (2,), (
+            f"expected one value per face, got {collapsed.shape}"
+        )
         np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
 
     def test_sel_time_keeps_static_variables(self):
@@ -284,7 +288,9 @@ class TestTimeDimension:
         )
         collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
         np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
-        assert collapsed.active.shape == (2,), f"mask sliced on wrong axis: {collapsed.active.shape}"
+        assert collapsed.active.shape == (2,), (
+            f"mask sliced on wrong axis: {collapsed.active.shape}"
+        )
         np.testing.assert_array_equal(collapsed.active, [False, True])
 
     @staticmethod
@@ -359,7 +365,10 @@ class TestTimeDimension:
             face_y=np.array([0.3, 0.6]),
         )
         var = MeshVariable(
-            name="wl", location="face", mesh_name="mesh2d", shape=(2, 3),
+            name="wl",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3),
             dimensions=("mesh2d_nFaces", "time"),
         )
         ds = MeshDataset(mesh, {"wl": var}, {})
@@ -388,12 +397,20 @@ class TestTimeDimension:
             face_y=np.array([0.3, 0.6]),
         )
         long_var = MeshVariable(
-            name="a", location="face", mesh_name="mesh2d", shape=(3, 2),
-            dimensions=("time", "mesh2d_nFaces"), _data=np.zeros((3, 2)),
+            name="a",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(3, 2),
+            dimensions=("time", "mesh2d_nFaces"),
+            _data=np.zeros((3, 2)),
         )
         short_var = MeshVariable(
-            name="b", location="face", mesh_name="mesh2d", shape=(2, 2),
-            dimensions=("time", "mesh2d_nFaces"), _data=np.zeros((2, 2)),
+            name="b",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 2),
+            dimensions=("time", "mesh2d_nFaces"),
+            _data=np.zeros((2, 2)),
         )
         ds = MeshDataset(mesh, {"a": long_var, "b": short_var}, {})
         with pytest.raises(ValueError, match="time length"):
