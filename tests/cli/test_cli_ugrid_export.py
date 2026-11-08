@@ -592,3 +592,47 @@ class TestRenameVariable:
                     "zz",
                 ]
             )
+
+
+class TestVoronoiPolygons:
+    """``mesh voronoi-polygons`` — Voronoi cells of the mesh nodes, as a vector file (#1479)."""
+
+    @staticmethod
+    def _mesh_file(tmp_path):
+        """A written four-node two-triangle mesh in EPSG:4326."""
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            epsg=4326,
+        )
+        path = tmp_path / "m.nc"
+        ds.to_file(str(path))
+        return str(path)
+
+    def test_voronoi_polygons_writes_a_vector_file(self, tmp_path):
+        """The verb writes one polygon per node to a vector file."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.gpkg"
+
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+
+        cells = FeatureCollection.read_file(str(out))
+        assert len(cells) == 4
+        assert set(cells.geometry.geom_type) == {"Polygon"}
+
+    def test_voronoi_polygons_infers_driver_from_geojson(self, tmp_path):
+        """The output driver is inferred from the extension (R1 N4)."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.geojson"
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        assert out.exists(), "the .geojson output must be created"
+        assert out.stat().st_size > 0, "the output must not be empty"
+
+    def test_voronoi_polygons_refuses_an_existing_output(self, tmp_path):
+        """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
+        src = self._mesh_file(tmp_path)
+        out = tmp_path / "vor.gpkg"
+        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        with pytest.raises(ValueError, match="already exists"):
+            _dispatch(["mesh", "voronoi-polygons", src, str(out)])
