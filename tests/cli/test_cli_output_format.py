@@ -111,6 +111,21 @@ class TestEmit:
             "list cell is JSON in one field"
         )
 
+    def test_csv_defuses_formula_injection(self, capsys):
+        """A string cell starting with =/+/-/@ is prefixed with a quote (L3)."""
+        emit(argparse.Namespace(format="csv"), [{"name": "=SUM(A1:A9)"}])
+        row = capsys.readouterr().out.splitlines()[1]
+        assert row == "'=SUM(A1:A9)", (
+            "a formula-like string cell must be quoted so it is literal"
+        )
+
+    def test_csv_leaves_numeric_values_untouched(self, capsys):
+        """A negative numeric value is not a string, so it is not quoted."""
+        emit(argparse.Namespace(format="csv"), [{"v": -9999.0}])
+        assert capsys.readouterr().out.splitlines()[1] == "-9999.0", (
+            "numbers are not formula-quoted"
+        )
+
 
 class TestGlobalFormatThroughCLI:
     """The global ``--format`` flag, placed before the command, reaches the verb."""

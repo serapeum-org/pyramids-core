@@ -96,6 +96,16 @@ class TestProgressReporterOutput:
         reporter.close()
         assert stream.getvalue() == "", "a disabled reporter must stay silent"
 
+    def test_percent_is_clamped_to_100(self):
+        """Advancing past ``total`` clamps the reported percentage at 100 (N4)."""
+        stream = _FakeTTY()
+        reporter = ProgressReporter(_args(), 2, label="w", stream=stream)
+        reporter.advance()
+        reporter.advance()
+        reporter.advance()
+        assert "(100%)" in stream.getvalue(), "percent must not exceed 100"
+        assert "150%" not in stream.getvalue(), "an over-count must not show >100%"
+
     def test_zero_total_shows_count_only(self):
         """A ``total`` of 0 is falsy, so the reporter shows a count without a percentage."""
         stream = _FakeTTY()

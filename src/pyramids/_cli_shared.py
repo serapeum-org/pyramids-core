@@ -299,6 +299,24 @@ def _ordered_fields(rows: Sequence[Mapping[str, Any]]) -> list[str]:
     return fields
 
 
+def _csv_safe(value: Any) -> Any:
+    """Defuse spreadsheet formula injection in a CSV cell.
+
+    A string cell beginning with ``=``, ``+``, ``-``, or ``@`` is interpreted as a formula
+    when the CSV is opened in Excel/LibreOffice. Prefix such a value with a single quote so
+    it is shown literally. Non-string / non-triggering values pass through unchanged.
+
+    Args:
+        value: The cell value about to be written.
+
+    Returns:
+        Any: The value, with a leading ``'`` prepended when it would be read as a formula.
+    """
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
+        return "'" + value
+    return value
+
+
 def _render_csv(payload: Any) -> str:
     """Render ``payload`` as CSV text with a header row (no trailing newline)."""
     rows = _rows_from_payload(payload)
@@ -307,7 +325,7 @@ def _render_csv(payload: Any) -> str:
     writer = csv.DictWriter(buffer, fieldnames=fields, lineterminator="\n")
     writer.writeheader()
     for row in rows:
-        writer.writerow({field: row.get(field, "") for field in fields})
+        writer.writerow({field: _csv_safe(row.get(field, "")) for field in fields})
     return buffer.getvalue().rstrip("\n")
 
 
@@ -425,7 +443,7 @@ class ProgressReporter:
         if not self.enabled:
             return
         if self._total:
-            pct = int(100 * self._done / self._total)
+            pct = min(100, int(100 * self._done / self._total))
             self._stream.write(f"\r{self._label}: {self._done}/{self._total} ({pct}%)")
         else:
             self._stream.write(f"\r{self._label}: {self._done}")
