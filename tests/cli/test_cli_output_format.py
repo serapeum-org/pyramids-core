@@ -30,6 +30,13 @@ class TestResolvedFormat:
         args = argparse.Namespace(json=False, format="csv")
         assert resolved_format(args) == "csv", "explicit --format should be honored"
 
+    def test_explicit_format_beats_json_alias(self):
+        """An explicit ``--format csv`` wins over the legacy ``--json`` alias (L1)."""
+        args = argparse.Namespace(json=True, format="csv")
+        assert resolved_format(args) == "csv", (
+            "explicit --format must beat the --json alias"
+        )
+
     def test_default_is_text(self):
         """Nothing set falls back to ``text`` and is not 'structured'."""
         args = argparse.Namespace()

@@ -174,17 +174,17 @@ def resolved_format(args: argparse.Namespace) -> str:
         str: One of :data:`OUTPUT_FORMATS`.
 
     Examples:
-        - ``--json`` is treated as ``json``:
+        - ``--json`` alone (no ``--format``) is treated as ``json``:
             ```python
             >>> import argparse
             >>> from pyramids._cli_shared import resolved_format
-            >>> resolved_format(argparse.Namespace(json=True, format="text"))
+            >>> resolved_format(argparse.Namespace(json=True, format=None))
             'json'
 
             ```
-        - An explicit ``--format csv`` is returned as-is:
+        - An explicit ``--format`` wins over the ``--json`` alias:
             ```python
-            >>> resolved_format(argparse.Namespace(json=False, format="csv"))
+            >>> resolved_format(argparse.Namespace(json=True, format="csv"))
             'csv'
 
             ```
@@ -195,9 +195,10 @@ def resolved_format(args: argparse.Namespace) -> str:
 
             ```
     """
-    if getattr(args, "json", False):
-        return "json"
-    return getattr(args, "format", None) or "text"
+    fmt = getattr(args, "format", None)
+    if fmt:
+        return fmt
+    return "json" if getattr(args, "json", False) else "text"
 
 
 def mark_format_support(parser: argparse.ArgumentParser) -> None:
