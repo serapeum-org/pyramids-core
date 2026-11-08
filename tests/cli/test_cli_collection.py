@@ -185,6 +185,44 @@ class TestCollectionResample:
             "window_0002.tif",
         ]
 
+    def test_progress_suppresses_per_window_log(
+        self, cli_stack, tmp_path, monkeypatch, capsys
+    ):
+        """With `--progress` enabled, the per-window `info_print` lines are suppressed (L4)."""
+        import io
+
+        from pyramids import cli_collection
+
+        class _AlwaysOn(cli_collection.ProgressReporter):
+            """A reporter forced enabled, drawing to a throwaway buffer (no real TTY needed)."""
+
+            def __init__(self, args, total, **kwargs):
+                kwargs.pop("stream", None)
+                super().__init__(args, total, stream=io.StringIO(), **kwargs)
+                self.enabled = True
+
+        monkeypatch.setattr(cli_collection, "ProgressReporter", _AlwaysOn)
+        out = str(tmp_path / "windows")
+        rc = main(
+            [
+                "--progress",
+                "collection",
+                "resample",
+                cli_stack,
+                out,
+                "--freq",
+                "1D",
+                "--op",
+                "mean",
+                "--times",
+                "2022-01-01,2022-01-02,2022-01-03",
+            ]
+        )
+        assert rc == 0, "resample under --progress should still succeed"
+        assert "window" not in capsys.readouterr().out, (
+            "per-window log must be suppressed by progress"
+        )
+
     def test_percentile_needs_q(self, cli_stack, tmp_path):
         """--op percentile --q 90 reduces one monthly window without error."""
         out = str(tmp_path / "p90")

@@ -250,7 +250,10 @@ def _cmd_collection_resample(args: argparse.Namespace) -> int:
         for index, (label, dataset) in enumerate(windows):
             path = os.path.join(args.output, args.pattern.format(i=index))
             dataset.to_file(path)
-            info_print(args, f"window {index} ({label}) -> {path}")
+            # The progress bar replaces the per-window log; printing both would interleave
+            # the scrolling log with the \r bar. Keep the log only when progress is off.
+            if not progress.enabled:
+                info_print(args, f"window {index} ({label}) -> {path}")
             progress.advance()
     return 0
 
