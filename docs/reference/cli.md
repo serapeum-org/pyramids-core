@@ -419,9 +419,10 @@ topology to its own NetCDF), `open-mf` (concatenate several files), `mesh-names`
 `active-mask`, `histogram`, `count-domain-cells`, `domain-area`, `circumcenters`, `sparse-adjacency` (adjacency
 matrix summary / `.npz`).
 
-**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time-range`, `head` / `tail` /
-`thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` / `drop-duplicates` /
-`drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or bbox),
+**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time` / `sel-time-range`, `head` /
+`tail` / `thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` /
+`drop-duplicates` / `drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or
+bbox),
 `subset-by-bounds`, and the samplers `sample`, `sample-line`, `sample-point`, `sample-random`.
 
 **Convert / export** — `convert` / `to-file` / `to-bytes` (UGRID NetCDF or a driver), `to-crs` (reproject) /
@@ -448,8 +449,8 @@ the Agg backend is forced so these run headless.
 **Multi-mesh join** — `concat` (stack several same-topology meshes) and `merge` (combine their variables).
 
 Not exposed (use Python, or pending a library fix): `curvefit` and `focal_apply` take a Python callable, so
-they have no shell form, and `sel-time` is held back by a known writer-serialization limitation.
-(`polyfit` and `voronoi-polygons` are now verbs — listed under Analysis and Convert/export above.)
+they have no shell form. (`polyfit`, `voronoi-polygons` and `sel-time` are now verbs — listed under Analysis,
+Convert/export and Select/subset above.)
 
 ## STAC
 

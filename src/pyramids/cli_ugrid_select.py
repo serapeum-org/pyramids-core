@@ -6,20 +6,19 @@ member, and writes the resulting mesh to a fresh path with :meth:`MeshDataset.to
 (the source is only read) — so every command is a writer guarded by ``refuse_existing`` /
 ``--overwrite``. No mesh logic lives here; each verb maps 1:1 onto an existing method.
 
-Three axes of selection are covered: **time** (``sel``/``isel``/``sel-time-range``/
-``thin``/``head``/``tail``/``drop-sel``/``drop-isel``/``drop-duplicates``/``squeeze``),
-**layer** on a ragged 3-D volume mesh (``sel-layer``/``isel-layer``/``collapse-layer``),
-and **space** (``subset-by-bounds``/``crop``/``clip``). ``clip-values`` clamps values and
-``where`` masks elements by a comparison; ``drop-variables`` drops whole variables. A bad
-index/label raised as ``KeyError``/``IndexError`` is remapped to ``ValueError`` via
-``map_lookup_errors`` so the CLI reports it as a clean ``error:`` line rather than an
-"unexpected failure".
+Three axes of selection are covered: **time** (``sel``/``isel``/``sel-time``/
+``sel-time-range``/``thin``/``head``/``tail``/``drop-sel``/``drop-isel``/
+``drop-duplicates``/``squeeze``), **layer** on a ragged 3-D volume mesh (``sel-layer``/
+``isel-layer``/``collapse-layer``), and **space** (``subset-by-bounds``/``crop``/``clip``).
+``clip-values`` clamps values and ``where`` masks elements by a comparison;
+``drop-variables`` drops whole variables. A bad index/label raised as
+``KeyError``/``IndexError`` is remapped to ``ValueError`` via ``map_lookup_errors`` so the
+CLI reports it as a clean ``error:`` line rather than an "unexpected failure".
 
-``MeshDataset.sel_time`` is intentionally **not** wrapped: it collapses the data array but
-leaves the variable's ``dimensions`` stale, so a time-collapsed result read from a file
-cannot be written back (``to_file`` raises ``RuntimeError: Illegal numpy array rank 1``).
-``isel --time N`` performs the same single-step positional selection and serialises
-correctly, so it covers that need until the kernel bug is fixed.
+``sel-time`` collapses the time axis down to a single step by position — the serialising
+counterpart of ``isel --time N`` (which also covers the same need). An earlier kernel bug
+left a time-collapsed variable's ``dimensions`` stale so the result could not be written
+back; that has since been fixed, and the round-trip is covered by a test.
 """
 
 from __future__ import annotations
@@ -175,6 +174,25 @@ def _cmd_mesh_isel(args: argparse.Namespace) -> int:
         result = mesh.isel(
             time=_scalar_or_list(args.time), element=_scalar_or_list(args.element)
         )
+    return _write(args, result)
+
+
+def _cmd_mesh_sel_time(args: argparse.Namespace) -> int:
+    """Handle ``pyramids mesh sel-time`` — select a single time step by position.
+
+    Collapses the time axis down to the step at ``--index``; non-temporal variables are
+    left unchanged. This is the serialising counterpart of ``isel --time N``.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``index``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    mesh = MeshDataset.read_file(args.file)
+    with map_lookup_errors():
+        result = mesh.sel_time(args.index)
     return _write(args, result)
 
 
@@ -530,6 +548,19 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     _add_io_arguments(m_il)
     m_il.add_argument("--index", type=int, required=True, help="0-based layer position")
     m_il.set_defaults(func=_cmd_mesh_isel_layer)
+
+    m_st = msub.add_parser(
+        "sel-time", help="select a single time step by position (collapses the axis)"
+    )
+    _add_io_arguments(m_st)
+    m_st.add_argument(
+        "--index",
+        type=int,
+        required=True,
+        help="0-based time step position (positional, not a coordinate value; "
+        "use 'sel --time' to select by coordinate)",
+    )
+    m_st.set_defaults(func=_cmd_mesh_sel_time)
 
     m_str = msub.add_parser(
         "sel-time-range", help="select a half-open range of time steps"

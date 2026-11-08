@@ -1348,20 +1348,29 @@ class MeshDataset(_MeshFacades):
     def sel_time(self, index: int) -> MeshDataset:
         """Select a single time step from all temporal variables.
 
-        Non-temporal variables are kept unchanged.
+        Non-temporal variables are kept unchanged; each temporal variable is collapsed to the
+        chosen step and becomes static. This is the single-step half of ``isel(time=index)``
+        and shares its axis-aware :func:`_static_from` collapse, so the two validate the same
+        way and drop the now-meaningless time coordinate. A leading-time variable still reads
+        only the requested slab from disk (the lazy single-step read of #982); a variable whose
+        time axis is not leading is taken on its own ``time_index``.
 
         Args:
-            index: Time step index.
+            index: Time step index (0-based; a negative index counts from the end).
 
         Returns:
-            New MeshDataset with single time step data.
+            New MeshDataset holding the single step, with the time dimension dropped.
+
+        Raises:
+            ValueError: No variable has a time dimension, the temporal variables disagree on
+                their time length, or a temporal variable has no readable data.
+            IndexError: ``index`` is out of range for the time axis.
         """
+        self._time_length("sel_time")
         new_data_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
             if var.has_time:
-                new_data_vars[name] = var.with_data(
-                    var.sel_time(index), active=var._time_sliced_active(index, None)
-                )
+                new_data_vars[name] = _collapse_variable_to_step(var, index)
             else:
                 new_data_vars[name] = var
 
@@ -4488,8 +4497,8 @@ class MeshDataset(_MeshFacades):
             # The implicit carry is what decides: a static mask survives the collapse (as it
             # does through `reduce`), while a per-step one cannot follow an axis that is gone.
             # Passing `active=None` here force-dropped both.
+            # `_static_from` already strips the time coordinate, so no second strip is needed.
             collapsed = _static_from(var, total, axis)
-            collapsed.attributes = _without_time_metadata(collapsed.attributes)
             # The total is in value-seconds, not the input's units, so the input's sentinel
             # does not describe it.
             collapsed.nodata = None
@@ -5352,7 +5361,10 @@ class MeshDataset(_MeshFacades):
         """Take one time step from every temporal variable, dropping the time dimension.
 
         The single-step half of :meth:`isel`: each temporal variable becomes static, as
-        :meth:`reduce` produces, while a static variable is carried through untouched.
+        :meth:`reduce` produces, while a static variable is carried through untouched. Shares
+        the per-variable collapse (:func:`_collapse_variable_to_step`) with
+        :meth:`sel_time`, so both read only the requested slab from disk for a leading-time
+        file-backed variable (#982).
 
         Args:
             index: The time position to take.
@@ -5362,23 +5374,14 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             ValueError: A temporal variable has no loaded data.
+            IndexError: ``index`` is out of range for the time axis.
         """
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
-            if not var.has_time:
+            if var.has_time:
+                new_vars[name] = _collapse_variable_to_step(var, index)
+            else:
                 new_vars[name] = var
-                continue
-            axis = cast("int", var.time_index)
-            data = var.data
-            if data is None:
-                raise ValueError(f"Variable {name!r} has no loaded data to select.")
-            step = np.take(np.asarray(data), index, axis=axis)
-            new_vars[name] = _static_from(
-                var,
-                np.asarray(step),
-                axis,
-                active=var._time_sliced_active(index, None),
-            )
         return self._rebuild(new_vars)
 
     def head(self, n: int = 5) -> MeshDataset:
@@ -6797,8 +6800,7 @@ def _without_time_metadata(attributes: dict) -> dict:
     """``attributes`` with the time-coordinate keys removed.
 
     A time-collapsing operation leaves a result that is no longer indexed by time, so its
-    stamps, CF units and calendar describe nothing — and leaving the units behind is worse than
-    untidy, because the on-disk coordinate writer re-encodes against whatever units it finds.
+    stamps, CF units and calendar describe nothing on the now-static variable and are dropped.
 
     Args:
         attributes: A variable's attributes.
@@ -7064,11 +7066,9 @@ def _static_from(
         else ()
     )
     # Copy the attributes (never alias — the same invariant MeshVariable.with_data keeps),
-    # and drop `time_values`: the time axis is gone, so a coordinate for it would be a
-    # stale, wrong-length list on a now-static variable.
-    attributes = {
-        key: value for key, value in var.attributes.items() if key != "time_values"
-    }
+    # and drop the whole time coordinate (`time_values`, CF units, calendar): the time axis
+    # is gone, so they describe nothing on the now-static variable.
+    attributes = _without_time_metadata(var.attributes)
     return MeshVariable(
         name=var.name,
         location=var.location,
@@ -7085,6 +7085,38 @@ def _static_from(
         ),
         _data=data,
     )
+
+
+def _collapse_variable_to_step(var: MeshVariable, index: int) -> MeshVariable:
+    """One time step of a temporal variable, as a static (time-collapsed) variable.
+
+    The shared body of the two single-step collapses — :meth:`MeshDataset.sel_time` and
+    :meth:`MeshDataset._collapse_to_step` (reached by ``isel(time=index)``) — so they cannot
+    drift. A leading-time variable reads only the requested slab from disk (the lazy
+    single-step read of #982); a variable whose time axis is not leading is taken with
+    :func:`numpy.take` on its own ``time_index``. The result drops the time dimension via
+    :func:`_static_from`, which also strips the now-meaningless time coordinate.
+
+    Args:
+        var: The temporal variable to collapse (caller has checked ``var.has_time``).
+        index: The time position to take (0-based; a negative index counts from the end).
+
+    Returns:
+        MeshVariable: The static variable holding that step.
+
+    Raises:
+        ValueError: The variable has neither eager data nor a loader to read from.
+        IndexError: ``index`` is out of range for the time axis.
+    """
+    if not var.has_data_source:
+        raise ValueError(f"Variable {var.name!r} has no loaded data to select.")
+    axis = cast("int", var.time_index)
+    if axis == 0:
+        # Leading time: the windowed read pulls only this slab from disk (#982).
+        step = np.asarray(var.sel_time(index))
+    else:
+        step = np.take(np.asarray(var.data), index, axis=axis)
+    return _static_from(var, step, axis, active=var._time_sliced_active(index, None))
 
 
 def _concat_temporal_variable(
