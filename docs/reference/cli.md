@@ -29,11 +29,13 @@ These global flags go **before** the command and apply across the CLI:
   `--config PATH`, then `PYRAMIDS_CONFIG`, then the nearest `pyramids.toml` searched upward from the working
   directory, then `~/.config/pyramids/config.toml`. An explicit flag on the command line always overrides a
   config default; `--no-config` ignores any file. A top-level `[defaults]` table applies to every verb that has
-  the option, and a `[group.command]` table applies to that one verb:
+  the option, and a `[group.command]` table applies to that one verb. Only **value-taking** options are
+  configurable — boolean flags such as `--overwrite` are deliberately not settable from config (there is no
+  `--no-overwrite` to override a configured `true` back to false, so the guard can never be silently disabled):
 
   ```toml
   [defaults]
-  overwrite = true
+  driver = "gpkg"
 
   [vector.warp]
   crs = "EPSG:4326"

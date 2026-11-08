@@ -1,22 +1,29 @@
 """Config-file support for the ``pyramids`` CLI (E-2 / #1490).
 
 A ``pyramids.toml`` file lets a user set per-command defaults once instead of repeating
-flags (CRS, driver, ``--overwrite``, ...). Defaults are applied to each subcommand's
-parser via :meth:`argparse.ArgumentParser.set_defaults` **before** parsing, so an explicit
-flag on the command line always wins. Precedence, highest first:
+flags (CRS, driver, output format, ...). Defaults are applied to each subcommand's parser
+via :meth:`argparse.ArgumentParser.set_defaults` **before** parsing, so an explicit flag on
+the command line always wins. Precedence, highest first:
 
 1. the command line (an explicit flag),
 2. the config file (``--config PATH`` > ``PYRAMIDS_CONFIG`` env > nearest ``pyramids.toml``
    searched upward from the working directory > ``~/.config/pyramids/config.toml``),
 3. the built-in argparse default.
 
+Only **value-taking** options are configurable. Zero-arg boolean flags (``store_true`` such
+as ``--overwrite``) are intentionally not seeded from config: there is no ``--no-<flag>``
+token to override a config ``true`` back to false, so a configured boolean would be sticky
+rather than a default — which would make the "an explicit flag always wins" rule false for
+booleans. Positionals are likewise never configured.
+
 Schema — a top-level ``[defaults]`` table applies to every verb that has the option, and a
 ``[group.command]`` table applies to that one verb (a key is only applied when the target
-verb actually defines that option, so an unrelated key is silently ignored):
+verb actually defines that option as a value option, so an unrelated or boolean key is
+silently ignored):
 
 ```toml
 [defaults]
-overwrite = true
+driver = "gpkg"
 
 [vector.warp]
 crs = "EPSG:4326"
@@ -147,7 +154,16 @@ def apply_config_defaults(
     global_defaults = config.get("defaults", {})
     global_defaults = global_defaults if isinstance(global_defaults, dict) else {}
     for path, subparser in _iter_subparsers(parser):
-        dests = {action.dest for action in subparser._actions}
+        # Only value-taking optionals are configurable. Zero-arg flags (``store_true`` etc.
+        # like ``--overwrite``) are excluded: a config ``overwrite = true`` would be sticky
+        # because there is no ``--no-overwrite`` token to override it back, which would make
+        # the "an explicit flag always wins" contract false for booleans. Positionals (no
+        # option strings) are likewise never seeded from config.
+        dests = {
+            action.dest
+            for action in subparser._actions
+            if action.option_strings and action.nargs != 0
+        }
         overrides: dict[str, Any] = {
             key: value for key, value in global_defaults.items() if key in dests
         }

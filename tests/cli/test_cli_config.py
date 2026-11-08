@@ -89,13 +89,28 @@ class TestApplyConfigDefaults:
     """`apply_config_defaults` onto the real parser."""
 
     def test_defaults_section_applies_to_matching_verbs(self):
-        """A ``[defaults]`` key is applied only where that option exists."""
+        """A ``[defaults]`` value option is applied where that option exists."""
+        parser = _build_parser()
+        apply_config_defaults(parser, {"defaults": {"driver": "gpkg"}})
+        ns = parser.parse_args(
+            ["vector", "warp", "a.shp", "b.gpkg", "--crs", "EPSG:4326"]
+        )
+        assert ns.driver == "gpkg", "[defaults] driver should seed the verb default"
+
+    def test_boolean_flag_is_not_configurable(self):
+        """A ``store_true`` flag (``overwrite``) is NOT seeded from config (M1).
+
+        Booleans are excluded because there is no ``--no-overwrite`` token to override a
+        config ``true`` back to false, which would make the flag sticky.
+        """
         parser = _build_parser()
         apply_config_defaults(parser, {"defaults": {"overwrite": True}})
         ns = parser.parse_args(
             ["vector", "warp", "a.shp", "b.gpkg", "--crs", "EPSG:4326"]
         )
-        assert ns.overwrite is True, "[defaults] overwrite should seed the verb default"
+        assert ns.overwrite is False, (
+            "a boolean flag must stay at its built-in False default"
+        )
 
     def test_command_section_overrides_defaults(self):
         """A ``[group.command]`` value overrides the global ``[defaults]`` one."""
@@ -153,8 +168,12 @@ class TestApplyConfigDefaults:
 class TestConfigThroughCLI:
     """End-to-end: a config file changes a verb's default, the CLI overrides it."""
 
-    def test_config_overwrite_default_lets_write_replace(self, cli_points, tmp_path):
-        """`[defaults] overwrite=true` lets a write verb replace an existing output."""
+    def test_config_boolean_overwrite_is_ignored_end_to_end(self, cli_points, tmp_path):
+        """`[defaults] overwrite=true` does NOT lift the guard — the write is still refused (M1).
+
+        Booleans are not configurable, so the overwrite guard cannot be silently disabled
+        from a config file; the user must pass ``--overwrite`` explicitly.
+        """
         out = tmp_path / "out.gpkg"
         out.write_text("sentinel")
         cfg = tmp_path / "pyramids.toml"
@@ -171,28 +190,20 @@ class TestConfigThroughCLI:
                 "EPSG:3857",
             ]
         )
-        assert rc == 0, "overwrite default from config should allow replacing the file"
+        assert rc == 1, "config overwrite=true must not disable the overwrite guard"
 
-    def test_no_config_ignores_the_file(self, cli_points, tmp_path):
-        """`--no-config` ignores a present config, so the write is refused."""
-        out = tmp_path / "out.gpkg"
-        out.write_text("sentinel")
-        cfg = tmp_path / "pyramids.toml"
-        cfg.write_text("[defaults]\noverwrite = true\n")
+    def test_no_config_skips_a_bad_config_file(self, tmp_path):
+        """`--no-config` short-circuits before config resolution, so a bad --config is ignored."""
         rc = main(
             [
                 "--no-config",
                 "--config",
-                str(cfg),
-                "vector",
-                "warp",
-                cli_points,
-                str(out),
-                "--crs",
-                "EPSG:3857",
+                str(tmp_path / "missing.toml"),
+                "completion",
+                "bash",
             ]
         )
-        assert rc == 1, "--no-config must ignore the config's overwrite default"
+        assert rc == 0, "--no-config must skip resolving the (missing) config entirely"
 
     def test_missing_config_is_clean_error_not_traceback(self, tmp_path, capsys):
         """A bad ``--config`` exits 1 with an ``error:`` line, not an uncaught traceback (M2)."""
