@@ -689,7 +689,11 @@ def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int)
 
 
 def _dimension_list(
-    rg: gdal.Group, var: MeshVariable, mesh_name: str, dims: dict[str, Any]
+    rg: gdal.Group,
+    var: MeshVariable,
+    mesh_name: str,
+    dims: dict[str, Any],
+    data: np.ndarray,
 ) -> list:
     """GDAL dimension list for a data variable's axes (one per axis, element axis last).
 
@@ -703,14 +707,15 @@ def _dimension_list(
 
     Args:
         rg: The GDAL root group dimensions are created in.
-        var: The variable whose axes are being mapped (``var.data`` is not ``None``).
+        var: The variable whose axes are being mapped.
         mesh_name: Name of the mesh topology variable (used for the element dim name).
         dims: The name->dimension cache shared across the write; updated in place.
+        data: The variable's data array (``var.data``, already checked non-``None`` by the
+            caller), passed in so its rank and shape need no re-narrowing here.
 
     Returns:
         The GDAL dimension objects for the variable's axes, element axis last.
     """
-    data = var.data
     names = var.dimensions if len(var.dimensions) == data.ndim else ()
     time_axis = var.time_index if var.has_time else None
     dim_list = []
@@ -748,7 +753,7 @@ def write_ugrid_data_variable(
     if var.data is None:
         return
 
-    dim_list = _dimension_list(rg, var, mesh_name, dims)
+    dim_list = _dimension_list(rg, var, mesh_name, dims, var.data)
 
     dtype_map = {
         np.dtype("float64"): gdal.GDT_Float64,

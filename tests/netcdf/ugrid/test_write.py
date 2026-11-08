@@ -627,3 +627,37 @@ class TestExtraDimension:
             d.GetName() for d in ds.GetRootGroup().OpenMDArray("v").GetDimensions()
         ]
         assert names == ["time", "v_dim1", "mesh2d_nFaces"], f"got {names}"
+
+    def test_creates_the_element_dimension_when_absent(self, tmp_path):
+        """`_dimension_list` creates the location dim when it is not already registered.
+
+        Test scenario:
+            In a full file write the topology writer pre-registers the element dimension, so
+            `write_ugrid_data_variable` always reuses it. Called with an empty `dims`, the
+            helper must instead create `mesh2d_nFaces` and record it, so a static (1-D)
+            variable still gets its single element dimension.
+        """
+        from pyramids.netcdf.ugrid.io import _dimension_list
+        from pyramids.netcdf.ugrid.models import MeshVariable
+
+        rg = self._root_group(tmp_path)
+        var = MeshVariable(
+            name="v",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(3,),
+            _data=np.zeros(3, dtype="float64"),
+        )
+        dims: dict = {}
+
+        dim_list = _dimension_list(rg, var, "mesh2d", dims, var.data)
+
+        assert [d.GetName() for d in dim_list] == ["mesh2d_nFaces"], (
+            "sole axis is the element dim"
+        )
+        assert "mesh2d_nFaces" in dims, (
+            "the created element dim must be cached for reuse"
+        )
+        assert dims["mesh2d_nFaces"].GetSize() == 3, (
+            "the element dim must match n_elements"
+        )
