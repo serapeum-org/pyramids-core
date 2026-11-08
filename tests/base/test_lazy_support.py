@@ -246,7 +246,9 @@ def test_core_never_imports_lazy_support():
     def _imports_lazy_support(source: str) -> bool:
         try:
             tree = ast.parse(source)
-        except SyntaxError:  # pragma: no cover - a parse failure is caught by other tooling
+        except (
+            SyntaxError
+        ):  # pragma: no cover - a parse failure is caught by other tooling
             return False
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
