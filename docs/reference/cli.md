@@ -428,11 +428,13 @@ bbox),
 **Convert / export** — `convert` / `to-file` / `to-bytes` (UGRID NetCDF or a driver), `to-crs` (reproject) /
 `set-crs` (declare only), `to-geodataframe` / `to-dataframe` / `to-image` / `to-zarr`, `to-dataset` (rasterize to
 GeoTIFF), `to-location` (remap onto another facet), `polygonize` / `contour` / `bounding-polygon` /
-`exterior-edges` / `exterior-faces` / `footprint`, `burn` (a vector onto faces), `with-variable` /
+`exterior-edges` / `exterior-faces` / `footprint`,
+`voronoi-polygons` (Voronoi cells of the nodes), `burn` (a vector onto faces), `with-variable` /
 `rename-variable` / `attach-data`.
 
 **Analysis / terrain** — `slope`, `aspect`, `hillshade`, `proximity`, `cluster`, `connected-components`,
-`zonal-stats`, `sieve`, `binary-dilation` / `binary-erosion`, `focal-mean` / `focal-std`, `regrid`.
+`zonal-stats`, `sieve`, `binary-dilation` / `binary-erosion`, `focal-mean` / `focal-std`, `regrid`, `polyfit`
+(per-element polynomial trend along time).
 
 **Interp / fill / time / calculus** — `interp-like` / `interp-time` / `interp-calendar`, `interpolate-na` /
 `fill-na-spatial` / `laplace-interpolate` / `ffill` / `bfill` / `fillna`, `clip-values`, `convert-units`,
@@ -446,8 +448,9 @@ the Agg backend is forced so these run headless.
 
 **Multi-mesh join** — `concat` (stack several same-topology meshes) and `merge` (combine their variables).
 
-Not exposed (use Python, or pending a library fix): `voronoi`, `polyfit`, `curvefit` and `focal_apply` take a
-Python callable or are not one-shot-shaped.
+Not exposed (use Python, or pending a library fix): `curvefit` and `focal_apply` take a Python callable, so
+they have no shell form. (`polyfit`, `voronoi-polygons` and `sel-time` are now verbs — listed under Analysis,
+Convert/export and Select/subset above.)
 
 ## STAC
 

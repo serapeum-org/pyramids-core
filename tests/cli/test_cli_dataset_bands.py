@@ -255,6 +255,11 @@ class TestSetColorRamp:
 
     def test_writes_color_table(self, single_band, tmp_path):
         """A two-colour ramp fills one colour entry per value in the range."""
+        # set-color-ramp builds the colour table through Dataset._set_color_table, which
+        # requires cleopatra (the [viz] extra). Skip where it is absent (core wheel env) so
+        # this core-marked module's other band tests still run there. The error-path test
+        # below does not reach cleopatra, so it stays core.
+        pytest.importorskip("cleopatra")
         out = str(tmp_path / "ramped.tif")
         rc = main(
             [

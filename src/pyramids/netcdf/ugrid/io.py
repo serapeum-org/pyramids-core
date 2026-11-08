@@ -643,6 +643,99 @@ def _write_connectivity_array(
     )
 
 
+def _extra_dimension(rg: gdal.Group, dims: dict[str, Any], name: str, size: int) -> Any:
+    """GDAL dimension for a non-time, non-element axis of a data variable.
+
+    A variable may carry a leading axis that is neither time nor the mesh-element axis -- the
+    ``coefficient`` axis a :meth:`MeshDataset.polyfit` / ``curvefit`` result replaces the time
+    axis with, or a layer axis. Without a dimension for it the variable's array rank exceeds
+    the dimension list and GDAL rejects the write with ``RuntimeError: Illegal numpy array
+    rank N``.
+
+    A dimension already created under `name` at the same `size` is reused, so variables that
+    share such an axis share one dimension. When the group already holds a dimension of that
+    name at a different size -- two fits of different degree in one dataset -- a size suffix
+    keeps the name unique, since a GDAL group cannot hold two dimensions with the same name.
+
+    Args:
+        rg: The GDAL root group the dimension is created in.
+        dims: The name→dimension cache shared across the write; updated in place.
+        name: The dimension's intended on-disk name (e.g. ``"coefficient"``).
+        size: The axis length.
+
+    Returns:
+        The GDAL dimension object to index this axis with.
+    """
+    # Walk the base name and its size-suffixed variants (`coefficient`, `coefficient2`, ...):
+    # reuse the first whose size matches, otherwise create at the first name not yet taken.
+    # Keying reuse on the base name alone would miss a `coefficient2` already created for this
+    # size and make a redundant third dimension.
+    #
+    # Reuse keys on name + size only, so two conceptually distinct axes that happen to share a
+    # name and length share one dimension. That is safe here because these extra dimensions are
+    # bare axis labels with no coordinate values attached -- a shared label of equal length is
+    # interchangeable. If coordinate values are ever attached to such an axis, switch to an
+    # identity that cannot alias (e.g. a per-axis key) instead of this name+size match.
+    unique = name
+    suffix = 1
+    while unique in dims:
+        if dims[unique].GetSize() == size:
+            return dims[unique]
+        suffix += 1
+        unique = f"{name}{suffix}"
+    created = rg.CreateDimension(unique, None, None, size)
+    dims[unique] = created
+    return created
+
+
+def _dimension_list(
+    rg: gdal.Group,
+    var: MeshVariable,
+    mesh_name: str,
+    dims: dict[str, Any],
+    data: np.ndarray,
+) -> list:
+    """GDAL dimension list for a data variable's axes (one per axis, element axis last).
+
+    Built positionally so a variable with extra leading axes that are neither time nor the
+    element axis -- e.g. the ``coefficient`` axis a :meth:`MeshDataset.polyfit` result carries,
+    or a ``(time, layer, element)`` stack with both -- is written with the right rank instead of
+    tripping GDAL's ``Illegal numpy array rank N``. The trailing axis is always the mesh-element
+    (location) axis; each non-trailing axis is the shared ``time`` dimension when it is the time
+    axis, otherwise a dimension named from ``var.dimensions`` (or synthesised when the variable
+    carries no names).
+
+    Args:
+        rg: The GDAL root group dimensions are created in.
+        var: The variable whose axes are being mapped.
+        mesh_name: Name of the mesh topology variable (used for the element dim name).
+        dims: The name->dimension cache shared across the write; updated in place.
+        data: The variable's data array (``var.data``, already checked non-``None`` by the
+            caller), passed in so its rank and shape need no re-narrowing here.
+
+    Returns:
+        The GDAL dimension objects for the variable's axes, element axis last.
+    """
+    names = var.dimensions if len(var.dimensions) == data.ndim else ()
+    time_axis = var.time_index if var.has_time else None
+    dim_list = []
+    for axis in range(data.ndim - 1):
+        if axis == time_axis and "time" in dims:
+            dim_list.append(dims["time"])
+        else:
+            dim_name = names[axis] if names else f"{var.name}_dim{axis}"
+            dim_list.append(_extra_dimension(rg, dims, dim_name, data.shape[axis]))
+
+    loc_dim_name = f"{mesh_name}_n{var.location.capitalize()}s"
+    if loc_dim_name in dims:
+        dim_list.append(dims[loc_dim_name])
+    else:
+        loc_dim = rg.CreateDimension(loc_dim_name, None, None, var.n_elements)
+        dims[loc_dim_name] = loc_dim
+        dim_list.append(loc_dim)
+    return dim_list
+
+
 def write_ugrid_data_variable(
     rg: gdal.Group,
     var: MeshVariable,
@@ -660,17 +753,7 @@ def write_ugrid_data_variable(
     if var.data is None:
         return
 
-    dim_list = []
-    if var.has_time and "time" in dims:
-        dim_list.append(dims["time"])
-
-    loc_dim_name = f"{mesh_name}_n{var.location.capitalize()}s"
-    if loc_dim_name in dims:
-        dim_list.append(dims[loc_dim_name])
-    else:
-        loc_dim = rg.CreateDimension(loc_dim_name, None, None, var.n_elements)
-        dims[loc_dim_name] = loc_dim
-        dim_list.append(loc_dim)
+    dim_list = _dimension_list(rg, var, mesh_name, dims, var.data)
 
     dtype_map = {
         np.dtype("float64"): gdal.GDT_Float64,

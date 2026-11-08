@@ -20,6 +20,56 @@ pytestmark = pytest.mark.core
 class TestWriteUgrid:
     """Tests for MeshDataset.to_file() (UGRID-15)."""
 
+    @staticmethod
+    def _temporal_ramp():
+        """A two-face mesh carrying a 3-step linear ramp (slope 10 / 20 per face)."""
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            data={"v": np.array([[0.0, 0.0], [10.0, 20.0], [20.0, 40.0]])},
+            data_locations={"v": "face"},
+        )
+        ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
+        return ds
+
+    def test_to_file_round_trips_a_polyfit_coefficient_dim(self, tmp_path):
+        """A polyfit result writes and reads back its non-time `coefficient` axis.
+
+        Test scenario:
+            `polyfit` replaces the time axis with a `coefficient` axis, giving a
+            `(deg + 1, n_face)` variable whose leading axis is neither time nor the element
+            axis. The writer assembled only a time-or-nothing + element dimension list, so it
+            built a rank-1 array for a rank-2 variable and GDAL raised
+            `RuntimeError: Illegal numpy array rank 2`. The result must now write and read
+            back with the coefficient axis and values intact.
+        """
+        fit = self._temporal_ramp().polyfit(1)
+        assert fit["v"].dimensions == ("coefficient", "face")
+        out = tmp_path / "polyfit.nc"
+
+        fit.to_file(out)
+
+        back = MeshDataset.read_file(out)
+        read = back["v"]
+        assert np.asarray(read.data).shape == (2, 2), (
+            "the coefficient axis must survive"
+        )
+        assert read.dimensions[0] == "coefficient", f"got {read.dimensions}"
+        np.testing.assert_allclose(np.asarray(read.data), np.asarray(fit["v"].data))
+
+    def test_to_file_round_trips_a_curvefit_parameter_dim(self, tmp_path):
+        """The sibling case: `curvefit`'s non-time `parameter` axis also writes."""
+        fit = self._temporal_ramp().curvefit(lambda x, a, b: a * x + b)
+        assert fit["v"].dimensions == ("parameter", "face")
+        out = tmp_path / "curvefit.nc"
+
+        fit.to_file(out)
+
+        read = MeshDataset.read_file(out)["v"]
+        assert np.asarray(read.data).shape == (2, 2)
+        assert read.dimensions[0] == "parameter", f"got {read.dimensions}"
+
     def test_write_and_read_round_trip(self, tmp_path):
         """Test write then read produces consistent data.
 
@@ -356,4 +406,258 @@ class TestTemporalWrite:
             var.data,
             temporal_data,
             err_msg="Temporal data should survive round-trip",
+        )
+
+
+class TestVoronoiPolygons:
+    """`MeshDataset.voronoi_polygons` — the file-serializable Voronoi output (#1479)."""
+
+    @staticmethod
+    def _strip_mesh():
+        """A four-node two-triangle zig-zag strip mesh in EPSG:4326."""
+        return MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            epsg=4326,
+        )
+
+    def test_returns_polygon_cells_in_the_mesh_crs(self):
+        """One polygon per node, carrying the mesh CRS (not a bare scipy object).
+
+        Test scenario:
+            `voronoi()` returns a `scipy.spatial.Voronoi` with no geospatial form;
+            `voronoi_polygons()` returns a `FeatureCollection` of the dual cells so the result
+            has a CRS and a vector geometry.
+        """
+        cells = self._strip_mesh().voronoi_polygons()
+
+        assert isinstance(cells, FeatureCollection), f"got {type(cells).__name__}"
+        assert len(cells) == 4, "one cell per distinct node"
+        assert set(cells.geometry.geom_type) == {"Polygon"}, "cells must be polygons"
+        assert cells.epsg == 4326, "the mesh CRS must carry onto the cells"
+        assert sorted(cells["node"].tolist()) == [0, 1, 2, 3], (
+            "each cell must carry its source node index"
+        )
+
+    def test_coincident_nodes_drop_cells_but_keep_the_node_index(self):
+        """A duplicate node yields fewer cells; the `node` column still maps survivors (R1 M1).
+
+        Test scenario:
+            `voronoi_polygons` delegates to `FeatureCollection.voronoi`, which skips coincident
+            points -- so a five-node mesh with two coincident nodes produces four cells, not
+            five, and the result must not pretend to be node-aligned by row. The `node` column
+            is the safe way back to the source node.
+        """
+        mesh = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 0.0, 1.0, 1.0, 0.5]),
+            node_y=np.array([0.0, 0.0, 0.0, 1.0, 0.5]),
+            face_node_connectivity=np.array([[0, 2, 3], [0, 3, 1]]),
+            epsg=4326,
+        )
+
+        cells = mesh.voronoi_polygons()
+
+        assert len(cells) == 4, "the coincident node must not produce its own cell"
+        assert set(cells["node"].tolist()) == {0, 2, 3, 4}, (
+            "survivors must carry their ORIGINAL node index -- node 1 (the coincident "
+            "duplicate) is dropped and node 0 is retained; a post-filter re-index would give "
+            "{0, 1, 2, 3} and fail here"
+        )
+
+    def test_cells_are_writable_to_a_file(self, tmp_path):
+        """The whole point of the method: the output can be serialized (#1479).
+
+        Test scenario:
+            The raw `voronoi()` scipy object cannot be written to a file; the polygon
+            `FeatureCollection` can, which is what unblocks a CLI verb.
+        """
+        out = tmp_path / "voronoi.gpkg"
+
+        self._strip_mesh().voronoi_polygons().to_file(str(out))
+
+        assert out.exists(), "the cells must write to a file"
+        assert out.stat().st_size > 0, "the written file must not be empty"
+
+    def test_the_raw_voronoi_primitive_is_unchanged(self):
+        """`voronoi()` still returns the low-level scipy tessellation (non-breaking)."""
+        from scipy.spatial import Voronoi
+
+        assert isinstance(self._strip_mesh().voronoi(), Voronoi)
+
+
+class TestExtraDimension:
+    """`io._extra_dimension` — reuse vs. size-suffix for non-time axes (#1479)."""
+
+    @staticmethod
+    def _root_group(tmp_path):
+        """A fresh GDAL multidimensional root group to create dimensions in."""
+        from osgeo import gdal
+
+        ds = gdal.GetDriverByName("netCDF").CreateMultiDimensional(
+            str(tmp_path / "dims.nc")
+        )
+        return ds.GetRootGroup()
+
+    def test_same_name_and_size_is_reused(self, tmp_path):
+        """A second request for the same name+size returns the same dimension object.
+
+        Test scenario:
+            Two variables that share an extra axis (e.g. both polyfit degree-1 results, each a
+            `coefficient` axis of length 2) must share one GDAL dimension, not create two.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        first = _extra_dimension(rg, dims, "coefficient", 2)
+        second = _extra_dimension(rg, dims, "coefficient", 2)
+        assert second is first, "same name+size must reuse the dimension"
+
+    def test_same_name_different_size_is_suffixed(self, tmp_path):
+        """A clash on name with a different size gets a unique size-suffixed name.
+
+        Test scenario:
+            A GDAL group cannot hold two dimensions of the same name. A degree-1 fit
+            (`coefficient`, size 2) and a degree-2 fit (size 3) in one dataset must not
+            collide; the second becomes `coefficient2`.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        first = _extra_dimension(rg, dims, "coefficient", 2)
+        second = _extra_dimension(rg, dims, "coefficient", 3)
+        assert second is not first, "a different size must not reuse the dimension"
+        assert second.GetName() == "coefficient2", f"got {second.GetName()}"
+
+    def test_reuse_finds_a_size_suffixed_variant(self, tmp_path):
+        """After a size clash, a later same-size request reuses the suffixed dim (R1 L1).
+
+        Test scenario:
+            `coefficient` (size 2) then `coefficient` (size 3 -> `coefficient2`); a third
+            request at size 3 must reuse `coefficient2`, not create a third dimension. Keying
+            reuse on the base name alone missed the suffixed variant.
+        """
+        from pyramids.netcdf.ugrid.io import _extra_dimension
+
+        rg = self._root_group(tmp_path)
+        dims: dict = {}
+        size2 = _extra_dimension(rg, dims, "coefficient", 2)
+        size3 = _extra_dimension(rg, dims, "coefficient", 3)
+        assert _extra_dimension(rg, dims, "coefficient", 3) is size3, (
+            "size-3 must reuse coefficient2"
+        )
+        assert _extra_dimension(rg, dims, "coefficient", 2) is size2, (
+            "size-2 must reuse coefficient"
+        )
+
+    def test_two_fitted_variables_share_the_coefficient_dim(self, tmp_path):
+        """Through the real writer: two temporal vars fit at one degree share the axis.
+
+        Test scenario:
+            `polyfit(1)` on a mesh with two temporal variables gives both a `coefficient`
+            axis of length 2; writing must reuse the one dimension (the `_extra_dimension`
+            same-size path) and round-trip both.
+        """
+        ds = MeshDataset.from_arrays(
+            node_x=np.array([0.0, 1.0, 2.0, 3.0]),
+            node_y=np.array([0.0, 1.0, 0.0, 1.0]),
+            face_node_connectivity=np.array([[0, 1, 2], [1, 2, 3]]),
+            data={
+                "a": np.array([[0.0, 0.0], [10.0, 20.0], [20.0, 40.0]]),
+                "b": np.array([[1.0, 1.0], [2.0, 3.0], [3.0, 5.0]]),
+            },
+            data_locations={"a": "face", "b": "face"},
+        )
+        for name in ("a", "b"):
+            ds[name].attributes = {
+                **ds[name].attributes,
+                "time_values": [0.0, 1.0, 2.0],
+            }
+        out = tmp_path / "twofit.nc"
+
+        ds.polyfit(1).to_file(out)
+
+        back = MeshDataset.read_file(out)
+        assert back["a"].dimensions[0] == "coefficient"
+        assert back["b"].dimensions[0] == "coefficient"
+        assert np.asarray(back["a"].data).shape == (2, 2)
+
+    def test_an_unnamed_extra_axis_gets_a_synthesised_dim_name(self, tmp_path):
+        """A variable with a non-time leading axis and no dim names gets `<var>_dim<axis>` (R1 L4).
+
+        Test scenario:
+            `polyfit`/`curvefit` always set `dimensions`, so the synthesised-name fallback in
+            `write_ugrid_data_variable` was untested. A hand-built 3-D variable with empty
+            `dimensions` (time axis 0 by fallback, an unnamed axis 1) exercises it: the written
+            file must carry a `<var>_dim1` dimension between `time` and the element axis.
+        """
+        from osgeo import gdal
+
+        from pyramids.netcdf.ugrid.connectivity import Connectivity
+        from pyramids.netcdf.ugrid.mesh import Mesh2d
+        from pyramids.netcdf.ugrid.models import MeshVariable
+
+        mesh = Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=Connectivity(
+                data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+                fill_value=-1,
+                cf_role="face_node_connectivity",
+                original_start_index=0,
+            ),
+        )
+        var = MeshVariable(
+            name="v",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(2, 3, 2),
+            _data=np.arange(12, dtype="float64").reshape(2, 3, 2),
+        )
+        out = tmp_path / "unnamed_axis.nc"
+
+        MeshDataset(mesh=mesh, data_variables={"v": var}, global_attributes={}).to_file(
+            out
+        )
+
+        ds = gdal.OpenEx(str(out), gdal.OF_MULTIDIM_RASTER)
+        names = [
+            d.GetName() for d in ds.GetRootGroup().OpenMDArray("v").GetDimensions()
+        ]
+        assert names == ["time", "v_dim1", "mesh2d_nFaces"], f"got {names}"
+
+    def test_creates_the_element_dimension_when_absent(self, tmp_path):
+        """`_dimension_list` creates the location dim when it is not already registered.
+
+        Test scenario:
+            In a full file write the topology writer pre-registers the element dimension, so
+            `write_ugrid_data_variable` always reuses it. Called with an empty `dims`, the
+            helper must instead create `mesh2d_nFaces` and record it, so a static (1-D)
+            variable still gets its single element dimension.
+        """
+        from pyramids.netcdf.ugrid.io import _dimension_list
+        from pyramids.netcdf.ugrid.models import MeshVariable
+
+        rg = self._root_group(tmp_path)
+        var = MeshVariable(
+            name="v",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(3,),
+            _data=np.zeros(3, dtype="float64"),
+        )
+        dims: dict = {}
+
+        dim_list = _dimension_list(rg, var, "mesh2d", dims, var.data)
+
+        assert [d.GetName() for d in dim_list] == ["mesh2d_nFaces"], (
+            "sole axis is the element dim"
+        )
+        assert "mesh2d_nFaces" in dims, (
+            "the created element dim must be cached for reuse"
+        )
+        assert dims["mesh2d_nFaces"].GetSize() == 3, (
+            "the element dim must match n_elements"
         )
