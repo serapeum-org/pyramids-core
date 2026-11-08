@@ -124,8 +124,9 @@ def test_netcdf_chunk_branded(no_backend, tmp_path):
         variable_name="v",
     )
     nc.to_file(path)
+    nc_read = NetCDF.read_file(path)
     with pytest.raises(OptionalPackageDoesNotExist):
-        NetCDF.read_file(path).chunk()
+        nc_read.chunk()
 
 
 def test_netcdf_to_dask_dataframe_branded(no_backend):

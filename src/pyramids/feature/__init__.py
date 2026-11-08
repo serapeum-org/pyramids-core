@@ -172,12 +172,13 @@ def is_lazy_fc(obj: object) -> bool:
         lazy_cls = backend_lazy_type(
             "lazy_feature_collection_type", "pyramids.feature.LazyFeatureCollection"
         )
-    except (OptionalPackageDoesNotExist, ImportError):
+    except ImportError:
         # No backend, or a backend whose [parquet] dependency is absent: the lazy class cannot be
-        # resolved, so no object can be an instance -> False. Only these "not available" errors are
-        # swallowed (ImportError covers the backend's own branded ModuleNotFoundError subclass); a
-        # malformed backend raising anything else propagates rather than being hidden behind a
-        # dispatch predicate. A user who wants the actionable "install/upgrade" error gets it from
+        # resolved, so no object can be an instance -> False. ImportError is the one swallowed
+        # family -- it covers both the branded OptionalPackageDoesNotExist (an ImportError subclass)
+        # and the backend's own ModuleNotFoundError subclass. A malformed backend raising anything
+        # else propagates rather than being hidden behind a dispatch predicate. A user who wants the
+        # actionable "install/upgrade" error gets it from
         # accessing `pyramids.feature.LazyFeatureCollection` directly, which does raise.
         return False
     return isinstance(obj, lazy_cls)
