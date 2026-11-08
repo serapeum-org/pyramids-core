@@ -208,6 +208,24 @@ def structured_requested(args: argparse.Namespace) -> bool:
 
     Returns:
         bool: ``True`` for ``json``/``csv``/``table``, ``False`` for ``text``.
+
+    Examples:
+        - A format of ``csv`` counts as structured:
+            ```python
+            >>> import argparse
+            >>> from pyramids._cli_shared import structured_requested
+            >>> structured_requested(argparse.Namespace(json=False, format="csv"))
+            True
+
+            ```
+        - Plain text (or nothing set) is not structured:
+            ```python
+            >>> structured_requested(argparse.Namespace(json=False, format="text"))
+            False
+            >>> structured_requested(argparse.Namespace())
+            False
+
+            ```
     """
     return resolved_format(args) != "text"
 

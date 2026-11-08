@@ -39,6 +39,27 @@ class PluginRecord:
         distribution: The installed distribution that provides it, or ``"?"`` if unknown.
         version: The distribution version, or ``"?"`` if unknown.
         error: ``None`` if the callable imported cleanly, else the error message.
+
+    Examples:
+        - A record for a plugin that loaded cleanly reports no error:
+            ```python
+            >>> from pyramids.cli_plugins import PluginRecord
+            >>> record = PluginRecord("citymodels", "pkg.cli:add", "pyramids-citymodels", "1.0", None)
+            >>> record.name
+            'citymodels'
+            >>> record.error is None
+            True
+
+            ```
+        - A record for a broken plugin carries the failure message:
+            ```python
+            >>> record = PluginRecord("ghost", "ghost:add", "?", "?", "ImportError: no module named 'ghost'")
+            >>> record.version
+            '?'
+            >>> "ImportError" in record.error
+            True
+
+            ```
     """
 
     name: str
