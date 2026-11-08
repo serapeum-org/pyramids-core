@@ -16,6 +16,10 @@ true: zero-arg boolean flags (``store_true`` such as ``--overwrite``) have no ``
 to flip a configured ``true`` back, and ``append``/``extend`` options would *merge* the CLI
 value onto the configured default instead of replacing it. Positionals are never configured.
 
+A configured value is validated the same way argparse would validate the CLI value: it must
+satisfy the option's ``choices`` and, for a multi-value ``nargs``, be a list — otherwise a
+clean, config-naming ``ValueError`` is raised.
+
 Schema — a top-level ``[defaults]`` table applies to every verb that has the option, and a
 ``[group.command]`` table applies to that one verb (a key is only applied when the target
 verb actually defines that option as a value option, so an unrelated or boolean key is
@@ -162,17 +166,50 @@ def apply_config_defaults(
         #   - ``append``/``extend`` options MERGE the CLI value onto the configured default
         #     instead of replacing it, so the configured entry is unremovable.
         # Positionals (no option strings) are likewise never seeded from config.
-        dests = {
-            action.dest
+        actions = {
+            action.dest: action
             for action in subparser._actions
             if action.option_strings and isinstance(action, argparse._StoreAction)
         }
-        overrides: dict[str, Any] = {
-            key: value for key, value in global_defaults.items() if key in dests
-        }
-        section = _section_for(config, path)
-        for key, value in section.items():
-            if key in dests:
-                overrides[key] = value
+        overrides: dict[str, Any] = {}
+        for source in (global_defaults, _section_for(config, path)):
+            for key, value in source.items():
+                if key in actions:
+                    _validate_config_value(actions[key], key, value, path)
+                    overrides[key] = value
         if overrides:
             subparser.set_defaults(**overrides)
+
+
+def _validate_config_value(
+    action: argparse.Action, key: str, value: Any, command: tuple[str, ...]
+) -> None:
+    """Validate a config value the way argparse would validate the equivalent CLI value.
+
+    ``set_defaults`` bypasses the action's ``choices``/``nargs`` checks, so a config value
+    could reach a handler in a shape the CLI would have rejected. Enforce the same two rules
+    here and raise a clean, config-naming :class:`ValueError` on a mismatch.
+
+    Args:
+        action: The option's argparse action.
+        key: The config key (the option's dest).
+        value: The configured value.
+        command: The ``(group, command, ...)`` path, for the error message.
+
+    Raises:
+        ValueError: ``value`` violates the option's ``nargs`` arity or ``choices``.
+    """
+    where = f"[{'.'.join(command)}] {key}" if command else key
+    expects_list = action.nargs in ("+", "*") or (
+        isinstance(action.nargs, int) and action.nargs > 1
+    )
+    if expects_list and not isinstance(value, list):
+        raise ValueError(
+            f"config {where} expects a list of values, got {type(value).__name__}"
+        )
+    if action.choices is not None:
+        for item in value if isinstance(value, list) else [value]:
+            if item not in action.choices:
+                raise ValueError(
+                    f"config {where}={item!r} is not one of {list(action.choices)}"
+                )

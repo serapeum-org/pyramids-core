@@ -176,6 +176,39 @@ class TestApplyConfigDefaults:
         )
         assert ns.driver is None, "a non-dict section must not crash or set anything"
 
+    def test_config_value_violating_choices_is_rejected(self):
+        """A config value outside the option's `choices` is a clean error (round-2 L3)."""
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers()
+        verb = sub.add_parser("x")
+        verb.add_argument("--mode", choices=["a", "b"])
+        verb.set_defaults(func=lambda a: 0)
+        with pytest.raises(ValueError, match="is not one of"):
+            apply_config_defaults(parser, {"x": {"mode": "z"}})
+
+    def test_config_scalar_for_nargs_list_is_rejected(self):
+        """A scalar config value for a `nargs='+'` option is rejected, not char-iterated (L3)."""
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers()
+        verb = sub.add_parser("x")
+        verb.add_argument("--vars", nargs="+")
+        verb.set_defaults(func=lambda a: 0)
+        with pytest.raises(ValueError, match="expects a list"):
+            apply_config_defaults(parser, {"x": {"vars": "single"}})
+
+    def test_config_valid_choices_and_list_apply(self):
+        """Valid `choices` and list values pass validation and are applied (L3)."""
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers()
+        verb = sub.add_parser("x")
+        verb.add_argument("--mode", choices=["a", "b"])
+        verb.add_argument("--vars", nargs="+")
+        verb.set_defaults(func=lambda a: 0)
+        apply_config_defaults(parser, {"x": {"mode": "a", "vars": ["u", "v"]}})
+        ns = parser.parse_args(["x"])
+        assert ns.mode == "a", "a valid choice should be applied"
+        assert ns.vars == ["u", "v"], "a list value should be applied for nargs='+'"
+
     def test_non_dict_defaults_section_is_ignored(self):
         """A ``[defaults]`` set to a non-table is tolerated and applies nothing."""
         parser = _build_parser()
