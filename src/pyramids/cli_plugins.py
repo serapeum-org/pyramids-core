@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from importlib.metadata import entry_points
 from typing import Any
 
-from pyramids._cli_shared import emit
+from pyramids._cli_shared import emit, mark_format_support
 
 PLUGIN_GROUP = "pyramids.cli_commands"
 
@@ -181,3 +181,4 @@ def add_plugins_commands(sub: argparse._SubParsersAction) -> None:
     )
     listing.add_argument("--json", action="store_true", help="emit JSON")
     listing.set_defaults(func=_cmd_plugins_list)
+    mark_format_support(listing)

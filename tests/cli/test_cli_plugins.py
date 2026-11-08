@@ -116,6 +116,18 @@ class TestPluginsListCLI:
         assert record["name"] == "myplug", "the plugin name should be listed"
         assert record["status"] == "ok", "a clean plugin's status should be ok"
 
+    def test_list_supports_format_csv(self, monkeypatch, capsys):
+        """`--format csv plugins list` renders CSV (it is emit-routed and marked, round-2 L1)."""
+        ep = _FakeEP("myplug", _good_loader, dist=_FakeDist("pyramids-myplug", "1.2.3"))
+        monkeypatch.setattr(cli_plugins, "entry_points", lambda group=None: [ep])
+        assert main(["--format", "csv", "plugins", "list"]) == 0, (
+            "csv must not be rejected on plugins list"
+        )
+        header = capsys.readouterr().out.splitlines()[0]
+        assert header.startswith("name,"), (
+            "csv output should start with the record header"
+        )
+
     def test_installed_plugin_verb_is_dispatchable(self, monkeypatch):
         """A discovered plugin's verb is registered on the real top-level parser."""
         ep = _FakeEP("myplug", _good_loader)
