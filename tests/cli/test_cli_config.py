@@ -97,6 +97,27 @@ class TestApplyConfigDefaults:
         )
         assert ns.driver == "gpkg", "[defaults] driver should seed the verb default"
 
+    def test_only_plain_store_options_are_configurable(self):
+        """Config seeds plain value options but not booleans or append options (round-2 M1).
+
+        An ``append`` default would MERGE with the CLI value instead of being overridden, the
+        same sticky failure as a boolean — so only plain ``store`` options are configurable.
+        """
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers()
+        verb = sub.add_parser("x")
+        verb.add_argument("--store")
+        verb.add_argument("--tag", action="append")
+        verb.add_argument("--flag", action="store_true")
+        verb.set_defaults(func=lambda a: 0)
+        apply_config_defaults(parser, {"x": {"store": "s", "tag": ["t"], "flag": True}})
+        ns = parser.parse_args(["x"])
+        assert ns.store == "s", "a plain store option should be seeded"
+        assert ns.tag is None, (
+            "an append option must NOT be seeded (it would merge, not override)"
+        )
+        assert ns.flag is False, "a boolean flag must NOT be seeded"
+
     def test_boolean_flag_is_not_configurable(self):
         """A ``store_true`` flag (``overwrite``) is NOT seeded from config (M1).
 

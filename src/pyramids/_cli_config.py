@@ -10,11 +10,11 @@ the command line always wins. Precedence, highest first:
    searched upward from the working directory > ``~/.config/pyramids/config.toml``),
 3. the built-in argparse default.
 
-Only **value-taking** options are configurable. Zero-arg boolean flags (``store_true`` such
-as ``--overwrite``) are intentionally not seeded from config: there is no ``--no-<flag>``
-token to override a config ``true`` back to false, so a configured boolean would be sticky
-rather than a default — which would make the "an explicit flag always wins" rule false for
-booleans. Positionals are likewise never configured.
+Only plain **value-replacing** options (argparse ``store``) are configurable. Options the CLI
+cannot fully override are intentionally not seeded, so "an explicit flag always wins" stays
+true: zero-arg boolean flags (``store_true`` such as ``--overwrite``) have no ``--no-<flag>``
+to flip a configured ``true`` back, and ``append``/``extend`` options would *merge* the CLI
+value onto the configured default instead of replacing it. Positionals are never configured.
 
 Schema — a top-level ``[defaults]`` table applies to every verb that has the option, and a
 ``[group.command]`` table applies to that one verb (a key is only applied when the target
@@ -154,15 +154,18 @@ def apply_config_defaults(
     global_defaults = config.get("defaults", {})
     global_defaults = global_defaults if isinstance(global_defaults, dict) else {}
     for path, subparser in _iter_subparsers(parser):
-        # Only value-taking optionals are configurable. Zero-arg flags (``store_true`` etc.
-        # like ``--overwrite``) are excluded: a config ``overwrite = true`` would be sticky
-        # because there is no ``--no-overwrite`` token to override it back, which would make
-        # the "an explicit flag always wins" contract false for booleans. Positionals (no
-        # option strings) are likewise never seeded from config.
+        # Only plain value-replacing optionals are configurable. We allowlist the ``store``
+        # action and exclude everything else, because "an explicit flag always wins" only
+        # holds for options the CLI can fully override:
+        #   - zero-arg flags (``store_true``/``store_false``/``count`` like ``--overwrite``)
+        #     have no ``--no-<flag>`` token, so a configured value would be sticky;
+        #   - ``append``/``extend`` options MERGE the CLI value onto the configured default
+        #     instead of replacing it, so the configured entry is unremovable.
+        # Positionals (no option strings) are likewise never seeded from config.
         dests = {
             action.dest
             for action in subparser._actions
-            if action.option_strings and action.nargs != 0
+            if action.option_strings and isinstance(action, argparse._StoreAction)
         }
         overrides: dict[str, Any] = {
             key: value for key, value in global_defaults.items() if key in dests
