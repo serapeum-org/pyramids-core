@@ -201,6 +201,37 @@ class TestTimeDimension:
         assert "time_units" not in collapsed.attributes, "stale time_units carried over"
         assert "calendar" not in collapsed.attributes, "stale calendar carried over"
 
+    @staticmethod
+    def _two_face_mesh():
+        """A 2-face mesh over four nodes, shared by the trailing-time sel_time tests."""
+        fnc = Connectivity(
+            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
+            fill_value=-1,
+            cf_role="face_node_connectivity",
+            original_start_index=0,
+        )
+        return Mesh2d(
+            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
+            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
+            face_node_connectivity=fnc,
+            face_x=np.array([0.5, 0.5]),
+            face_y=np.array([0.3, 0.6]),
+        )
+
+    @staticmethod
+    def _face_time_var(
+        name="wl", shape=(2, 3), dimensions=("mesh2d_nFaces", "time"), **kwargs
+    ):
+        """A face-located variable on `_two_face_mesh`; the time axis is set by `dimensions`."""
+        return MeshVariable(
+            name=name,
+            location="face",
+            mesh_name="mesh2d",
+            shape=shape,
+            dimensions=dimensions,
+            **kwargs,
+        )
+
     def test_sel_time_trailing_time_axis(self):
         """sel_time collapses the real time axis, not axis 0, for trailing-time data.
 
@@ -208,28 +239,12 @@ class TestTimeDimension:
             A variable dimensioned ``(face, time)`` keeps time last. sel_time(1) must return
             every face at step 1 (the column ``data[:, 1]``), not row 1 (``data[1]``).
         """
-        fnc = Connectivity(
-            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
-            fill_value=-1,
-            cf_role="face_node_connectivity",
-            original_start_index=0,
+        var = self._face_time_var(
+            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]])
         )
-        mesh = Mesh2d(
-            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-            face_node_connectivity=fnc,
-            face_x=np.array([0.5, 0.5]),
-            face_y=np.array([0.3, 0.6]),
-        )
-        var = MeshVariable(
-            name="wl",
-            location="face",
-            mesh_name="mesh2d",
-            shape=(2, 3),
-            dimensions=("mesh2d_nFaces", "time"),
-            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
-        )
-        collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
+        collapsed = MeshDataset(self._two_face_mesh(), {"wl": var}, {}).sel_time(1)[
+            "wl"
+        ]
         assert collapsed.shape == (2,), (
             f"expected one value per face, got {collapsed.shape}"
         )
@@ -264,61 +279,21 @@ class TestTimeDimension:
             A ``(face, time)`` variable with a per-step ``(face, time)`` mask: sel_time(1)
             must keep the column ``mask[:, 1]`` (one value per face), not row ``mask[1]``.
         """
-        fnc = Connectivity(
-            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
-            fill_value=-1,
-            cf_role="face_node_connectivity",
-            original_start_index=0,
-        )
-        mesh = Mesh2d(
-            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-            face_node_connectivity=fnc,
-            face_x=np.array([0.5, 0.5]),
-            face_y=np.array([0.3, 0.6]),
-        )
-        var = MeshVariable(
-            name="wl",
-            location="face",
-            mesh_name="mesh2d",
-            shape=(2, 3),
-            dimensions=("mesh2d_nFaces", "time"),
-            _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
-            active=np.array([[True, False, False], [True, True, False]]),
-        )
-        collapsed = MeshDataset(mesh, {"wl": var}, {}).sel_time(1)["wl"]
+        collapsed = self._trailing_time_mesh_with_mask().sel_time(1)["wl"]
         np.testing.assert_array_equal(collapsed.data, [11.0, 21.0])
         assert collapsed.active.shape == (2,), (
             f"mask sliced on wrong axis: {collapsed.active.shape}"
         )
         np.testing.assert_array_equal(collapsed.active, [False, True])
 
-    @staticmethod
-    def _trailing_time_mesh_with_mask():
+    @classmethod
+    def _trailing_time_mesh_with_mask(cls):
         """A 2-face mesh with a trailing-time ``(face, time)`` variable and per-step mask."""
-        fnc = Connectivity(
-            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
-            fill_value=-1,
-            cf_role="face_node_connectivity",
-            original_start_index=0,
-        )
-        mesh = Mesh2d(
-            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-            face_node_connectivity=fnc,
-            face_x=np.array([0.5, 0.5]),
-            face_y=np.array([0.3, 0.6]),
-        )
-        var = MeshVariable(
-            name="wl",
-            location="face",
-            mesh_name="mesh2d",
-            shape=(2, 3),
-            dimensions=("mesh2d_nFaces", "time"),
+        var = cls._face_time_var(
             _data=np.array([[10.0, 11.0, 12.0], [20.0, 21.0, 22.0]]),
             active=np.array([[True, False, False], [True, True, False]]),
         )
-        return MeshDataset(mesh, {"wl": var}, {})
+        return MeshDataset(cls._two_face_mesh(), {"wl": var}, {})
 
     def test_time_sliced_active_range_uses_time_axis(self):
         """`_time_sliced_active(start, stop)` slices a per-step mask on the time axis.
@@ -351,27 +326,7 @@ class TestTimeDimension:
             The non-leading branch must materialise the array to take the step; with neither
             eager data nor a loader there is nothing to select, so it raises ValueError.
         """
-        fnc = Connectivity(
-            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
-            fill_value=-1,
-            cf_role="face_node_connectivity",
-            original_start_index=0,
-        )
-        mesh = Mesh2d(
-            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-            face_node_connectivity=fnc,
-            face_x=np.array([0.5, 0.5]),
-            face_y=np.array([0.3, 0.6]),
-        )
-        var = MeshVariable(
-            name="wl",
-            location="face",
-            mesh_name="mesh2d",
-            shape=(2, 3),
-            dimensions=("mesh2d_nFaces", "time"),
-        )
-        ds = MeshDataset(mesh, {"wl": var}, {})
+        ds = MeshDataset(self._two_face_mesh(), {"wl": self._face_time_var()}, {})
         with pytest.raises(ValueError, match="no loaded data"):
             ds.sel_time(1)
 
@@ -383,36 +338,19 @@ class TestTimeDimension:
             raises rather than taking a step that is in range for one and out of range for the
             other.
         """
-        fnc = Connectivity(
-            data=np.array([[0, 1, 2], [0, 2, 3]], dtype=np.intp),
-            fill_value=-1,
-            cf_role="face_node_connectivity",
-            original_start_index=0,
-        )
-        mesh = Mesh2d(
-            node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-            node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-            face_node_connectivity=fnc,
-            face_x=np.array([0.5, 0.5]),
-            face_y=np.array([0.3, 0.6]),
-        )
-        long_var = MeshVariable(
+        long_var = self._face_time_var(
             name="a",
-            location="face",
-            mesh_name="mesh2d",
             shape=(3, 2),
             dimensions=("time", "mesh2d_nFaces"),
             _data=np.zeros((3, 2)),
         )
-        short_var = MeshVariable(
+        short_var = self._face_time_var(
             name="b",
-            location="face",
-            mesh_name="mesh2d",
             shape=(2, 2),
             dimensions=("time", "mesh2d_nFaces"),
             _data=np.zeros((2, 2)),
         )
-        ds = MeshDataset(mesh, {"a": long_var, "b": short_var}, {})
+        ds = MeshDataset(self._two_face_mesh(), {"a": long_var, "b": short_var}, {})
         with pytest.raises(ValueError, match="time length"):
             ds.sel_time(0)
 
