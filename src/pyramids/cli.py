@@ -113,6 +113,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="ignore any pyramids.toml config file and use built-in defaults only",
     )
+    parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="show a progress indicator on stderr for multi-item write verbs (a no-op "
+        "when output is not an interactive terminal or when --quiet is set)",
+    )
     sub = parser.add_subparsers(dest="group", required=True)
 
     add_dataset_commands(sub)

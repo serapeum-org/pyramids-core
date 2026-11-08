@@ -17,8 +17,10 @@ import io
 import json
 import math
 import os
+import sys
 from collections.abc import Iterator, Mapping, Sequence
-from typing import Any
+from types import TracebackType
+from typing import Any, TextIO
 
 OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
@@ -336,6 +338,82 @@ def emit(args: argparse.Namespace, payload: Any, *, text: str | None = None) -> 
         print(text)
     else:
         print(json.dumps(json_sanitize(payload)))
+
+
+class ProgressReporter:
+    """A dependency-free progress indicator for the CLI's per-item write loops.
+
+    Writes ``\\r<label>: <done>/<total> (<pct>%)`` to stderr as items complete, and a final
+    newline on close. It is a no-op unless the user passed ``--progress`` and output is an
+    interactive terminal and ``--quiet`` was not passed — so pipes, logs, and CI stay clean.
+    When ``total`` is unknown it reports a running count without a percentage.
+
+    Use it as a context manager around a loop and call :meth:`advance` per item::
+
+        with ProgressReporter(args, len(items), label="items") as progress:
+            for item in items:
+                ...
+                progress.advance()
+
+    Args:
+        args: The parsed arguments (carries ``progress`` and ``quiet``).
+        total: The number of items, or ``None`` when it is not known up front.
+        label: A short noun for the line (e.g. ``"windows"``).
+        stream: The stream to draw on; defaults to :data:`sys.stderr` (injectable for tests).
+    """
+
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        total: int | None,
+        *,
+        label: str = "progress",
+        stream: TextIO | None = None,
+    ) -> None:
+        self._stream = stream if stream is not None else sys.stderr
+        self._total = total
+        self._label = label
+        self._done = 0
+        self.enabled = bool(
+            getattr(args, "progress", False)
+            and not getattr(args, "quiet", False)
+            and getattr(self._stream, "isatty", lambda: False)()
+        )
+
+    def advance(self, step: int = 1) -> None:
+        """Advance the counter by ``step`` items and redraw the line if enabled.
+
+        Args:
+            step: How many items completed since the last call (default ``1``).
+        """
+        self._done += step
+        if not self.enabled:
+            return
+        if self._total:
+            pct = int(100 * self._done / self._total)
+            self._stream.write(f"\r{self._label}: {self._done}/{self._total} ({pct}%)")
+        else:
+            self._stream.write(f"\r{self._label}: {self._done}")
+        self._stream.flush()
+
+    def close(self) -> None:
+        """Finish the line with a newline so later output is not glued to the bar."""
+        if self.enabled:
+            self._stream.write("\n")
+            self._stream.flush()
+
+    def __enter__(self) -> ProgressReporter:
+        """Enter the context, returning ``self``."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Close the progress line on exit (success or error)."""
+        self.close()
 
 
 def force_agg_backend() -> None:
