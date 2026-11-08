@@ -343,7 +343,9 @@ jobs:
       fail-fast: false
       matrix:
         arch: [arm64, x86_64]
-    runs-on: macos-14
+    # macos-15: GitHub retired the macos-14 runner config (macos-14-arm64-us-default),
+    # so jobs pinned to macos-14 are cancelled at dispatch before a runner is assigned.
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -511,7 +513,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, windows-2022]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-2022]
         python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
           - os: ubuntu-latest
@@ -522,7 +524,7 @@ jobs:
             arch: aarch64
             artifact: wheels-linux-aarch64
             wheel-tag: manylinux
-          - os: macos-14
+          - os: macos-15
             arch: arm64
             artifact: wheels-macos-arm64
             wheel-tag: macosx
@@ -907,7 +909,7 @@ jobs:
           pytest -q -o "pythonpath=" --timeout=60 --timeout-method=thread
           -n auto --dist loadfile -m "core and not vfs and not slow" tests/
 
-  # The macOS x86_64 wheel is cross-compiled on an arm64 macos-14 host, so
+  # The macOS x86_64 wheel is cross-compiled on an arm64 macos-15 host, so
   # cibuildwheel can't run it, and GitHub's macos-13 Intel runners are unusable
   # in practice (an added macos-13 test cell sat queued 12h, never assigned a
   # runner). Verify the wheel here instead by running an x86_64 CPython under
