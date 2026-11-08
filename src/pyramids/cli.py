@@ -53,6 +53,7 @@ from pyramids.cli_completion import add_completion_commands
 from pyramids.cli_dataset import add_dataset_commands
 from pyramids.cli_netcdf import add_netcdf_commands
 from pyramids.cli_ogc import add_ogc_commands
+from pyramids.cli_plugins import add_plugins_commands, load_plugin_commands
 from pyramids.cli_stac import add_stac_commands
 from pyramids.cli_ugrid import add_ugrid_commands
 from pyramids.cli_vector import add_vector_commands
@@ -123,6 +124,10 @@ def _build_parser() -> argparse.ArgumentParser:
     add_ugrid_commands(sub)
     add_processing_commands(sub)
     add_completion_commands(sub)
+    add_plugins_commands(sub)
+    # Installed third-party plugins contribute their own verbs; a broken one is skipped,
+    # never fatal (its error is surfaced by `pyramids plugins list`).
+    load_plugin_commands(sub)
 
     return parser
 
