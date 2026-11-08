@@ -164,11 +164,12 @@ def json_sanitize(obj: Any) -> Any:
 def resolved_format(args: argparse.Namespace) -> str:
     """Return the output format a command should use: ``text``/``json``/``csv``/``table``.
 
-    The global ``--format`` wins; the legacy per-command ``--json`` flag is honored as an
-    alias for ``--format json`` (so older scripts keep working). Defaults to ``text``.
+    The global ``--format`` (stored on ``output_format`` to avoid colliding with a verb-level
+    ``--format``) wins; the legacy per-command ``--json`` flag is honored as an alias for
+    ``--format json`` (so older scripts keep working). Defaults to ``text``.
 
     Args:
-        args: The parsed arguments (may carry ``format`` and/or ``json``).
+        args: The parsed arguments (may carry ``output_format`` and/or ``json``).
 
     Returns:
         str: One of :data:`OUTPUT_FORMATS`.
@@ -178,13 +179,13 @@ def resolved_format(args: argparse.Namespace) -> str:
             ```python
             >>> import argparse
             >>> from pyramids._cli_shared import resolved_format
-            >>> resolved_format(argparse.Namespace(json=True, format=None))
+            >>> resolved_format(argparse.Namespace(json=True, output_format=None))
             'json'
 
             ```
         - An explicit ``--format`` wins over the ``--json`` alias:
             ```python
-            >>> resolved_format(argparse.Namespace(json=True, format="csv"))
+            >>> resolved_format(argparse.Namespace(json=True, output_format="csv"))
             'csv'
 
             ```
@@ -195,9 +196,9 @@ def resolved_format(args: argparse.Namespace) -> str:
 
             ```
     """
-    fmt = getattr(args, "format", None)
+    fmt = getattr(args, "output_format", None)
     if fmt:
-        return fmt
+        return str(fmt)
     return "json" if getattr(args, "json", False) else "text"
 
 
@@ -338,13 +339,13 @@ def emit(args: argparse.Namespace, payload: Any, *, text: str | None = None) -> 
             ```python
             >>> import argparse
             >>> from pyramids._cli_shared import emit
-            >>> emit(argparse.Namespace(format="json"), {"a": 1, "b": 2})
+            >>> emit(argparse.Namespace(output_format="json"), {"a": 1, "b": 2})
             {"a": 1, "b": 2}
 
             ```
         - CSV flattens a dict to a header + one row:
             ```python
-            >>> emit(argparse.Namespace(format="csv"), {"a": 1, "b": 2})
+            >>> emit(argparse.Namespace(output_format="csv"), {"a": 1, "b": 2})
             a,b
             1,2
 

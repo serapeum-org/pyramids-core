@@ -180,6 +180,25 @@ class TestNcTimeValues:
         assert payload["values"]
         assert all(isinstance(value, (int, float)) for value in payload["values"])
 
+    def test_global_format_json_coexists_with_verb_format(self, capsys):
+        """Global `--format json` works even though this verb has its own `--format` strftime.
+
+        The global flag stores on ``output_format`` so it does not collide with the verb's
+        ``--format`` (which keeps dest ``format``).
+        """
+        assert main(["--format", "json", "nc", "time-values", str(_NC)]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["var"] == "time", (
+            "global --format json must still emit the JSON payload"
+        )
+
+    def test_verb_format_strftime_still_controls_labels(self, capsys):
+        """The verb's own `--format` strftime still formats the labels (no clobber)."""
+        assert main(["nc", "time-values", str(_NC), "--format", "%Y"]) == 0
+        assert "time:" in capsys.readouterr().out, (
+            "the verb --format should still render labels"
+        )
+
     def test_raw_non_time_var_is_empty(self, capsys):
         """--raw on a non-time variable yields an empty list and exits 0 (issue #1467)."""
         assert (

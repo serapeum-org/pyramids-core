@@ -95,6 +95,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--format",
+        # A distinct dest so the global flag never collides with a verb-level --format (e.g.
+        # `nc time-values --format <strftime>`), whose own dest stays `format`.
+        dest="output_format",
         choices=OUTPUT_FORMATS,
         default=None,
         help="output format for data-emitting verbs (info/bounds/stats/list/...): "
@@ -195,15 +198,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         # Normalize --json to the resolved output format so verbs routed through emit() and
         # verbs that still read args.json directly agree. --format wins over the legacy --json
         # alias; csv/table (and text) resolve json to False.
-        args.json = resolved_format(args) == "json"
+        output_format = resolved_format(args)
+        args.json = output_format == "json"
         # csv/table are rendered only by verbs routed through emit() (they call
         # mark_format_support). Reject them on any other verb with a clear error instead of
         # silently printing the text form. json is unaffected — it bridges to every --json verb.
-        if args.format in ("csv", "table") and not getattr(
+        if output_format in ("csv", "table") and not getattr(
             args, "supports_format", False
         ):
             raise ValueError(
-                f"this command does not support --format {args.format}; csv/table are "
+                f"this command does not support --format {output_format}; csv/table are "
                 "available on the tabular verbs (e.g. vector info/bounds, nc groups/list-vars, "
                 "mesh mesh-names). Use --format json, or omit --format for text."
             )
