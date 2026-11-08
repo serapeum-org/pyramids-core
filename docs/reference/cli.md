@@ -43,7 +43,7 @@ These global flags go **before** the command and apply across the CLI:
   ```
 
 - **`--progress`** — show a progress indicator on stderr for multi-item write verbs (e.g. `collection resample`,
-  `vector explode-gpx`). It is a no-op when stderr is not an interactive terminal (pipes, logs, CI) or when
+  `vector read-gpx`). It is a no-op when stderr is not an interactive terminal (pipes, logs, CI) or when
   `--quiet` is set.
 
 **Shell completion** — `pyramids completion {bash,zsh,fish}` prints the completion hook for your shell. Completion

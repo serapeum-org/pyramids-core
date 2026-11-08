@@ -333,10 +333,11 @@ def _render_table(payload: Any) -> str:
 def emit(args: argparse.Namespace, payload: Any, *, text: str | None = None) -> None:
     """Print ``payload`` in the format the user asked for (``--format`` / ``--json``).
 
-    The single output sink for a data-emitting verb. ``json`` reproduces the previous
-    ``json.dumps(json_sanitize(payload))`` byte-for-byte; ``csv`` and ``table`` flatten the
-    payload into records; ``text`` prints ``text`` when the caller supplied a bespoke
-    human rendering, otherwise it falls back to JSON.
+    The single output sink for a data-emitting verb. ``json`` prints the sanitized compact
+    form ``json.dumps(json_sanitize(payload))`` (so a non-finite float becomes ``null``
+    rather than invalid ``NaN``); ``csv`` and ``table`` flatten the payload into records;
+    ``text`` prints ``text`` when the caller supplied a bespoke human rendering, otherwise it
+    falls back to JSON.
 
     Args:
         args: The parsed arguments (carries ``format`` / ``json``).
