@@ -49,6 +49,7 @@ from pyramids._cli_config import apply_config_defaults, find_config_file, load_c
 from pyramids._cli_shared import OUTPUT_FORMATS
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
+from pyramids.cli_completion import add_completion_commands
 from pyramids.cli_dataset import add_dataset_commands
 from pyramids.cli_netcdf import add_netcdf_commands
 from pyramids.cli_ogc import add_ogc_commands
@@ -121,6 +122,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_ogc_commands(sub)
     add_ugrid_commands(sub)
     add_processing_commands(sub)
+    add_completion_commands(sub)
 
     return parser
 
