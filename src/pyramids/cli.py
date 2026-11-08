@@ -45,6 +45,7 @@ from collections.abc import Sequence
 from shapely.errors import GEOSException
 
 from pyramids import __version__
+from pyramids._cli_config import apply_config_defaults, find_config_file, load_config
 from pyramids._cli_shared import OUTPUT_FORMATS
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
@@ -98,6 +99,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "'json' is honored by every verb that supports --json; 'csv'/'table' by the "
         "tabular verbs. Place it before the command, e.g. `pyramids --format json vector info ...`",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        metavar="PATH",
+        help="read per-command defaults from this pyramids.toml (overrides discovery of a "
+        "nearby pyramids.toml / PYRAMIDS_CONFIG / ~/.config/pyramids/config.toml)",
+    )
+    parser.add_argument(
+        "--no-config",
+        action="store_true",
+        help="ignore any pyramids.toml config file and use built-in defaults only",
+    )
     sub = parser.add_subparsers(dest="group", required=True)
 
     add_dataset_commands(sub)
@@ -110,6 +123,27 @@ def _build_parser() -> argparse.ArgumentParser:
     add_processing_commands(sub)
 
     return parser
+
+
+def _apply_config(parser: argparse.ArgumentParser, argv: Sequence[str] | None) -> None:
+    """Load a ``pyramids.toml`` and set its per-command defaults on ``parser``.
+
+    Peeks at ``--config`` / ``--no-config`` with a throwaway parser (the real parse needs a
+    subcommand, which may be absent here), resolves the config file, and applies its
+    defaults so an explicit CLI flag still overrides them. ``--no-config`` skips it.
+
+    Args:
+        parser: The fully built top-level parser to apply defaults onto.
+        argv: The raw argument list being parsed.
+    """
+    peek = argparse.ArgumentParser(add_help=False)
+    peek.add_argument("--config", default=None)
+    peek.add_argument("--no-config", action="store_true")
+    known, _ = peek.parse_known_args(argv)
+    if known.no_config:
+        return
+    config = load_config(find_config_file(known.config))
+    apply_config_defaults(parser, config)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -131,6 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ```
     """
     parser = _build_parser()
+    _apply_config(parser, argv)
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
