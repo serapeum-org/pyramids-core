@@ -216,36 +216,6 @@ def mark_format_support(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(supports_format=True)
 
 
-def structured_requested(args: argparse.Namespace) -> bool:
-    """Return ``True`` when the user asked for machine-readable output (not ``text``).
-
-    Args:
-        args: The parsed arguments.
-
-    Returns:
-        bool: ``True`` for ``json``/``csv``/``table``, ``False`` for ``text``.
-
-    Examples:
-        - A format of ``csv`` counts as structured:
-            ```python
-            >>> import argparse
-            >>> from pyramids._cli_shared import structured_requested
-            >>> structured_requested(argparse.Namespace(json=False, format="csv"))
-            True
-
-            ```
-        - Plain text (or nothing set) is not structured:
-            ```python
-            >>> structured_requested(argparse.Namespace(json=False, format="text"))
-            False
-            >>> structured_requested(argparse.Namespace())
-            False
-
-            ```
-    """
-    return resolved_format(args) != "text"
-
-
 def _rows_from_payload(payload: Any) -> list[dict[str, Any]]:
     """Normalise a payload into a list of flat records for CSV/table rendering.
 

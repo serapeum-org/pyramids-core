@@ -10,7 +10,6 @@ import pytest
 from pyramids._cli_shared import (
     emit,
     resolved_format,
-    structured_requested,
 )
 from pyramids.cli import main
 
@@ -18,7 +17,7 @@ pytestmark = pytest.mark.core
 
 
 class TestResolvedFormat:
-    """`resolved_format` / `structured_requested` precedence."""
+    """`resolved_format` precedence."""
 
     def test_json_flag_is_an_alias(self):
         """The legacy ``--json`` flag resolves to the ``json`` format."""
@@ -38,10 +37,9 @@ class TestResolvedFormat:
         )
 
     def test_default_is_text(self):
-        """Nothing set falls back to ``text`` and is not 'structured'."""
+        """Nothing set falls back to ``text``."""
         args = argparse.Namespace()
         assert resolved_format(args) == "text", "default should be text"
-        assert structured_requested(args) is False, "text is not a structured format"
 
 
 class TestEmit:
