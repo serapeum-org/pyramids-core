@@ -226,6 +226,15 @@ class TestConfigThroughCLI:
         )
         assert rc == 0, "--no-config must skip resolving the (missing) config entirely"
 
+    def test_bad_config_does_not_block_help(self, tmp_path, capsys):
+        """`--help` still works even when `--config` points at a missing file (round-2 L2)."""
+        with pytest.raises(SystemExit) as exc:
+            main(["--config", str(tmp_path / "nope.toml"), "--help"])
+        assert exc.value.code == 0, "--help should exit 0 despite a broken config"
+        assert "usage:" in capsys.readouterr().out.lower(), (
+            "help text should still be shown"
+        )
+
     def test_missing_config_is_clean_error_not_traceback(self, tmp_path, capsys):
         """A bad ``--config`` exits 1 with an ``error:`` line, not an uncaught traceback (M2)."""
         rc = main(

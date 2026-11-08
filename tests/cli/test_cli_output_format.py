@@ -180,3 +180,10 @@ class TestGlobalFormatThroughCLI:
         assert capsys.readouterr().out.strip().startswith("{"), (
             "info should emit a JSON object"
         )
+
+    def test_format_text_overrides_json_flag_on_direct_verb(self, cli_raster, capsys):
+        """`--format text` + verb `--json` prints text even on a direct-args.json verb (round-2 N3)."""
+        assert main(["--format", "text", "info", cli_raster, "--json"]) == 0
+        assert not capsys.readouterr().out.strip().startswith("{"), (
+            "text must win over --json"
+        )

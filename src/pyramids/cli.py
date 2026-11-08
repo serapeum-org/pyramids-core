@@ -46,7 +46,7 @@ from shapely.errors import GEOSException
 
 from pyramids import __version__
 from pyramids._cli_config import apply_config_defaults, find_config_file, load_config
-from pyramids._cli_shared import OUTPUT_FORMATS
+from pyramids._cli_shared import OUTPUT_FORMATS, resolved_format
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
 from pyramids.cli_completion import add_completion_commands
@@ -181,15 +181,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
     try:
-        # Config resolution is inside the try so a bad --config / PYRAMIDS_CONFIG / invalid
-        # TOML becomes the CLI's clean `error:` line (exit 1), not an uncaught traceback.
-        _apply_config(parser, argv)
+        # Resolve config defaults inside the try so a bad --config / PYRAMIDS_CONFIG / invalid
+        # TOML becomes the CLI's clean `error:` line, not a traceback. Defer any such error
+        # until AFTER parse_args so `--help`/`--version` still work with a broken config.
+        config_error: Exception | None = None
+        try:
+            _apply_config(parser, argv)
+        except (ValueError, OSError) as exc:
+            config_error = exc
         args = parser.parse_args(argv)
-        # Bridge the global `--format json` onto the legacy per-command `--json` flag so
-        # every verb that already supports `--json` emits JSON under `--format json`, with
-        # no per-verb change. `csv`/`table` are handled by the verbs migrated to `emit`.
-        if getattr(args, "format", None) == "json" and not getattr(args, "json", False):
-            args.json = True
+        if config_error is not None:
+            raise config_error
+        # Normalize --json to the resolved output format so verbs routed through emit() and
+        # verbs that still read args.json directly agree. --format wins over the legacy --json
+        # alias; csv/table (and text) resolve json to False.
+        args.json = resolved_format(args) == "json"
         # csv/table are rendered only by verbs routed through emit() (they call
         # mark_format_support). Reject them on any other verb with a clear error instead of
         # silently printing the text form. json is unaffected — it bridges to every --json verb.
