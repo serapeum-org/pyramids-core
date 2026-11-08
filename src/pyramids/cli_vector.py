@@ -10,9 +10,9 @@ command maps 1:1 onto an existing ``FeatureCollection`` call.
 from __future__ import annotations
 
 import argparse
-import json
 
 from pyramids._cli_shared import (
+    emit,
     info_print,
     json_safe,
     refuse_existing,
@@ -56,11 +56,8 @@ def _cmd_vector_info(args: argparse.Namespace) -> int:
         "columns": [column for column in fc.columns if column != geom_col],
         "bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)],
     }
-    if args.json:
-        print(json.dumps(payload))
-    else:
-        for key, value in payload.items():
-            print(f"{key}: {value}")
+    text = "\n".join(f"{key}: {value}" for key, value in payload.items())
+    emit(args, payload, text=text)
     return 0
 
 
@@ -78,10 +75,7 @@ def _cmd_vector_bounds(args: argparse.Namespace) -> int:
         fc = fc.to_crs(args.crs)
     minx, miny, maxx, maxy = (float(value) for value in fc.total_bounds)
     payload = {"bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)]}
-    if args.json:
-        print(json.dumps(payload))
-    else:
-        print(f"{minx} {miny} {maxx} {maxy}")
+    emit(args, payload, text=f"{minx} {miny} {maxx} {maxy}")
     return 0
 
 

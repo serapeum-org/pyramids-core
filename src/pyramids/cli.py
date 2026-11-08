@@ -45,6 +45,7 @@ from collections.abc import Sequence
 from shapely.errors import GEOSException
 
 from pyramids import __version__
+from pyramids._cli_shared import OUTPUT_FORMATS
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
 from pyramids.cli_dataset import add_dataset_commands
@@ -89,6 +90,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="suppress informational output, e.g. 'wrote ...' (errors still print); "
         "place it before the command, e.g. `pyramids --quiet warp ...`",
     )
+    parser.add_argument(
+        "--format",
+        choices=OUTPUT_FORMATS,
+        default=None,
+        help="output format for data-emitting verbs (info/bounds/stats/list/...): "
+        "'json' is honored by every verb that supports --json; 'csv'/'table' by the "
+        "tabular verbs. Place it before the command, e.g. `pyramids --format json vector info ...`",
+    )
     sub = parser.add_subparsers(dest="group", required=True)
 
     add_dataset_commands(sub)
@@ -125,6 +134,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
+    # Bridge the global `--format json` onto the legacy per-command `--json` flag so
+    # every verb that already supports `--json` emits JSON under `--format json`, with
+    # no per-verb change. `csv`/`table` are handled by the verbs migrated to `emit`.
+    if getattr(args, "format", None) == "json" and not getattr(args, "json", False):
+        args.json = True
     try:
         result: int = args.func(args)
     except (

@@ -28,6 +28,7 @@ from scipy.sparse import save_npz
 from shapely.geometry import LineString, Point, Polygon
 
 from pyramids._cli_shared import (
+    emit,
     info_print,
     json_sanitize,
     map_lookup_errors,
@@ -125,11 +126,7 @@ def _cmd_mesh_names(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     names = MeshDataset.mesh_names(args.file, driver=args.driver)
-    if args.json:
-        print(json.dumps({"mesh_names": names}))
-    else:
-        for name in names:
-            print(name)
+    emit(args, {"mesh_names": names}, text="\n".join(names))
     return 0
 
 

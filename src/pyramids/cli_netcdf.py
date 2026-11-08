@@ -20,7 +20,7 @@ import io
 import json
 from typing import Any
 
-from pyramids._cli_shared import info_print, json_safe, refuse_existing
+from pyramids._cli_shared import emit, info_print, json_safe, refuse_existing
 from pyramids.cli_netcdf_cftime import add_nc_cftime_commands
 from pyramids.cli_netcdf_inspect import add_nc_inspect_commands
 from pyramids.cli_netcdf_io import add_nc_io_commands
@@ -84,12 +84,8 @@ def _cmd_nc_groups(args: argparse.Namespace) -> int:
         int: ``0`` on success (an empty list for a flat / classic store).
     """
     names = list(NetCDF.read_file(args.file).group_names)
-    if args.json:
-        print(json.dumps({"path": args.file, "groups": names}))
-    else:
-        print(f"file: {args.file}")
-        for name in names:
-            print(f"  - {name}")
+    text = "\n".join([f"file: {args.file}", *(f"  - {name}" for name in names)])
+    emit(args, {"path": args.file, "groups": names}, text=text)
     return 0
 
 
@@ -126,12 +122,8 @@ def _cmd_nc_list_vars(args: argparse.Namespace) -> int:
     """
     nc = NetCDF.read_file(args.file)
     names = list(nc.variable_names)
-    if args.json:
-        print(json.dumps({"path": args.file, "variables": names}))
-    else:
-        print(f"file: {args.file}")
-        for name in names:
-            print(f"  - {name}")
+    text = "\n".join([f"file: {args.file}", *(f"  - {name}" for name in names)])
+    emit(args, {"path": args.file, "variables": names}, text=text)
     return 0
 
 
