@@ -141,3 +141,20 @@ class TestGlobalFormatThroughCLI:
         """With no format flag the verb prints its human text form."""
         assert main(["vector", "info", cli_points]) == 0
         assert "features: 5" in capsys.readouterr().out, "text output must be unchanged"
+
+    def test_csv_on_unsupported_verb_is_a_clean_error(self, cli_raster, capsys):
+        """`--format csv` on a verb that doesn't support it errors, not silent text (M3)."""
+        rc = main(["--format", "csv", "info", cli_raster])
+        assert rc == 1, "csv on an unsupported verb must fail, not silently print text"
+        assert "does not support --format csv" in capsys.readouterr().err, (
+            "error must name the format"
+        )
+
+    def test_json_still_works_on_unsupported_verb(self, cli_raster, capsys):
+        """`--format json` still bridges to every --json-capable verb (not gated by M3)."""
+        assert main(["--format", "json", "info", cli_raster]) == 0, (
+            "json bridge is unaffected"
+        )
+        assert capsys.readouterr().out.strip().startswith("{"), (
+            "info should emit a JSON object"
+        )

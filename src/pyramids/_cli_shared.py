@@ -200,6 +200,21 @@ def resolved_format(args: argparse.Namespace) -> str:
     return getattr(args, "format", None) or "text"
 
 
+def mark_format_support(parser: argparse.ArgumentParser) -> None:
+    """Flag a verb's parser as rendering ``--format csv``/``table`` (not only ``json``).
+
+    Every verb honors ``--format json`` through the ``--json`` bridge, but ``csv``/``table``
+    only work on verbs routed through :func:`emit`. Calling this on such a verb's parser sets
+    a ``supports_format`` default that the top-level dispatcher checks, so ``--format
+    csv``/``table`` on a verb that did *not* call this is rejected with a clear error instead
+    of silently printing text.
+
+    Args:
+        parser: The subcommand parser whose verb renders csv/table via :func:`emit`.
+    """
+    parser.set_defaults(supports_format=True)
+
+
 def structured_requested(args: argparse.Namespace) -> bool:
     """Return ``True`` when the user asked for machine-readable output (not ``text``).
 

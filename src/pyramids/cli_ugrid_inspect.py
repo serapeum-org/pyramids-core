@@ -32,6 +32,7 @@ from pyramids._cli_shared import (
     info_print,
     json_sanitize,
     map_lookup_errors,
+    mark_format_support,
     refuse_existing,
     resolve_vector_driver,
 )
@@ -446,6 +447,7 @@ def _add_mesh_names(msub: argparse._SubParsersAction) -> None:
     parser.add_argument("--driver", help="mesh driver name (default: detect)")
     parser.add_argument("--json", action="store_true", help=_HELP_JSON)
     parser.set_defaults(func=_cmd_mesh_names)
+    mark_format_support(parser)
 
 
 def _add_get(msub: argparse._SubParsersAction) -> None:

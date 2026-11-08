@@ -15,6 +15,7 @@ from pyramids._cli_shared import (
     emit,
     info_print,
     json_safe,
+    mark_format_support,
     refuse_existing,
 )
 from pyramids._cli_shared import (
@@ -169,6 +170,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_info.add_argument("--layer", help="layer name/index for multi-layer sources")
     v_info.add_argument("--json", action="store_true", help="emit JSON")
     v_info.set_defaults(func=_cmd_vector_info)
+    mark_format_support(v_info)
 
     v_bounds = vsub.add_parser("bounds", help="print the vector bounding box")
     v_bounds.add_argument("src", help=_HELP_SRC_VECTOR)
@@ -176,6 +178,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_bounds.add_argument("--crs", help="reproject bounds to this CRS first")
     v_bounds.add_argument("--json", action="store_true", help="emit JSON")
     v_bounds.set_defaults(func=_cmd_vector_bounds)
+    mark_format_support(v_bounds)
 
     v_conv = vsub.add_parser("convert", help="re-save a vector in another format")
     v_conv.add_argument("src", help=_HELP_SRC_VECTOR)

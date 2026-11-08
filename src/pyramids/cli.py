@@ -190,6 +190,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         # no per-verb change. `csv`/`table` are handled by the verbs migrated to `emit`.
         if getattr(args, "format", None) == "json" and not getattr(args, "json", False):
             args.json = True
+        # csv/table are rendered only by verbs routed through emit() (they call
+        # mark_format_support). Reject them on any other verb with a clear error instead of
+        # silently printing the text form. json is unaffected — it bridges to every --json verb.
+        if args.format in ("csv", "table") and not getattr(
+            args, "supports_format", False
+        ):
+            raise ValueError(
+                f"this command does not support --format {args.format}; csv/table are "
+                "available on the tabular verbs (e.g. vector info/bounds, nc groups/list-vars, "
+                "mesh mesh-names). Use --format json, or omit --format for text."
+            )
         result: int = args.func(args)
     except (
         ValueError,

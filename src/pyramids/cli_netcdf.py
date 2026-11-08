@@ -20,7 +20,13 @@ import io
 import json
 from typing import Any
 
-from pyramids._cli_shared import emit, info_print, json_safe, refuse_existing
+from pyramids._cli_shared import (
+    emit,
+    info_print,
+    json_safe,
+    mark_format_support,
+    refuse_existing,
+)
 from pyramids.cli_netcdf_cftime import add_nc_cftime_commands
 from pyramids.cli_netcdf_inspect import add_nc_inspect_commands
 from pyramids.cli_netcdf_io import add_nc_io_commands
@@ -242,6 +248,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_groups.add_argument("file", help=_HELP_NC_FILE)
     nc_groups.add_argument("--json", action="store_true", help="emit JSON")
     nc_groups.set_defaults(func=_cmd_nc_groups)
+    mark_format_support(nc_groups)
 
     nc_gg = ncsub.add_parser("get-group", help="write one sub-group out as a NetCDF")
     nc_gg.add_argument("file", help=_HELP_NC_FILE)
@@ -256,6 +263,7 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_list.add_argument("file", help=_HELP_NC_FILE)
     nc_list.add_argument("--json", action="store_true", help="emit JSON")
     nc_list.set_defaults(func=_cmd_nc_list_vars)
+    mark_format_support(nc_list)
 
     nc_ex = ncsub.add_parser("extract", help="extract one variable to a raster")
     nc_ex.add_argument("file", help=_HELP_NC_FILE)
