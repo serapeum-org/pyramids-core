@@ -27,9 +27,10 @@ pyramids is a high-level, object-oriented layer over these; you rarely call them
 | [serapeum-org](https://github.com/serapeum-org) | the umbrella org — pyramids, cleopatra, and shared CI/tooling live here. |
 
 !!! tip "Plugins extend the core through entry points"
-    Beyond the companion libraries above, pyramids has a plugin system: packages such as `pyramids-eo`,
-    `pyramids-mesh`, `digitalearth` and `pyramids-citymodels` register new formats, sources and renderers into
-    the core through entry-point hooks. See the [Plugins & extensions catalog](plugins.md) for the full list,
+    Beyond the companion libraries above, pyramids has a plugin system: packages such as `pyramids-lazy`
+    (the Dask compute backend), `pyramids-eo`, `pyramids-mesh`, `digitalearth` and `pyramids-citymodels` register
+    new compute backends, formats, sources and renderers into the core through entry-point hooks. See the
+    [Plugins & extensions catalog](plugins.md) for the full list,
     and [Extending pyramids](extending-pyramids.md) to write your own.
 
 ## Integrations

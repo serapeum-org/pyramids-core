@@ -1,7 +1,8 @@
 # Plugins & extensions
 
 pyramids has a small **plugin system**: a separate package can teach the core new file formats, new data
-sources, or new renderers by registering into one of pyramids' entry-point groups. Installing such a package
+sources, new renderers, or a new compute backend by registering into one of pyramids' entry-point groups.
+Installing such a package
 into the same environment is all it takes — pyramids discovers the plugin through Python
 [entry points](https://packaging.python.org/en/latest/specifications/entry-points/) at import time, with **no
 import coupling**: pyramids never imports a plugin, and a bare install behaves exactly as before.
@@ -22,10 +23,36 @@ documentation site — follow the **Docs** link for its full API and examples. T
 
 | Plugin | Hook group | What it adds | Docs |
 |--------|-----------|--------------|------|
+| [`pyramids-lazy`](https://github.com/serapeum-org/pyramids-lazy) | `pyramids.compute_backend` | Lazy / Dask out-of-core compute backend — chunked reads, Zarr & kerchunk writes and partitioned vector ops across `Dataset`, `NetCDF`, `DatasetCollection` and `FeatureCollection` | [Lazy computation guide](tutorials/lazy/lazy-compute.md) |
 | [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) | `pyramids.raster_drivers` | Remote-sensing / Earth-observation tier — raster drivers for Google Earth Engine, Sentinel-2, SEVIRI and EUMETSAT FCI sources | [serapeum-org.github.io/pyramids-eo](https://serapeum-org.github.io/pyramids-eo) |
 | [`pyramids-mesh`](https://github.com/serapeum-org/pyramids-mesh) | `pyramids.mesh_drivers` | Mesh file-format drivers — 2DM, Selafin, DFSU, XMDF, PLY, SWW, HEC-RAS, ADCIRC, SCHISM, GMSH and more | [serapeum-org.github.io/pyramids-mesh](https://serapeum-org.github.io/pyramids-mesh) |
 | [`digitalearth`](https://github.com/serapeum-org/Digital-Earth) | `pyramids.plot_backends` | Geospatial visualization — `interactive`, `3d` and `web` plot backends for `Dataset.plot(backend=...)` | [serapeum-org.github.io/Digital-Earth](https://serapeum-org.github.io/Digital-Earth) |
 | [`pyramids-citymodels`](https://github.com/serapeum-org/pyramids-citymodels) | `pyramids.vector_drivers` | 3D city-model vector drivers — CityJSON, CityGML and 3D Tiles | [serapeum-org.github.io/pyramids-citymodels](https://serapeum-org.github.io/pyramids-citymodels) |
+
+## pyramids-lazy — Dask-backed out-of-core compute
+
+`pyramids-lazy` is the **compute backend** behind pyramids' lazy layer. Unlike the format-driver plugins below, it
+adds no new file types — it supplies the Dask engine that `Dataset.read_array(chunks=…)`, `NetCDF.to_kerchunk`,
+`DatasetCollection.from_stac`, `FeatureCollection.read_file(..., backend="dask")` and the rest of the lazy API
+route to. A bare `pyramids-core` keeps all those entry points; calling one without the backend raises a branded
+error telling you to install it. Installing `pyramids-lazy` into the same environment turns them all on, with no
+code change.
+
+Because the user-facing API lives in core, the full how-to stays in these docs — the
+[Lazy computation guide](tutorials/lazy/lazy-compute.md) — rather than in a separate site.
+
+```bash
+pip install pyramids-lazy             # dask / zarr / kerchunk — the raster, NetCDF and cube lazy paths
+pip install "pyramids-lazy[parquet]"  # + the lazy vector path (adds dask-geopandas)
+```
+
+```python
+from pyramids.dataset import Dataset
+
+# with pyramids-lazy installed, read_array returns a dask.array.Array instead of a NumPy array
+chunked = Dataset.read_file("big-raster.tif").read_array(chunks=(1, 2048, 2048))
+mean = chunked.mean().compute()   # the graph runs across Dask workers
+```
 
 ## pyramids-eo — Earth-observation raster sources
 
