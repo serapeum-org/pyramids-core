@@ -178,16 +178,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             ```
     """
     parser = _build_parser()
-    _apply_config(parser, argv)
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
-    args = parser.parse_args(argv)
-    # Bridge the global `--format json` onto the legacy per-command `--json` flag so
-    # every verb that already supports `--json` emits JSON under `--format json`, with
-    # no per-verb change. `csv`/`table` are handled by the verbs migrated to `emit`.
-    if getattr(args, "format", None) == "json" and not getattr(args, "json", False):
-        args.json = True
     try:
+        # Config resolution is inside the try so a bad --config / PYRAMIDS_CONFIG / invalid
+        # TOML becomes the CLI's clean `error:` line (exit 1), not an uncaught traceback.
+        _apply_config(parser, argv)
+        args = parser.parse_args(argv)
+        # Bridge the global `--format json` onto the legacy per-command `--json` flag so
+        # every verb that already supports `--json` emits JSON under `--format json`, with
+        # no per-verb change. `csv`/`table` are handled by the verbs migrated to `emit`.
+        if getattr(args, "format", None) == "json" and not getattr(args, "json", False):
+            args.json = True
         result: int = args.func(args)
     except (
         ValueError,

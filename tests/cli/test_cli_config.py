@@ -193,3 +193,23 @@ class TestConfigThroughCLI:
             ]
         )
         assert rc == 1, "--no-config must ignore the config's overwrite default"
+
+    def test_missing_config_is_clean_error_not_traceback(self, tmp_path, capsys):
+        """A bad ``--config`` exits 1 with an ``error:`` line, not an uncaught traceback (M2)."""
+        rc = main(
+            ["--config", str(tmp_path / "nope.toml"), "vector", "info", "x.geojson"]
+        )
+        assert rc == 1, "a missing --config should map to a clean exit 1"
+        assert capsys.readouterr().err.startswith("error:"), (
+            "it should print a one-line error:"
+        )
+
+    def test_invalid_toml_through_main_is_clean_error(self, tmp_path, capsys):
+        """An invalid config file surfaces as ``error:`` + exit 1 through ``main`` (M2)."""
+        cfg = tmp_path / "pyramids.toml"
+        cfg.write_text("x = = =")
+        rc = main(["--config", str(cfg), "vector", "info", "x.geojson"])
+        assert rc == 1, "a malformed config should map to a clean exit 1"
+        assert "invalid config file" in capsys.readouterr().err, (
+            "the TOML error should be reported"
+        )
