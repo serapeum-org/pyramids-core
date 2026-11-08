@@ -15,6 +15,12 @@ Discovery is failure-isolated: a plugin that fails to import or raises while reg
 recorded and skipped, never crashing the whole CLI. ``pyramids plugins list`` reports what
 is installed and whether each plugin loaded. Everything here is standard-library
 (:mod:`importlib.metadata`), so it adds no dependency.
+
+Startup trade-off: plugin registration callables are imported and run on **every** invocation
+(including ``--help``/``--version``), because the full command tree must be known before
+argparse parses. This is the standard entry-point-plugin cost; lazy loading (only when the
+dispatched group is unknown to the built-ins) is a possible future optimization if startup
+latency ever matters, but it is deliberately out of scope here.
 """
 
 from __future__ import annotations
