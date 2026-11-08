@@ -1,5 +1,36 @@
 ﻿# Change log
 
+## 0.75.0 (2026-11-08)
+
+### BREAKING CHANGE
+
+- Cell.array_to_map_coordinates is removed; use
+Dataset.xy with center=False for the old corner-based behaviour.
+total_bounds is now abstract on RasterBase, so any subclass that
+implemented only bbox must also provide total_bounds.
+- `UgridDataset`, `Network1d` and `UgridMetadata` are renamed
+to `MeshDataset`, `Mesh1d` and `MeshMetadata`, and `pyramids.netcdf.ugrid.network`
+to `pyramids.netcdf.ugrid.mesh1d`. The old names still work for one release
+via deprecation aliases and will be removed in a future release.
+
+### Feat
+
+- **ugrid**: add mesh sel-time CLI verb and fix the time-collapse kernel (#1480)
+- **ugrid**: serialize non-time dims; add voronoi_polygons + mesh verbs (#1479)
+- **cli**: CLI parity round 2 — full Dataset/FeatureCollection/NetCDF/DatasetCollection/Mesh surface (#1474)
+- **dataset**: add Dataset.calc() string-expression band calculator (#1473)
+- **cli**: expose the full Dataset raster surface (#1465)
+- **cli**: expand the vector group to the full FeatureCollection surface (#1459)
+- **cli**: expand the nc group to the full NetCDF surface (#1444)
+- add raster/IO ergonomics helpers (#1448)
+- **cli**: add UGRID mesh group; extract raster commands into cli_dataset (#1442)
+- **cli**: add vector, NetCDF, STAC, OGC, and collection command groups (#1425)
+
+### Refactor
+
+- **dataset**: canonicalize the fill/coords/metadata/bbox names (#1463)
+- **ugrid**: rename the mesh data model to Mesh1d / MeshDataset (#1445)
+
 ## 0.74.0 (2026-10-30)
 
 ### Feat
