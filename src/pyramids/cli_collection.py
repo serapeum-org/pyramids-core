@@ -24,6 +24,7 @@ import argparse
 import glob as _glob
 import json
 import os
+import sys
 from typing import Any, cast
 
 from pyramids._cli_shared import (
@@ -250,9 +251,11 @@ def _cmd_collection_resample(args: argparse.Namespace) -> int:
         for index, (label, dataset) in enumerate(windows):
             path = os.path.join(args.output, args.pattern.format(i=index))
             dataset.to_file(path)
-            # The progress bar replaces the per-window log; printing both would interleave
-            # the scrolling log with the \r bar. Keep the log only when progress is off.
-            if not progress.enabled:
+            # The progress bar (stderr) replaces the per-window log only when they would
+            # collide on one interactive terminal — i.e. progress is drawing AND stdout is
+            # itself a tty. When stdout is redirected to a file/pipe, keep the log so the
+            # machine-capturable output is not lost.
+            if not (progress.enabled and sys.stdout.isatty()):
                 info_print(args, f"window {index} ({label}) -> {path}")
             progress.advance()
     return 0

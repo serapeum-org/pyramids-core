@@ -185,42 +185,72 @@ class TestCollectionResample:
             "window_0002.tif",
         ]
 
-    def test_progress_suppresses_per_window_log(
-        self, cli_stack, tmp_path, monkeypatch, capsys
-    ):
-        """With `--progress` enabled, the per-window `info_print` lines are suppressed (L4)."""
+    @staticmethod
+    def _force_progress_on(monkeypatch):
+        """Replace ProgressReporter with one forced enabled, drawing to a throwaway buffer."""
         import io
 
         from pyramids import cli_collection
 
         class _AlwaysOn(cli_collection.ProgressReporter):
-            """A reporter forced enabled, drawing to a throwaway buffer (no real TTY needed)."""
-
             def __init__(self, args, total, **kwargs):
                 kwargs.pop("stream", None)
                 super().__init__(args, total, stream=io.StringIO(), **kwargs)
                 self.enabled = True
 
         monkeypatch.setattr(cli_collection, "ProgressReporter", _AlwaysOn)
-        out = str(tmp_path / "windows")
-        rc = main(
-            [
-                "--progress",
-                "collection",
-                "resample",
-                cli_stack,
-                out,
-                "--freq",
-                "1D",
-                "--op",
-                "mean",
-                "--times",
-                "2022-01-01,2022-01-02,2022-01-03",
-            ]
+
+    def _resample_argv(self, cli_stack, tmp_path):
+        """Return argv for a three-window daily resample into a temp dir."""
+        return [
+            "--progress",
+            "collection",
+            "resample",
+            cli_stack,
+            str(tmp_path / "windows"),
+            "--freq",
+            "1D",
+            "--op",
+            "mean",
+            "--times",
+            "2022-01-01,2022-01-02,2022-01-03",
+        ]
+
+    def test_progress_suppresses_log_on_tty_stdout(
+        self, cli_stack, tmp_path, monkeypatch
+    ):
+        """With progress drawing AND stdout a tty, the per-window log is suppressed (L4)."""
+        import contextlib
+        import io
+
+        self._force_progress_on(monkeypatch)
+
+        class _TTYOut(io.StringIO):
+            def isatty(self):
+                return True
+
+        out = _TTYOut()
+        with contextlib.redirect_stdout(out):
+            rc = main(self._resample_argv(cli_stack, tmp_path))
+        assert rc == 0, "resample under --progress should succeed"
+        assert "window" not in out.getvalue(), (
+            "log suppressed when it would collide with the bar"
         )
-        assert rc == 0, "resample under --progress should still succeed"
-        assert "window" not in capsys.readouterr().out, (
-            "per-window log must be suppressed by progress"
+
+    def test_progress_keeps_log_when_stdout_redirected(
+        self, cli_stack, tmp_path, monkeypatch
+    ):
+        """With progress drawing but stdout redirected (non-tty), the log is KEPT (round-2 L4)."""
+        import contextlib
+        import io
+
+        self._force_progress_on(monkeypatch)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = main(self._resample_argv(cli_stack, tmp_path))
+        assert rc == 0, "resample under --progress should succeed"
+        assert "window" in out.getvalue(), (
+            "redirected stdout must still capture the per-window log"
         )
 
     def test_percentile_needs_q(self, cli_stack, tmp_path):
