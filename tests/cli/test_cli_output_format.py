@@ -77,6 +77,33 @@ class TestEmit:
         emit(argparse.Namespace(format=None), {"a": 1})
         assert json.loads(capsys.readouterr().out) == {"a": 1}
 
+    def test_table_renders_none_cell_as_blank(self, capsys):
+        """A ``None`` field renders as an empty cell, not the string 'None'."""
+        emit(argparse.Namespace(format="table"), [{"a": 1, "b": None}])
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0].split() == ["a", "b"], (
+            "both columns should appear in the header"
+        )
+        assert lines[1].strip() == "1", (
+            "the None cell should be blank, leaving just the a value"
+        )
+
+    def test_csv_ragged_rows_fill_missing_with_blank(self, capsys):
+        """Rows with different keys share the union of columns, missing cells blank."""
+        emit(argparse.Namespace(format="csv"), [{"a": 1}, {"b": 2}])
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == "a,b", "columns should be the first-seen union of keys"
+        assert lines[1:] == ["1,", ",2"], (
+            "each row fills only its own key, blanks elsewhere"
+        )
+
+    def test_csv_nested_value_is_json_encoded_cell(self, capsys):
+        """A nested list value is JSON-encoded so it stays one CSV cell."""
+        emit(argparse.Namespace(format="csv"), [{"a": [1, 2]}])
+        assert capsys.readouterr().out.splitlines()[1] == '"[1, 2]"', (
+            "list cell is JSON in one field"
+        )
+
 
 class TestGlobalFormatThroughCLI:
     """The global ``--format`` flag, placed before the command, reaches the verb."""

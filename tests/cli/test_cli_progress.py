@@ -96,6 +96,16 @@ class TestProgressReporterOutput:
         reporter.close()
         assert stream.getvalue() == "", "a disabled reporter must stay silent"
 
+    def test_zero_total_shows_count_only(self):
+        """A ``total`` of 0 is falsy, so the reporter shows a count without a percentage."""
+        stream = _FakeTTY()
+        reporter = ProgressReporter(_args(), 0, label="items", stream=stream)
+        reporter.advance()
+        assert "\ritems: 1" in stream.getvalue(), (
+            "zero total falls back to a plain count"
+        )
+        assert "%" not in stream.getvalue(), "no percentage when total is zero"
+
 
 class TestProgressFlagPlumbing:
     """The global ``--progress`` flag parses and does not disturb a verb."""

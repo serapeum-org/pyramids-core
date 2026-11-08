@@ -47,6 +47,22 @@ class TestFindConfigFile:
         nested.mkdir(parents=True)
         assert find_config_file(start=str(nested)) == tmp_path / "pyramids.toml"
 
+    def test_missing_env_path_raises(self, tmp_path, monkeypatch):
+        """A ``PYRAMIDS_CONFIG`` pointing at a missing file is a clean error."""
+        monkeypatch.setenv("PYRAMIDS_CONFIG", str(tmp_path / "ghost.toml"))
+        with pytest.raises(ValueError, match="does not exist"):
+            find_config_file()
+
+    def test_no_config_anywhere_returns_none(self, tmp_path, monkeypatch):
+        """With no env, no project file, and no user file, discovery returns ``None``."""
+        monkeypatch.delenv("PYRAMIDS_CONFIG", raising=False)
+        monkeypatch.setattr(
+            "pyramids._cli_config.Path.home", lambda: tmp_path / "nohome"
+        )
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        assert find_config_file(start=str(empty)) is None, "no config means None"
+
 
 class TestLoadConfig:
     """`load_config` parsing."""
@@ -105,6 +121,33 @@ class TestApplyConfigDefaults:
         assert not hasattr(ns, "not_an_option"), (
             "unknown config keys must not leak onto args"
         )
+
+    def test_empty_config_is_a_noop(self):
+        """An empty config applies nothing and does not raise."""
+        parser = _build_parser()
+        apply_config_defaults(parser, {})
+        ns = parser.parse_args(
+            ["vector", "warp", "a.shp", "b.gpkg", "--crs", "EPSG:4326"]
+        )
+        assert ns.driver is None, "no config should leave the built-in default"
+
+    def test_non_dict_intermediate_section_is_ignored(self):
+        """A malformed section (``[vector]`` set to a scalar) is skipped, not fatal."""
+        parser = _build_parser()
+        apply_config_defaults(parser, {"vector": 5})
+        ns = parser.parse_args(
+            ["vector", "warp", "a.shp", "b.gpkg", "--crs", "EPSG:4326"]
+        )
+        assert ns.driver is None, "a non-dict section must not crash or set anything"
+
+    def test_non_dict_defaults_section_is_ignored(self):
+        """A ``[defaults]`` set to a non-table is tolerated and applies nothing."""
+        parser = _build_parser()
+        apply_config_defaults(parser, {"defaults": "oops"})
+        ns = parser.parse_args(
+            ["vector", "warp", "a.shp", "b.gpkg", "--crs", "EPSG:4326"]
+        )
+        assert ns.overwrite is False, "a malformed [defaults] must not change defaults"
 
 
 class TestConfigThroughCLI:
