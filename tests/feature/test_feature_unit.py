@@ -3,7 +3,7 @@
 These tests cover the pyramids-specific surface of ``FeatureCollection``
 after the ARC-1a/ARC-1b refactor:
 
-- Static helpers: ``_geometry_collection``, ``_explode_gdf``,
+- Static helpers: ``_geometry_collection_coords``, ``_explode_multipart``,
   ``_multi_geom_handler``, ``_get_coords``, ``_get_xy_coords``,
   ``_get_point_coords``, ``_create_sr_from_proj``.
 - Instance methods: ``center_point``, ``dtypes``, ``__str__``.
@@ -50,14 +50,14 @@ from pyramids.base.crs import (
 )
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.feature import (
-    FeatureCollection,
-    explode_gdf,
-    geometry_collection_coords,
-    get_coords,
-    get_point_coords,
-    get_xy_coords,
-    multi_geom_handler,
+from pyramids.feature import FeatureCollection
+from pyramids.feature.geometry import (
+    _explode_multipart,
+    _geometry_collection_coords,
+    _get_coords,
+    _get_point_coords,
+    _get_xy_coords,
+    _multi_geom_handler,
 )
 
 pytestmark = pytest.mark.core
@@ -325,37 +325,37 @@ class TestSubclassContract:
 
 
 class TestGeometryCollection:
-    """Tests for ``_geometry_collection`` static method."""
+    """Tests for ``_geometry_collection_coords``."""
 
     def test_extracts_point_x(self, geometry_collection_geom):
         """A Point(10, 20) should appear as 10.0 in the x-coord list."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 10.0 in result
 
     def test_extracts_point_y(self, geometry_collection_geom):
         """A Point(10, 20) should appear as 20.0 in the y-coord list."""
-        result = geometry_collection_coords(geometry_collection_geom, "y")
+        result = _geometry_collection_coords(geometry_collection_geom, "y")
         assert 20.0 in result
 
     def test_extracts_linestring_coords(self, geometry_collection_geom):
         """LineString [(0,0),(1,1),(2,0)] x-coords should include 0, 1, 2."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 0.0 in result and 1.0 in result and 2.0 in result
 
     def test_extracts_polygon_coords(self, geometry_collection_geom):
         """Polygon box(5,5,6,6) x-coords should include 5 and 6."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 5.0 in result and 6.0 in result
 
     def test_empty_geometry_collection(self):
         """An empty GeometryCollection should produce an empty list."""
         gc = GeometryCollection()
-        result = geometry_collection_coords(gc, "x")
+        result = _geometry_collection_coords(gc, "x")
         assert result == []
 
 
 class TestExplodeGdf:
-    """Tests for ``_explode_gdf`` via ``xy()``."""
+    """Tests for ``_explode_multipart`` via ``xy()``."""
 
     def test_multipolygon_exploded_via_xy(self):
         """``with_coordinates()`` explodes MultiPolygons into per-row Polygons."""
@@ -373,11 +373,11 @@ class TestExplodeGdf:
 
     def test_no_multipolygon_unchanged(self, simple_polygon_gdf: GeoDataFrame):
         """A GDF without multi-geometries should be returned with same row count."""
-        result = explode_gdf(simple_polygon_gdf.copy(), geometry="multipolygon")
+        result = _explode_multipart(simple_polygon_gdf.copy(), geometry="multipolygon")
         assert len(result) == len(simple_polygon_gdf)
 
     def test_input_gdf_not_mutated(self):
-        """D-H1: explode_gdf must not mutate the caller's GeoDataFrame.
+        """D-H1: _explode_multipart must not mutate the caller's GeoDataFrame.
 
         Test scenario:
             The previous implementation dropped exploded rows from the
@@ -394,14 +394,14 @@ class TestExplodeGdf:
         original_len = len(gdf)
         original_first_type = gdf.geometry.iloc[0].geom_type
 
-        explode_gdf(gdf, geometry="multipolygon")
+        _explode_multipart(gdf, geometry="multipolygon")
 
         # Input row count + geometries are unchanged.
         assert len(gdf) == original_len, (
-            f"explode_gdf mutated the input length: {len(gdf)} vs {original_len}"
+            f"_explode_multipart mutated the input length: {len(gdf)} vs {original_len}"
         )
         assert gdf.geometry.iloc[0].geom_type == original_first_type, (
-            "explode_gdf mutated the first row's geometry in place"
+            "_explode_multipart mutated the first row's geometry in place"
         )
 
     def test_returns_expanded_row_count(self):
@@ -418,7 +418,7 @@ class TestExplodeGdf:
         single = box(10.0, 10.0, 11.0, 11.0)
         gdf = gpd.GeoDataFrame(geometry=[mpoly, single], crs="EPSG:4326")
 
-        out = explode_gdf(gdf, geometry="multipolygon")
+        out = _explode_multipart(gdf, geometry="multipolygon")
         assert out is not gdf, "return value must be a fresh GeoDataFrame"
         assert len(out) == 4, f"expected 4 exploded rows, got {len(out)}"
 
@@ -427,23 +427,23 @@ class TestMultiGeomHandler:
     """Tests for ``_multi_geom_handler``."""
 
     def test_multipoint_x(self, multipoint_geom: MultiPoint):
-        result = multi_geom_handler(multipoint_geom, "x", "multipoint")
+        result = _multi_geom_handler(multipoint_geom, "x", "multipoint")
         assert result == [1.0, 3.0, 5.0]
 
     def test_multipoint_y(self, multipoint_geom: MultiPoint):
-        result = multi_geom_handler(multipoint_geom, "y", "multipoint")
+        result = _multi_geom_handler(multipoint_geom, "y", "multipoint")
         assert result == [2.0, 4.0, 6.0]
 
     def test_multilinestring_x(self, multilinestring_geom: MultiLineString):
-        result = multi_geom_handler(multilinestring_geom, "x", "multilinestring")
+        result = _multi_geom_handler(multilinestring_geom, "x", "multilinestring")
         assert result == [[0.0, 1.0], [2.0, 3.0]]
 
     def test_multilinestring_y(self, multilinestring_geom: MultiLineString):
-        result = multi_geom_handler(multilinestring_geom, "y", "multilinestring")
+        result = _multi_geom_handler(multilinestring_geom, "y", "multilinestring")
         assert result == [[0.0, 1.0], [2.0, 3.0]]
 
     def test_multipolygon_x(self, multipolygon_geom: MultiPolygon):
-        result = multi_geom_handler(multipolygon_geom, "x", "multipolygon")
+        result = _multi_geom_handler(multipolygon_geom, "x", "multipolygon")
         assert len(result) == 2
         for coords in result:
             assert isinstance(coords, list)
@@ -1043,7 +1043,7 @@ class TestGetCoords:
         import pandas as pd
 
         row = pd.Series({"geometry": geom})
-        result = get_coords(row, "geometry", "x")
+        result = _get_coords(row, "geometry", "x")
         assert isinstance(result, expected_type)
 
     def test_multipolygon_raises(self):
@@ -1053,14 +1053,14 @@ class TestGetCoords:
         sentinel, which silently dropped rows whose x coordinate
         happened to equal -9999 in projected CRSes. The function now
         raises ValueError; xy() guarantees this branch is unreachable
-        by calling explode_gdf first.
+        by calling _explode_multipart first.
         """
         import pandas as pd
 
         mp = MultiPolygon([box(0, 0, 1, 1)])
         row = pd.Series({"geometry": mp})
         with pytest.raises(ValueError, match="MultiPolygon"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_xy_does_not_drop_real_minus_9999(self):
         """ARC-9 regression: a polygon with x=-9999 is not silently dropped.
@@ -1093,7 +1093,7 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": Point()})  # empty
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_empty_linestring_raises_invalid_geometry(self):
         """C22: an empty LineString also raises ``InvalidGeometryError``."""
@@ -1103,7 +1103,7 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": LineString()})
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_empty_polygon_raises_invalid_geometry(self):
         """C22: an empty Polygon also raises ``InvalidGeometryError``."""
@@ -1113,14 +1113,14 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": Polygon()})
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "y")
+            _get_coords(row, "geometry", "y")
 
     def test_geometry_collection(self):
         import pandas as pd
 
         gc = GeometryCollection([Point(7, 8)])
         row = pd.Series({"geometry": gc})
-        result = get_coords(row, "geometry", "x")
+        result = _get_coords(row, "geometry", "x")
         assert 7.0 in result
 
 
@@ -1167,14 +1167,14 @@ class TestGetXyCoordsInvalidType:
     def test_invalid_coord_type_raises(self):
         line = LineString([(0, 0), (1, 1)])
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_xy_coords(line, "z")
+            _get_xy_coords(line, "z")
 
 
 class TestGetPointCoordsInvalidType:
     def test_invalid_coord_type_raises(self):
         point = Point(5, 10)
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_point_coords(point, "z")
+            _get_point_coords(point, "z")
 
     def test_invalid_coord_type_checked_before_attribute_access(self):
         """M2: the ``coord_type`` check fires before ``geometry.x/y``.
@@ -1191,4 +1191,4 @@ class TestGetPointCoordsInvalidType:
         """
         empty = Point()
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_point_coords(empty, "z")
+            _get_point_coords(empty, "z")

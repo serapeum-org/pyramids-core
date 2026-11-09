@@ -33,14 +33,16 @@ if TYPE_CHECKING:
 
 def with_coordinates(fc: FeatureCollection) -> FeatureCollection:
     """Explode multi-geometries and attach per-vertex ``x`` / ``y`` columns."""
-    gdf = _geom.explode_gdf(gpd.GeoDataFrame(fc, copy=True), geometry="multipolygon")
-    gdf = _geom.explode_gdf(gdf, geometry="geometrycollection")
+    gdf = _geom._explode_multipart(
+        gpd.GeoDataFrame(fc, copy=True), geometry="multipolygon"
+    )
+    gdf = _geom._explode_multipart(gdf, geometry="geometrycollection")
     result = type(fc)(gdf)
     result["x"] = result.apply(
-        _geom.get_coords, geom_col="geometry", coord_type="x", axis=1
+        _geom._get_coords, geom_col="geometry", coord_type="x", axis=1
     )
     result["y"] = result.apply(
-        _geom.get_coords, geom_col="geometry", coord_type="y", axis=1
+        _geom._get_coords, geom_col="geometry", coord_type="y", axis=1
     )
     result.reset_index(drop=True, inplace=True)
     return result

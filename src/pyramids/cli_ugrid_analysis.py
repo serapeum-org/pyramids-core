@@ -925,6 +925,46 @@ def _register_sampling(msub: argparse._SubParsersAction) -> None:
     contour.set_defaults(func=_cmd_contour)
 
 
+def _cmd_polyfit(args: argparse.Namespace) -> int:
+    """Handle ``pyramids mesh polyfit`` — per-element polynomial trend along time.
+
+    Fits a degree-``d`` polynomial to each element's time series and writes the coefficients
+    (highest power first) as a mesh file, the time axis replaced by a ``coefficient`` axis.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``degree``, ``var``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    mesh = MeshDataset.read_file(args.file)
+    with map_lookup_errors():
+        result = mesh.polyfit(args.degree, variable_name=args.var)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _register_fitting(msub: argparse._SubParsersAction) -> None:
+    """Register the along-time fitting verbs on the ``mesh`` sub-command action.
+
+    Args:
+        msub: The ``mesh`` group's ``add_subparsers`` action.
+    """
+    pf = msub.add_parser(
+        "polyfit", help="per-element polynomial trend along time (writes coefficients)"
+    )
+    pf.add_argument("file", help=_HELP_MESH_FILE)
+    pf.add_argument("output", help=_HELP_MESH_OUT)
+    pf.add_argument(
+        "--degree", "-d", type=int, required=True, help="polynomial degree (>= 0)"
+    )
+    _add_var(pf)
+    _add_overwrite(pf)
+    pf.set_defaults(func=_cmd_polyfit)
+
+
 def add_ugrid_analysis_commands(msub: argparse._SubParsersAction) -> None:
     """Register the mesh analysis / terrain verbs on the ``mesh`` sub-command action.
 
@@ -936,3 +976,4 @@ def add_ugrid_analysis_commands(msub: argparse._SubParsersAction) -> None:
     _register_morphology(msub)
     _register_summaries(msub)
     _register_sampling(msub)
+    _register_fitting(msub)

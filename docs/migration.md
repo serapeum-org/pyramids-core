@@ -186,6 +186,53 @@ default: `array_to_map_coordinates` defaulted to cell corners, `xy` defaults to 
 `total_bounds` is now an abstract property on `RasterBase`; any third-party subclass that implemented only `bbox`
 must also provide `total_bounds`.
 
+**`Dataset.to_raster` → `to_file`.** `to_raster` was a redundant second name for `to_file`; it keeps working as a
+`DeprecationWarning`-emitting alias and will be removed next major. Call `to_file` instead — the arguments are
+identical.
+
+**`DatasetCollection.first()` / `.last()` now return a `Dataset`, not a 2-D array.** Hard change, no deprecation
+alias — the methods keep their names but their return type changed to match `iloc`. Add `.read_array(band=0)` to
+recover the old array:
+
+```python
+cube.first()                      # before -> np.ndarray (2-D);  after -> Dataset
+cube.first().read_array(band=0)   # the 2-D array, as before
+```
+
+**`Dataset.overlay` → `Dataset.zonal_stats`, and `zonal_stats` now returns a `GeoDataFrame`.** `zonal_stats`
+accepts **either** a polygon `FeatureCollection` **or** an aligned categorical raster `Dataset` as its zones (each
+distinct pixel value is a zone), and returns a `geopandas.GeoDataFrame` — one row per zone, carrying the zone
+`geometry` plus one column per stat. The old `overlay` (`dict[class, list]`) is a `DeprecationWarning`-emitting
+alias; use `zonal_stats(class_raster, raw_values=True)` and read its `raw_values` column instead:
+
+```python
+# before
+ds.overlay(class_raster)                       # -> {1: [10.0, 20.0], 2: [30.0, 40.0]}
+
+# after
+ds.zonal_stats(class_raster, stats=("mean",))                  # -> GeoDataFrame of per-class stats
+ds.zonal_stats(class_raster, raw_values=True)["raw_values"]    # the raw grouped values (ndarray per class)
+```
+
+Notes:
+
+- The polygon path now returns a `GeoDataFrame` instead of a plain `DataFrame` (a mostly transparent change —
+  `GeoDataFrame` subclasses `DataFrame`); and `raw_values` is an object column that does **not** export to file
+  formats (it is in-memory only and off by default).
+- The deprecated `overlay` alias is *equivalent to*, not byte-identical with, the old `overlay`: it now
+  **excludes the class raster's no-data cells** (the old `overlay` would have produced a dict key for the
+  class-raster no-data value), and its values are `float64` rather than the base band's native dtype. Both are
+  intentional improvements; code that `float(...)`-casts the values is unaffected.
+- The old `overlay` streamed row strips (#967) so it never read the whole raster; the deprecated alias (and
+  `zonal_stats` generally) reads the whole base band and class array, a memory regression that only affects code
+  still on `overlay`.
+- Raster-category zones now require the class raster to genuinely **share the base grid** (same size,
+  geotransform and CRS), where the old `overlay` only checked row/column counts. A same-shape but misaligned
+  class raster that `overlay` silently (and geometrically wrongly) accepted now raises `AlignmentError` — align
+  it first, e.g. `classes = classes.align(base)`.
+- The CLI follows: `pyramids zonal-stats` gains `--classes <raster>` for raster-category zones, and the `overlay`
+  verb is deprecated (warns, points at `zonal-stats --classes`).
+
 **CF-packed data is now unpacked on read, and the keyword is `unpack`.** Hard change, silent for the values —
 nothing raises. A raster that declares `scale_factor` / `add_offset` (GDAL's `GetScale` / `GetOffset`) now reads
 back in physical units as `float64` instead of raw stored counts.

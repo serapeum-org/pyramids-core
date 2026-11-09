@@ -6,7 +6,7 @@ Array reading/writing, file serialization, tiling, and overview operations.
 flowchart LR
     IO(("IO<br/>ds.io"))
     IO --> R["<b>read</b><br/>read_array · read_windows<br/>get_block_arrangement<br/>get_tile · map_blocks"]
-    IO --> W["<b>write / export</b><br/>write_array · to_file · to_bytes<br/>to_raster · to_xyz · to_terrain_rgb"]
+    IO --> W["<b>write / export</b><br/>write_array · to_file · to_bytes<br/>to_xyz · to_terrain_rgb"]
     IO --> O["<b>overviews</b><br/>overview_count · create_overviews<br/>
         recreate_overviews · get_overview<br/>
         get_overview_dataset · read_overview_array"]

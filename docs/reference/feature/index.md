@@ -50,14 +50,14 @@ classDiagram
         +polygon_wkt(coords)
         +create_points(coords)
         +point_collection(coords, crs)
-        +get_coords(row, geom_col, coord_type)
-        +get_xy_coords(geometry, coord_type)
-        +get_point_coords(geometry, coord_type)
-        +get_line_coords(geometry, coord_type)
-        +get_poly_coords(geometry, coord_type)
-        +explode_gdf(gdf, geometry)
-        +multi_geom_handler(multi_geometry, coord_type, geom_type)
-        +geometry_collection_coords(geom, coord_type)
+        -_get_coords(row, geom_col, coord_type)
+        -_get_xy_coords(geometry, coord_type)
+        -_get_point_coords(geometry, coord_type)
+        -_get_line_coords(geometry, coord_type)
+        -_get_poly_coords(geometry, coord_type)
+        -_explode_multipart(gdf, geometry)
+        -_multi_geom_handler(multi_geometry, coord_type, geom_type)
+        -_geometry_collection_coords(geom, coord_type)
     }
 
     class crs {

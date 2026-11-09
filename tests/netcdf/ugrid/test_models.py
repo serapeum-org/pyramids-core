@@ -607,6 +607,63 @@ class TestMeshVariable:
         with pytest.raises(ValueError, match="no time dimension"):
             face_var_1d.sel_time_range(0, 1)
 
+    @pytest.fixture
+    def named_temporal_var(self):
+        """A temporal face variable carrying explicit ``(time, face)`` dimension names.
+
+        Returns:
+            MeshVariable: shape ``(3, 5)`` with ``dimensions=("time", "mesh2d_nFaces")``.
+        """
+        return MeshVariable(
+            name="water_level",
+            location="face",
+            mesh_name="mesh2d",
+            shape=(3, 5),
+            dimensions=("time", "mesh2d_nFaces"),
+            _data=np.arange(15.0).reshape(3, 5),
+        )
+
+    def test_with_data_same_rank_keeps_names(self, named_temporal_var):
+        """A same-rank replacement keeps both ``shape`` and dimension names.
+
+        Test scenario:
+            Replacing the ``(3, 5)`` array with another 2-D array (a trimmed time range)
+            keeps the two names, matching the new shape.
+        """
+        trimmed = named_temporal_var.with_data(np.zeros((2, 5)))
+        assert trimmed.shape == (2, 5), f"expected shape (2, 5), got {trimmed.shape}"
+        assert trimmed.dimensions == ("time", "mesh2d_nFaces"), (
+            f"names changed unexpectedly: {trimmed.dimensions}"
+        )
+
+    def test_with_data_keeps_source_dimensions_on_rank_drop(self, named_temporal_var):
+        """``with_data`` does NOT reconcile names on a rank drop — the caller must.
+
+        Test scenario:
+            Handing a 1-D array keeps the source's 2-name tuple (the result is intentionally
+            inconsistent). A rank-reducing derivation is expected to go through
+            ``_static_from``, which drops the collapsed axis by position; ``with_data`` keeping
+            the tuple means a non-leading collapse fails loudly rather than being silently
+            mis-named.
+        """
+        kept = named_temporal_var.with_data(np.zeros(5))
+        assert kept.shape == (5,), f"expected shape (5,), got {kept.shape}"
+        assert kept.dimensions == ("time", "mesh2d_nFaces"), (
+            f"with_data should keep the source names, got {kept.dimensions}"
+        )
+
+    def test_with_data_none_keeps_shape_and_names(self, named_temporal_var):
+        """``with_data(None)`` keeps the original shape and dimension names.
+
+        Test scenario:
+            Passing no array retains the source shape, so the names must be retained too.
+        """
+        kept = named_temporal_var.with_data(None)
+        assert kept.shape == (3, 5), f"expected shape (3, 5), got {kept.shape}"
+        assert kept.dimensions == ("time", "mesh2d_nFaces"), (
+            f"names changed unexpectedly: {kept.dimensions}"
+        )
+
 
 class TestUgridMetadata:
     """Tests for the MeshMetadata frozen dataclass."""

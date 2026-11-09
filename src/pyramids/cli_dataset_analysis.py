@@ -111,15 +111,38 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_zonal_stats(args: argparse.Namespace) -> int:
-    """Handle `pyramids zonal-stats` — statistics per polygon zone.
+def _resolve_zonal_table(ds: Dataset, args: argparse.Namespace):
+    """Compute the zonal-stats GeoDataFrame from the vector `zones` or the `--classes` raster.
 
-    Writes a CSV when `--output` is given, emits JSON records with `--json`, or
-    prints the table otherwise. The zones vector is reprojected onto the raster's
-    CRS when both declare one and they differ.
+    Exactly one zone source must be given. A vector `zones` layer is reprojected onto the
+    raster's CRS when both declare one and they differ.
+    """
+    if args.classes is not None and args.zones is not None:
+        raise ValueError(
+            "provide either a vector 'zones' argument or --classes <class_raster>, not both"
+        )
+    stats = tuple(args.stats)
+    if args.classes is not None:
+        classes = Dataset.read_file(args.classes)
+        return ds.zonal_stats(classes, stats=stats, band=args.band)
+    if args.zones is not None:
+        fc = FeatureCollection.read_file(args.zones)
+        if fc.crs is not None and ds.crs and fc.epsg != ds.epsg:
+            fc = fc.to_crs(ds.epsg)
+        return ds.zonal_stats(fc, stats=stats, band=args.band)
+    raise ValueError("provide a vector 'zones' argument or --classes <class_raster>")
+
+
+def _cmd_zonal_stats(args: argparse.Namespace) -> int:
+    """Handle `pyramids zonal-stats` — statistics per polygon zone or raster category.
+
+    Zones come from the vector `zones` file, or from a categorical raster via `--classes`
+    (each distinct pixel value is a zone). Writes a CSV when `--output` is given, emits JSON
+    records with `--json`, or prints the table otherwise. The zones vector is reprojected onto
+    the raster's CRS when both declare one and they differ.
 
     Args:
-        args: Parsed args with `raster`, `zones`, `stats`, `band`, `output`,
+        args: Parsed args with `raster`, `zones`, `classes`, `stats`, `band`, `output`,
             `json`, `overwrite`.
 
     Returns:
@@ -128,11 +151,10 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.raster)
-    zones = FeatureCollection.read_file(args.zones)
-    if zones.crs is not None and ds.crs and zones.epsg != ds.epsg:
-        zones = zones.to_crs(ds.epsg)
     with map_lookup_errors():
-        table = ds.zonal_stats(zones, stats=tuple(args.stats), band=args.band)
+        table = _resolve_zonal_table(ds, args)
+    # Emit a plain stats table; drop the GeoDataFrame geometry column from the CLI output.
+    table = table[list(args.stats)]
     if args.output is not None:
         table.to_csv(args.output)
         info_print(args, f"wrote {args.output}")
@@ -387,9 +409,18 @@ def add_dataset_analysis_commands(sub: argparse._SubParsersAction) -> None:
     cluster.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     cluster.set_defaults(func=_cmd_cluster)
 
-    zonal = sub.add_parser("zonal-stats", help="statistics per polygon zone")
+    zonal = sub.add_parser(
+        "zonal-stats", help="statistics per polygon zone or raster category"
+    )
     zonal.add_argument("raster", help=_HELP_SRC_RASTER)
-    zonal.add_argument("zones", help="polygon vector file defining the zones")
+    zonal.add_argument(
+        "zones", nargs="?", help="polygon vector file defining the zones"
+    )
+    zonal.add_argument(
+        "--classes",
+        help="categorical raster whose distinct values define the zones "
+        "(an alternative to the vector 'zones')",
+    )
     zonal.add_argument(
         "--stats",
         nargs="+",

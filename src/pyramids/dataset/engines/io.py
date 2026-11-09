@@ -481,7 +481,8 @@ class IO(_Engine["Dataset"]):
 
     Owns the reads (`read_array`, `read_windows`, `get_tile`,
     `get_block_arrangement`), the writes (`write_array`, `to_file`, `to_bytes`,
-    `to_raster`, `to_xyz`, `to_terrain_rgb`), the block-wise passes
+    `to_xyz`, `to_terrain_rgb`; plus the deprecated `to_raster` alias of
+    `to_file`), the block-wise passes
     (`stream_transform`, `stream_reduce`, `map_blocks`) and the overview family
     (`overview_count`, `create_overviews`, `recreate_overviews`, `get_overview`,
     `get_overview_dataset`, `read_overview_array`). `Dataset` exposes a
@@ -2601,23 +2602,48 @@ class IO(_Engine["Dataset"]):
         *,
         compute: bool = True,
         lock: Any = None,
+        reopen: bool = True,
     ) -> Any:
-        """Alias of :meth:`to_file` for API convenience.
+        """Deprecated alias of :meth:`to_file`.
+
+        .. deprecated::
+            ``to_raster`` is a redundant second name for :meth:`to_file` and will
+            be removed in a future release. Call :meth:`to_file` instead; the
+            arguments are identical.
 
         Forwards every argument to :meth:`to_file`; see that method's
-        documentation for the full contract. Provided for parity with the
-        common `.to_raster` name.
+        documentation for the full contract.
+
+        Args:
+            path: Destination raster path.
+            band: Zero-based band index (selects a single band for ASCII-grid drivers only).
+            tile_length: Internal tile size in pixels, or ``None`` for the driver default.
+            creation_options: GDAL creation options as ``"KEY=VALUE"`` strings, or ``None``.
+            driver: GDAL driver short name, or ``None`` to infer it from ``path``.
+            compute: Write eagerly (``True``) or, for a lazy dataset, return a delayed write.
+            lock: Optional lock for parallel delayed writes.
+            reopen: Reopen the written file and return the resulting dataset (``True``), or
+                return ``None`` after writing (``False``).
+
+        Returns:
+            Whatever :meth:`to_file` returns: ``None`` for an eager write, or a delayed
+            write object when ``compute=False``.
 
         Examples:
-            - Write a dataset to a GeoTIFF:
+            - Write a dataset to a GeoTIFF (use the canonical ``to_file``):
 
               ```python
               >>> from pyramids.dataset import Dataset
               >>> ds = Dataset.read_file("in.tif")  # doctest: +SKIP
-              >>> ds.to_raster("out.tif")  # doctest: +SKIP
+              >>> ds.to_file("out.tif")  # doctest: +SKIP
 
               ```
         """
+        warnings.warn(
+            "`to_raster` is deprecated and will be removed in a future release; use `to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.to_file(
             path,
             band=band,
@@ -2626,6 +2652,7 @@ class IO(_Engine["Dataset"]):
             driver=driver,
             compute=compute,
             lock=lock,
+            reopen=reopen,
         )
 
     def _tile_offsets(self, size: int = 256) -> Generator:

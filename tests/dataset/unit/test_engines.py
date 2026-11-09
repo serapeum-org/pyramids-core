@@ -246,7 +246,10 @@ FACADE_METHODS = [
     ("io", "read_array"),
     ("io", "write_array"),
     ("io", "to_file"),
-    ("io", "to_raster"),
+    # NB: ``("io", "to_raster")`` is intentionally excluded — ``Dataset.to_raster`` is
+    # now a deprecated alias that warns and delegates to ``io.to_file`` (NOT ``io.to_raster``),
+    # so it is no longer a pure same-named pass-through facade. Its deprecation + delegation
+    # behaviour is covered by ``tests/dataset/test_dataset_naming_deprecations.py``.
     ("io", "get_block_arrangement"),
     ("io", "get_tile"),
     ("io", "map_blocks"),
@@ -278,7 +281,10 @@ FACADE_METHODS = [
     ("analysis", "apply"),
     ("analysis", "fill_domain"),
     ("analysis", "extract"),
-    ("analysis", "overlay"),
+    # NB: ``("analysis", "overlay")`` is intentionally excluded (#1496) — ``Dataset.overlay`` is
+    # now a deprecated alias that warns and delegates to ``zonal_stats`` (not ``analysis.overlay``),
+    # so it is no longer a pure same-named pass-through facade. Its deprecation + parity with
+    # ``zonal_stats(raw_values=True)`` is covered by ``tests/dataset/ops/test_zonal_stats_raster.py``.
     ("analysis", "get_mask"),
     ("analysis", "footprint"),
     ("analysis", "get_histogram"),

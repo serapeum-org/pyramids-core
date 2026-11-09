@@ -17,6 +17,43 @@ spatial options: `bounds`, `warp`, `georeference`, `orthorectify`, and `edit-inf
 WKT, or PROJ string; `warp`, `overview`, `georeference`, and `orthorectify` accept a `--resampling` method
 (`nearest`, `bilinear`, `cubic`, `average`, `mode`, …).
 
+## Cross-cutting options
+
+These global flags go **before** the command and apply across the CLI:
+
+- **`--format {text,json,csv,table}`** — output format for data-emitting verbs (`info`, `bounds`, `stats`,
+  `list-*`, …). `json` is honored by every verb that supports `--json` (the per-command `--json` flag still works
+  as an alias); `csv` and `table` are rendered by the tabular verbs (e.g. `vector info/bounds`, `nc
+  groups/list-vars`, `mesh mesh-names`). Example: `pyramids --format csv vector info roads.gpkg`.
+- **`--config PATH`** / **`--no-config`** — read per-command defaults from a `pyramids.yaml` (YAML, matching the
+  package's own `config.yaml`). Discovery order: `--config PATH`, then `PYRAMIDS_CONFIG`, then the nearest
+  `pyramids.yaml` searched upward from the working directory, then `~/.config/pyramids/config.yaml`. An explicit
+  flag on the command line always overrides a config default; `--no-config` ignores any file. A top-level
+  `defaults` mapping applies to every verb that has the option, and a `<group>.<command>` mapping applies to that
+  one verb. Only **value-taking** options are configurable — boolean flags such as `--overwrite` are deliberately
+  not settable from config (there is no `--no-overwrite` to override a configured `true` back to false, so the
+  guard can never be silently disabled):
+
+  ```yaml
+  defaults:
+    driver: gpkg
+  vector:
+    warp:
+      crs: "EPSG:4326"
+      driver: gpkg
+  ```
+
+- **`--progress`** — show a progress indicator on stderr for multi-item write verbs (e.g. `collection resample`,
+  `vector read-gpx`). It is a no-op when stderr is not an interactive terminal (pipes, logs, CI) or when
+  `--quiet` is set.
+
+**Shell completion** — `pyramids completion {bash,zsh,fish}` prints the completion hook for your shell. Completion
+is driven by [argcomplete](https://pypi.org/project/argcomplete/) (`pip install argcomplete`); pyramids keeps it
+an optional convenience and works without it.
+
+**Plugins** — a third-party package that registers a `pyramids.cli_commands` entry point contributes its own verbs
+to `pyramids` automatically. `pyramids plugins list` reports the installed plugins and whether each one loaded.
+
 ## Inspect & edit metadata
 
 ```bash
@@ -419,19 +456,22 @@ topology to its own NetCDF), `open-mf` (concatenate several files), `mesh-names`
 `active-mask`, `histogram`, `count-domain-cells`, `domain-area`, `circumcenters`, `sparse-adjacency` (adjacency
 matrix summary / `.npz`).
 
-**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time-range`, `head` / `tail` /
-`thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` / `drop-duplicates` /
-`drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or bbox),
+**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time` / `sel-time-range`, `head` /
+`tail` / `thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` /
+`drop-duplicates` / `drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or
+bbox),
 `subset-by-bounds`, and the samplers `sample`, `sample-line`, `sample-point`, `sample-random`.
 
 **Convert / export** — `convert` / `to-file` / `to-bytes` (UGRID NetCDF or a driver), `to-crs` (reproject) /
 `set-crs` (declare only), `to-geodataframe` / `to-dataframe` / `to-image` / `to-zarr`, `to-dataset` (rasterize to
 GeoTIFF), `to-location` (remap onto another facet), `polygonize` / `contour` / `bounding-polygon` /
-`exterior-edges` / `exterior-faces` / `footprint`, `burn` (a vector onto faces), `with-variable` /
+`exterior-edges` / `exterior-faces` / `footprint`,
+`voronoi-polygons` (Voronoi cells of the nodes), `burn` (a vector onto faces), `with-variable` /
 `rename-variable` / `attach-data`.
 
 **Analysis / terrain** — `slope`, `aspect`, `hillshade`, `proximity`, `cluster`, `connected-components`,
-`zonal-stats`, `sieve`, `binary-dilation` / `binary-erosion`, `focal-mean` / `focal-std`, `regrid`.
+`zonal-stats`, `sieve`, `binary-dilation` / `binary-erosion`, `focal-mean` / `focal-std`, `regrid`, `polyfit`
+(per-element polynomial trend along time).
 
 **Interp / fill / time / calculus** — `interp-like` / `interp-time` / `interp-calendar`, `interpolate-na` /
 `fill-na-spatial` / `laplace-interpolate` / `ffill` / `bfill` / `fillna`, `clip-values`, `convert-units`,
@@ -445,9 +485,9 @@ the Agg backend is forced so these run headless.
 
 **Multi-mesh join** — `concat` (stack several same-topology meshes) and `merge` (combine their variables).
 
-Not exposed (use Python, or pending a library fix): `voronoi`, `polyfit`, `curvefit` and `focal_apply` take a
-Python callable or are not one-shot-shaped, and `sel-time` is held back by a known writer-serialization
-limitation.
+Not exposed (use Python, or pending a library fix): `curvefit` and `focal_apply` take a Python callable, so
+they have no shell form. (`polyfit`, `voronoi-polygons` and `sel-time` are now verbs — listed under Analysis,
+Convert/export and Select/subset above.)
 
 ## STAC
 

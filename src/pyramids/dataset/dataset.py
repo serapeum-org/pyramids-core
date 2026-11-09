@@ -1222,9 +1222,31 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Analysis.percentile_stretch <pyramids.dataset.engines.Analysis.percentile_stretch>`."""
         return self.analysis.percentile_stretch(*args, **kwargs)
 
-    def overlay(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Analysis.overlay <pyramids.dataset.engines.Analysis.overlay>`."""
-        return self.analysis.overlay(*args, **kwargs)
+    def overlay(self, classes_map, band: int = 0, exclude_value=None):
+        """Deprecated alias of :meth:`zonal_stats`.
+
+        .. deprecated::
+            Use ``ds.zonal_stats(classes_map, raw_values=True)`` and read its ``raw_values`` column. This alias
+            still returns the old ``dict[class, list]`` and will be removed in a future release.
+        """
+        warnings.warn(
+            "`overlay` is deprecated and will be removed in a future release; use "
+            "`zonal_stats(classes_map, raw_values=True)` and read its `raw_values` column.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        gdf = self.zonal_stats(
+            classes_map,
+            stats=("count",),
+            band=band,
+            exclude_value=exclude_value,
+            raw_values=True,
+        )
+        return {
+            key: list(vals)
+            for key, vals in zip(gdf.index, gdf["raw_values"])
+            if len(vals)
+        }
 
     def get_mask(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.get_mask <pyramids.dataset.engines.Analysis.get_mask>`."""
@@ -2057,8 +2079,13 @@ class Dataset(RasterBase):
         return self.io.to_bytes(*args, **kwargs)
 
     def to_raster(self, *args, **kwargs):
-        """Facade — delegates to :meth:`IO.to_raster <pyramids.dataset.engines.IO.to_raster>`."""
-        return self.io.to_raster(*args, **kwargs)
+        """Deprecated alias of :meth:`to_file` (use ``to_file``; emits a ``DeprecationWarning``)."""
+        warnings.warn(
+            "`to_raster` is deprecated and will be removed in a future release; use `to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_file(*args, **kwargs)
 
     def get_block_arrangement(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_block_arrangement <pyramids.dataset.engines.IO.get_block_arrangement>`."""
@@ -2479,34 +2506,48 @@ class Dataset(RasterBase):
 
     def zonal_stats(
         self,
-        fc: FeatureCollection,
+        zones: FeatureCollection | Dataset,
         *,
         stats: Sequence[str] = ("mean",),
         method: str = "rasterize",
         band: int = 0,
-    ) -> pd.DataFrame:
-        """Compute zonal statistics of this dataset over a polygon FeatureCollection.
+        exclude_value: float | None = None,
+        raw_values: bool = False,
+    ) -> GeoDataFrame:
+        """Group this dataset's values by polygon or raster-category zones and reduce them per zone.
 
-        Thin forwarder to
-        :func:`pyramids.dataset.ops._zonal.zonal_stats`; see that
-        function for the full argument contract. The statistics are in
-        physical units (a CF-packed band is unpacked), and the band's
-        no-data cells, found in its stored values, are left out.
+        Thin forwarder to :func:`pyramids.dataset.ops._zonal.zonal_stats`; see that function for the full
+        contract. The zones come from **either** a polygon
+        :class:`~pyramids.feature.FeatureCollection` **or** an aligned categorical raster
+        :class:`~pyramids.dataset.Dataset` (each distinct pixel value is a zone). The statistics are in physical
+        units (a CF-packed band is unpacked), and the band's no-data cells, found in its stored values, are left
+        out. Returns a :class:`geopandas.GeoDataFrame` — one row per zone, carrying the zone geometry.
 
         Args:
-            fc: A :class:`pyramids.feature.FeatureCollection` of
-                polygons sharing this dataset's CRS.
-            stats: Sequence of stat names (`"mean"`, `"sum"`,
-                `"min"`, `"max"`, `"std"`, `"var"`,
-                `"count"`).
-            method: `"rasterize"` is the only supported value today;
-                an area-weighted `"fractional"` method is planned.
+            zones: A polygon :class:`~pyramids.feature.FeatureCollection` sharing this dataset's CRS, or a
+                categorical raster :class:`~pyramids.dataset.Dataset` aligned with this one.
+            stats: Sequence of stat names (`"mean"`, `"sum"`, `"min"`, `"max"`, `"std"`, `"var"`, `"count"`).
+            method: `"rasterize"` is the only supported value today; an area-weighted `"fractional"` method is
+                planned.
             band: Zero-based band index.
+            exclude_value: A physical value to drop from the inputs before reducing, or `None`.
+            raw_values: When `True`, add a `raw_values` object column holding each zone's extracted values as an
+                `ndarray` (in-memory only; does not export to file formats). Off by default.
 
         Returns:
-            pandas.DataFrame: Indexed by `fc.index`; one column per stat.
+            geopandas.GeoDataFrame: One row per zone with the zone `geometry`, one column per stat, and
+            optionally `raw_values`. Indexed by `fc.index` for polygon zones, or by the class value
+            (`index.name="class"`) for raster zones.
         """
-        return _zonal_stats(self, fc, stats=stats, method=method, band=band)
+        return _zonal_stats(
+            self,
+            zones,
+            stats=stats,
+            method=method,
+            band=band,
+            exclude_value=exclude_value,
+            raw_values=raw_values,
+        )
 
     def to_zarr(
         self,

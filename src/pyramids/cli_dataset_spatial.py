@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 
 import numpy as np
 from shapely.geometry import LineString
@@ -90,11 +91,15 @@ def _cmd_align(args: argparse.Namespace) -> int:
 
 
 def _cmd_overlay(args: argparse.Namespace) -> int:
-    """Handle `pyramids overlay` — group a raster's values by a class raster.
+    """Handle the deprecated `pyramids overlay` — group a raster's values by a class raster.
+
+    .. deprecated::
+        Use ``pyramids zonal-stats <raster> --classes <class_raster>`` instead. This verb warns on stderr and
+        still prints the per-class value counts / mapping for back-compat.
 
     For each class in the (aligned) class raster, collects the base-raster values
-    that fall in that class (``Dataset.overlay``). Prints a per-class value count
-    by default, or the full ``{class: [values]}`` mapping with ``--json``.
+    that fall in that class. Prints a per-class value count by default, or the full
+    ``{class: [values]}`` mapping with ``--json``.
 
     Args:
         args: Parsed arguments with ``input``, ``classes``, ``band``,
@@ -107,9 +112,16 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
     classes = Dataset.read_file(args.classes)
     require_matching_crs(base, classes)
     with map_lookup_errors():
-        grouped = base.overlay(
-            classes, band=args.band, exclude_value=args.exclude_value
+        gdf = base.zonal_stats(
+            classes,
+            stats=("count",),
+            band=args.band,
+            exclude_value=args.exclude_value,
+            raw_values=True,
         )
+    grouped = {
+        key: list(vals) for key, vals in zip(gdf.index, gdf["raw_values"]) if len(vals)
+    }
     payload = {
         str(key): [float(value) for value in values] for key, values in grouped.items()
     }
@@ -118,6 +130,11 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
     else:
         for key, values in payload.items():
             print(f"class {key}: {len(values)} value(s)")
+    print(
+        "warning: the 'overlay' command is deprecated and will be removed in a future "
+        "release; use 'zonal-stats <raster> --classes <class_raster>'.",
+        file=sys.stderr,
+    )
     return 0
 
 

@@ -1,34 +1,35 @@
-"""Zonal statistics over a :class:`Dataset` + polygon
-:class:`FeatureCollection`.
+"""Zonal statistics over a :class:`Dataset`, grouped by polygon zones or raster categories.
 
-Single-pass rasterize of every polygon into an integer label grid,
-then numpy-based per-label reductions. Follows xvec's
-`method="rasterize"` pattern (single rasterize, then groupby).
+The zones come from **either** a polygon :class:`~pyramids.feature.FeatureCollection` **or** a categorical
+raster :class:`~pyramids.dataset.Dataset` (each distinct pixel value is a zone). Both paths reduce the base band
+over an integer label grid with the shared :func:`pyramids.base._reductions.reduce_by_label`, and both return a
+:class:`geopandas.GeoDataFrame` — one row per zone, carrying the zone geometry plus one column per statistic.
+
+Single-pass design:
+
+* Polygon zones: rasterize every polygon into an integer label grid (xvec's `method="rasterize"` pattern), then
+  reduce per label.
+* Raster zones: the class raster *is* the label grid; `numpy.unique` maps the distinct class values to 0-based
+  labels, and the class footprints are vectorised (`to_polygons` dissolved by value) for the geometry.
 
 Scope kept narrow:
 
-* Supported stats: `mean`, `sum`, `min`, `max`, `count`,
-  `std`, `var`.
+* Supported stats: `mean`, `sum`, `min`, `max`, `count`, `std`, `var`.
 * One band at a time (caller selects via `band=`).
-* Raster and vector must share a CRS — caller reprojects first if
-  not. (A later enhancement can auto-align.)
-* Output is a `pandas.DataFrame` indexed by the FeatureCollection
-  row index, with one column per stat.
+* Raster/raster and raster/vector must share a grid/CRS — caller aligns or reprojects first.
+* `raw_values=True` adds an object column holding each zone's extracted values (an `ndarray`, in row-major
+  order). It is an in-memory convenience and does not export to file formats; it is off by default.
 
-Area-weighted zonal statistics (where a cell's contribution is
-scaled by the fraction of its area inside the polygon) are planned
-as a `method="fractional"` follow-up — see
-`planning/dask/zonal_stats/` for the full implementation plan.
-Until that lands, callers who need area-weighted semantics must
-either upsample the raster or rasterize the polygons finely and
-then reduce.
+Area-weighted zonal statistics (a cell scaled by its area fraction inside the zone) are planned as a
+`method="fractional"` follow-up — see `planning/dask/zonal_stats/`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
@@ -102,101 +103,169 @@ def _rasterize_labels(ds: Dataset, fc: FeatureCollection) -> np.typing.NDArray:
     return labels
 
 
-def _rasterize_zonal_stats(
-    ds: Dataset,
-    fc: FeatureCollection,
-    stats: Sequence[str],
-    band: int,
-    no_data: float | None,
-) -> pd.DataFrame:
-    """Compute stats via single-rasterize + the shared per-label reducer.
+def _prep_band(
+    ds: Dataset, band: int, exclude_value: float | None
+) -> np.typing.NDArray:
+    """Return the band's physical values with invalid cells blanked to `NaN`.
 
-    The polygons are rasterised once into an integer label grid, then
-    :func:`pyramids.base._reductions.reduce_by_label` reduces the band per label
-    (bincount for sum/count/mean, a sorted-group pass for min/max/std/var).
-
-    The band is read once in stored units. The no-data cells are found there, where
-    the sentinel lives, and blanked to `NaN`; the statistics are then taken over the
-    physical values, unpacked with `ds._effective_packing(band)`.
+    The band is read once in stored units; the no-data cells are found there, where the sentinel lives, and the
+    values are then unpacked to physical units with `ds._effective_packing(band)`. No-data cells and any cell equal
+    to `exclude_value` (in physical units) are set to `NaN` so `reduce_by_label` ignores them and `raw_values`
+    drops them.
 
     Args:
         ds: The source dataset.
-        fc: The polygons, one zone per row.
-        stats: Statistic names, in output column order.
         band: Zero-based band index.
-        no_data: The band's declared (stored) sentinel, or `None` when it has none.
+        exclude_value: A physical value to drop, or `None`.
 
     Returns:
-        pd.DataFrame: Indexed by `fc.index`; one `float64` column per stat, `NaN` for
-            a zone with no valid cell (`count` is `0.0` there).
-
-    Raises:
-        ValueError: An unknown stat name.
+        np.ndarray: `float64`, shaped like the band, with invalid cells as `NaN`.
     """
-    # Masked against the stored counts, where the sentinel lives, and the statistics
-    # then taken over the physical values. `no_data` is a stored value, so comparing it
-    # with a physical read of a packed band matched nothing and every gap entered the
-    # zone's mean, count and minimum as a measurement.
     stored = np.asarray(ds.read_array(band=band, unpack=False))
     raster = np.asarray(
         apply_unpack(stored, *ds._effective_packing(band)), dtype=np.float64
     )
+    no_data_list = ds.no_data_value
+    no_data = no_data_list[band] if no_data_list else None
+    valid = np.ones(raster.shape, dtype=bool)
     if no_data is not None:
-        # `is_no_data`, not `==`: a NaN sentinel never equals itself, so the
-        # comparison marked nothing and every no-data cell entered the stats.
-        raster = np.where(is_no_data(stored, no_data), np.nan, raster)
-    labels = _rasterize_labels(ds, fc)
-    n_features = len(fc)
+        # `is_no_data`, not `==`: a NaN sentinel never equals itself.
+        valid &= ~is_no_data(stored, no_data)
+    if exclude_value is not None:
+        valid &= raster != float(exclude_value)
+    return np.where(valid, raster, np.nan)
 
-    # The per-label reduction (bincount for sum/count/mean, a sorted-group pass for
-    # min/max/std/var) is the grid-agnostic `reduce_by_label`: unassigned pixels carry -1
-    # from `_rasterize_labels`, and the physical NaN-blanked `raster` is the value array.
-    columns = reduce_by_label(raster, labels, n_features, list(stats), unassigned=-1)
-    ordered = {stat: columns[stat] for stat in stats}
-    return pd.DataFrame(ordered, index=fc.index)
+
+def _vector_zones(
+    ds: Dataset, fc: FeatureCollection
+) -> tuple[np.typing.NDArray, int, Any, Any, Any]:
+    """Build the label grid, zone count, index, geometry and CRS for polygon zones."""
+    labels = _rasterize_labels(ds, fc)
+    index = fc.index
+    geoms = fc.geometry.values
+    crs = getattr(fc, "crs", None)
+    return labels, len(fc), index, geoms, crs
+
+
+def _label_geometries(
+    ds: Dataset, labels: np.typing.NDArray, n_zones: int
+) -> list[Any]:
+    """Vectorise each label's footprint into one (multi)polygon, ordered by label `0..n_zones-1`.
+
+    The labels are polygonised through a shifted copy (`labels + 1`) so the background (`-1 -> 0`) is the value
+    GDAL's `Polygonize` self-mask drops, while every real label (`0..n-1 -> 1..n`) is vectorised. This matters
+    because polygonising the class raster directly would silently skip a class whose own value is `0` (GDAL
+    treats a `0` band value as masked). Connected regions of the same label are dissolved into one geometry.
+    """
+    # Local import breaks the dataset <-> dataset.ops._zonal cycle (dataset.py imports this module).
+    from pyramids.dataset import Dataset as _Dataset
+
+    shifted = (labels + 1).astype("int32")
+    mem_drv = gdal.GetDriverByName("MEM")
+    label_ds = mem_drv.Create("", ds.columns, ds.rows, 1, gdal.GDT_Int32)
+    label_ds.SetGeoTransform(ds.geotransform)
+    label_ds.SetProjection(ds.raster.GetProjection())
+    label_ds.GetRasterBand(1).WriteArray(shifted)
+    polygons = _Dataset(label_ds).to_polygons()
+    label_ds = None
+
+    value_col = next(
+        column for column in polygons.columns if column != polygons.geometry.name
+    )
+    dissolved = polygons.dissolve(by=value_col)
+    geom_map = {
+        int(value): geom for value, geom in zip(dissolved.index, dissolved.geometry)
+    }
+    return [geom_map.get(label + 1) for label in range(n_zones)]
+
+
+def _raster_zones(
+    ds: Dataset, classes_ds: Dataset
+) -> tuple[np.typing.NDArray, int, Any, Any, Any]:
+    """Build the label grid, zone count, index, geometry and CRS for raster-category zones.
+
+    The class raster must be aligned with `ds` (same grid). Each distinct class value (excluding the class
+    raster's no-data) becomes a zone; the class footprints are vectorised per label for the geometry.
+    """
+    class_arr = np.asarray(classes_ds.read_array(band=0, unpack=False))
+    cls_no_data_list = classes_ds.no_data_value
+    cls_no_data = cls_no_data_list[0] if cls_no_data_list else None
+    class_valid = np.ones(class_arr.shape, dtype=bool)
+    if cls_no_data is not None:
+        class_valid &= ~is_no_data(class_arr, cls_no_data)
+
+    classes = np.unique(class_arr[class_valid])
+    labels = np.full(class_arr.shape, -1, dtype=np.intp)
+    labels[class_valid] = np.searchsorted(classes, class_arr[class_valid])
+
+    geoms = _label_geometries(ds, labels, len(classes))
+    index = pd.Index(classes, name="class")
+    crs = ds.crs
+    return labels, len(classes), index, geoms, crs
+
+
+def _extract_raw(
+    raster: np.typing.NDArray, labels: np.typing.NDArray, n_zones: int
+) -> list[np.typing.NDArray]:
+    """Per zone, the base band's valid values in row-major order (NaN cells dropped).
+
+    One pass: keep the assigned, non-NaN cells, stably sort them by label (stable so row-major
+    order is preserved within each zone), and split at the per-label group boundaries -- so the
+    cost is one sort rather than a full mask scan per zone.
+    """
+    flat_labels = labels.ravel()
+    flat_values = raster.ravel()
+    valid = (flat_labels >= 0) & ~np.isnan(flat_values)
+    valid_labels = flat_labels[valid]
+    valid_values = flat_values[valid]
+    order = np.argsort(valid_labels, kind="stable")
+    counts = np.bincount(valid_labels, minlength=n_zones)
+    boundaries = np.cumsum(counts[:-1])
+    return list(np.split(valid_values[order], boundaries))
 
 
 def zonal_stats(
     ds: Dataset,
-    fc: FeatureCollection,
+    zones: FeatureCollection | Dataset,
     *,
     stats: Sequence[str] = ("mean",),
     method: str = "rasterize",
     band: int = 0,
-) -> pd.DataFrame:
-    """Compute zonal statistics of `ds` over polygons in `fc`.
+    exclude_value: float | None = None,
+    raw_values: bool = False,
+) -> gpd.GeoDataFrame:
+    """Group `ds`'s values by polygon or raster-category zones and reduce them per zone.
 
-    The statistics are taken over physical values, as `read_array` returns them: a
-    CF-packed band (`scale_factor` / `add_offset`) is unpacked. The band's no-data
-    cells are found in its stored values, where the sentinel lives, and left out of
-    every statistic, so a packed band's gaps do not enter a zone's mean, count or
-    minimum as the physical number a default read shows there.
+    The statistics are taken over physical values, as `read_array` returns them: a CF-packed band
+    (`scale_factor` / `add_offset`) is unpacked. The band's no-data cells, and any cell equal to `exclude_value`,
+    are left out of every statistic.
 
     Args:
         ds: The source :class:`~pyramids.dataset.Dataset`.
-        fc: A :class:`~pyramids.feature.FeatureCollection` of polygons.
-            CRS must match `ds` — reproject first if needed.
-        stats: Statistics to compute per polygon. One or more of
-            `"mean"`, `"sum"`, `"min"`, `"max"`, `"std"`,
-            `"var"`, `"count"`.
-        method: `"rasterize"` is the only supported value today.
-            Uses a single-pass GDAL rasterize then numpy groupby per
-            label — fast and accurate when polygons are comparable to
-            or larger than the raster pixel. An area-weighted
-            `"fractional"` method is planned; see
-            `planning/dask/zonal_stats/`.
+        zones: Either a polygon :class:`~pyramids.feature.FeatureCollection` (one zone per feature) or a
+            categorical raster :class:`~pyramids.dataset.Dataset` aligned with `ds` (one zone per distinct pixel
+            value). A `FeatureCollection`'s CRS must match `ds`; a class raster must share `ds`'s grid.
+        stats: Statistics per zone. One or more of `"mean"`, `"sum"`, `"min"`, `"max"`, `"std"`, `"var"`,
+            `"count"`.
+        method: Must be `"rasterize"` (the only supported value today, for both zone kinds); any other value
+            raises `ValueError`. An area-weighted `"fractional"` method is planned.
         band: Zero-based band index on `ds`. Default 0.
+        exclude_value: A physical value to drop from the inputs before reducing, or `None`.
+        raw_values: When `True`, add a `raw_values` object column holding each zone's extracted values as an
+            `ndarray` (row-major order, NaN/no-data dropped). Off by default; the column is in-memory only and
+            does not export to file formats.
 
     Returns:
-        pandas.DataFrame: Indexed by `fc.index`; one column per
-        stat.
+        geopandas.GeoDataFrame: One row per zone, carrying the zone `geometry`, one `float64` column per stat
+        (`NaN` for a zone with no valid cell, `count` is `0.0` there), and optionally `raw_values`. Indexed by
+        `fc.index` for polygon zones, or by the class value (`index.name="class"`) for raster zones.
 
     Raises:
-        ValueError: Unknown `stat` name or unknown `method`.
+        ValueError: An unknown `stat` name or an unknown `method`.
+        AlignmentError: A class raster not aligned with `ds`.
 
     Examples:
-        - Compute the mean value of a constant-valued raster over one
-          polygon — the answer must equal the raster value itself:
+        - Mean of a constant raster over one polygon equals the raster value:
             ```python
             >>> import geopandas as gpd
             >>> import numpy as np
@@ -217,36 +286,54 @@ def zonal_stats(
             5.0
 
             ```
-        - On a CF-packed band the statistics are physical and the gap is left out:
+        - Group a value raster by an aligned class raster; one row per class:
             ```python
-            >>> import geopandas as gpd
             >>> import numpy as np
-            >>> from shapely.geometry import box
             >>> from pyramids.dataset import Dataset, GeoReference
             >>> from pyramids.dataset.ops._zonal import zonal_stats
-            >>> from pyramids.feature import FeatureCollection
-            >>> packed = Dataset.from_array(
-            ...     np.array([[100, 200], [300, -9999]], dtype="int16"),
-            ...     geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
-            ...     no_data_value=-9999,
+            >>> geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+            >>> values = Dataset.from_array(
+            ...     np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"), geo_ref=geo,
             ... )
-            >>> packed.scale = [0.01]
-            >>> fc = FeatureCollection(gpd.GeoDataFrame(
-            ...     {"zone": ["a"]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:4326",
-            ... ))
-            >>> out = zonal_stats(packed, fc, stats=("mean", "count", "min"))
-            >>> out.to_dict("records")
-            [{'mean': 2.0, 'count': 3.0, 'min': 1.0}]
+            >>> classes = Dataset.from_array(
+            ...     np.array([[1, 1], [2, 2]], dtype="int32"), geo_ref=geo,
+            ... )
+            >>> out = zonal_stats(values, classes, stats=("mean", "count"))
+            >>> out[["mean", "count"]].to_dict("index")
+            {1: {'mean': 15.0, 'count': 2.0}, 2: {'mean': 35.0, 'count': 2.0}}
 
             ```
     """
-    if method == "rasterize":
-        no_data_list = ds.no_data_value
-        no_data = no_data_list[band] if no_data_list else None
-        result = _rasterize_zonal_stats(ds, fc, stats, band, no_data)
-    else:
+    if method != "rasterize":
         raise ValueError(f"method must be 'rasterize', got {method!r}")
-    return result
+
+    # Local import breaks the dataset <-> dataset.ops._zonal cycle (dataset.py imports this module).
+    from pyramids.dataset import Dataset as _Dataset
+
+    # Check alignment before reading the base band, so a misaligned class raster fails fast
+    # without a wasted full-band read + unpack.
+    raster_zones = isinstance(zones, _Dataset)
+    # `same_grid`, not `_check_alignment`: the class raster must share ds's grid *and* CRS
+    # (not merely its row/column counts), or the zones would come from the wrong ground location.
+    if raster_zones and not ds.spatial.same_grid(zones):
+        from pyramids.base._errors import AlignmentError
+
+        raise AlignmentError(
+            "The class Dataset is not aligned with the current raster, please use the "
+            "method 'align' to align both rasters."
+        )
+
+    raster = _prep_band(ds, band, exclude_value)
+    if raster_zones:
+        labels, n_zones, index, geoms, crs = _raster_zones(ds, zones)
+    else:
+        labels, n_zones, index, geoms, crs = _vector_zones(ds, zones)
+
+    columns = reduce_by_label(raster, labels, n_zones, list(stats), unassigned=-1)
+    data = {stat: columns[stat] for stat in stats}
+    if raw_values:
+        data["raw_values"] = _extract_raw(raster, labels, n_zones)
+    return gpd.GeoDataFrame(data, geometry=list(geoms), index=index, crs=crs)
 
 
 __all__ = ["zonal_stats"]

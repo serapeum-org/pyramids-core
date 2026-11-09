@@ -1,6 +1,6 @@
 [project]
 name = "pyramids-core"
-version = "0.74.0"
+version = "0.75.0"
 description = "GIS utility package"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [{ name = "Mostafa Farrag", email = "moah.farag@gmail.com" }]
@@ -506,6 +506,16 @@ python = { version = "3.14.*", build = "*_cp314" }
 # thread-sensitive code must test the GIL build. Free-threaded is a separate
 # opt-in leg (#683).
 python = { version = "3.15.*", build = "*_cp315" }
+
+# Pin the docs env to Python 3.14 (standard-GIL cp314), matching dev/py314. None of the
+# docs env's features (gdal/docs/viz/interop/lazy/stac/parquet) pin Python, and
+# requires-python floors at 3.11 with no upper cap below 4, so a re-solve otherwise floats
+# the docs env to the newest Python. The jupyter docs stack is not 3.15-ready:
+# mkdocs-jupyter -> jupytext -> jupyter_client runs datetime.strptime("1", "%d") at import,
+# which CPython 3.15 rejects (gh-70647), so `mkdocs build --strict` fails to load the
+# plugin. Drop this pin once the jupyter stack supports 3.15.
+[tool.pixi.feature.docs.dependencies]
+python = { version = "3.14.*", build = "*_cp314" }
 
 [tool.pixi.feature.dev.dependencies]
 scipy = ">=1.17.1,<2"

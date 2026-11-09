@@ -3157,23 +3157,33 @@ class DatasetCollection:
         indices = range(self.time_length - keep, self.time_length)
         return self._stack_timesteps([self._dataset_at(j) for j in indices])
 
-    def first(self) -> np.typing.NDArray:
-        """First timestep array (2D).
+    def first(self) -> Dataset:
+        """First timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[0]`` because it only reads one
-        timestep instead of the full cube.
+        Consistent with :meth:`iloc` and :meth:`last`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``0``. Equivalent to ``iloc(0)``.
+            Call ``cube.first().read_array(band=0)`` to get the first timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(0).read_array(band=0))
+        return self._dataset_at(0)
 
-    def last(self) -> np.typing.NDArray:
-        """Last timestep array (2D).
+    def last(self) -> Dataset:
+        """Last timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[-1]`` because it only reads one
-        timestep instead of the full cube.
+        Consistent with :meth:`iloc` and :meth:`first`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``-1``. Equivalent to ``iloc(-1)``.
+            Call ``cube.last().read_array(band=0)`` to get the last timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(-1).read_array(band=0))
+        return self._dataset_at(-1)
 
     def iloc(self, i: int) -> Dataset:
         """Return the ``Dataset`` at position ``i``.
@@ -4515,26 +4525,39 @@ class DatasetCollection:
         classes_map,
         exclude_value: float | int | None = None,
     ) -> dict[float, list[float]]:
-        """Overlay.
+        """Deprecated alias — group every dataset's values by a class raster.
+
+        .. deprecated::
+            Superseded by :meth:`Dataset.zonal_stats`, which accepts a categorical raster as its zones. Call
+            ``ds.zonal_stats(classes_map, raw_values=True)`` per dataset instead. This alias still returns the
+            merged ``dict[class, list]`` and will be removed in a future release.
 
         Args:
             classes_map (Dataset):
-                Dataset object for the raster that has classes to overlay with.
+                The aligned class raster whose distinct values define the zones.
             exclude_value (float | int, optional):
-                Values to exclude from extracted values. Defaults to None.
+                A physical value to drop from the extracted values. Defaults to None.
 
         Returns:
             dict[float, list[float]]:
-                Dictionary with a list of values in the basemap as keys and for each key a list of all the
-                intersected values in the maps from the path.
+                Each class value mapped to the list of values across the collection that fall inside it.
         """
+        warnings.warn(
+            "`overlay` is deprecated and will be removed in a future release; use "
+            "`Dataset.zonal_stats(classes_map, raw_values=True)` per dataset.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         values: dict[Any, list[float]] = {}
         for ds in self.datasets:
-            dict_i = ds.overlay(classes_map, exclude_value)
-
-            # these are the distinct values from the BaseMap which are keys in the
-            # values dict with each one having a list of values
-            for class_i, vals in dict_i.items():
-                values.setdefault(class_i, []).extend(vals)
+            gdf = ds.zonal_stats(
+                classes_map,
+                stats=("count",),
+                exclude_value=exclude_value,
+                raw_values=True,
+            )
+            for class_i, vals in zip(gdf.index, gdf["raw_values"]):
+                if len(vals):
+                    values.setdefault(class_i, []).extend(list(vals))
 
         return values

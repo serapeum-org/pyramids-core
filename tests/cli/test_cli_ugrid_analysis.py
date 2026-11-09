@@ -544,3 +544,51 @@ class TestContour:
         out = str(tmp_path / "contour.weird")
         with pytest.raises(ValueError, match="driver"):
             _run(["mesh", "contour", ramp_file, out, "--levels", "3"])
+
+
+class TestPolyfit:
+    """``mesh polyfit`` — per-element polynomial trend along time (#1479)."""
+
+    @staticmethod
+    def _ramp_file(tmp_path):
+        """A written four-face mesh with a 3-step temporal ramp on variable ``v``."""
+        ds = MeshDataset.from_arrays(
+            node_x=_NODE_X,
+            node_y=_NODE_Y,
+            face_node_connectivity=_FACES,
+            data={
+                "v": np.array(
+                    [[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 4.0], [2.0, 4.0, 6.0, 8.0]]
+                )
+            },
+            data_locations={"v": "face"},
+        )
+        ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
+        path = tmp_path / "ramp_t.nc"
+        ds.to_file(str(path))
+        return str(path)
+
+    def test_polyfit_writes_a_coefficient_mesh(self, tmp_path):
+        """A degree-1 fit writes a mesh whose time axis became a coefficient axis."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "pf.nc")
+
+        assert _run(["mesh", "polyfit", src, out, "--degree", "1"]) == 0
+
+        back = MeshDataset.read_file(out)
+        assert back["v"].dimensions[0] == "coefficient", f"got {back['v'].dimensions}"
+        assert np.asarray(back["v"].data).shape == (2, 4)
+
+    def test_polyfit_requires_a_degree(self, tmp_path):
+        """`--degree` is required; argparse rejects the call without it."""
+        src = self._ramp_file(tmp_path)
+        with pytest.raises(SystemExit):
+            _run(["mesh", "polyfit", src, str(tmp_path / "pf.nc")])
+
+    def test_polyfit_refuses_an_existing_output(self, tmp_path):
+        """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "pf.nc")
+        assert _run(["mesh", "polyfit", src, out, "--degree", "1"]) == 0
+        with pytest.raises(ValueError, match="already exists"):
+            _run(["mesh", "polyfit", src, out, "--degree", "1"])

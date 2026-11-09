@@ -10,11 +10,12 @@ command maps 1:1 onto an existing ``FeatureCollection`` call.
 from __future__ import annotations
 
 import argparse
-import json
 
 from pyramids._cli_shared import (
+    emit,
     info_print,
     json_safe,
+    mark_format_support,
     refuse_existing,
 )
 from pyramids._cli_shared import (
@@ -56,11 +57,8 @@ def _cmd_vector_info(args: argparse.Namespace) -> int:
         "columns": [column for column in fc.columns if column != geom_col],
         "bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)],
     }
-    if args.json:
-        print(json.dumps(payload))
-    else:
-        for key, value in payload.items():
-            print(f"{key}: {value}")
+    text = "\n".join(f"{key}: {value}" for key, value in payload.items())
+    emit(args, payload, text=text)
     return 0
 
 
@@ -78,10 +76,7 @@ def _cmd_vector_bounds(args: argparse.Namespace) -> int:
         fc = fc.to_crs(args.crs)
     minx, miny, maxx, maxy = (float(value) for value in fc.total_bounds)
     payload = {"bounds": [json_safe(value) for value in (minx, miny, maxx, maxy)]}
-    if args.json:
-        print(json.dumps(payload))
-    else:
-        print(f"{minx} {miny} {maxx} {maxy}")
+    emit(args, payload, text=f"{minx} {miny} {maxx} {maxy}")
     return 0
 
 
@@ -175,6 +170,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_info.add_argument("--layer", help="layer name/index for multi-layer sources")
     v_info.add_argument("--json", action="store_true", help="emit JSON")
     v_info.set_defaults(func=_cmd_vector_info)
+    mark_format_support(v_info)
 
     v_bounds = vsub.add_parser("bounds", help="print the vector bounding box")
     v_bounds.add_argument("src", help=_HELP_SRC_VECTOR)
@@ -182,6 +178,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_bounds.add_argument("--crs", help="reproject bounds to this CRS first")
     v_bounds.add_argument("--json", action="store_true", help="emit JSON")
     v_bounds.set_defaults(func=_cmd_vector_bounds)
+    mark_format_support(v_bounds)
 
     v_conv = vsub.add_parser("convert", help="re-save a vector in another format")
     v_conv.add_argument("src", help=_HELP_SRC_VECTOR)

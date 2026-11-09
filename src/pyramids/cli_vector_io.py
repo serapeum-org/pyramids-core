@@ -19,6 +19,7 @@ import pandas as pd
 import shapely
 
 from pyramids._cli_shared import (
+    ProgressReporter,
     info_print,
     json_sanitize,
     map_lookup_errors,
@@ -389,10 +390,12 @@ def _cmd_vector_read_gpx(args: argparse.Namespace) -> int:
         raise ValueError(f"{args.src!r} has no non-empty GPX sub-layers to write")
     driver = resolve_vector_driver(args.output, args.driver)
     names = sorted(layers)
-    for index, name in enumerate(names):
-        layers[name].to_file(
-            args.output, driver=driver, layer=name, mode="w" if index == 0 else "a"
-        )
+    with ProgressReporter(args, len(names), label="layers") as progress:
+        for index, name in enumerate(names):
+            layers[name].to_file(
+                args.output, driver=driver, layer=name, mode="w" if index == 0 else "a"
+            )
+            progress.advance()
     info_print(args, f"wrote {args.output} (layers: {', '.join(names)})")
     return 0
 
