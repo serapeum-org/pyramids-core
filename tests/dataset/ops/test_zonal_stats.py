@@ -47,10 +47,12 @@ def two_boxes():
 
 
 class TestRasterizeMean:
-    def test_returns_dataframe(self, raster, two_boxes):
+    def test_returns_geodataframe(self, raster, two_boxes):
         result = raster.zonal_stats(two_boxes, stats=("mean",))
-        assert isinstance(result, pd.DataFrame)
-        assert list(result.columns) == ["mean"]
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert [column for column in result.columns if column != "geometry"] == ["mean"]
+        assert "geometry" in result.columns
+        assert result.geometry.notna().all()
         assert len(result) == 2
 
     def test_mean_of_box_zero_correct(self, raster, two_boxes):
@@ -89,8 +91,9 @@ class TestMultipleStats:
             unreachable from the mean/sum-only paths.
         """
         result = raster.zonal_stats(two_boxes, stats=("count",))
-        assert list(result.columns) == ["count"], (
-            f"Expected a single 'count' column, got {list(result.columns)}"
+        stat_columns = [column for column in result.columns if column != "geometry"]
+        assert stat_columns == ["count"], (
+            f"Expected a single 'count' stat column, got {stat_columns}"
         )
         assert result["count"].tolist() == [
             4.0,

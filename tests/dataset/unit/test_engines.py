@@ -281,7 +281,10 @@ FACADE_METHODS = [
     ("analysis", "apply"),
     ("analysis", "fill_domain"),
     ("analysis", "extract"),
-    ("analysis", "overlay"),
+    # NB: ``("analysis", "overlay")`` is intentionally excluded (#1496) — ``Dataset.overlay`` is
+    # now a deprecated alias that warns and delegates to ``zonal_stats`` (not ``analysis.overlay``),
+    # so it is no longer a pure same-named pass-through facade. Its deprecation + parity with
+    # ``zonal_stats(raw_values=True)`` is covered by ``tests/dataset/ops/test_zonal_stats_raster.py``.
     ("analysis", "get_mask"),
     ("analysis", "footprint"),
     ("analysis", "get_histogram"),

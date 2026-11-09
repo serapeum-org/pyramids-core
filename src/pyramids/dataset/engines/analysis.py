@@ -20,7 +20,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from geopandas.geodataframe import GeoDataFrame
-from hpc.indexing import get_indices2, get_pixels2
+from hpc.indexing import get_pixels2
 from osgeo import gdal, osr
 from pandas import DataFrame
 from shapely.geometry import LineString
@@ -5081,102 +5081,47 @@ class Analysis(_Engine["Dataset"]):
         band: int = 0,
         exclude_value: float | int | None = None,
     ) -> dict[float, list[float]]:
-        """Overlay.
+        """Deprecated alias — group this dataset's values by a class raster.
 
-        Overlay method extracts all the values in the dataset for each class in the given class map.
-
-        Both rasters are read as `read_array` returns them, so a CF-packed band (`scale_factor` /
-        `add_offset`) contributes physical values, and the no-data cells are left out by matching the
-        sentinel expressed in those same physical units.
+        .. deprecated::
+            `overlay` is superseded by :meth:`zonal_stats`, which accepts a categorical raster as its zones and
+            returns a :class:`geopandas.GeoDataFrame`. Use
+            ``ds.zonal_stats(classes_map, raw_values=True)`` and read its ``raw_values`` column instead. This
+            alias still returns the old ``dict[class, list]`` and will be removed in a future release.
 
         Args:
             classes_map (Dataset):
-                Dataset object for the raster that has classes you want to overlay with the raster.
+                The aligned class raster whose distinct values define the zones.
             band (int):
-                If the raster is multi-band, choose the band you want to overlay with the classes map. Default is 0.
+                Band index on the base raster. Default is 0.
             exclude_value (Numeric, optional):
-                Values you want to exclude from extracted values, in physical units. Default is None.
+                A physical value to drop from the extracted values. Default is None.
 
         Returns:
             Dict:
-                Dictionary with class values as keys (from the class map), and for each key a list of all the intersected
-                values in the base map.
+                Each class value mapped to the list of base values that fall inside it (row-major order).
 
         Raises:
             AlignmentError: `classes_map` is not aligned with this dataset.
-
-        Examples:
-            - Build a small value raster and an aligned class raster in memory:
-
-              ```python
-              >>> import numpy as np
-              >>> from pyramids.dataset import Dataset, GeoReference
-              >>> values = np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32")
-              >>> dataset = Dataset.from_array(
-              ...     values,
-              ...     geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
-              ... )
-              >>> class_map = np.array([[1, 1], [2, 2]], dtype="int32")
-              >>> classes = Dataset.from_array(
-              ...     class_map,
-              ...     geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
-              ... )
-
-              ```
-
-            - Overlay the value raster with the class raster. The result maps each
-              class to the list of values that fall inside it:
-
-              ```python
-              >>> overlaid = dataset.overlay(classes)
-              >>> sorted(int(key) for key in overlaid)
-              [1, 2]
-
-              ```
-
-            - Use a class key to read the values that overlay that class:
-
-              ```python
-              >>> [float(value) for value in sorted(overlaid[1], key=float)]
-              [10.0, 20.0]
-              >>> [float(value) for value in sorted(overlaid[2], key=float)]
-              [30.0, 40.0]
-
-              ```
         """
-        if not self._ds.spatial._check_alignment(classes_map):
-            raise AlignmentError(
-                "The class Dataset is not aligned with the current raster, please use the method "
-                "'align' to align both rasters."
-            )
-        # The physical sentinel, because `get_indices2` compares it against strips
-        # `read_array` produced; the stored one matches nothing on a packed band.
-        physical_sentinel = self._physical_no_data(band if band is not None else 0)
-        no_data_value = physical_sentinel if physical_sentinel is not None else np.nan
-        mask = (
-            [no_data_value, exclude_value]
-            if exclude_value is not None
-            else [no_data_value]
+        warnings.warn(
+            "`overlay` is deprecated and will be removed in a future release; use "
+            "`zonal_stats(classes_map, raw_values=True)` and read its `raw_values` column.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        def _group(
-            acc: dict[Any, list[Any]], strip: np.ndarray, window: list[int]
-        ) -> dict[Any, list[Any]]:
-            # Read the aligned class strip over the same window; the rasters are
-            # aligned (checked above), so the windows index the same cells.
-            classes = classes_map.read_array(window=window)
-            for ind_i in get_indices2(strip, mask):
-                key = classes[ind_i[0], ind_i[1]]
-                if key not in acc:
-                    acc[key] = []
-                acc[key].append(strip[ind_i[0], ind_i[1]])
-            return acc
-
-        # Stream base + class rasters in row strips so neither is read whole (#967).
-        # Full-width top-to-bottom strips keep row-major order, so each class's value
-        # list is byte-identical to the whole-array pass.
-        values: dict[Any, list[Any]] = self._ds.io.stream_reduce(_group, {}, band=band)
-        return values
+        gdf = self._ds.zonal_stats(
+            classes_map,
+            stats=("count",),
+            band=band if band is not None else 0,
+            exclude_value=exclude_value,
+            raw_values=True,
+        )
+        return {
+            key: list(vals)
+            for key, vals in zip(gdf.index, gdf["raw_values"])
+            if len(vals)
+        }
 
     def get_mask(self, band: int = 0) -> np.typing.NDArray:
         """Get the mask array.
