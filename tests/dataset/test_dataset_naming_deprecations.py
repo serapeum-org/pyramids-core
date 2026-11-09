@@ -72,8 +72,9 @@ class TestToRasterRenamedToToFile:
             produces the output raster on disk.
         """
         out = tmp_path / "out.tif"
+        ds = _value_raster()
         with pytest.warns(DeprecationWarning, match="to_file") as record:
-            _value_raster().to_raster(str(out))
+            ds.to_raster(str(out))
         assert out.exists(), "to_raster must still write the raster"
         warning = self._only_deprecation(record)
         assert warning.filename == __file__, (
