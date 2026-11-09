@@ -2612,8 +2612,21 @@ class IO(_Engine["Dataset"]):
         Forwards every argument to :meth:`to_file`; see that method's
         documentation for the full contract.
 
+        Args:
+            path: Destination raster path.
+            band: Zero-based band index (selects a single band for ASCII-grid drivers only).
+            tile_length: Internal tile size in pixels, or ``None`` for the driver default.
+            creation_options: GDAL creation options as ``"KEY=VALUE"`` strings, or ``None``.
+            driver: GDAL driver short name, or ``None`` to infer it from ``path``.
+            compute: Write eagerly (``True``) or, for a lazy dataset, return a delayed write.
+            lock: Optional lock for parallel delayed writes.
+
+        Returns:
+            Whatever :meth:`to_file` returns: ``None`` for an eager write, or a delayed
+            write object when ``compute=False``.
+
         Examples:
-            - Write a dataset to a GeoTIFF:
+            - Write a dataset to a GeoTIFF (use the canonical ``to_file``):
 
               ```python
               >>> from pyramids.dataset import Dataset

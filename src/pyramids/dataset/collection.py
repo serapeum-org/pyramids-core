@@ -3448,20 +3448,28 @@ class DatasetCollection:
     def first(self) -> Dataset:
         """First timestep as a :class:`Dataset` (lazy handle).
 
-        Returns the ``Dataset`` at position ``0`` — consistent with :meth:`iloc`
-        and :meth:`last`, which also return ``Dataset`` handles. Pixel values are
-        not loaded; call :meth:`~pyramids.dataset.Dataset.read_array` on the
-        result for the 2-D array (``cube.first().read_array(band=0)``).
+        Consistent with :meth:`iloc` and :meth:`last`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``0``. Equivalent to ``iloc(0)``.
+            Call ``cube.first().read_array(band=0)`` to get the first timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
         return self._dataset_at(0)
 
     def last(self) -> Dataset:
         """Last timestep as a :class:`Dataset` (lazy handle).
 
-        Returns the ``Dataset`` at position ``-1`` — consistent with :meth:`iloc`
-        and :meth:`first`, which also return ``Dataset`` handles. Pixel values are
-        not loaded; call :meth:`~pyramids.dataset.Dataset.read_array` on the
-        result for the 2-D array (``cube.last().read_array(band=0)``).
+        Consistent with :meth:`iloc` and :meth:`first`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``-1``. Equivalent to ``iloc(-1)``.
+            Call ``cube.last().read_array(band=0)`` to get the last timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
         return self._dataset_at(-1)
 
