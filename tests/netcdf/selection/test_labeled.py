@@ -82,19 +82,36 @@ class TestLabeledDatasetRead:
     def test_netcdf_exposes_dims_coords_variables(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         assert store.sizes == {"time": N_TIME, "feature_id": N_FEAT}
-        assert "feature_id" in store.coordinates
-        assert "gage_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "feature_id" in store.coordinate_names
+        assert "gage_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
 
     def test_zarr_exposes_dims_coords_variables(self, zarr_store: Path):
         store = LabeledDataset.read_file(zarr_store)
         assert store.sizes == {"time": N_TIME, "feature_id": N_FEAT}
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
+
+    def test_deprecated_name_accessors_still_work_and_warn(self, nc_store: Path):
+        """The old `variables`/`coordinates`/`dimensions` names alias the `*_names` ones.
+
+        They were renamed because a bare `variables`/`dimensions` means a mapping in xarray and
+        netCDF4, while these return a `list[str]`; the aliases keep the old spelling working for
+        one release and emit a `DeprecationWarning` pointing at the new name.
+        """
+        store = LabeledDataset.read_file(nc_store)
+        for old, new in (
+            ("variables", "variable_names"),
+            ("coordinates", "coordinate_names"),
+            ("dimensions", "dimension_names"),
+        ):
+            with pytest.warns(DeprecationWarning, match=f"use {new} instead"):
+                aliased = getattr(store, old)
+            assert aliased == getattr(store, new), old
 
     def test_engine_override_opens_zarr(self, zarr_store: Path):
         store = LabeledDataset.read_file(zarr_store, engine="zarr")
-        assert store.variables == ["streamflow"]
+        assert store.variable_names == ["streamflow"]
 
     def test_zarr_v3_string_coord_is_read(self, tmp_path: Path):
         """A Zarr v3 string coord is read as a normal coordinate (GDAL >= 3.13).
@@ -113,9 +130,9 @@ class TestLabeledDatasetRead:
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)
             store = LabeledDataset.read_file(path)
-        assert "gage_id" in store.coordinates, "v3 string coord must be read"
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "gage_id" in store.coordinate_names, "v3 string coord must be read"
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
         np.testing.assert_array_equal(
             store["gage_id"].values, np.array(["01010000", "01010500", "01011000"])
         )
@@ -154,9 +171,11 @@ class TestLabeledDatasetRead:
         )
         with pytest.warns(UserWarning, match="13782"):
             store = LabeledDataset.read_file(path)
-        assert "gage_id" not in store.coordinates, "unreadable coord must be dropped"
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "gage_id" not in store.coordinate_names, (
+            "unreadable coord must be dropped"
+        )
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
         np.testing.assert_array_equal(
             store["streamflow"].values,
             np.arange(N_TIME * N_FEAT, dtype="f4").reshape(N_TIME, N_FEAT),
@@ -164,7 +183,7 @@ class TestLabeledDatasetRead:
 
     def test_variables_subset(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store, variables=["streamflow"])
-        assert store.variables == ["streamflow"]
+        assert store.variable_names == ["streamflow"]
 
     def test_variables_unknown_name_raises(self, nc_store: Path):
         """An unknown name in ``variables=`` raises KeyError and releases the handle.
@@ -205,7 +224,7 @@ class TestLabeledDatasetRead:
 
     def test_dimensions_property(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        assert store.dimensions == ["time", "feature_id"]
+        assert store.dimension_names == ["time", "feature_id"]
 
     def test_unopenable_store_raises(self, tmp_path: Path):
         with pytest.raises(ValueError, match="could not open"):
@@ -426,7 +445,7 @@ class TestLabeledDatasetClose:
     def test_context_manager_closes(self, nc_store: Path):
         """The store is usable inside a with-block and closed on exit."""
         with LabeledDataset.read_file(nc_store) as store:
-            assert store.variables == ["streamflow"]
+            assert store.variable_names == ["streamflow"]
         nc_store.unlink()
         assert not nc_store.exists(), "file must be removable after the with-block"
 

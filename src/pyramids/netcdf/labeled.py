@@ -595,19 +595,62 @@ class LabeledDataset:
         }
 
     @property
-    def dimensions(self) -> list[str]:
+    def dimension_names(self) -> list[str]:
         """Dimension names (in store order), excluding scalar-selected ones."""
         return [d for d in self._dim_order if d not in self._scalar_dims]
 
     @property
-    def coordinates(self) -> list[str]:
+    def coordinate_names(self) -> list[str]:
         """Coordinate variable names (e.g. `feature_id`, `time`, `latitude`)."""
         return list(self._coord_names)
 
     @property
-    def variables(self) -> list[str]:
+    def variable_names(self) -> list[str]:
         """Data-variable names (excludes coordinates)."""
         return list(self._var_names)
+
+    @property
+    def dimensions(self) -> list[str]:
+        """Deprecated alias of :attr:`dimension_names`.
+
+        Renamed so the accessor says it returns a list of names rather than a mapping: bare
+        `dimensions` means a mapping keyed by name in both xarray and netCDF4, and matching
+        GDAL's own `*Names` convention (which this package wraps) spells the list form out.
+        """
+        warnings.warn(
+            "LabeledDataset.dimensions is deprecated; use dimension_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.dimension_names
+
+    @property
+    def coordinates(self) -> list[str]:
+        """Deprecated alias of :attr:`coordinate_names`.
+
+        Renamed for the same reason as :attr:`dimensions`: the `*_names` form says it returns a
+        list of names, not the coordinate objects.
+        """
+        warnings.warn(
+            "LabeledDataset.coordinates is deprecated; use coordinate_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.coordinate_names
+
+    @property
+    def variables(self) -> list[str]:
+        """Deprecated alias of :attr:`variable_names`.
+
+        Renamed to resolve a type collision: `NetCDF.variables` is a mapping, while this
+        returned a plain `list[str]` under the same name. `variable_names` says which it is.
+        """
+        warnings.warn(
+            "LabeledDataset.variables is deprecated; use variable_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variable_names
 
     def _read(self, name: str) -> tuple[np.typing.NDArray, tuple[str, ...]]:
         """Read array `name` with the current selection applied.
@@ -768,7 +811,7 @@ class LabeledDataset:
         if name not in self._coord_names:
             raise KeyError(
                 f"{name!r} is not a coordinate of this store; available: "
-                f"{self.coordinates}"
+                f"{self.coordinate_names}"
             )
 
     def select(self, **labels: Any) -> LabeledDataset:
@@ -1042,7 +1085,7 @@ class LabeledDataset:
                 "to avoid loading the whole store into memory.",
                 stacklevel=2,
             )
-        out_dims = self.dimensions
+        out_dims = self.dimension_names
         if out_dims:
             shape = tuple(self._selected_size(d) for d in out_dims)
             grids = np.meshgrid(*[np.arange(s) for s in shape], indexing="ij")
@@ -1173,7 +1216,7 @@ class LabeledDataset:
         """Compact, structure-only representation (no data read)."""
         return (
             f"<LabeledDataset sizes={self.sizes} "
-            f"coords={self.coordinates} variables={self.variables}>"
+            f"coords={self.coordinate_names} variables={self.variable_names}>"
         )
 
 
