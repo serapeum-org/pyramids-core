@@ -46,6 +46,7 @@ from shapely.errors import GEOSException
 
 from pyramids import __version__
 from pyramids._cli_config import apply_config_defaults, find_config_file, load_config
+from pyramids._cli_groups import SuggestingArgumentParser, rewrite_deprecated
 from pyramids._cli_shared import OUTPUT_FORMATS, resolved_format
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
@@ -77,7 +78,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ``--quiet`` flags and every command group registered via its
         ``add_<domain>_commands`` function.
     """
-    parser = argparse.ArgumentParser(
+    parser = SuggestingArgumentParser(
         prog="pyramids", description="pyramids GIS toolkit"
     )
     parser.add_argument(
@@ -122,7 +123,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="show a progress indicator on stderr for multi-item write verbs (a no-op "
         "when output is not an interactive terminal or when --quiet is set)",
     )
-    sub = parser.add_subparsers(dest="group", required=True)
+    sub = parser.add_subparsers(
+        dest="group", required=True, parser_class=SuggestingArgumentParser
+    )
 
     add_dataset_commands(sub)
     add_vector_commands(sub)
@@ -183,6 +186,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
+    # Rewrite a deprecated flat verb (e.g. `pyramids info`) to its new nested path
+    # (`pyramids raster info`), warning once. A no-op until verbs start moving.
+    argv = rewrite_deprecated(list(argv) if argv is not None else sys.argv[1:])
     try:
         # Resolve config defaults inside the try so a bad --config / PYRAMIDS_CONFIG / invalid
         # TOML becomes the CLI's clean `error:` line, not a traceback. Defer any such error
