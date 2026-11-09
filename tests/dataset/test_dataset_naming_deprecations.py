@@ -50,30 +50,53 @@ def _cube(time_length: int = 3, rows: int = 4, cols: int = 5):
 class TestToRasterRenamedToToFile:
     """``to_raster`` is the deprecated alias; ``to_file`` is canonical."""
 
+    @staticmethod
+    def _only_deprecation(record):
+        """Return the single ``DeprecationWarning`` in ``record``, ignoring incidental ones.
+
+        Asserts exactly one ``DeprecationWarning`` was emitted (guards against a
+        double-warn regression) and returns it so the caller can check ``stacklevel``.
+        """
+        deprecations = [w for w in record if issubclass(w.category, DeprecationWarning)]
+        assert len(deprecations) == 1, (
+            f"expected exactly one DeprecationWarning, got {len(deprecations)}"
+        )
+        return deprecations[0]
+
     def test_dataset_to_raster_warns_and_writes(self, tmp_path):
         """``Dataset.to_raster`` still writes the file but warns about ``to_file``.
 
         Test scenario:
-            Calling the facade alias emits a ``DeprecationWarning`` whose message names
-            ``to_file`` and still produces the output raster on disk.
+            Calling the facade alias emits exactly one ``DeprecationWarning`` whose message
+            names ``to_file``, whose ``stacklevel=2`` points at this caller, and still
+            produces the output raster on disk.
         """
         out = tmp_path / "out.tif"
-        with pytest.warns(DeprecationWarning, match="to_file"):
+        with pytest.warns(DeprecationWarning, match="to_file") as record:
             _value_raster().to_raster(str(out))
         assert out.exists(), "to_raster must still write the raster"
+        warning = self._only_deprecation(record)
+        assert warning.filename == __file__, (
+            f"stacklevel=2 must point the facade warning at the caller, got {warning.filename}"
+        )
 
     def test_io_engine_to_raster_warns_and_writes(self, tmp_path):
         """The engine-level ``IO.to_raster`` warns and writes too.
 
         Test scenario:
             A strong ref to the Dataset is kept (the ``io`` engine holds only a weakref);
-            ``io.to_raster`` warns about ``to_file`` and writes the file.
+            ``io.to_raster`` emits exactly one ``DeprecationWarning`` about ``to_file``,
+            points it at this caller (``stacklevel=2``), and writes the file.
         """
         out = tmp_path / "out2.tif"
         ds = _value_raster()
-        with pytest.warns(DeprecationWarning, match="to_file"):
+        with pytest.warns(DeprecationWarning, match="to_file") as record:
             ds.io.to_raster(str(out))
         assert out.exists(), "IO.to_raster must still write the raster"
+        warning = self._only_deprecation(record)
+        assert warning.filename == __file__, (
+            f"stacklevel=2 must point the engine warning at the caller, got {warning.filename}"
+        )
 
     def test_to_file_does_not_warn(self, tmp_path):
         """The canonical ``to_file`` must not emit a ``DeprecationWarning``.
