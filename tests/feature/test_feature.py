@@ -26,10 +26,10 @@ from pyramids.feature import (
     FeatureCollection,
     create_points,
     create_polygon,
-    multi_geom_handler,
     point_collection,
     polygon_wkt,
 )
+from pyramids.feature.geometry import _multi_geom_handler
 
 pytestmark = pytest.mark.core
 
@@ -265,21 +265,21 @@ class TestMultiGeomHandler:
     def test_multi_points_with_multiple_point(
         self, multi_point_geom, point_coords: list
     ):
-        res = multi_geom_handler(multi_point_geom, "x", "MultiPoint")
+        res = _multi_geom_handler(multi_point_geom, "x", "MultiPoint")
         assert all(np.isclose(res, [point_coords[0], point_coords[0]], rtol=0.00001))
 
     def test_multi_points_with_one_point(
         self, multi_point_one_point_geom, point_coords: list
     ):
-        res = multi_geom_handler(multi_point_one_point_geom, "x", "MultiPoint")
+        res = _multi_geom_handler(multi_point_one_point_geom, "x", "MultiPoint")
         assert np.isclose(res[0], point_coords[0], rtol=0.00001)
 
     def test_multi_polygons(self, multi_polygon_geom, multi_polygon_coords_x: list):
-        res = multi_geom_handler(multi_polygon_geom, "x", "MultiPolygon")
+        res = _multi_geom_handler(multi_polygon_geom, "x", "MultiPolygon")
         assert res == multi_polygon_coords_x
 
     def test_multi_linestring(self, multi_line_geom, multi_linestring_coords_x: list):
-        res = multi_geom_handler(multi_line_geom, "x", "MULTILINESTRING")
+        res = _multi_geom_handler(multi_line_geom, "x", "MULTILINESTRING")
         assert res == multi_linestring_coords_x
 
 

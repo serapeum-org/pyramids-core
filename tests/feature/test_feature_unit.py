@@ -57,8 +57,8 @@ from pyramids.feature import (
     get_coords,
     get_point_coords,
     get_xy_coords,
-    multi_geom_handler,
 )
+from pyramids.feature.geometry import _multi_geom_handler
 
 pytestmark = pytest.mark.core
 
@@ -427,23 +427,23 @@ class TestMultiGeomHandler:
     """Tests for ``_multi_geom_handler``."""
 
     def test_multipoint_x(self, multipoint_geom: MultiPoint):
-        result = multi_geom_handler(multipoint_geom, "x", "multipoint")
+        result = _multi_geom_handler(multipoint_geom, "x", "multipoint")
         assert result == [1.0, 3.0, 5.0]
 
     def test_multipoint_y(self, multipoint_geom: MultiPoint):
-        result = multi_geom_handler(multipoint_geom, "y", "multipoint")
+        result = _multi_geom_handler(multipoint_geom, "y", "multipoint")
         assert result == [2.0, 4.0, 6.0]
 
     def test_multilinestring_x(self, multilinestring_geom: MultiLineString):
-        result = multi_geom_handler(multilinestring_geom, "x", "multilinestring")
+        result = _multi_geom_handler(multilinestring_geom, "x", "multilinestring")
         assert result == [[0.0, 1.0], [2.0, 3.0]]
 
     def test_multilinestring_y(self, multilinestring_geom: MultiLineString):
-        result = multi_geom_handler(multilinestring_geom, "y", "multilinestring")
+        result = _multi_geom_handler(multilinestring_geom, "y", "multilinestring")
         assert result == [[0.0, 1.0], [2.0, 3.0]]
 
     def test_multipolygon_x(self, multipolygon_geom: MultiPolygon):
-        result = multi_geom_handler(multipolygon_geom, "x", "multipolygon")
+        result = _multi_geom_handler(multipolygon_geom, "x", "multipolygon")
         assert len(result) == 2
         for coords in result:
             assert isinstance(coords, list)

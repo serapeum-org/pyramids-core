@@ -155,7 +155,7 @@ def get_line_coords(geometry: LineString, coord_type: str) -> list:
 
     Thin wrapper around :func:`get_xy_coords` that documents the
     `LineString`-specific entry point used by
-    :func:`multi_geom_handler` and :func:`get_coords`.
+    :func:`_multi_geom_handler` and :func:`get_coords`.
 
     Args:
         geometry (LineString): A shapely `LineString`.
@@ -332,7 +332,7 @@ def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFra
     return result.reset_index(drop=True)
 
 
-def multi_geom_handler(
+def _multi_geom_handler(
     multi_geometry: MultiPolygon | MultiPoint | MultiLineString,
     coord_type: str,
     geom_type: str,
@@ -356,9 +356,9 @@ def multi_geom_handler(
         - Extract x coordinates from a MultiPoint (one scalar per part):
             ```python
             >>> from shapely.geometry import MultiPoint
-            >>> from pyramids.feature.geometry import multi_geom_handler
+            >>> from pyramids.feature.geometry import _multi_geom_handler
             >>> mp = MultiPoint([(0, 0), (1, 1), (2, 2)])
-            >>> multi_geom_handler(mp, "x", "multipoint")
+            >>> _multi_geom_handler(mp, "x", "multipoint")
             [0.0, 1.0, 2.0]
 
             ```
@@ -366,23 +366,23 @@ def multi_geom_handler(
           part):
             ```python
             >>> from shapely.geometry import MultiLineString
-            >>> from pyramids.feature.geometry import multi_geom_handler
+            >>> from pyramids.feature.geometry import _multi_geom_handler
             >>> mls = MultiLineString([[(0, 0), (1, 1)], [(2, 2), (3, 3)]])
-            >>> multi_geom_handler(mls, "x", "multilinestring")
+            >>> _multi_geom_handler(mls, "x", "multilinestring")
             [[0.0, 1.0], [2.0, 3.0]]
 
             ```
         - Extract y coordinates from a MultiPolygon exterior rings:
             ```python
             >>> from shapely.geometry import Polygon, MultiPolygon
-            >>> from pyramids.feature.geometry import multi_geom_handler
+            >>> from pyramids.feature.geometry import _multi_geom_handler
             >>> mp = MultiPolygon(
             ...     [
             ...         Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
             ...         Polygon([(2, 2), (3, 2), (3, 3), (2, 3)]),
             ...     ]
             ... )
-            >>> multi_geom_handler(mp, "y", "multipolygon")
+            >>> _multi_geom_handler(mp, "y", "multipolygon")
             [[0.0, 0.0, 1.0, 1.0, 0.0], [2.0, 2.0, 3.0, 3.0, 2.0]]
 
             ```
@@ -551,7 +551,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
         )
     if gtype == "geometrycollection":
         return geometry_collection_coords(geom, coord_type)
-    return multi_geom_handler(geom, coord_type, gtype)
+    return _multi_geom_handler(geom, coord_type, gtype)
 
 
 def create_polygon(coords: list[tuple[float, float]]) -> Polygon:
@@ -963,7 +963,7 @@ class GeometryCoords:
 
     Replaces the older free-function family
     (``get_xy_coords`` / ``get_point_coords`` / ``get_line_coords`` /
-    ``get_poly_coords`` / ``multi_geom_handler`` /
+    ``get_poly_coords`` / ``_multi_geom_handler`` /
     ``geometry_collection_coords``) with a single object that knows
     which dispatch to take and exposes ``.x`` / ``.y`` instead of a
     stringly-typed ``coord_type="x"`` parameter.
@@ -1066,7 +1066,7 @@ class GeometryCoords:
         if gtype == "geometrycollection":
             return geometry_collection_coords(self._geometry, axis)
         if gtype.startswith("multi"):
-            return multi_geom_handler(self._geometry, axis, gtype)
+            return _multi_geom_handler(self._geometry, axis, gtype)
         # Fallback for unknown geometry types: try the linestring path,
         # which uses geometry.coords.xy. If that raises AttributeError
         # the underlying geometry simply doesn't expose coords and the

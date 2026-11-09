@@ -27,7 +27,6 @@ from pyramids.feature.geometry import (
     get_point_coords,
     get_poly_coords,
     get_xy_coords,
-    multi_geom_handler,
     point_collection,
     polygon_wkt,
 )
@@ -165,7 +164,6 @@ __all__ = [
     "get_xy_coords",
     "has_lazy_backend",
     "is_lazy_fc",
-    "multi_geom_handler",
     "point_collection",
     "polygon_wkt",
 ]
