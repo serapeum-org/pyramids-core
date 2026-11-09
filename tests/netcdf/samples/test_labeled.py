@@ -13,9 +13,9 @@ def test_read_file_exposes_dimensions_and_variables(sample):
     """``LabeledDataset.read_file`` opens the station file and lists its dimensions and variables."""
     ld = LabeledDataset.read_file(sample(STATION))
     try:
-        assert ld.dimensions, "expected dimensions"
-        assert "recNum" in ld.dimensions
-        assert len(ld.variables) > 0
+        assert ld.dimension_names, "expected dimensions"
+        assert "recNum" in ld.dimension_names
+        assert len(ld.variable_names) > 0
     finally:
         ld.close()
 
@@ -24,7 +24,7 @@ def test_contains_and_getitem(sample):
     """Membership testing and item access return a lazy labeled array for a known variable."""
     ld = LabeledDataset.read_file(sample(STATION))
     try:
-        name = ld.variables[0]
+        name = ld.variable_names[0]
         assert name in ld
         assert "definitely_absent_variable" not in ld
         assert ld[name] is not None
@@ -35,7 +35,7 @@ def test_contains_and_getitem(sample):
 def test_context_manager_closes(sample):
     """``LabeledDataset`` works as a context manager."""
     with LabeledDataset.read_file(sample(STATION)) as ld:
-        assert ld.variables is not None
+        assert ld.variable_names is not None
 
 
 def test_getitem_defaults_the_labels_it_does_not_read(sample):
@@ -52,7 +52,7 @@ def test_getitem_defaults_the_labels_it_does_not_read(sample):
     """
     ld = LabeledDataset.read_file(sample(STATION))
     try:
-        name = ld.variables[0]
+        name = ld.variable_names[0]
 
         array = ld[name]
 

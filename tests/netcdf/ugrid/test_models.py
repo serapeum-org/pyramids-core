@@ -517,7 +517,7 @@ class TestMeshVariable:
             Selecting time step 1 from a (3, 5) variable should return
             the second row.
         """
-        result = temporal_var.sel_time(1)
+        result = temporal_var.isel(time=1).data
         expected = np.array([1.1, 2.1, 3.1, 4.1, 5.1])
         np.testing.assert_array_almost_equal(result, expected)
 
@@ -527,7 +527,7 @@ class TestMeshVariable:
         Test scenario:
             First time step selection.
         """
-        result = temporal_var.sel_time(0)
+        result = temporal_var.isel(time=0).data
         expected = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         np.testing.assert_array_almost_equal(result, expected)
 
@@ -537,7 +537,7 @@ class TestMeshVariable:
         Test scenario:
             Last time step selection using index 2.
         """
-        result = temporal_var.sel_time(2)
+        result = temporal_var.isel(time=2).data
         expected = np.array([1.2, 2.2, 3.2, 4.2, 5.2])
         np.testing.assert_array_almost_equal(result, expected)
 
@@ -548,19 +548,19 @@ class TestMeshVariable:
             Calling sel_time on a 1D variable should raise ValueError.
         """
         with pytest.raises(ValueError, match="no time dimension"):
-            face_var_1d.sel_time(0)
+            face_var_1d.isel(time=0)
 
     def test_sel_time_no_data_raises(self):
         """sel_time raises ValueError when a temporal variable has no loaded data."""
         var = MeshVariable(name="v", location="face", mesh_name="m", shape=(3, 5))
         with pytest.raises(ValueError, match="no loaded data"):
-            var.sel_time(0)
+            var.isel(time=0)
 
     def test_sel_time_range_no_data_raises(self):
         """sel_time_range raises ValueError when a temporal variable has no loaded data."""
         var = MeshVariable(name="v", location="face", mesh_name="m", shape=(3, 5))
         with pytest.raises(ValueError, match="no loaded data"):
-            var.sel_time_range(0, 2)
+            var.isel(time=slice(0, 2))
 
     def test_sel_time_range_valid(self, temporal_var):
         """Test sel_time_range returns a new MeshVariable with sliced data.
@@ -569,7 +569,7 @@ class TestMeshVariable:
             Selecting time range [0:2] from a (3, 5) variable should return
             a new MeshVariable with shape (2, 5).
         """
-        result = temporal_var.sel_time_range(0, 2)
+        result = temporal_var.isel(time=slice(0, 2))
         assert isinstance(result, MeshVariable), (
             f"Expected MeshVariable, got {type(result)}"
         )
@@ -591,7 +591,7 @@ class TestMeshVariable:
         temporal_var.nodata = -999.0
         temporal_var.units = "m"
         temporal_var.standard_name = "sea_surface_height"
-        result = temporal_var.sel_time_range(1, 3)
+        result = temporal_var.isel(time=slice(1, 3))
         assert result.nodata == -999.0, f"Expected nodata -999.0, got {result.nodata}"
         assert result.units == "m", f"Expected units 'm', got '{result.units}'"
         assert result.standard_name == "sea_surface_height", (
@@ -605,7 +605,18 @@ class TestMeshVariable:
             Calling sel_time_range on a 1D variable should raise ValueError.
         """
         with pytest.raises(ValueError, match="no time dimension"):
-            face_var_1d.sel_time_range(0, 1)
+            face_var_1d.isel(time=slice(0, 1))
+
+    def test_deprecated_time_methods_forward_to_isel_and_warn(self, temporal_var):
+        """`sel_time` / `sel_time_range` are deprecated aliases of `isel(time=...)`."""
+        import numpy as np
+
+        with pytest.warns(DeprecationWarning, match=r"isel\(time=index\)"):
+            arr = temporal_var.sel_time(1)
+        assert np.allclose(arr, temporal_var.isel(time=1).data)
+        with pytest.warns(DeprecationWarning, match=r"isel\(time=slice"):
+            rng = temporal_var.sel_time_range(0, 2)
+        assert rng.shape == temporal_var.isel(time=slice(0, 2)).shape
 
     @pytest.fixture
     def named_temporal_var(self):

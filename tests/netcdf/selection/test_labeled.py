@@ -82,19 +82,79 @@ class TestLabeledDatasetRead:
     def test_netcdf_exposes_dims_coords_variables(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         assert store.sizes == {"time": N_TIME, "feature_id": N_FEAT}
-        assert "feature_id" in store.coordinates
-        assert "gage_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "feature_id" in store.coordinate_names
+        assert "gage_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
 
     def test_zarr_exposes_dims_coords_variables(self, zarr_store: Path):
         store = LabeledDataset.read_file(zarr_store)
         assert store.sizes == {"time": N_TIME, "feature_id": N_FEAT}
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
+
+    def test_isel_positional_slice_keeps_dim(self, nc_store: Path):
+        """`isel` selects by integer position; a slice keeps the dimension."""
+        store = LabeledDataset.read_file(nc_store)
+        sub = store.isel(time=slice(0, 2))
+        assert sub.sizes["time"] == 2
+        assert sub.sizes["feature_id"] == N_FEAT
+
+    def test_isel_scalar_drops_dim(self, nc_store: Path):
+        """A scalar `isel` keeps one step and drops the dimension, like `sel` with a scalar."""
+        store = LabeledDataset.read_file(nc_store)
+        sub = store.isel(time=0)
+        assert "time" not in sub.sizes
+
+    def test_isel_unknown_dim_raises(self, nc_store: Path):
+        """`isel` refuses a name that is not a dimension."""
+        store = LabeledDataset.read_file(nc_store)
+        with pytest.raises(KeyError, match="not a dimension"):
+            store.isel(nope=0)
+
+    def test_sel_slice_is_the_label_range(self, nc_store: Path):
+        """`sel(time=slice(a, b))` is the CF-aware label window the old `select_time` gave."""
+        store = LabeledDataset.read_file(nc_store)
+        a = store.sel(time=slice("2010-06-02", "2010-06-03"))
+        assert a.sizes["time"] == 2
+
+    def test_sel_slice_rejects_a_step(self, nc_store: Path):
+        """A label range takes no step -- a positional stride is `isel`'s job."""
+        store = LabeledDataset.read_file(nc_store)
+        with pytest.raises(ValueError, match="takes no step"):
+            store.sel(time=slice("2010-06-01", "2010-06-30", 2))
+
+    def test_deprecated_selection_aliases_still_work_and_warn(self, nc_store: Path):
+        """`select*` forward to `sel*`, and `select_time` to `sel(time=slice(...))`, with a warning."""
+        store = LabeledDataset.read_file(nc_store)
+        with pytest.warns(DeprecationWarning, match="use sel instead"):
+            a = store.select(feature_id=[101, 202])
+        assert a.sizes["feature_id"] == 2
+        with pytest.warns(DeprecationWarning, match="use sel_by_coord instead"):
+            store.select_by_coord("feature_id", [101])
+        with pytest.warns(DeprecationWarning, match=r"sel\(time=slice"):
+            b = store.select_time("2010-06-02", "2010-06-03")
+        assert b.sizes["time"] == 2
+
+    def test_deprecated_name_accessors_still_work_and_warn(self, nc_store: Path):
+        """The old `variables`/`coordinates`/`dimensions` names alias the `*_names` ones.
+
+        They were renamed because a bare `variables`/`dimensions` means a mapping in xarray and
+        netCDF4, while these return a `list[str]`; the aliases keep the old spelling working for
+        one release and emit a `DeprecationWarning` pointing at the new name.
+        """
+        store = LabeledDataset.read_file(nc_store)
+        for old, new in (
+            ("variables", "variable_names"),
+            ("coordinates", "coordinate_names"),
+            ("dimensions", "dimension_names"),
+        ):
+            with pytest.warns(DeprecationWarning, match=f"use {new} instead"):
+                aliased = getattr(store, old)
+            assert aliased == getattr(store, new), old
 
     def test_engine_override_opens_zarr(self, zarr_store: Path):
         store = LabeledDataset.read_file(zarr_store, engine="zarr")
-        assert store.variables == ["streamflow"]
+        assert store.variable_names == ["streamflow"]
 
     def test_zarr_v3_string_coord_is_read(self, tmp_path: Path):
         """A Zarr v3 string coord is read as a normal coordinate (GDAL >= 3.13).
@@ -113,9 +173,9 @@ class TestLabeledDatasetRead:
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)
             store = LabeledDataset.read_file(path)
-        assert "gage_id" in store.coordinates, "v3 string coord must be read"
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "gage_id" in store.coordinate_names, "v3 string coord must be read"
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
         np.testing.assert_array_equal(
             store["gage_id"].values, np.array(["01010000", "01010500", "01011000"])
         )
@@ -154,9 +214,11 @@ class TestLabeledDatasetRead:
         )
         with pytest.warns(UserWarning, match="13782"):
             store = LabeledDataset.read_file(path)
-        assert "gage_id" not in store.coordinates, "unreadable coord must be dropped"
-        assert "feature_id" in store.coordinates
-        assert store.variables == ["streamflow"]
+        assert "gage_id" not in store.coordinate_names, (
+            "unreadable coord must be dropped"
+        )
+        assert "feature_id" in store.coordinate_names
+        assert store.variable_names == ["streamflow"]
         np.testing.assert_array_equal(
             store["streamflow"].values,
             np.arange(N_TIME * N_FEAT, dtype="f4").reshape(N_TIME, N_FEAT),
@@ -164,7 +226,7 @@ class TestLabeledDatasetRead:
 
     def test_variables_subset(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store, variables=["streamflow"])
-        assert store.variables == ["streamflow"]
+        assert store.variable_names == ["streamflow"]
 
     def test_variables_unknown_name_raises(self, nc_store: Path):
         """An unknown name in ``variables=`` raises KeyError and releases the handle.
@@ -205,7 +267,7 @@ class TestLabeledDatasetRead:
 
     def test_dimensions_property(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        assert store.dimensions == ["time", "feature_id"]
+        assert store.dimension_names == ["time", "feature_id"]
 
     def test_unopenable_store_raises(self, tmp_path: Path):
         with pytest.raises(ValueError, match="could not open"):
@@ -230,14 +292,14 @@ class TestLabeledDatasetSelect:
 
     def test_select_feature_id_subset(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=[101, 303])
+        sub = store.sel(feature_id=[101, 303])
         assert sub.sizes["feature_id"] == 2
         assert list(sub["feature_id"].values) == [101, 303]
         assert sub.sizes["time"] == N_TIME
 
     def test_select_reads_only_selected_data(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=[101, 303])
+        sub = store.sel(feature_id=[101, 303])
         np.testing.assert_array_equal(
             sub["streamflow"].values, store["streamflow"].values[:, [0, 2]]
         )
@@ -249,7 +311,7 @@ class TestLabeledDatasetSelect:
         exercising the contiguous-run read plus the searchsorted remap back to request order.
         """
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=[303, 101])
+        sub = store.sel(feature_id=[303, 101])
         np.testing.assert_array_equal(
             sub["streamflow"].values,
             store["streamflow"].values[:, [2, 0]],
@@ -264,8 +326,8 @@ class TestLabeledDatasetSelect:
         just like the equivalent Python scalar.
         """
         store = LabeledDataset.read_file(nc_store)
-        by_scalar = store.select(feature_id=101)
-        by_0d = store.select(feature_id=np.array(101))
+        by_scalar = store.sel(feature_id=101)
+        by_0d = store.sel(feature_id=np.array(101))
         assert by_0d.sizes == by_scalar.sizes, "0-d array must match scalar select"
         np.testing.assert_array_equal(
             by_0d["streamflow"].values, by_scalar["streamflow"].values
@@ -273,52 +335,52 @@ class TestLabeledDatasetSelect:
 
     def test_select_returns_new_instance(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=[202])
+        sub = store.sel(feature_id=[202])
         assert isinstance(sub, LabeledDataset)
         assert store.sizes["feature_id"] == N_FEAT  # original untouched
 
     def test_select_unknown_feature_id_reported(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="999"):
-            store.select(feature_id=[101, 999])
+            store.sel(feature_id=[101, 999])
 
     def test_select_unknown_dim_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="not a coordinate"):
-            store.select(bogus=[1])
+            store.sel(bogus=[1])
 
     def test_select_on_coordless_name_raises_clearly(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         # 'string8' is an internal dimension with no coordinate variable.
         with pytest.raises(KeyError, match="not a coordinate"):
-            store.select(string8=[0])
+            store.sel(string8=[0])
 
     def test_select_by_coord_gage_id(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_by_coord("gage_id", ["01010500"])
+        sub = store.sel_by_coord("gage_id", ["01010500"])
         assert sub.sizes["feature_id"] == 1
         assert list(sub["feature_id"].values) == [202]
 
     def test_select_by_coord_unknown_reported(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="99999999"):
-            store.select_by_coord("gage_id", ["99999999"])
+            store.sel_by_coord("gage_id", ["99999999"])
 
     def test_select_by_coord_preserves_order(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_by_coord("gage_id", ["01011000", "01010000"])
+        sub = store.sel_by_coord("gage_id", ["01011000", "01010000"])
         assert list(sub["feature_id"].values) == [101, 303]
 
     def test_select_scalar_value(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=202)
+        sub = store.sel(feature_id=202)
         assert "feature_id" not in sub.sizes
         assert int(sub["feature_id"].values) == 202
 
     def test_select_by_coord_unknown_coord_name_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="not a coordinate"):
-            store.select_by_coord("nope", ["x"])
+            store.sel_by_coord("nope", ["x"])
 
     def test_select_by_coord_requires_1d(self, tmp_path: Path):
         ds = _streamflow_dataset(
@@ -329,28 +391,28 @@ class TestLabeledDatasetSelect:
         ds.close()
         store = LabeledDataset.read_file(path)
         with pytest.raises(KeyError, match="must be 1-D"):
-            store.select_by_coord("grid", [0.0])
+            store.sel_by_coord("grid", [0.0])
 
     def test_select_empty_list_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(ValueError, match="empty selection list"):
-            store.select(feature_id=[])
+            store.sel(feature_id=[])
 
     def test_select_by_coord_empty_list_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(ValueError, match="empty selection list"):
-            store.select_by_coord("gage_id", [])
+            store.sel_by_coord("gage_id", [])
 
     def test_select_tuple_treated_as_list(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        from_tuple = store.select(feature_id=(101, 202))
-        from_list = store.select(feature_id=[101, 202])
+        from_tuple = store.sel(feature_id=(101, 202))
+        from_list = store.sel(feature_id=[101, 202])
         assert from_tuple.sizes == from_list.sizes == {"time": N_TIME, "feature_id": 2}
         assert list(from_tuple["feature_id"].values) == [101, 202]
 
     def test_select_numpy_array_selector_keeps_request_order(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=np.array([303, 101]))
+        sub = store.sel(feature_id=np.array([303, 101]))
         assert list(sub["feature_id"].values) == [303, 101]
 
 
@@ -359,41 +421,41 @@ class TestLabeledDatasetTimeSlice:
 
     def test_select_time_window(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_time("2010-06-02", "2010-06-03")
+        sub = store.sel(time=slice("2010-06-02", "2010-06-03"))
         assert sub.sizes["time"] == 2
         assert sub.sizes["feature_id"] == N_FEAT
 
     def test_select_time_open_ended_start(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_time(end="2010-06-02")
+        sub = store.sel(time=slice(None, "2010-06-02"))
         assert sub.sizes["time"] == 2
 
     def test_select_time_open_ended_end(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_time(start="2010-06-03")
+        sub = store.sel(time=slice("2010-06-03", None))
         assert sub.sizes["time"] == 2
 
     def test_select_time_full_range_keeps_all(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_time()
+        sub = store.sel(time=slice(None, None))
         assert sub.sizes["time"] == N_TIME
 
     def test_select_time_composes_with_select(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select(feature_id=[101, 202]).select_time(
-            "2010-06-01", "2010-06-02"
+        sub = store.sel(feature_id=[101, 202]).sel(
+            time=slice("2010-06-01", "2010-06-02")
         )
         assert sub.sizes == {"time": 2, "feature_id": 2}
 
     def test_out_of_range_window_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        with pytest.raises(ValueError, match="no timesteps in window"):
-            store.select_time("2020-01-01", "2020-12-31")
+        with pytest.raises(ValueError, match="no entries of"):
+            store.sel(time=slice("2020-01-01", "2020-12-31"))
 
     def test_unknown_time_dim_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="not a coordinate"):
-            store.select_time("2010-06-01", time_dim="when")
+            store.sel(when=slice("2010-06-01", None))
 
     def test_cftime_axis(self, tmp_path: Path):
         times = [cftime.DatetimeNoLeap(2010, 6, d) for d in (1, 2, 3, 4)]
@@ -405,7 +467,7 @@ class TestLabeledDatasetTimeSlice:
         ds.to_netcdf(path)
         ds.close()
         store = LabeledDataset.read_file(path)
-        sub = store.select_time("2010-06-02", "2010-06-03")
+        sub = store.sel(time=slice("2010-06-02", "2010-06-03"))
         assert sub.sizes["time"] == 2
         # a non-standard calendar decodes to cftime objects, not datetime64.
         decoded = store["time"].values
@@ -426,7 +488,7 @@ class TestLabeledDatasetClose:
     def test_context_manager_closes(self, nc_store: Path):
         """The store is usable inside a with-block and closed on exit."""
         with LabeledDataset.read_file(nc_store) as store:
-            assert store.variables == ["streamflow"]
+            assert store.variable_names == ["streamflow"]
         nc_store.unlink()
         assert not nc_store.exists(), "file must be removable after the with-block"
 
@@ -436,30 +498,30 @@ class TestLabeledDatasetBbox:
 
     def test_bbox_keeps_inside_features(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_bbox((-76.5, 40.5, -74.5, 41.5))
+        sub = store.sel_bbox((-76.5, 40.5, -74.5, 41.5))
         assert list(sub["feature_id"].values) == [202]
 
     def test_bbox_inclusive_bounds(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_bbox((-77.0, 40.0, -75.0, 42.0))
+        sub = store.sel_bbox((-77.0, 40.0, -75.0, 42.0))
         assert list(sub["feature_id"].values) == [101, 202, 303]
 
     def test_bbox_composes_with_time(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        sub = store.select_bbox((-76.5, 40.5, -74.5, 41.5)).select_time(
-            "2010-06-01", "2010-06-02"
+        sub = store.sel_bbox((-76.5, 40.5, -74.5, 41.5)).sel(
+            time=slice("2010-06-01", "2010-06-02")
         )
         assert sub.sizes == {"time": 2, "feature_id": 1}
 
     def test_empty_bbox_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(ValueError, match="no labels inside bbox"):
-            store.select_bbox((0.0, 0.0, 1.0, 1.0))
+            store.sel_bbox((0.0, 0.0, 1.0, 1.0))
 
     def test_unknown_coord_raises(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
         with pytest.raises(KeyError, match="not a coordinate"):
-            store.select_bbox((-77, 40, -75, 42), lon="x")
+            store.sel_bbox((-77, 40, -75, 42), lon="x")
 
     def test_non_1d_coord_raises(self, tmp_path: Path):
         ds = _streamflow_dataset(
@@ -470,7 +532,7 @@ class TestLabeledDatasetBbox:
         ds.close()
         store = LabeledDataset.read_file(path)
         with pytest.raises(KeyError, match="must be 1-D"):
-            store.select_bbox((-77, 40, -75, 42), lon="grid")
+            store.sel_bbox((-77, 40, -75, 42), lon="grid")
 
     def test_mismatched_dims_raises(self, tmp_path: Path):
         ds = _streamflow_dataset(t_lon=(("time",), np.zeros(N_TIME)))
@@ -479,7 +541,7 @@ class TestLabeledDatasetBbox:
         ds.close()
         store = LabeledDataset.read_file(path)
         with pytest.raises(KeyError, match="same dimension"):
-            store.select_bbox((-77, 40, -75, 42), lon="t_lon")
+            store.sel_bbox((-77, 40, -75, 42), lon="t_lon")
 
     def test_bbox_custom_lon_lat_names(self, tmp_path: Path):
         ds = _streamflow_dataset().rename({"longitude": "x", "latitude": "y"})
@@ -487,7 +549,7 @@ class TestLabeledDatasetBbox:
         ds.to_netcdf(path)
         ds.close()
         store = LabeledDataset.read_file(path)
-        sub = store.select_bbox((-76.5, 40.5, -74.5, 41.5), lon="x", lat="y")
+        sub = store.sel_bbox((-76.5, 40.5, -74.5, 41.5), lon="x", lat="y")
         assert list(sub["feature_id"].values) == [202]
 
 
@@ -509,7 +571,7 @@ class TestLabeledDatasetWrite:
 
     def test_to_dataframe_values_match(self, nc_store: Path):
         store = LabeledDataset.read_file(nc_store)
-        df = store.select(feature_id=[101]).to_dataframe()
+        df = store.sel(feature_id=[101]).to_dataframe()
         assert len(df) == N_TIME
         assert set(df["feature_id"]) == {101}
         # streamflow for feature_id 101 (column 0) across the 4 timesteps.
