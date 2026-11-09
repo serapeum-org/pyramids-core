@@ -26,7 +26,7 @@ _SNIPPETS = {
 }
 
 _NOTE = (
-    "# pyramids shell completion ({shell}).\n"
+    "# pyramids shell completion ({0}).\n"
     "# Requires argcomplete (`pip install argcomplete`). Add the line(s) below to your\n"
     "# shell startup file, or `eval`/`source` them in the current session:"
 )
@@ -41,7 +41,7 @@ def _cmd_completion(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    print(_NOTE.format(shell=args.shell))
+    print(_NOTE.format(args.shell))
     print(_SNIPPETS[args.shell])
     return 0
 
