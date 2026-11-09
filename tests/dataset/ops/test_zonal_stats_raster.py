@@ -197,6 +197,23 @@ class TestZonalStatsEdgeCases:
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
             _values().zonal_stats(_classes(), method="fractional")
 
+    def test_same_shape_different_grid_raises(self):
+        """A same-shape class raster on a different grid is rejected, not silently wrong.
+
+        Test scenario:
+            A 3x3 class raster with the value raster's shape but a shifted top-left corner
+            does not share its grid, so `zonal_stats` raises `AlignmentError` rather than
+            stamping each zone from the wrong ground location (review finding L1).
+        """
+        shifted = Dataset.from_array(
+            np.array([[1, 1, 2], [1, 2, 2], [3, 3, 3]], dtype="int32"),
+            geo_ref=GeoReference(
+                top_left_corner=(100.0, 103.0), cell_size=1.0, epsg=4326
+            ),
+        )
+        with pytest.raises(AlignmentError):
+            _values().zonal_stats(shifted, stats=("mean",))
+
     def test_class_value_zero_gets_a_geometry(self):
         """A class whose value is ``0`` still gets a real geometry, not ``None``.
 

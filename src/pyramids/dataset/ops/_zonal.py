@@ -207,14 +207,21 @@ def _raster_zones(
 def _extract_raw(
     raster: np.typing.NDArray, labels: np.typing.NDArray, n_zones: int
 ) -> list[np.typing.NDArray]:
-    """Per zone, the base band's valid values in row-major order (NaN cells dropped)."""
+    """Per zone, the base band's valid values in row-major order (NaN cells dropped).
+
+    One pass: keep the assigned, non-NaN cells, stably sort them by label (stable so row-major
+    order is preserved within each zone), and split at the per-label group boundaries -- so the
+    cost is one sort rather than a full mask scan per zone.
+    """
     flat_labels = labels.ravel()
     flat_values = raster.ravel()
-    raw: list[np.typing.NDArray] = []
-    for label in range(n_zones):
-        zone_values = flat_values[flat_labels == label]
-        raw.append(zone_values[~np.isnan(zone_values)])
-    return raw
+    valid = (flat_labels >= 0) & ~np.isnan(flat_values)
+    valid_labels = flat_labels[valid]
+    valid_values = flat_values[valid]
+    order = np.argsort(valid_labels, kind="stable")
+    counts = np.bincount(valid_labels, minlength=n_zones)
+    boundaries = np.cumsum(counts[:-1])
+    return list(np.split(valid_values[order], boundaries))
 
 
 def zonal_stats(
@@ -306,7 +313,9 @@ def zonal_stats(
     # Check alignment before reading the base band, so a misaligned class raster fails fast
     # without a wasted full-band read + unpack.
     raster_zones = isinstance(zones, _Dataset)
-    if raster_zones and not ds.spatial._check_alignment(zones):
+    # `same_grid`, not `_check_alignment`: the class raster must share ds's grid *and* CRS
+    # (not merely its row/column counts), or the zones would come from the wrong ground location.
+    if raster_zones and not ds.spatial.same_grid(zones):
         from pyramids.base._errors import AlignmentError
 
         raise AlignmentError(
