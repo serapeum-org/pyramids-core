@@ -214,11 +214,20 @@ ds.zonal_stats(class_raster, stats=("mean",))                  # -> GeoDataFrame
 ds.zonal_stats(class_raster, raw_values=True)["raw_values"]    # the raw grouped values (ndarray per class)
 ```
 
-Two notes: the polygon path now returns a `GeoDataFrame` instead of a plain `DataFrame` (a mostly transparent
-change — `GeoDataFrame` subclasses `DataFrame`); and `raw_values` is an object column that does **not** export to
-file formats (it is in-memory only and off by default). The CLI follows: `pyramids zonal-stats` gains
-`--classes <raster>` for raster-category zones, and the `overlay` verb is deprecated (warns, points at
-`zonal-stats --classes`).
+Notes:
+
+- The polygon path now returns a `GeoDataFrame` instead of a plain `DataFrame` (a mostly transparent change —
+  `GeoDataFrame` subclasses `DataFrame`); and `raw_values` is an object column that does **not** export to file
+  formats (it is in-memory only and off by default).
+- The deprecated `overlay` alias is *equivalent to*, not byte-identical with, the old `overlay`: it now
+  **excludes the class raster's no-data cells** (the old `overlay` would have produced a dict key for the
+  class-raster no-data value), and its values are `float64` rather than the base band's native dtype. Both are
+  intentional improvements; code that `float(...)`-casts the values is unaffected.
+- The old `overlay` streamed row strips (#967) so it never read the whole raster; the deprecated alias (and
+  `zonal_stats` generally) reads the whole base band and class array, a memory regression that only affects code
+  still on `overlay`.
+- The CLI follows: `pyramids zonal-stats` gains `--classes <raster>` for raster-category zones, and the `overlay`
+  verb is deprecated (warns, points at `zonal-stats --classes`).
 
 **CF-packed data is now unpacked on read, and the keyword is `unpack`.** Hard change, silent for the values —
 nothing raises. A raster that declares `scale_factor` / `add_offset` (GDAL's `GetScale` / `GetOffset`) now reads
