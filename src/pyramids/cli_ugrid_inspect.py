@@ -28,9 +28,11 @@ from scipy.sparse import save_npz
 from shapely.geometry import LineString, Point, Polygon
 
 from pyramids._cli_shared import (
+    emit,
     info_print,
     json_sanitize,
     map_lookup_errors,
+    mark_format_support,
     refuse_existing,
     resolve_vector_driver,
 )
@@ -125,11 +127,7 @@ def _cmd_mesh_names(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     names = MeshDataset.mesh_names(args.file, driver=args.driver)
-    if args.json:
-        print(json.dumps({"mesh_names": names}))
-    else:
-        for name in names:
-            print(name)
+    emit(args, {"mesh_names": names}, text="\n".join(names))
     return 0
 
 
@@ -449,6 +447,7 @@ def _add_mesh_names(msub: argparse._SubParsersAction) -> None:
     parser.add_argument("--driver", help="mesh driver name (default: detect)")
     parser.add_argument("--json", action="store_true", help=_HELP_JSON)
     parser.set_defaults(func=_cmd_mesh_names)
+    mark_format_support(parser)
 
 
 def _add_get(msub: argparse._SubParsersAction) -> None:

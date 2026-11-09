@@ -12,10 +12,17 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import csv
+import io
+import json
 import math
 import os
-from collections.abc import Iterator
-from typing import Any
+import sys
+from collections.abc import Iterator, Mapping, Sequence
+from types import TracebackType
+from typing import Any, TextIO
+
+OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
 
 @contextlib.contextmanager
@@ -152,6 +159,285 @@ def json_sanitize(obj: Any) -> Any:
     if type(obj).__module__ == "numpy" and hasattr(obj, "tolist"):
         return json_sanitize(obj.tolist())
     return obj
+
+
+def resolved_format(args: argparse.Namespace) -> str:
+    """Return the output format a command should use: ``text``/``json``/``csv``/``table``.
+
+    The global ``--format`` (stored on ``output_format`` to avoid colliding with a verb-level
+    ``--format``) wins; the legacy per-command ``--json`` flag is honored as an alias for
+    ``--format json`` (so older scripts keep working). Defaults to ``text``.
+
+    Args:
+        args: The parsed arguments (may carry ``output_format`` and/or ``json``).
+
+    Returns:
+        str: One of :data:`OUTPUT_FORMATS`.
+
+    Examples:
+        - ``--json`` alone (no ``--format``) is treated as ``json``:
+            ```python
+            >>> import argparse
+            >>> from pyramids._cli_shared import resolved_format
+            >>> resolved_format(argparse.Namespace(json=True, output_format=None))
+            'json'
+
+            ```
+        - An explicit ``--format`` wins over the ``--json`` alias:
+            ```python
+            >>> resolved_format(argparse.Namespace(json=True, output_format="csv"))
+            'csv'
+
+            ```
+        - Nothing set falls back to ``text``:
+            ```python
+            >>> resolved_format(argparse.Namespace())
+            'text'
+
+            ```
+    """
+    fmt = getattr(args, "output_format", None)
+    if fmt:
+        return str(fmt)
+    return "json" if getattr(args, "json", False) else "text"
+
+
+def mark_format_support(parser: argparse.ArgumentParser) -> None:
+    """Flag a verb's parser as rendering ``--format csv``/``table`` (not only ``json``).
+
+    Every verb honors ``--format json`` through the ``--json`` bridge, but ``csv``/``table``
+    only work on verbs routed through :func:`emit`. Calling this on such a verb's parser sets
+    a ``supports_format`` default that the top-level dispatcher checks, so ``--format
+    csv``/``table`` on a verb that did *not* call this is rejected with a clear error instead
+    of silently printing text.
+
+    Args:
+        parser: The subcommand parser whose verb renders csv/table via :func:`emit`.
+    """
+    parser.set_defaults(supports_format=True)
+
+
+def _rows_from_payload(payload: Any) -> list[dict[str, Any]]:
+    """Normalise a payload into a list of flat records for CSV/table rendering.
+
+    Handles the shapes the CLI actually emits: a list of dicts (returned as-is), a single
+    dict of scalars (one row), a dict wrapping exactly one list under a key (its records,
+    or a ``value`` column for a scalar list), and a bare list of scalars (a ``value``
+    column). Nested values that are not themselves records are JSON-encoded into the cell
+    so every field stays a single CSV/table value.
+
+    Args:
+        payload: The structure a handler would otherwise ``json.dumps``.
+
+    Returns:
+        list[dict[str, Any]]: Flat records, one per output row.
+    """
+    data = json_sanitize(payload)
+    if isinstance(data, Mapping):
+        values = list(data.values())
+        if (
+            len(data) == 1
+            and isinstance(values[0], Sequence)
+            and not isinstance(values[0], (str, bytes))
+        ):
+            return _rows_from_payload(values[0])
+        return [{key: _scalarise(value) for key, value in data.items()}]
+    if isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
+        rows: list[dict[str, Any]] = []
+        for item in data:
+            if isinstance(item, Mapping):
+                rows.append({key: _scalarise(value) for key, value in item.items()})
+            else:
+                rows.append({"value": _scalarise(item)})
+        return rows
+    return [{"value": _scalarise(data)}]
+
+
+def _scalarise(value: Any) -> Any:
+    """Collapse a non-scalar cell to a JSON string so it fits one CSV/table field."""
+    if isinstance(value, (Mapping, list, tuple)):
+        return json.dumps(value)
+    return value
+
+
+def _ordered_fields(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Return the union of keys across ``rows`` in first-seen order (stable columns)."""
+    fields: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in fields:
+                fields.append(key)
+    return fields
+
+
+def _csv_safe(value: Any) -> Any:
+    """Defuse spreadsheet formula injection in a CSV cell.
+
+    A string cell beginning with ``=``, ``+``, ``-``, or ``@`` is interpreted as a formula
+    when the CSV is opened in Excel/LibreOffice. Prefix such a value with a single quote so
+    it is shown literally. Non-string / non-triggering values pass through unchanged.
+
+    Args:
+        value: The cell value about to be written.
+
+    Returns:
+        Any: The value, with a leading ``'`` prepended when it would be read as a formula.
+    """
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
+        return "'" + value
+    return value
+
+
+def _render_csv(payload: Any) -> str:
+    """Render ``payload`` as CSV text with a header row (no trailing newline)."""
+    rows = _rows_from_payload(payload)
+    fields = _ordered_fields(rows)
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: _csv_safe(row.get(field, "")) for field in fields})
+    return buffer.getvalue().rstrip("\n")
+
+
+def _render_table(payload: Any) -> str:
+    """Render ``payload`` as a left-aligned, space-padded text table with a header."""
+    rows = _rows_from_payload(payload)
+    fields = _ordered_fields(rows)
+    cells = [
+        [("" if row.get(f) is None else str(row.get(f, ""))) for f in fields]
+        for row in rows
+    ]
+    widths = [len(f) for f in fields]
+    for cell_row in cells:
+        widths = [max(width, len(cell)) for width, cell in zip(widths, cell_row)]
+    lines = ["  ".join(field.ljust(widths[i]) for i, field in enumerate(fields))]
+    for cell_row in cells:
+        lines.append(
+            "  ".join(cell.ljust(widths[i]) for i, cell in enumerate(cell_row))
+        )
+    return "\n".join(lines)
+
+
+def emit(args: argparse.Namespace, payload: Any, *, text: str | None = None) -> None:
+    """Print ``payload`` in the format the user asked for (``--format`` / ``--json``).
+
+    The single output sink for a data-emitting verb. ``json`` prints the sanitized compact
+    form ``json.dumps(json_sanitize(payload))`` (so a non-finite float becomes ``null``
+    rather than invalid ``NaN``); ``csv`` and ``table`` flatten the payload into records;
+    ``text`` prints ``text`` when the caller supplied a bespoke human rendering, otherwise it
+    falls back to JSON.
+
+    Args:
+        args: The parsed arguments (carries ``format`` / ``json``).
+        payload: The structured result (dict, list of dicts, or list of scalars).
+        text: The human-readable rendering for ``--format text``. When ``None``, ``text``
+            mode prints the JSON form (used by verbs whose only output is the payload).
+
+    Examples:
+        - JSON is the sanitised compact form:
+            ```python
+            >>> import argparse
+            >>> from pyramids._cli_shared import emit
+            >>> emit(argparse.Namespace(output_format="json"), {"a": 1, "b": 2})
+            {"a": 1, "b": 2}
+
+            ```
+        - CSV flattens a dict to a header + one row:
+            ```python
+            >>> emit(argparse.Namespace(output_format="csv"), {"a": 1, "b": 2})
+            a,b
+            1,2
+
+            ```
+    """
+    fmt = resolved_format(args)
+    if fmt == "json":
+        print(json.dumps(json_sanitize(payload)))
+    elif fmt == "csv":
+        print(_render_csv(payload))
+    elif fmt == "table":
+        print(_render_table(payload))
+    elif text is not None:
+        print(text)
+    else:
+        print(json.dumps(json_sanitize(payload)))
+
+
+class ProgressReporter:
+    """A dependency-free progress indicator for the CLI's per-item write loops.
+
+    Writes ``\\r<label>: <done>/<total> (<pct>%)`` to stderr as items complete, and a final
+    newline on close. It is a no-op unless the user passed ``--progress`` and output is an
+    interactive terminal and ``--quiet`` was not passed — so pipes, logs, and CI stay clean.
+    When ``total`` is unknown it reports a running count without a percentage.
+
+    Use it as a context manager around a loop and call :meth:`advance` per item::
+
+        with ProgressReporter(args, len(items), label="items") as progress:
+            for item in items:
+                ...
+                progress.advance()
+
+    Args:
+        args: The parsed arguments (carries ``progress`` and ``quiet``).
+        total: The number of items, or ``None`` when it is not known up front.
+        label: A short noun for the line (e.g. ``"windows"``).
+        stream: The stream to draw on; defaults to :data:`sys.stderr` (injectable for tests).
+    """
+
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        total: int | None,
+        *,
+        label: str = "progress",
+        stream: TextIO | None = None,
+    ) -> None:
+        self._stream = stream if stream is not None else sys.stderr
+        self._total = total
+        self._label = label
+        self._done = 0
+        self.enabled = bool(
+            getattr(args, "progress", False)
+            and not getattr(args, "quiet", False)
+            and getattr(self._stream, "isatty", lambda: False)()
+        )
+
+    def advance(self, step: int = 1) -> None:
+        """Advance the counter by ``step`` items and redraw the line if enabled.
+
+        Args:
+            step: How many items completed since the last call (default ``1``).
+        """
+        self._done += step
+        if not self.enabled:
+            return
+        if self._total:
+            pct = min(100, int(100 * self._done / self._total))
+            self._stream.write(f"\r{self._label}: {self._done}/{self._total} ({pct}%)")
+        else:
+            self._stream.write(f"\r{self._label}: {self._done}")
+        self._stream.flush()
+
+    def close(self) -> None:
+        """Finish the line with a newline so later output is not glued to the bar."""
+        if self.enabled:
+            self._stream.write("\n")
+            self._stream.flush()
+
+    def __enter__(self) -> ProgressReporter:
+        """Enter the context, returning ``self``."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Close the progress line on exit (success or error)."""
+        self.close()
 
 
 def force_agg_backend() -> None:

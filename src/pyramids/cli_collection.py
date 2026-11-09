@@ -24,9 +24,11 @@ import argparse
 import glob as _glob
 import json
 import os
+import sys
 from typing import Any, cast
 
 from pyramids._cli_shared import (
+    ProgressReporter,
     info_print,
     json_safe,
     needs_lazy_extra,
@@ -244,10 +246,18 @@ def _cmd_collection_resample(args: argparse.Namespace) -> int:
         times, freq=args.freq, op=args.op, skipna=args.skipna, q=args.q
     )
     os.makedirs(args.output, exist_ok=True)
-    for index, (label, dataset) in enumerate(windows):
-        path = os.path.join(args.output, args.pattern.format(i=index))
-        dataset.to_file(path)
-        info_print(args, f"window {index} ({label}) -> {path}")
+    total = len(windows) if hasattr(windows, "__len__") else None
+    with ProgressReporter(args, total, label="windows") as progress:
+        for index, (label, dataset) in enumerate(windows):
+            path = os.path.join(args.output, args.pattern.format(i=index))
+            dataset.to_file(path)
+            # The progress bar (stderr) replaces the per-window log only when they would
+            # collide on one interactive terminal — i.e. progress is drawing AND stdout is
+            # itself a tty. When stdout is redirected to a file/pipe, keep the log so the
+            # machine-capturable output is not lost.
+            if not (progress.enabled and sys.stdout.isatty()):
+                info_print(args, f"window {index} ({label}) -> {path}")
+            progress.advance()
     return 0
 
 

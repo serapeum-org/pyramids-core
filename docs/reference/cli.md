@@ -17,6 +17,43 @@ spatial options: `bounds`, `warp`, `georeference`, `orthorectify`, and `edit-inf
 WKT, or PROJ string; `warp`, `overview`, `georeference`, and `orthorectify` accept a `--resampling` method
 (`nearest`, `bilinear`, `cubic`, `average`, `mode`, …).
 
+## Cross-cutting options
+
+These global flags go **before** the command and apply across the CLI:
+
+- **`--format {text,json,csv,table}`** — output format for data-emitting verbs (`info`, `bounds`, `stats`,
+  `list-*`, …). `json` is honored by every verb that supports `--json` (the per-command `--json` flag still works
+  as an alias); `csv` and `table` are rendered by the tabular verbs (e.g. `vector info/bounds`, `nc
+  groups/list-vars`, `mesh mesh-names`). Example: `pyramids --format csv vector info roads.gpkg`.
+- **`--config PATH`** / **`--no-config`** — read per-command defaults from a `pyramids.yaml` (YAML, matching the
+  package's own `config.yaml`). Discovery order: `--config PATH`, then `PYRAMIDS_CONFIG`, then the nearest
+  `pyramids.yaml` searched upward from the working directory, then `~/.config/pyramids/config.yaml`. An explicit
+  flag on the command line always overrides a config default; `--no-config` ignores any file. A top-level
+  `defaults` mapping applies to every verb that has the option, and a `<group>.<command>` mapping applies to that
+  one verb. Only **value-taking** options are configurable — boolean flags such as `--overwrite` are deliberately
+  not settable from config (there is no `--no-overwrite` to override a configured `true` back to false, so the
+  guard can never be silently disabled):
+
+  ```yaml
+  defaults:
+    driver: gpkg
+  vector:
+    warp:
+      crs: "EPSG:4326"
+      driver: gpkg
+  ```
+
+- **`--progress`** — show a progress indicator on stderr for multi-item write verbs (e.g. `collection resample`,
+  `vector read-gpx`). It is a no-op when stderr is not an interactive terminal (pipes, logs, CI) or when
+  `--quiet` is set.
+
+**Shell completion** — `pyramids completion {bash,zsh,fish}` prints the completion hook for your shell. Completion
+is driven by [argcomplete](https://pypi.org/project/argcomplete/) (`pip install argcomplete`); pyramids keeps it
+an optional convenience and works without it.
+
+**Plugins** — a third-party package that registers a `pyramids.cli_commands` entry point contributes its own verbs
+to `pyramids` automatically. `pyramids plugins list` reports the installed plugins and whether each one loaded.
+
 ## Inspect & edit metadata
 
 ```bash
