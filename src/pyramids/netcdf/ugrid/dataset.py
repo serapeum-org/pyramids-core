@@ -1352,6 +1352,12 @@ class MeshDataset(_MeshFacades):
         and the same class already exposes :meth:`isel`, which collapses a single step through
         the identical :func:`_collapse_variable_to_step` (so the result is byte-for-byte the
         same, including the #982 lazy slab read). This forwards to it.
+
+        Args:
+            index: Time step index (0-based; a negative index counts from the end).
+
+        Returns:
+            MeshDataset: The single step, with the time dimension dropped.
         """
         warnings.warn(
             "MeshDataset.sel_time is deprecated; use isel(time=index) instead.",
@@ -1366,6 +1372,13 @@ class MeshDataset(_MeshFacades):
         `sel_time_range` took **integer** positions (`stop` exclusive), which is `isel` with a
         slice. :meth:`isel` keeps the time dimension for a slice exactly as this did, so the
         result is identical.
+
+        Args:
+            start: Start index (inclusive).
+            stop: Stop index (exclusive).
+
+        Returns:
+            MeshDataset: The selected time range, time dimension kept.
         """
         warnings.warn(
             "MeshDataset.sel_time_range is deprecated; use "
