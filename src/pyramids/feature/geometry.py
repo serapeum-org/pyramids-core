@@ -404,7 +404,7 @@ def _multi_geom_handler(
     return coord_arrays
 
 
-def geometry_collection_coords(geom: Any, coord_type: str) -> list[Any]:
+def _geometry_collection_coords(geom: Any, coord_type: str) -> list[Any]:
     """Extract coords from every sub-geometry of a GeometryCollection.
 
     Args:
@@ -422,16 +422,16 @@ def geometry_collection_coords(geom: Any, coord_type: str) -> list[Any]:
           collection:
             ```python
             >>> from shapely.geometry import Point, LineString, GeometryCollection
-            >>> from pyramids.feature.geometry import geometry_collection_coords
+            >>> from pyramids.feature.geometry import _geometry_collection_coords
             >>> gc = GeometryCollection([Point(1, 2), LineString([(0, 0), (1, 1)])])
-            >>> geometry_collection_coords(gc, "x")
+            >>> _geometry_collection_coords(gc, "x")
             [1.0, 0.0, 1.0]
 
             ```
         - Merge y coordinates from a Point, a LineString, and a Polygon:
             ```python
             >>> from shapely.geometry import Point, LineString, Polygon, GeometryCollection
-            >>> from pyramids.feature.geometry import geometry_collection_coords
+            >>> from pyramids.feature.geometry import _geometry_collection_coords
             >>> gc = GeometryCollection(
             ...     [
             ...         Point(3, 4),
@@ -439,7 +439,7 @@ def geometry_collection_coords(geom: Any, coord_type: str) -> list[Any]:
             ...         Polygon([(5, 5), (6, 5), (6, 6), (5, 6)]),
             ...     ]
             ... )
-            >>> geometry_collection_coords(gc, "y")
+            >>> _geometry_collection_coords(gc, "y")
             [4.0, 0.0, 2.0, 5.0, 5.0, 6.0, 6.0, 5.0]
 
             ```
@@ -553,7 +553,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
             "."
         )
     if gtype == "geometrycollection":
-        return geometry_collection_coords(geom, coord_type)
+        return _geometry_collection_coords(geom, coord_type)
     return _multi_geom_handler(geom, coord_type, gtype)
 
 
@@ -987,7 +987,7 @@ class GeometryCoords:
     Replaces the older free-function family
     (``get_xy_coords`` / ``get_point_coords`` / ``get_line_coords`` /
     ``get_poly_coords`` / ``_multi_geom_handler`` /
-    ``geometry_collection_coords``) with a single object that knows
+    ``_geometry_collection_coords``) with a single object that knows
     which dispatch to take and exposes ``.x`` / ``.y`` instead of a
     stringly-typed ``coord_type="x"`` parameter.
 
@@ -1087,7 +1087,7 @@ class GeometryCoords:
         if gtype == "polygon":
             return get_poly_coords(self._geometry, axis)
         if gtype == "geometrycollection":
-            return geometry_collection_coords(self._geometry, axis)
+            return _geometry_collection_coords(self._geometry, axis)
         if gtype.startswith("multi"):
             return _multi_geom_handler(self._geometry, axis, gtype)
         # Fallback for unknown geometry types: try the linestring path,

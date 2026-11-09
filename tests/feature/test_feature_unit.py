@@ -3,7 +3,7 @@
 These tests cover the pyramids-specific surface of ``FeatureCollection``
 after the ARC-1a/ARC-1b refactor:
 
-- Static helpers: ``_geometry_collection``, ``_explode_multipart``,
+- Static helpers: ``_geometry_collection_coords``, ``_explode_multipart``,
   ``_multi_geom_handler``, ``_get_coords``, ``_get_xy_coords``,
   ``_get_point_coords``, ``_create_sr_from_proj``.
 - Instance methods: ``center_point``, ``dtypes``, ``__str__``.
@@ -52,12 +52,15 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.feature import (
     FeatureCollection,
-    geometry_collection_coords,
     get_coords,
     get_point_coords,
     get_xy_coords,
 )
-from pyramids.feature.geometry import _explode_multipart, _multi_geom_handler
+from pyramids.feature.geometry import (
+    _explode_multipart,
+    _geometry_collection_coords,
+    _multi_geom_handler,
+)
 
 pytestmark = pytest.mark.core
 
@@ -324,32 +327,32 @@ class TestSubclassContract:
 
 
 class TestGeometryCollection:
-    """Tests for ``_geometry_collection`` static method."""
+    """Tests for ``_geometry_collection_coords``."""
 
     def test_extracts_point_x(self, geometry_collection_geom):
         """A Point(10, 20) should appear as 10.0 in the x-coord list."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 10.0 in result
 
     def test_extracts_point_y(self, geometry_collection_geom):
         """A Point(10, 20) should appear as 20.0 in the y-coord list."""
-        result = geometry_collection_coords(geometry_collection_geom, "y")
+        result = _geometry_collection_coords(geometry_collection_geom, "y")
         assert 20.0 in result
 
     def test_extracts_linestring_coords(self, geometry_collection_geom):
         """LineString [(0,0),(1,1),(2,0)] x-coords should include 0, 1, 2."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 0.0 in result and 1.0 in result and 2.0 in result
 
     def test_extracts_polygon_coords(self, geometry_collection_geom):
         """Polygon box(5,5,6,6) x-coords should include 5 and 6."""
-        result = geometry_collection_coords(geometry_collection_geom, "x")
+        result = _geometry_collection_coords(geometry_collection_geom, "x")
         assert 5.0 in result and 6.0 in result
 
     def test_empty_geometry_collection(self):
         """An empty GeometryCollection should produce an empty list."""
         gc = GeometryCollection()
-        result = geometry_collection_coords(gc, "x")
+        result = _geometry_collection_coords(gc, "x")
         assert result == []
 
 

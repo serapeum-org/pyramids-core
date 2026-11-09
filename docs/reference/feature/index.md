@@ -57,7 +57,7 @@ classDiagram
         +get_poly_coords(geometry, coord_type)
         -_explode_multipart(gdf, geometry)
         -_multi_geom_handler(multi_geometry, coord_type, geom_type)
-        +geometry_collection_coords(geom, coord_type)
+        -_geometry_collection_coords(geom, coord_type)
     }
 
     class crs {
