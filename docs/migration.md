@@ -226,6 +226,10 @@ Notes:
 - The old `overlay` streamed row strips (#967) so it never read the whole raster; the deprecated alias (and
   `zonal_stats` generally) reads the whole base band and class array, a memory regression that only affects code
   still on `overlay`.
+- Raster-category zones now require the class raster to genuinely **share the base grid** (same size,
+  geotransform and CRS), where the old `overlay` only checked row/column counts. A same-shape but misaligned
+  class raster that `overlay` silently (and geometrically wrongly) accepted now raises `AlignmentError` — align
+  it first, e.g. `classes = classes.align(base)`.
 - The CLI follows: `pyramids zonal-stats` gains `--classes <raster>` for raster-category zones, and the `overlay`
   verb is deprecated (warns, points at `zonal-stats --classes`).
 
