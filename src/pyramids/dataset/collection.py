@@ -4813,26 +4813,39 @@ class DatasetCollection:
         classes_map,
         exclude_value: float | int | None = None,
     ) -> dict[float, list[float]]:
-        """Overlay.
+        """Deprecated alias — group every dataset's values by a class raster.
+
+        .. deprecated::
+            Superseded by :meth:`Dataset.zonal_stats`, which accepts a categorical raster as its zones. Call
+            ``ds.zonal_stats(classes_map, raw_values=True)`` per dataset instead. This alias still returns the
+            merged ``dict[class, list]`` and will be removed in a future release.
 
         Args:
             classes_map (Dataset):
-                Dataset object for the raster that has classes to overlay with.
+                The aligned class raster whose distinct values define the zones.
             exclude_value (float | int, optional):
-                Values to exclude from extracted values. Defaults to None.
+                A physical value to drop from the extracted values. Defaults to None.
 
         Returns:
             dict[float, list[float]]:
-                Dictionary with a list of values in the basemap as keys and for each key a list of all the
-                intersected values in the maps from the path.
+                Each class value mapped to the list of values across the collection that fall inside it.
         """
+        warnings.warn(
+            "`overlay` is deprecated and will be removed in a future release; use "
+            "`Dataset.zonal_stats(classes_map, raw_values=True)` per dataset.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         values: dict[Any, list[float]] = {}
         for ds in self.datasets:
-            dict_i = ds.overlay(classes_map, exclude_value)
-
-            # these are the distinct values from the BaseMap which are keys in the
-            # values dict with each one having a list of values
-            for class_i, vals in dict_i.items():
-                values.setdefault(class_i, []).extend(vals)
+            gdf = ds.zonal_stats(
+                classes_map,
+                stats=("count",),
+                exclude_value=exclude_value,
+                raw_values=True,
+            )
+            for class_i, vals in zip(gdf.index, gdf["raw_values"]):
+                if len(vals):
+                    values.setdefault(class_i, []).extend(list(vals))
 
         return values

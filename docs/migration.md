@@ -199,6 +199,27 @@ cube.first()                      # before -> np.ndarray (2-D);  after -> Datase
 cube.first().read_array(band=0)   # the 2-D array, as before
 ```
 
+**`Dataset.overlay` → `Dataset.zonal_stats`, and `zonal_stats` now returns a `GeoDataFrame`.** `zonal_stats`
+accepts **either** a polygon `FeatureCollection` **or** an aligned categorical raster `Dataset` as its zones (each
+distinct pixel value is a zone), and returns a `geopandas.GeoDataFrame` — one row per zone, carrying the zone
+`geometry` plus one column per stat. The old `overlay` (`dict[class, list]`) is a `DeprecationWarning`-emitting
+alias; use `zonal_stats(class_raster, raw_values=True)` and read its `raw_values` column instead:
+
+```python
+# before
+ds.overlay(class_raster)                       # -> {1: [10.0, 20.0], 2: [30.0, 40.0]}
+
+# after
+ds.zonal_stats(class_raster, stats=("mean",))                  # -> GeoDataFrame of per-class stats
+ds.zonal_stats(class_raster, raw_values=True)["raw_values"]    # the raw grouped values (ndarray per class)
+```
+
+Two notes: the polygon path now returns a `GeoDataFrame` instead of a plain `DataFrame` (a mostly transparent
+change — `GeoDataFrame` subclasses `DataFrame`); and `raw_values` is an object column that does **not** export to
+file formats (it is in-memory only and off by default). The CLI follows: `pyramids zonal-stats` gains
+`--classes <raster>` for raster-category zones, and the `overlay` verb is deprecated (warns, points at
+`zonal-stats --classes`).
+
 **CF-packed data is now unpacked on read, and the keyword is `unpack`.** Hard change, silent for the values —
 nothing raises. A raster that declares `scale_factor` / `add_offset` (GDAL's `GetScale` / `GetOffset`) now reads
 back in physical units as `float64` instead of raw stored counts.
