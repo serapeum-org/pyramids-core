@@ -1089,6 +1089,7 @@ class GeometryCoords:
     def _dispatch(self, axis: str):
         geom = self._geometry
         gtype = geom.geom_type.lower()
+        result: Any
         if gtype.startswith("multi"):
             # MultiPoint / MultiLineString / MultiPolygon need the part-aware
             # handler (one coordinate sequence per constituent geometry).
