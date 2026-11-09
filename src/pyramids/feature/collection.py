@@ -6,7 +6,7 @@ The `feature` subpackage is organised as:
   :class:`FeatureCollection` class.
 - :mod:`pyramids.feature.geometry` — shape factories and coordinate
   extractors (`create_polygon`, `create_point`, `get_coords`,
-  `explode_gdf`, `_multi_geom_handler`, …).
+  `_explode_multipart`, `_multi_geom_handler`, …).
 - :mod:`pyramids.feature._ogr` — private OGR bridge.
 
 CRS / EPSG / reprojection helpers (`get_epsg_from_prj`,
@@ -2564,7 +2564,7 @@ class FeatureCollection(GeoDataFrame):
 
                 ```
         """
-        return FeatureCollection(_geom.explode_gdf(self, geometry=geometry))
+        return FeatureCollection(_geom._explode_multipart(self, geometry=geometry))
 
     def with_coordinates(self) -> FeatureCollection:
         """Return a new FeatureCollection with per-vertex `x` and `y` columns.

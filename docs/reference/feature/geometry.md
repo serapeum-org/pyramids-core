@@ -74,20 +74,10 @@ before touching the geometry's attributes (M2), so an invalid
 
 ## Multi-geometry Handling
 
-`explode_gdf` expands `MultiPolygon` (or `GeometryCollection`) rows
-into one-geometry-per-row frames; `multi_geom_handler` and
-`geometry_collection_coords` return per-part coordinate sequences
-without exploding.
-
-::: pyramids.feature.geometry.explode_gdf
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.multi_geom_handler
-    options:
-        show_root_heading: true
-        heading_level: 3
+`geometry_collection_coords` returns per-part coordinate sequences from a
+`GeometryCollection`. To split multi-part frames into one-geometry-per-row,
+use `FeatureCollection.explode`; for per-part coordinates of any geometry,
+use `GeometryCoords`.
 
 ::: pyramids.feature.geometry.geometry_collection_coords
     options:

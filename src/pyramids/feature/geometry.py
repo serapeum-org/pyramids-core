@@ -16,7 +16,7 @@ you need several outputs from the same input:
   ``.xy`` properties. Replaces the ``coord_type="x"`` stringly-typed
   parameter on the older free functions.
 
-``explode_gdf`` and ``get_coords`` operate on a GeoDataFrame /
+``_explode_multipart`` and ``get_coords`` operate on a GeoDataFrame /
 DataFrame row respectively and stay free functions: the natural
 home for them is the consumer (``FeatureCollection.explode``
 exposes the explode logic as an instance method).
@@ -234,7 +234,9 @@ def get_poly_coords(geometry: Polygon, coord_type: str) -> list:
     return get_xy_coords(geometry.exterior, coord_type)
 
 
-def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFrame:
+def _explode_multipart(
+    gdf: GeoDataFrame, geometry: str = "multipolygon"
+) -> GeoDataFrame:
     """Explode multi-geometries into per-row single geometries.
 
     Rows whose geometry type matches `geometry` are expanded so that
@@ -261,7 +263,7 @@ def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFra
             ```python
             >>> import geopandas as gpd
             >>> from shapely.geometry import Polygon, MultiPolygon
-            >>> from pyramids.feature.geometry import explode_gdf
+            >>> from pyramids.feature.geometry import _explode_multipart
             >>> gdf = gpd.GeoDataFrame(
             ...     {
             ...         "name": ["a", "b"],
@@ -277,7 +279,7 @@ def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFra
             ...     },
             ...     crs="EPSG:4326",
             ... )
-            >>> result = explode_gdf(gdf, "multipolygon")
+            >>> result = _explode_multipart(gdf, "multipolygon")
             >>> len(result)
             3
             >>> [g.geom_type for g in result.geometry]
@@ -291,7 +293,7 @@ def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFra
             ```python
             >>> import geopandas as gpd
             >>> from shapely.geometry import Polygon, MultiPolygon
-            >>> from pyramids.feature.geometry import explode_gdf
+            >>> from pyramids.feature.geometry import _explode_multipart
             >>> gdf = gpd.GeoDataFrame(
             ...     {
             ...         "geometry": [
@@ -305,7 +307,7 @@ def explode_gdf(gdf: GeoDataFrame, geometry: str = "multipolygon") -> GeoDataFra
             ...     },
             ...     crs="EPSG:4326",
             ... )
-            >>> _ = explode_gdf(gdf, "multipolygon")
+            >>> _ = _explode_multipart(gdf, "multipolygon")
             >>> gdf.iloc[0].geometry.geom_type
             'MultiPolygon'
 
@@ -463,7 +465,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
     several projected CRSes) with the "unhandled geometry" signal and
     could silently drop valid rows. The sentinel is gone; callers
     must explode MultiPolygon rows *before* calling this function
-    (:func:`explode_gdf` does exactly that and is always invoked from
+    (:func:`_explode_multipart` does exactly that and is always invoked from
     :meth:`FeatureCollection.xy`).
 
     Args:
@@ -476,7 +478,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
 
     Raises:
         InvalidGeometryError: If the geometry is a `MultiPolygon`
-            (explode the frame with :func:`explode_gdf` first so that
+            (explode the frame with :func:`_explode_multipart` first so that
             each row is a single Polygon — this replaces the old
             `-9999` sentinel), or if the geometry is **empty**
             (`geom.is_empty`). C22 turned the silent `(nan, nan)`
@@ -510,7 +512,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
 
             ```
         - A `MultiPolygon` row raises `InvalidGeometryError` — use
-          :func:`explode_gdf` first:
+          :func:`_explode_multipart` first:
             ```python
             >>> import geopandas as gpd
             >>> from shapely.geometry import Polygon, MultiPolygon
@@ -546,7 +548,7 @@ def get_coords(row: Any, geom_col: str, coord_type: str) -> Any:
     if gtype == "multipolygon":
         raise InvalidGeometryError(
             "get_coords does not accept MultiPolygon rows — explode the "
-            "GeoDataFrame with explode_gdf(gdf, 'multipolygon') first "
+            "GeoDataFrame into single-part rows first "
             "."
         )
     if gtype == "geometrycollection":

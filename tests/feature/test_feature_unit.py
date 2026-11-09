@@ -3,7 +3,7 @@
 These tests cover the pyramids-specific surface of ``FeatureCollection``
 after the ARC-1a/ARC-1b refactor:
 
-- Static helpers: ``_geometry_collection``, ``_explode_gdf``,
+- Static helpers: ``_geometry_collection``, ``_explode_multipart``,
   ``_multi_geom_handler``, ``_get_coords``, ``_get_xy_coords``,
   ``_get_point_coords``, ``_create_sr_from_proj``.
 - Instance methods: ``center_point``, ``dtypes``, ``__str__``.
@@ -52,13 +52,12 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.feature import (
     FeatureCollection,
-    explode_gdf,
     geometry_collection_coords,
     get_coords,
     get_point_coords,
     get_xy_coords,
 )
-from pyramids.feature.geometry import _multi_geom_handler
+from pyramids.feature.geometry import _explode_multipart, _multi_geom_handler
 
 pytestmark = pytest.mark.core
 
@@ -355,7 +354,7 @@ class TestGeometryCollection:
 
 
 class TestExplodeGdf:
-    """Tests for ``_explode_gdf`` via ``xy()``."""
+    """Tests for ``_explode_multipart`` via ``xy()``."""
 
     def test_multipolygon_exploded_via_xy(self):
         """``with_coordinates()`` explodes MultiPolygons into per-row Polygons."""
@@ -373,11 +372,11 @@ class TestExplodeGdf:
 
     def test_no_multipolygon_unchanged(self, simple_polygon_gdf: GeoDataFrame):
         """A GDF without multi-geometries should be returned with same row count."""
-        result = explode_gdf(simple_polygon_gdf.copy(), geometry="multipolygon")
+        result = _explode_multipart(simple_polygon_gdf.copy(), geometry="multipolygon")
         assert len(result) == len(simple_polygon_gdf)
 
     def test_input_gdf_not_mutated(self):
-        """D-H1: explode_gdf must not mutate the caller's GeoDataFrame.
+        """D-H1: _explode_multipart must not mutate the caller's GeoDataFrame.
 
         Test scenario:
             The previous implementation dropped exploded rows from the
@@ -394,14 +393,14 @@ class TestExplodeGdf:
         original_len = len(gdf)
         original_first_type = gdf.geometry.iloc[0].geom_type
 
-        explode_gdf(gdf, geometry="multipolygon")
+        _explode_multipart(gdf, geometry="multipolygon")
 
         # Input row count + geometries are unchanged.
         assert len(gdf) == original_len, (
-            f"explode_gdf mutated the input length: {len(gdf)} vs {original_len}"
+            f"_explode_multipart mutated the input length: {len(gdf)} vs {original_len}"
         )
         assert gdf.geometry.iloc[0].geom_type == original_first_type, (
-            "explode_gdf mutated the first row's geometry in place"
+            "_explode_multipart mutated the first row's geometry in place"
         )
 
     def test_returns_expanded_row_count(self):
@@ -418,7 +417,7 @@ class TestExplodeGdf:
         single = box(10.0, 10.0, 11.0, 11.0)
         gdf = gpd.GeoDataFrame(geometry=[mpoly, single], crs="EPSG:4326")
 
-        out = explode_gdf(gdf, geometry="multipolygon")
+        out = _explode_multipart(gdf, geometry="multipolygon")
         assert out is not gdf, "return value must be a fresh GeoDataFrame"
         assert len(out) == 4, f"expected 4 exploded rows, got {len(out)}"
 
@@ -1053,7 +1052,7 @@ class TestGetCoords:
         sentinel, which silently dropped rows whose x coordinate
         happened to equal -9999 in projected CRSes. The function now
         raises ValueError; xy() guarantees this branch is unreachable
-        by calling explode_gdf first.
+        by calling _explode_multipart first.
         """
         import pandas as pd
 

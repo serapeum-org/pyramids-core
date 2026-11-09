@@ -13,12 +13,12 @@ import pytest
 from shapely.geometry import MultiPolygon, Point, Polygon
 
 from pyramids.feature import FeatureCollection, _wfs
-from pyramids.feature.geometry import create_points, explode_gdf
+from pyramids.feature.geometry import _explode_multipart, create_points
 from pyramids.feature.tessellation import fishnet_cells
 
 
 class TestArc16ExplodeGdf:
-    """ARC-16: explode_gdf must select rows by mask, not index label."""
+    """ARC-16: _explode_multipart must select rows by mask, not index label."""
 
     def test_non_unique_index_preserves_all_rows(self):
         """A non-matching row sharing a duplicate index label is not dropped.
@@ -38,7 +38,7 @@ class TestArc16ExplodeGdf:
             {"name": ["multi", "plain"]}, geometry=[multi, plain], crs="EPSG:4326"
         )
         gdf.index = [0, 0]
-        result = explode_gdf(gdf, "multipolygon")
+        result = _explode_multipart(gdf, "multipolygon")
         assert list(result["name"]) == ["plain", "multi", "multi"], (
             f"lost data: {list(result['name'])}"
         )
@@ -53,7 +53,7 @@ class TestArc16ExplodeGdf:
             ]
         )
         gdf = gpd.GeoDataFrame(geometry=[multi], crs="EPSG:4326")
-        _ = explode_gdf(gdf, "multipolygon")
+        _ = _explode_multipart(gdf, "multipolygon")
         assert gdf.iloc[0].geometry.geom_type == "MultiPolygon", (
             "input frame was mutated"
         )
@@ -62,7 +62,7 @@ class TestArc16ExplodeGdf:
         """A FeatureCollection input does not shadow geopandas' explode with its own override.
 
         Test scenario:
-            FeatureCollection.explode → explode_gdf(self, …); the internal `.explode(index_parts=…)` must reach
+            FeatureCollection.explode → _explode_multipart(self, …); the internal `.explode(index_parts=…)` must reach
             GeoDataFrame.explode, not FeatureCollection.explode(geometry=…) (the FC is-a GeoDataFrame trap).
         """
         multi = MultiPolygon(

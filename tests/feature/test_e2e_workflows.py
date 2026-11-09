@@ -312,7 +312,7 @@ class TestGeometryHardeningChain:
     """Chained e2e across D-H1/C21/C22/C23 + D-H2.
 
     Builds a FeatureCollection with mixed Polygons + MultiPolygons, runs
-    ``with_coordinates`` (which calls ``explode_gdf`` internally), asserts:
+    ``with_coordinates`` (which calls ``_explode_multipart`` internally), asserts:
 
     * the input FC is untouched (D-H1),
     * the exploded output has the right row count,

@@ -55,8 +55,8 @@ classDiagram
         +get_point_coords(geometry, coord_type)
         +get_line_coords(geometry, coord_type)
         +get_poly_coords(geometry, coord_type)
-        +explode_gdf(gdf, geometry)
-        +multi_geom_handler(multi_geometry, coord_type, geom_type)
+        -_explode_multipart(gdf, geometry)
+        -_multi_geom_handler(multi_geometry, coord_type, geom_type)
         +geometry_collection_coords(geom, coord_type)
     }
 
