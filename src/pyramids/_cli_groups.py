@@ -7,12 +7,9 @@ and this module holds the shared plumbing every family uses to get there:
   ``did you mean …?`` hint (via :mod:`difflib`) when a subcommand is misspelled.
 - :func:`add_group` — mount a nested command group on a subparsers action and return the
   group's own subparsers action, so a domain or subsystem registers its verbs uniformly.
-- :data:`DEPRECATED` + :func:`rewrite_deprecated` — the compatibility shim. As verbs move
-  from their old flat path to a nested one, an entry ``"old-verb": ("domain", "verb")`` is
-  added here; the shim rewrites ``pyramids old-verb …`` to the new path and prints a one-line
-  deprecation note. The old spellings are **removed in 1.0.0** (no permanent aliases).
 
-Everything is standard-library only.
+The restructure is a **hard move**: when a verb moves to its nested path the old flat spelling
+is removed outright (no deprecation aliases). Everything is standard-library only.
 """
 
 from __future__ import annotations
@@ -20,8 +17,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import re
-import sys
-from typing import TextIO, cast
+from typing import cast
 
 _BAD_CHOICE = re.compile(r"invalid choice: '([^']*)'")
 _CHOOSE_FROM = re.compile(r"choose from (.+)\)")
@@ -100,71 +96,3 @@ def add_group(
         parser_class=SuggestingArgumentParser,
     )
     return cast("argparse._SubParsersAction", inner)
-
-
-# old flat verb -> new nested path. Populated as each phase moves a family. Empty until the
-# raster/process groups land; the shim is a no-op while it is empty.
-DEPRECATED: dict[str, tuple[str, ...]] = {}
-
-_REMOVED_IN = "1.0.0"
-# Global options that must be skipped when locating the verb token; the value-taking ones
-# consume the following token too.
-_GLOBAL_VALUE_OPTS = {"--format", "--config"}
-_GLOBAL_FLAG_OPTS = {
-    "--quiet",
-    "-q",
-    "--no-config",
-    "--progress",
-    "--version",
-    "-V",
-    "--help",
-    "-h",
-}
-
-
-def _verb_index(argv: list[str]) -> int | None:
-    """Return the index of the first subcommand token in ``argv``, skipping global options."""
-    i = 0
-    while i < len(argv):
-        token = argv[i]
-        if token in _GLOBAL_VALUE_OPTS:
-            i += 2
-            continue
-        if token in _GLOBAL_FLAG_OPTS or token.startswith("-"):
-            i += 1
-            continue
-        return i
-    return None
-
-
-def rewrite_deprecated(argv: list[str], *, stderr: TextIO | None = None) -> list[str]:
-    """Rewrite a deprecated flat verb to its new nested path, warning once.
-
-    If the subcommand in ``argv`` is a key of :data:`DEPRECATED`, its token is replaced by the
-    new path (e.g. ``["info", "x"]`` -> ``["raster", "info", "x"]``) and a one-line
-    deprecation note is printed to ``stderr``. Global options before the verb are preserved.
-    Anything not deprecated is returned unchanged.
-
-    Args:
-        argv: The raw argument list (without the program name).
-        stderr: Stream for the deprecation note; defaults to :data:`sys.stderr`.
-
-    Returns:
-        list[str]: The possibly-rewritten argument list.
-    """
-    if not DEPRECATED:
-        return argv
-    index = _verb_index(argv)
-    if index is None:
-        return argv
-    new = DEPRECATED.get(argv[index])
-    if new is None:
-        return argv
-    stream = stderr if stderr is not None else sys.stderr
-    old_path = " ".join(argv[: index + 1][index:])
-    print(
-        f"warning: `pyramids {old_path}` is deprecated; use `pyramids {' '.join(new)}` "
-        f"(removed in {_REMOVED_IN})",
-        file=stream,
-    )
-    return [*argv[:index], *new, *argv[index + 1 :]]

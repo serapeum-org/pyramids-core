@@ -52,7 +52,7 @@ class TestPythonMEntrypoint:
         src_dir = os.path.dirname(os.path.dirname(pyramids.__file__))
         env = {**os.environ, "PYTHONPATH": src_dir}
         proc = subprocess.run(
-            [sys.executable, "-m", "pyramids", "info", cli_raster, "--json"],
+            [sys.executable, "-m", "pyramids", "raster", "info", cli_raster, "--json"],
             capture_output=True,
             text=True,
             env=env,
@@ -93,110 +93,110 @@ class TestTopLevelHelp:
 
 
 _HELP_ARGVS = [
-    ["info", "--help"],
-    ["bounds", "--help"],
-    ["clip", "--help"],
-    ["warp", "--help"],
-    ["merge", "--help"],
-    ["overview", "--help"],
-    ["sample", "--help"],
-    ["convert", "--help"],
-    ["georeference", "--help"],
-    ["orthorectify", "--help"],
-    ["edit-info", "--help"],
-    ["calc", "--help"],
-    ["shapes", "--help"],
-    ["rasterize", "--help"],
-    ["render", "--help"],
-    ["cog", "--help"],
-    ["cog", "create", "--help"],
-    ["cog", "validate", "--help"],
-    ["cog", "info", "--help"],
+    ["raster", "info", "--help"],
+    ["raster", "bounds", "--help"],
+    ["raster", "clip", "--help"],
+    ["raster", "warp", "--help"],
+    ["raster", "merge", "--help"],
+    ["raster", "overview", "--help"],
+    ["raster", "sample", "--help"],
+    ["raster", "convert", "--help"],
+    ["raster", "georeference", "--help"],
+    ["raster", "orthorectify", "--help"],
+    ["raster", "edit-info", "--help"],
+    ["raster", "calc", "--help"],
+    ["raster", "shapes", "--help"],
+    ["raster", "rasterize", "--help"],
+    ["raster", "render", "--help"],
+    ["raster", "cog", "--help"],
+    ["raster", "cog", "create", "--help"],
+    ["raster", "cog", "validate", "--help"],
+    ["raster", "cog", "info", "--help"],
     ["run", "--help"],
     ["apply", "--help"],
     ["tools", "--help"],
     ["tool", "--help"],
     # issue #1436: full Dataset surface — read / construct
-    ["from-bytes", "--help"],
-    ["from-dataframe", "--help"],
-    ["from-points", "--help"],
-    ["from-point-arrays", "--help"],
-    ["from-band-files", "--help"],
-    ["from-archive", "--help"],
-    ["from-zarr", "--help"],
-    ["create", "--help"],
-    ["create-empty", "--help"],
-    ["empty-like", "--help"],
-    ["dataset-like", "--help"],
+    ["raster", "from-bytes", "--help"],
+    ["raster", "from-dataframe", "--help"],
+    ["raster", "from-points", "--help"],
+    ["raster", "from-point-arrays", "--help"],
+    ["raster", "from-band-files", "--help"],
+    ["raster", "from-archive", "--help"],
+    ["raster", "from-zarr", "--help"],
+    ["raster", "create", "--help"],
+    ["raster", "create-empty", "--help"],
+    ["raster", "empty-like", "--help"],
+    ["raster", "dataset-like", "--help"],
     ["fetch", "wmts", "--help"],
     ["fetch", "ogc-coverages", "--help"],
     # issue #1436: inspect / metadata
-    ["stats", "--help"],
-    ["histogram", "--help"],
-    ["get-meta-data", "--help"],
-    ["get-attribute-table", "--help"],
-    ["set-attribute-table", "--help"],
-    ["mask-flags", "--help"],
-    ["footprint", "--help"],
-    ["cell-area", "--help"],
-    ["domain-area", "--help"],
-    ["count-domain-cells", "--help"],
-    ["same-grid", "--help"],
+    ["raster", "stats", "--help"],
+    ["raster", "histogram", "--help"],
+    ["raster", "get-meta-data", "--help"],
+    ["raster", "get-attribute-table", "--help"],
+    ["raster", "set-attribute-table", "--help"],
+    ["raster", "mask-flags", "--help"],
+    ["raster", "footprint", "--help"],
+    ["raster", "cell-area", "--help"],
+    ["raster", "domain-area", "--help"],
+    ["raster", "count-domain-cells", "--help"],
+    ["raster", "same-grid", "--help"],
     # issue #1436: bands / georef edit
-    ["add-band", "--help"],
-    ["select-bands", "--help"],
-    ["get-band-by-color", "--help"],
-    ["create-mask-band", "--help"],
-    ["read-masks", "--help"],
-    ["get-mask", "--help"],
-    ["set-color-ramp", "--help"],
-    ["set-rpcs", "--help"],
-    ["geolocate", "--help"],
+    ["raster", "add-band", "--help"],
+    ["raster", "select-bands", "--help"],
+    ["raster", "get-band-by-color", "--help"],
+    ["raster", "create-mask-band", "--help"],
+    ["raster", "read-masks", "--help"],
+    ["raster", "get-mask", "--help"],
+    ["raster", "set-color-ramp", "--help"],
+    ["raster", "set-rpcs", "--help"],
+    ["raster", "geolocate", "--help"],
     # issue #1436: spatial ops
-    ["align", "--help"],
-    ["overlay", "--help"],
-    ["combine", "--help"],
-    ["warped-view", "--help"],
-    ["wrap-longitude", "--help"],
-    ["translate", "--help"],
-    ["transect", "--help"],
-    ["extract", "--help"],
+    ["raster", "align", "--help"],
+    ["raster", "overlay", "--help"],
+    ["raster", "combine", "--help"],
+    ["raster", "warped-view", "--help"],
+    ["raster", "wrap-longitude", "--help"],
+    ["raster", "translate", "--help"],
+    ["raster", "transect", "--help"],
+    ["raster", "extract", "--help"],
     # issue #1436: analysis / terrain
-    ["proximity", "--help"],
-    ["cluster", "--help"],
-    ["zonal-stats", "--help"],
-    ["match-histogram", "--help"],
-    ["percentile-stretch", "--help"],
-    ["pan-sharpen", "--help"],
-    ["fillna", "--help"],
-    ["where", "--help"],
-    ["convert-units", "--help"],
-    ["contour", "--help"],
+    ["raster", "proximity", "--help"],
+    ["raster", "cluster", "--help"],
+    ["raster", "zonal-stats", "--help"],
+    ["raster", "match-histogram", "--help"],
+    ["raster", "percentile-stretch", "--help"],
+    ["raster", "pan-sharpen", "--help"],
+    ["raster", "fillna", "--help"],
+    ["raster", "where", "--help"],
+    ["raster", "convert-units", "--help"],
+    ["raster", "contour", "--help"],
     # issue #1436: overviews / windowed reads
-    ["recreate-overviews", "--help"],
-    ["read-overview-array", "--help"],
-    ["read-part", "--help"],
-    ["preview", "--help"],
-    ["point", "--help"],
-    ["read-tile", "--help"],
+    ["raster", "recreate-overviews", "--help"],
+    ["raster", "read-overview-array", "--help"],
+    ["raster", "read-part", "--help"],
+    ["raster", "preview", "--help"],
+    ["raster", "point", "--help"],
+    ["raster", "read-tile", "--help"],
     # issue #1436: export / convert
-    ["to-bytes", "--help"],
-    ["to-cog-bytes", "--help"],
-    ["to-dataframe", "--help"],
-    ["to-polygons", "--help"],
-    ["to-raster", "--help"],
-    ["to-image", "--help"],
-    ["to-xyz", "--help"],
-    ["to-zarr", "--help"],
-    ["to-stac-item", "--help"],
-    ["to-terrain-rgb", "--help"],
+    ["raster", "to-bytes", "--help"],
+    ["raster", "to-cog-bytes", "--help"],
+    ["raster", "to-dataframe", "--help"],
+    ["raster", "to-polygons", "--help"],
+    ["raster", "to-raster", "--help"],
+    ["raster", "to-image", "--help"],
+    ["raster", "to-xyz", "--help"],
+    ["raster", "to-zarr", "--help"],
+    ["raster", "to-stac-item", "--help"],
+    ["raster", "to-terrain-rgb", "--help"],
     # issue #1436: plot (headless)
-    ["plot-histogram", "--help"],
-    ["plot-vector-field", "--help"],
-    ["animate", "--help"],
+    ["raster", "plot-histogram", "--help"],
+    ["raster", "plot-vector-field", "--help"],
+    ["raster", "animate", "--help"],
     # issue #1471: finish the Dataset surface — checksum + subdataset
-    ["checksum", "--help"],
-    ["subdataset", "--help"],
+    ["raster", "checksum", "--help"],
+    ["raster", "subdataset", "--help"],
     ["vector", "--help"],
     ["vector", "info", "--help"],
     ["vector", "warp", "--help"],
@@ -510,7 +510,9 @@ class TestQuiet:
     def test_quiet_suppresses_wrote_line(self, cli_raster, tmp_path, capsys):
         """--quiet suppresses the 'wrote' chatter but still writes the output."""
         out = str(tmp_path / "q.tif")
-        assert main(["--quiet", "warp", cli_raster, out, "--crs", "3857"]) == 0
+        assert (
+            main(["--quiet", "raster", "warp", cli_raster, out, "--crs", "3857"]) == 0
+        )
         assert capsys.readouterr().out == "", "no stdout under --quiet"
         assert os.path.exists(out)
 
@@ -524,6 +526,7 @@ class TestResamplingVocab:
         assert (
             main(
                 [
+                    "raster",
                     "warp",
                     cli_raster,
                     str(tmp_path / f"w_{method}.tif"),
@@ -536,7 +539,18 @@ class TestResamplingVocab:
             == 0
         )
         assert (
-            main(["overview", cli_raster, "--levels", "2", "--resampling", method]) == 0
+            main(
+                [
+                    "raster",
+                    "overview",
+                    cli_raster,
+                    "--levels",
+                    "2",
+                    "--resampling",
+                    method,
+                ]
+            )
+            == 0
         )
 
     def test_cubic_spline_alias_on_overview(self, cli_raster):
@@ -544,6 +558,7 @@ class TestResamplingVocab:
         assert (
             main(
                 [
+                    "raster",
                     "overview",
                     cli_raster,
                     "--levels",
@@ -576,7 +591,7 @@ class TestCalcNote:
         out = None
         res = str(tmp_path / "diff.tif")
 
-        rc = main(["calc", "A - B", a, b, res])
+        rc = main(["raster", "calc", "A - B", a, b, res])
         err = capsys.readouterr().err
 
         assert rc == 1, "a grid mismatch must exit 1"
@@ -589,22 +604,22 @@ class TestEditInfoNodata:
 
     def test_unset_removes_sentinel(self, cli_raster):
         """--nodata none clears the no-data value."""
-        assert main(["edit-info", cli_raster, "--nodata", "none"]) == 0
+        assert main(["raster", "edit-info", cli_raster, "--nodata", "none"]) == 0
         assert Dataset.read_file(cli_raster).no_data_value[0] is None
 
     def test_nan_token(self, cli_raster):
         """--nodata nan sets a NaN sentinel."""
-        assert main(["edit-info", cli_raster, "--nodata", "nan"]) == 0
+        assert main(["raster", "edit-info", cli_raster, "--nodata", "nan"]) == 0
         assert math.isnan(Dataset.read_file(cli_raster).no_data_value[0])
 
     def test_numeric_still_works(self, cli_raster):
         """A numeric --nodata still sets the value."""
-        assert main(["edit-info", cli_raster, "--nodata", "0"]) == 0
+        assert main(["raster", "edit-info", cli_raster, "--nodata", "0"]) == 0
         assert Dataset.read_file(cli_raster).no_data_value[0] == 0
 
     def test_bad_token_errors(self, cli_raster, capsys):
         """A non-numeric, non-token --nodata exits 1 cleanly."""
-        assert main(["edit-info", cli_raster, "--nodata", "banana"]) == 1
+        assert main(["raster", "edit-info", cli_raster, "--nodata", "banana"]) == 1
         assert "not a number" in capsys.readouterr().err
 
 
@@ -620,7 +635,7 @@ class TestEditInfoDriverGuard:
             return object()  # a read-only open succeeds -> genuine update-mode limit
 
         monkeypatch.setattr(cli_dataset.Dataset, "read_file", staticmethod(fake))
-        rc = main(["edit-info", cli_raster, "--nodata", "0"])
+        rc = main(["raster", "edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1
         assert "update-mode" in err
@@ -633,7 +648,7 @@ class TestEditInfoDriverGuard:
             raise RuntimeError("TIFFReadDirectory: Failed to read directory")
 
         monkeypatch.setattr(cli_dataset.Dataset, "read_file", staticmethod(boom))
-        rc = main(["edit-info", cli_raster, "--nodata", "0"])
+        rc = main(["raster", "edit-info", cli_raster, "--nodata", "0"])
         err = capsys.readouterr().err
         assert rc == 1
         assert "Failed to read directory" in err, "the real error must surface"
@@ -646,7 +661,7 @@ class TestCogJson:
     def test_cog_create_json_result(self, cli_raster, tmp_path, capsys):
         """cog create --json emits a parseable result with the validity flag."""
         out = str(tmp_path / "out.cog.tif")
-        rc = main(["cog", "create", cli_raster, out, "--json"])
+        rc = main(["raster", "cog", "create", cli_raster, out, "--json"])
         payload = json.loads(capsys.readouterr().out)
         assert rc == 0, "a valid COG must exit 0"
         assert payload["is_valid"] is True
@@ -655,9 +670,9 @@ class TestCogJson:
     def test_cog_validate_json_result(self, cli_raster, tmp_path, capsys):
         """cog validate --json emits is_valid / errors / warnings as JSON."""
         out = str(tmp_path / "out.cog.tif")
-        assert main(["cog", "create", cli_raster, out]) == 0
+        assert main(["raster", "cog", "create", cli_raster, out]) == 0
         capsys.readouterr()
-        rc = main(["cog", "validate", out, "--json"])
+        rc = main(["raster", "cog", "validate", out, "--json"])
         payload = json.loads(capsys.readouterr().out)
         assert rc == 0
         assert payload["is_valid"] is True
@@ -671,15 +686,15 @@ class TestRender:
     def test_writes_png(self, cli_raster, tmp_path):
         """render saves a non-empty PNG headlessly."""
         out = str(tmp_path / "ql.png")
-        assert main(["render", cli_raster, out]) == 0
+        assert main(["raster", "render", cli_raster, out]) == 0
         assert os.path.exists(out)
         assert os.path.getsize(out) > 0
 
     def test_refuses_existing(self, cli_raster, tmp_path):
         """render refuses an existing output without --overwrite."""
         out = str(tmp_path / "exists.png")
-        main(["render", cli_raster, out])
-        assert main(["render", cli_raster, out]) == 1
+        main(["raster", "render", cli_raster, out])
+        assert main(["raster", "render", cli_raster, out]) == 1
 
     def test_forces_agg_backend(self, cli_raster, tmp_path, monkeypatch):
         """render forces MPLBACKEND=Agg even when an interactive one is pre-set (L3).
@@ -689,7 +704,7 @@ class TestRender:
         """
         monkeypatch.setenv("MPLBACKEND", "TkAgg")
         out = str(tmp_path / "forced.png")
-        assert main(["render", cli_raster, out]) == 0
+        assert main(["raster", "render", cli_raster, out]) == 0
         assert os.environ["MPLBACKEND"] == "Agg", (
             "a pre-exported interactive backend must not win over the forced Agg"
         )

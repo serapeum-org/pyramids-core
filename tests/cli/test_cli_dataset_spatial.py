@@ -151,7 +151,7 @@ class TestAlign:
     def test_resamples_onto_reference_grid(self, ramp, fine_grid, tmp_path, capsys):
         """The output adopts the reference's dimensions, cell size, and CRS."""
         out = str(tmp_path / "aligned.tif")
-        assert main(["align", ramp, fine_grid, out]) == 0, "align must exit 0"
+        assert main(["raster", "align", ramp, fine_grid, out]) == 0, "align must exit 0"
         aligned = Dataset.read_file(out)
         assert (aligned.rows, aligned.columns) == (16, 16), "wrong dimensions"
         assert aligned.epsg == 4326, "wrong CRS"
@@ -160,7 +160,13 @@ class TestAlign:
     def test_missing_input_one_line_error(self, fine_grid, tmp_path, capsys):
         """A missing input raster exits 1 with a one-line error."""
         rc = main(
-            ["align", str(tmp_path / "nope.tif"), fine_grid, str(tmp_path / "o.tif")]
+            [
+                "raster",
+                "align",
+                str(tmp_path / "nope.tif"),
+                fine_grid,
+                str(tmp_path / "o.tif"),
+            ]
         )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
@@ -170,7 +176,9 @@ class TestOverlay:
 
     def test_groups_values_by_class(self, ramp, classes, capsys):
         """--json maps each class to the base values that fall in it."""
-        assert main(["overlay", ramp, classes, "--json"]) == 0, "overlay must exit 0"
+        assert main(["raster", "overlay", ramp, classes, "--json"]) == 0, (
+            "overlay must exit 0"
+        )
         payload = json.loads(capsys.readouterr().out)
         assert sorted(payload) == ["0", "1"], f"wrong class keys: {list(payload)}"
         assert len(payload["0"]) == 32, "class 0 should hold the top four rows"
@@ -179,19 +187,19 @@ class TestOverlay:
 
     def test_text_output_prints_per_class_counts(self, ramp, classes, capsys):
         """Without --json, each class prints a human-readable value count."""
-        assert main(["overlay", ramp, classes]) == 0, "overlay must exit 0"
+        assert main(["raster", "overlay", ramp, classes]) == 0, "overlay must exit 0"
         out = capsys.readouterr().out
         assert "class 0: 32 value(s)" in out, f"missing class-0 count line: {out!r}"
         assert "class 1: 32 value(s)" in out, f"missing class-1 count line: {out!r}"
 
     def test_crs_mismatch_one_line_error(self, ramp, ramp_3857, capsys):
         """Two rasters on different CRSes exit 1 before any grouping."""
-        rc = main(["overlay", ramp, ramp_3857])
+        rc = main(["raster", "overlay", ramp, ramp_3857])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_out_of_range_band_clean_error(self, ramp, classes, capsys):
         """An out-of-range --band is a clean user error, not 'unexpected failure'."""
-        rc = main(["overlay", ramp, classes, "--band", "99"])
+        rc = main(["raster", "overlay", ramp, classes, "--band", "99"])
         err = capsys.readouterr().err
         _assert_one_line_error(rc, err)
         assert "unexpected failure" not in err, (
@@ -205,7 +213,9 @@ class TestCombine:
     def test_add_two_rasters(self, ramp, twos, tmp_path, capsys):
         """--op add sums the matching cells onto the shared grid."""
         out = str(tmp_path / "sum.tif")
-        assert main(["combine", ramp, twos, out, "--op", "add"]) == 0, "combine exit 0"
+        assert main(["raster", "combine", ramp, twos, out, "--op", "add"]) == 0, (
+            "combine exit 0"
+        )
         result = Dataset.read_file(out)
         assert (result.rows, result.columns) == (8, 8), "grid must be preserved"
         arr = result.read_array()
@@ -214,7 +224,17 @@ class TestCombine:
 
     def test_crs_mismatch_one_line_error(self, ramp, ramp_3857, tmp_path, capsys):
         """Combining rasters on different CRSes exits 1 with a clean message."""
-        rc = main(["combine", ramp, ramp_3857, str(tmp_path / "o.tif"), "--op", "add"])
+        rc = main(
+            [
+                "raster",
+                "combine",
+                ramp,
+                ramp_3857,
+                str(tmp_path / "o.tif"),
+                "--op",
+                "add",
+            ]
+        )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -224,15 +244,17 @@ class TestWarpedView:
     def test_writes_reprojected_raster(self, ramp, tmp_path, capsys):
         """The materialised view is in the requested target CRS."""
         out = str(tmp_path / "wv.tif")
-        assert main(["warped-view", ramp, out, "--crs", "EPSG:3857"]) == 0, "exit 0"
+        assert main(["raster", "warped-view", ramp, out, "--crs", "EPSG:3857"]) == 0, (
+            "exit 0"
+        )
         assert Dataset.read_file(out).epsg == 3857, "output CRS wrong"
 
     def test_overwrite_without_flag_one_line_error(self, ramp, tmp_path, capsys):
         """An existing output without --overwrite exits 1."""
         out = str(tmp_path / "exists.tif")
-        assert main(["warped-view", ramp, out, "--crs", "EPSG:3857"]) == 0
+        assert main(["raster", "warped-view", ramp, out, "--crs", "EPSG:3857"]) == 0
         capsys.readouterr()
-        rc = main(["warped-view", ramp, out, "--crs", "EPSG:3857"])
+        rc = main(["raster", "warped-view", ramp, out, "--crs", "EPSG:3857"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -242,14 +264,14 @@ class TestWrapLongitude:
     def test_shifts_to_minus180_frame(self, global_360, tmp_path, capsys):
         """A global 0..360 grid lands on -180 after the column roll."""
         out = str(tmp_path / "wrapped.tif")
-        assert main(["wrap-longitude", global_360, out]) == 0, "exit 0"
+        assert main(["raster", "wrap-longitude", global_360, out]) == 0, "exit 0"
         wrapped = Dataset.read_file(out)
         assert wrapped.top_left_corner[0] == pytest.approx(-180.0), "wrong origin"
         assert (wrapped.rows, wrapped.columns) == (1, 360), "shape must be preserved"
 
     def test_regional_grid_one_line_error(self, ramp, tmp_path, capsys):
         """A non-global (regional) grid is refused with a one-line error."""
-        rc = main(["wrap-longitude", ramp, str(tmp_path / "o.tif")])
+        rc = main(["raster", "wrap-longitude", ramp, str(tmp_path / "o.tif")])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -259,14 +281,17 @@ class TestTranslate:
     def test_srcwin_subsets(self, ramp, tmp_path, capsys):
         """--src-win extracts the pixel subwindow."""
         out = str(tmp_path / "sub.tif")
-        assert main(["translate", ramp, out, "--src-win", "0", "0", "4", "4"]) == 0
+        assert (
+            main(["raster", "translate", ramp, out, "--src-win", "0", "0", "4", "4"])
+            == 0
+        )
         sub = Dataset.read_file(out)
         assert (sub.rows, sub.columns) == (4, 4), "subwindow size wrong"
 
     def test_proj_win_subsets(self, ramp, tmp_path, capsys):
         """--proj-win extracts the [ulx, uly, lrx, lry] projected subwindow."""
         out = str(tmp_path / "pw.tif")
-        rc = main(["translate", ramp, out, "--proj-win", "0", "8", "4", "4"])
+        rc = main(["raster", "translate", ramp, out, "--proj-win", "0", "8", "4", "4"])
         assert rc == 0, "translate --proj-win must exit 0"
         sub = Dataset.read_file(out)
         assert (sub.rows, sub.columns) == (4, 4), "projected subwindow size wrong"
@@ -274,7 +299,7 @@ class TestTranslate:
     def test_output_type_retypes(self, ramp, tmp_path, capsys):
         """--output-type casts the stored band to the requested numpy dtype."""
         out = str(tmp_path / "typed.tif")
-        rc = main(["translate", ramp, out, "--output-type", "int16"])
+        rc = main(["raster", "translate", ramp, out, "--output-type", "int16"])
         assert rc == 0, "translate --output-type must exit 0"
         typed = Dataset.read_file(out)
         assert typed.read_array().dtype == np.int16, "output dtype not int16"
@@ -282,7 +307,7 @@ class TestTranslate:
     def test_nodata_sets_sentinel(self, ramp, tmp_path, capsys):
         """--nodata sets the output no-data value."""
         out = str(tmp_path / "nd.tif")
-        rc = main(["translate", ramp, out, "--nodata", "-1"])
+        rc = main(["raster", "translate", ramp, out, "--nodata", "-1"])
         assert rc == 0, "translate --nodata must exit 0"
         result = Dataset.read_file(out)
         assert float(result.no_data_value[0]) == pytest.approx(-1.0), "nodata unset"
@@ -290,7 +315,7 @@ class TestTranslate:
     def test_unscale_runs(self, ramp, tmp_path, capsys):
         """--unscale forwards unscale=True and still writes an output raster."""
         out = str(tmp_path / "unscaled.tif")
-        rc = main(["translate", ramp, out, "--unscale"])
+        rc = main(["raster", "translate", ramp, out, "--unscale"])
         assert rc == 0, "translate --unscale must exit 0"
         unscaled = Dataset.read_file(out)
         assert (unscaled.rows, unscaled.columns) == (8, 8), "grid must be preserved"
@@ -298,14 +323,14 @@ class TestTranslate:
     def test_bands_selects(self, ramp, tmp_path, capsys):
         """--bands re-selects the (1-based) bands to keep."""
         out = str(tmp_path / "band1.tif")
-        rc = main(["translate", ramp, out, "--bands", "1"])
+        rc = main(["raster", "translate", ramp, out, "--bands", "1"])
         assert rc == 0, "translate --bands must exit 0"
         assert Dataset.read_file(out).band_count == 1, "wrong band count"
 
     def test_resampling_forwarded(self, ramp, tmp_path, capsys):
         """--resampling forwards a resampleAlg and still writes the output."""
         out = str(tmp_path / "resampled.tif")
-        rc = main(["translate", ramp, out, "--resampling", "nearest"])
+        rc = main(["raster", "translate", ramp, out, "--resampling", "nearest"])
         assert rc == 0, "translate --resampling must exit 0"
         resampled = Dataset.read_file(out)
         assert (resampled.rows, resampled.columns) == (8, 8), "grid must be preserved"
@@ -313,7 +338,7 @@ class TestTranslate:
     def test_scale_rescales(self, ramp, tmp_path, capsys):
         """--scale with four values rescales the band from src to dst range."""
         out = str(tmp_path / "scaled.tif")
-        rc = main(["translate", ramp, out, "--scale", "0", "63", "0", "100"])
+        rc = main(["raster", "translate", ramp, out, "--scale", "0", "63", "0", "100"])
         assert rc == 0, "translate --scale must exit 0"
         arr = Dataset.read_file(out).read_array()
         assert float(arr.max()) == pytest.approx(100.0), "63 -> 100 rescale wrong"
@@ -322,12 +347,14 @@ class TestTranslate:
     def test_scale_wrong_length_one_line_error(self, ramp, tmp_path, capsys):
         """--scale with 3 values is rejected with a clean one-line error."""
         out = str(tmp_path / "bad_scale.tif")
-        rc = main(["translate", ramp, out, "--scale", "0", "1", "2"])
+        rc = main(["raster", "translate", ramp, out, "--scale", "0", "1", "2"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_missing_input_one_line_error(self, tmp_path, capsys):
         """A missing input raster exits 1 with a one-line error."""
-        rc = main(["translate", str(tmp_path / "nope.tif"), str(tmp_path / "o.tif")])
+        rc = main(
+            ["raster", "translate", str(tmp_path / "nope.tif"), str(tmp_path / "o.tif")]
+        )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -337,7 +364,9 @@ class TestTransect:
     def test_csv_profile_along_top_row(self, ramp, tmp_path, capsys):
         """Sampling the top row yields the row's values with rising distance."""
         out = str(tmp_path / "profile.csv")
-        rc = main(["transect", ramp, out, "--line", "0.5,7.5;7.5,7.5", "--n", "8"])
+        rc = main(
+            ["raster", "transect", ramp, out, "--line", "0.5,7.5;7.5,7.5", "--n", "8"]
+        )
         assert rc == 0, "transect must exit 0"
         with open(out, newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
@@ -356,6 +385,7 @@ class TestTransect:
         """--json prints the distance/value/x/y profile and skips the output guard."""
         rc = main(
             [
+                "raster",
                 "transect",
                 ramp,
                 "ignored.geojson",
@@ -375,7 +405,18 @@ class TestTransect:
     def test_vector_output_writes_points(self, ramp, tmp_path, capsys):
         """A non-CSV output extension writes a vector file via the resolved driver."""
         out = tmp_path / "profile.geojson"
-        rc = main(["transect", ramp, str(out), "--line", "0.5,7.5;7.5,7.5", "--n", "8"])
+        rc = main(
+            [
+                "raster",
+                "transect",
+                ramp,
+                str(out),
+                "--line",
+                "0.5,7.5;7.5,7.5",
+                "--n",
+                "8",
+            ]
+        )
         assert rc == 0, "transect vector output must exit 0"
         assert out.exists(), "vector profile file was not written"
         written = gpd.read_file(str(out))
@@ -384,21 +425,48 @@ class TestTransect:
     def test_line_single_vertex_one_line_error(self, ramp, tmp_path, capsys):
         """A --line with fewer than two vertices exits 1 with a clean error."""
         rc = main(
-            ["transect", ramp, str(tmp_path / "o.csv"), "--line", "0,0", "--n", "2"]
+            [
+                "raster",
+                "transect",
+                ramp,
+                str(tmp_path / "o.csv"),
+                "--line",
+                "0,0",
+                "--n",
+                "2",
+            ]
         )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_line_bad_vertex_shape_one_line_error(self, ramp, tmp_path, capsys):
         """A vertex that is not an 'x,y' pair exits 1 with a clean error."""
         rc = main(
-            ["transect", ramp, str(tmp_path / "o.csv"), "--line", "0,0;1", "--n", "2"]
+            [
+                "raster",
+                "transect",
+                ramp,
+                str(tmp_path / "o.csv"),
+                "--line",
+                "0,0;1",
+                "--n",
+                "2",
+            ]
         )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_line_non_numeric_one_line_error(self, ramp, tmp_path, capsys):
         """A vertex with non-numeric coordinates exits 1 with a clean error."""
         rc = main(
-            ["transect", ramp, str(tmp_path / "o.csv"), "--line", "0,0;a,b", "--n", "2"]
+            [
+                "raster",
+                "transect",
+                ramp,
+                str(tmp_path / "o.csv"),
+                "--line",
+                "0,0;a,b",
+                "--n",
+                "2",
+            ]
         )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
@@ -406,6 +474,7 @@ class TestTransect:
         """A missing input raster exits 1 with a one-line error."""
         rc = main(
             [
+                "raster",
                 "transect",
                 str(tmp_path / "nope.tif"),
                 str(tmp_path / "o.csv"),
@@ -424,7 +493,7 @@ class TestExtract:
     def test_csv_values(self, ramp, tmp_path, capsys):
         """Every cell value is written on one band row (none excluded here)."""
         out = str(tmp_path / "values.csv")
-        assert main(["extract", ramp, out]) == 0, "extract must exit 0"
+        assert main(["raster", "extract", ramp, out]) == 0, "extract must exit 0"
         with open(out, newline="", encoding="utf-8") as handle:
             rows = list(csv.reader(handle))
         assert len(rows) == 1, "a single-band raster writes one row"
@@ -434,7 +503,17 @@ class TestExtract:
     def test_exclude_value_json(self, ramp, capsys):
         """--exclude-value drops the matching cells; --json prints the result."""
         assert (
-            main(["extract", ramp, "ignored.csv", "--exclude-value", "0", "--json"])
+            main(
+                [
+                    "raster",
+                    "extract",
+                    ramp,
+                    "ignored.csv",
+                    "--exclude-value",
+                    "0",
+                    "--json",
+                ]
+            )
             == 0
         )
         values = json.loads(capsys.readouterr().out)["values"]
@@ -444,7 +523,7 @@ class TestExtract:
     def test_mask_reads_values_at_points(self, ramp, ramp_points, tmp_path, capsys):
         """--mask reads one value per point instead of every cell."""
         out = str(tmp_path / "at_points.csv")
-        assert main(["extract", ramp, out, "--mask", ramp_points]) == 0
+        assert main(["raster", "extract", ramp, out, "--mask", ramp_points]) == 0
         with open(out, newline="", encoding="utf-8") as handle:
             rows = list(csv.reader(handle))
         assert len(rows) == 1, "single band -> one row"
@@ -454,14 +533,14 @@ class TestExtract:
     def test_overwrite_without_flag_one_line_error(self, ramp, tmp_path, capsys):
         """An existing CSV output without --overwrite exits 1."""
         out = str(tmp_path / "exists.csv")
-        assert main(["extract", ramp, out]) == 0
+        assert main(["raster", "extract", ramp, out]) == 0
         capsys.readouterr()
-        rc = main(["extract", ramp, out])
+        rc = main(["raster", "extract", ramp, out])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_out_of_range_band_clean_error(self, ramp, tmp_path, capsys):
         """An out-of-range --band is a clean user error, not 'unexpected failure'."""
-        rc = main(["extract", ramp, str(tmp_path / "o.csv"), "--band", "99"])
+        rc = main(["raster", "extract", ramp, str(tmp_path / "o.csv"), "--band", "99"])
         err = capsys.readouterr().err
         _assert_one_line_error(rc, err)
         assert "unexpected failure" not in err, (

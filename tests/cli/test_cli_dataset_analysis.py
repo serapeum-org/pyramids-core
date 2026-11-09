@@ -148,7 +148,7 @@ class TestProximity:
     def test_distance_to_target(self, target, tmp_path, capsys):
         """The target cell reads 0 and a two-cell offset reads 2 in PIXEL units."""
         out = str(tmp_path / "prox.tif")
-        rc = main(["proximity", target, out, "--distance-units", "PIXEL"])
+        rc = main(["raster", "proximity", target, out, "--distance-units", "PIXEL"])
         assert rc == 0, capsys.readouterr().err
         dist = Dataset.read_file(out).read_array()
         assert float(dist[4, 4]) == 0.0, "target cell must be distance 0"
@@ -157,7 +157,7 @@ class TestProximity:
     def test_negative_max_distance_errors(self, target, tmp_path, capsys):
         """A negative --max-distance is a clean one-line error."""
         out = str(tmp_path / "prox.tif")
-        rc = main(["proximity", target, out, "--max-distance", "-1"])
+        rc = main(["raster", "proximity", target, out, "--max-distance", "-1"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -167,7 +167,9 @@ class TestCluster:
     def test_labels_and_count_json(self, ramp, tmp_path, capsys):
         """A label raster is written and --json reports a positive cluster count."""
         out = str(tmp_path / "clust.tif")
-        rc = main(["cluster", ramp, out, "--lower", "2", "--upper", "40", "--json"])
+        rc = main(
+            ["raster", "cluster", ramp, out, "--lower", "2", "--upper", "40", "--json"]
+        )
         payload = json.loads(capsys.readouterr().out)
         assert rc == 0, "cluster must exit 0"
         assert payload["output"] == out, "JSON must name the output"
@@ -178,13 +180,13 @@ class TestCluster:
         """Writing over an existing file without --overwrite is refused."""
         out = str(tmp_path / "clust.tif")
         open(out, "w").close()
-        rc = main(["cluster", ramp, out, "--lower", "2", "--upper", "40"])
+        rc = main(["raster", "cluster", ramp, out, "--lower", "2", "--upper", "40"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_labels_and_count_plain(self, ramp, tmp_path, capsys):
         """Without --json the label raster is written and a count line is printed."""
         out = str(tmp_path / "clust.tif")
-        rc = main(["cluster", ramp, out, "--lower", "2", "--upper", "40"])
+        rc = main(["raster", "cluster", ramp, out, "--lower", "2", "--upper", "40"])
         captured = capsys.readouterr()
         assert rc == 0, captured.err
         assert "cluster label(s)" in captured.out, "plain branch must report the count"
@@ -196,7 +198,9 @@ class TestZonalStats:
 
     def test_json_records(self, ramp, zones, capsys):
         """--json emits one record per zone with the requested stats."""
-        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "count", "--json"])
+        rc = main(
+            ["raster", "zonal-stats", ramp, zones, "--stats", "mean", "count", "--json"]
+        )
         records = json.loads(capsys.readouterr().out)
         assert rc == 0, "zonal-stats must exit 0"
         assert len(records) == 1, "one zone, one record"
@@ -207,19 +211,23 @@ class TestZonalStats:
     def test_csv_output(self, ramp, zones, tmp_path, capsys):
         """--output writes a CSV carrying the stat column."""
         out = str(tmp_path / "z.csv")
-        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "--output", out])
+        rc = main(
+            ["raster", "zonal-stats", ramp, zones, "--stats", "mean", "--output", out]
+        )
         assert rc == 0, capsys.readouterr().err
         assert os.path.exists(out), "CSV not written"
         assert "mean" in open(out).read(), "CSV missing the mean column"
 
     def test_unknown_stat_errors(self, ramp, zones, capsys):
         """An unknown stat name is a clean one-line error."""
-        rc = main(["zonal-stats", ramp, zones, "--stats", "median"])
+        rc = main(["raster", "zonal-stats", ramp, zones, "--stats", "median"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_out_of_range_band_clean_error(self, ramp, zones, capsys):
         """An out-of-range --band is a clean user error, not 'unexpected failure'."""
-        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "--band", "99"])
+        rc = main(
+            ["raster", "zonal-stats", ramp, zones, "--stats", "mean", "--band", "99"]
+        )
         err = capsys.readouterr().err
         _assert_one_line_error(rc, err)
         assert "unexpected failure" not in err, (
@@ -228,7 +236,7 @@ class TestZonalStats:
 
     def test_prints_table(self, ramp, zones, capsys):
         """Without --output or --json, the records are printed one per line."""
-        rc = main(["zonal-stats", ramp, zones, "--stats", "mean", "count"])
+        rc = main(["raster", "zonal-stats", ramp, zones, "--stats", "mean", "count"])
         captured = capsys.readouterr()
         assert rc == 0, captured.err
         assert "'count'" in captured.out, "printed record must carry the stat keys"
@@ -240,7 +248,9 @@ class TestZonalStats:
         ).to_crs("EPSG:3857")
         zones_3857 = str(tmp_path / "zones_3857.geojson")
         FeatureCollection(fc).to_file(zones_3857)
-        rc = main(["zonal-stats", ramp, zones_3857, "--stats", "count", "--json"])
+        rc = main(
+            ["raster", "zonal-stats", ramp, zones_3857, "--stats", "count", "--json"]
+        )
         records = json.loads(capsys.readouterr().out)
         assert rc == 0, "reprojection branch must still exit 0"
         assert records[0]["count"] == pytest.approx(16.0), "4x4 quadrant = 16 cells"
@@ -256,7 +266,7 @@ class TestMatchHistogram:
             np.arange(64, dtype="float32").reshape(8, 8) * 0.5, geo_ref=_GEO
         ).to_file(reference)
         out = str(tmp_path / "mh.tif")
-        rc = main(["match-histogram", ramp, reference, out])
+        rc = main(["raster", "match-histogram", ramp, reference, out])
         assert rc == 0, capsys.readouterr().err
         assert Dataset.read_file(out).shape[-2:] == (8, 8), "grid must be preserved"
 
@@ -267,7 +277,7 @@ class TestMatchHistogram:
             np.arange(64, dtype="float32").reshape(8, 8) * 0.5, geo_ref=_GEO
         ).to_file(reference)
         out = str(tmp_path / "mh.tif")
-        rc = main(["match-histogram", ramp, reference, out, "--bins", "0"])
+        rc = main(["raster", "match-histogram", ramp, reference, out, "--bins", "0"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -277,7 +287,18 @@ class TestPercentileStretch:
     def test_stretch_into_unit_range(self, ramp, tmp_path, capsys):
         """The stretched output lies within [0, 1]."""
         out = str(tmp_path / "ps.tif")
-        rc = main(["percentile-stretch", ramp, out, "--lower", "0", "--upper", "100"])
+        rc = main(
+            [
+                "raster",
+                "percentile-stretch",
+                ramp,
+                out,
+                "--lower",
+                "0",
+                "--upper",
+                "100",
+            ]
+        )
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
         assert float(values.min()) >= 0.0, "stretched minimum below 0"
@@ -286,7 +307,18 @@ class TestPercentileStretch:
     def test_equal_percentiles_error(self, ramp, tmp_path, capsys):
         """Equal lower/upper percentiles are a clean one-line error."""
         out = str(tmp_path / "ps.tif")
-        rc = main(["percentile-stretch", ramp, out, "--lower", "50", "--upper", "50"])
+        rc = main(
+            [
+                "raster",
+                "percentile-stretch",
+                ramp,
+                out,
+                "--lower",
+                "50",
+                "--upper",
+                "50",
+            ]
+        )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -297,7 +329,7 @@ class TestPanSharpen:
         """The fused raster is at the pan resolution with one band per spectral band."""
         ms_path, pan_path = pan_pair
         out = str(tmp_path / "fused.tif")
-        rc = main(["pan-sharpen", ms_path, pan_path, out])
+        rc = main(["raster", "pan-sharpen", ms_path, pan_path, out])
         assert rc == 0, capsys.readouterr().err
         fused = Dataset.read_file(out)
         assert (fused.rows, fused.columns, fused.band_count) == (128, 128, 3)
@@ -306,7 +338,9 @@ class TestPanSharpen:
         """An unsupported --algorithm is a clean one-line error."""
         ms_path, pan_path = pan_pair
         out = str(tmp_path / "fused.tif")
-        rc = main(["pan-sharpen", ms_path, pan_path, out, "--algorithm", "nope"])
+        rc = main(
+            ["raster", "pan-sharpen", ms_path, pan_path, out, "--algorithm", "nope"]
+        )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -316,7 +350,7 @@ class TestFillna:
     def test_fills_gap(self, gaps, tmp_path, capsys):
         """The gap cell takes the fill value in the output."""
         out = str(tmp_path / "filled.tif")
-        rc = main(["fillna", gaps, out, "--value", "0"])
+        rc = main(["raster", "fillna", gaps, out, "--value", "0"])
         assert rc == 0, capsys.readouterr().err
         assert float(Dataset.read_file(out).read_array()[0, 0]) == 0.0, "gap not filled"
 
@@ -324,7 +358,7 @@ class TestFillna:
         """Writing over an existing file without --overwrite is refused."""
         out = str(tmp_path / "filled.tif")
         open(out, "w").close()
-        rc = main(["fillna", gaps, out, "--value", "0"])
+        rc = main(["raster", "fillna", gaps, out, "--value", "0"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -334,7 +368,7 @@ class TestWhere:
     def test_keeps_selected_masks_rest(self, ramp, tmp_path, capsys):
         """Cells failing the condition become the raster's no-data value."""
         out = str(tmp_path / "where.tif")
-        rc = main(["where", ramp, out, "--cond", "A > 30"])
+        rc = main(["raster", "where", ramp, out, "--cond", "A > 30"])
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
         assert float(values[0, 0]) == -9999.0, "unselected cell must be masked"
@@ -343,13 +377,13 @@ class TestWhere:
     def test_disallowed_condition_errors(self, ramp, tmp_path, capsys):
         """A condition outside the arithmetic whitelist is a clean one-line error."""
         out = str(tmp_path / "where.tif")
-        rc = main(["where", ramp, out, "--cond", "__import__('os')"])
+        rc = main(["raster", "where", ramp, out, "--cond", "__import__('os')"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
     def test_other_numeric_fills_unselected(self, ramp, tmp_path, capsys):
         """--other <number> fills the unselected cells with that constant."""
         out = str(tmp_path / "where.tif")
-        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "5"])
+        rc = main(["raster", "where", ramp, out, "--cond", "A > 30", "--other", "5"])
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
         assert float(values[0, 0]) == pytest.approx(5.0), "unselected cell must be 5"
@@ -358,7 +392,7 @@ class TestWhere:
     def test_other_nan_token(self, ramp, tmp_path, capsys):
         """--other nan is accepted and masks the unselected cells with NaN."""
         out = str(tmp_path / "where_nan.tif")
-        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "nan"])
+        rc = main(["raster", "where", ramp, out, "--cond", "A > 30", "--other", "nan"])
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
         assert np.isnan(float(values[0, 0])), "unselected cell must be NaN"
@@ -366,14 +400,16 @@ class TestWhere:
     def test_other_none_token(self, ramp, tmp_path, capsys):
         """--other none is accepted (explicit NaN fill) and writes the raster."""
         out = str(tmp_path / "where_none.tif")
-        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "none"])
+        rc = main(["raster", "where", ramp, out, "--cond", "A > 30", "--other", "none"])
         assert rc == 0, capsys.readouterr().err
         assert os.path.exists(out), "output must be written"
 
     def test_other_bad_token_errors(self, ramp, tmp_path, capsys):
         """A non-numeric --other that is neither nan nor none is a one-line error."""
         out = str(tmp_path / "where_bad.tif")
-        rc = main(["where", ramp, out, "--cond", "A > 30", "--other", "banana"])
+        rc = main(
+            ["raster", "where", ramp, out, "--cond", "A > 30", "--other", "banana"]
+        )
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -383,7 +419,7 @@ class TestConvertUnits:
     def test_kelvin_to_celsius(self, kelvin, tmp_path, capsys):
         """A Kelvin raster converts to the expected Celsius values."""
         out = str(tmp_path / "celsius.tif")
-        rc = main(["convert-units", kelvin, out, "--target", "celsius"])
+        rc = main(["raster", "convert-units", kelvin, out, "--target", "celsius"])
         assert rc == 0, capsys.readouterr().err
         values = Dataset.read_file(out).read_array()
         assert values.tolist() == [[0.0, 10.0], [20.0, 30.0]], "bad conversion"
@@ -391,7 +427,7 @@ class TestConvertUnits:
     def test_unsupported_target_errors(self, kelvin, tmp_path, capsys):
         """An unsupported --target unit is a clean one-line error."""
         out = str(tmp_path / "celsius.tif")
-        rc = main(["convert-units", kelvin, out, "--target", "furlongs"])
+        rc = main(["raster", "convert-units", kelvin, out, "--target", "furlongs"])
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
@@ -401,7 +437,7 @@ class TestContour:
     def test_interval_lines(self, ramp, tmp_path, capsys):
         """An interval traces LineString contours into the vector output."""
         out = str(tmp_path / "contours.geojson")
-        rc = main(["contour", ramp, out, "--interval", "10"])
+        rc = main(["raster", "contour", ramp, out, "--interval", "10"])
         assert rc == 0, capsys.readouterr().err
         lines = FeatureCollection.read_file(out)
         assert len(lines) > 0, "no contours produced"
@@ -410,5 +446,5 @@ class TestContour:
     def test_non_positive_interval_errors(self, ramp, tmp_path, capsys):
         """A non-positive --interval is a clean one-line error."""
         out = str(tmp_path / "contours.geojson")
-        rc = main(["contour", ramp, out, "--interval", "-1"])
+        rc = main(["raster", "contour", ramp, out, "--interval", "-1"])
         _assert_one_line_error(rc, capsys.readouterr().err)

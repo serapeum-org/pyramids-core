@@ -6,11 +6,13 @@ in its own ``cli_<domain>.py`` module and registers itself on the top-level
 parser via an ``add_<domain>_commands(sub)`` function; this module only wires the
 groups together, provides the global flags, and runs the dispatch loop.
 
-Command groups:
+Command groups (all now `pyramids <domain> [<subsystem>] <verb>`):
 
-- raster / COG (`pyramids.cli_dataset`) — `info`, `bounds`, `clip`, `warp`,
-  `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
-  `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
+- raster (`pyramids.cli_dataset`) — the full single-raster (`Dataset`) surface under
+  `pyramids raster …`: `info`, `bounds`, `clip`, `warp`, `merge`, `sample`, `convert`,
+  `georeference`, `orthorectify`, `edit-info`, `calc`, `shapes`, `rasterize`, `render`, the
+  band/inspect/overview/read/io/export/plot verbs, and `raster cog create|validate|info`.
+  (The old flat spellings — `pyramids info`, `pyramids warp`, … — were removed.)
 - vector (`pyramids.cli_vector` + `cli_vector_{inspect,geom,overlay,tess,io}`) — the full
   `FeatureCollection` surface: core (`info`/`bounds`/`convert`/`warp`/`clip`), inspection, unary geometry ops,
   overlay/set ops + predicate `filter`, tessellation/binning/sampling, measurements, I/O export, and remote
@@ -46,7 +48,7 @@ from shapely.errors import GEOSException
 
 from pyramids import __version__
 from pyramids._cli_config import apply_config_defaults, find_config_file, load_config
-from pyramids._cli_groups import SuggestingArgumentParser, rewrite_deprecated
+from pyramids._cli_groups import SuggestingArgumentParser
 from pyramids._cli_shared import OUTPUT_FORMATS, resolved_format
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
@@ -186,9 +188,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     if argcomplete is not None:  # pragma: no cover - optional convenience
         argcomplete.autocomplete(parser)
-    # Rewrite a deprecated flat verb (e.g. `pyramids info`) to its new nested path
-    # (`pyramids raster info`), warning once. A no-op until verbs start moving.
-    argv = rewrite_deprecated(list(argv) if argv is not None else sys.argv[1:])
     try:
         # Resolve config defaults inside the try so a bad --config / PYRAMIDS_CONFIG / invalid
         # TOML becomes the CLI's clean `error:` line, not a traceback. Defer any such error

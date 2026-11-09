@@ -80,7 +80,7 @@ class TestBoundsJson:
             The four bounds are finite here, so the payload round-trips through
             `json.loads` unchanged.
         """
-        main(["bounds", wgs84_raster, "--json"])
+        main(["raster", "bounds", wgs84_raster, "--json"])
         payload = json.loads(capsys.readouterr().out)
         assert len(payload["bounds"]) == 4, (
             f"expected four bounds, got {payload['bounds']}"
@@ -100,7 +100,7 @@ class TestBoundsJson:
             as a bare `Infinity`, which is not valid JSON — the guard maps it to
             null so `json.loads(..., parse_constant=...)` never sees a constant.
         """
-        main(["bounds", wgs84_raster, "--json", "--crs", "EPSG:3857"])
+        main(["raster", "bounds", wgs84_raster, "--json", "--crs", "EPSG:3857"])
         raw = capsys.readouterr().out
 
         def _reject(constant: str):
@@ -127,7 +127,7 @@ class TestBoundsJson:
             exactly why the bug went unnoticed; re-parse in a subprocess with
             constants rejected to prove the text is portable.
         """
-        main(["bounds", wgs84_raster, "--json", "--crs", "EPSG:3857"])
+        main(["raster", "bounds", wgs84_raster, "--json", "--crs", "EPSG:3857"])
         raw = capsys.readouterr().out.strip()
         code = (
             "import json,sys\n"

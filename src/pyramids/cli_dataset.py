@@ -20,6 +20,7 @@ import numpy as np
 from osgeo import osr
 from pandas import DataFrame
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import force_agg_backend, info_print, map_lookup_errors
 from pyramids._cli_shared import json_safe as _json_safe
 from pyramids._cli_shared import refuse_existing as _refuse_existing
@@ -974,6 +975,14 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
+    # Everything registers under the `raster` group: `pyramids raster <verb>`. The old flat
+    # verbs keep working via the deprecation shim (rewritten + warned, removed in 1.0.0).
+    raster_sub = add_group(
+        sub,
+        "raster",
+        "single-raster (Dataset) operations: inspect, warp/clip/merge, bands, overviews, cog, io",
+    )
+    sub = raster_sub
     _add_cog_commands(sub)
 
     raster_info = sub.add_parser("info", help="print raster metadata")

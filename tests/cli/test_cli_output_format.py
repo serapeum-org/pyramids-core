@@ -164,7 +164,7 @@ class TestGlobalFormatThroughCLI:
 
     def test_csv_on_unsupported_verb_is_a_clean_error(self, cli_raster, capsys):
         """`--format csv` on a verb that doesn't support it errors, not silent text (M3)."""
-        rc = main(["--format", "csv", "info", cli_raster])
+        rc = main(["--format", "csv", "raster", "info", cli_raster])
         assert rc == 1, "csv on an unsupported verb must fail, not silently print text"
         assert "does not support --format csv" in capsys.readouterr().err, (
             "error must name the format"
@@ -172,7 +172,7 @@ class TestGlobalFormatThroughCLI:
 
     def test_json_still_works_on_unsupported_verb(self, cli_raster, capsys):
         """`--format json` still bridges to every --json-capable verb (not gated by M3)."""
-        assert main(["--format", "json", "info", cli_raster]) == 0, (
+        assert main(["--format", "json", "raster", "info", cli_raster]) == 0, (
             "json bridge is unaffected"
         )
         assert capsys.readouterr().out.strip().startswith("{"), (
@@ -181,7 +181,7 @@ class TestGlobalFormatThroughCLI:
 
     def test_format_text_overrides_json_flag_on_direct_verb(self, cli_raster, capsys):
         """`--format text` + verb `--json` prints text even on a direct-args.json verb (round-2 N3)."""
-        assert main(["--format", "text", "info", cli_raster, "--json"]) == 0
+        assert main(["--format", "text", "raster", "info", cli_raster, "--json"]) == 0
         assert not capsys.readouterr().out.strip().startswith("{"), (
             "text must win over --json"
         )

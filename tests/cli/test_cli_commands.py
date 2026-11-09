@@ -65,7 +65,7 @@ class TestInfoCommand:
         Test scenario:
             epsg, shape, dtype, nodata, and bounds are all present and right.
         """
-        assert main(["info", src_raster, "--json"]) == 0, "info must exit 0"
+        assert main(["raster", "info", src_raster, "--json"]) == 0, "info must exit 0"
         payload = json.loads(capsys.readouterr().out)
         assert payload["epsg"] == 4326, f"epsg wrong: {payload['epsg']}"
         assert (payload["bands"], payload["rows"], payload["columns"]) == (1, 8, 8)
@@ -75,13 +75,13 @@ class TestInfoCommand:
 
     def test_plain_output_lists_keys(self, src_raster, capsys):
         """The human-readable form prints key: value lines."""
-        assert main(["info", src_raster]) == 0
+        assert main(["raster", "info", src_raster]) == 0
         out = capsys.readouterr().out
         assert "epsg: 4326" in out, f"missing epsg line in: {out}"
 
     def test_missing_file_one_line_error(self, tmp_path, capsys):
         """A missing path exits 1 with a one-line error (no traceback)."""
-        rc = main(["info", str(tmp_path / "nope.tif")])
+        rc = main(["raster", "info", str(tmp_path / "nope.tif")])
         err = capsys.readouterr().err
         assert rc == 1, "missing file must exit 1"
         assert err.startswith("error: "), f"unexpected stderr: {err}"
@@ -93,7 +93,7 @@ class TestBoundsCommand:
 
     def test_native_bounds(self, src_raster, capsys):
         """The native bbox is printed space-separated."""
-        assert main(["bounds", src_raster]) == 0
+        assert main(["raster", "bounds", src_raster]) == 0
         assert capsys.readouterr().out.split() == ["0.0", "0.0", "8.0", "8.0"]
 
     def test_reprojected_bounds_json(self, src_raster, capsys):
@@ -102,14 +102,16 @@ class TestBoundsCommand:
         Test scenario:
             4326 -> 3857: longitude 8 deg is ~890 km east.
         """
-        assert main(["bounds", src_raster, "--crs", "EPSG:3857", "--json"]) == 0
+        assert (
+            main(["raster", "bounds", src_raster, "--crs", "EPSG:3857", "--json"]) == 0
+        )
         bounds = json.loads(capsys.readouterr().out)["bounds"]
         assert bounds[0] == pytest.approx(0.0, abs=1e-6), "min_x wrong"
         assert bounds[2] == pytest.approx(890_555.9, rel=1e-3), "max_x wrong"
 
     def test_invalid_crs_one_line_error(self, src_raster, capsys):
         """An uninterpretable --crs exits 1 with a clean message."""
-        rc = main(["bounds", src_raster, "--crs", "not-a-crs"])
+        rc = main(["raster", "bounds", src_raster, "--crs", "not-a-crs"])
         err = capsys.readouterr().err
         assert rc == 1, "bad CRS must exit 1"
         assert err.startswith("error: "), f"unexpected stderr: {err}"
@@ -118,7 +120,7 @@ class TestBoundsCommand:
     def test_crs_on_crsless_raster_clear_error(self, tmp_path, capsys):
         """bounds --crs on a raster without a CRS names the real cause (L10)."""
         path = _crsless_raster(tmp_path)
-        rc = main(["bounds", path, "--crs", "EPSG:3857"])
+        rc = main(["raster", "bounds", path, "--crs", "EPSG:3857"])
         err = capsys.readouterr().err
         assert rc == 1, "reprojecting bounds of a CRS-less raster must exit 1"
         assert "source CRS" in err, f"error should name the missing source CRS: {err}"
@@ -130,7 +132,10 @@ class TestClipCommand:
     def test_bbox_clip_writes_subset(self, src_raster, tmp_path, capsys):
         """--bbox crops to the requested extent."""
         out_path = str(tmp_path / "clip.tif")
-        assert main(["clip", src_raster, out_path, "--bbox", "1", "1", "5", "5"]) == 0
+        assert (
+            main(["raster", "clip", src_raster, out_path, "--bbox", "1", "1", "5", "5"])
+            == 0
+        )
         clipped = Dataset.read_file(out_path)
         assert (clipped.rows, clipped.columns) == (4, 4), "clip extent wrong"
 
@@ -144,7 +149,9 @@ class TestClipCommand:
         mask_path = str(tmp_path / "mask.geojson")
         FeatureCollection.from_bbox((1.0, 1.0, 5.0, 5.0), epsg=4326).to_file(mask_path)
         out_path = str(tmp_path / "clip_vec.tif")
-        assert main(["clip", src_raster, out_path, "--vector", mask_path]) == 0
+        assert (
+            main(["raster", "clip", src_raster, out_path, "--vector", mask_path]) == 0
+        )
         clipped = Dataset.read_file(out_path)
         assert (clipped.rows, clipped.columns) == (4, 4), "vector clip extent wrong"
 
@@ -152,7 +159,7 @@ class TestClipCommand:
         """clip --bbox on a CRS-less raster gives a clear error, not a low-level one (L10)."""
         path = _crsless_raster(tmp_path)
         out = str(tmp_path / "out.tif")
-        rc = main(["clip", path, out, "--bbox", "1", "1", "5", "5"])
+        rc = main(["raster", "clip", path, out, "--bbox", "1", "1", "5", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "clip on a CRS-less raster must exit 1"
         assert "has none" in err, f"error should name the missing CRS: {err}"
@@ -160,7 +167,9 @@ class TestClipCommand:
     def test_bbox_disjoint_from_raster_clear_error(self, src_raster, tmp_path, capsys):
         """clip --bbox outside the raster extent gives a clear error, not an IndexError (L4)."""
         out = str(tmp_path / "out.tif")
-        rc = main(["clip", src_raster, out, "--bbox", "100", "100", "110", "110"])
+        rc = main(
+            ["raster", "clip", src_raster, out, "--bbox", "100", "100", "110", "110"]
+        )
         err = capsys.readouterr().err
         assert rc == 1, "a disjoint clip bbox must exit 1"
         assert "does not intersect" in err, (
@@ -179,7 +188,7 @@ class TestClipCommand:
             mask_path
         )
         out = str(tmp_path / "out.tif")
-        rc = main(["clip", src_raster, out, "--vector", mask_path])
+        rc = main(["raster", "clip", src_raster, out, "--vector", mask_path])
         err = capsys.readouterr().err
         assert rc == 1, "a disjoint vector mask must exit 1"
         assert "does not intersect" in err, (
@@ -192,13 +201,28 @@ class TestClipCommand:
     def test_refuses_to_overwrite_without_flag(self, src_raster, tmp_path, capsys):
         """clip refuses to clobber an existing output unless --overwrite (N5)."""
         out = str(tmp_path / "exists.tif")
-        assert main(["clip", src_raster, out, "--bbox", "1", "1", "5", "5"]) == 0
-        rc = main(["clip", src_raster, out, "--bbox", "1", "1", "5", "5"])
+        assert (
+            main(["raster", "clip", src_raster, out, "--bbox", "1", "1", "5", "5"]) == 0
+        )
+        rc = main(["raster", "clip", src_raster, out, "--bbox", "1", "1", "5", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "a second write without --overwrite must be refused"
         assert "already exists" in err, f"error should mention the existing file: {err}"
         assert (
-            main(["clip", src_raster, out, "--bbox", "1", "1", "5", "5", "--overwrite"])
+            main(
+                [
+                    "raster",
+                    "clip",
+                    src_raster,
+                    out,
+                    "--bbox",
+                    "1",
+                    "1",
+                    "5",
+                    "5",
+                    "--overwrite",
+                ]
+            )
             == 0
         ), "--overwrite must allow replacing the output"
 
@@ -208,6 +232,7 @@ class TestClipCommand:
         with pytest.raises(SystemExit):
             main(
                 [
+                    "raster",
                     "clip",
                     src_raster,
                     out,
@@ -228,13 +253,14 @@ class TestWarpCommand:
     def test_warp_writes_target_crs(self, src_raster, tmp_path, capsys):
         """--crs reprojects and writes the output."""
         out_path = str(tmp_path / "warp.tif")
-        assert main(["warp", src_raster, out_path, "--crs", "3857"]) == 0
+        assert main(["raster", "warp", src_raster, out_path, "--crs", "3857"]) == 0
         assert Dataset.read_file(out_path).epsg == 3857, "output CRS wrong"
 
     def test_invalid_resampling_one_line_error(self, src_raster, tmp_path, capsys):
         """An unknown resampling exits 1 with a clean message."""
         rc = main(
             [
+                "raster",
                 "warp",
                 src_raster,
                 str(tmp_path / "w.tif"),
@@ -260,7 +286,7 @@ class TestMergeCommand:
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
         ).to_file(second)
         out_path = str(tmp_path / "merged.tif")
-        assert main(["merge", src_raster, second, out_path]) == 0
+        assert main(["raster", "merge", src_raster, second, out_path]) == 0
         merged = Dataset.read_file(out_path)
         assert merged.columns > 8, "mosaic must span both tiles"
 
@@ -271,7 +297,7 @@ class TestMergeCommand:
             `merge a.tif out.tif` parses as one input + the output; the
             command must reject it instead of silently copying the file.
         """
-        rc = main(["merge", src_raster, str(tmp_path / "m.tif")])
+        rc = main(["raster", "merge", src_raster, str(tmp_path / "m.tif")])
         assert rc == 1, "single-input merge must exit 1"
         assert "at least two" in capsys.readouterr().err, "expected guidance"
 
@@ -289,7 +315,20 @@ class TestMergeCommand:
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
         ).to_file(second)
         out_path = str(tmp_path / "windowed.tif")
-        rc = main(["merge", src_raster, second, out_path, "--bbox", "1", "1", "5", "5"])
+        rc = main(
+            [
+                "raster",
+                "merge",
+                src_raster,
+                second,
+                out_path,
+                "--bbox",
+                "1",
+                "1",
+                "5",
+                "5",
+            ]
+        )
         assert rc == 0, "a windowed merge must succeed"
         windowed = Dataset.read_file(out_path)
         assert windowed.columns == 4, f"expected 4 columns, got {windowed.columns}"
@@ -314,6 +353,7 @@ class TestMergeCommand:
         out_path = str(tmp_path / "windowed_crs.tif")
         rc = main(
             [
+                "raster",
                 "merge",
                 src_raster,
                 second,
@@ -345,7 +385,7 @@ class TestMergeCommand:
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
         ).to_file(second)
         out_path = str(tmp_path / "full.tif")
-        assert main(["merge", src_raster, second, out_path]) == 0
+        assert main(["raster", "merge", src_raster, second, out_path]) == 0
         assert Dataset.read_file(out_path).columns > 8, "mosaic must span both tiles"
 
     def test_bbox_crs_without_bbox_exits_one(self, src_raster, tmp_path, capsys):
@@ -363,7 +403,15 @@ class TestMergeCommand:
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
         ).to_file(second)
         rc = main(
-            ["merge", src_raster, second, str(tmp_path / "x.tif"), "--bbox-crs", "3857"]
+            [
+                "raster",
+                "merge",
+                src_raster,
+                second,
+                str(tmp_path / "x.tif"),
+                "--bbox-crs",
+                "3857",
+            ]
         )
         assert rc == 1, "--bbox-crs without --bbox must exit 1"
         assert "error: " in capsys.readouterr().err, "expected one-line error"
@@ -383,6 +431,7 @@ class TestMergeCommand:
         ).to_file(second)
         rc = main(
             [
+                "raster",
                 "merge",
                 src_raster,
                 second,
@@ -403,7 +452,7 @@ class TestOverviewCommand:
 
     def test_builds_requested_levels(self, src_raster, capsys):
         """--levels builds that many overview levels in place."""
-        assert main(["overview", src_raster, "--levels", "2", "4"]) == 0
+        assert main(["raster", "overview", src_raster, "--levels", "2", "4"]) == 0
         assert Dataset.read_file(src_raster).overview_count[0] == 2, (
             "expected 2 overview levels"
         )
@@ -412,6 +461,7 @@ class TestOverviewCommand:
         """The warp-family 'nearest neighbor' spelling is accepted here too (L9)."""
         rc = main(
             [
+                "raster",
                 "overview",
                 src_raster,
                 "--levels",
@@ -424,7 +474,7 @@ class TestOverviewCommand:
 
     def test_non_power_of_two_levels_rejected(self, src_raster, capsys):
         """A non-power-of-two --levels is rejected up front with a clear error (L6)."""
-        rc = main(["overview", src_raster, "--levels", "3", "5"])
+        rc = main(["raster", "overview", src_raster, "--levels", "3", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "non-power-of-two levels must exit 1"
         assert "power-of-two" in err, f"error should name the constraint: {err}"
@@ -443,6 +493,7 @@ class TestSampleCommand:
         assert (
             main(
                 [
+                    "raster",
                     "sample",
                     src_raster,
                     "--points",
@@ -458,19 +509,19 @@ class TestSampleCommand:
 
     def test_empty_points_rejected(self, src_raster, capsys):
         """An empty --points exits 1 with a clean message."""
-        rc = main(["sample", src_raster, "--points", ";"])
+        rc = main(["raster", "sample", src_raster, "--points", ";"])
         assert rc == 1, "empty points must exit 1"
         assert "at least one" in capsys.readouterr().err, "expected guidance"
 
     def test_malformed_point_rejected(self, src_raster, capsys):
         """A point that is not 'x,y' exits 1 naming the bad chunk."""
-        rc = main(["sample", src_raster, "--points", "1,2,3"])
+        rc = main(["raster", "sample", src_raster, "--points", "1,2,3"])
         assert rc == 1, "malformed point must exit 1"
         assert "expected 'x,y'" in capsys.readouterr().err, "expected format hint"
 
     def test_non_numeric_point_rejected(self, src_raster, capsys):
         """A non-numeric coordinate exits 1 naming the bad chunk."""
-        rc = main(["sample", src_raster, "--points", "a,2"])
+        rc = main(["raster", "sample", src_raster, "--points", "a,2"])
         err = capsys.readouterr().err
         assert rc == 1, "non-numeric point must exit 1"
         assert "'a,2'" in err, f"error must name the bad chunk: {err}"
@@ -490,7 +541,7 @@ class TestSampleCommand:
             no_data_value=None,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         ).to_file(path)
-        assert main(["sample", path, "--points", "100,100", "--json"]) == 0
+        assert main(["raster", "sample", path, "--points", "100,100", "--json"]) == 0
         values = json.loads(capsys.readouterr().out)["values"]
         assert values == [[None]], f"out-of-bounds must be null: {values}"
 
@@ -501,7 +552,7 @@ class TestConvertCommand:
     def test_extension_inferred_conversion(self, src_raster, tmp_path, capsys):
         """The output driver is inferred from the extension (.nc -> NetCDF)."""
         out_path = str(tmp_path / "out.nc")
-        assert main(["convert", src_raster, out_path]) == 0
+        assert main(["raster", "convert", src_raster, out_path]) == 0
         converted = Dataset.read_file(out_path)
         np.testing.assert_array_equal(
             converted.read_array(),
@@ -517,7 +568,10 @@ class TestConvertCommand:
             GTiff file regardless.
         """
         out_path = str(tmp_path / "tiff_in_disguise.nc")
-        assert main(["convert", src_raster, out_path, "--driver", "geotiff"]) == 0
+        assert (
+            main(["raster", "convert", src_raster, out_path, "--driver", "geotiff"])
+            == 0
+        )
         converted = Dataset.read_file(out_path)
         driver = converted.raster.GetDriver().ShortName
         assert driver == "GTiff", f"--driver geotiff ignored; wrote {driver}"
@@ -526,6 +580,7 @@ class TestConvertCommand:
         """An unknown --driver exits 1 with a clean message."""
         rc = main(
             [
+                "raster",
                 "convert",
                 src_raster,
                 str(tmp_path / "o.tif"),
@@ -540,7 +595,7 @@ class TestConvertCommand:
 
     def test_unknown_extension_one_line_error(self, src_raster, tmp_path, capsys):
         """An extension absent from the catalog exits 1 with a clean message."""
-        rc = main(["convert", src_raster, str(tmp_path / "o.unknown")])
+        rc = main(["raster", "convert", src_raster, str(tmp_path / "o.unknown")])
         err = capsys.readouterr().err
         assert rc == 1, "unknown extension must exit 1"
         assert err.startswith("error: "), f"unexpected stderr: {err}"
@@ -564,7 +619,7 @@ class TestSubdatasetCommand:
             capsys: Pytest stdout/stderr capture fixture.
         """
         out_path = str(tmp_path / "band0.tif")
-        assert main(["subdataset", _NETCDF_CONTAINER, "0", out_path]) == 0
+        assert main(["raster", "subdataset", _NETCDF_CONTAINER, "0", out_path]) == 0
         assert Dataset.read_file(out_path).band_count == 1, "one band extracted"
 
     def test_extract_by_name(self, tmp_path, capsys):
@@ -576,7 +631,7 @@ class TestSubdatasetCommand:
         """
         name = Dataset.read_file(_NETCDF_CONTAINER).subdatasets[1].name
         out_path = str(tmp_path / "by_name.tif")
-        assert main(["subdataset", _NETCDF_CONTAINER, name, out_path]) == 0
+        assert main(["raster", "subdataset", _NETCDF_CONTAINER, name, out_path]) == 0
         assert os.path.exists(out_path), "extraction by name writes the output"
 
     def test_extract_by_negative_index(self, tmp_path, capsys):
@@ -587,7 +642,7 @@ class TestSubdatasetCommand:
             capsys: Pytest stdout/stderr capture fixture.
         """
         out_path = str(tmp_path / "last.tif")
-        assert main(["subdataset", _NETCDF_CONTAINER, "-1", out_path]) == 0
+        assert main(["raster", "subdataset", _NETCDF_CONTAINER, "-1", out_path]) == 0
         assert os.path.exists(out_path), "a negative index resolves to the last one"
 
     def test_refuses_existing_without_overwrite(self, tmp_path, capsys):
@@ -599,11 +654,21 @@ class TestSubdatasetCommand:
         """
         out_path = str(tmp_path / "exists.tif")
         Path(out_path).write_text("", encoding="utf-8")
-        assert main(["subdataset", _NETCDF_CONTAINER, "0", out_path]) == 1
+        assert main(["raster", "subdataset", _NETCDF_CONTAINER, "0", out_path]) == 1
         err = capsys.readouterr().err
         assert "already exists" in err, "the overwrite guard must fire"
         assert (
-            main(["subdataset", _NETCDF_CONTAINER, "0", out_path, "--overwrite"]) == 0
+            main(
+                [
+                    "raster",
+                    "subdataset",
+                    _NETCDF_CONTAINER,
+                    "0",
+                    out_path,
+                    "--overwrite",
+                ]
+            )
+            == 0
         )
 
     def test_out_of_range_index_one_line_error(self, tmp_path, capsys):
@@ -613,7 +678,9 @@ class TestSubdatasetCommand:
             tmp_path: Pytest temporary-directory fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        rc = main(["subdataset", _NETCDF_CONTAINER, "99", str(tmp_path / "o.tif")])
+        rc = main(
+            ["raster", "subdataset", _NETCDF_CONTAINER, "99", str(tmp_path / "o.tif")]
+        )
         err = capsys.readouterr().err
         assert rc == 1, "an out-of-range index must exit 1"
         assert err.startswith("error: "), f"unexpected stderr: {err}"
@@ -628,6 +695,7 @@ class TestSubdatasetCommand:
         """
         rc = main(
             [
+                "raster",
                 "subdataset",
                 _NETCDF_CONTAINER,
                 'NETCDF:"nope.nc":x',
@@ -664,8 +732,8 @@ class TestHelpSurface:
             command: Subcommand under test.
         """
         with pytest.raises(SystemExit) as exc:
-            main([command, "--help"])
-        assert exc.value.code == 0, f"{command} --help must exit 0"
+            main(["raster", command, "--help"])
+        assert exc.value.code == 0, f"raster {command} --help must exit 0"
         assert command in capsys.readouterr().out, "help text must name the command"
 
 
@@ -679,7 +747,7 @@ class TestUnexpectedErrors:
             raise KeyError("internal")
 
         monkeypatch.setattr("pyramids.cli_dataset._cmd_raster_info", boom)
-        rc = main(["info", src_raster])
+        rc = main(["raster", "info", src_raster])
         err = capsys.readouterr().err
         assert rc == 1, "an unexpected internal error must exit 1"
         assert err.startswith("error: unexpected failure"), f"unexpected stderr: {err}"
@@ -694,7 +762,7 @@ class TestUnexpectedErrors:
         monkeypatch.setattr("pyramids.cli_dataset._cmd_raster_info", boom)
         monkeypatch.setenv("PYRAMIDS_DEBUG", "1")
         with pytest.raises(KeyError):
-            main(["info", src_raster])
+            main(["raster", "info", src_raster])
 
 
 class TestGeoreferenceCLI:
@@ -709,6 +777,7 @@ class TestGeoreferenceCLI:
         out = str(tmp_path / "geo.tif")
         rc = main(
             [
+                "raster",
                 "georeference",
                 src_raster,
                 out,
@@ -753,6 +822,7 @@ class TestGeoreferenceCLI:
         ).to_file(out)
         rc = main(
             [
+                "raster",
                 "georeference",
                 src_raster,
                 out,
@@ -775,7 +845,7 @@ class TestGeoreferenceCLI:
             rather than crashing.
         """
         out = str(tmp_path / "ortho.tif")
-        rc = main(["orthorectify", src_raster, out, "--rpc-height", "100"])
+        rc = main(["raster", "orthorectify", src_raster, out, "--rpc-height", "100"])
         assert rc == 1, "must exit 1 when the input has no RPC metadata"
         assert not os.path.exists(out), "no output on a failed orthorectify"
 
@@ -789,7 +859,7 @@ class TestEditInfo:
         Test scenario:
             --crs 3857 --nodata 0 on a 4326/-9999 raster; re-read reflects both.
         """
-        rc = main(["edit-info", src_raster, "--crs", "3857", "--nodata", "0"])
+        rc = main(["raster", "edit-info", src_raster, "--crs", "3857", "--nodata", "0"])
         assert rc == 0, "edit-info must exit 0"
         ds = Dataset.read_file(src_raster)
         assert ds.epsg == 3857
@@ -801,7 +871,7 @@ class TestEditInfo:
         Test scenario:
             --tag AREA=test sets the AREA metadata item.
         """
-        rc = main(["edit-info", src_raster, "--tag", "AREA=test"])
+        rc = main(["raster", "edit-info", src_raster, "--tag", "AREA=test"])
         assert rc == 0
         assert Dataset.read_file(src_raster).raster.GetMetadataItem("AREA") == "test"
 
@@ -811,7 +881,7 @@ class TestEditInfo:
         Test scenario:
             A bare edit-info call no-ops with a helpful message.
         """
-        rc = main(["edit-info", src_raster])
+        rc = main(["raster", "edit-info", src_raster])
         assert rc == 0
         assert "no edits" in capsys.readouterr().out
 
@@ -837,7 +907,7 @@ class TestCalc:
         a = self._band(tmp_path, "a.tif", 4.0)
         b = self._band(tmp_path, "b.tif", 2.0)
         out = str(tmp_path / "ndvi.tif")
-        rc = main(["calc", "(A - B) / (A + B)", a, b, out])
+        rc = main(["raster", "calc", "(A - B) / (A + B)", a, b, out])
         assert rc == 0, "calc must exit 0"
         result = np.asarray(Dataset.read_file(out).read_array())
         assert np.allclose(result, (4.0 - 2.0) / (4.0 + 2.0))
@@ -850,7 +920,7 @@ class TestCalc:
         """
         a = self._band(tmp_path, "a.tif", 4.0)
         out = str(tmp_path / "w.tif")
-        rc = main(["calc", "np.where(A > 3, 1, 0)", a, out])
+        rc = main(["raster", "calc", "np.where(A > 3, 1, 0)", a, out])
         assert rc == 0
         assert np.allclose(np.asarray(Dataset.read_file(out).read_array()), 1)
 
@@ -860,7 +930,7 @@ class TestCalc:
         Test scenario:
             A single operand exits 1 rather than treating the only path as both.
         """
-        assert main(["calc", "A * 2", str(tmp_path / "only.tif")]) == 1
+        assert main(["raster", "calc", "A * 2", str(tmp_path / "only.tif")]) == 1
 
     def test_more_than_twenty_six_inputs_are_refused(self, tmp_path):
         """The expression binds A..Z, so 27 inputs have no name left.
@@ -870,7 +940,9 @@ class TestCalc:
         """
         inputs = [str(tmp_path / f"in{index}.tif") for index in range(27)]
 
-        assert main(["calc", "A * 2", *inputs, str(tmp_path / "out.tif")]) == 1
+        assert (
+            main(["raster", "calc", "A * 2", *inputs, str(tmp_path / "out.tif")]) == 1
+        )
 
     def test_a_crs_less_input_is_refused(self, tmp_path):
         """A result that cannot be georeferenced is refused, not stamped with a default.
@@ -881,7 +953,7 @@ class TestCalc:
         source = _crsless_raster(tmp_path)
         out = str(tmp_path / "out.tif")
 
-        rc = main(["calc", "A * 2", source, out])
+        rc = main(["raster", "calc", "A * 2", source, out])
 
         assert rc == 1, "a CRS-less input must exit 1"
         assert not os.path.exists(out), "nothing is written without a CRS"
@@ -902,7 +974,7 @@ class TestCalc:
         ).to_file(elsewhere)
         out = str(tmp_path / "diff.tif")
 
-        rc = main(["calc", "A - B", a, elsewhere, out])
+        rc = main(["raster", "calc", "A - B", a, elsewhere, out])
 
         assert rc == 1, "a grid mismatch must exit 1"
         assert not os.path.exists(out), "nothing is written on a grid mismatch"
@@ -924,7 +996,7 @@ class TestCalc:
         out = None
         result = str(tmp_path / "diff.tif")
 
-        rc = main(["calc", "A - B", a, untagged, result])
+        rc = main(["raster", "calc", "A - B", a, untagged, result])
 
         assert rc == 0, "an untagged input on the same grid must be accepted"
         assert np.allclose(np.asarray(Dataset.read_file(result).read_array()), 2.0)
@@ -944,7 +1016,7 @@ class TestCalc:
         ).to_file(source)
         out = str(tmp_path / "doubled.tif")
 
-        rc = main(["calc", "A * 2", source, out, "--dtype", "int16"])
+        rc = main(["raster", "calc", "A * 2", source, out, "--dtype", "int16"])
 
         assert rc == 0
         written = Dataset.read_file(out)
@@ -961,7 +1033,7 @@ class TestCalc:
         source = self._band(tmp_path, "a.tif", 4.0)
         out = str(tmp_path / "byte.tif")
 
-        rc = main(["calc", "A * 2", source, out, "--dtype", "uint8"])
+        rc = main(["raster", "calc", "A * 2", source, out, "--dtype", "uint8"])
 
         assert rc == 0
         assert Dataset.read_file(out).no_data_value[0] == 255
@@ -981,7 +1053,7 @@ class TestCalc:
         ).to_file(projected)
         out = str(tmp_path / "diff.tif")
 
-        rc = main(["calc", "A - B", a, projected, out])
+        rc = main(["raster", "calc", "A - B", a, projected, out])
 
         assert rc == 1, "a differing, present CRS must still be refused"
         assert not os.path.exists(out)
@@ -1001,7 +1073,7 @@ class TestCalc:
         ).to_file(source)
         out = str(tmp_path / "rot_out.tif")
 
-        rc = main(["calc", "A * 2", source, out])
+        rc = main(["raster", "calc", "A * 2", source, out])
 
         assert rc == 0
         assert Dataset.read_file(out).geotransform == geotransform
@@ -1013,7 +1085,7 @@ class TestCalc:
             __import__('os') exits 1 (ValueError) and creates no output.
         """
         out = str(tmp_path / "evil.tif")
-        rc = main(["calc", "__import__('os')", src_raster, out])
+        rc = main(["raster", "calc", "__import__('os')", src_raster, out])
         assert rc == 1, "disallowed expression must exit 1"
         assert not os.path.exists(out), "nothing is written on a rejected expression"
 
@@ -1024,7 +1096,7 @@ class TestCalc:
             A * 2 with --dtype float64 writes a float64 raster.
         """
         out = str(tmp_path / "d.tif")
-        rc = main(["calc", "A * 2", src_raster, out, "--dtype", "float64"])
+        rc = main(["raster", "calc", "A * 2", src_raster, out, "--dtype", "float64"])
         assert rc == 0
         assert np.asarray(Dataset.read_file(out).read_array()).dtype == np.float64
 
@@ -1034,7 +1106,7 @@ class TestCalc:
         Test scenario:
             --crs "EPSG:3857" sets the CRS without a cryptic error.
         """
-        rc = main(["edit-info", src_raster, "--crs", "EPSG:3857"])
+        rc = main(["raster", "edit-info", src_raster, "--crs", "EPSG:3857"])
         assert rc == 0, "authority-string CRS must be accepted"
         assert Dataset.read_file(src_raster).epsg == 3857
 
@@ -1044,7 +1116,7 @@ class TestCalc:
         Test scenario:
             --crs not-a-crs exits 1 and the EPSG stays 4326 (no partial write).
         """
-        rc = main(["edit-info", src_raster, "--crs", "not-a-crs"])
+        rc = main(["raster", "edit-info", src_raster, "--crs", "not-a-crs"])
         assert rc == 1, "invalid CRS must exit 1"
         assert Dataset.read_file(src_raster).epsg == 4326, "no partial write"
 
@@ -1059,7 +1131,7 @@ class TestShapesRasterizeCLI:
             shapes src.tif out.geojson writes per-cell polygons (64 cells).
         """
         out = str(tmp_path / "shapes.geojson")
-        rc = main(["shapes", src_raster, out])
+        rc = main(["raster", "shapes", src_raster, out])
         assert rc == 0, "shapes must exit 0"
         assert os.path.exists(out)
         assert np.all(np.isfinite(FeatureCollection.read_file(out).total_bounds))
@@ -1071,9 +1143,9 @@ class TestShapesRasterizeCLI:
             shapes -> vector, then rasterize --cell-size 1 -> a raster file.
         """
         vector = str(tmp_path / "v.geojson")
-        assert main(["shapes", src_raster, vector]) == 0
+        assert main(["raster", "shapes", src_raster, vector]) == 0
         out = str(tmp_path / "r.tif")
-        rc = main(["rasterize", vector, out, "--cell-size", "1"])
+        rc = main(["raster", "rasterize", vector, out, "--cell-size", "1"])
         assert rc == 0, "rasterize must exit 0"
         assert os.path.exists(out)
         assert Dataset.read_file(out).cell_size == 1
@@ -1085,8 +1157,8 @@ class TestShapesRasterizeCLI:
             A missing output grid is a clean user error.
         """
         vector = str(tmp_path / "v.geojson")
-        assert main(["shapes", src_raster, vector]) == 0
-        rc = main(["rasterize", vector, str(tmp_path / "r.tif")])
+        assert main(["raster", "shapes", src_raster, vector]) == 0
+        rc = main(["raster", "rasterize", vector, str(tmp_path / "r.tif")])
         assert rc == 1, "must exit 1 without --cell-size/--like"
 
     def test_shapes_point_geometry(self, src_raster, tmp_path):
@@ -1096,7 +1168,7 @@ class TestShapesRasterizeCLI:
             --geometry point writes a readable vector with finite bounds.
         """
         out = str(tmp_path / "pts.geojson")
-        rc = main(["shapes", src_raster, out, "--geometry", "point"])
+        rc = main(["raster", "shapes", src_raster, out, "--geometry", "point"])
         assert rc == 0, "shapes --geometry point must exit 0"
         assert np.all(np.isfinite(FeatureCollection.read_file(out).total_bounds))
 
@@ -1107,8 +1179,8 @@ class TestShapesRasterizeCLI:
             An existing destination is not clobbered.
         """
         out = str(tmp_path / "exists.geojson")
-        main(["shapes", src_raster, out])
-        rc = main(["shapes", src_raster, out])
+        main(["raster", "shapes", src_raster, out])
+        rc = main(["raster", "shapes", src_raster, out])
         assert rc == 1, "must refuse an existing output without --overwrite"
 
     def test_rasterize_with_template(self, src_raster, tmp_path):
@@ -1119,9 +1191,9 @@ class TestShapesRasterizeCLI:
             template's cell size and dimensions.
         """
         vector = str(tmp_path / "v.geojson")
-        assert main(["shapes", src_raster, vector]) == 0
+        assert main(["raster", "shapes", src_raster, vector]) == 0
         out = str(tmp_path / "r.tif")
-        rc = main(["rasterize", vector, out, "--like", src_raster])
+        rc = main(["raster", "rasterize", vector, out, "--like", src_raster])
         assert rc == 0, "rasterize --like must exit 0"
         template = Dataset.read_file(src_raster)
         result = Dataset.read_file(out)
@@ -1134,9 +1206,20 @@ class TestShapesRasterizeCLI:
             --column Band_1 produces a single-band raster.
         """
         vector = str(tmp_path / "v.geojson")
-        assert main(["shapes", src_raster, vector]) == 0
+        assert main(["raster", "shapes", src_raster, vector]) == 0
         out = str(tmp_path / "r.tif")
-        rc = main(["rasterize", vector, out, "--cell-size", "1", "--column", "Band_1"])
+        rc = main(
+            [
+                "raster",
+                "rasterize",
+                vector,
+                out,
+                "--cell-size",
+                "1",
+                "--column",
+                "Band_1",
+            ]
+        )
         assert rc == 0, "rasterize --column must exit 0"
         assert Dataset.read_file(out).band_count == 1
 
@@ -1149,7 +1232,7 @@ class TestShapesRasterizeCLI:
         """
         monkeypatch.setattr("pyramids.cli_dataset._SHAPES_MAX_CELLS", 4)
         out = str(tmp_path / "big.geojson")
-        rc = main(["shapes", src_raster, out])
+        rc = main(["raster", "shapes", src_raster, out])
         assert rc == 1, "an over-threshold shapes must exit 1"
         assert not os.path.exists(out), "no output on a refused shapes"
 
@@ -1161,7 +1244,7 @@ class TestShapesRasterizeCLI:
         """
         monkeypatch.setattr("pyramids.cli_dataset._SHAPES_MAX_CELLS", 4)
         out = str(tmp_path / "big.geojson")
-        rc = main(["shapes", src_raster, out, "--allow-large"])
+        rc = main(["raster", "shapes", src_raster, out, "--allow-large"])
         assert rc == 0, "--allow-large must proceed"
         assert os.path.exists(out)
 
@@ -1172,9 +1255,20 @@ class TestShapesRasterizeCLI:
             Passing both still succeeds and prints a clarifying note to stderr.
         """
         vector = str(tmp_path / "v.geojson")
-        assert main(["shapes", src_raster, vector]) == 0
+        assert main(["raster", "shapes", src_raster, vector]) == 0
         capsys.readouterr()
         out = str(tmp_path / "r.tif")
-        rc = main(["rasterize", vector, out, "--cell-size", "1", "--like", src_raster])
+        rc = main(
+            [
+                "raster",
+                "rasterize",
+                vector,
+                out,
+                "--cell-size",
+                "1",
+                "--like",
+                src_raster,
+            ]
+        )
         assert rc == 0
         assert "ignored" in capsys.readouterr().err
