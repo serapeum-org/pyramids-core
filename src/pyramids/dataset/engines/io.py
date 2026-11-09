@@ -481,7 +481,8 @@ class IO(_Engine["Dataset"]):
 
     Owns the reads (`read_array`, `read_windows`, `get_tile`,
     `get_block_arrangement`), the writes (`write_array`, `to_file`, `to_bytes`,
-    `to_raster`, `to_xyz`, `to_terrain_rgb`), the block-wise passes
+    `to_xyz`, `to_terrain_rgb`; plus the deprecated `to_raster` alias of
+    `to_file`), the block-wise passes
     (`stream_transform`, `stream_reduce`, `map_blocks`) and the overview family
     (`overview_count`, `create_overviews`, `recreate_overviews`, `get_overview`,
     `get_overview_dataset`, `read_overview_array`). `Dataset` exposes a
