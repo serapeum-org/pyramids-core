@@ -52,7 +52,8 @@ class TestRasterZones:
         )
         assert result.index.name == "class", "index should be named 'class'"
         assert result.geometry.notna().all(), "each class must carry a geometry"
-        assert result.crs is not None and result.crs.to_epsg() == 4326
+        assert result.crs is not None, "result must carry a CRS"
+        assert result.crs.to_epsg() == 4326, "CRS should be EPSG:4326"
 
     def test_stats_match_manual_reduction(self):
         """Per-class mean/count/min equal a hand-computed reduction.
@@ -75,8 +76,9 @@ class TestRasterZones:
             np.array([[1, 2], [2, 1]], dtype="int32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
+        values = _values()
         with pytest.raises(AlignmentError):
-            _values().zonal_stats(other, stats=("mean",))
+            values.zonal_stats(other, stats=("mean",))
 
     def test_cf_packed_values_are_physical(self):
         """Statistics use physical values on a CF-packed band.
@@ -143,8 +145,9 @@ class TestOverlayDeprecation:
             Independent of `zonal_stats`: class 1 = {10, 20, 40}, class 2 = {30, 50, 60},
             class 3 = {70, 80, 90}, in row-major order.
         """
+        values, classes = _values(), _classes()
         with pytest.warns(DeprecationWarning, match="zonal_stats"):
-            legacy = _values().overlay(_classes())
+            legacy = values.overlay(classes)
         normalised = {
             int(key): sorted(float(value) for value in vals)
             for key, vals in legacy.items()
@@ -178,14 +181,16 @@ class TestOverlayDeprecation:
     def test_analysis_engine_overlay_warns(self):
         """The engine-level `Analysis.overlay` warns too."""
         ds = _values()
+        classes = _classes()
         with pytest.warns(DeprecationWarning, match="zonal_stats"):
-            ds.analysis.overlay(_classes())
+            ds.analysis.overlay(classes)
 
     def test_collection_overlay_warns_and_merges(self):
         """`DatasetCollection.overlay` warns and merges per-class values across datasets."""
         cube = DatasetCollection.from_dataset(_values(), time_length=1)
+        classes = _classes()
         with pytest.warns(DeprecationWarning, match="zonal_stats"):
-            merged = cube.overlay(_classes())
+            merged = cube.overlay(classes)
         assert sorted(int(key) for key in merged) == [1, 2, 3]
 
 
@@ -194,8 +199,9 @@ class TestZonalStatsEdgeCases:
 
     def test_invalid_method_raises(self):
         """An unknown `method` raises ValueError before any work."""
+        values, classes = _values(), _classes()
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
-            _values().zonal_stats(_classes(), method="fractional")
+            values.zonal_stats(classes, method="fractional")
 
     def test_same_shape_different_grid_raises(self):
         """A same-shape class raster on a different grid is rejected, not silently wrong.
@@ -211,8 +217,9 @@ class TestZonalStatsEdgeCases:
                 top_left_corner=(100.0, 103.0), cell_size=1.0, epsg=4326
             ),
         )
+        values = _values()
         with pytest.raises(AlignmentError):
-            _values().zonal_stats(shifted, stats=("mean",))
+            values.zonal_stats(shifted, stats=("mean",))
 
     def test_class_value_zero_gets_a_geometry(self):
         """A class whose value is ``0`` still gets a real geometry, not ``None``.
@@ -306,5 +313,6 @@ class TestZonalStatsEdgeCases:
                 {"zone": ["a"]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:3857"
             )
         )
+        values = _values()
         with pytest.raises(ValueError, match="does not match Dataset CRS"):
-            _values().zonal_stats(fc, stats=("mean",))
+            values.zonal_stats(fc, stats=("mean",))

@@ -111,6 +111,28 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_zonal_table(ds: Dataset, args: argparse.Namespace):
+    """Compute the zonal-stats GeoDataFrame from the vector `zones` or the `--classes` raster.
+
+    Exactly one zone source must be given. A vector `zones` layer is reprojected onto the
+    raster's CRS when both declare one and they differ.
+    """
+    if args.classes is not None and args.zones is not None:
+        raise ValueError(
+            "provide either a vector 'zones' argument or --classes <class_raster>, not both"
+        )
+    stats = tuple(args.stats)
+    if args.classes is not None:
+        classes = Dataset.read_file(args.classes)
+        return ds.zonal_stats(classes, stats=stats, band=args.band)
+    if args.zones is not None:
+        fc = FeatureCollection.read_file(args.zones)
+        if fc.crs is not None and ds.crs and fc.epsg != ds.epsg:
+            fc = fc.to_crs(ds.epsg)
+        return ds.zonal_stats(fc, stats=stats, band=args.band)
+    raise ValueError("provide a vector 'zones' argument or --classes <class_raster>")
+
+
 def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     """Handle `pyramids zonal-stats` — statistics per polygon zone or raster category.
 
@@ -129,24 +151,8 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.raster)
-    if args.classes is not None and args.zones is not None:
-        raise ValueError(
-            "provide either a vector 'zones' argument or --classes <class_raster>, not both"
-        )
-    stats = tuple(args.stats)
     with map_lookup_errors():
-        if args.classes is not None:
-            classes = Dataset.read_file(args.classes)
-            table = ds.zonal_stats(classes, stats=stats, band=args.band)
-        elif args.zones is not None:
-            fc = FeatureCollection.read_file(args.zones)
-            if fc.crs is not None and ds.crs and fc.epsg != ds.epsg:
-                fc = fc.to_crs(ds.epsg)
-            table = ds.zonal_stats(fc, stats=stats, band=args.band)
-        else:
-            raise ValueError(
-                "provide a vector 'zones' argument or --classes <class_raster>"
-            )
+        table = _resolve_zonal_table(ds, args)
     # Emit a plain stats table; drop the GeoDataFrame geometry column from the CLI output.
     table = table[list(args.stats)]
     if args.output is not None:
