@@ -136,21 +136,43 @@ class TestRawValues:
 class TestOverlayDeprecation:
     """`overlay` is a deprecated alias returning the old `dict[class, list]`."""
 
-    def test_dataset_overlay_warns_and_matches_zonal_stats(self):
-        """`Dataset.overlay` warns and equals the dict rebuilt from `zonal_stats`."""
+    def test_dataset_overlay_warns_and_returns_expected_dict(self):
+        """`Dataset.overlay` warns and returns the hand-computed per-class value dict.
+
+        Test scenario:
+            Independent of `zonal_stats`: class 1 = {10, 20, 40}, class 2 = {30, 50, 60},
+            class 3 = {70, 80, 90}, in row-major order.
+        """
         with pytest.warns(DeprecationWarning, match="zonal_stats"):
             legacy = _values().overlay(_classes())
-        gdf = _values().zonal_stats(_classes(), stats=("count",), raw_values=True)
-        rebuilt = {
-            int(key): [float(value) for value in vals]
-            for key, vals in zip(gdf.index, gdf["raw_values"])
-            if len(vals)
-        }
         normalised = {
-            int(key): [float(v) for v in vals] for key, vals in legacy.items()
+            int(key): sorted(float(value) for value in vals)
+            for key, vals in legacy.items()
         }
-        assert normalised == rebuilt, (
-            "overlay dict diverged from zonal_stats raw_values"
+        expected = {1: [10.0, 20.0, 40.0], 2: [30.0, 50.0, 60.0], 3: [70.0, 80.0, 90.0]}
+        assert normalised == {key: sorted(vals) for key, vals in expected.items()}
+
+    def test_overlay_excludes_class_no_data_key(self):
+        """The deprecated `overlay` does not key the class raster's no-data value.
+
+        Test scenario:
+            A class raster with no-data 255: those cells form no zone, so 255 is absent
+            from the dict. An intentional improvement over the pre-deprecation `overlay`
+            (documented in `docs/migration.md`).
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        values = Dataset.from_array(
+            np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"), geo_ref=geo
+        )
+        classes = Dataset.from_array(
+            np.array([[1, 1], [255, 255]], dtype="int32"),
+            geo_ref=geo,
+            no_data_value=255,
+        )
+        with pytest.warns(DeprecationWarning):
+            result = values.overlay(classes)
+        assert {int(key) for key in result} == {1}, (
+            "class no-data 255 must not be a key"
         )
 
     def test_analysis_engine_overlay_warns(self):
@@ -174,6 +196,26 @@ class TestZonalStatsEdgeCases:
         """An unknown `method` raises ValueError before any work."""
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
             _values().zonal_stats(_classes(), method="fractional")
+
+    def test_class_value_zero_gets_a_geometry(self):
+        """A class whose value is ``0`` still gets a real geometry, not ``None``.
+
+        Test scenario:
+            GDAL's ``Polygonize`` self-mask drops ``0``-valued pixels, so polygonizing the
+            class raster directly would skip class 0. The label-shift path must still
+            vectorise it (regression for review finding M1).
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        values = Dataset.from_array(
+            np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"), geo_ref=geo
+        )
+        classes = Dataset.from_array(
+            np.array([[0, 0], [2, 2]], dtype="int32"), geo_ref=geo
+        )
+        result = values.zonal_stats(classes, stats=("mean",))
+        assert list(result.index) == [0, 2], "class 0 must be a zone"
+        assert result.geometry.notna().all(), "class 0 must carry a real geometry"
+        assert result.loc[0, "mean"] == 15.0, "class 0 stats must be correct too"
 
     def test_class_raster_no_data_value_is_dropped(self):
         """A class raster's no-data value does not become a zone.

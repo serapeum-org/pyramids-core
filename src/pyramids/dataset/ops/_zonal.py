@@ -147,14 +147,45 @@ def _vector_zones(
     return labels, len(fc), index, geoms, crs
 
 
+def _label_geometries(
+    ds: Dataset, labels: np.typing.NDArray, n_zones: int
+) -> list[Any]:
+    """Vectorise each label's footprint into one (multi)polygon, ordered by label `0..n_zones-1`.
+
+    The labels are polygonised through a shifted copy (`labels + 1`) so the background (`-1 -> 0`) is the value
+    GDAL's `Polygonize` self-mask drops, while every real label (`0..n-1 -> 1..n`) is vectorised. This matters
+    because polygonising the class raster directly would silently skip a class whose own value is `0` (GDAL
+    treats a `0` band value as masked). Connected regions of the same label are dissolved into one geometry.
+    """
+    # Local import breaks the dataset <-> dataset.ops._zonal cycle (dataset.py imports this module).
+    from pyramids.dataset import Dataset as _Dataset
+
+    shifted = (labels + 1).astype("int32")
+    mem_drv = gdal.GetDriverByName("MEM")
+    label_ds = mem_drv.Create("", ds.columns, ds.rows, 1, gdal.GDT_Int32)
+    label_ds.SetGeoTransform(ds.geotransform)
+    label_ds.SetProjection(ds.raster.GetProjection())
+    label_ds.GetRasterBand(1).WriteArray(shifted)
+    polygons = _Dataset(label_ds).to_polygons()
+    label_ds = None
+
+    value_col = next(
+        column for column in polygons.columns if column != polygons.geometry.name
+    )
+    dissolved = polygons.dissolve(by=value_col)
+    geom_map = {
+        int(value): geom for value, geom in zip(dissolved.index, dissolved.geometry)
+    }
+    return [geom_map.get(label + 1) for label in range(n_zones)]
+
+
 def _raster_zones(
     ds: Dataset, classes_ds: Dataset
 ) -> tuple[np.typing.NDArray, int, Any, Any, Any]:
     """Build the label grid, zone count, index, geometry and CRS for raster-category zones.
 
     The class raster must be aligned with `ds` (same grid). Each distinct class value (excluding the class
-    raster's no-data) becomes a zone; the class footprints are vectorised and dissolved per value for the
-    geometry.
+    raster's no-data) becomes a zone; the class footprints are vectorised per label for the geometry.
     """
     class_arr = np.asarray(classes_ds.read_array(band=0, unpack=False))
     cls_no_data_list = classes_ds.no_data_value
@@ -167,13 +198,7 @@ def _raster_zones(
     labels = np.full(class_arr.shape, -1, dtype=np.intp)
     labels[class_valid] = np.searchsorted(classes, class_arr[class_valid])
 
-    polygons = classes_ds.to_polygons()
-    value_col = polygons.columns[0]
-    dissolved = polygons.dissolve(by=value_col)
-    geom_map = {
-        float(value): geom for value, geom in zip(dissolved.index, dissolved.geometry)
-    }
-    geoms = [geom_map.get(float(class_value)) for class_value in classes]
+    geoms = _label_geometries(ds, labels, len(classes))
     index = pd.Index(classes, name="class")
     crs = ds.crs
     return labels, len(classes), index, geoms, crs
@@ -215,8 +240,8 @@ def zonal_stats(
             value). A `FeatureCollection`'s CRS must match `ds`; a class raster must share `ds`'s grid.
         stats: Statistics per zone. One or more of `"mean"`, `"sum"`, `"min"`, `"max"`, `"std"`, `"var"`,
             `"count"`.
-        method: `"rasterize"` is the only supported value for polygon zones today (raster zones ignore it). An
-            area-weighted `"fractional"` method is planned.
+        method: Must be `"rasterize"` (the only supported value today, for both zone kinds); any other value
+            raises `ValueError`. An area-weighted `"fractional"` method is planned.
         band: Zero-based band index on `ds`. Default 0.
         exclude_value: A physical value to drop from the inputs before reducing, or `None`.
         raw_values: When `True`, add a `raw_values` object column holding each zone's extracted values as an
@@ -278,15 +303,19 @@ def zonal_stats(
     # Local import breaks the dataset <-> dataset.ops._zonal cycle (dataset.py imports this module).
     from pyramids.dataset import Dataset as _Dataset
 
-    raster = _prep_band(ds, band, exclude_value)
-    if isinstance(zones, _Dataset):
-        if not ds.spatial._check_alignment(zones):
-            from pyramids.base._errors import AlignmentError
+    # Check alignment before reading the base band, so a misaligned class raster fails fast
+    # without a wasted full-band read + unpack.
+    raster_zones = isinstance(zones, _Dataset)
+    if raster_zones and not ds.spatial._check_alignment(zones):
+        from pyramids.base._errors import AlignmentError
 
-            raise AlignmentError(
-                "The class Dataset is not aligned with the current raster, please use the "
-                "method 'align' to align both rasters."
-            )
+        raise AlignmentError(
+            "The class Dataset is not aligned with the current raster, please use the "
+            "method 'align' to align both rasters."
+        )
+
+    raster = _prep_band(ds, band, exclude_value)
+    if raster_zones:
         labels, n_zones, index, geoms, crs = _raster_zones(ds, zones)
     else:
         labels, n_zones, index, geoms, crs = _vector_zones(ds, zones)
