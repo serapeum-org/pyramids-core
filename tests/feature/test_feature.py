@@ -45,7 +45,7 @@ class TestAttributes:
 
     def test_columns_gdf(self, coello_gauges_gdf: GeoDataFrame):
         feature = FeatureCollection(coello_gauges_gdf)
-        assert feature.column == ["id", "x", "y", "geometry"]
+        assert feature.columns.tolist() == ["id", "x", "y", "geometry"]
 
 
 class TestReadFile:

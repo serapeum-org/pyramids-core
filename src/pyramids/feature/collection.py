@@ -1150,48 +1150,6 @@ class FeatureCollection(GeoDataFrame):
         bounds = self.total_bounds.tolist()
         return [bounds[0], bounds[3]]
 
-    @property
-    def column(self) -> list[str]:
-        """Deprecated alias for :attr:`columns` returning a `list[str]`.
-
-        Returns:
-            list[str]: Column names in their current order, including
-            the active geometry column.
-
-        Examples:
-            - A frame with an `id` field reports both columns:
-                ```python
-                >>> import geopandas as gpd
-                >>> from shapely.geometry import Point
-                >>> from pyramids.feature import FeatureCollection
-                >>> fc = FeatureCollection(
-                ...     gpd.GeoDataFrame(
-                ...         {"id": [1]}, geometry=[Point(0, 0)], crs="EPSG:4326",
-                ...     )
-                ... )
-                >>> fc.column
-                ['id', 'geometry']
-
-                ```
-            - Multiple attribute columns appear in insertion order:
-                ```python
-                >>> import geopandas as gpd
-                >>> from shapely.geometry import Point
-                >>> from pyramids.feature import FeatureCollection
-                >>> fc = FeatureCollection(
-                ...     gpd.GeoDataFrame(
-                ...         {"name": ["a"], "pop": [100]},
-                ...         geometry=[Point(0, 0)],
-                ...         crs="EPSG:4326",
-                ...     )
-                ... )
-                >>> fc.column
-                ['name', 'pop', 'geometry']
-
-                ```
-        """
-        return cast(list[str], self.columns.tolist())
-
     def __str__(self) -> str:
         """Return a short, pyramids-branded summary of the collection."""
         n = len(self)
@@ -2168,7 +2126,7 @@ class FeatureCollection(GeoDataFrame):
                 ...     "s3://bucket/big.parquet",
                 ...     columns=["id", "geometry"],
                 ... )
-                >>> fc.column  # doctest: +SKIP
+                >>> fc.columns.tolist()  # doctest: +SKIP
                 ['id', 'geometry']
 
                 ```
@@ -2355,7 +2313,7 @@ class FeatureCollection(GeoDataFrame):
                 >>> fc.to_file(path)
                 >>> path.exists()
                 True
-                >>> FeatureCollection.read_file(path).column
+                >>> FeatureCollection.read_file(path).columns.tolist()
                 ['id', 'geometry']
 
                 ```

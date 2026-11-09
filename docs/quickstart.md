@@ -56,7 +56,7 @@ from pyramids.feature import FeatureCollection
 
 fc = FeatureCollection.read_file("examples/data/coello_polygons.geojson")
 fc.epsg            # -> 32618
-fc.column          # -> ['fid', 'column2', 'columns3', 'geometry']
+fc.columns.tolist() # -> ['fid', 'column2', 'columns3', 'geometry']
 fc.plot()          # geopandas/matplotlib by default; pass basemap=... for a tiled backdrop
 ```
 
