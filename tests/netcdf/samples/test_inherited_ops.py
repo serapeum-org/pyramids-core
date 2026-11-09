@@ -262,7 +262,7 @@ def test_inherited_to_cog_writes_file(tos_view, tmp_path):
     assert out.exists() and out.stat().st_size > 0
 
 
-def test_inherited_to_raster_writes_file(tos_view, tmp_path):
+def test_inherited_to_file_writes_file(tos_view, tmp_path):
     """The inherited GeoTIFF writer produces an on-disk raster from a variable view."""
     out = tmp_path / "tos_raster.tif"
     tos_view.to_file(str(out))

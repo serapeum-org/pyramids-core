@@ -1,7 +1,8 @@
 """Tests for :meth:`pyramids.dataset.Dataset.to_file` ``compute=False``.
 
-DASK-7: defer the write via ``dask.delayed`` when ``compute=False``;
-add :meth:`Dataset.to_raster` alias for API parity.
+DASK-7: defer the write via ``dask.delayed`` when ``compute=False``. The
+deprecated ``to_raster`` alias is covered in
+``tests/dataset/test_dataset_naming_deprecations.py``.
 """
 
 from __future__ import annotations
@@ -77,17 +78,17 @@ class TestComputeFalseReturnsDelayed:
         np.testing.assert_array_equal(arr, tiny_dataset.read_array())
 
 
-class TestToRasterAlias:
-    """``to_raster`` is a thin forward of ``to_file``."""
+class TestToFileWrites:
+    """Eager and deferred :meth:`Dataset.to_file` writes."""
 
-    def test_to_raster_writes_file(self, tiny_dataset, tmp_path):
-        out = tmp_path / "via_alias.tif"
+    def test_writes_file(self, tiny_dataset, tmp_path):
+        out = tmp_path / "written.tif"
         tiny_dataset.to_file(str(out))
         assert out.exists()
 
     @requires_lazy
-    def test_to_raster_compute_false(self, tiny_dataset, tmp_path):
-        out = tmp_path / "via_alias_delayed.tif"
+    def test_compute_false_returns_delayed(self, tiny_dataset, tmp_path):
+        out = tmp_path / "delayed.tif"
         delayed = tiny_dataset.to_file(str(out), compute=False)
         from dask.delayed import Delayed
 
