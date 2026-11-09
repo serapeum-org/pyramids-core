@@ -1,0 +1,34 @@
+[
+  {
+    "version": "main",
+    "title": "main",
+    "aliases": []
+  },
+  {
+    "version": "0.75.0",
+    "title": "0.75.0",
+    "aliases": [
+      "latest"
+    ]
+  },
+  {
+    "version": "0.74.0",
+    "title": "0.74.0",
+    "aliases": []
+  },
+  {
+    "version": "0.73.0",
+    "title": "0.73.0",
+    "aliases": []
+  },
+  {
+    "version": "0.71.0",
+    "title": "0.71.0",
+    "aliases": []
+  },
+  {
+    "version": "0.70.0",
+    "title": "0.70.0",
+    "aliases": []
+  }
+]
