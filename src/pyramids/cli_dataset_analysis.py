@@ -129,18 +129,24 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.raster)
-    if args.classes is not None:
-        zones: FeatureCollection | Dataset = Dataset.read_file(args.classes)
-    elif args.zones is not None:
-        zones = FeatureCollection.read_file(args.zones)
-        if zones.crs is not None and ds.crs and zones.epsg != ds.epsg:
-            zones = zones.to_crs(ds.epsg)
-    else:
+    if args.classes is not None and args.zones is not None:
         raise ValueError(
-            "provide a vector 'zones' argument or --classes <class_raster>"
+            "provide either a vector 'zones' argument or --classes <class_raster>, not both"
         )
+    stats = tuple(args.stats)
     with map_lookup_errors():
-        table = ds.zonal_stats(zones, stats=tuple(args.stats), band=args.band)
+        if args.classes is not None:
+            classes = Dataset.read_file(args.classes)
+            table = ds.zonal_stats(classes, stats=stats, band=args.band)
+        elif args.zones is not None:
+            fc = FeatureCollection.read_file(args.zones)
+            if fc.crs is not None and ds.crs and fc.epsg != ds.epsg:
+                fc = fc.to_crs(ds.epsg)
+            table = ds.zonal_stats(fc, stats=stats, band=args.band)
+        else:
+            raise ValueError(
+                "provide a vector 'zones' argument or --classes <class_raster>"
+            )
     # Emit a plain stats table; drop the GeoDataFrame geometry column from the CLI output.
     table = table[list(args.stats)]
     if args.output is not None:
