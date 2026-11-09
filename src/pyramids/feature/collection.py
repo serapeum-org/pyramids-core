@@ -5,7 +5,7 @@ The `feature` subpackage is organised as:
 - :mod:`pyramids.feature.collection` (this module) — the
   :class:`FeatureCollection` class.
 - :mod:`pyramids.feature.geometry` — shape factories and coordinate
-  extractors (`create_polygon`, `create_point`, `get_coords`,
+  extractors (`create_polygon`, `create_point`, `_get_coords`,
   `_explode_multipart`, `_multi_geom_handler`, …).
 - :mod:`pyramids.feature._ogr` — private OGR bridge.
 

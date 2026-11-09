@@ -121,7 +121,7 @@ class FeatureError(_PyramidsError):
 class InvalidGeometryError(FeatureError, ValueError):
     """A geometry is empty, malformed, or has the wrong type.
 
-    Raised e.g. when :func:`pyramids.feature.geometry.get_coords` is
+    Raised e.g. when :func:`pyramids.feature.geometry._get_coords` is
     handed a `MultiPolygon`.
 
     Multi-inherits from :class:`ValueError` so `except ValueError:`

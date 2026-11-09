@@ -50,15 +50,13 @@ from pyramids.base.crs import (
 )
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.feature import (
-    FeatureCollection,
-    get_coords,
-    get_point_coords,
-    get_xy_coords,
-)
+from pyramids.feature import FeatureCollection
 from pyramids.feature.geometry import (
     _explode_multipart,
     _geometry_collection_coords,
+    _get_coords,
+    _get_point_coords,
+    _get_xy_coords,
     _multi_geom_handler,
 )
 
@@ -1045,7 +1043,7 @@ class TestGetCoords:
         import pandas as pd
 
         row = pd.Series({"geometry": geom})
-        result = get_coords(row, "geometry", "x")
+        result = _get_coords(row, "geometry", "x")
         assert isinstance(result, expected_type)
 
     def test_multipolygon_raises(self):
@@ -1062,7 +1060,7 @@ class TestGetCoords:
         mp = MultiPolygon([box(0, 0, 1, 1)])
         row = pd.Series({"geometry": mp})
         with pytest.raises(ValueError, match="MultiPolygon"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_xy_does_not_drop_real_minus_9999(self):
         """ARC-9 regression: a polygon with x=-9999 is not silently dropped.
@@ -1095,7 +1093,7 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": Point()})  # empty
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_empty_linestring_raises_invalid_geometry(self):
         """C22: an empty LineString also raises ``InvalidGeometryError``."""
@@ -1105,7 +1103,7 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": LineString()})
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_empty_polygon_raises_invalid_geometry(self):
         """C22: an empty Polygon also raises ``InvalidGeometryError``."""
@@ -1115,14 +1113,14 @@ class TestGetCoords:
 
         row = pd.Series({"geometry": Polygon()})
         with pytest.raises(InvalidGeometryError, match="empty geometry"):
-            get_coords(row, "geometry", "y")
+            _get_coords(row, "geometry", "y")
 
     def test_geometry_collection(self):
         import pandas as pd
 
         gc = GeometryCollection([Point(7, 8)])
         row = pd.Series({"geometry": gc})
-        result = get_coords(row, "geometry", "x")
+        result = _get_coords(row, "geometry", "x")
         assert 7.0 in result
 
 
@@ -1169,14 +1167,14 @@ class TestGetXyCoordsInvalidType:
     def test_invalid_coord_type_raises(self):
         line = LineString([(0, 0), (1, 1)])
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_xy_coords(line, "z")
+            _get_xy_coords(line, "z")
 
 
 class TestGetPointCoordsInvalidType:
     def test_invalid_coord_type_raises(self):
         point = Point(5, 10)
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_point_coords(point, "z")
+            _get_point_coords(point, "z")
 
     def test_invalid_coord_type_checked_before_attribute_access(self):
         """M2: the ``coord_type`` check fires before ``geometry.x/y``.
@@ -1193,4 +1191,4 @@ class TestGetPointCoordsInvalidType:
         """
         empty = Point()
         with pytest.raises(ValueError, match="'x' or 'y'"):
-            get_point_coords(empty, "z")
+            _get_point_coords(empty, "z")

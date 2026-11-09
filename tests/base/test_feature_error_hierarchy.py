@@ -29,7 +29,7 @@ from pyramids.base._errors import (
 )
 from pyramids.base.crs import get_epsg_from_prj
 from pyramids.feature import FeatureCollection
-from pyramids.feature.geometry import get_coords
+from pyramids.feature.geometry import _get_coords
 
 pytestmark = pytest.mark.core
 
@@ -55,7 +55,7 @@ class TestHierarchy:
 
 
 class TestInvalidGeometryError:
-    """MultiPolygon into get_coords raises InvalidGeometryError (/-18)."""
+    """MultiPolygon into _get_coords raises InvalidGeometryError (/-18)."""
 
     def test_raised_on_multipolygon(self):
         import pandas as pd
@@ -63,7 +63,7 @@ class TestInvalidGeometryError:
         mp = MultiPolygon([box(0, 0, 1, 1)])
         row = pd.Series({"geometry": mp})
         with pytest.raises(InvalidGeometryError, match="MultiPolygon"):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_still_catchable_as_value_error(self):
         """Legacy handlers using `except ValueError` keep working."""
@@ -72,7 +72,7 @@ class TestInvalidGeometryError:
         mp = MultiPolygon([box(0, 0, 1, 1)])
         row = pd.Series({"geometry": mp})
         with pytest.raises(ValueError):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
     def test_catchable_as_feature_error(self):
         """A broad `except FeatureError:` also catches it."""
@@ -81,7 +81,7 @@ class TestInvalidGeometryError:
         mp = MultiPolygon([box(0, 0, 1, 1)])
         row = pd.Series({"geometry": mp})
         with pytest.raises(FeatureError):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
 
 class TestCRSError:
