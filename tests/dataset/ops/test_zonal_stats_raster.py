@@ -9,11 +9,13 @@ from __future__ import annotations
 import geopandas as gpd
 import numpy as np
 import pytest
+from shapely.geometry import box
 
 from pyramids.base._errors import AlignmentError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.collection import DatasetCollection
+from pyramids.feature import FeatureCollection
 
 _GEO = dict(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326)
 
@@ -163,3 +165,87 @@ class TestOverlayDeprecation:
         with pytest.warns(DeprecationWarning, match="zonal_stats"):
             merged = cube.overlay(_classes())
         assert sorted(int(key) for key in merged) == [1, 2, 3]
+
+
+class TestZonalStatsEdgeCases:
+    """Boundary and error branches of `zonal_stats`."""
+
+    def test_invalid_method_raises(self):
+        """An unknown `method` raises ValueError before any work."""
+        with pytest.raises(ValueError, match="method must be 'rasterize'"):
+            _values().zonal_stats(_classes(), method="fractional")
+
+    def test_class_raster_no_data_value_is_dropped(self):
+        """A class raster's no-data value does not become a zone.
+
+        Test scenario:
+            A class raster declaring 0 as no-data has its 0-cells excluded; only the
+            real classes 1 and 2 appear as zones.
+        """
+        classes = Dataset.from_array(
+            np.array([[0, 1], [2, 2]], dtype="int32"),
+            geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
+            no_data_value=0,
+        )
+        values = Dataset.from_array(
+            np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"),
+            geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
+        )
+        result = values.zonal_stats(classes, stats=("mean",))
+        assert list(result.index) == [1, 2], "no-data class 0 must be dropped"
+
+    def test_all_no_data_class_yields_nan_row(self):
+        """A class whose base cells are all no-data is a row with NaN stats and count 0.
+
+        Test scenario:
+            Base no-data (-9999) covers exactly class 2's cells, so class 2 is still a
+            zone but has no valid value.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        values = Dataset.from_array(
+            np.array([[10.0, 20.0], [-9999.0, -9999.0]], dtype="float32"),
+            geo_ref=geo,
+            no_data_value=-9999.0,
+        )
+        classes = Dataset.from_array(
+            np.array([[1, 1], [2, 2]], dtype="int32"), geo_ref=geo
+        )
+        result = values.zonal_stats(classes, stats=("mean", "count"))
+        assert result.loc[2, "count"] == 0.0, "all-no-data class counts zero"
+        assert np.isnan(result.loc[2, "mean"]), "all-no-data class mean is NaN"
+
+    def test_polygon_zones_support_raw_values(self):
+        """The polygon path also honours `raw_values`.
+
+        Test scenario:
+            One box over a 2x2 raster returns a single row whose `raw_values` holds all
+            four cell values in row-major order.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        values = Dataset.from_array(
+            np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"), geo_ref=geo
+        )
+        fc = FeatureCollection(
+            gpd.GeoDataFrame(
+                {"zone": ["a"]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:4326"
+            )
+        )
+        result = values.zonal_stats(fc, stats=("count",), raw_values=True)
+        np.testing.assert_array_equal(
+            result.iloc[0]["raw_values"], np.array([10.0, 20.0, 30.0, 40.0])
+        )
+
+    def test_crs_mismatch_raises(self):
+        """A FeatureCollection whose CRS differs from the raster raises ValueError.
+
+        Test scenario:
+            A polygon in EPSG:3857 against a raster in EPSG:4326 is rejected before
+            rasterizing, pointing the caller at `fc.to_crs`.
+        """
+        fc = FeatureCollection(
+            gpd.GeoDataFrame(
+                {"zone": ["a"]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:3857"
+            )
+        )
+        with pytest.raises(ValueError, match="does not match Dataset CRS"):
+            _values().zonal_stats(fc, stats=("mean",))
