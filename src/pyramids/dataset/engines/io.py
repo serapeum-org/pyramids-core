@@ -2601,6 +2601,7 @@ class IO(_Engine["Dataset"]):
         *,
         compute: bool = True,
         lock: Any = None,
+        reopen: bool = True,
     ) -> Any:
         """Deprecated alias of :meth:`to_file`.
 
@@ -2620,6 +2621,8 @@ class IO(_Engine["Dataset"]):
             driver: GDAL driver short name, or ``None`` to infer it from ``path``.
             compute: Write eagerly (``True``) or, for a lazy dataset, return a delayed write.
             lock: Optional lock for parallel delayed writes.
+            reopen: Reopen the written file and return the resulting dataset (``True``), or
+                return ``None`` after writing (``False``).
 
         Returns:
             Whatever :meth:`to_file` returns: ``None`` for an eager write, or a delayed
@@ -2648,6 +2651,7 @@ class IO(_Engine["Dataset"]):
             driver=driver,
             compute=compute,
             lock=lock,
+            reopen=reopen,
         )
 
     def _tile_offsets(self, size: int = 256) -> Generator:

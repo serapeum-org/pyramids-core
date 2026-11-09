@@ -124,7 +124,12 @@ class TestToRasterRenamedToToFile:
         spy = mocker.patch.object(ds.io, "to_file", return_value="sentinel")
         with pytest.warns(DeprecationWarning):
             result = ds.io.to_raster(
-                out, band=0, tile_length=256, creation_options=None, driver="GTiff"
+                out,
+                band=0,
+                tile_length=256,
+                creation_options=None,
+                driver="GTiff",
+                reopen=False,
             )
         assert result == "sentinel", "to_raster must return what to_file returns"
         spy.assert_called_once_with(
@@ -135,6 +140,7 @@ class TestToRasterRenamedToToFile:
             driver="GTiff",
             compute=True,
             lock=None,
+            reopen=False,
         )
 
 
