@@ -1346,74 +1346,34 @@ class MeshDataset(_MeshFacades):
         return result
 
     def sel_time(self, index: int) -> MeshDataset:
-        """Select a single time step from all temporal variables.
+        """Deprecated: use ``isel(time=index)``.
 
-        Non-temporal variables are kept unchanged; each temporal variable is collapsed to the
-        chosen step and becomes static. This is the single-step half of ``isel(time=index)``
-        and shares its axis-aware :func:`_static_from` collapse, so the two validate the same
-        way and drop the now-meaningless time coordinate. A leading-time variable still reads
-        only the requested slab from disk (the lazy single-step read of #982); a variable whose
-        time axis is not leading is taken on its own ``time_index``.
-
-        Args:
-            index: Time step index (0-based; a negative index counts from the end).
-
-        Returns:
-            New MeshDataset holding the single step, with the time dimension dropped.
-
-        Raises:
-            ValueError: No variable has a time dimension, the temporal variables disagree on
-                their time length, or a temporal variable has no readable data.
-            IndexError: ``index`` is out of range for the time axis.
+        `sel_time` took an **integer** position, which is `isel` semantics under a `sel` name,
+        and the same class already exposes :meth:`isel`, which collapses a single step through
+        the identical :func:`_collapse_variable_to_step` (so the result is byte-for-byte the
+        same, including the #982 lazy slab read). This forwards to it.
         """
-        self._time_length("sel_time")
-        new_data_vars: dict[str, MeshVariable] = {}
-        for name, var in self._data_variables.items():
-            if var.has_time:
-                new_data_vars[name] = _collapse_variable_to_step(var, index)
-            else:
-                new_data_vars[name] = var
-
-        # See `to_crs`: `type(self)` keeps a subclass, and `file_name` is carried.
-        result = type(self)(
-            mesh=self._mesh,
-            data_variables=new_data_vars,
-            global_attributes=self._global_attributes,
-            topology_info=self._topology_info,
-            crs_wkt=self._crs_wkt,
-            file_name=self._file_name,
-            volume_topology=self._volume_topology,
+        warnings.warn(
+            "MeshDataset.sel_time is deprecated; use isel(time=index) instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.isel(time=index)
 
     def sel_time_range(self, start: int, stop: int) -> MeshDataset:
-        """Select a time range from all temporal variables.
+        """Deprecated: use ``isel(time=slice(start, stop))``.
 
-        Args:
-            start: Start index (inclusive).
-            stop: Stop index (exclusive).
-
-        Returns:
-            New MeshDataset with the selected time range.
+        `sel_time_range` took **integer** positions (`stop` exclusive), which is `isel` with a
+        slice. :meth:`isel` keeps the time dimension for a slice exactly as this did, so the
+        result is identical.
         """
-        new_data_vars: dict[str, MeshVariable] = {}
-        for name, var in self._data_variables.items():
-            if var.has_time:
-                new_data_vars[name] = var.sel_time_range(start, stop)
-            else:
-                new_data_vars[name] = var
-
-        # See `to_crs`: `type(self)` keeps a subclass, and `file_name` is carried.
-        result = type(self)(
-            mesh=self._mesh,
-            data_variables=new_data_vars,
-            global_attributes=self._global_attributes,
-            topology_info=self._topology_info,
-            crs_wkt=self._crs_wkt,
-            file_name=self._file_name,
-            volume_topology=self._volume_topology,
+        warnings.warn(
+            "MeshDataset.sel_time_range is deprecated; use "
+            "isel(time=slice(start, stop)) instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.isel(time=slice(start, stop))
 
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True

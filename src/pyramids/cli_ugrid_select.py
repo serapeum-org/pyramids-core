@@ -192,7 +192,7 @@ def _cmd_mesh_sel_time(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.sel_time(args.index)
+        result = mesh.isel(time=args.index)
     return _write(args, result)
 
 
@@ -240,7 +240,7 @@ def _cmd_mesh_sel_time_range(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.sel_time_range(args.start, args.stop)
+        result = mesh.isel(time=slice(args.start, args.stop))
     return _write(args, result)
 
 
