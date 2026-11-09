@@ -3445,23 +3445,33 @@ class DatasetCollection:
         indices = range(self.time_length - keep, self.time_length)
         return self._stack_timesteps([self._dataset_at(j) for j in indices])
 
-    def first(self) -> np.typing.NDArray:
-        """First timestep array (2D).
+    def first(self) -> Dataset:
+        """First timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[0]`` because it only reads one
-        timestep instead of the full cube.
+        Consistent with :meth:`iloc` and :meth:`last`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``0``. Equivalent to ``iloc(0)``.
+            Call ``cube.first().read_array(band=0)`` to get the first timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(0).read_array(band=0))
+        return self._dataset_at(0)
 
-    def last(self) -> np.typing.NDArray:
-        """Last timestep array (2D).
+    def last(self) -> Dataset:
+        """Last timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[-1]`` because it only reads one
-        timestep instead of the full cube.
+        Consistent with :meth:`iloc` and :meth:`first`, which also return ``Dataset``
+        handles. Pixel values are not loaded; call
+        :meth:`~pyramids.dataset.Dataset.read_array` on the result for the 2-D array.
+
+        Returns:
+            Dataset: The lazy ``Dataset`` at position ``-1``. Equivalent to ``iloc(-1)``.
+            Call ``cube.last().read_array(band=0)`` to get the last timestep's 2-D array
+            (what this method returned before it was changed to yield a ``Dataset``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(-1).read_array(band=0))
+        return self._dataset_at(-1)
 
     def iloc(self, i: int) -> Dataset:
         """Return the ``Dataset`` at position ``i``.

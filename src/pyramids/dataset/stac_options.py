@@ -680,11 +680,11 @@ class AssetRead:
             ...         }
             ...     },
             ... }
-            >>> DatasetCollection.from_stac([item], "data").first().tolist()
+            >>> DatasetCollection.from_stac([item], "data").first().read_array(band=0).tolist()
             [[0, 100], [200, 300]]
             >>> DatasetCollection.from_stac(
             ...     [item], "data", read=AssetRead(rescale=True)
-            ... ).first().tolist()
+            ... ).first().read_array(band=0).tolist()
             [[nan, 1.0], [2.0, 3.0]]
 
             ```

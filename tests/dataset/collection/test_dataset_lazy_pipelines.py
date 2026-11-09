@@ -6,7 +6,7 @@ the cross-task paths most likely to silently break under refactors.
 
 The five scenarios:
 
-1. ``read_array(chunks=)`` → ``map_blocks(chunks=)`` → ``to_raster(compute=False)``
+1. ``read_array(chunks=)`` → ``map_blocks(chunks=)`` → ``to_file(compute=False)``
    — the canonical lazy raster pipeline end-to-end.
 2. ``Reprojector`` applied to a :class:`Dataset` whose backing array is
    lazy (set via ``read_array(chunks=...)``). Confirms the reprojector
@@ -14,7 +14,7 @@ The five scenarios:
    inside GDAL Warp.
 3. ``map_blocks(chunks=)`` result written via ``to_zarr`` — the
    only truly parallel raster output path.
-4. Round-trip ``to_zarr`` → ``from_zarr`` → ``to_raster(compute=True)``.
+4. Round-trip ``to_zarr`` → ``from_zarr`` → ``to_file(compute=True)``.
 5. ``Reprojector`` pickles across a subprocess boundary and applies
    to a Dataset on the far side (dask.distributed case).
 """
@@ -82,10 +82,10 @@ def _pickle_reprojector_worker(payload: bytes, src_path: str) -> tuple[int, int,
 class TestDatasetLazyPipelines:
     """Cross-task lazy pipelines for Phase 1."""
 
-    def test_read_map_blocks_to_raster_pipeline(self, source_tif, tmp_path):
+    def test_read_map_blocks_to_file_pipeline(self, source_tif, tmp_path):
         """Full lazy pipeline: lazy read → map_blocks → compute=False write → compute.
 
-        L2: ``to_raster(compute=False)`` only accepts disk-anchored
+        L2: ``to_file(compute=False)`` only accepts disk-anchored
         Datasets, because the delayed write pickles ``self`` through
         :meth:`RasterBase.__reduce__` which cannot reconstruct a
         MEM dataset. So we materialise ``map_blocks``, persist the
@@ -111,7 +111,7 @@ class TestDatasetLazyPipelines:
 
         out_path = str(tmp_path / "doubled.tif")
         disk_scratch = Dataset.read_file(scratch_path)
-        delayed = disk_scratch.to_raster(out_path, compute=False)
+        delayed = disk_scratch.to_file(out_path, compute=False)
         delayed.compute()
 
         roundtrip = Dataset.read_file(out_path).read_array()
@@ -155,14 +155,14 @@ class TestDatasetLazyPipelines:
             doubled_arr,
         )
 
-    def test_zarr_roundtrip_to_raster(self, source_tif, tmp_path):
-        """Round-trip: source → to_zarr → from_zarr → to_raster → re-read."""
+    def test_zarr_roundtrip_to_file(self, source_tif, tmp_path):
+        """Round-trip: source → to_zarr → from_zarr → to_file → re-read."""
         src = Dataset.read_file(source_tif)
         store = str(tmp_path / "rt.zarr")
         src.to_zarr(store)
         via_zarr = Dataset.from_zarr(store)
         out_tif = str(tmp_path / "roundtripped.tif")
-        via_zarr.to_raster(out_tif)
+        via_zarr.to_file(out_tif)
         reloaded = Dataset.read_file(out_tif)
         np.testing.assert_array_equal(
             reloaded.read_array(),

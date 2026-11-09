@@ -2061,8 +2061,13 @@ class Dataset(RasterBase):
         return self.io.to_bytes(*args, **kwargs)
 
     def to_raster(self, *args, **kwargs):
-        """Facade — delegates to :meth:`IO.to_raster <pyramids.dataset.engines.IO.to_raster>`."""
-        return self.io.to_raster(*args, **kwargs)
+        """Deprecated alias of :meth:`to_file` (use ``to_file``; emits a ``DeprecationWarning``)."""
+        warnings.warn(
+            "`to_raster` is deprecated and will be removed in a future release; use `to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_file(*args, **kwargs)
 
     def get_block_arrangement(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_block_arrangement <pyramids.dataset.engines.IO.get_block_arrangement>`."""

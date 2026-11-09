@@ -202,10 +202,10 @@ def _cmd_to_polygons(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_raster(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-raster`` — write a raster via the ``to_raster`` alias.
+    """Handle ``pyramids to-raster`` — write a raster via :meth:`Dataset.to_file`.
 
-    ``to_raster`` forwards to ``to_file``; unlike ``pyramids convert`` it exposes
-    the tile length and raw GDAL creation options. ``--band`` is forwarded as
+    Unlike ``pyramids convert`` it exposes the tile length and raw GDAL creation
+    options. ``--band`` is forwarded as
     ``to_file``'s ``band`` argument, which selects the single band only for ASCII
     grid drivers; GeoTIFF and the other raster drivers write every band. It is
     range-checked here so an out-of-range index errors cleanly rather than being
@@ -228,7 +228,7 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
         raise ValueError(
             f"band {args.band} is out of range for a {ds.band_count}-band raster"
         )
-    ds.to_raster(
+    ds.to_file(
         args.output,
         band=args.band,
         tile_length=args.tile_length,

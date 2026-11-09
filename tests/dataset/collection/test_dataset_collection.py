@@ -581,8 +581,8 @@ class TestProperties:
         cube.open_multi_dataset()
         first = cube.first()
         last = cube.last()
-        assert first.shape == rasters_folder_dim
-        assert last.shape == rasters_folder_dim
+        assert first.read_array(band=0).shape == rasters_folder_dim
+        assert last.read_array(band=0).shape == rasters_folder_dim
 
     def test_rows_columns(
         self,

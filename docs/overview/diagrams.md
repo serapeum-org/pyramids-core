@@ -478,7 +478,7 @@ classDiagram
     %% Engines (Dataset collaborators)
     class engines_IO {
         +read_array · _lazy_read_array
-        +to_file · to_raster
+        +to_file
         +read_overview · get_block_arrangement
         +to_xyz · map_blocks
     }

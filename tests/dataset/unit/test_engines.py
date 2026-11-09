@@ -246,7 +246,10 @@ FACADE_METHODS = [
     ("io", "read_array"),
     ("io", "write_array"),
     ("io", "to_file"),
-    ("io", "to_raster"),
+    # NB: ``("io", "to_raster")`` is intentionally excluded — ``Dataset.to_raster`` is
+    # now a deprecated alias that warns and delegates to ``io.to_file`` (NOT ``io.to_raster``),
+    # so it is no longer a pure same-named pass-through facade. Its deprecation + delegation
+    # behaviour is covered by ``tests/dataset/test_dataset_naming_deprecations.py``.
     ("io", "get_block_arrangement"),
     ("io", "get_tile"),
     ("io", "map_blocks"),

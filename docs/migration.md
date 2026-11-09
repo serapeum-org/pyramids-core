@@ -186,6 +186,19 @@ default: `array_to_map_coordinates` defaulted to cell corners, `xy` defaults to 
 `total_bounds` is now an abstract property on `RasterBase`; any third-party subclass that implemented only `bbox`
 must also provide `total_bounds`.
 
+**`Dataset.to_raster` → `to_file`.** `to_raster` was a redundant second name for `to_file`; it keeps working as a
+`DeprecationWarning`-emitting alias and will be removed next major. Call `to_file` instead — the arguments are
+identical.
+
+**`DatasetCollection.first()` / `.last()` now return a `Dataset`, not a 2-D array.** Hard change, no deprecation
+alias — the methods keep their names but their return type changed to match `iloc`. Add `.read_array(band=0)` to
+recover the old array:
+
+```python
+cube.first()                      # before -> np.ndarray (2-D);  after -> Dataset
+cube.first().read_array(band=0)   # the 2-D array, as before
+```
+
 **CF-packed data is now unpacked on read, and the keyword is `unpack`.** Hard change, silent for the values —
 nothing raises. A raster that declares `scale_factor` / `add_offset` (GDAL's `GetScale` / `GetOffset`) now reads
 back in physical units as `float64` instead of raw stored counts.
