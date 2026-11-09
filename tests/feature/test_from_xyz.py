@@ -264,3 +264,78 @@ class TestFromXYZComposition:
         assert (ds.rows, ds.columns, ds.band_count) == (10, 10, 1), (
             f"unexpected shape: {ds.rows}x{ds.columns}x{ds.band_count}"
         )
+
+
+class TestFromXYZElevation:
+    """Tests for z_as_elevation=True folding z into the geometry (PointZ)."""
+
+    def test_folds_z_into_geometry(self):
+        """z_as_elevation=True builds 3-D PointZ geometry carrying the z value.
+
+        Test scenario:
+            Two triples with z_as_elevation=True yield POINT Z geometries whose
+            third ordinate is the z coordinate.
+        """
+        fc = FeatureCollection.from_xyz(
+            [0.0, 1.0], [2.0, 3.0], [5.0, 6.0], z_as_elevation=True
+        )
+        assert fc.geometry.iloc[0].wkt == "POINT Z (0 2 5)", (
+            f"unexpected geometry: {fc.geometry.iloc[0].wkt}"
+        )
+        assert fc.geometry.iloc[0].has_z, "geometry should be 3-D (PointZ)"
+
+    def test_writes_no_value_column(self):
+        """z_as_elevation=True writes no z attribute column.
+
+        Test scenario:
+            The result's only column is the geometry; z lives in the coordinate.
+        """
+        fc = FeatureCollection.from_xyz(
+            [0.0, 1.0], [2.0, 3.0], [5.0, 6.0], z_as_elevation=True
+        )
+        assert list(fc.columns) == ["geometry"], (
+            f"unexpected columns: {list(fc.columns)}"
+        )
+
+    def test_preserves_crs(self):
+        """z_as_elevation=True still attaches the requested CRS.
+
+        Test scenario:
+            crs=4326 is reported back while the geometry is 3-D.
+        """
+        fc = FeatureCollection.from_xyz(
+            [0.0], [0.0], [9.0], crs=4326, z_as_elevation=True
+        )
+        assert fc.epsg == 4326, f"Expected EPSG 4326, got {fc.epsg}"
+        assert fc.geometry.iloc[0].has_z, "geometry should be 3-D (PointZ)"
+
+    def test_default_keeps_z_as_2d_value_column(self):
+        """The default (z_as_elevation=False) keeps 2-D geometry + a z column.
+
+        Test scenario:
+            Same inputs without the flag give POINT (not POINT Z) and a z column.
+        """
+        fc = FeatureCollection.from_xyz([0.0], [2.0], [5.0])
+        assert not fc.geometry.iloc[0].has_z, "default geometry should be 2-D"
+        assert list(fc["z"]) == [5.0], f"z column wrong: {list(fc['z'])}"
+
+    def test_true_without_z_raises(self):
+        """z_as_elevation=True without z is a contradiction and raises.
+
+        Test scenario:
+            Omitting z while asking to fold it into the geometry raises ValueError.
+        """
+        with pytest.raises(ValueError, match="z_as_elevation=True needs z"):
+            FeatureCollection.from_xyz([0.0, 1.0], [2.0, 3.0], z_as_elevation=True)
+
+    def test_non_finite_z_raises(self):
+        """A NaN z with z_as_elevation=True raises rather than building POINT Z NaN.
+
+        Test scenario:
+            A NaN among the z coordinates is rejected when z is geometry, since it
+            would build an invalid 3-D point.
+        """
+        with pytest.raises(ValueError, match="z must be finite when z_as_elevation"):
+            FeatureCollection.from_xyz(
+                [0.0, 1.0], [2.0, 3.0], [5.0, float("nan")], z_as_elevation=True
+            )

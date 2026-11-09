@@ -614,6 +614,7 @@ class FeatureCollection(GeoDataFrame):
         *,
         crs: Any = None,
         z_column: str = "z",
+        z_as_elevation: bool = False,
     ) -> FeatureCollection:
         """Build a point FeatureCollection from parallel coordinate arrays.
 
@@ -630,6 +631,11 @@ class FeatureCollection(GeoDataFrame):
         the horizontal position without silently reprojecting the stored value. The
         two capabilities compose on the class: build with ``from_xyz``, reproject
         with ``to_crs``, grid with ``interpolate_to_raster``.
+
+        Set ``z_as_elevation=True`` to instead fold ``z`` into the geometry as a third
+        coordinate (``POINT Z (x y z)``); no value column is written then. Use it when
+        ``z`` *is* the point's elevation (its position) rather than a value measured at
+        a 2-D location.
 
         The coordinates must be finite: a ``NaN`` or infinite ``x``/``y`` is a
         malformed point and raises. A ``NaN`` in ``z`` is different — it is a missing
@@ -650,15 +656,21 @@ class FeatureCollection(GeoDataFrame):
                 :func:`~pyramids.base.crs.crs_from_user_input`, so an EPSG code only
                 GDAL's PROJ database knows (which raw pyproj cannot parse) still
                 attaches (issue #943). Defaults to ``None`` (no CRS).
-            z_column: Name to store ``z`` under. Defaults to ``"z"``.
+            z_column: Name to store ``z`` under. Defaults to ``"z"``. Ignored when
+                ``z_as_elevation=True`` (no value column is written).
+            z_as_elevation: When ``True``, ``z`` is folded into the geometry as the
+                point's third coordinate (``PointZ``) and no ``z_column`` is written;
+                ``z`` must then be given and finite. When ``False`` (default), ``z``
+                is a 2-D point's attribute column. Defaults to ``False``.
 
         Returns:
             FeatureCollection: One point row per coordinate triple.
 
         Raises:
             ValueError: ``x`` and ``y`` are not 1-D and of equal length, ``z`` (if
-                given) does not match their length, the arrays are empty, or a
-                coordinate (``x`` or ``y``) is non-finite.
+                given) does not match their length, the arrays are empty, a
+                coordinate (``x`` or ``y``) is non-finite, or ``z_as_elevation=True``
+                while ``z`` is ``None`` or non-finite.
 
         Examples:
             - Build a point layer from three arrays and read back its shape:
@@ -684,6 +696,18 @@ class FeatureCollection(GeoDataFrame):
                 'POINT (0 2)'
 
                 ```
+            - Fold ``z`` into the geometry as elevation (``PointZ``), no value column:
+                ```python
+                >>> from pyramids.feature import FeatureCollection
+                >>> fc = FeatureCollection.from_xyz(
+                ...     [0.0, 1.0], [2.0, 3.0], [5.0, 6.0], z_as_elevation=True,
+                ... )
+                >>> fc.geometry.iloc[0].wkt
+                'POINT Z (0 2 5)'
+                >>> "z" in fc.columns
+                False
+
+                ```
 
         See Also:
             - :meth:`to_crs`: reproject the built layer.
@@ -691,7 +715,9 @@ class FeatureCollection(GeoDataFrame):
             - :meth:`from_records`: build from per-row dicts that already hold
               shapely geometries.
         """
-        return _read.from_xyz(cls, x, y, z, crs=crs, z_column=z_column)
+        return _read.from_xyz(
+            cls, x, y, z, crs=crs, z_column=z_column, z_as_elevation=z_as_elevation
+        )
 
     _VALID_TILE_STRATEGIES: tuple[str, ...] = (
         "auto",

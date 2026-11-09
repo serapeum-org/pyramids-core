@@ -1526,6 +1526,7 @@ def from_xyz(
     *,
     crs: Any = None,
     z_column: str = "z",
+    z_as_elevation: bool = False,
 ) -> FeatureCollection:
     """Build a point FC from parallel coordinate arrays (see FeatureCollection.from_xyz)."""
     xs = np.asarray(x, dtype=float)
@@ -1552,18 +1553,39 @@ def from_xyz(
         )
     # `points_from_xy` builds the whole GeometryArray in one vectorized shapely call
     # -- no Python-level Point() per row -- which is what keeps this usable for large
-    # point tables. `z` is carried as an attribute column (the value to grid), not
-    # baked into the geometry, so a later `.to_crs()` reprojects the horizontal
-    # position without silently shifting the stored value.
+    # point tables. By default `z` is carried as an attribute column (the value to
+    # grid), not baked into the geometry, so a later `.to_crs()` reprojects the
+    # horizontal position without silently shifting the stored value. With
+    # `z_as_elevation=True` the caller opts into the opposite: `z` becomes the
+    # geometry's third coordinate (PointZ) and no value column is written.
+    if z_as_elevation and z is None:
+        raise ValueError(
+            "from_xyz: z_as_elevation=True needs z coordinates to fold into the "
+            "geometry; got z=None."
+        )
     data: dict[str, Any] = {}
+    zs = None
     if z is not None:
         zs = np.asarray(z, dtype=float)
         if zs.shape != xs.shape:
             raise ValueError(
                 f"from_xyz: z must match x/y length; got {zs.size} and {xs.size}."
             )
-        data[z_column] = zs
-    geometry = gpd.points_from_xy(xs, ys)
+    if z_as_elevation:
+        # A NaN/inf z would build an invalid POINT Z (x y NaN), so require finite z
+        # here -- unlike the 2D value-column path, where a NaN z is a kept-missing
+        # reading only dropped later when the column is gridded.
+        if not np.isfinite(zs).all():
+            raise ValueError(
+                "from_xyz: z must be finite when z_as_elevation=True; a NaN or "
+                "infinite z would build an invalid POINT Z (x y NaN) geometry. Store "
+                "z as a value column instead (z_as_elevation=False)."
+            )
+        geometry = gpd.points_from_xy(xs, ys, zs)
+    else:
+        if zs is not None:
+            data[z_column] = zs
+        geometry = gpd.points_from_xy(xs, ys)
     # Resolve the CRS through `crs_from_user_input` (the #943 healer the array APIs
     # use) before handing it to the inner GeoDataFrame: a GDAL-only EPSG that pyproj
     # cannot parse would otherwise raise here. It has to go on the inner frame
