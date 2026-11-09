@@ -22,9 +22,9 @@ from collections.abc import Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, TextIO
 
-OUTPUT_FORMATS = ("text", "json", "csv", "table")
-
 from pyramids.base._errors import OptionalPackageDoesNotExist
+
+OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
 
 @contextlib.contextmanager
