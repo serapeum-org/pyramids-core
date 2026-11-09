@@ -1621,12 +1621,14 @@ class MeshDataset(_MeshFacades):
         if variable_name is not None:
             var = self.get_data(variable_name)
             if var.location == location:
-                # For a temporal variable only the first step is tabulated; `sel_time(0)` reads just
-                # that slab instead of loading every step to slice `[0]` (#982). `has_data_source`
-                # avoids a temporal-specific `sel_time` error for a variable with no readable data
-                # (checked without forcing a load — review L3).
+                # For a temporal variable only the first step is tabulated; the windowed read
+                # pulls just that slab instead of loading every step to slice `[0]` (#982).
+                # `has_data_source` keeps a variable with no readable data to the `None` branch
+                # below (checked without forcing a load — review L3).
                 if var.has_time:
-                    var_data = var.sel_time(0) if var.has_data_source else None
+                    var_data = (
+                        var._read_time_window(0, None) if var.has_data_source else None
+                    )
                 else:
                     var_data = var.data
                 # A variable with no readable data becomes a length-correct null column rather than
@@ -7073,7 +7075,9 @@ def _collapse_variable_to_step(var: MeshVariable, index: int) -> MeshVariable:
     axis = cast("int", var.time_index)
     if axis == 0:
         # Leading time: the windowed read pulls only this slab from disk (#982).
-        step = np.asarray(var.sel_time(index))
+        # `_read_time_window` is the raw-slab primitive `sel_time` wrapped; used directly so
+        # `sel_time` has no internal caller and can be retyped/deprecated on its own.
+        step = np.asarray(var._read_time_window(index, None))
     else:
         step = np.take(np.asarray(var.data), index, axis=axis)
     return _static_from(var, step, axis, active=var._time_sliced_active(index, None))
