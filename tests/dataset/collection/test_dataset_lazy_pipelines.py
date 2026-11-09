@@ -111,7 +111,7 @@ class TestDatasetLazyPipelines:
 
         out_path = str(tmp_path / "doubled.tif")
         disk_scratch = Dataset.read_file(scratch_path)
-        delayed = disk_scratch.to_raster(out_path, compute=False)
+        delayed = disk_scratch.to_file(out_path, compute=False)
         delayed.compute()
 
         roundtrip = Dataset.read_file(out_path).read_array()
@@ -162,7 +162,7 @@ class TestDatasetLazyPipelines:
         src.to_zarr(store)
         via_zarr = Dataset.from_zarr(store)
         out_tif = str(tmp_path / "roundtripped.tif")
-        via_zarr.to_raster(out_tif)
+        via_zarr.to_file(out_tif)
         reloaded = Dataset.read_file(out_tif)
         np.testing.assert_array_equal(
             reloaded.read_array(),

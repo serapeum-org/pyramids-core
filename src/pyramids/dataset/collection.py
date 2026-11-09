@@ -3445,23 +3445,25 @@ class DatasetCollection:
         indices = range(self.time_length - keep, self.time_length)
         return self._stack_timesteps([self._dataset_at(j) for j in indices])
 
-    def first(self) -> np.typing.NDArray:
-        """First timestep array (2D).
+    def first(self) -> Dataset:
+        """First timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[0]`` because it only reads one
-        timestep instead of the full cube.
+        Returns the ``Dataset`` at position ``0`` — consistent with :meth:`iloc`
+        and :meth:`last`, which also return ``Dataset`` handles. Pixel values are
+        not loaded; call :meth:`~pyramids.dataset.Dataset.read_array` on the
+        result for the 2-D array (``cube.first().read_array(band=0)``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(0).read_array(band=0))
+        return self._dataset_at(0)
 
-    def last(self) -> np.typing.NDArray:
-        """Last timestep array (2D).
+    def last(self) -> Dataset:
+        """Last timestep as a :class:`Dataset` (lazy handle).
 
-        Cheaper than ``self.values[-1]`` because it only reads one
-        timestep instead of the full cube.
+        Returns the ``Dataset`` at position ``-1`` — consistent with :meth:`iloc`
+        and :meth:`first`, which also return ``Dataset`` handles. Pixel values are
+        not loaded; call :meth:`~pyramids.dataset.Dataset.read_array` on the
+        result for the 2-D array (``cube.last().read_array(band=0)``).
         """
-        # No chunks=, so this always returns a plain ndarray.
-        return cast(np.typing.NDArray, self._dataset_at(-1).read_array(band=0))
+        return self._dataset_at(-1)
 
     def iloc(self, i: int) -> Dataset:
         """Return the ``Dataset`` at position ``i``.

@@ -82,13 +82,13 @@ class TestToRasterAlias:
 
     def test_to_raster_writes_file(self, tiny_dataset, tmp_path):
         out = tmp_path / "via_alias.tif"
-        tiny_dataset.to_raster(str(out))
+        tiny_dataset.to_file(str(out))
         assert out.exists()
 
     @requires_lazy
     def test_to_raster_compute_false(self, tiny_dataset, tmp_path):
         out = tmp_path / "via_alias_delayed.tif"
-        delayed = tiny_dataset.to_raster(str(out), compute=False)
+        delayed = tiny_dataset.to_file(str(out), compute=False)
         from dask.delayed import Delayed
 
         assert isinstance(delayed, Delayed)

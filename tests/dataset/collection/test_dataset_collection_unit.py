@@ -534,15 +534,15 @@ class TestIterationMethods:
         assert result.shape == (1, 5, 6), f"Expected (1,5,6), got {result.shape}"
 
     def test_first(self, cube_with_values: DatasetCollection):
-        """first() should return the first time slice (2D array)."""
-        result = cube_with_values.first()
+        """first() should return the first timestep as a Dataset."""
+        result = cube_with_values.first().read_array(band=0)
         assert result.shape == (5, 6), f"Expected (5,6), got {result.shape}"
         expected_first = np.arange(3 * 5 * 6, dtype=np.float64).reshape(3, 5, 6)[0]
         np.testing.assert_array_equal(result, expected_first)
 
     def test_last(self, cube_with_values: DatasetCollection):
-        """last() should return the final time slice (2D array)."""
-        result = cube_with_values.last()
+        """last() should return the final timestep as a Dataset."""
+        result = cube_with_values.last().read_array(band=0)
         assert result.shape == (5, 6), f"Expected (5,6), got {result.shape}"
         expected_last = np.arange(3 * 5 * 6, dtype=np.float64).reshape(3, 5, 6)[-1]
         np.testing.assert_array_equal(result, expected_last)
@@ -1721,7 +1721,7 @@ class TestDatasetAtLazyHandles:
             f"expected index 0, got {set(col._handle_cache)}"
         )
         np.testing.assert_array_equal(
-            result,
+            result.read_array(band=0),
             np.arange(20, dtype="int16").reshape(4, 5),
             err_msg="first() returned the wrong timestep array",
         )

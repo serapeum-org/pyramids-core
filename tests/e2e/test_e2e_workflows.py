@@ -1074,15 +1074,19 @@ class TestDatasetCollectionProcessingPipeline:
 
         assert md.head(3).shape == (3, rows, cols), "head(3) shape mismatch"
         assert md.tail(-2).shape == (2, rows, cols), "tail(-2) shape mismatch"
-        assert md.first().shape == (rows, cols), "first() shape mismatch"
-        assert md.last().shape == (rows, cols), "last() shape mismatch"
+        assert md.first().read_array(band=0).shape == (rows, cols), (
+            "first() shape mismatch"
+        )
+        assert md.last().read_array(band=0).shape == (rows, cols), (
+            "last() shape mismatch"
+        )
 
         # Verify first/last content
         np.testing.assert_array_equal(
-            md.first(), values[0], err_msg="first() content mismatch"
+            md.first().read_array(band=0), values[0], err_msg="first() content mismatch"
         )
         np.testing.assert_array_equal(
-            md.last(), values[-1], err_msg="last() content mismatch"
+            md.last().read_array(band=0), values[-1], err_msg="last() content mismatch"
         )
 
 

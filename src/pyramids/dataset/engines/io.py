@@ -2602,11 +2602,15 @@ class IO(_Engine["Dataset"]):
         compute: bool = True,
         lock: Any = None,
     ) -> Any:
-        """Alias of :meth:`to_file` for API convenience.
+        """Deprecated alias of :meth:`to_file`.
+
+        .. deprecated::
+            ``to_raster`` is a redundant second name for :meth:`to_file` and will
+            be removed in a future release. Call :meth:`to_file` instead; the
+            arguments are identical.
 
         Forwards every argument to :meth:`to_file`; see that method's
-        documentation for the full contract. Provided for parity with the
-        common `.to_raster` name.
+        documentation for the full contract.
 
         Examples:
             - Write a dataset to a GeoTIFF:
@@ -2614,10 +2618,15 @@ class IO(_Engine["Dataset"]):
               ```python
               >>> from pyramids.dataset import Dataset
               >>> ds = Dataset.read_file("in.tif")  # doctest: +SKIP
-              >>> ds.to_raster("out.tif")  # doctest: +SKIP
+              >>> ds.to_file("out.tif")  # doctest: +SKIP
 
               ```
         """
+        warnings.warn(
+            "`to_raster` is deprecated and will be removed in a future release; use `to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.to_file(
             path,
             band=band,
