@@ -508,7 +508,7 @@ class TestS3PathStyleAddressing:
         """``select`` (via ``_replace``) carries the parent's cloud config (#560)."""
         sentinel = CloudConfig(aws_virtual_hosting=False)
         store = self._mem_store_with_variable(sentinel)
-        child = store.select(x=[10, 30])
+        child = store.sel(x=[10, 30])
         assert child._cloud_config is sentinel, (
             "child view must reuse the parent's cloud config, not a fresh empty one"
         )

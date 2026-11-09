@@ -578,8 +578,58 @@ class MeshVariable:
                 result = data[start] if stop is None else data[start:stop]
         return result
 
+    def isel(self, *, time: int | slice) -> MeshVariable:
+        """Select along the time axis by **integer position**, returning a `MeshVariable`.
+
+        The variable-level counterpart of :meth:`MeshDataset.isel`, and the one selection verb
+        every selection-capable class in the package shares (`NetCDF`, `MeshDataset`,
+        `LabeledDataset`). Over time:
+
+        - an `int` keeps that one step and **drops** the time dimension (the result is static,
+          `has_time == False`);
+        - a `slice` keeps the time dimension, trimmed to the chosen steps.
+
+        A leading-time variable reads only the requested slab from disk (#982).
+
+        Args:
+            time: An `int` step (negative counts from the end) or a contiguous `slice`.
+
+        Returns:
+            MeshVariable: The selected variable.
+
+        Raises:
+            ValueError: The variable has no time dimension, has no readable data, or `time` is a
+                slice with a step other than 1.
+            IndexError: An integer step is out of range.
+        """
+        if not self.has_time:
+            raise ValueError(f"Variable '{self.name}' has no time dimension.")
+        if isinstance(time, slice):
+            length = self.shape[cast("int", self.time_index)]
+            start, stop, step = time.indices(length)
+            if step != 1:
+                raise ValueError(
+                    f"isel(time=slice) on a MeshVariable takes a contiguous slice (step 1), "
+                    f"got step {step}."
+                )
+            slab = self._read_time_window(start, stop)
+            if slab is None:
+                raise ValueError(f"Variable '{self.name}' has no loaded data.")
+            return self.with_data(slab, active=self._time_sliced_active(start, stop))
+        # Integer: collapse to a static variable. `_collapse_variable_to_step` lives in
+        # `ugrid.dataset`, which imports this module, so the import is deferred here to break
+        # the models <-> dataset cycle (the one carve-out the repo allows).
+        from pyramids.netcdf.ugrid.dataset import _collapse_variable_to_step
+
+        return _collapse_variable_to_step(self, int(time))
+
     def sel_time(self, index: int) -> np.typing.NDArray:
-        """Select a single time step, reading only that slab from disk when possible.
+        """Deprecated: use ``isel(time=index).data``.
+
+        This reads one time step as a raw array. It is the odd one out — every other selection
+        returns a wrapped object, not bare numbers — so it is deprecated in favour of
+        :meth:`isel`, whose `int` form returns a collapsed `MeshVariable` (take `.data` for the
+        same array).
 
         Args:
             index: Time step index.
@@ -589,9 +639,13 @@ class MeshVariable:
 
         Raises:
             IndexError: If index is out of range.
-            ValueError: If the variable has no time dimension, or has no
-                loaded data array.
+            ValueError: If the variable has no time dimension, or has no loaded data array.
         """
+        warnings.warn(
+            "MeshVariable.sel_time is deprecated; use isel(time=index).data instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.has_time:
             raise ValueError(f"Variable '{self.name}' has no time dimension.")
         slab = self._read_time_window(index, None)
@@ -600,7 +654,10 @@ class MeshVariable:
         return cast("np.typing.NDArray", slab)
 
     def sel_time_range(self, start: int, stop: int) -> MeshVariable:
-        """Select a time range, reading only that slab from disk when possible.
+        """Deprecated: use ``isel(time=slice(start, stop))``.
+
+        `sel_time_range` took integer positions (`stop` exclusive), which is `isel` with a slice.
+        It forwards there, returning the same trimmed `MeshVariable`.
 
         Args:
             start: Start time index (inclusive).
@@ -610,15 +667,15 @@ class MeshVariable:
             New MeshVariable with the selected time range.
 
         Raises:
-            ValueError: If the variable has no time dimension, or has no
-                loaded data array.
+            ValueError: If the variable has no time dimension, or has no loaded data array.
         """
-        if not self.has_time:
-            raise ValueError(f"Variable '{self.name}' has no time dimension.")
-        slab = self._read_time_window(start, stop)
-        if slab is None:
-            raise ValueError(f"Variable '{self.name}' has no loaded data.")
-        return self.with_data(slab, active=self._time_sliced_active(start, stop))
+        warnings.warn(
+            "MeshVariable.sel_time_range is deprecated; use "
+            "isel(time=slice(start, stop)) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.isel(time=slice(start, stop))
 
     @property
     def active_has_time(self) -> bool:

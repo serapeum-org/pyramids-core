@@ -595,19 +595,62 @@ class LabeledDataset:
         }
 
     @property
-    def dimensions(self) -> list[str]:
+    def dimension_names(self) -> list[str]:
         """Dimension names (in store order), excluding scalar-selected ones."""
         return [d for d in self._dim_order if d not in self._scalar_dims]
 
     @property
-    def coordinates(self) -> list[str]:
+    def coordinate_names(self) -> list[str]:
         """Coordinate variable names (e.g. `feature_id`, `time`, `latitude`)."""
         return list(self._coord_names)
 
     @property
-    def variables(self) -> list[str]:
+    def variable_names(self) -> list[str]:
         """Data-variable names (excludes coordinates)."""
         return list(self._var_names)
+
+    @property
+    def dimensions(self) -> list[str]:
+        """Deprecated alias of :attr:`dimension_names`.
+
+        Renamed so the accessor says it returns a list of names rather than a mapping: bare
+        `dimensions` means a mapping keyed by name in both xarray and netCDF4, and matching
+        GDAL's own `*Names` convention (which this package wraps) spells the list form out.
+        """
+        warnings.warn(
+            "LabeledDataset.dimensions is deprecated; use dimension_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.dimension_names
+
+    @property
+    def coordinates(self) -> list[str]:
+        """Deprecated alias of :attr:`coordinate_names`.
+
+        Renamed for the same reason as :attr:`dimensions`: the `*_names` form says it returns a
+        list of names, not the coordinate objects.
+        """
+        warnings.warn(
+            "LabeledDataset.coordinates is deprecated; use coordinate_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.coordinate_names
+
+    @property
+    def variables(self) -> list[str]:
+        """Deprecated alias of :attr:`variable_names`.
+
+        Renamed to resolve a type collision: `NetCDF.variables` is a mapping, while this
+        returned a plain `list[str]` under the same name. `variable_names` says which it is.
+        """
+        warnings.warn(
+            "LabeledDataset.variables is deprecated; use variable_names instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variable_names
 
     def _read(self, name: str) -> tuple[np.typing.NDArray, tuple[str, ...]]:
         """Read array `name` with the current selection applied.
@@ -768,38 +811,102 @@ class LabeledDataset:
         if name not in self._coord_names:
             raise KeyError(
                 f"{name!r} is not a coordinate of this store; available: "
-                f"{self.coordinates}"
+                f"{self.coordinate_names}"
             )
 
-    def select(self, **labels: Any) -> LabeledDataset:
-        """Select by label-dimension coordinate value(s).
+    def _time_scale(self, dim: str) -> tuple[str, str] | None:
+        """The `(units, calendar)` of a CF-time dimension, or `None` when it is not one.
 
-        Each keyword is a coordinate (typically a dimension coordinate such as
-        `feature_id` / `station`) mapped to a value or list of values to
-        keep, in the requested order. A scalar drops that dimension. Missing
-        labels are reported rather than silently dropped.
+        Lets `sel` accept a `slice` of date strings on a time axis the way `select_time` did,
+        without the caller naming the axis: the bounds are parsed in the axis's own numeric
+        scale, so `360_day` / `noleap` calendars compare correctly.
+        """
+        with self._with_store() as grp:
+            arr = grp.OpenMDArray(dim)
+            unit = arr.GetUnit()
+            if not is_cf_time_units(unit):
+                return None
+            cal_attr = _get_attr(arr, "calendar")
+            calendar = cal_attr.ReadAsString() if cal_attr is not None else "standard"
+        return unit, calendar
+
+    def _sel_range(self, dim: str, window: slice, index: dict[str, Any]) -> None:
+        """Keep the entries of `dim` whose coordinate falls in the label window `[start, stop]`.
+
+        Mutates `index` in place. Bounds are inclusive and compared in the coordinate's own
+        numeric scale — on a CF-time axis a date string / datetime is parsed through the axis's
+        `units` + `calendar`, so non-standard calendars work. A `step` on the slice is rejected:
+        a label range is a value window, not a positional stride (use `isel` for that).
+        """
+        if window.step is not None:
+            raise ValueError(
+                f"sel({dim}=slice(...)) is a label range and takes no step; use isel for a "
+                f"positional stride"
+            )
+        start, stop = window.start, window.stop
+        current = self._coord_current(dim, dim)
+        scale = self._time_scale(dim)
+        if scale is not None:
+            unit, calendar = scale
+            current = current.astype("float64")
+            low = None if start is None else self._time_to_num(start, unit, calendar)
+            high = None if stop is None else self._time_to_num(stop, unit, calendar)
+        else:
+            low, high = start, stop
+        mask = np.ones(current.shape, dtype=bool)
+        if low is not None:
+            mask &= current >= low
+        if high is not None:
+            mask &= current <= high
+        if not mask.any():
+            raise ValueError(f"no entries of {dim!r} in window [{start}, {stop}]")
+        base = self._index.get(dim)
+        base = np.arange(self._full_sizes[dim]) if base is None else np.asarray(base)
+        index[dim] = base[np.flatnonzero(mask)]
+
+    def sel(self, **labels: Any) -> LabeledDataset:
+        """Select by label-dimension coordinate value(s) — exact values, or a `slice` range.
+
+        Each keyword is a coordinate (typically a dimension coordinate such as `feature_id` /
+        `station` / `time`) mapped to one of:
+
+        - a scalar value — keep that one entry and **drop** the dimension;
+        - a list/tuple/array of values — keep those entries, in the requested order;
+        - a `slice(start, stop)` — keep the entries whose coordinate falls in the inclusive
+          window, in store order. On a CF-time axis the bounds may be date strings or datetimes,
+          parsed in the axis's own `units` + `calendar` (so `sel(time=slice("2010-06-01",
+          "2010-08-31"))` is the range `select_time` used to express).
+
+        This is the label counterpart of :meth:`isel` (integer positions), matching
+        :meth:`pyramids.netcdf.NetCDF.sel` / :meth:`~pyramids.netcdf.NetCDF.isel`.
 
         Args:
-            **labels: `dim=value` or `dim=[values]` selectors. A scalar
-                drops the dimension; a list/tuple/array keeps the matching
-                entries in the requested order. An empty sequence is an error.
+            **labels: `dim=value`, `dim=[values]`, or `dim=slice(start, stop)` selectors.
 
         Returns:
             LabeledDataset: A new view with only the selected labels.
 
         Raises:
-            KeyError: `dim` is not a coordinate, or any value is absent.
-            ValueError: A selection list is empty.
+            KeyError: `dim` is not a coordinate, or any requested value is absent.
+            ValueError: A selection list is empty, a slice carries a `step`, or a range
+                selects nothing.
 
         Examples:
             - Keep three reaches by `feature_id`::
 
-                >>> sub = store.select(feature_id=[101, 202, 303])  # doctest: +SKIP
+                >>> sub = store.sel(feature_id=[101, 202, 303])  # doctest: +SKIP
+
+            - A summer time window::
+
+                >>> sub = store.sel(time=slice("2010-06-01", "2010-08-31"))  # doctest: +SKIP
         """
         index = dict(self._index)
         scalar = set(self._scalar_dims)
         for dim, values in labels.items():
             self._require_coord(dim)
+            if isinstance(values, slice):
+                self._sel_range(dim, values, index)
+                continue
             current = self._coord_current(dim, dim)
             # np.ndim == 0 treats Python scalars, numpy scalars, and 0-d arrays
             # alike (a 0-d ndarray is not iterable, so the isinstance check alone
@@ -831,7 +938,7 @@ class LabeledDataset:
                 scalar.add(dim)
         return self._replace(index, frozenset(scalar))
 
-    def select_by_coord(self, coord: str, values: Iterable[Any]) -> LabeledDataset:
+    def sel_by_coord(self, coord: str, values: Iterable[Any]) -> LabeledDataset:
         """Select along a non-dimension 1-D coordinate (e.g. a `gage_id` join).
 
         `coord` is a 1-D coordinate over the label dimension; the store is
@@ -852,7 +959,7 @@ class LabeledDataset:
         Examples:
             - Select reaches by their USGS gauge id::
 
-                >>> sub = store.select_by_coord("gage_id", ["01010000"])  # doctest: +SKIP
+                >>> sub = store.sel_by_coord("gage_id", ["01010000"])  # doctest: +SKIP
         """
         self._require_coord(coord)
         dims = self._array_dims(coord)
@@ -880,6 +987,97 @@ class LabeledDataset:
         """Convert a date string / datetime to the time axis's numeric scale."""
         return encode_cf_time(value, unit, calendar)
 
+    def isel(self, **indexers: Any) -> LabeledDataset:
+        """Select by **integer position** along one or more dimensions.
+
+        The positional counterpart of :meth:`sel`, matching
+        :meth:`pyramids.netcdf.NetCDF.isel`. Each keyword maps a dimension to one of:
+
+        - an `int` — keep that one step (negative counts from the end) and **drop** the
+          dimension;
+        - a `slice` — keep the positional range (a `step` is honoured here, unlike :meth:`sel`);
+        - a list/array of ints — keep those positions, in the given order.
+
+        Positions are relative to the **current** selection, so `isel` composes with an earlier
+        `sel`/`isel`.
+
+        Args:
+            **indexers: `dim=int`, `dim=slice`, or `dim=[positions]` selectors.
+
+        Returns:
+            LabeledDataset: A new view at the chosen positions.
+
+        Raises:
+            KeyError: `dim` is not a dimension of the store.
+            IndexError: A position is out of range for the dimension.
+
+        Examples:
+            - The first three timesteps::
+
+                >>> sub = store.isel(time=slice(0, 3))  # doctest: +SKIP
+
+            - A single step, dropping the dimension::
+
+                >>> plane = store.isel(time=0)  # doctest: +SKIP
+        """
+        index = dict(self._index)
+        scalar = set(self._scalar_dims)
+        for dim, selector in indexers.items():
+            if dim not in self._full_sizes:
+                raise KeyError(
+                    f"{dim!r} is not a dimension of this store; available: "
+                    f"{self.dimension_names}"
+                )
+            base = self._index.get(dim)
+            base = (
+                np.arange(self._full_sizes[dim]) if base is None else np.asarray(base)
+            )
+            if isinstance(selector, slice):
+                index[dim] = base[selector]
+            elif np.ndim(selector) == 0:
+                index[dim] = base[[int(selector)]]
+                scalar.add(dim)
+            else:
+                index[dim] = base[np.asarray(selector, dtype=int)]
+        return self._replace(index, frozenset(scalar))
+
+    def select(self, **labels: Any) -> LabeledDataset:
+        """Deprecated alias of :meth:`sel`.
+
+        Renamed so the whole package spells label selection `sel`, as every sibling container
+        class (`NetCDF`, `MeshDataset`) and xarray do.
+        """
+        warnings.warn(
+            "LabeledDataset.select is deprecated; use sel instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.sel(**labels)
+
+    def select_by_coord(self, coord: str, values: Iterable[Any]) -> LabeledDataset:
+        """Deprecated alias of :meth:`sel_by_coord`."""
+        warnings.warn(
+            "LabeledDataset.select_by_coord is deprecated; use sel_by_coord instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.sel_by_coord(coord, values)
+
+    def select_bbox(
+        self,
+        bbox: tuple[float, float, float, float],
+        *,
+        lon: str = "longitude",
+        lat: str = "latitude",
+    ) -> LabeledDataset:
+        """Deprecated alias of :meth:`sel_bbox`."""
+        warnings.warn(
+            "LabeledDataset.select_bbox is deprecated; use sel_bbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.sel_bbox(bbox, lon=lon, lat=lat)
+
     def select_time(
         self,
         start: Any = None,
@@ -887,57 +1085,21 @@ class LabeledDataset:
         *,
         time_dim: str = "time",
     ) -> LabeledDataset:
-        """Slice the time axis to a `[start, end]` window (inclusive).
+        """Deprecated: use ``sel(<time_dim>=slice(start, end))``.
 
-        Composes with :meth:`select` / :meth:`select_by_coord`. Bounds are
-        compared in the time variable's own numeric scale (`units` + CF
-        `calendar`), so non-standard calendars (`360_day` / `noleap`) work.
-
-        Args:
-            start: Lower bound (inclusive). A string (`"2010-06-01"`),
-                `datetime`, or `None` to start at the first step.
-            end: Upper bound (inclusive). Same forms; `None` runs to the last.
-            time_dim: Name of the time dimension. Defaults to `"time"`.
-
-        Returns:
-            LabeledDataset: A new view restricted to the in-range timesteps.
-
-        Raises:
-            KeyError: `time_dim` is not a coordinate of the store.
-            ValueError: The window selects no timesteps.
-
-        Examples:
-            - Restrict to a summer window::
-
-                >>> sub = store.select_time("2010-06-01", "2010-08-31")  # doctest: +SKIP
+        The standalone time-window method is gone now that :meth:`sel` accepts a `slice` of
+        label values, with the same CF-calendar-aware bound parsing. `select_time(a, b)` forwards
+        to `sel(time=slice(a, b))`.
         """
-        self._require_coord(time_dim)
-        with self._with_store() as grp:
-            arr = grp.OpenMDArray(time_dim)
-            unit = arr.GetUnit()
-            cal_attr = _get_attr(arr, "calendar")
-            calendar = cal_attr.ReadAsString() if cal_attr is not None else "standard"
-        current = self._coord_current(time_dim, time_dim).astype("float64")
-        mask = np.ones(current.shape, dtype=bool)
-        if start is not None:
-            mask &= current >= self._time_to_num(start, unit, calendar)
-        if end is not None:
-            mask &= current <= self._time_to_num(end, unit, calendar)
-        if not mask.any():
-            full = self._coord_full(time_dim)
-            raise ValueError(
-                f"no timesteps in window [{start}, {end}]; the store spans "
-                f"[{full.min()}, {full.max()}] in '{unit}'"
-            )
-        base = self._index.get(time_dim)
-        base = (
-            np.arange(self._full_sizes[time_dim]) if base is None else np.asarray(base)
+        warnings.warn(
+            f"LabeledDataset.select_time is deprecated; use "
+            f"sel({time_dim}=slice(start, end)) instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        index = dict(self._index)
-        index[time_dim] = base[np.flatnonzero(mask)]
-        return self._replace(index, self._scalar_dims)
+        return self.sel(**{time_dim: slice(start, end)})
 
-    def select_bbox(
+    def sel_bbox(
         self,
         bbox: tuple[float, float, float, float],
         *,
@@ -967,7 +1129,7 @@ class LabeledDataset:
         Examples:
             - Keep reaches inside a small box::
 
-                >>> sub = store.select_bbox((-77.0, 40.0, -75.0, 42.0))  # doctest: +SKIP
+                >>> sub = store.sel_bbox((-77.0, 40.0, -75.0, 42.0))  # doctest: +SKIP
         """
         min_lon, min_lat, max_lon, max_lat = bbox
         for name in (lon, lat):
@@ -1023,7 +1185,7 @@ class LabeledDataset:
 
         Every dimension/coordinate becomes a column and each data variable a
         column, one row per `(label, time, ...)` cell. Realises the selected
-        data, so slice with :meth:`select` / :meth:`select_time` /
+        data, so slice with :meth:`sel` / :meth:`sel_bbox` /
         :meth:`select_bbox` first for large stores.
 
         Returns:
@@ -1038,11 +1200,11 @@ class LabeledDataset:
         if nbytes > _LARGE_REALISE_BYTES:
             warnings.warn(
                 f"realising ~{nbytes / 1e9:.1f} GB into a "
-                "DataFrame; slice with select / select_time / select_bbox first "
+                "DataFrame; slice with sel / sel_bbox first "
                 "to avoid loading the whole store into memory.",
                 stacklevel=2,
             )
-        out_dims = self.dimensions
+        out_dims = self.dimension_names
         if out_dims:
             shape = tuple(self._selected_size(d) for d in out_dims)
             grids = np.meshgrid(*[np.arange(s) for s in shape], indexing="ij")
@@ -1173,7 +1335,7 @@ class LabeledDataset:
         """Compact, structure-only representation (no data read)."""
         return (
             f"<LabeledDataset sizes={self.sizes} "
-            f"coords={self.coordinates} variables={self.variables}>"
+            f"coords={self.coordinate_names} variables={self.variable_names}>"
         )
 
 

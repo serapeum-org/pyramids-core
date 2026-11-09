@@ -142,6 +142,24 @@ class TestTimeDimension:
             data_locations={"water_level": "face"},
         )
 
+    def test_sel_time_is_deprecated_and_equals_isel(self, temporal_dataset):
+        """`sel_time` / `sel_time_range` took integer positions — that is `isel` work.
+
+        Both are now deprecated aliases forwarding to `isel(time=…)`, which collapses a single
+        step through the same `_collapse_variable_to_step`, so the result is identical.
+        """
+        with pytest.warns(DeprecationWarning, match=r"use isel\(time=index\)"):
+            dep = temporal_dataset.sel_time(1)
+        new = temporal_dataset.isel(time=1)
+        assert np.array_equal(dep["water_level"].data, new["water_level"].data)
+
+        with pytest.warns(DeprecationWarning, match=r"isel\(time=slice"):
+            dep_range = temporal_dataset.sel_time_range(0, 2)
+        new_range = temporal_dataset.isel(time=slice(0, 2))
+        assert np.array_equal(
+            dep_range["water_level"].data, new_range["water_level"].data
+        )
+
     def test_time_values_default(self, temporal_dataset):
         """Test time_values returns range indices by default.
 
