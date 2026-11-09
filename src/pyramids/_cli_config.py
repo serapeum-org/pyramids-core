@@ -1,13 +1,15 @@
 """Config-file support for the ``pyramids`` CLI (E-2 / #1490).
 
-A ``pyramids.toml`` file lets a user set per-command defaults once instead of repeating
-flags (CRS, driver, output format, ...). Defaults are applied to each subcommand's parser
+A ``pyramids.yaml`` file lets a user set per-command defaults once instead of repeating
+flags (CRS, driver, output format, ...). YAML is the package's config format (see
+``pyramids/base/config.yaml`` and the processing-pipeline ``.yaml`` files), so this stays
+consistent with the rest of the codebase. Defaults are applied to each subcommand's parser
 via :meth:`argparse.ArgumentParser.set_defaults` **before** parsing, so an explicit flag on
 the command line always wins. Precedence, highest first:
 
 1. the command line (an explicit flag),
-2. the config file (``--config PATH`` > ``PYRAMIDS_CONFIG`` env > nearest ``pyramids.toml``
-   searched upward from the working directory > ``~/.config/pyramids/config.toml``),
+2. the config file (``--config PATH`` > ``PYRAMIDS_CONFIG`` env > nearest ``pyramids.yaml``
+   searched upward from the working directory > ``~/.config/pyramids/config.yaml``),
 3. the built-in argparse default.
 
 Only plain **value-replacing** options (argparse ``store``) are configurable. Options the CLI
@@ -20,33 +22,34 @@ A configured value is validated the same way argparse would validate the CLI val
 satisfy the option's ``choices`` and, for a multi-value ``nargs``, be a list — otherwise a
 clean, config-naming ``ValueError`` is raised.
 
-Schema — a top-level ``[defaults]`` table applies to every verb that has the option, and a
-``[group.command]`` table applies to that one verb (a key is only applied when the target
+Schema — a top-level ``defaults`` mapping applies to every verb that has the option, and a
+``<group>.<command>`` mapping applies to that one verb (a key is only applied when the target
 verb actually defines that option as a value option, so an unrelated or boolean key is
 silently ignored):
 
-```toml
-[defaults]
-driver = "gpkg"
-
-[vector.warp]
-crs = "EPSG:4326"
-driver = "gpkg"
+```yaml
+defaults:
+  driver: gpkg
+vector:
+  warp:
+    crs: "EPSG:4326"
+    driver: gpkg
 ```
 
-The module reads nothing from the CLI package, so it adds no import cycle. ``tomllib`` is
-in the standard library (Python 3.11+), so this needs no new dependency.
+The module reads nothing from the CLI package, so it adds no import cycle, and ``PyYAML`` is
+already a core dependency, so this needs no new one.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-import tomllib
 from pathlib import Path
 from typing import Any
 
-CONFIG_BASENAME = "pyramids.toml"
+import yaml
+
+CONFIG_BASENAME = "pyramids.yaml"
 CONFIG_ENV_VAR = "PYRAMIDS_CONFIG"
 
 
@@ -57,7 +60,7 @@ def find_config_file(
 
     Args:
         explicit: The value of ``--config`` (an explicit path), if given. Must exist.
-        start: The directory to begin the upward ``pyramids.toml`` search from; defaults to
+        start: The directory to begin the upward ``pyramids.yaml`` search from; defaults to
             the current working directory.
 
     Returns:
@@ -82,29 +85,40 @@ def find_config_file(
         candidate = directory / CONFIG_BASENAME
         if candidate.is_file():
             return candidate
-    user = Path.home() / ".config" / "pyramids" / "config.toml"
+    user = Path.home() / ".config" / "pyramids" / "config.yaml"
     return user if user.is_file() else None
 
 
 def load_config(path: Path | None) -> dict[str, Any]:
-    """Parse a config file into a nested dict, or ``{}`` when ``path`` is ``None``.
+    """Parse a YAML config file into a nested dict, or ``{}`` when ``path`` is ``None``.
+
+    An empty file (``yaml.safe_load`` returns ``None``) is treated as no config. A top-level
+    document that is not a mapping is rejected, since the schema is a mapping of tables.
 
     Args:
         path: The config file to read, or ``None``.
 
     Returns:
-        dict[str, Any]: The parsed tables, or an empty dict.
+        dict[str, Any]: The parsed mapping, or an empty dict.
 
     Raises:
-        ValueError: The file is not valid TOML.
+        ValueError: The file is not valid YAML, or its top level is not a mapping.
     """
     if path is None:
         return {}
     try:
         with path.open("rb") as handle:
-            return tomllib.load(handle)
-    except tomllib.TOMLDecodeError as exc:
+            data = yaml.safe_load(handle)
+    except yaml.YAMLError as exc:
         raise ValueError(f"invalid config file {str(path)!r}: {exc}") from exc
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"invalid config file {str(path)!r}: top level must be a mapping, got "
+            f"{type(data).__name__}"
+        )
+    return data
 
 
 def _iter_subparsers(

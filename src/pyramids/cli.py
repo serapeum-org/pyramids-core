@@ -108,13 +108,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--config",
         default=None,
         metavar="PATH",
-        help="read per-command defaults from this pyramids.toml (overrides discovery of a "
-        "nearby pyramids.toml / PYRAMIDS_CONFIG / ~/.config/pyramids/config.toml)",
+        help="read per-command defaults from this pyramids.yaml (overrides discovery of a "
+        "nearby pyramids.yaml / PYRAMIDS_CONFIG / ~/.config/pyramids/config.yaml)",
     )
     parser.add_argument(
         "--no-config",
         action="store_true",
-        help="ignore any pyramids.toml config file and use built-in defaults only",
+        help="ignore any pyramids.yaml config file and use built-in defaults only",
     )
     parser.add_argument(
         "--progress",
@@ -142,7 +142,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _apply_config(parser: argparse.ArgumentParser, argv: Sequence[str] | None) -> None:
-    """Load a ``pyramids.toml`` and set its per-command defaults on ``parser``.
+    """Load a ``pyramids.yaml`` and set its per-command defaults on ``parser``.
 
     Peeks at ``--config`` / ``--no-config`` with a throwaway parser (the real parse needs a
     subcommand, which may be absent here), resolves the config file, and applies its

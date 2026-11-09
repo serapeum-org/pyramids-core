@@ -25,21 +25,22 @@ These global flags go **before** the command and apply across the CLI:
   `list-*`, …). `json` is honored by every verb that supports `--json` (the per-command `--json` flag still works
   as an alias); `csv` and `table` are rendered by the tabular verbs (e.g. `vector info/bounds`, `nc
   groups/list-vars`, `mesh mesh-names`). Example: `pyramids --format csv vector info roads.gpkg`.
-- **`--config PATH`** / **`--no-config`** — read per-command defaults from a `pyramids.toml`. Discovery order:
-  `--config PATH`, then `PYRAMIDS_CONFIG`, then the nearest `pyramids.toml` searched upward from the working
-  directory, then `~/.config/pyramids/config.toml`. An explicit flag on the command line always overrides a
-  config default; `--no-config` ignores any file. A top-level `[defaults]` table applies to every verb that has
-  the option, and a `[group.command]` table applies to that one verb. Only **value-taking** options are
-  configurable — boolean flags such as `--overwrite` are deliberately not settable from config (there is no
-  `--no-overwrite` to override a configured `true` back to false, so the guard can never be silently disabled):
+- **`--config PATH`** / **`--no-config`** — read per-command defaults from a `pyramids.yaml` (YAML, matching the
+  package's own `config.yaml`). Discovery order: `--config PATH`, then `PYRAMIDS_CONFIG`, then the nearest
+  `pyramids.yaml` searched upward from the working directory, then `~/.config/pyramids/config.yaml`. An explicit
+  flag on the command line always overrides a config default; `--no-config` ignores any file. A top-level
+  `defaults` mapping applies to every verb that has the option, and a `<group>.<command>` mapping applies to that
+  one verb. Only **value-taking** options are configurable — boolean flags such as `--overwrite` are deliberately
+  not settable from config (there is no `--no-overwrite` to override a configured `true` back to false, so the
+  guard can never be silently disabled):
 
-  ```toml
-  [defaults]
-  driver = "gpkg"
-
-  [vector.warp]
-  crs = "EPSG:4326"
-  driver = "gpkg"
+  ```yaml
+  defaults:
+    driver: gpkg
+  vector:
+    warp:
+      crs: "EPSG:4326"
+      driver: gpkg
   ```
 
 - **`--progress`** — show a progress indicator on stderr for multi-item write verbs (e.g. `collection resample`,
