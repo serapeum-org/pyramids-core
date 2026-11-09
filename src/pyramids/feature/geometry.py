@@ -24,6 +24,7 @@ exposes the explode logic as an instance method).
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable
 from typing import Any, cast
 
@@ -690,8 +691,33 @@ def create_points(coords: Iterable[tuple[float, ...]]) -> list[Point]:
     return points
 
 
+def _points_to_gdf(coords: Iterable[tuple[float, ...]], crs: Any) -> GeoDataFrame:
+    """Build a point :class:`GeoDataFrame` from coordinate tuples (internal).
+
+    The implementation behind the deprecated :func:`point_collection` and
+    :meth:`Coords.to_geodataframe`. Public callers should use
+    :meth:`pyramids.feature.FeatureCollection.from_xyz` instead.
+
+    Args:
+        coords: Iterable of `(x, y[, z])` tuples.
+        crs: Any CRS :class:`geopandas.GeoDataFrame` accepts.
+
+    Returns:
+        GeoDataFrame: A frame with a single `geometry` column.
+    """
+    pts = create_points(coords)
+    return gpd.GeoDataFrame(columns=["geometry"], data=pts, crs=crs)
+
+
 def point_collection(coords: Iterable[tuple[float, ...]], crs: Any) -> GeoDataFrame:
     """Build a :class:`GeoDataFrame` of points with a given CRS (ARC-15).
+
+    .. deprecated::
+        Use :meth:`pyramids.feature.FeatureCollection.from_xyz` instead
+        (``from_xyz(x, y, z=…, crs=…)``, or ``z_as_elevation=True`` for a 3-D
+        ``PointZ`` layer); it returns a ``FeatureCollection``, not a raw
+        ``GeoDataFrame``. ``point_collection`` will be removed in a future
+        release.
 
     Args:
         coords: Iterable of `(x, y)` tuples.
@@ -702,33 +728,28 @@ def point_collection(coords: Iterable[tuple[float, ...]], crs: Any) -> GeoDataFr
         GeoDataFrame: A GeoDataFrame with a single `geometry` column.
 
     Examples:
-        - Build a GeoDataFrame of two points in WGS84 and inspect the
-          CRS and the first geometry:
+        - `point_collection` still works but warns; prefer `from_xyz`:
             ```python
+            >>> import warnings
             >>> from pyramids.feature.geometry import point_collection
-            >>> gdf = point_collection([(10, 20), (30, 40)], "EPSG:4326")
-            >>> len(gdf)
-            2
+            >>> with warnings.catch_warnings():
+            ...     warnings.simplefilter("ignore", DeprecationWarning)
+            ...     gdf = point_collection([(10, 20), (30, 40)], "EPSG:4326")
             >>> gdf.crs.to_epsg()
             4326
             >>> gdf.iloc[0].geometry.wkt
             'POINT (10 20)'
 
             ```
-        - Build an empty-ish frame with a single point and access the
-          x/y of the stored geometry:
-            ```python
-            >>> from pyramids.feature.geometry import point_collection
-            >>> gdf = point_collection([(100.0, -50.0)], "EPSG:4326")
-            >>> gdf.iloc[0].geometry.x
-            100.0
-            >>> gdf.iloc[0].geometry.y
-            -50.0
-
-            ```
     """
-    pts = create_points(coords)
-    return gpd.GeoDataFrame(columns=["geometry"], data=pts, crs=crs)
+    warnings.warn(
+        "point_collection is deprecated; use FeatureCollection.from_xyz "
+        "(from_xyz(x, y, z=..., crs=...), or z_as_elevation=True for a PointZ "
+        "layer) instead. It returns a FeatureCollection, not a GeoDataFrame.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _points_to_gdf(coords, crs)
 
 
 class Coords:
@@ -881,7 +902,7 @@ class Coords:
 
                 ```
         """
-        return point_collection(self._coords, crs)
+        return _points_to_gdf(self._coords, crs)
 
     def reproject(
         self,

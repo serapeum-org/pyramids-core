@@ -133,7 +133,9 @@ class TestCreatePoint:
         assert len(pts) == len(coordinates)
 
     def test_point_collection_returns_fc(self, coordinates: List[Tuple[int, int]]):
-        fc = FeatureCollection(point_collection(coordinates, crs=4326))
+        with pytest.warns(DeprecationWarning, match="from_xyz"):
+            gdf = point_collection(coordinates, crs=4326)
+        fc = FeatureCollection(gdf)
         assert isinstance(fc, FeatureCollection)
         assert len(fc["geometry"]) == len(coordinates)
         assert fc.epsg == 4326
@@ -149,7 +151,7 @@ class TestCreatePoint:
         """
         assert not hasattr(FeatureCollection, "create_point"), (
             "FeatureCollection.create_point must be deleted (D-H2). "
-            "Use create_points() or point_collection() instead."
+            "Use create_points() or FeatureCollection.from_xyz() instead."
         )
 
 
