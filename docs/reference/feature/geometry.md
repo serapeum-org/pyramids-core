@@ -40,56 +40,13 @@ by return type so each function has a single, unambiguous output:
 
 ## Coordinate Extraction
 
-Per-geometry coordinate accessors. `get_coords` dispatches by geometry
-type; the typed helpers (`get_point_coords`, `get_line_coords`,
-`get_poly_coords`, `get_xy_coords`) are lazy — they check `coord_type`
-before touching the geometry's attributes (M2), so an invalid
-`coord_type` raises before a degenerate geometry can trigger a
-`GEOSException`.
-
-::: pyramids.feature.geometry.get_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.get_xy_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.get_point_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.get_line_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.get_poly_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
+Per-geometry coordinate access goes through `GeometryCoords`, which exposes
+`.x` / `.y` / `.xy` and dispatches by geometry type internally (checking
+`coord_type` lazily, before touching a degenerate geometry's attributes). The
+low-level per-type extractors are private implementation details.
 
 ## Multi-geometry Handling
 
-`explode_gdf` expands `MultiPolygon` (or `GeometryCollection`) rows
-into one-geometry-per-row frames; `multi_geom_handler` and
-`geometry_collection_coords` return per-part coordinate sequences
-without exploding.
-
-::: pyramids.feature.geometry.explode_gdf
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.multi_geom_handler
-    options:
-        show_root_heading: true
-        heading_level: 3
-
-::: pyramids.feature.geometry.geometry_collection_coords
-    options:
-        show_root_heading: true
-        heading_level: 3
+Per-part coordinates of any geometry are available through `GeometryCoords`,
+which dispatches by type (including `GeometryCollection`). To split multi-part
+frames into one-geometry-per-row, use `FeatureCollection.explode`.

@@ -36,7 +36,8 @@ from pyramids.base.crs import reproject_coordinates
 from pyramids.base.georeference import GeoReference
 from pyramids.base.protocols import SpatialObject
 from pyramids.dataset import Dataset
-from pyramids.feature import FeatureCollection, create_polygon, get_coords
+from pyramids.feature import FeatureCollection, create_polygon
+from pyramids.feature.geometry import _get_coords
 
 pytestmark = [pytest.mark.core, pytest.mark.e2e]
 
@@ -312,13 +313,13 @@ class TestGeometryHardeningChain:
     """Chained e2e across D-H1/C21/C22/C23 + D-H2.
 
     Builds a FeatureCollection with mixed Polygons + MultiPolygons, runs
-    ``with_coordinates`` (which calls ``explode_gdf`` internally), asserts:
+    ``with_coordinates`` (which calls ``_explode_multipart`` internally), asserts:
 
     * the input FC is untouched (D-H1),
     * the exploded output has the right row count,
     * ``create_polygon`` rejects a bad ring (C21) so the pipeline can
       build one valid polygon to feed the FC,
-    * calling ``get_coords`` on an empty row raises (C22), and
+    * calling ``_get_coords`` on an empty row raises (C22), and
     * ``reproject_coordinates`` converts pyproj failures to
       :class:`pyramids.base._errors.CRSError` (C23).
     """
@@ -347,12 +348,12 @@ class TestGeometryHardeningChain:
         assert len(exploded) == 3
 
         # C22: empty geometry in a row raises InvalidGeometryError on
-        # direct ``get_coords`` access.
+        # direct ``_get_coords`` access.
         import pandas as _pd
 
         row = _pd.Series({"geometry": _Pt()})
         with pytest.raises(InvalidGeometryError):
-            get_coords(row, "geometry", "x")
+            _get_coords(row, "geometry", "x")
 
         # C23: a bad target CRS in a downstream reproject surfaces as
         # pyramids CRSError, not pyproj's.

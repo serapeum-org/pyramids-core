@@ -31,7 +31,8 @@ from shapely.geometry import LineString, Point, Polygon, box
 
 from pyramids.base._errors import CRSError
 from pyramids.base.crs import reproject_coordinates
-from pyramids.feature import FeatureCollection, get_line_coords, get_poly_coords
+from pyramids.feature import FeatureCollection
+from pyramids.feature.geometry import _get_line_coords, _get_poly_coords
 
 pytestmark = pytest.mark.core
 
@@ -53,18 +54,18 @@ class TestLowLevelCoordHelpers:
 
     def test_get_line_coords_x(self):
         line = LineString([(0.0, 10.0), (1.0, 11.0), (2.0, 12.0)])
-        xs = get_line_coords(line, "x")
+        xs = _get_line_coords(line, "x")
         assert xs == [0.0, 1.0, 2.0]
 
     def test_get_line_coords_y(self):
         line = LineString([(0.0, 10.0), (1.0, 11.0), (2.0, 12.0)])
-        ys = get_line_coords(line, "y")
+        ys = _get_line_coords(line, "y")
         assert ys == [10.0, 11.0, 12.0]
 
     def test_get_poly_coords_exterior_ring(self):
         """Polygon vertex extraction walks the exterior ring."""
         poly = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        xs = get_poly_coords(poly, "x")
+        xs = _get_poly_coords(poly, "x")
         # First + last are the same (closed ring).
         assert xs[0] == pytest.approx(0.0)
         assert xs[-1] == pytest.approx(0.0)

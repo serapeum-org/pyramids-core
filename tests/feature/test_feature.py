@@ -26,10 +26,10 @@ from pyramids.feature import (
     FeatureCollection,
     create_points,
     create_polygon,
-    multi_geom_handler,
     point_collection,
     polygon_wkt,
 )
+from pyramids.feature.geometry import _multi_geom_handler
 
 pytestmark = pytest.mark.core
 
@@ -45,7 +45,7 @@ class TestAttributes:
 
     def test_columns_gdf(self, coello_gauges_gdf: GeoDataFrame):
         feature = FeatureCollection(coello_gauges_gdf)
-        assert feature.column == ["id", "x", "y", "geometry"]
+        assert feature.columns.tolist() == ["id", "x", "y", "geometry"]
 
 
 class TestReadFile:
@@ -133,7 +133,9 @@ class TestCreatePoint:
         assert len(pts) == len(coordinates)
 
     def test_point_collection_returns_fc(self, coordinates: List[Tuple[int, int]]):
-        fc = FeatureCollection(point_collection(coordinates, crs=4326))
+        with pytest.warns(DeprecationWarning, match="from_xyz"):
+            gdf = point_collection(coordinates, crs=4326)
+        fc = FeatureCollection(gdf)
         assert isinstance(fc, FeatureCollection)
         assert len(fc["geometry"]) == len(coordinates)
         assert fc.epsg == 4326
@@ -149,7 +151,7 @@ class TestCreatePoint:
         """
         assert not hasattr(FeatureCollection, "create_point"), (
             "FeatureCollection.create_point must be deleted (D-H2). "
-            "Use create_points() or point_collection() instead."
+            "Use create_points() or FeatureCollection.from_xyz() instead."
         )
 
 
@@ -265,21 +267,21 @@ class TestMultiGeomHandler:
     def test_multi_points_with_multiple_point(
         self, multi_point_geom, point_coords: list
     ):
-        res = multi_geom_handler(multi_point_geom, "x", "MultiPoint")
+        res = _multi_geom_handler(multi_point_geom, "x", "MultiPoint")
         assert all(np.isclose(res, [point_coords[0], point_coords[0]], rtol=0.00001))
 
     def test_multi_points_with_one_point(
         self, multi_point_one_point_geom, point_coords: list
     ):
-        res = multi_geom_handler(multi_point_one_point_geom, "x", "MultiPoint")
+        res = _multi_geom_handler(multi_point_one_point_geom, "x", "MultiPoint")
         assert np.isclose(res[0], point_coords[0], rtol=0.00001)
 
     def test_multi_polygons(self, multi_polygon_geom, multi_polygon_coords_x: list):
-        res = multi_geom_handler(multi_polygon_geom, "x", "MultiPolygon")
+        res = _multi_geom_handler(multi_polygon_geom, "x", "MultiPolygon")
         assert res == multi_polygon_coords_x
 
     def test_multi_linestring(self, multi_line_geom, multi_linestring_coords_x: list):
-        res = multi_geom_handler(multi_line_geom, "x", "MULTILINESTRING")
+        res = _multi_geom_handler(multi_line_geom, "x", "MULTILINESTRING")
         assert res == multi_linestring_coords_x
 
 
