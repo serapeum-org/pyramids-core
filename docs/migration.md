@@ -1147,7 +1147,7 @@ for `uint8`, `65535` for `uint16`).
 ### 0.47.0
 
 **`pyramids calc` refuses a first input with no CRS.** The result cannot be georeferenced and pyramids will not
-stamp a default; set a CRS on the input first. `pyramids georeference` is unaffected — its GCPs and `--gcp-crs`
+stamp a default; set a CRS on the input first. `pyramids raster georeference` is unaffected — its GCPs and `--gcp-crs`
 replace the georeference wholesale.
 
 ## netcdf

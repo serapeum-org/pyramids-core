@@ -20,7 +20,7 @@ The functions are also callable in-process for scripting/testing:
 
 ```python
 from pyramids.cli import main
-exit_code = main(["cog", "info", "scene_cog.tif"])
+exit_code = main(["raster", "cog", "info", "scene_cog.tif"])
 ```
 
 ## API

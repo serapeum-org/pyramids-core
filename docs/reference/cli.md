@@ -486,7 +486,7 @@ the Agg backend is forced so these run headless.
 **Multi-mesh join** — `concat` (stack several same-topology meshes) and `merge` (combine their variables).
 
 Not exposed (use Python, or pending a library fix): `curvefit` and `focal_apply` take a Python callable, so
-they have no shell form. (`polyfit`, `voronoi-polygons` and `sel-time` are now verbs — listed under Analysis,
+they have no shell form. (`polyfit`, `voronoi-polygons` and `isel-time` are now verbs — listed under Analysis,
 Convert/export and Select/subset above.)
 
 ## STAC
