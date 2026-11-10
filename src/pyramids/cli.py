@@ -27,7 +27,7 @@ Command groups (all now `pyramids <domain> [<subsystem>] <verb>`):
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`
 - UGRID mesh (`pyramids.cli_ugrid`) — `mesh info|extract|convert`
-- processing (`pyramids.processing.cli`) — `run`, `apply`, `tools`, `tool`
+- processing (`pyramids.processing.cli`) — `process run|apply` and `process tool list|show`
 
 The top-level `--version`/`-V` prints the version, and global `--quiet`/`-q`
 (before the command) suppresses informational output. Every command maps 1:1 onto
