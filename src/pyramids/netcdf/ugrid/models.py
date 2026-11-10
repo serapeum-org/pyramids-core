@@ -490,9 +490,8 @@ class MeshVariable:
     def time_index(self) -> int | None:
         """Deprecated alias for :attr:`time_axis_index`.
 
-        .. deprecated::
-            Renamed to ``time_axis_index`` -- it returns the time *axis* number, not a
-            time *step*. Use :attr:`time_axis_index` instead.
+        Deprecated: Renamed to ``time_axis_index`` -- it returns the time *axis* number, not a time *step*. Use
+            :attr:`time_axis_index` instead.
 
         Returns:
             int | None: The 0-based index of the time axis, or ``None`` when the

@@ -740,9 +740,8 @@ class MeshDataset(_MeshFacades):
     def get_data(self, variable_name: str) -> MeshVariable:
         """Deprecated alias for ``mesh[variable_name]``.
 
-        .. deprecated::
-            Use subscription ``mesh[name]`` (or :meth:`get` for a default) instead; it is the
-            same lookup and matches the xarray idiom.
+        Deprecated: Use subscription ``mesh[name]`` (or :meth:`get` for a default) instead; it is the same lookup and
+            matches the xarray idiom.
 
         Args:
             variable_name: Name of the data variable.
@@ -2487,8 +2486,7 @@ class MeshDataset(_MeshFacades):
     def n_layers(self) -> int | None:
         """Deprecated alias for :attr:`n_layer`.
 
-        .. deprecated::
-            Renamed to ``n_layer`` (singular, matching ``n_node``/``n_face``/``n_edge``).
+        Deprecated: Renamed to ``n_layer`` (singular, matching ``n_node``/``n_face``/``n_edge``).
 
         Returns:
             int | None: The layer-centre count, or ``None`` when no variable is layered.
@@ -2504,8 +2502,7 @@ class MeshDataset(_MeshFacades):
     def n_layer_interfaces(self) -> int | None:
         """Deprecated alias for :attr:`n_layer_interface`.
 
-        .. deprecated::
-            Renamed to ``n_layer_interface`` (singular, matching the ``n_*`` family).
+        Deprecated: Renamed to ``n_layer_interface`` (singular, matching the ``n_*`` family).
 
         Returns:
             int | None: The layer-interface count, or ``None`` when nothing sits on them.

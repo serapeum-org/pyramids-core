@@ -9980,10 +9980,8 @@ class NetCDF(Dataset):
     def get_all_metadata(self, open_options: dict | None = None) -> NetCDFMetadata:
         """Deprecated alias for :meth:`refresh_metadata`.
 
-        .. deprecated::
-            Renamed to ``refresh_metadata`` -- the difference from :attr:`metadata` is that
-            it is an uncached re-read, not that it returns "all" metadata. Use
-            :meth:`refresh_metadata` instead.
+        Deprecated: Renamed to ``refresh_metadata`` -- the difference from :attr:`metadata` is that it is an uncached
+            re-read, not that it returns "all" metadata. Use :meth:`refresh_metadata` instead.
 
         Args:
             open_options: Driver-specific open options forwarded to

@@ -90,8 +90,7 @@ class MeshSpatialIndex:
     def face_tree(self) -> Any:
         """Deprecated alias for :attr:`face_centroid_tree`.
 
-        .. deprecated::
-            Renamed to ``face_centroid_tree`` (it is a KD-tree on face centroids).
+        Deprecated: Renamed to ``face_centroid_tree`` (it is a KD-tree on face centroids).
 
         Returns:
             Any: The face-centroid KD-tree.
@@ -107,8 +106,7 @@ class MeshSpatialIndex:
     def face_strtree(self) -> Any:
         """Deprecated alias for :attr:`face_rtree`.
 
-        .. deprecated::
-            Renamed to ``face_rtree`` (it drops shapely's ``STRtree`` type name).
+        Deprecated: Renamed to ``face_rtree`` (it drops shapely's ``STRtree`` type name).
 
         Returns:
             Any: The face-polygon R-tree.
