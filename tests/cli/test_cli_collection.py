@@ -115,7 +115,7 @@ class TestCollectionInfoSources:
 
 
 class TestCollectionStats:
-    """`pyramids collection stats`.
+    """`pyramids collection reduce`.
 
     Marked ``lazy``, not ``core``: ``stats --reduce`` calls the DatasetCollection reducers, which
     route through ``pyramids.dataset._reduce_ops.resolve_dask_op`` and require the optional ``dask``
@@ -363,7 +363,7 @@ class TestCollectionMerge:
 
 
 class TestCollectionToFile:
-    """`pyramids collection to-file` — write every timestep to a directory."""
+    """`pyramids collection export file` — write every timestep to a directory."""
 
     pytestmark = pytest.mark.lazy
 
@@ -384,7 +384,7 @@ class TestCollectionToFile:
 
 
 class TestCollectionToCog:
-    """`pyramids collection to-cog` — each timestep as its own COG."""
+    """`pyramids collection export cog` — each timestep as its own COG."""
 
     pytestmark = pytest.mark.lazy
 
@@ -407,7 +407,7 @@ class TestCollectionToCog:
 
 
 class TestCollectionToNetcdf:
-    """`pyramids collection to-netcdf` — write the (T,B,R,C) cube to NetCDF."""
+    """`pyramids collection export netcdf` — write the (T,B,R,C) cube to NetCDF."""
 
     pytestmark = pytest.mark.lazy
 
@@ -436,7 +436,7 @@ class TestCollectionToNetcdf:
 
 
 class TestCollectionToZarr:
-    """`pyramids collection to-zarr` — write the (T,B,R,C) cube to a Zarr store."""
+    """`pyramids collection export zarr` — write the (T,B,R,C) cube to a Zarr store."""
 
     pytestmark = pytest.mark.lazy
 
@@ -454,7 +454,7 @@ class TestCollectionToZarr:
 
 
 class TestCollectionToKerchunk:
-    """`pyramids collection to-kerchunk` — write a kerchunk reference JSON."""
+    """`pyramids collection export kerchunk` — write a kerchunk reference JSON."""
 
     pytestmark = pytest.mark.lazy
 
@@ -619,7 +619,7 @@ class TestCollectionResamplePattern:
 
 
 class TestCollectionToCogPattern:
-    """`collection to-cog` validates --pattern up front, like resample (M1/L1)."""
+    """`collection export cog` validates --pattern up front, like resample (M1/L1)."""
 
     def test_unknown_placeholder_is_clean(self, tmp_path, capsys):
         """An unknown --pattern placeholder fails fast with a clean error (M1)."""
