@@ -76,7 +76,7 @@ def _read_table(path: str) -> DataFrame:
 
 
 def _cmd_stats(args: argparse.Namespace) -> int:
-    """Handle `pyramids stats` — band statistics (min/max/mean/std).
+    """Handle `pyramids raster stats` — band statistics (min/max/mean/std).
 
     Args:
         args: Parsed arguments with `file`, `band`, `exact`, and `json`.
@@ -108,7 +108,7 @@ def _cmd_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_histogram(args: argparse.Namespace) -> int:
-    """Handle `pyramids histogram` — a band's value histogram.
+    """Handle `pyramids raster histogram` — a band's value histogram.
 
     Args:
         args: Parsed arguments with `file`, `band`, `bins`, `min_value`,
@@ -142,7 +142,7 @@ def _cmd_histogram(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_meta_data(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-metadata` — a GDAL metadata domain's contents.
+    """Handle `pyramids raster get-metadata` — a GDAL metadata domain's contents.
 
     Args:
         args: Parsed arguments with `file`, `domain`, and `json`.
@@ -164,7 +164,7 @@ def _cmd_get_meta_data(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_attribute_table(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-attribute-table` — a band's raster attribute table.
+    """Handle `pyramids raster advanced get-attribute-table` — a band's raster attribute table.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -189,7 +189,7 @@ def _cmd_get_attribute_table(args: argparse.Namespace) -> int:
 
 
 def _cmd_set_attribute_table(args: argparse.Namespace) -> int:
-    """Handle `pyramids set-attribute-table` — attach an attribute table in place.
+    """Handle `pyramids raster advanced set-attribute-table` — attach an attribute table in place.
 
     The table is read from a CSV/JSON file and written **into** the raster (the
     raster is edited in place), so there is no output path and no `--overwrite`.
@@ -212,7 +212,7 @@ def _cmd_set_attribute_table(args: argparse.Namespace) -> int:
 
 
 def _cmd_mask_flags(args: argparse.Namespace) -> int:
-    """Handle `pyramids mask-flags` — decode a band's GDAL mask flags.
+    """Handle `pyramids raster advanced mask-flags` — decode a band's GDAL mask flags.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -239,7 +239,7 @@ def _cmd_mask_flags(args: argparse.Namespace) -> int:
 
 
 def _cmd_footprint(args: argparse.Namespace) -> int:
-    """Handle `pyramids footprint` — the covered extent of a band as polygons.
+    """Handle `pyramids raster footprint` — the covered extent of a band as polygons.
 
     Writes the polygons to `output` when given; otherwise emits them as GeoJSON
     with `--json`, or prints a one-line summary.
@@ -285,7 +285,7 @@ def _cmd_footprint(args: argparse.Namespace) -> int:
 
 
 def _cmd_cell_area(args: argparse.Namespace) -> int:
-    """Handle `pyramids cell-area` — per-cell ground area summary.
+    """Handle `pyramids raster cell-area` — per-cell ground area summary.
 
     The per-cell grid can be large (and is a broadcast view), so the command
     reports its summary (min/max/mean and the full-grid total), not the array.
@@ -316,7 +316,7 @@ def _cmd_cell_area(args: argparse.Namespace) -> int:
 
 
 def _cmd_domain_area(args: argparse.Namespace) -> int:
-    """Handle `pyramids domain-area` — ground area of a band's valid cells.
+    """Handle `pyramids raster domain-area` — ground area of a band's valid cells.
 
     Args:
         args: Parsed arguments with `file`, `band`, `unit`, and `json`.
@@ -335,7 +335,7 @@ def _cmd_domain_area(args: argparse.Namespace) -> int:
 
 
 def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
-    """Handle `pyramids count-domain-cells` — number of a band's valid cells.
+    """Handle `pyramids raster count-domain-cells` — number of a band's valid cells.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -353,7 +353,7 @@ def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
 
 
 def _cmd_same_grid(args: argparse.Namespace) -> int:
-    """Handle `pyramids same-grid` — whether two rasters share a grid (and CRS).
+    """Handle `pyramids raster advanced same-grid` — whether two rasters share a grid (and CRS).
 
     Args:
         args: Parsed arguments with `a`, `b`, `no_compare_crs`, and `json`.
@@ -372,7 +372,7 @@ def _cmd_same_grid(args: argparse.Namespace) -> int:
 
 
 def _cmd_checksum(args: argparse.Namespace) -> int:
-    """Handle `pyramids checksum` — per-band GDAL checksum for integrity checks.
+    """Handle `pyramids raster advanced checksum` — per-band GDAL checksum for integrity checks.
 
     Reports the GDAL checksum of every band, or of a single `--band`; two rasters
     that read back the same values share the same checksum(s), so it is a cheap

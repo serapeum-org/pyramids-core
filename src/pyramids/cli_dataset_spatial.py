@@ -55,7 +55,7 @@ _HELP_BAND = "zero-based band index"
 # Named element-wise binary operations for `combine`, each a numpy ufunc taking
 # the two operands' matching cells. Kept to the unambiguous, order-independent or
 # clearly-ordered arithmetic a one-shot verb can name without a free-form
-# expression (that is what `pyramids calc` is for).
+# expression (that is what `pyramids raster calc` is for).
 _COMBINE_OPS = {
     "add": np.add,
     "subtract": np.subtract,
@@ -67,7 +67,7 @@ _COMBINE_OPS = {
 
 
 def _cmd_align(args: argparse.Namespace) -> int:
-    """Handle `pyramids align` — resample a raster onto a reference raster's grid.
+    """Handle `pyramids raster align` — resample a raster onto a reference raster's grid.
 
     The input is resampled onto the reference's coordinate system, dimensions,
     and cell size (``Dataset.align``). This is *not* guarded by
@@ -91,10 +91,10 @@ def _cmd_align(args: argparse.Namespace) -> int:
 
 
 def _cmd_overlay(args: argparse.Namespace) -> int:
-    """Handle the deprecated `pyramids overlay` — group a raster's values by a class raster.
+    """Handle the deprecated `pyramids raster overlay` — group a raster's values by a class raster.
 
     .. deprecated::
-        Use ``pyramids zonal-stats <raster> --classes <class_raster>`` instead. This verb warns on stderr and
+        Use ``pyramids raster zonal-stats <raster> --classes <class_raster>`` instead. This verb warns on stderr and
         still prints the per-class value counts / mapping for back-compat.
 
     For each class in the (aligned) class raster, collects the base-raster values
@@ -139,7 +139,7 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
 
 
 def _cmd_combine(args: argparse.Namespace) -> int:
-    """Handle `pyramids combine` — combine two aligned rasters cell by cell.
+    """Handle `pyramids raster combine` — combine two aligned rasters cell by cell.
 
     Applies the ``--op`` element-wise binary operation to the two rasters'
     matching cells (``Dataset.combine``) and writes the result. The operands must
@@ -163,7 +163,7 @@ def _cmd_combine(args: argparse.Namespace) -> int:
 
 
 def _cmd_warped_view(args: argparse.Namespace) -> int:
-    """Handle `pyramids warped-view` — write an on-the-fly reprojected raster.
+    """Handle `pyramids raster advanced warped-view` — write an on-the-fly reprojected raster.
 
     Builds the lazy warped VRT view (``Dataset.warped_view``) and materialises it
     to the output path. Unlike ``warp`` this can also set an output ``--cell-size``
@@ -190,7 +190,7 @@ def _cmd_warped_view(args: argparse.Namespace) -> int:
 
 
 def _cmd_wrap_longitude(args: argparse.Namespace) -> int:
-    """Handle `pyramids wrap-longitude` — shift a global grid 0..360 -> -180..180.
+    """Handle `pyramids raster advanced wrap-longitude` — shift a global grid 0..360 -> -180..180.
 
     A pure column roll (no resampling) via ``Dataset.wrap_longitude``; the input
     must span the whole globe in the 0..360 frame.
@@ -210,7 +210,7 @@ def _cmd_wrap_longitude(args: argparse.Namespace) -> int:
 
 
 def _cmd_translate(args: argparse.Namespace) -> int:
-    """Handle `pyramids translate` — subset / rescale / retype a raster.
+    """Handle `pyramids raster advanced translate` — subset / rescale / retype a raster.
 
     A ``gdal_translate``-style one-shot over ``Dataset.translate``: extract a
     pixel (``--src-win``) or projected (``--proj-win``) window, rescale values
@@ -329,7 +329,7 @@ def _write_transect(args: argparse.Namespace, profile) -> None:
 
 
 def _cmd_transect(args: argparse.Namespace) -> int:
-    """Handle `pyramids transect` — sample a band along a line.
+    """Handle `pyramids raster advanced transect` — sample a band along a line.
 
     Densifies ``--line`` into ordered positions (a fixed ``--n`` count or one
     roughly every ``--step`` metres) and samples the band at each
@@ -354,7 +354,7 @@ def _cmd_transect(args: argparse.Namespace) -> int:
 
 
 def _cmd_extract(args: argparse.Namespace) -> int:
-    """Handle `pyramids extract` — pull a raster's values (optionally at points).
+    """Handle `pyramids raster extract` — pull a raster's values (optionally at points).
 
     Reads every cell value (``Dataset.extract``), dropping no-data and any
     ``--exclude-value``; with ``--mask`` (a point vector) it reads the values at

@@ -137,7 +137,7 @@ def _write_raster(
 
 
 def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
-    """Handle `pyramids recreate-overviews` — regenerate existing overviews in place.
+    """Handle `pyramids raster recreate-overviews` — regenerate existing overviews in place.
 
     Unlike `overview` (which *builds* pyramids via `create_overviews`), this
     regenerates the levels a raster already has; a raster with none is left
@@ -159,7 +159,7 @@ def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_overview_array(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-overview-array` — read one overview level.
+    """Handle `pyramids raster advanced read-overview-array` — read one overview level.
 
     Writes the decimated level to `output` as a georeferenced raster, or — with
     `--json` — prints its shape / dtype / min / max / mean instead.
@@ -217,7 +217,7 @@ def _cmd_read_overview_array(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_part(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-part` — read a geographic window to a raster.
+    """Handle `pyramids raster advanced read-part` — read a geographic window to a raster.
 
     Reads a `--bbox` window decimated from the nearest overview and writes it as
     a georeferenced raster using the window's own transform.
@@ -257,7 +257,7 @@ def _cmd_read_part(args: argparse.Namespace) -> int:
 
 
 def _cmd_preview(args: argparse.Namespace) -> int:
-    """Handle `pyramids preview` — write a whole-image decimated thumbnail.
+    """Handle `pyramids raster advanced preview` — write a whole-image decimated thumbnail.
 
     Args:
         args: Parsed args with `input`, `output`, `max_size`, `resampling`,
@@ -285,7 +285,7 @@ def _cmd_preview(args: argparse.Namespace) -> int:
 
 
 def _cmd_point(args: argparse.Namespace) -> int:
-    """Handle `pyramids point` — sample band value(s) at a map coordinate.
+    """Handle `pyramids raster advanced point` — sample band value(s) at a map coordinate.
 
     Args:
         args: Parsed args with `input`, `x`, `y`, `point_crs`, `band`, `json`.
@@ -310,7 +310,7 @@ def _cmd_point(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_tile(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-tile` — read a Web-Mercator XYZ tile to a raster.
+    """Handle `pyramids raster advanced read-tile` — read a Web-Mercator XYZ tile to a raster.
 
     Reads slippy-map tile `(z, x, y)` and writes it as an EPSG:3857 raster whose
     geotransform comes from the tile's own Web-Mercator bounds.

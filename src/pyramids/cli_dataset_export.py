@@ -18,7 +18,7 @@ Deferred:
     - ``Dataset.write_array`` — patches an existing raster in place from an
       in-memory ``numpy`` array. A CLI has no array to supply and the call
       produces no new output file (it mutates the input), so it is not a sensible
-      one-shot export verb; use ``pyramids calc`` / ``pyramids convert`` to
+      one-shot export verb; use ``pyramids raster calc`` / ``pyramids raster convert`` to
       produce a new raster instead.
 """
 
@@ -181,7 +181,7 @@ def _cmd_to_dataframe(args: argparse.Namespace) -> int:
 def _cmd_to_polygons(args: argparse.Namespace) -> int:
     """Handle ``pyramids raster export polygons`` — dissolve equal-valued regions to polygons.
 
-    Unlike ``pyramids shapes`` (one feature per cell), this merges connected
+    Unlike ``pyramids raster shapes`` (one feature per cell), this merges connected
     equal-valued cells into one polygon per region and writes them to a vector
     file whose driver follows the extension (or ``--driver``).
 
@@ -204,7 +204,7 @@ def _cmd_to_polygons(args: argparse.Namespace) -> int:
 def _cmd_to_raster(args: argparse.Namespace) -> int:
     """Handle ``pyramids raster export raster`` — write a raster via :meth:`Dataset.to_file`.
 
-    Unlike ``pyramids convert`` it exposes the tile length and raw GDAL creation
+    Unlike ``pyramids raster convert`` it exposes the tile length and raw GDAL creation
     options. ``--band`` is forwarded as
     ``to_file``'s ``band`` argument, which selects the single band only for ASCII
     grid drivers; GeoTIFF and the other raster drivers write every band. It is

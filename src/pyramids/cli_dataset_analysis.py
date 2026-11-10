@@ -62,7 +62,7 @@ def _georef_like(ds: Dataset) -> GeoReference:
 
 
 def _cmd_proximity(args: argparse.Namespace) -> int:
-    """Handle `pyramids proximity` — distance-to-target raster.
+    """Handle `pyramids raster proximity` — distance-to-target raster.
 
     Args:
         args: Parsed args with `input`, `output`, `band`, `target_values`,
@@ -86,7 +86,7 @@ def _cmd_proximity(args: argparse.Namespace) -> int:
 
 
 def _cmd_cluster(args: argparse.Namespace) -> int:
-    """Handle `pyramids cluster` — label connected cells within a value range.
+    """Handle `pyramids raster cluster` — label connected cells within a value range.
 
     Writes the per-cell cluster-label array as a raster sharing the source grid,
     and reports the cluster count returned by :meth:`Dataset.cluster`.
@@ -134,7 +134,7 @@ def _resolve_zonal_table(ds: Dataset, args: argparse.Namespace):
 
 
 def _cmd_zonal_stats(args: argparse.Namespace) -> int:
-    """Handle `pyramids zonal-stats` — statistics per polygon zone or raster category.
+    """Handle `pyramids raster zonal-stats` — statistics per polygon zone or raster category.
 
     Zones come from the vector `zones` file, or from a categorical raster via `--classes`
     (each distinct pixel value is a zone). Writes a CSV when `--output` is given, emits JSON
@@ -169,7 +169,7 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_match_histogram(args: argparse.Namespace) -> int:
-    """Handle `pyramids match-histogram` — match a band onto a reference's distribution.
+    """Handle `pyramids raster match-histogram` — match a band onto a reference's distribution.
 
     Args:
         args: Parsed args with `input`, `reference`, `output`, `band`,
@@ -193,7 +193,7 @@ def _cmd_match_histogram(args: argparse.Namespace) -> int:
 
 
 def _cmd_percentile_stretch(args: argparse.Namespace) -> int:
-    """Handle `pyramids percentile-stretch` — stretch a band between two percentiles.
+    """Handle `pyramids raster percentile-stretch` — stretch a band between two percentiles.
 
     Args:
         args: Parsed args with `input`, `output`, `lower`, `upper`, `band`,
@@ -211,7 +211,7 @@ def _cmd_percentile_stretch(args: argparse.Namespace) -> int:
 
 
 def _cmd_pan_sharpen(args: argparse.Namespace) -> int:
-    """Handle `pyramids pan-sharpen` — fuse a multispectral raster with a pan band.
+    """Handle `pyramids raster pan-sharpen` — fuse a multispectral raster with a pan band.
 
     Args:
         args: Parsed args with `multispectral`, `pan`, `output`, `algorithm`,
@@ -237,7 +237,7 @@ def _cmd_pan_sharpen(args: argparse.Namespace) -> int:
 
 
 def _cmd_fillna(args: argparse.Namespace) -> int:
-    """Handle `pyramids fillna` — give every gap a constant value.
+    """Handle `pyramids raster fillna` — give every gap a constant value.
 
     Args:
         args: Parsed args with `input`, `output`, `value`, `overwrite`.
@@ -283,7 +283,7 @@ def _parse_other(raw: str | None) -> tuple[bool, float | None]:
 
 
 def _cmd_where(args: argparse.Namespace) -> int:
-    """Handle `pyramids where` — keep the cells a condition selects, mask the rest.
+    """Handle `pyramids raster where` — keep the cells a condition selects, mask the rest.
 
     The condition is an expression over the input raster bound to ``A`` (e.g.
     ``'A > 5'``), evaluated by the same AST whitelist `calc` uses — never
@@ -312,7 +312,7 @@ def _cmd_where(args: argparse.Namespace) -> int:
 
 
 def _cmd_convert_units(args: argparse.Namespace) -> int:
-    """Handle `pyramids convert-units` — transform band values to another unit.
+    """Handle `pyramids raster convert-units` — transform band values to another unit.
 
     Args:
         args: Parsed args with `input`, `output`, `target`, `band`, `overwrite`.
@@ -328,7 +328,7 @@ def _cmd_convert_units(args: argparse.Namespace) -> int:
 
 
 def _cmd_contour(args: argparse.Namespace) -> int:
-    """Handle `pyramids contour` — trace iso-value contours into a vector file.
+    """Handle `pyramids raster contour` — trace iso-value contours into a vector file.
 
     Emits contour lines at each level, or filled polygons between levels with
     `--polygonize`. Exactly one of `--interval` / `--fixed-levels` is required.
