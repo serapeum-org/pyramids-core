@@ -1115,7 +1115,8 @@ replace the georeference wholesale.
 the cached `metadata` property; the only difference is that it is an uncached re-read. The new name says so, and
 it now also **stores the fresh result as the cached value** (so a later `.metadata` read returns it), matching
 the `refresh_from_db` / `Session.refresh` idiom. `get_all_metadata` keeps working as a `DeprecationWarning`-emitting
-alias.
+alias — note it is **not** byte-for-byte behaviour-preserving: it inherits the new cache write, so after calling it
+`nc.metadata` returns the freshly re-read value rather than any previously cached one.
 
 ```python
 # Before

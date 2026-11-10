@@ -28,3 +28,12 @@ def test_get_all_metadata_warns_and_matches(sample):
     with pytest.warns(DeprecationWarning, match="refresh_metadata"):
         legacy = nc.get_all_metadata()
     assert legacy.variables.keys() == nc.refresh_metadata().variables.keys()
+
+
+def test_get_all_metadata_alias_also_refreshes_the_cache(sample):
+    nc = NetCDF.read_file(sample(_SAMPLE))
+    with pytest.warns(DeprecationWarning, match="refresh_metadata"):
+        legacy = nc.get_all_metadata()
+    # The alias forwards to refresh_metadata, so it inherits the cache write -- it is NOT a
+    # non-mutating peek. .metadata returns the object the alias produced.
+    assert nc.metadata is legacy

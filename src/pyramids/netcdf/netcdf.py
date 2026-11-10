@@ -9916,7 +9916,9 @@ class NetCDF(Dataset):
         back to the classic `NETCDF_DIM_*` parser (`dimensions.py`) when
         opened in classic mode (no root group available).
 
-        Cached on first access. Invalidated by add_variable/remove_variable.
+        Cached on first access. Invalidated by add_variable/remove_variable, and
+        rewritten by :meth:`refresh_metadata` (which re-reads from GDAL and stores the
+        fresh result here).
 
         Returns:
             NetCDFMetadata
