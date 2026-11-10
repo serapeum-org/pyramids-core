@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import argparse
 
-from pyramids._cli_groups import add_group
+from pyramids._cli_groups import SuggestingArgumentParser, add_group
 from pyramids._cli_shared import (
     emit,
     info_print,
@@ -164,7 +164,7 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     vector = sub.add_parser("vector", help="vector (FeatureCollection) commands")
-    vsub = vector.add_subparsers(dest="command", required=True)
+    vsub = vector.add_subparsers(dest="command", required=True, parser_class=SuggestingArgumentParser)
 
     v_info = vsub.add_parser("info", help="print vector metadata")
     v_info.add_argument("src", help=_HELP_SRC_VECTOR)

@@ -27,7 +27,7 @@ import os
 import sys
 from typing import Any, cast
 
-from pyramids._cli_groups import add_group
+from pyramids._cli_groups import SuggestingArgumentParser, add_group
 from pyramids._cli_shared import (
     ProgressReporter,
     info_print,
@@ -726,7 +726,7 @@ def add_collection_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     collection = sub.add_parser("collection", help="temporal raster-stack commands")
-    csub = collection.add_subparsers(dest="command", required=True)
+    csub = collection.add_subparsers(dest="command", required=True, parser_class=SuggestingArgumentParser)
 
     _add_info(csub)
     _add_stats(csub)

@@ -249,3 +249,24 @@ class TestGroupedCliStructure:
         assert {"run", "apply", "tool"} <= set(process.choices), "process verbs present"
         tool = _subparsers(process.choices["tool"])
         assert {"list", "show"} <= set(tool.choices), "`process tool list|show` present"
+
+    @pytest.mark.parametrize(
+        "domain, subsystem", [("vector", "geom"), ("nc", "select"), ("mesh", "read")]
+    )
+    def test_subgroup_parsers_suggest(self, root, domain, subsystem):
+        """A domain's subsystem parser is a `SuggestingArgumentParser`.
+
+        Args:
+            root: The top-level subparsers action.
+            domain: The domain group whose subsystem is checked.
+            subsystem: A subsystem that must be mounted as a suggesting parser.
+
+        Test scenario:
+            The subsystem parser carries the did-you-mean backport so a misspelled third-level
+            verb (``pyramids vector geom buffr``) is suggested on Python < 3.14 too — not only
+            under ``raster``/``process`` (which were always built via ``add_group``).
+        """
+        subgroup = self._group(root, domain).choices[subsystem]
+        assert isinstance(subgroup, SuggestingArgumentParser), (
+            f"{domain} {subsystem} parser must suggest near-matches for its verbs"
+        )
