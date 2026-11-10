@@ -248,7 +248,7 @@ class TestClipCommand:
 
 
 class TestWarpCommand:
-    """`pyramids warp`."""
+    """`pyramids raster warp`."""
 
     def test_warp_writes_target_crs(self, src_raster, tmp_path, capsys):
         """--crs reprojects and writes the output."""
@@ -984,7 +984,7 @@ class TestCalc:
 
         Test scenario:
             The second input carries no CRS tag but the same geotransform and size.
-            Comparing CRSes would refuse it and point at `pyramids warp`, which cannot
+            Comparing CRSes would refuse it and point at `pyramids raster warp`, which cannot
             warp a raster that has no source CRS — so the pixel grid alone decides.
         """
         a = self._band(tmp_path, "a.tif", 4.0)

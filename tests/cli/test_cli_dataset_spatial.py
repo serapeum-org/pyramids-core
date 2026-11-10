@@ -239,7 +239,7 @@ class TestCombine:
 
 
 class TestWarpedView:
-    """`pyramids warped-view`."""
+    """`pyramids raster advanced warped-view`."""
 
     def test_writes_reprojected_raster(self, ramp, tmp_path, capsys):
         """The materialised view is in the requested target CRS."""

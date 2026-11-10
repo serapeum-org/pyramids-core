@@ -639,7 +639,7 @@ class TestEditInfoDriverGuard:
         err = capsys.readouterr().err
         assert rc == 1
         assert "update-mode" in err
-        assert "pyramids convert" in err
+        assert "pyramids raster convert" in err
 
     def test_corrupt_file_keeps_original_error(self, cli_raster, monkeypatch, capsys):
         """When a read-only open also fails, the original error is not mislabeled (L1)."""
