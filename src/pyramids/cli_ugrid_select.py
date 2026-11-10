@@ -6,8 +6,8 @@ member, and writes the resulting mesh to a fresh path with :meth:`MeshDataset.to
 (the source is only read) — so every command is a writer guarded by ``refuse_existing`` /
 ``--overwrite``. No mesh logic lives here; each verb maps 1:1 onto an existing method.
 
-Three axes of selection are covered: **time** (``sel``/``isel``/``sel-time``/
-``sel-time-range``/``thin``/``head``/``tail``/``drop-sel``/``drop-isel``/
+Three axes of selection are covered: **time** (``sel``/``isel``/``isel-time``/
+``isel-time-range``/``thin``/``head``/``tail``/``drop-sel``/``drop-isel``/
 ``drop-duplicates``/``squeeze``), **layer** on a ragged 3-D volume mesh (``sel-layer``/
 ``isel-layer``/``collapse-layer``), and **space** (``subset-by-bounds``/``crop``/``clip``).
 ``clip-values`` clamps values and ``where`` masks elements by a comparison;
@@ -15,7 +15,7 @@ Three axes of selection are covered: **time** (``sel``/``isel``/``sel-time``/
 ``KeyError``/``IndexError`` is remapped to ``ValueError`` via ``map_lookup_errors`` so the
 CLI reports it as a clean ``error:`` line rather than an "unexpected failure".
 
-``sel-time`` collapses the time axis down to a single step by position — the serialising
+``isel-time`` collapses the time axis down to a single step by position — the serialising
 counterpart of ``isel --time N`` (which also covers the same need). An earlier kernel bug
 left a time-collapsed variable's ``dimensions`` stale so the result could not be written
 back; that has since been fixed, and the round-trip is covered by a test.
@@ -178,7 +178,7 @@ def _cmd_mesh_isel(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_sel_time(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh sel-time`` — select a single time step by position.
+    """Handle ``pyramids mesh isel-time`` — select a single time step by position.
 
     Collapses the time axis down to the step at ``--index``; non-temporal variables are
     left unchanged. This is the serialising counterpart of ``isel --time N``.
@@ -229,7 +229,7 @@ def _cmd_mesh_isel_layer(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_sel_time_range(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh sel-time-range`` — select a half-open range of time steps.
+    """Handle ``pyramids mesh isel-time-range`` — select a half-open range of time steps.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``start``, ``stop``, ``overwrite``.
@@ -550,7 +550,7 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     m_il.set_defaults(func=_cmd_mesh_isel_layer)
 
     m_st = msub.add_parser(
-        "sel-time", help="select a single time step by position (collapses the axis)"
+        "isel-time", help="select a single time step by position (collapses the axis)"
     )
     _add_io_arguments(m_st)
     m_st.add_argument(
@@ -563,7 +563,7 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     m_st.set_defaults(func=_cmd_mesh_sel_time)
 
     m_str = msub.add_parser(
-        "sel-time-range", help="select a half-open range of time steps"
+        "isel-time-range", help="select a half-open range of time steps"
     )
     _add_io_arguments(m_str)
     m_str.add_argument(

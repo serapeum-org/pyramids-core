@@ -133,7 +133,7 @@ class TestClipCommand:
         """--bbox crops to the requested extent."""
         out_path = str(tmp_path / "clip.tif")
         assert (
-            main(["raster", "clip", src_raster, out_path, "--bbox", "1", "1", "5", "5"])
+            main(["raster", "crop", src_raster, out_path, "--bbox", "1", "1", "5", "5"])
             == 0
         )
         clipped = Dataset.read_file(out_path)
@@ -150,7 +150,7 @@ class TestClipCommand:
         FeatureCollection.from_bbox((1.0, 1.0, 5.0, 5.0), epsg=4326).to_file(mask_path)
         out_path = str(tmp_path / "clip_vec.tif")
         assert (
-            main(["raster", "clip", src_raster, out_path, "--vector", mask_path]) == 0
+            main(["raster", "crop", src_raster, out_path, "--vector", mask_path]) == 0
         )
         clipped = Dataset.read_file(out_path)
         assert (clipped.rows, clipped.columns) == (4, 4), "vector clip extent wrong"
@@ -159,7 +159,7 @@ class TestClipCommand:
         """clip --bbox on a CRS-less raster gives a clear error, not a low-level one (L10)."""
         path = _crsless_raster(tmp_path)
         out = str(tmp_path / "out.tif")
-        rc = main(["raster", "clip", path, out, "--bbox", "1", "1", "5", "5"])
+        rc = main(["raster", "crop", path, out, "--bbox", "1", "1", "5", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "clip on a CRS-less raster must exit 1"
         assert "has none" in err, f"error should name the missing CRS: {err}"
@@ -168,7 +168,7 @@ class TestClipCommand:
         """clip --bbox outside the raster extent gives a clear error, not an IndexError (L4)."""
         out = str(tmp_path / "out.tif")
         rc = main(
-            ["raster", "clip", src_raster, out, "--bbox", "100", "100", "110", "110"]
+            ["raster", "crop", src_raster, out, "--bbox", "100", "100", "110", "110"]
         )
         err = capsys.readouterr().err
         assert rc == 1, "a disjoint clip bbox must exit 1"
@@ -188,7 +188,7 @@ class TestClipCommand:
             mask_path
         )
         out = str(tmp_path / "out.tif")
-        rc = main(["raster", "clip", src_raster, out, "--vector", mask_path])
+        rc = main(["raster", "crop", src_raster, out, "--vector", mask_path])
         err = capsys.readouterr().err
         assert rc == 1, "a disjoint vector mask must exit 1"
         assert "does not intersect" in err, (
@@ -202,9 +202,9 @@ class TestClipCommand:
         """clip refuses to clobber an existing output unless --overwrite (N5)."""
         out = str(tmp_path / "exists.tif")
         assert (
-            main(["raster", "clip", src_raster, out, "--bbox", "1", "1", "5", "5"]) == 0
+            main(["raster", "crop", src_raster, out, "--bbox", "1", "1", "5", "5"]) == 0
         )
-        rc = main(["raster", "clip", src_raster, out, "--bbox", "1", "1", "5", "5"])
+        rc = main(["raster", "crop", src_raster, out, "--bbox", "1", "1", "5", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "a second write without --overwrite must be refused"
         assert "already exists" in err, f"error should mention the existing file: {err}"
@@ -212,7 +212,7 @@ class TestClipCommand:
             main(
                 [
                     "raster",
-                    "clip",
+                    "crop",
                     src_raster,
                     out,
                     "--bbox",
@@ -233,7 +233,7 @@ class TestClipCommand:
             main(
                 [
                     "raster",
-                    "clip",
+                    "crop",
                     src_raster,
                     out,
                     "--bbox",
@@ -716,7 +716,7 @@ class TestHelpSurface:
         [
             "info",
             "bounds",
-            "clip",
+            "crop",
             "warp",
             "merge",
             "overview",

@@ -10,7 +10,7 @@ Commands registered by :func:`add_dataset_inspect_commands`:
 
 - ``stats`` → :meth:`Dataset.stats`
 - ``histogram`` → :meth:`Dataset.get_histogram`
-- ``get-meta-data`` → :meth:`Dataset.get_meta_data`
+- ``get-metadata`` → :meth:`Dataset.get_meta_data`
 - ``get-attribute-table`` → :meth:`Dataset.get_attribute_table`
 - ``set-attribute-table`` → :meth:`Dataset.set_attribute_table` (edits the raster
   **in place** — the attribute table is written into the file, so there is no
@@ -142,7 +142,7 @@ def _cmd_histogram(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_meta_data(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-meta-data` — a GDAL metadata domain's contents.
+    """Handle `pyramids get-metadata` — a GDAL metadata domain's contents.
 
     Args:
         args: Parsed arguments with `file`, `domain`, and `json`.
@@ -447,7 +447,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     histogram.add_argument("--json", action="store_true", help=_HELP_JSON)
     histogram.set_defaults(func=_cmd_histogram)
 
-    meta = sub.add_parser("get-meta-data", help="a GDAL metadata domain's contents")
+    meta = sub.add_parser("get-metadata", help="a GDAL metadata domain's contents")
     meta.add_argument("file", help=_HELP_INSPECT_RASTER)
     meta.add_argument(
         "--domain",

@@ -95,7 +95,7 @@ class TestTopLevelHelp:
 _HELP_ARGVS = [
     ["raster", "info", "--help"],
     ["raster", "bounds", "--help"],
-    ["raster", "clip", "--help"],
+    ["raster", "crop", "--help"],
     ["raster", "warp", "--help"],
     ["raster", "merge", "--help"],
     ["raster", "overview", "--help"],
@@ -133,7 +133,7 @@ _HELP_ARGVS = [
     # issue #1436: inspect / metadata
     ["raster", "stats", "--help"],
     ["raster", "histogram", "--help"],
-    ["raster", "get-meta-data", "--help"],
+    ["raster", "get-metadata", "--help"],
     ["raster", "get-attribute-table", "--help"],
     ["raster", "set-attribute-table", "--help"],
     ["raster", "mask-flags", "--help"],
@@ -363,7 +363,7 @@ _HELP_ARGVS = [
     ["nc", "io", "merge", "--help"],
     ["collection", "--help"],
     ["collection", "info", "--help"],
-    ["collection", "stats", "--help"],
+    ["collection", "reduce", "--help"],
     # issue #1469: full DatasetCollection surface
     ["collection", "resample", "--help"],
     ["collection", "merge", "--help"],
@@ -464,7 +464,7 @@ _HELP_ARGVS = [
     ["mesh", "analysis", "sample-random", "--help"],
     ["mesh", "select", "sel", "--help"],
     ["mesh", "select", "sel-layer", "--help"],
-    ["mesh", "select", "sel-time-range", "--help"],
+    ["mesh", "select", "isel-time-range", "--help"],
     ["mesh", "attrs", "set-attr", "--help"],
     ["mesh", "export", "set-crs", "--help"],
     ["mesh", "interp", "shift", "--help"],

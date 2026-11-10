@@ -129,21 +129,21 @@ class TestCollectionStats:
     def test_mean_reduction(self, cli_stack, tmp_path):
         """--reduce mean writes the element-wise mean across the stack."""
         out = str(tmp_path / "mean.tif")
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "mean"]) == 0
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "mean"]) == 0
         # mean of constant rasters 0, 1, 2 is 1.0 everywhere.
         assert np.allclose(np.asarray(Dataset.read_file(out).read_array()), 1.0)
 
     def test_refuses_existing(self, cli_stack, tmp_path):
         """A second stats write without --overwrite is refused."""
         out = str(tmp_path / "m.tif")
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "max"]) == 0
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "max"]) == 1
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "max"]) == 0
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "max"]) == 1
 
     def test_carries_base_no_data_value(self, tmp_path):
         """The reduction output carries the base stack's no-data, not -9999 (L2)."""
         glob = _stack_with(tmp_path, epsg=4326, no_data=-1.0)
         out = str(tmp_path / "nd.tif")
-        assert main(["collection", "stats", glob, out, "--reduce", "mean"]) == 0
+        assert main(["collection", "reduce", glob, out, "--reduce", "mean"]) == 0
         assert Dataset.read_file(out).no_data_value[0] == -1.0, (
             "stats must carry the base no-data sentinel, not from_array's -9999 default"
         )
@@ -152,7 +152,7 @@ class TestCollectionStats:
         """A non-4326 stack keeps its CRS on the reduction output (M2 via crs_spec)."""
         glob = _stack_with(tmp_path, epsg=32633, no_data=-9999.0)
         out = str(tmp_path / "utm.tif")
-        assert main(["collection", "stats", glob, out, "--reduce", "sum"]) == 0
+        assert main(["collection", "reduce", glob, out, "--reduce", "sum"]) == 0
         assert Dataset.read_file(out).epsg == 32633, "output CRS must match the stack"
 
 

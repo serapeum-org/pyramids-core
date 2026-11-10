@@ -193,7 +193,7 @@ class TestHelpers:
 
 
 class TestTimeSelect:
-    """Time-axis commands on a temporal mesh (``sel``/``isel``/``sel-time``/…)."""
+    """Time-axis commands on a temporal mesh (``sel``/``isel``/``isel-time``/…)."""
 
     def test_sel_scalar_collapses_time(self, tmp_path):
         """sel with one coordinate value writes a static (time-collapsed) mesh."""
@@ -246,7 +246,7 @@ class TestTimeSelect:
     def test_isel_single_time_collapses(self, tmp_path):
         """isel with one --time value collapses the axis and still serialises.
 
-        ``sel-time`` is the dedicated single-step counterpart; both collapse the time axis
+        ``isel-time`` is the dedicated single-step counterpart; both collapse the time axis
         and write back cleanly.
         """
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
@@ -255,10 +255,10 @@ class TestTimeSelect:
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
     def test_sel_time_collapses_and_serialises(self, tmp_path):
-        """sel-time picks one step by position, collapses the axis, and round-trips."""
+        """isel-time picks one step by position, collapses the axis, and round-trips."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "sel-time", src, out, "--index", "1"]) == 0
+        assert _run(["mesh", "select", "isel-time", src, out, "--index", "1"]) == 0
         written = MeshDataset.read_file(out)
         assert written.get_data("d").data.ndim == 1
         assert written.get_data("d").data.tolist() == [2.0, 3.0]
@@ -271,7 +271,7 @@ class TestTimeSelect:
                 [
                     "mesh",
                     "select",
-                    "sel-time",
+                    "isel-time",
                     src,
                     str(tmp_path / "o.nc"),
                     "--index",
@@ -280,7 +280,7 @@ class TestTimeSelect:
             )
 
     def test_sel_time_non_temporal_is_value_error(self, tmp_path):
-        """sel-time on a static mesh is a clean ValueError, matching isel --time."""
+        """isel-time on a static mesh is a clean ValueError, matching isel --time."""
         static = MeshDataset.from_arrays(
             node_x=np.array([0.0, 1.0, 1.0, 0.0]),
             node_y=np.array([0.0, 0.0, 1.0, 1.0]),
@@ -294,7 +294,7 @@ class TestTimeSelect:
                 [
                     "mesh",
                     "select",
-                    "sel-time",
+                    "isel-time",
                     src,
                     str(tmp_path / "o.nc"),
                     "--index",
@@ -303,18 +303,18 @@ class TestTimeSelect:
             )
 
     def test_sel_time_refuses_existing_output(self, tmp_path):
-        """sel-time refuses to clobber an existing output unless --overwrite is given."""
+        """isel-time refuses to clobber an existing output unless --overwrite is given."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
         out = tmp_path / "o.nc"
         out.write_text("sentinel")
         with pytest.raises(ValueError, match="exists"):
-            _run(["mesh", "select", "sel-time", src, str(out), "--index", "0"])
+            _run(["mesh", "select", "isel-time", src, str(out), "--index", "0"])
         assert (
             _run(
                 [
                     "mesh",
                     "select",
-                    "sel-time",
+                    "isel-time",
                     src,
                     str(out),
                     "--index",
@@ -327,7 +327,7 @@ class TestTimeSelect:
         assert MeshDataset.read_file(str(out)).get_data("d").data.ndim == 1
 
     def test_sel_time_range(self, tmp_path):
-        """sel-time-range keeps the half-open [start, stop) window."""
+        """isel-time-range keeps the half-open [start, stop) window."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert (
@@ -335,7 +335,7 @@ class TestTimeSelect:
                 [
                     "mesh",
                     "select",
-                    "sel-time-range",
+                    "isel-time-range",
                     src,
                     out,
                     "--start",

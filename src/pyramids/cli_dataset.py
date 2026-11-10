@@ -325,7 +325,7 @@ def _cmd_bounds(args: argparse.Namespace) -> int:
 
 
 def _cmd_clip(args: argparse.Namespace) -> int:
-    """Handle `pyramids clip` — crop a raster by bbox or vector mask.
+    """Handle `pyramids crop` — crop a raster by bbox or vector mask.
 
     Args:
         args: Parsed arguments with `input`, `output`, `bbox`, and `vector`.
@@ -998,7 +998,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     bounds.add_argument("--json", action="store_true", help=_HELP_JSON)
     bounds.set_defaults(func=_cmd_bounds)
 
-    clip = sub.add_parser("clip", help="crop a raster by bbox or vector mask")
+    clip = sub.add_parser("crop", help="crop a raster by bbox or vector mask")
     clip.add_argument("input", help=_HELP_SRC_RASTER)
     clip.add_argument("output", help=_HELP_DST_RASTER)
     clip_how = clip.add_mutually_exclusive_group(required=True)

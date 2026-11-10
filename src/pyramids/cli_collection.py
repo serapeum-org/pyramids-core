@@ -195,7 +195,7 @@ def _cmd_collection_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_stats(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection stats`` — write a time reduction as a raster.
+    """Handle ``pyramids collection reduce`` — write a time reduction as a raster.
 
     Args:
         args: Parsed args with ``glob``, ``output``, ``reduce``, ``overwrite``.
@@ -494,7 +494,7 @@ def _add_info(csub: argparse._SubParsersAction) -> None:
 
 def _add_stats(csub: argparse._SubParsersAction) -> None:
     """Register the ``stats`` command (the six associative reducers)."""
-    c_stats = csub.add_parser("stats", help="write a time reduction of a stack")
+    c_stats = csub.add_parser("reduce", help="write a time reduction of a stack")
     _add_open_args(c_stats)
     c_stats.add_argument("output", help="destination raster path")
     c_stats.add_argument(

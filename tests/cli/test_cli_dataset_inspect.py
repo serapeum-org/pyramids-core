@@ -122,11 +122,11 @@ class TestHistogram:
 
 
 class TestGetMetaData:
-    """`pyramids get-meta-data` reads a GDAL metadata domain."""
+    """`pyramids get-metadata` reads a GDAL metadata domain."""
 
     def test_json(self, raster, capsys):
         """--json emits the domain and its metadata mapping."""
-        assert main(["raster", "get-meta-data", raster, "--json"]) == 0
+        assert main(["raster", "get-metadata", raster, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["domain"] == ""
         assert isinstance(payload["metadata"], dict)
@@ -139,7 +139,7 @@ class TestGetMetaData:
                 ``AREA_OR_POINT``.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["raster", "get-meta-data", raster]) == 0, (
+        assert main(["raster", "get-metadata", raster]) == 0, (
             "default domain should succeed"
         )
         out = capsys.readouterr().out
@@ -161,7 +161,7 @@ class TestGetMetaData:
         handle.SetMetadata(["<x>hi</x>"], "xml:TEST")
         handle.FlushCache()
         handle = None
-        assert main(["raster", "get-meta-data", raster, "--domain", "xml:TEST"]) == 0, (
+        assert main(["raster", "get-metadata", raster, "--domain", "xml:TEST"]) == 0, (
             "reading an xml domain should succeed"
         )
         assert capsys.readouterr().out.strip() == "<x>hi</x>", (
@@ -170,7 +170,7 @@ class TestGetMetaData:
 
     def test_missing_file_errors(self, capsys):
         """A missing file exits 1."""
-        assert main(["raster", "get-meta-data", _MISSING]) == 1
+        assert main(["raster", "get-metadata", _MISSING]) == 1
 
 
 class TestAttributeTable:
