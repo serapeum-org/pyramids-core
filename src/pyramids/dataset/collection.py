@@ -253,6 +253,36 @@ class _GroupedCollection:
         return self._reduce_per_label("var", skipna=skipna)
 
 
+def _coerce_time_index(time_list: list[Any]) -> pd.DatetimeIndex:
+    """Parse per-timestep timestamps into a ``DatetimeIndex``, tolerant of mixed formats.
+
+    A plain ``pd.to_datetime`` infers one format from the first element and then
+    raises on any element that does not match it — so a list of timestamp strings
+    that mixes fractional and whole seconds (common for satellite scene stacks,
+    e.g. ``"…09:41:12.345000+00"`` next to ``"…09:43:06+00"``) fails. Datetime-like
+    inputs (``datetime``, ``Timestamp``, ``DatetimeIndex``) and single-format string
+    lists parse directly; only when that raises do we re-parse each element with
+    ``format="mixed"``, falling back to ``utc=True`` when the strings carry differing
+    UTC offsets (which ``format="mixed"`` alone refuses to combine).
+
+    Args:
+        time_list: The per-timestep timestamps, already materialised as a list.
+
+    Returns:
+        pandas.DatetimeIndex: One entry per input timestamp, order preserved.
+    """
+    try:
+        index = pd.DatetimeIndex(time_list)
+    except (ValueError, TypeError):
+        try:
+            index = pd.DatetimeIndex(pd.to_datetime(time_list, format="mixed"))
+        except (ValueError, TypeError):
+            index = pd.DatetimeIndex(
+                pd.to_datetime(time_list, format="mixed", utc=True)
+            )
+    return index
+
+
 def _grouped_reduce(
     data,
     label_array: np.ndarray,
@@ -1493,6 +1523,7 @@ class DatasetCollection:
         op: str = "mean",
         skipna: bool = True,
         q: float | None = None,
+        origin: str | pd.Timestamp | datetime | None = None,
     ) -> list[tuple[Any, Dataset]]:
         """Reduce the time axis by a calendar frequency, grid-attached.
 
@@ -1522,7 +1553,10 @@ class DatasetCollection:
             times: Per-timestep timestamps, length ``self.time_length``. Any
                 value :func:`pandas.to_datetime` accepts (``datetime``,
                 ``"2022-01-01"``, ``pandas.Timestamp``, a ``DatetimeIndex``, …),
-                aligned with the collection's timestep order.
+                aligned with the collection's timestep order. Strings that mix
+                precisions (fractional and whole seconds) or differing UTC
+                offsets are parsed per element, so a heterogeneous scene-stack
+                list does not need pre-normalising.
             freq: A pandas offset alias naming the window size, e.g. ``"1MS"``
                 (month start), ``"7D"`` (weekly), ``"1D"``, ``"6h"``.
             op: Reduction operation. The associative statistics ``"mean"``
@@ -1547,6 +1581,14 @@ class DatasetCollection:
             q: The level for ``op="percentile"`` (``0 < q <= 100``) or
                 ``op="quantile"`` (``0 < q <= 1``). Required for those two ops
                 and rejected for every other op.
+            origin: Forwarded to :class:`pandas.Grouper` to anchor the fixed-width
+                bins. Left ``None`` (default) the bins keep pandas' default
+                epoch/``"start_day"`` anchoring, so a window request spanning the
+                full range (e.g. ``freq=f"{span_days}D"``) can still split in two
+                when the extreme timestamps straddle an epoch-anchored boundary.
+                Pass ``"start"`` (or an explicit :class:`~pandas.Timestamp`) to
+                anchor the first bin on ``times.min()`` and collapse such a request
+                to a single whole-window bucket.
 
         Returns:
             list[tuple[Any, Dataset]]: ``(window_label, dataset)`` pairs, one
@@ -1605,17 +1647,27 @@ class DatasetCollection:
                 f"{self._time_length} timesteps."
             )
 
-        index = pd.DatetimeIndex(pd.to_datetime(time_list))
+        index = _coerce_time_index(time_list)
         if index.isna().any():
             raise ValueError(
                 "times contains unparseable / NaT entries; every timestep must "
                 "have a valid timestamp."
             )
-        positions = pd.Series(np.arange(len(index)), index=index)
+        # pandas ignores Grouper's origin= for a Day frequency when the index is
+        # tz-aware (the satellite-scene case). Bucket on a tz-naive copy so the
+        # anchor takes effect, then re-attach the tz to each window label.
+        tz = index.tz
+        relabel_tz = origin is not None and tz is not None
+        group_index = index.tz_localize(None) if relabel_tz else index
+        positions = pd.Series(np.arange(len(index)), index=group_index)
         window_labels: list[Any] = [None] * len(index)
-        for window_key, members in positions.groupby(pd.Grouper(freq=freq)):
+        grouper_kwargs: dict[str, Any] = {"freq": freq}
+        if origin is not None:
+            grouper_kwargs["origin"] = origin
+        for window_key, members in positions.groupby(pd.Grouper(**grouper_kwargs)):
+            label = window_key.tz_localize(tz) if relabel_tz else window_key
             for pos in members.to_numpy():
-                window_labels[int(pos)] = window_key
+                window_labels[int(pos)] = label
 
         reduced = _grouped_reduce_time(
             self.data,

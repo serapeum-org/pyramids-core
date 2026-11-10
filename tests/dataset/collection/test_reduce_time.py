@@ -167,6 +167,63 @@ class TestReduceTime:
         )
 
     @requires_lazy
+    def test_accepts_mixed_precision_timestamp_strings(self, daily_files):
+        """Strings mixing fractional and whole seconds parse without raising.
+
+        Test scenario:
+            A scene-stack-style list where some timestamps carry microseconds
+            and some do not (and all carry a UTC offset) — a bare
+            ``pd.to_datetime`` would raise on the first non-matching element.
+            All four fall in one January month, so ``freq='1MS'`` yields a
+            single window whose mean of 0,1,2,3 is 1.5.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022/01/01 09:41:12.345000+00",
+            "2022/01/08 09:43:06+00",
+            "2022/01/15 09:41:12.500000+00",
+            "2022/01/22 09:43:06+00",
+        ]
+        result = coll.reduce_time(times, freq="1MS", op="mean")
+        assert len(result) == 1, "all four are one January month → one window"
+        assert float(result[0][1].read_array()[0, 0]) == pytest.approx(1.5), (
+            "mean(0,1,2,3) should be 1.5"
+        )
+
+    @requires_lazy
+    def test_origin_start_collapses_straddling_span_to_one_window(self, daily_files):
+        """A span-wide window splits under default anchoring but unifies with origin.
+
+        Test scenario:
+            Four timestamps whose extremes straddle an epoch-anchored N-day
+            boundary. ``freq=f'{span_days}D'`` with the default (epoch/start_day)
+            anchor splits the stack into two windows — silently dropping scenes
+            for a caller that takes ``result[0]`` — while ``origin='start'``
+            anchors the first bin on ``times.min()`` and collapses it to one.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022-01-01 20:00+00",
+            "2022-01-02 00:00+00",
+            "2022-01-03 00:00+00",
+            "2022-01-04 05:00+00",
+        ]
+        parsed = pd.to_datetime(times, format="mixed", utc=True)
+        span_days = (parsed.max() - parsed.min()).days + 1
+        freq = f"{span_days}D"
+
+        default = coll.reduce_time(times, freq=freq, op="mean")
+        assert len(default) == 2, (
+            "epoch-anchored bins split the straddling span into two windows"
+        )
+
+        anchored = coll.reduce_time(times, freq=freq, op="mean", origin="start")
+        assert len(anchored) == 1, "origin='start' collapses the span to one window"
+        assert float(anchored[0][1].read_array()[0, 0]) == pytest.approx(1.5), (
+            "one window → mean(0,1,2,3) = 1.5"
+        )
+
+    @requires_lazy
     def test_invalid_op_raises(self, daily_files, daily_times):
         """An unsupported op raises ValueError before any reduction.
 
