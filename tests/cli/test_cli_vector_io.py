@@ -27,7 +27,18 @@ class TestFromBbox:
         """from-bbox writes a one-feature polygon in the given CRS."""
         out = tmp_path / "bbox.geojson"
         rc = _run(
-            ["from-bbox", str(out), "--bbox", "0", "0", "1", "1", "--epsg", "4326"]
+            [
+                "io",
+                "from-bbox",
+                str(out),
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--epsg",
+                "4326",
+            ]
         )
         assert rc == 0
         fc = FeatureCollection.read_file(str(out))
@@ -37,11 +48,15 @@ class TestFromBbox:
         """A second from-bbox without --overwrite is refused."""
         out = str(tmp_path / "bbox.geojson")
         assert (
-            _run(["from-bbox", out, "--bbox", "0", "0", "1", "1", "--epsg", "4326"])
+            _run(
+                ["io", "from-bbox", out, "--bbox", "0", "0", "1", "1", "--epsg", "4326"]
+            )
             == 0
         )
         assert (
-            _run(["from-bbox", out, "--bbox", "0", "0", "1", "1", "--epsg", "4326"])
+            _run(
+                ["io", "from-bbox", out, "--bbox", "0", "0", "1", "1", "--epsg", "4326"]
+            )
             == 1
         )
 
@@ -51,18 +66,18 @@ class TestGeoJsonExports:
 
     def test_to_json_stdout(self, capsys):
         """to-json prints a GeoJSON FeatureCollection string to stdout."""
-        assert _run(["to-json", str(_POLY)]) == 0
+        assert _run(["io", "to-json", str(_POLY)]) == 0
         assert '"FeatureCollection"' in capsys.readouterr().out
 
     def test_to_json_out_file(self, tmp_path):
         """--out writes the GeoJSON to a file."""
         out = tmp_path / "o.json"
-        assert _run(["to-json", str(_POLY), "--out", str(out)]) == 0
+        assert _run(["io", "to-json", str(_POLY), "--out", str(out)]) == 0
         assert out.stat().st_size > 0
 
     def test_to_geo_dict_json(self, capsys):
         """to-geo-dict --json emits a strict-valid mapping with features."""
-        assert _run(["to-geo-dict", str(_POLY), "--json"]) == 0
+        assert _run(["io", "to-geo-dict", str(_POLY), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["type"] == "FeatureCollection"
         assert len(payload["features"]) > 0
@@ -74,13 +89,13 @@ class TestWktWkbExports:
     def test_to_wkt_csv(self, tmp_path):
         """to-wkt writes a non-empty CSV."""
         out = tmp_path / "w.csv"
-        assert _run(["to-wkt", str(_POLY), str(out)]) == 0
+        assert _run(["io", "to-wkt", str(_POLY), str(out)]) == 0
         assert out.stat().st_size > 0
 
     def test_to_wkb_hex_csv(self, tmp_path):
         """to-wkb --hex writes a non-empty CSV."""
         out = tmp_path / "wb.csv"
-        assert _run(["to-wkb", str(_POLY), str(out), "--hex"]) == 0
+        assert _run(["io", "to-wkb", str(_POLY), str(out), "--hex"]) == 0
         assert out.stat().st_size > 0
 
 
@@ -90,13 +105,13 @@ class TestTileExports:
     def test_to_mvt(self, tmp_path):
         """to-mvt writes an MVT archive."""
         out = tmp_path / "t.mvt"
-        assert _run(["to-mvt", str(_POLY), str(out)]) == 0
+        assert _run(["io", "to-mvt", str(_POLY), str(out)]) == 0
         assert out.exists()
 
     def test_to_pmtiles(self, tmp_path):
         """to-pmtiles writes a PMTiles archive."""
         out = tmp_path / "t.pmtiles"
-        assert _run(["to-pmtiles", str(_POLY), str(out)]) == 0
+        assert _run(["io", "to-pmtiles", str(_POLY), str(out)]) == 0
         assert out.exists()
 
 
@@ -107,9 +122,9 @@ class TestParquetRoundTrip:
     def test_to_and_read_parquet(self, tmp_path):
         """to-parquet then read-parquet round-trips the features to a vector file."""
         pq = tmp_path / "x.parquet"
-        assert _run(["to-parquet", str(_POLY), str(pq)]) == 0
+        assert _run(["io", "to-parquet", str(_POLY), str(pq)]) == 0
         out = tmp_path / "rp.geojson"
-        assert _run(["read-parquet", str(pq), str(out)]) == 0
+        assert _run(["io", "read-parquet", str(pq), str(out)]) == 0
         assert len(FeatureCollection.read_file(str(out))) == len(
             FeatureCollection.read_file(str(_POLY))
         )
@@ -118,7 +133,7 @@ class TestParquetRoundTrip:
     def test_to_feather(self, tmp_path):
         """to-feather writes a non-empty GeoFeather file."""
         out = tmp_path / "x.feather"
-        assert _run(["to-feather", str(_POLY), str(out)]) == 0
+        assert _run(["io", "to-feather", str(_POLY), str(out)]) == 0
         assert out.stat().st_size > 0
 
 
@@ -141,6 +156,7 @@ class TestRemoteReaders:
         out = tmp_path / "ogc.geojson"
         rc = _run(
             [
+                "io",
                 "from-ogc-features",
                 str(out),
                 "--endpoint",
@@ -162,7 +178,7 @@ class TestRemoteReaders:
             classmethod(lambda cls, url, *, where="1=1", out_fields="*": fixture),
         )
         out = tmp_path / "fs.geojson"
-        assert _run(["from-featureserver", str(out), "--url", "http://x/0"]) == 0
+        assert _run(["io", "from-featureserver", str(out), "--url", "http://x/0"]) == 0
         assert out.exists()
 
     def test_from_vectortileserver_mocked(self, tmp_path, monkeypatch):
@@ -174,7 +190,7 @@ class TestRemoteReaders:
             classmethod(lambda cls, url, *, layer=None, bbox=None: fixture),
         )
         out = tmp_path / "vts.geojson"
-        assert _run(["from-vectortileserver", str(out), "--url", "http://x"]) == 0
+        assert _run(["io", "from-vectortileserver", str(out), "--url", "http://x"]) == 0
         assert out.exists()
 
 
@@ -183,7 +199,7 @@ class TestGeoDictPlain:
 
     def test_plain_output(self, capsys):
         """The plain form prints the type and feature count."""
-        assert _run(["to-geo-dict", str(_POLY)]) == 0
+        assert _run(["io", "to-geo-dict", str(_POLY)]) == 0
         out = capsys.readouterr().out
         assert "type:" in out
         assert "features:" in out
@@ -196,7 +212,18 @@ class TestWriteFormat:
         """from-bbox to .shp produces a real shapefile (sidecars), not GeoJSON-in-.shp."""
         out = tmp_path / "b.shp"
         rc = _run(
-            ["from-bbox", str(out), "--bbox", "0", "0", "1", "1", "--epsg", "4326"]
+            [
+                "io",
+                "from-bbox",
+                str(out),
+                "--bbox",
+                "0",
+                "0",
+                "1",
+                "1",
+                "--epsg",
+                "4326",
+            ]
         )
         assert rc == 0
         assert (tmp_path / "b.shx").exists()
@@ -213,7 +240,7 @@ class TestParquetExtraMissing:
             raise ImportError("Missing optional dependency 'pyarrow'.")
 
         monkeypatch.setattr(cli_vector_io.FeatureCollection, "to_parquet", boom)
-        rc = _run(["to-parquet", str(_POLY), str(tmp_path / "o.parquet")])
+        rc = _run(["io", "to-parquet", str(_POLY), str(tmp_path / "o.parquet")])
         err = capsys.readouterr().err
         assert rc == 1
         assert "parquet" in err
@@ -238,7 +265,18 @@ class TestFromXyz:
         csv = tmp_path / "xyz.csv"
         csv.write_text("x,y,z\n0,0,10\n1,1,20\n2,2,30\n", encoding="utf-8")
         out = tmp_path / "pts.geojson"
-        argv = ["from-xyz", str(csv), str(out), "--x", "x", "--y", "y", "--z", "z"]
+        argv = [
+            "io",
+            "from-xyz",
+            str(csv),
+            str(out),
+            "--x",
+            "x",
+            "--y",
+            "y",
+            "--z",
+            "z",
+        ]
         assert _run([*argv, "--crs", "EPSG:4326"]) == 0
         fc = FeatureCollection.read_file(str(out))
         assert len(fc) == 3
@@ -249,7 +287,10 @@ class TestFromXyz:
         csv = tmp_path / "xy.csv"
         csv.write_text("lon,lat\n0,0\n1,1\n", encoding="utf-8")
         out = tmp_path / "bare.geojson"
-        assert _run(["from-xyz", str(csv), str(out), "--x", "lon", "--y", "lat"]) == 0
+        assert (
+            _run(["io", "from-xyz", str(csv), str(out), "--x", "lon", "--y", "lat"])
+            == 0
+        )
         assert len(FeatureCollection.read_file(str(out))) == 2
 
     def test_missing_column_errors(self, tmp_path):
@@ -257,7 +298,9 @@ class TestFromXyz:
         csv = tmp_path / "xy.csv"
         csv.write_text("a,b\n0,0\n", encoding="utf-8")
         out = tmp_path / "o.geojson"
-        assert _run(["from-xyz", str(csv), str(out), "--x", "nope", "--y", "b"]) == 1
+        assert (
+            _run(["io", "from-xyz", str(csv), str(out), "--x", "nope", "--y", "b"]) == 1
+        )
 
 
 class TestFromFeatures:
@@ -283,7 +326,9 @@ class TestFromFeatures:
         src = tmp_path / "fc.json"
         src.write_text(json.dumps(data), encoding="utf-8")
         out = tmp_path / "ff.geojson"
-        assert _run(["from-features", str(src), str(out), "--crs", "EPSG:4326"]) == 0
+        assert (
+            _run(["io", "from-features", str(src), str(out), "--crs", "EPSG:4326"]) == 0
+        )
         assert len(FeatureCollection.read_file(str(out))) == 2
 
     def test_bare_feature_list(self, tmp_path):
@@ -298,7 +343,7 @@ class TestFromFeatures:
         src = tmp_path / "list.json"
         src.write_text(json.dumps(feats), encoding="utf-8")
         out = tmp_path / "ffl.geojson"
-        assert _run(["from-features", str(src), str(out)]) == 0
+        assert _run(["io", "from-features", str(src), str(out)]) == 0
         assert len(FeatureCollection.read_file(str(out))) == 1
 
 
@@ -310,7 +355,9 @@ class TestFromRecords:
         csv = tmp_path / "rec.csv"
         csv.write_text("id,geometry\n1,POINT (0 0)\n2,POINT (1 1)\n", encoding="utf-8")
         out = tmp_path / "rec.geojson"
-        assert _run(["from-records", str(csv), str(out), "--crs", "EPSG:4326"]) == 0
+        assert (
+            _run(["io", "from-records", str(csv), str(out), "--crs", "EPSG:4326"]) == 0
+        )
         fc = FeatureCollection.read_file(str(out))
         assert len(fc) == 2
         assert "id" in fc.columns
@@ -320,7 +367,7 @@ class TestFromRecords:
         csv = tmp_path / "norec.csv"
         csv.write_text("id,value\n1,5\n", encoding="utf-8")
         out = tmp_path / "o.geojson"
-        assert _run(["from-records", str(csv), str(out)]) == 1
+        assert _run(["io", "from-records", str(csv), str(out)]) == 1
 
 
 class TestReadGpx:
@@ -331,7 +378,7 @@ class TestReadGpx:
         src = tmp_path / "t.gpx"
         src.write_text(_GPX, encoding="utf-8")
         out = tmp_path / "g.gpkg"
-        assert _run(["read-gpx", str(src), str(out)]) == 0
+        assert _run(["io", "read-gpx", str(src), str(out)]) == 0
         waypoints = FeatureCollection.read_file(str(out), layer="waypoints")
         assert len(waypoints) == 1
 
@@ -341,7 +388,7 @@ class TestReadGpx:
         src.write_text(_GPX, encoding="utf-8")
         out = tmp_path / "g.gpkg"
         out.write_text("placeholder", encoding="utf-8")
-        assert _run(["read-gpx", str(src), str(out)]) == 1
+        assert _run(["io", "read-gpx", str(src), str(out)]) == 1
 
     def test_no_sublayers_errors(self, tmp_path, monkeypatch, capsys):
         """A GPX with no non-empty sub-layers exits 1 cleanly, not the catch-all."""
@@ -352,7 +399,7 @@ class TestReadGpx:
             "read_gpx_layers",
             classmethod(lambda cls, path: {}),
         )
-        rc = _run(["read-gpx", str(src), str(tmp_path / "g.gpkg")])
+        rc = _run(["io", "read-gpx", str(src), str(tmp_path / "g.gpkg")])
         err = capsys.readouterr().err
         assert rc == 1
         assert "unexpected failure" not in err

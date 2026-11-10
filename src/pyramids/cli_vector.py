@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import (
     emit,
     info_print,
@@ -214,8 +215,14 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_clip.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_clip.set_defaults(func=_cmd_vector_clip)
 
-    add_vector_inspect_commands(vsub)
-    add_vector_geom_commands(vsub)
-    add_vector_overlay_commands(vsub)
-    add_vector_tess_commands(vsub)
-    add_vector_io_commands(vsub)
+    add_vector_inspect_commands(
+        add_group(vsub, "inspect", "inspect a vector's schema/validity")
+    )
+    add_vector_geom_commands(add_group(vsub, "geom", "unary geometry operations"))
+    add_vector_overlay_commands(
+        add_group(vsub, "overlay", "overlay / set ops, joins, filter")
+    )
+    add_vector_tess_commands(
+        add_group(vsub, "tess", "tessellation, binning, sampling, measures")
+    )
+    add_vector_io_commands(add_group(vsub, "io", "format I/O and remote readers"))
