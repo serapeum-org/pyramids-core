@@ -264,19 +264,61 @@ def _coerce_time_index(time_list: list[Any]) -> pd.DatetimeIndex:
     and then raises on the first that does not match. The only case the
     constructor cannot handle is strings that carry **differing** UTC offsets (or a
     naive/aware mix); those are re-parsed with ``format="mixed", utc=True`` to
-    combine them into a single tz-aware index.
+    combine them into a single tz-aware index. In that fallback naive elements are
+    read as UTC, and anything unparseable becomes ``NaT`` (``errors="coerce"``) so
+    the caller's ``NaT`` guard reports it with one clear message rather than
+    pandas' raw parse error.
+
+    Because each string is parsed independently, a locale-ambiguous list
+    (e.g. ``["01/02/2022", "25/02/2022"]``) can mix day-first and month-first
+    conventions element by element without raising — pass unambiguous, preferably
+    ISO 8601, strings.
 
     Args:
         time_list: The per-timestep timestamps, already materialised as a list.
 
     Returns:
-        pandas.DatetimeIndex: One entry per input timestamp, order preserved.
+        pandas.DatetimeIndex: One entry per input timestamp, order preserved;
+        unparseable strings surface as ``NaT``.
     """
     try:
         index = pd.DatetimeIndex(time_list)
     except (ValueError, TypeError):
-        index = pd.DatetimeIndex(pd.to_datetime(time_list, format="mixed", utc=True))
+        index = pd.DatetimeIndex(
+            pd.to_datetime(time_list, format="mixed", utc=True, errors="coerce")
+        )
     return index
+
+
+def _normalize_origin(
+    origin: str | pd.Timestamp | datetime, tz: Any
+) -> str | pd.Timestamp:
+    """Match a ``reduce_time`` origin anchor to the frame the index is bucketed in.
+
+    String anchors (``"start"``, ``"end"``, ``"epoch"``, …) pass through untouched.
+    An explicit timestamp is coerced into the same frame as the (possibly
+    tz-stripped) grouping index: for a tz-aware index — which is bucketed as a
+    UTC-naive copy — the origin is converted to UTC and made naive; for a tz-naive
+    index a stray tz-aware origin is reduced to naive wall time. This keeps
+    :class:`pandas.Grouper` from rejecting an origin whose timezone differs from the
+    index it groups.
+
+    Args:
+        origin: The anchor passed to ``reduce_time`` (a string, ``Timestamp``, or
+            ``datetime``).
+        tz: The original index timezone (``None`` for a naive index).
+
+    Returns:
+        str | pandas.Timestamp: A string anchor unchanged, or a timestamp in the
+        grouping index's frame.
+    """
+    if isinstance(origin, str):
+        return origin
+    ts = pd.Timestamp(origin)
+    if tz is not None:
+        ts = ts.tz_convert("UTC") if ts.tz is not None else ts.tz_localize("UTC")
+        return ts.tz_localize(None)
+    return ts.tz_localize(None) if ts.tz is not None else ts
 
 
 def _grouped_reduce(
@@ -1552,7 +1594,12 @@ class DatasetCollection:
                 aligned with the collection's timestep order. Strings that mix
                 precisions (fractional and whole seconds) or differing UTC
                 offsets are parsed per element, so a heterogeneous scene-stack
-                list does not need pre-normalising.
+                list does not need pre-normalising. Because each string is parsed
+                independently, pass unambiguous (preferably ISO 8601) strings — a
+                locale-ambiguous ``DD/MM`` vs ``MM/DD`` list may be read with mixed
+                conventions rather than rejected; in a parse that must fall back,
+                naive elements of a naive/aware mix are read as UTC; and integer
+                epochs follow pandas' default nanosecond unit.
             freq: A pandas offset alias naming the window size, e.g. ``"1MS"``
                 (month start), ``"7D"`` (weekly), ``"1D"``, ``"6h"``.
             op: Reduction operation. The associative statistics ``"mean"``
@@ -1577,14 +1624,17 @@ class DatasetCollection:
             q: The level for ``op="percentile"`` (``0 < q <= 100``) or
                 ``op="quantile"`` (``0 < q <= 1``). Required for those two ops
                 and rejected for every other op.
-            origin: Forwarded to :class:`pandas.Grouper` to anchor the fixed-width
-                bins. Left ``None`` (default) the bins keep pandas' default
-                epoch/``"start_day"`` anchoring, so a window request spanning the
-                full range (e.g. ``freq=f"{span_days}D"``) can still split in two
-                when the extreme timestamps straddle an epoch-anchored boundary.
-                Pass ``"start"`` (or an explicit :class:`~pandas.Timestamp`) to
-                anchor the first bin on ``times.min()`` and collapse such a request
-                to a single whole-window bucket.
+            origin: Anchors the fixed-width bins (passed to :class:`pandas.Grouper`,
+                normalised for timezone). Left ``None`` (default) the bins keep
+                pandas' default epoch/``"start_day"`` anchoring, so a window request
+                spanning the full range (e.g. ``freq=f"{span_days}D"``) can still
+                split in two when the extreme timestamps straddle an epoch-anchored
+                boundary. Pass ``"start"`` (or an explicit
+                :class:`~pandas.Timestamp`, e.g. ``times.min()``) to anchor the
+                first bin on ``times.min()`` and collapse such a request to a single
+                whole-window bucket. A tz-aware ``Timestamp`` is accepted for a
+                tz-aware index: bucketing runs in UTC, and window labels are
+                returned in the index's timezone.
 
         Returns:
             list[tuple[Any, Dataset]]: ``(window_label, dataset)`` pairs, one
@@ -1656,18 +1706,20 @@ class DatasetCollection:
                 "have a valid timestamp."
             )
         # pandas ignores Grouper's origin= for a Day frequency when the index is
-        # tz-aware (the satellite-scene case). Bucket on a tz-naive copy so the
-        # anchor takes effect, then re-attach the tz to each window label.
+        # tz-aware (the satellite-scene case). When an anchor is requested we bucket
+        # on a UTC-naive copy of the index — and a matching UTC-naive origin — then
+        # map each window label back to the index timezone. UTC has no DST, so the
+        # round-trip never lands on a nonexistent/ambiguous wall time.
         tz = index.tz
-        relabel_tz = origin is not None and tz is not None
-        group_index = index.tz_localize(None) if relabel_tz else index
+        anchored_tz = origin is not None and tz is not None
+        group_index = index.tz_convert("UTC").tz_localize(None) if anchored_tz else index
         positions = pd.Series(np.arange(len(index)), index=group_index)
         window_labels: list[Any] = [None] * len(index)
         grouper_kwargs: dict[str, Any] = {"freq": freq}
         if origin is not None:
-            grouper_kwargs["origin"] = origin
+            grouper_kwargs["origin"] = _normalize_origin(origin, tz)
         for window_key, members in positions.groupby(pd.Grouper(**grouper_kwargs)):
-            label = window_key.tz_localize(tz) if relabel_tz else window_key
+            label = window_key.tz_localize("UTC").tz_convert(tz) if anchored_tz else window_key
             for pos in members.to_numpy():
                 window_labels[int(pos)] = label
 
