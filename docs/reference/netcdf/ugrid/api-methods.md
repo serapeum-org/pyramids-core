@@ -32,8 +32,8 @@ grouped by category.
 | `time_values` | **(D)** | Parsed time coordinate values, or `None` |
 | `volume_topology` | **(D)** | Ragged vertical layering, or `None` |
 | `n_volume` | **(D)** | Total number of 3-D volumes, or `None` |
-| `n_layers` | **(D)** | Number of vertical layers, or `None` |
-| `n_layer_interfaces` | **(D)** | Number of layer interfaces, or `None` |
+| `n_layer` | **(D)** | Number of vertical layers, or `None` |
+| `n_layer_interface` | **(D)** | Number of layer interfaces, or `None` |
 | `layer_values` | **(D)** | Layer coordinate values, or `None` |
 
 ---
@@ -80,7 +80,7 @@ grouped by category.
 
 | Method | Source | Description |
 |--------|--------|-------------|
-| `get_data(variable_name)` | **(D)** | Get a variable by name |
+| `mesh[name]` / `get(name, default)` | **(D)** | Get a variable by name (`get_data` is a deprecated alias) |
 | `with_variable(name, data, location, nodata)` | **(D)** | Return new ds with variable added/replaced |
 | `drop_variables(names)` | **(D)** | Return new ds without named variable(s) |
 | `rename_variable(old, new)` | **(D)** | Return new ds with variable renamed |

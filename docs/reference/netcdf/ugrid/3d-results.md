@@ -52,7 +52,7 @@ from pyramids.netcdf.ugrid import VolumeTopology
 ds = MeshDataset.read_file("estuary_3d.nc")
 ds.volume_topology          # VolumeTopology, or None for a 2-D / uniform mesh
 ds.n_volume                 # total volumes, or None
-ds.n_layers                 # the MAX layer count over the columns (documented), for a ragged mesh
+ds.n_layer                  # the MAX layer count over the columns (documented), for a ragged mesh
 
 # The k-th layer per column as a 2-D face field; columns shallower than k+1 layers are NaN,
 # never silently padded.
@@ -72,7 +72,7 @@ Its invariants (`volume_offset` starts at 0, is non-decreasing, and its gaps equ
 `layer_count`) are validated at construction, so a malformed topology fails early rather than at
 use. `to_dataframe()` lays a ragged variable out one row per volume, carrying the column
 (`element`) and the 0-based `layer` within it — no row is fabricated for an absent layer. The
-uniform-layer path (`n_layers`, `isel_layer`, `sel_layer`, `layer_values`) is unchanged whenever
+uniform-layer path (`n_layer`, `isel_layer`, `sel_layer`, `layer_values`) is unchanged whenever
 no `VolumeTopology` is set.
 
 ## On-disk layout
