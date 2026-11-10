@@ -50,7 +50,7 @@ from pyramids.netcdf.metadata import to_json
 nc = NetCDF.read_file("tests/data/netcdf/cf__4v__1d3-3d1__proj__y-desc.nc", open_as_multi_dimensional=True)
 
 # Read everything (groups, arrays, dimensions, attributes)
-md = nc.get_all_metadata()
+md = nc.refresh_metadata()
 
 # Convert to JSON
 print(to_json(md))
@@ -59,7 +59,7 @@ print(to_json(md))
 You can also pass open options (persisted into the result for provenance):
 
 ```python
-md = nc.get_all_metadata(open_options={"OPEN_SHARED": "YES"})
+md = nc.refresh_metadata(open_options={"OPEN_SHARED": "YES"})
 ```
 
 ## Dimension overview

@@ -40,7 +40,7 @@ class Connectivity:
     original_start_index: int
 
     @classmethod
-    def from_gdal_array(cls, md_arr: gdal.MDArray, cf_role: str) -> Connectivity:
+    def _from_gdal_array(cls, md_arr: gdal.MDArray, cf_role: str) -> Connectivity:
         """Read connectivity from a GDAL MDArray, normalizing start_index.
 
         Reads the raw index array, subtracts start_index if it is 1,

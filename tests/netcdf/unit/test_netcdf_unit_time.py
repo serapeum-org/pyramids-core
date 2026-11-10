@@ -163,7 +163,7 @@ class TestMSWEPFile:
             str(MSWEP_PATH),
             open_as_multi_dimensional=True,
         )
-        md = nc.get_all_metadata()
+        md = nc.refresh_metadata()
         assert len(md.dimensions) > 0, "dimensions should be populated"
 
     def test_mswep_lon_lat(self):

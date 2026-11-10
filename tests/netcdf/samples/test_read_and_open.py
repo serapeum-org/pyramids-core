@@ -47,6 +47,6 @@ def test_from_bytes_with_suffix(sample_name, sample, structural):
         data = handle.read()
     nc = NetCDF.from_bytes(data, suffix=".nc")
     try:
-        assert len(nc.get_all_metadata().variables) == nvars
+        assert len(nc.refresh_metadata().variables) == nvars
     finally:
         nc.close()

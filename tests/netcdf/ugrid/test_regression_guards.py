@@ -139,7 +139,7 @@ class TestLayerApiIsMetadataOnly:
 
     def test_n_layers_reads_the_declared_shape(self, lazy):
         dataset, loader = lazy
-        assert dataset.n_layers == 3
+        assert dataset.n_layer == 3
         assert loader.calls == 0
 
     def test_layer_values_does_not_load(self, lazy):

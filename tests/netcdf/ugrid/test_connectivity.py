@@ -247,7 +247,7 @@ class TestConnectivityAsMasked:
 
 
 class TestConnectivityFromGdalArray:
-    """Tests for Connectivity.from_gdal_array()."""
+    """Tests for Connectivity._from_gdal_array()."""
 
     def _mock_md_array(self, data, start_index=0, fill_value=-999):
         """Create a mock GDAL MDArray for testing.
@@ -287,7 +287,7 @@ class TestConnectivityFromGdalArray:
         """
         raw = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.int32)
         md_arr = self._mock_md_array(raw, start_index=0, fill_value=-999)
-        conn = Connectivity.from_gdal_array(md_arr, "face_node_connectivity")
+        conn = Connectivity._from_gdal_array(md_arr, "face_node_connectivity")
         assert conn.original_start_index == 0, (
             f"Expected 0, got {conn.original_start_index}"
         )
@@ -302,7 +302,7 @@ class TestConnectivityFromGdalArray:
         """
         raw = np.array([[1, 2, 3], [2, 4, 3]], dtype=np.int32)
         md_arr = self._mock_md_array(raw, start_index=1, fill_value=-999)
-        conn = Connectivity.from_gdal_array(md_arr, "face_node_connectivity")
+        conn = Connectivity._from_gdal_array(md_arr, "face_node_connectivity")
         assert conn.original_start_index == 1, (
             f"Expected 1, got {conn.original_start_index}"
         )
@@ -316,7 +316,7 @@ class TestConnectivityFromGdalArray:
         """
         raw = np.array([[1, 2, 3, -999], [2, 4, 3, -999]], dtype=np.int32)
         md_arr = self._mock_md_array(raw, start_index=1, fill_value=-999)
-        conn = Connectivity.from_gdal_array(md_arr, "face_node_connectivity")
+        conn = Connectivity._from_gdal_array(md_arr, "face_node_connectivity")
         assert conn.fill_value == -1, f"Expected fill_value -1, got {conn.fill_value}"
         expected = np.array([[0, 1, 2, -1], [1, 3, 2, -1]], dtype=np.intp)
         np.testing.assert_array_equal(conn.data, expected)

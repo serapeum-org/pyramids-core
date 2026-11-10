@@ -1111,6 +1111,47 @@ replace the georeference wholesale.
 
 ### unreleased
 
+**`NetCDF.get_all_metadata` is now `NetCDF.refresh_metadata`.** "all" implied it returned *more* metadata than
+the cached `metadata` property; the only difference is that it is an uncached re-read. The new name says so, and
+it now also **stores the fresh result as the cached value** (so a later `.metadata` read returns it), matching
+the `refresh_from_db` / `Session.refresh` idiom. `get_all_metadata` keeps working as a `DeprecationWarning`-emitting
+alias — note it is **not** byte-for-byte behaviour-preserving: it inherits the new cache write, so after calling it
+`nc.metadata` returns the freshly re-read value rather than any previously cached one.
+
+```python
+# Before
+md = nc.get_all_metadata()
+# After
+md = nc.refresh_metadata()   # same metadata, and nc.metadata now returns it too
+```
+
+**Mesh naming cleanup (`netcdf/ugrid/`).** Several `MeshDataset` / `MeshVariable` / `MeshSpatialIndex` members
+were renamed for consistency with the `n_*` family, the `sel`/`isel` rule, and the xarray idiom. Each old name
+keeps working as a `DeprecationWarning`-emitting alias (behaviour identical) **except** the two GDAL-fed
+constructors, which were internal plumbing and are now private with **no** alias.
+
+| old | new | note |
+|---|---|---|
+| `MeshVariable.time_index` | `MeshVariable.time_axis_index` | returns the time *axis number*, not a time *step* |
+| `MeshDataset.n_layers` | `MeshDataset.n_layer` | singular, matching `n_node`/`n_face`/`n_edge` |
+| `MeshDataset.n_layer_interfaces` | `MeshDataset.n_layer_interface` | singular `n_*` family |
+| `MeshDataset.get_data(name)` | `mesh[name]` (or `mesh.get(name, default)`) | `get_data` duplicated subscription |
+| `MeshSpatialIndex.face_tree` | `MeshSpatialIndex.face_centroid_tree` | it is a KD-tree on face centroids |
+| `MeshSpatialIndex.face_strtree` | `MeshSpatialIndex.face_rtree` | drops shapely's `STRtree` type name |
+| `Mesh2d.from_gdal_group` | `Mesh2d._from_gdal_group` | **private, no alias** — internal GDAL path |
+| `Connectivity.from_gdal_array` | `Connectivity._from_gdal_array` | **private, no alias** — internal GDAL path |
+
+```python
+# Before
+var = mesh.get_data("salinity")
+axis = var.time_index
+n = mesh.n_layers
+# After
+var = mesh["salinity"]          # or mesh.get("salinity") for a default
+axis = var.time_axis_index
+n = mesh.n_layer
+```
+
 **`NetCDF.meta_data` is now `NetCDF.metadata`** (part of the dataset naming cleanup, issue #1462). `meta_data`
 keeps working as a `DeprecationWarning`-emitting alias and still returns the same cached `NetCDFMetadata`. See the
 [dataset](#dataset) section's rename table for the full list.

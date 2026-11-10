@@ -36,7 +36,7 @@ def test_get_variable_2d_plus_has_shape(sample_name, sample):
     """For a multi-variable file, every >=2-D variable loads as a dataset exposing a 2-D+ shape."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         twod_plus = [n for n in nc.variable_names if len(meta.variables[n].shape) >= 2]
         for name in twod_plus:
             var = nc.get_variable(name)
@@ -54,7 +54,7 @@ def test_get_variable_1d_does_not_raise(sample_name, sample):
     """
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         oned = [n for n in nc.variable_names if len(meta.variables[n].shape) == 1]
         for name in oned:
             assert nc.get_variable(name) is not None, (

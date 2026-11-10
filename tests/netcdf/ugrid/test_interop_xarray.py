@@ -114,7 +114,7 @@ class TestToFromXarray:
         assert depth.nodata == -999.0
         assert depth.has_time is False
         assert level.has_time is True
-        assert level.time_index == 0
+        assert level.time_axis_index == 0
         # Element axis stays last.
         assert level.data.shape[-1] == mesh.n_face
 
@@ -236,7 +236,7 @@ class TestChunkedVariables:
         lazy = chunked[name]
         assert isinstance(lazy, da.Array)
 
-        eager = np.asarray(ug.get_data(name).data, dtype="float64")
+        eager = np.asarray(ug[name].data, dtype="float64")
         np.testing.assert_allclose(
             float(lazy.astype("float64").mean().compute()), float(np.nanmean(eager))
         )

@@ -97,7 +97,7 @@ class TestAddVariableFileBacked:
         src = NetCDF.read_file(str(tmp_path / "packed.nc"))
         dst = NetCDF.read_file(str(tmp_path / "dst.nc"))
         dst.add_variable(src, "rh")
-        _packed(dst.get_all_metadata().variables["rh"])
+        _packed(dst.refresh_metadata().variables["rh"])
 
     def test_survives_disk_round_trip(self, tmp_path):
         """Packing should still be intact after the destination is saved and reloaded."""
@@ -108,7 +108,7 @@ class TestAddVariableFileBacked:
         dst.add_variable(src, "rh")
         dst.to_file(str(tmp_path / "out.nc"))
         reloaded = NetCDF.read_file(str(tmp_path / "out.nc"))
-        _packed(reloaded.get_all_metadata().variables["rh"])
+        _packed(reloaded.refresh_metadata().variables["rh"])
 
 
 class TestAddVariableRefusesANameItCannotResolve:
@@ -197,4 +197,4 @@ class TestRenameVariableFileBacked:
         nc.rename_variable("rh", "relhum")
         assert "rh" not in nc.variable_names, f"old name remains: {nc.variable_names}"
         assert "relhum" in nc.variable_names, f"new name missing: {nc.variable_names}"
-        _packed(nc.get_all_metadata().variables["relhum"])
+        _packed(nc.refresh_metadata().variables["relhum"])

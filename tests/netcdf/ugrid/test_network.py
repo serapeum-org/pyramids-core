@@ -385,7 +385,7 @@ class TestSort:
         """A fill row must not reach the degree census or the orientation (H1).
 
         Test scenario:
-            `Connectivity.from_gdal_array` writes `-1` into every slot that held a file's
+            `Connectivity._from_gdal_array` writes `-1` into every slot that held a file's
             `_FillValue`, so a driver-read network is padded. Reading the raw table put `-1`
             into `np.bincount`, which refuses negatives -- so the helper whose only job is to
             build a friendly message died inside numpy, and the caller never saw the
