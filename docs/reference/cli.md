@@ -10,7 +10,7 @@ pyramids --version              # print the installed version
 python -m pyramids raster info x.tif   # the module form, equivalent to the `pyramids` script
 ```
 
-Place the global **`--quiet`** (`-q`) before the command (`pyramids --quiet warp …`) to suppress the `wrote …`
+Place the global **`--quiet`** (`-q`) before the command (`pyramids --quiet raster warp …`) to suppress the `wrote …`
 chatter; errors still print. Commands that write a file refuse to clobber an existing output unless you pass
 **`--overwrite`**. A handful take
 spatial options: `bounds`, `warp`, `georeference`, `orthorectify`, and `edit-info` accept a CRS as an EPSG code,
@@ -180,7 +180,7 @@ pyramids raster import band-files red.tif green.tif blue.tif rgb.tif        # st
 pyramids raster create-empty blank.tif --rows 512 --columns 512 --epsg 4326 --cell-size 0.01
 ```
 
-**Inspect / metadata** (`--json`) — `stats` (`--exact`), `histogram`, `get-meta-data` (`--domain`),
+**Inspect / metadata** (`--json`) — `stats` (`--exact`), `histogram`, `get-metadata` (`--domain`),
 `get-attribute-table` / `set-attribute-table`, `mask-flags`, `footprint` (valid-data polygon → an optional vector
 output), `cell-area`, `domain-area`, `count-domain-cells`, `same-grid` (compare two rasters' grids), and
 `checksum` (per-band GDAL checksum for integrity / round-trip verification).
@@ -205,10 +205,10 @@ which legitimately reprojects the source onto the reference grid.
 `--json`), `read-part --bbox` (a pixel/geo window → raster), `preview --max-size` (a decimated thumbnail), `point`
 (sample at a map coordinate), `read-tile z x y` (an XYZ/Web-Mercator tile → raster).
 
-**Export / convert** — `to-bytes`, `to-cog-bytes`, `to-dataframe` (CSV / Parquet — Parquet needs `[parquet]`),
-`to-polygons` (region-dissolving vectorize), `to-raster` (band/tile/creation-option control over `convert`),
-`to-image` (PNG/JPEG via a colormap — needs `[viz]`), `to-xyz`, `to-zarr` (needs `[lazy]`), `to-stac-item`,
-`to-terrain-rgb` (Mapbox Terrain-RGB encode).
+**Export** (`raster export <fmt>`) — `bytes`, `cog-bytes`, `dataframe` (CSV / Parquet — Parquet needs
+`[parquet]`), `polygons` (region-dissolving vectorize), `raster` (band/tile/creation-option control over
+`convert`), `image` (PNG/JPEG via a colormap — needs `[viz]`), `xyz`, `zarr` (needs `[lazy]`), `stac-item`,
+`terrain-rgb` (Mapbox Terrain-RGB encode).
 
 **Plot (headless, via cleopatra)** — `plot-histogram`, `plot-vector-field`, `animate`; the Agg backend is forced so
 these run headless (`render` remains the quick-look PNG, and `contour` lives under analysis above).
@@ -424,15 +424,15 @@ Every opening verb takes a shared `--source {files,zarr,archive}` option (defaul
 STAC and point-cloud sources are deferred to the Python API.
 
 - **Inspect** — `info` (count, CRS, grid; `--json`).
-- **Time reduction** — `stats` (one reduction → one raster; `mean|sum|min|max|std|var`) and `resample`, which
+- **Time reduction** — `reduce` (one reduction → one raster; `mean|sum|min|max|std|var`) and `resample`, which
   bins the time axis to a pandas `--freq` (e.g. `1MS`, `7D`, `6h`) and reduces each window with a rich `--op`
   (`mean|sum|min|max|std|var|median|quantile|percentile|mode|trend|sens_slope`), writing one raster per window.
 - **Batch geoprocessing** (applied to every timestep) — `reproject --crs`, `crop` (`--mask` or `--bbox`/`--epsg`),
   and `align --reference` (resample each step onto a reference raster's grid).
-- **Export** — `to-file` (every step to a directory), `to-cog` (each step as its own COG), `to-netcdf` /
-  `to-zarr` (the whole `(T, B, R, C)` cube to one store), `to-kerchunk` (a reference JSON over NetCDF/HDF5
-  sources), and `merge` (mosaic every timestep into one raster, with `--bbox`/`--method`). `to-zarr` and
-  `to-kerchunk` (and the `--source zarr` opener) need the `[lazy]` extra.
+- **Export** (`collection export <fmt>`) — `file` (every step to a directory), `cog` (each step as its own COG),
+  `netcdf` / `zarr` (the whole `(T, B, R, C)` cube to one store), `kerchunk` (a reference JSON over NetCDF/HDF5
+  sources); plus `merge` at the group root (mosaic every timestep into one raster, with `--bbox`/`--method`).
+  `export zarr` and `export kerchunk` (and the `--source zarr` opener) need the `[lazy]` extra.
 
 ## UGRID mesh
 
@@ -456,7 +456,7 @@ topology to its own NetCDF), `open-mf` (concatenate several files), `mesh-names`
 `active-mask`, `histogram`, `count-domain-cells`, `domain-area`, `circumcenters`, `sparse-adjacency` (adjacency
 matrix summary / `.npz`).
 
-**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `sel-time` / `sel-time-range`, `head` /
+**Select / subset / sample** — `isel` / `sel` (by position / coordinate), `isel-time` / `isel-time-range`, `head` /
 `tail` / `thin`, `squeeze`, `isel-layer` / `sel-layer` / `collapse-layer`, `drop-sel` / `drop-isel` /
 `drop-duplicates` / `drop-variables` / `dropna`, `where` (mask by comparison), `crop` / `clip` (polygon mask or
 bbox),

@@ -18,7 +18,7 @@ the pixels they need via HTTP range requests. pyramids provides:
   Azure, and HTTPS via GDAL's virtual filesystem.
 - `DatasetCollection.to_cog_stack()` — export a temporal stack as a
   COG-per-slice directory.
-- `pyramids cog create|validate|info` — a command-line interface.
+- `pyramids raster cog create|validate|info` — a command-line interface.
 
 > **Defaults.** `to_cog` resolves the two pixel-affecting options
 > per source dtype: the **predictor** (`2` for integer rasters, `3`
@@ -498,13 +498,13 @@ info = cog_info("/vsicurl/https://host/scene.tif",  # or override explicitly
 
 ## Command line
 
-The `pyramids cog` command group exposes the common workflow from the
+The `pyramids raster cog` command group exposes the common workflow from the
 shell:
 
 ```bash
-pyramids cog create input.tif scene_cog.tif --profile zstd
-pyramids cog validate scene_cog.tif --strict
-pyramids cog info scene_cog.tif
+pyramids raster cog create input.tif scene_cog.tif --profile zstd
+pyramids raster cog validate scene_cog.tif --strict
+pyramids raster cog info scene_cog.tif
 ```
 
 `create` validates the output by default (`--no-validate` to skip);

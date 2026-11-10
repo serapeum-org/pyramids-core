@@ -22,7 +22,7 @@ Command groups (all now `pyramids <domain> [<subsystem>] <verb>`):
   management, positional/label selection & subsetting, CF/time/calendar/calculus, I/O export, and headless
   plotting (each sub-module documents its own commands; `pyramids nc --help` lists them)
 - collection (`pyramids.cli_collection`) — the full `DatasetCollection` surface:
-  `collection info|stats|resample|merge|to-file|to-cog|to-netcdf|to-zarr|to-kerchunk|reproject|crop|align`
+  `collection info|reduce|resample|merge|export {file,cog,netcdf,zarr,kerchunk}|reproject|crop|align`
   (each verb opens via `--source files|zarr|archive`)
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`
@@ -94,7 +94,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "-q",
         action="store_true",
         help="suppress informational output, e.g. 'wrote ...' (errors still print); "
-        "place it before the command, e.g. `pyramids --quiet warp ...`",
+        "place it before the command, e.g. `pyramids --quiet raster warp ...`",
     )
     parser.add_argument(
         "--format",
@@ -180,7 +180,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     Examples:
         - Inspect a COG from the shell:
             ```python
-            >>> main(["cog", "info", "scene.tif"])  # doctest: +SKIP
+            >>> main(["raster", "cog", "info", "scene.tif"])  # doctest: +SKIP
             0
 
             ```
