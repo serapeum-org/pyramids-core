@@ -7,7 +7,7 @@ writing Python. Every command has `-h/--help`:
 pyramids --help                 # list all commands
 pyramids <command> --help       # options for one command
 pyramids --version              # print the installed version
-python -m pyramids info x.tif   # the module form, equivalent to the `pyramids` script
+python -m pyramids raster info x.tif   # the module form, equivalent to the `pyramids` script
 ```
 
 Place the global **`--quiet`** (`-q`) before the command (`pyramids --quiet warp …`) to suppress the `wrote …`
@@ -57,11 +57,11 @@ to `pyramids` automatically. `pyramids plugins list` reports the installed plugi
 ## Inspect & edit metadata
 
 ```bash
-pyramids info dem.tif                 # human-readable metadata (add --json for machine output)
-pyramids info dem.tif --json
-pyramids bounds dem.tif               # bounding box; --crs 4326 reprojects the corners; --json for JSON
-pyramids edit-info dem.tif --crs 4326 --nodata -9999 --tag units=m   # edit CRS / nodata / tags in place
-pyramids blocks dem.tif --json        # native block (tile) windows; --band N (0-based, default 0)
+pyramids raster info dem.tif                 # human-readable metadata (add --json for machine output)
+pyramids raster info dem.tif --json
+pyramids raster bounds dem.tif               # bounding box; --crs 4326 reprojects the corners; --json for JSON
+pyramids raster edit-info dem.tif --crs 4326 --nodata -9999 --tag units=m   # edit CRS / nodata / tags in place
+pyramids raster blocks dem.tif --json        # native block (tile) windows; --band N (0-based, default 0)
 ```
 
 - **`info`** — print raster metadata (`--json` for a machine-readable dump).
@@ -73,12 +73,12 @@ pyramids blocks dem.tif --json        # native block (tile) windows; --band N (0
 ## Convert, warp, clip, merge, overviews
 
 ```bash
-pyramids convert in.asc out.tif                       # re-encode; --driver GTiff to force a driver
-pyramids warp in.tif out.tif --crs 4326 --resampling bilinear
-pyramids clip in.tif out.tif --bbox 440000 475000 480000 515000    # or: --vector aoi.geojson
-pyramids merge tileA.tif tileB.tif tileC.tif mosaic.tif            # two or more inputs, last arg = output
-pyramids merge tileA.tif tileB.tif aoi.tif --bbox 4.1 51.9 4.6 52.2 --bbox-crs 4326   # read only the window
-pyramids overview dem.tif --levels 2 4 8 --resampling average      # build image pyramids IN PLACE
+pyramids raster convert in.asc out.tif                       # re-encode; --driver GTiff to force a driver
+pyramids raster warp in.tif out.tif --crs 4326 --resampling bilinear
+pyramids raster crop in.tif out.tif --bbox 440000 475000 480000 515000    # or: --vector aoi.geojson
+pyramids raster merge tileA.tif tileB.tif tileC.tif mosaic.tif            # two or more inputs, last arg = output
+pyramids raster merge tileA.tif tileB.tif aoi.tif --bbox 4.1 51.9 4.6 52.2 --bbox-crs 4326   # read only the window
+pyramids raster overview dem.tif --levels 2 4 8 --resampling average      # build image pyramids IN PLACE
 ```
 
 - **`convert`** — re-save a raster in another format (driver inferred from the extension, or `--driver`).
@@ -97,9 +97,9 @@ pyramids overview dem.tif --levels 2 4 8 --resampling average      # build image
 ## Cloud-Optimized GeoTIFF
 
 ```bash
-pyramids cog create in.tif out.cog.tif --profile zstd --blocksize 512   # write + auto-validate
-pyramids cog validate out.cog.tif --strict                              # --strict: warnings are errors
-pyramids cog info out.cog.tif                                           # structured COG layout / overviews
+pyramids raster cog create in.tif out.cog.tif --profile zstd --blocksize 512   # write + auto-validate
+pyramids raster cog validate out.cog.tif --strict                              # --strict: warnings are errors
+pyramids raster cog info out.cog.tif                                           # structured COG layout / overviews
 ```
 
 `cog create` profiles: `deflate`, `zstd`, `lzw`, `webp`, `jpeg`, `lerc`, `lerc_deflate`, `lerc_zstd`,
@@ -109,13 +109,13 @@ See the [COG CLI reference](cog/cli.md) for the full option set.
 ## Band math
 
 ```bash
-pyramids calc '(A - B) / (A + B)' nir.tif red.tif ndvi.tif --dtype float32
+pyramids raster calc '(A - B) / (A + B)' nir.tif red.tif ndvi.tif --dtype float32
 ```
 
 - **`calc`** — evaluate an expression over inputs `A, B, …` (the operands, in order) into a new raster; the
   **last** operand is the output path. `--dtype` sets the output NumPy dtype. Every input must already sit on
   the first one's grid — `calc` does not resample, and refuses a mismatch rather than writing the answer on
-  a grid the inputs never agreed on. Warp them onto a common grid first (`pyramids warp`). An input carrying
+  a grid the inputs never agreed on. Warp them onto a common grid first (`pyramids raster warp`). An input carrying
   no CRS tag at all is compared on its pixel grid alone, so an untagged mask or QA layer that sits on the
   template's cells still works. The output's no-data value is `-9999` whatever the inputs declare — or, when
   the output dtype cannot hold `-9999`, that dtype's own fallback (`255` for `uint8`, `65535` for `uint16`), which
@@ -127,12 +127,12 @@ pyramids calc '(A - B) / (A + B)' nir.tif red.tif ndvi.tif --dtype float32
 
 ```bash
 # Fit a transform through ground-control points (pixel/line -> map x/y)
-pyramids georeference raw.tif out.tif \
+pyramids raster georeference raw.tif out.tif \
     --gcp 0 0 100000 500000 --gcp 512 0 105000 500000 --gcp 0 512 100000 495000 \
     --gcp-crs 32636 --transform polynomial --order 1 --to-crs 4326
 
 # Orthorectify from the raster's RPC sensor model (needs a DEM or a constant height)
-pyramids orthorectify scene.tif ortho.tif --dem dem.tif --to-crs 4326
+pyramids raster orthorectify scene.tif ortho.tif --dem dem.tif --to-crs 4326
 ```
 
 - **`georeference`** — warp from repeatable `--gcp PIXEL LINE X Y` points (with `--gcp-crs`); `--transform`
@@ -142,9 +142,9 @@ pyramids orthorectify scene.tif ortho.tif --dem dem.tif --to-crs 4326
 ## Raster ↔ vector
 
 ```bash
-pyramids rasterize parcels.geojson parcels.tif --cell-size 10 --column value   # or --like template.tif
-pyramids shapes classes.tif classes.geojson --geometry polygon                 # vectorize (one feature/cell)
-pyramids sample dem.tif --points "440000,510000;450000,505000" --json          # read values at points
+pyramids raster rasterize parcels.geojson parcels.tif --cell-size 10 --column value   # or --like template.tif
+pyramids raster shapes classes.tif classes.geojson --geometry polygon                 # vectorize (one feature/cell)
+pyramids raster sample dem.tif --points "440000,510000;450000,505000" --json          # read values at points
 ```
 
 - **`rasterize`** — burn a vector into a new raster; set `--cell-size` **or** adopt a template grid with
@@ -156,7 +156,7 @@ pyramids sample dem.tif --points "440000,510000;450000,505000" --json          #
 ## Quick-look render
 
 ```bash
-pyramids render dem.tif quicklook.png --band 0 --title "DEM" --dpi 150   # headless PNG via cleopatra
+pyramids raster render dem.tif quicklook.png --band 0 --title "DEM" --dpi 150   # headless PNG via cleopatra
 ```
 
 - **`render`** — save a PNG preview of a raster. Plotting goes through
@@ -176,8 +176,8 @@ zip/tar/gzip), `from-zarr` (needs the `[lazy]` extra), and the blank-canvas cons
 `empty-like`, `dataset-like` (stamp a template's georeference onto a `.npy` array).
 
 ```bash
-pyramids from-band-files red.tif green.tif blue.tif rgb.tif        # stack bands into one raster
-pyramids create-empty blank.tif --rows 512 --columns 512 --epsg 4326 --cell-size 0.01
+pyramids raster import band-files red.tif green.tif blue.tif rgb.tif        # stack bands into one raster
+pyramids raster create-empty blank.tif --rows 512 --columns 512 --epsg 4326 --cell-size 0.01
 ```
 
 **Inspect / metadata** (`--json`) — `stats` (`--exact`), `histogram`, `get-meta-data` (`--domain`),
@@ -249,8 +249,8 @@ existing method. Writes refuse to clobber without `--overwrite`.
 `set-precision`.
 
 ```bash
-pyramids vector buffer gauges.geojson buf.geojson --distance 500
-pyramids vector simplify coast.geojson simple.geojson --tolerance 10
+pyramids vector geom buffer gauges.geojson buf.geojson --distance 500
+pyramids vector geom simplify coast.geojson simple.geojson --tolerance 10
 ```
 
 **Overlay / set ops** (need a second layer) — `intersection` / `difference` / `symmetric-difference` / `union`
@@ -259,8 +259,8 @@ pyramids vector simplify coast.geojson simple.geojson --tolerance 10
 --predicate <contains|within|intersects|covers|covered-by|crosses|disjoint|overlaps|touches|dwithin> --mask`.
 
 ```bash
-pyramids vector overlay parcels.geojson zones.geojson out.geojson --right zones.geojson --how intersection
-pyramids vector filter parcels.geojson in_aoi.geojson --predicate intersects --mask aoi.geojson
+pyramids vector overlay overlay parcels.geojson zones.geojson out.geojson --right zones.geojson --how intersection
+pyramids vector overlay filter parcels.geojson in_aoi.geojson --predicate intersects --mask aoi.geojson
 ```
 
 **Tessellation / binning / sampling** — `voronoi-polygons`, `delaunay-triangles`,
@@ -276,8 +276,8 @@ from the geopandas-delegated `voronoi-polygons`), `quadtree` (adaptive quad-tree
 (a CSV with a WKT `--geometry` column), and `read-gpx` (every non-empty GPX sub-layer → one multi-layer file).
 
 ```bash
-pyramids vector voronoi stations.geojson cells.geojson --values rainfall --clip aoi.geojson
-pyramids vector interpolate-to-raster stations.geojson surface.tif --column rainfall --cell-size 100
+pyramids vector tess voronoi stations.geojson cells.geojson --values rainfall --clip aoi.geojson
+pyramids vector tess interpolate-to-raster stations.geojson surface.tif --column rainfall --cell-size 100
 ```
 
 **Measurements** (print; `--json`) — `geodesic-area` / `geodesic-length` / `geodesic-distance`, `distance`,
@@ -308,11 +308,11 @@ existing output unless you pass `--overwrite`.
 
 ```bash
 pyramids nc info climate.nc --json              # variables, dimensions, CRS, bounds, time axis
-pyramids nc summary climate.nc --vars tas pr    # per-variable statistics (count/min/max/mean/std)
-pyramids nc metadata climate.nc --json          # the full metadata record
+pyramids nc inspect summary climate.nc --vars tas pr    # per-variable statistics (count/min/max/mean/std)
+pyramids nc inspect metadata climate.nc --json          # the full metadata record
 pyramids nc list-vars climate.nc                # variables GDAL can expose as rasters
-pyramids nc dim-values climate.nc --dim lat     # a dimension's coordinate values
-pyramids nc time-values climate.nc --json       # the formatted time-axis labels
+pyramids nc inspect dim-values climate.nc --dim lat     # a dimension's coordinate values
+pyramids nc inspect time-values climate.nc --json       # the formatted time-axis labels
 ```
 
 - **`nc info --full`** adds the per-variable detail to the summary; **`nc time-values --raw`** emits the raw
@@ -322,14 +322,14 @@ pyramids nc time-values climate.nc --json       # the formatted time-axis labels
 
 ```bash
 pyramids nc sel climate.nc out.nc --time 2020-06-15 --var tas   # one time step (exact date label)
-pyramids nc isel climate.nc out.nc --index time=0              # select by integer position
+pyramids nc select isel climate.nc out.nc --index time=0              # select by integer position
 pyramids nc crop climate.nc out.nc --bbox 4.1 51.9 4.6 52.2    # spatial subset (file CRS)
-pyramids nc thin climate.nc out.nc --step time=2               # keep every Nth step
-pyramids nc head climate.nc out.nc --count time=3              # first N along a dimension (also: tail)
-pyramids nc drop-sel climate.nc out.nc --label time=2020-06-15 # drop by label (also: drop-isel by index)
-pyramids nc drop-duplicates climate.nc out.nc --dim time       # drop duplicate coordinates
-pyramids nc dropna climate.nc out.nc --dim time --how all      # drop empty slices
-pyramids nc pad climate.nc out.nc --width time=2 --mode constant --value 0
+pyramids nc select thin climate.nc out.nc --step time=2               # keep every Nth step
+pyramids nc select head climate.nc out.nc --count time=3              # first N along a dimension (also: tail)
+pyramids nc select drop-sel climate.nc out.nc --label time=2020-06-15 # drop by label (also: drop-isel by index)
+pyramids nc select drop-duplicates climate.nc out.nc --dim time       # drop duplicate coordinates
+pyramids nc select dropna climate.nc out.nc --dim time --how all      # drop empty slices
+pyramids nc select pad climate.nc out.nc --width time=2 --mode constant --value 0
 ```
 
 - **`nc sel`** matches by a `--time` date label (sub-daily axes may match several steps); `info`/`sel` assume the
@@ -341,14 +341,14 @@ pyramids nc pad climate.nc out.nc --width time=2 --mode constant --value 0
 
 ```bash
 pyramids nc extract climate.nc t2m.tif --var tas          # one variable -> a georeferenced raster
-pyramids nc rename-var climate.nc out.nc --old tas --new t2m
-pyramids nc remove-var climate.nc out.nc --var msk_rgn
-pyramids nc reproject-var climate.nc out.nc --var tas --epsg 3857
-pyramids nc resample-var climate.nc out.nc --var tas --cell-size 1.0
-pyramids nc rename-dims climate.nc out.nc --map lat=y lon=x
-pyramids nc drop-dims climate.nc out.nc --dims bnds
-pyramids nc set-coords climate.nc out.nc --names lat lon    # also: reset-coords
-pyramids nc squeeze climate.nc out.nc --dim time            # drop length-one dimensions
+pyramids nc vars rename-var climate.nc out.nc --old tas --new t2m
+pyramids nc vars remove-var climate.nc out.nc --var msk_rgn
+pyramids nc vars reproject-var climate.nc out.nc --var tas --epsg 3857
+pyramids nc vars resample-var climate.nc out.nc --var tas --cell-size 1.0
+pyramids nc vars rename-dims climate.nc out.nc --map lat=y lon=x
+pyramids nc vars drop-dims climate.nc out.nc --dims bnds
+pyramids nc vars set-coords climate.nc out.nc --names lat lon    # also: reset-coords
+pyramids nc vars squeeze climate.nc out.nc --dim time            # drop length-one dimensions
 ```
 
 **Variable mutation** (each writes a new NetCDF) — `add-var --source` (copy variables in from another NetCDF),
@@ -359,16 +359,16 @@ vector mask), `expand-dims --var --dim` (lift a variable onto a new band dimensi
 **CF / time / calendar / calculus** (each writes a new NetCDF)
 
 ```bash
-pyramids nc convert-calendar climate.nc out.nc --calendar noleap
-pyramids nc interp-calendar climate.nc out.nc --target other.nc
-pyramids nc groupby-bins climate.nc out.nc --dim time --bins 4 --how mean
-pyramids nc rolling climate.nc out.nc --dim time --window 3 --how mean   # also: rolling-exp --alpha
-pyramids nc shift climate.nc out.nc --dim time --periods 1
-pyramids nc integrate climate.nc out.nc --dim time          # also: cumulative-integrate, differentiate
-pyramids nc polyfit climate.nc out.nc --dim time --deg 2
-pyramids nc interp climate.nc out.nc --coord plev=50000 --method linear
-pyramids nc interpolate-na climate.nc out.nc --dim time
-pyramids nc reduce climate.nc out.nc --dim time --how mean
+pyramids nc calc convert-calendar climate.nc out.nc --calendar noleap
+pyramids nc calc interp-calendar climate.nc out.nc --target other.nc
+pyramids nc calc groupby-bins climate.nc out.nc --dim time --bins 4 --how mean
+pyramids nc calc rolling climate.nc out.nc --dim time --window 3 --how mean   # also: rolling-exp --alpha
+pyramids nc calc shift climate.nc out.nc --dim time --periods 1
+pyramids nc calc integrate climate.nc out.nc --dim time          # also: cumulative-integrate, differentiate
+pyramids nc calc polyfit climate.nc out.nc --dim time --deg 2
+pyramids nc calc interp climate.nc out.nc --coord plev=50000 --method linear
+pyramids nc calc interpolate-na climate.nc out.nc --dim time
+pyramids nc calc reduce climate.nc out.nc --dim time --how mean
 ```
 
 **More reductions & interpolation** (each writes a new NetCDF) — `coarsen --dim --window --how` (block-reduce a
@@ -389,18 +389,18 @@ dimension), `merge --inputs` (put several cubes' variables together).
 **I/O export**
 
 ```bash
-pyramids nc convert climate.nc out.nc           # re-write as a NetCDF
-pyramids nc to-dataframe climate.nc out.csv --vars tas
-pyramids nc to-dict climate.nc --json           # structure (add --data for the arrays)
-pyramids nc to-zarr climate.nc out.zarr --var tas   # per-variable Zarr store (needs the [lazy] extra)
+pyramids nc io convert climate.nc out.nc           # re-write as a NetCDF
+pyramids nc io to-dataframe climate.nc out.csv --vars tas
+pyramids nc io to-dict climate.nc --json           # structure (add --data for the arrays)
+pyramids nc io to-zarr climate.nc out.zarr --var tas   # per-variable Zarr store (needs the [lazy] extra)
 ```
 
 **Plot** (headless PNG/animation via cleopatra; the Agg backend is forced)
 
 ```bash
-pyramids nc plot climate.nc map.png --var tas --kind contour
-pyramids nc plot-histogram climate.nc hist.png --var tas
-pyramids nc animate climate.nc anim.gif --var tas --dim time --fps 4
+pyramids nc plot plot climate.nc map.png --var tas --kind contour
+pyramids nc plot plot-histogram climate.nc hist.png --var tas
+pyramids nc plot animate climate.nc anim.gif --var tas --dim time --fps 4
 ```
 
 Not exposed as one-shot CLI verbs (use Python): `where`/`isin` (boolean-array conditions), `convert-units`
@@ -414,7 +414,7 @@ raster ops on a NetCDF plane (warp, slope, COG, …) are the top-level raster co
 
 ```bash
 pyramids collection info "tiles/*.tif" --json                # count, CRS, grid of a co-registered stack
-pyramids collection stats "tiles/*.tif" mean.tif --reduce mean   # time reduction (mean|sum|min|max|std|var)
+pyramids collection reduce "tiles/*.tif" mean.tif --reduce mean   # time reduction (mean|sum|min|max|std|var)
 pyramids collection resample "tiles/*.tif" monthly/ --freq 1MS --op mean   # calendar-frequency binning
 ```
 
@@ -445,7 +445,7 @@ verbs take `--json`. The original Phase-1 `extract` (rasterize onto a `--like` g
 pyramids mesh info mesh.nc --json                            # node/face/edge counts, CRS, bounds, variables
 pyramids mesh extract mesh.nc z.tif --like grid.tif --var mesh2d_node_z   # rasterize a variable onto a grid
 pyramids mesh convert mesh.nc mesh.gpkg --var mesh2d_node_z --location node  # mesh -> vector
-pyramids mesh sample-point mesh.nc --var mesh2d_node_z --x 4.1 4.6 --y 51.9 52.2 --json  # sample at x/y
+pyramids mesh analysis sample-point mesh.nc --var mesh2d_node_z --x 4.1 4.6 --y 51.9 52.2 --json  # sample at x/y
 ```
 
 **Read / construct** — `from-arrays` (node/face `.npy` arrays), `from-structured` (a quad mesh from a raster),
@@ -514,14 +514,14 @@ pyramids fetch wfs https://example/ows roads.geojson --typename topp:roads --bbo
 ## Run one tool, or a pipeline
 
 ```bash
-pyramids tools                                               # list the registered processing tools
-pyramids tool slope                                          # one tool's parameter schema
-pyramids apply slope dem.tif slope.tif --set units=degrees   # run a single tool, no YAML needed
-pyramids run pipeline.yaml --inputs a.tif b.tif --out ./out --manifest run.yaml   # batch + provenance
+pyramids process tool list                                               # list the registered processing tools
+pyramids process tool show slope                                          # one tool's parameter schema
+pyramids process apply slope dem.tif slope.tif --set units=degrees   # run a single tool, no YAML needed
+pyramids process run pipeline.yaml --inputs a.tif b.tif --out ./out --manifest run.yaml   # batch + provenance
 ```
 
 - **`apply`** runs one registered tool over a single input into an explicit output, taking typed `--set KEY=VALUE`
-  parameters (discover them with `pyramids tool NAME`).
+  parameters (discover them with `pyramids process tool show NAME`).
 - **`run`** batches a pipeline YAML over one or more `--inputs` (paths or a glob) into `--out`; `--manifest` writes a
   reproducible recipe plus per-input timings, and `--parallel` runs the batch across a process pool.
 
