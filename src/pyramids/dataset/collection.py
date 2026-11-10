@@ -1723,14 +1723,20 @@ class DatasetCollection:
         # round-trip never lands on a nonexistent/ambiguous wall time.
         tz = index.tz
         anchored_tz = origin is not None and tz is not None
-        group_index = index.tz_convert("UTC").tz_localize(None) if anchored_tz else index
+        group_index = (
+            index.tz_convert("UTC").tz_localize(None) if anchored_tz else index
+        )
         positions = pd.Series(np.arange(len(index)), index=group_index)
         window_labels: list[Any] = [None] * len(index)
         grouper_kwargs: dict[str, Any] = {"freq": freq}
         if origin is not None:
             grouper_kwargs["origin"] = _normalize_origin(origin, tz)
         for window_key, members in positions.groupby(pd.Grouper(**grouper_kwargs)):
-            label = window_key.tz_localize("UTC").tz_convert(tz) if anchored_tz else window_key
+            label = (
+                window_key.tz_localize("UTC").tz_convert(tz)
+                if anchored_tz
+                else window_key
+            )
             for pos in members.to_numpy():
                 window_labels[int(pos)] = label
 

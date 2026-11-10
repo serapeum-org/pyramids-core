@@ -302,7 +302,9 @@ class TestReduceTime:
             utc=True,
         )
         span_days = (times.max() - times.min()).days + 1
-        result = coll.reduce_time(times, freq=f"{span_days}D", op="mean", origin=times.min())
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
         assert len(result) == 1, "a tz-aware Timestamp origin should collapse the span"
         label, ds = result[0]
         assert label.tz is not None, "a tz-aware index keeps tz-aware window labels"
@@ -327,7 +329,9 @@ class TestReduceTime:
             ]
         )
         span_days = (times.max() - times.min()).days + 1
-        result = coll.reduce_time(times, freq=f"{span_days}D", op="mean", origin=times.min())
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
         assert len(result) == 1, "a naive Timestamp origin should collapse the span"
         label, ds = result[0]
         assert label.tz is None, "a naive index keeps naive window labels"
@@ -355,7 +359,10 @@ class TestReduceTime:
         )
         span_days = (times.max() - times.min()).days + 1
         result = coll.reduce_time(
-            times, freq=f"{span_days}D", op="mean", origin=pd.Timestamp("2022-01-01 20:00")
+            times,
+            freq=f"{span_days}D",
+            op="mean",
+            origin=pd.Timestamp("2022-01-01 20:00"),
         )
         assert len(result) == 1, "a naive origin (read as UTC) collapses the span"
         assert result[0][0] == times.min(), "anchored on the UTC minimum"
@@ -384,7 +391,9 @@ class TestReduceTime:
             op="mean",
             origin=pd.Timestamp("2022-01-01 20:00", tz="UTC"),
         )
-        assert len(result) == 1, "a tz-aware origin reduced to wall time collapses the span"
+        assert len(result) == 1, (
+            "a tz-aware origin reduced to wall time collapses the span"
+        )
         assert result[0][0] == times.min(), "anchored on the naive minimum"
 
     @requires_lazy
@@ -406,11 +415,15 @@ class TestReduceTime:
             ]
         ).tz_localize("Etc/GMT-5")
         span_days = (times.max() - times.min()).days + 1
-        result = coll.reduce_time(times, freq=f"{span_days}D", op="mean", origin=times.min())
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
         assert len(result) == 1, "origin should collapse the span for a +05 index"
         label, _ = result[0]
         assert label.tz is not None, "the +05 offset is preserved on the label"
-        assert label == times.min(), "the window label is the anchor instant, offset intact"
+        assert label == times.min(), (
+            "the window label is the anchor instant, offset intact"
+        )
 
     @requires_lazy
     def test_origin_on_named_dst_zone_does_not_crash(self, daily_files):
@@ -464,7 +477,9 @@ class TestReduceTime:
         )
         result = coll.reduce_time(times, freq="3D", op="mean")
         assert len(result) == 2, "default anchoring is unchanged → still two windows"
-        assert all(label.tz is not None for label, _ in result), "default labels stay tz-aware"
+        assert all(label.tz is not None for label, _ in result), (
+            "default labels stay tz-aware"
+        )
 
     @requires_lazy
     def test_unparseable_string_raises_friendly_error(self, daily_files):
