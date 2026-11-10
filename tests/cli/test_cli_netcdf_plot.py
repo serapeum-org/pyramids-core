@@ -22,7 +22,7 @@ class TestNcPlot:
     def test_writes_png(self, tmp_path):
         """plot saves a non-empty PNG for a variable."""
         out = tmp_path / "map.png"
-        assert main(["nc", "plot", str(_NC), str(out), "--var", "tas"]) == 0
+        assert main(["nc", "plot", "plot", str(_NC), str(out), "--var", "tas"]) == 0
         assert out.exists()
         assert out.stat().st_size > 0
 
@@ -31,7 +31,17 @@ class TestNcPlot:
         out = tmp_path / "contour.png"
         assert (
             main(
-                ["nc", "plot", str(_NC), str(out), "--var", "tas", "--kind", "contour"]
+                [
+                    "nc",
+                    "plot",
+                    "plot",
+                    str(_NC),
+                    str(out),
+                    "--var",
+                    "tas",
+                    "--kind",
+                    "contour",
+                ]
             )
             == 0
         )
@@ -40,12 +50,14 @@ class TestNcPlot:
     def test_refuses_existing(self, tmp_path):
         """A second plot without --overwrite is refused."""
         out = str(tmp_path / "map.png")
-        assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 0
-        assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 1
+        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 0
+        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 1
 
     def test_unknown_variable_errors_cleanly(self, tmp_path, capsys):
         """An unknown --var exits 1 with a clean error, not the catch-all."""
-        rc = main(["nc", "plot", str(_NC), str(tmp_path / "o.png"), "--var", "nope"])
+        rc = main(
+            ["nc", "plot", "plot", str(_NC), str(tmp_path / "o.png"), "--var", "nope"]
+        )
         err = capsys.readouterr().err
         assert rc == 1
         assert "unexpected failure" not in err
@@ -55,7 +67,7 @@ class TestNcPlot:
         """A pre-set interactive backend is overridden to Agg and the PNG still renders."""
         monkeypatch.setenv("MPLBACKEND", "TkAgg")
         out = str(tmp_path / "forced.png")
-        assert main(["nc", "plot", str(_NC), out, "--var", "tas"]) == 0
+        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 0
         assert os.environ["MPLBACKEND"] == "Agg"
         assert os.path.exists(out)
         assert os.path.getsize(out) > 0
@@ -67,7 +79,10 @@ class TestNcPlotHistogram:
     def test_writes_png(self, tmp_path):
         """plot-histogram saves a non-empty PNG of a variable's distribution."""
         out = tmp_path / "hist.png"
-        assert main(["nc", "plot-histogram", str(_NC), str(out), "--var", "tas"]) == 0
+        assert (
+            main(["nc", "plot", "plot-histogram", str(_NC), str(out), "--var", "tas"])
+            == 0
+        )
         assert out.stat().st_size > 0
 
 
@@ -81,6 +96,7 @@ class TestNcAnimate:
             main(
                 [
                     "nc",
+                    "plot",
                     "animate",
                     str(_NC_TIME),
                     str(out),
@@ -99,7 +115,17 @@ class TestNcAnimate:
         """An unknown --dim exits 1 with a clean error, not the catch-all (H2)."""
         out = str(tmp_path / "o.gif")
         rc = main(
-            ["nc", "animate", str(_NC_TIME), out, "--var", "tos", "--dim", "nope"]
+            [
+                "nc",
+                "plot",
+                "animate",
+                str(_NC_TIME),
+                out,
+                "--var",
+                "tos",
+                "--dim",
+                "nope",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1

@@ -20,6 +20,7 @@ import io
 import json
 from typing import Any
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import (
     emit,
     info_print,
@@ -301,9 +302,13 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_crop.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_crop.set_defaults(func=_cmd_nc_crop)
 
-    add_nc_inspect_commands(ncsub)
-    add_nc_vars_commands(ncsub)
-    add_nc_select_commands(ncsub)
-    add_nc_cftime_commands(ncsub)
-    add_nc_io_commands(ncsub)
-    add_nc_plot_commands(ncsub)
+    add_nc_inspect_commands(
+        add_group(ncsub, "inspect", "summaries, metadata, dim/time values")
+    )
+    add_nc_vars_commands(add_group(ncsub, "vars", "variable and dimension management"))
+    add_nc_select_commands(
+        add_group(ncsub, "select", "positional/label selection and subsetting")
+    )
+    add_nc_cftime_commands(add_group(ncsub, "calc", "CF/time/calendar and calculus"))
+    add_nc_io_commands(add_group(ncsub, "io", "format I/O and conversion"))
+    add_nc_plot_commands(add_group(ncsub, "plot", "headless plotting"))
