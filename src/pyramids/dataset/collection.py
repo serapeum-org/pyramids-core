@@ -256,14 +256,15 @@ class _GroupedCollection:
 def _coerce_time_index(time_list: list[Any]) -> pd.DatetimeIndex:
     """Parse per-timestep timestamps into a ``DatetimeIndex``, tolerant of mixed formats.
 
-    A plain ``pd.to_datetime`` infers one format from the first element and then
-    raises on any element that does not match it — so a list of timestamp strings
-    that mixes fractional and whole seconds (common for satellite scene stacks,
-    e.g. ``"…09:41:12.345000+00"`` next to ``"…09:43:06+00"``) fails. Datetime-like
-    inputs (``datetime``, ``Timestamp``, ``DatetimeIndex``) and single-format string
-    lists parse directly; only when that raises do we re-parse each element with
-    ``format="mixed"``, falling back to ``utc=True`` when the strings carry differing
-    UTC offsets (which ``format="mixed"`` alone refuses to combine).
+    The :class:`pandas.DatetimeIndex` constructor parses each element on its own,
+    so it already copes with datetime-like inputs and with string lists that mix
+    precisions (fractional vs. whole seconds, common in satellite scene stacks,
+    e.g. ``"…09:41:12.345000+00"`` next to ``"…09:43:06+00"``) — unlike a bare
+    ``pd.to_datetime(time_list)``, which infers one format from the first element
+    and then raises on the first that does not match. The only case the
+    constructor cannot handle is strings that carry **differing** UTC offsets (or a
+    naive/aware mix); those are re-parsed with ``format="mixed", utc=True`` to
+    combine them into a single tz-aware index.
 
     Args:
         time_list: The per-timestep timestamps, already materialised as a list.
@@ -274,12 +275,7 @@ def _coerce_time_index(time_list: list[Any]) -> pd.DatetimeIndex:
     try:
         index = pd.DatetimeIndex(time_list)
     except (ValueError, TypeError):
-        try:
-            index = pd.DatetimeIndex(pd.to_datetime(time_list, format="mixed"))
-        except (ValueError, TypeError):
-            index = pd.DatetimeIndex(
-                pd.to_datetime(time_list, format="mixed", utc=True)
-            )
+        index = pd.DatetimeIndex(pd.to_datetime(time_list, format="mixed", utc=True))
     return index
 
 
@@ -1636,6 +1632,12 @@ class DatasetCollection:
                 ```python
                 >>> p90 = coll.reduce_time(times, freq="1YS", op="percentile", q=90)  # doctest: +SKIP
                 >>> slope = coll.reduce_time(times, freq="1YS", op="trend")  # doctest: +SKIP
+
+                ```
+            - Anchor a span-wide window on ``times.min()`` so it stays a single
+              bucket instead of splitting on an epoch-aligned boundary:
+                ```python
+                >>> span = coll.reduce_time(times, freq="30D", op="median", origin="start")  # doctest: +SKIP
 
                 ```
         """

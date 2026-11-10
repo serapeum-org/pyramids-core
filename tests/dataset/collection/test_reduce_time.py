@@ -224,6 +224,64 @@ class TestReduceTime:
         )
 
     @requires_lazy
+    def test_accepts_strings_with_differing_utc_offsets(self, daily_files):
+        """Timestamps carrying different UTC offsets parse to one tz-aware index.
+
+        Test scenario:
+            A list whose elements use ``+00``, ``+05`` and ``-03`` cannot be
+            combined by the DatetimeIndex constructor; the fallback re-parses
+            with ``utc=True``. All four map to January in UTC, so ``freq='1MS'``
+            yields a single window whose mean of 0,1,2,3 is 1.5.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022/01/01 09:00:00+00",
+            "2022/01/08 09:00:00+05",
+            "2022/01/15 09:00:00-03",
+            "2022/01/22 09:00:00+00",
+        ]
+        result = coll.reduce_time(times, freq="1MS", op="mean")
+        assert len(result) == 1, "all four map to one January month in UTC"
+        label, ds = result[0]
+        assert label.tz is not None, "mixed-offset parse should yield a tz-aware label"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), (
+            "mean(0,1,2,3) should be 1.5"
+        )
+
+    @requires_lazy
+    def test_origin_start_on_naive_times(self, daily_files):
+        """origin='start' also anchors bins for a timezone-naive index.
+
+        Test scenario:
+            The straddling-span case with naive (no-offset) timestamps. The
+            default anchor splits it into two windows; ``origin='start'`` anchors
+            on ``times.min()`` and collapses it to one. Exercises the branch where
+            no timezone re-attachment is needed.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022-01-01 20:00",
+            "2022-01-02 00:00",
+            "2022-01-03 00:00",
+            "2022-01-04 05:00",
+        ]
+        parsed = pd.to_datetime(times)
+        assert parsed.tz is None, "fixture inputs must be timezone-naive"
+        span_days = (parsed.max() - parsed.min()).days + 1
+        freq = f"{span_days}D"
+
+        default = coll.reduce_time(times, freq=freq, op="mean")
+        assert len(default) == 2, "epoch-anchored bins split the naive straddling span"
+
+        anchored = coll.reduce_time(times, freq=freq, op="mean", origin="start")
+        assert len(anchored) == 1, "origin='start' collapses the span to one window"
+        label, ds = anchored[0]
+        assert label.tz is None, "a naive index keeps naive window labels"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), (
+            "one window → mean(0,1,2,3) = 1.5"
+        )
+
+    @requires_lazy
     def test_invalid_op_raises(self, daily_files, daily_times):
         """An unsupported op raises ValueError before any reduction.
 
