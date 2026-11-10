@@ -1,5 +1,35 @@
 ﻿# Change log
 
+## 0.76.0 (2026-11-09)
+
+### BREAKING CHANGE
+
+- Dataset.zonal_stats now returns a geopandas.GeoDataFrame
+(with a geometry column) instead of a plain pandas.DataFrame. GeoDataFrame
+subclasses DataFrame, so column access, to_csv and to_dict keep working;
+select the stat columns (for example df[["mean"]]) if a geometry-free frame
+is required.
+- multi_geom_handler, explode_gdf, geometry_collection_coords,
+get_xy_coords, get_point_coords, get_line_coords, get_poly_coords, get_coords
+and FeatureCollection.column are no longer public. Use GeometryCoords for
+coordinate access, FeatureCollection.explode to explode multi-part geometries,
+FeatureCollection.from_xyz to build point layers, and .columns for the column
+list. point_collection is deprecated and will be removed in a future release.
+- DatasetCollection.first() and .last() now return a
+Dataset instead of a 2-D numpy array. Call .read_array(band=0) on the
+returned Dataset to get the previous array.
+
+### Feat
+
+- **dataset**: zonal_stats accepts raster-category zones and returns a GeoDataFrame (#1509)
+- **cli**: add cross-cutting CLI ergonomics (--format, config file, --progress, plugins, completion) (#1494)
+
+### Refactor
+
+- **netcdf**: one sel/isel selection surface, and *_names accessors (#1499)
+- **feature**: privatise internal geometry helpers behind GeometryCoords (#1503)
+- **dataset**: deprecate to_raster alias; first/last return Dataset (#1497)
+
 ## 0.75.0 (2026-11-08)
 
 ### BREAKING CHANGE
