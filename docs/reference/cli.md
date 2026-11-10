@@ -61,7 +61,7 @@ pyramids raster info dem.tif                 # human-readable metadata (add --js
 pyramids raster info dem.tif --json
 pyramids raster bounds dem.tif               # bounding box; --crs 4326 reprojects the corners; --json for JSON
 pyramids raster edit-info dem.tif --crs 4326 --nodata -9999 --tag units=m   # edit CRS / nodata / tags in place
-pyramids raster blocks dem.tif --json        # native block (tile) windows; --band N (0-based, default 0)
+pyramids raster advanced blocks dem.tif --json        # native block (tile) windows; --band N (0-based, default 0)
 ```
 
 - **`info`** — print raster metadata (`--json` for a machine-readable dump).
@@ -326,10 +326,10 @@ pyramids nc select isel climate.nc out.nc --index time=0              # select b
 pyramids nc crop climate.nc out.nc --bbox 4.1 51.9 4.6 52.2    # spatial subset (file CRS)
 pyramids nc select thin climate.nc out.nc --step time=2               # keep every Nth step
 pyramids nc select head climate.nc out.nc --count time=3              # first N along a dimension (also: tail)
-pyramids nc select drop-sel climate.nc out.nc --label time=2020-06-15 # drop by label (also: drop-isel by index)
-pyramids nc select drop-duplicates climate.nc out.nc --dim time       # drop duplicate coordinates
+pyramids nc advanced drop-sel climate.nc out.nc --label time=2020-06-15 # drop by label (also: drop-isel by index)
+pyramids nc advanced drop-duplicates climate.nc out.nc --dim time       # drop duplicate coordinates
 pyramids nc select dropna climate.nc out.nc --dim time --how all      # drop empty slices
-pyramids nc select pad climate.nc out.nc --width time=2 --mode constant --value 0
+pyramids nc advanced pad climate.nc out.nc --width time=2 --mode constant --value 0
 ```
 
 - **`nc sel`** matches by a `--time` date label (sub-daily axes may match several steps); `info`/`sel` assume the
@@ -345,10 +345,10 @@ pyramids nc vars rename-var climate.nc out.nc --old tas --new t2m
 pyramids nc vars remove-var climate.nc out.nc --var msk_rgn
 pyramids nc vars reproject-var climate.nc out.nc --var tas --epsg 3857
 pyramids nc vars resample-var climate.nc out.nc --var tas --cell-size 1.0
-pyramids nc vars rename-dims climate.nc out.nc --map lat=y lon=x
-pyramids nc vars drop-dims climate.nc out.nc --dims bnds
-pyramids nc vars set-coords climate.nc out.nc --names lat lon    # also: reset-coords
-pyramids nc vars squeeze climate.nc out.nc --dim time            # drop length-one dimensions
+pyramids nc advanced rename-dims climate.nc out.nc --map lat=y lon=x
+pyramids nc advanced drop-dims climate.nc out.nc --dims bnds
+pyramids nc advanced set-coords climate.nc out.nc --names lat lon    # also: reset-coords
+pyramids nc advanced squeeze climate.nc out.nc --dim time            # drop length-one dimensions
 ```
 
 **Variable mutation** (each writes a new NetCDF) — `add-var --source` (copy variables in from another NetCDF),
@@ -361,10 +361,10 @@ vector mask), `expand-dims --var --dim` (lift a variable onto a new band dimensi
 ```bash
 pyramids nc calc convert-calendar climate.nc out.nc --calendar noleap
 pyramids nc calc interp-calendar climate.nc out.nc --target other.nc
-pyramids nc calc groupby-bins climate.nc out.nc --dim time --bins 4 --how mean
-pyramids nc calc rolling climate.nc out.nc --dim time --window 3 --how mean   # also: rolling-exp --alpha
-pyramids nc calc shift climate.nc out.nc --dim time --periods 1
-pyramids nc calc integrate climate.nc out.nc --dim time          # also: cumulative-integrate, differentiate
+pyramids nc advanced groupby-bins climate.nc out.nc --dim time --bins 4 --how mean
+pyramids nc advanced rolling climate.nc out.nc --dim time --window 3 --how mean   # also: rolling-exp --alpha
+pyramids nc advanced shift climate.nc out.nc --dim time --periods 1
+pyramids nc advanced integrate climate.nc out.nc --dim time          # also: cumulative-integrate, differentiate
 pyramids nc calc polyfit climate.nc out.nc --dim time --deg 2
 pyramids nc calc interp climate.nc out.nc --coord plev=50000 --method linear
 pyramids nc calc interpolate-na climate.nc out.nc --dim time

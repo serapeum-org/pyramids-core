@@ -1121,6 +1121,13 @@ Four verbs were also renamed to match the Python API as they moved (naming audit
 | `pyramids collection stats` | `pyramids collection reduce` | it is a time reduction, not band statistics (`--reduce <op>` still names the op) |
 | `pyramids mesh sel-time[-range]` | `pyramids mesh select isel-time[-range]` | track the positional-selection method rename |
 
+**Rarely-one-shot primitives moved under a per-domain `advanced` subgroup.** To keep each domain's help focused
+on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim
+mechanics, geometry micro-ops, low-level accessors) now live under `pyramids <domain> advanced <verb>` — e.g.
+`raster read-part` → `raster advanced read-part`, `nc squeeze` → `nc advanced squeeze`, `vector force-2d` →
+`vector advanced force-2d`, `mesh get` → `mesh advanced get`. The capability is unchanged; only the path moved
+(hard move, no alias). Run `pyramids <domain> advanced --help` to list a domain's primitives.
+
 `pyramids --help` lists the groups (`raster`, `vector`, `nc`, `collection`, `stac`, `fetch`, `mesh`, `process`,
 `completion`, `plugins`); an unknown subcommand prints a "did you mean …?" suggestion.
 
