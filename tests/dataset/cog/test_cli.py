@@ -65,7 +65,7 @@ class TestCli:
             Creating with a profile produces a valid COG on disk.
         """
         out = tmp_path / "out.tif"
-        code = main(["cog", "create", source_tif, str(out), "--profile", "deflate"])
+        code = main(["raster", "cog", "create", source_tif, str(out), "--profile", "deflate"])
         assert code == 0, "create should succeed"
         assert "valid COG" in capsys.readouterr().out, "should report validity"
         assert out.exists(), "output file should exist"
@@ -85,6 +85,7 @@ class TestCli:
         out = tmp_path / "override.tif"
         code = main(
             [
+                "raster",
                 "cog",
                 "create",
                 source_tif,
@@ -114,6 +115,7 @@ class TestCli:
         out = tmp_path / "blk.tif"
         code = main(
             [
+                "raster",
                 "cog",
                 "create",
                 source_tif,
@@ -144,6 +146,7 @@ class TestCli:
         out = tmp_path / "j.tif"
         code = main(
             [
+                "raster",
                 "cog",
                 "create",
                 source_tif,
@@ -172,13 +175,13 @@ class TestCli:
             message; passing --overwrite then succeeds.
         """
         out = tmp_path / "exists.tif"
-        assert main(["cog", "create", source_tif, str(out)]) == 0
+        assert main(["raster", "cog", "create", source_tif, str(out)]) == 0
         capsys.readouterr()
-        code = main(["cog", "create", source_tif, str(out)])
+        code = main(["raster", "cog", "create", source_tif, str(out)])
         err = capsys.readouterr().err
         assert code == 1, "a second create without --overwrite must be refused"
         assert "already exists" in err, f"error should name the existing file: {err}"
-        assert main(["cog", "create", source_tif, str(out), "--overwrite"]) == 0
+        assert main(["raster", "cog", "create", source_tif, str(out), "--overwrite"]) == 0
 
     def test_validate_valid_returns_0(self, cog_tif, capsys):
         """`cog validate` returns 0 for a valid COG.
@@ -190,7 +193,7 @@ class TestCli:
         Test scenario:
             A valid COG exits 0 and prints 'valid COG'.
         """
-        code = main(["cog", "validate", cog_tif])
+        code = main(["raster", "cog", "validate", cog_tif])
         assert code == 0, "valid COG should exit 0"
         assert "valid COG" in capsys.readouterr().out, "should print validity"
 
@@ -208,7 +211,7 @@ class TestCli:
         ds = gdal.Open(source_tif, gdal.GA_ReadOnly)
         ds.BuildOverviews("NEAREST", [2])
         ds = None
-        code = main(["cog", "validate", source_tif])
+        code = main(["raster", "cog", "validate", source_tif])
         assert code == 1, "non-COG should exit 1"
 
     def test_info_prints_fields(self, cog_tif, capsys):
@@ -221,7 +224,7 @@ class TestCli:
         Test scenario:
             The output contains the compression and overview lines.
         """
-        code = main(["cog", "info", cog_tif])
+        code = main(["raster", "cog", "info", cog_tif])
         out = capsys.readouterr().out
         assert code == 0, "info should exit 0"
         assert "compression:" in out and "overviews:" in out, f"missing fields:\n{out}"
