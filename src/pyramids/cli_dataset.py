@@ -1247,5 +1247,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     add_dataset_spatial_commands(sub)
     add_dataset_analysis_commands(sub)
     add_dataset_overviews_commands(sub)
-    add_dataset_export_commands(sub)
+    add_dataset_export_commands(
+        add_group(sub, "export", "write a raster to a file or format")
+    )
     add_dataset_plot_commands(sub)

@@ -350,7 +350,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
-    to_bytes = sub.add_parser("to-bytes", help="serialize a raster to raw bytes")
+    to_bytes = sub.add_parser("bytes", help="serialize a raster to raw bytes")
     to_bytes.add_argument("input", help=_HELP_SRC_RASTER)
     to_bytes.add_argument(
         "output", nargs="?", help="destination file (default: write to stdout)"
@@ -362,7 +362,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_bytes.set_defaults(func=_cmd_to_bytes)
 
     to_cog_bytes = sub.add_parser(
-        "to-cog-bytes", help="serialize a raster to Cloud Optimized GeoTIFF bytes"
+        "cog-bytes", help="serialize a raster to Cloud Optimized GeoTIFF bytes"
     )
     to_cog_bytes.add_argument("input", help=_HELP_SRC_RASTER)
     to_cog_bytes.add_argument("output", help="destination .tif path")
@@ -374,7 +374,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_cog_bytes.set_defaults(func=_cmd_to_cog_bytes)
 
     to_df = sub.add_parser(
-        "to-dataframe", help="write a per-cell table (CSV, or Parquet by extension)"
+        "dataframe", help="write a per-cell table (CSV, or Parquet by extension)"
     )
     to_df.add_argument("input", help=_HELP_SRC_RASTER)
     to_df.add_argument("output", help="destination .csv or .parquet path")
@@ -389,7 +389,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_df.set_defaults(func=_cmd_to_dataframe)
 
     to_poly = sub.add_parser(
-        "to-polygons",
+        "polygons",
         help="dissolve connected equal-valued cells into polygons (vector file)",
     )
     to_poly.add_argument("input", help=_HELP_SRC_RASTER)
@@ -404,7 +404,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_poly.set_defaults(func=_cmd_to_polygons)
 
     to_raster = sub.add_parser(
-        "to-raster", help="write a raster (to_file alias) with band/tiling options"
+        "raster", help="write a raster (to_file alias) with band/tiling options"
     )
     to_raster.add_argument("input", help=_HELP_SRC_RASTER)
     to_raster.add_argument("output", help="destination raster path")
@@ -432,7 +432,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_raster.set_defaults(func=_cmd_to_raster)
 
     to_image = sub.add_parser(
-        "to-image", help="write a colour-mapped RGB image of a band (PNG/JPEG)"
+        "image", help="write a colour-mapped RGB image of a band (PNG/JPEG)"
     )
     to_image.add_argument("input", help=_HELP_SRC_RASTER)
     to_image.add_argument("output", help="destination image path (e.g. out.png)")
@@ -451,7 +451,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_image.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_image.set_defaults(func=_cmd_to_image)
 
-    to_xyz = sub.add_parser("to-xyz", help="write a lon/lat/value XYZ point table")
+    to_xyz = sub.add_parser("xyz", help="write a lon/lat/value XYZ point table")
     to_xyz.add_argument("input", help=_HELP_SRC_RASTER)
     to_xyz.add_argument("output", help="destination .xyz path")
     to_xyz.add_argument(
@@ -463,14 +463,14 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_xyz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_xyz.set_defaults(func=_cmd_to_xyz)
 
-    to_zarr = sub.add_parser("to-zarr", help="write the raster to a Zarr store")
+    to_zarr = sub.add_parser("zarr", help="write the raster to a Zarr store")
     to_zarr.add_argument("input", help=_HELP_SRC_RASTER)
     to_zarr.add_argument("output", help="destination Zarr store path")
     to_zarr.add_argument("--mode", default="w", help="Zarr open mode (default: w)")
     to_zarr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_zarr.set_defaults(func=_cmd_to_zarr)
 
-    to_stac = sub.add_parser("to-stac-item", help="write a STAC Item JSON document")
+    to_stac = sub.add_parser("stac-item", help="write a STAC Item JSON document")
     to_stac.add_argument("input", help=_HELP_SRC_RASTER)
     to_stac.add_argument("output", help="destination .json path")
     to_stac.add_argument("--item-id", required=True, help="STAC item identifier")
@@ -484,7 +484,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_stac.set_defaults(func=_cmd_to_stac_item)
 
     to_terrain = sub.add_parser(
-        "to-terrain-rgb", help="encode a DEM to Mapbox/Terrarium terrain-RGB"
+        "terrain-rgb", help="encode a DEM to Mapbox/Terrarium terrain-RGB"
     )
     to_terrain.add_argument("input", help="source elevation raster path")
     to_terrain.add_argument(

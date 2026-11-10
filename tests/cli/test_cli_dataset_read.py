@@ -63,13 +63,13 @@ class TestFromBytes:
     def test_happy_path(self, tmp_path):
         """The bytes of a GeoTIFF file round-trip into an openable raster."""
         out = str(tmp_path / "o.tif")
-        rc = main(["raster", "from-bytes", _DATA_TIF, out])
+        rc = main(["raster", "import", "bytes", _DATA_TIF, out])
         assert rc == 0
         assert Dataset.read_file(out).band_count == 1
 
     def test_missing_input_errors(self, tmp_path):
         """Neither an input path nor --stdin exits 1."""
-        argv = ["raster", "from-bytes", str(tmp_path / "o.tif")]
+        argv = ["raster", "import", "bytes", str(tmp_path / "o.tif")]
         assert main(argv) == 1
 
     def test_stdin_branch(self, tmp_path, monkeypatch):
@@ -79,7 +79,7 @@ class TestFromBytes:
             "sys.stdin", SimpleNamespace(buffer=_FakeStdinBuffer(payload))
         )
         out = str(tmp_path / "o.tif")
-        rc = main(["raster", "from-bytes", out, "--stdin"])
+        rc = main(["raster", "import", "bytes", out, "--stdin"])
         assert rc == 0
         assert Dataset.read_file(out).band_count == 1
 
@@ -102,7 +102,8 @@ class TestFromDataframe:
         rc = main(
             [
                 "raster",
-                "from-dataframe",
+                "import",
+                "dataframe",
                 self._csv(tmp_path),
                 out,
                 "--x",
@@ -127,7 +128,8 @@ class TestFromDataframe:
         Path(out).write_bytes(b"x")
         argv = [
             "raster",
-            "from-dataframe",
+            "import",
+            "dataframe",
             self._csv(tmp_path),
             out,
             "--x",
@@ -143,7 +145,8 @@ class TestFromDataframe:
         rc = main(
             [
                 "raster",
-                "from-dataframe",
+                "import",
+                "dataframe",
                 self._csv(tmp_path),
                 out,
                 "--x",
@@ -182,7 +185,8 @@ class TestFromPoints:
         rc = main(
             [
                 "raster",
-                "from-points",
+                "import",
+                "points",
                 self._vector(tmp_path),
                 out,
                 "--value-column",
@@ -200,7 +204,8 @@ class TestFromPoints:
         Path(out).write_bytes(b"x")
         argv = [
             "raster",
-            "from-points",
+            "import",
+            "points",
             self._vector(tmp_path),
             out,
             "--value-column",
@@ -216,7 +221,8 @@ class TestFromPoints:
         rc = main(
             [
                 "raster",
-                "from-points",
+                "import",
+                "points",
                 self._vector(tmp_path),
                 out,
                 "--value-column",
@@ -251,7 +257,8 @@ class TestFromPointArrays:
         rc = main(
             [
                 "raster",
-                "from-point-arrays",
+                "import",
+                "point-arrays",
                 self._csv(tmp_path),
                 out,
                 "--x",
@@ -275,7 +282,8 @@ class TestFromPointArrays:
         rc = main(
             [
                 "raster",
-                "from-point-arrays",
+                "import",
+                "point-arrays",
                 self._csv(tmp_path),
                 out,
                 "--x",
@@ -306,7 +314,8 @@ class TestFromPointArrays:
         out = str(tmp_path / "o.tif")
         argv = [
             "raster",
-            "from-point-arrays",
+            "import",
+            "point-arrays",
             self._csv(tmp_path),
             out,
             "--x",
@@ -329,7 +338,7 @@ class TestFromBandFiles:
         b1 = _band_tif(tmp_path, "b1.tif", 2)
         b2 = _band_tif(tmp_path, "b2.tif", 3)
         out = str(tmp_path / "o.tif")
-        rc = main(["raster", "from-band-files", b1, b2, out])
+        rc = main(["raster", "import", "band-files", b1, b2, out])
         assert rc == 0
         assert Dataset.read_file(out).band_count == 2
 
@@ -338,7 +347,7 @@ class TestFromBandFiles:
         b1 = _band_tif(tmp_path, "b1.tif", 2)
         out = str(tmp_path / "o.tif")
         Path(out).write_bytes(b"x")
-        assert main(["raster", "from-band-files", b1, out]) == 1
+        assert main(["raster", "import", "band-files", b1, out]) == 1
 
     def test_align_resampling_and_no_data_value(self, tmp_path):
         """--align with --resampling and --no-data-value reach Dataset.from_band_files."""
@@ -348,7 +357,8 @@ class TestFromBandFiles:
         rc = main(
             [
                 "raster",
-                "from-band-files",
+                "import",
+                "band-files",
                 b1,
                 b2,
                 out,
@@ -381,7 +391,8 @@ class TestFromArchive:
         rc = main(
             [
                 "raster",
-                "from-archive",
+                "import",
+                "archive",
                 self._zip(tmp_path),
                 out,
                 "--member-glob",
@@ -394,7 +405,9 @@ class TestFromArchive:
     def test_missing_archive_errors(self, tmp_path):
         """A non-existent archive exits 1."""
         out = str(tmp_path / "o.tif")
-        assert main(["raster", "from-archive", str(tmp_path / "nope.zip"), out]) == 1
+        assert (
+            main(["raster", "import", "archive", str(tmp_path / "nope.zip"), out]) == 1
+        )
 
     def test_no_data_value_forwarded(self, tmp_path):
         """--no-data-value is parsed and forwarded to Dataset.from_archive."""
@@ -402,7 +415,8 @@ class TestFromArchive:
         rc = main(
             [
                 "raster",
-                "from-archive",
+                "import",
+                "archive",
                 self._zip(tmp_path),
                 out,
                 "--member-glob",
@@ -424,7 +438,7 @@ class TestFromZarr:
         store = str(tmp_path / "store.zarr")
         Dataset.read_file(_band_tif(tmp_path, "src.tif", 7)).to_zarr(store)
         out = str(tmp_path / "o.tif")
-        rc = main(["raster", "from-zarr", store, out])
+        rc = main(["raster", "import", "zarr", store, out])
         assert rc == 0
         assert Dataset.read_file(out).band_count == 1
 
@@ -432,7 +446,9 @@ class TestFromZarr:
         """An existing output without --overwrite exits 1 before any zarr read."""
         out = str(tmp_path / "o.tif")
         Path(out).write_bytes(b"x")
-        assert main(["raster", "from-zarr", str(tmp_path / "store.zarr"), out]) == 1
+        assert (
+            main(["raster", "import", "zarr", str(tmp_path / "store.zarr"), out]) == 1
+        )
 
     def test_missing_zarr_extra_is_remapped(self, tmp_path, monkeypatch):
         """A missing-``zarr`` ImportError becomes a clean user error (exit 1)."""
@@ -445,7 +461,7 @@ class TestFromZarr:
             staticmethod(raise_import_error),
         )
         out = str(tmp_path / "o.tif")
-        rc = main(["raster", "from-zarr", str(tmp_path / "store.zarr"), out])
+        rc = main(["raster", "import", "zarr", str(tmp_path / "store.zarr"), out])
         assert rc == 1
 
     def test_storage_options_parsed(self, tmp_path, monkeypatch, capsys):
@@ -464,7 +480,8 @@ class TestFromZarr:
         rc = main(
             [
                 "raster",
-                "from-zarr",
+                "import",
+                "zarr",
                 "store.zarr",
                 out,
                 "--storage-options",
