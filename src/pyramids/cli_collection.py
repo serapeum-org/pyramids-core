@@ -27,6 +27,7 @@ import os
 import sys
 from typing import Any, cast
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import (
     ProgressReporter,
     info_print,
@@ -579,7 +580,7 @@ def _add_merge(csub: argparse._SubParsersAction) -> None:
 
 def _add_to_file(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-file`` command (write every timestep to a directory)."""
-    c = csub.add_parser("to-file", help="write every timestep to a directory")
+    c = csub.add_parser("file", help="write every timestep to a directory")
     _add_open_args(c)
     c.add_argument("output", help=_HELP_DST_DIR)
     c.add_argument(
@@ -599,7 +600,7 @@ def _add_to_file(csub: argparse._SubParsersAction) -> None:
 
 def _add_to_cog(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-cog`` command (each timestep -> its own COG)."""
-    c = csub.add_parser("to-cog", help="write each timestep as its own COG")
+    c = csub.add_parser("cog", help="write each timestep as its own COG")
     _add_open_args(c)
     c.add_argument("output", help="destination directory (one COG per timestep)")
     c.add_argument(
@@ -616,7 +617,7 @@ def _add_to_cog(csub: argparse._SubParsersAction) -> None:
 
 def _add_to_netcdf(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-netcdf`` command (write the (T,B,R,C) cube to NetCDF)."""
-    c = csub.add_parser("to-netcdf", help="write the (T,B,R,C) cube to a NetCDF file")
+    c = csub.add_parser("netcdf", help="write the (T,B,R,C) cube to a NetCDF file")
     _add_open_args(c)
     c.add_argument("output", help="destination NetCDF path")
     c.add_argument(
@@ -634,7 +635,7 @@ def _add_to_netcdf(csub: argparse._SubParsersAction) -> None:
 
 def _add_to_zarr(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-zarr`` command (write the (T,B,R,C) cube to a Zarr store)."""
-    c = csub.add_parser("to-zarr", help="write the (T,B,R,C) cube to a Zarr store")
+    c = csub.add_parser("zarr", help="write the (T,B,R,C) cube to a Zarr store")
     _add_open_args(c)
     c.add_argument("output", help="destination Zarr store path")
     c.add_argument("--mode", default="w", help="Zarr write mode (default: w)")
@@ -645,7 +646,7 @@ def _add_to_zarr(csub: argparse._SubParsersAction) -> None:
 def _add_to_kerchunk(csub: argparse._SubParsersAction) -> None:
     """Register the ``to-kerchunk`` command (write a kerchunk reference JSON)."""
     c = csub.add_parser(
-        "to-kerchunk", help="write a kerchunk reference JSON (NetCDF/HDF5 sources)"
+        "kerchunk", help="write a kerchunk reference JSON (NetCDF/HDF5 sources)"
     )
     _add_open_args(c)
     c.add_argument("output", help="destination kerchunk reference JSON path")
@@ -731,11 +732,12 @@ def add_collection_commands(sub: argparse._SubParsersAction) -> None:
     _add_stats(csub)
     _add_resample(csub)
     _add_merge(csub)
-    _add_to_file(csub)
-    _add_to_cog(csub)
-    _add_to_netcdf(csub)
-    _add_to_zarr(csub)
-    _add_to_kerchunk(csub)
+    export_sub = add_group(csub, "export", "write a collection to a file or format")
+    _add_to_file(export_sub)
+    _add_to_cog(export_sub)
+    _add_to_netcdf(export_sub)
+    _add_to_zarr(export_sub)
+    _add_to_kerchunk(export_sub)
     _add_reproject(csub)
     _add_crop(csub)
     _add_align(csub)
