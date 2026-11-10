@@ -303,6 +303,12 @@ def _normalize_origin(
     :class:`pandas.Grouper` from rejecting an origin whose timezone differs from the
     index it groups.
 
+    A **naive** origin given for a **tz-aware** index is read as UTC (not as the
+    index's zone). That is deliberate: the grouping index is UTC-naive, so a
+    UTC-naive origin matches it, and localising the origin to a named index zone
+    could itself raise on a DST gap. Pass a tz-aware ``Timestamp`` (e.g.
+    ``times.min()``) when you mean an instant in the index's zone.
+
     Args:
         origin: The anchor passed to ``reduce_time`` (a string, ``Timestamp``, or
             ``datetime``).
@@ -313,12 +319,15 @@ def _normalize_origin(
         grouping index's frame.
     """
     if isinstance(origin, str):
-        return origin
-    ts = pd.Timestamp(origin)
-    if tz is not None:
-        ts = ts.tz_convert("UTC") if ts.tz is not None else ts.tz_localize("UTC")
-        return ts.tz_localize(None)
-    return ts.tz_localize(None) if ts.tz is not None else ts
+        normalized: str | pd.Timestamp = origin
+    else:
+        ts = pd.Timestamp(origin)
+        if tz is not None:
+            ts = ts.tz_convert("UTC") if ts.tz is not None else ts.tz_localize("UTC")
+            normalized = ts.tz_localize(None)
+        else:
+            normalized = ts.tz_localize(None) if ts.tz is not None else ts
+    return normalized
 
 
 def _grouped_reduce(
@@ -1705,10 +1714,12 @@ class DatasetCollection:
                 "times contains unparseable / NaT entries; every timestep must "
                 "have a valid timestamp."
             )
-        # pandas ignores Grouper's origin= for a Day frequency when the index is
-        # tz-aware (the satellite-scene case). When an anchor is requested we bucket
-        # on a UTC-naive copy of the index — and a matching UTC-naive origin — then
-        # map each window label back to the index timezone. UTC has no DST, so the
+        # When an anchor is requested on a tz-aware index we bucket on a UTC-naive
+        # copy of the index — and a matching UTC-naive origin — for all frequencies,
+        # then map each window label back to the index timezone. This is motivated
+        # by pandas ignoring Grouper's origin= for a Day frequency on a tz-aware
+        # index (the satellite-scene case), but applying it uniformly also gives
+        # even, DST-free bins at sub-day frequencies; UTC has no DST, so the label
         # round-trip never lands on a nonexistent/ambiguous wall time.
         tz = index.tz
         anchored_tz = origin is not None and tz is not None
