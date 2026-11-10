@@ -1135,7 +1135,7 @@ constructors, which were internal plumbing and are now private with **no** alias
 | `MeshVariable.time_index` | `MeshVariable.time_axis_index` | returns the time *axis number*, not a time *step* |
 | `MeshDataset.n_layers` | `MeshDataset.n_layer` | singular, matching `n_node`/`n_face`/`n_edge` |
 | `MeshDataset.n_layer_interfaces` | `MeshDataset.n_layer_interface` | singular `n_*` family |
-| `MeshDataset.get_data(name)` | `mesh[name]` (or `mesh.get(name, default)`) | `get_data` duplicated subscription; `get()` already existed |
+| `MeshDataset.get_data(name)` | `mesh[name]` (or `mesh.get(name, default)`) | `get_data` duplicated subscription |
 | `MeshSpatialIndex.face_tree` | `MeshSpatialIndex.face_centroid_tree` | it is a KD-tree on face centroids |
 | `MeshSpatialIndex.face_strtree` | `MeshSpatialIndex.face_rtree` | drops shapely's `STRtree` type name |
 | `Mesh2d.from_gdal_group` | `Mesh2d._from_gdal_group` | **private, no alias** — internal GDAL path |
