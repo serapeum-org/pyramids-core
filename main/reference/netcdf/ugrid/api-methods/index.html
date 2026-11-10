@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8039,12 +8039,12 @@ grouped by category.</p>
 <td>Total number of 3-D volumes, or <code>None</code></td>
 </tr>
 <tr>
-<td><code>n_layers</code></td>
+<td><code>n_layer</code></td>
 <td><strong>(D)</strong></td>
 <td>Number of vertical layers, or <code>None</code></td>
 </tr>
 <tr>
-<td><code>n_layer_interfaces</code></td>
+<td><code>n_layer_interface</code></td>
 <td><strong>(D)</strong></td>
 <td>Number of layer interfaces, or <code>None</code></td>
 </tr>
@@ -8213,9 +8213,9 @@ grouped by category.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>get_data(variable_name)</code></td>
+<td><code>mesh[name]</code> / <code>get(name, default)</code></td>
 <td><strong>(D)</strong></td>
-<td>Get a variable by name</td>
+<td>Get a variable by name (<code>get_data</code> is a deprecated alias)</td>
 </tr>
 <tr>
 <td><code>with_variable(name, data, location, nodata)</code></td>

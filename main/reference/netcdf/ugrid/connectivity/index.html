@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5599,17 +5599,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_gdal_array
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pyramids.netcdf.ugrid.Connectivity.get_element" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7636,17 +7625,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_gdal_array
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pyramids.netcdf.ugrid.Connectivity.get_element" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7732,7 +7710,7 @@
 <p>Wrapper for UGRID connectivity arrays that handles <code>start_index</code>
 normalization (always 0-indexed internally) and <code>_FillValue</code>
 masking for mixed-element meshes.</p>
-<p><code>from_gdal_array</code> reads the raw array (which may be 1-based per UGRID) and normalizes it to a 0-indexed,
+<p><code>_from_gdal_array</code> reads the raw array (which may be 1-based per UGRID) and normalizes it to a 0-indexed,
 fill-masked internal form; the accessors then read individual elements or a fully masked view:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
@@ -7760,7 +7738,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     <pre class="mermaid"><code>flowchart LR
     A[("GDAL MDArray&lt;br/&gt;start_index 0/1&lt;br/&gt;_FillValue")]
     C["Connectivity&lt;br/&gt;0-indexed, fill-masked"]
-    A --&gt;|from_gdal_array| C
+    A --&gt;|_from_gdal_array| C
     C --&gt;|"get_element(i)"| E["node indices of element i"]
     C --&gt;|as_masked| M["masked array&lt;br/&gt;(ragged / mixed-element)"]
     C --&gt;|is_triangular| T{"3 nodes each?"}</code></pre> 
@@ -8011,7 +7989,7 @@ nodes than max_nodes_per_element. Default: -1.</p>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-40" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-40"></a>    <span class="n">original_start_index</span><span class="p">:</span> <span class="nb">int</span>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-41" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-41"></a>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-42" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-42"></a>    <span class="nd">@classmethod</span>
-<a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-43" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-43"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">from_gdal_array</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">md_arr</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">MDArray</span><span class="p">,</span> <span class="n">cf_role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Connectivity</span><span class="p">:</span>
+<a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-43" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-43"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_from_gdal_array</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">md_arr</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">MDArray</span><span class="p">,</span> <span class="n">cf_role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Connectivity</span><span class="p">:</span>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-44" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-44"></a><span class="w">        </span><span class="sd">"""Read connectivity from a GDAL MDArray, normalizing start_index.</span>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-45" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-45"></a>
 <a id="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-46" name="pyramids.netcdf.ugrid.Connectivity--source--__codelineno-0-46"></a><span class="sd">        Reads the raw index array, subtracts start_index if it is 1,</span>
@@ -8175,194 +8153,6 @@ nodes than max_nodes_per_element. Default: -1.</p>
 
 
 
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array" class="doc doc-heading"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array" class="toclink">
-            <code class="highlight language-python"><span class="n">from_gdal_array</span><span class="p">(</span><span class="n">md_arr</span><span class="p">,</span> <span class="n">cf_role</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-</a><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array" class="headerlink" title="Permanent link">#</a></h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Read connectivity from a GDAL MDArray, normalizing start_index.</p>
-<p>Reads the raw index array, subtracts start_index if it is 1,
-and replaces the original fill value with -1 for internal use.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>md_arr</code>
-            </td>
-            <td>
-                  <code><span title="osgeo.gdal.MDArray">MDArray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>GDAL MDArray containing the connectivity data.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>cf_role</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The cf_role attribute value for this connectivity.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.Connectivity&lt;/code&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt; (&lt;code&gt;pyramids.netcdf.ugrid.connectivity.Connectivity&lt;/code&gt;)" href="#pyramids.netcdf.ugrid.Connectivity">Connectivity</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Connectivity instance with 0-indexed data.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>src/pyramids/netcdf/ugrid/connectivity.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-42">42</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-43">43</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-44">44</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-45">45</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-46">46</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-47">47</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-48">48</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-49">49</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-50">50</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-51">51</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-52">52</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-53">53</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-54">54</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-55">55</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-56">56</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-57">57</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-58">58</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-59">59</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-60">60</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-61">61</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-62">62</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-63">63</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-64">64</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-65">65</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-66">66</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-67">67</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-68">68</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-69">69</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-70">70</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-71">71</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-72">72</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-73">73</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-74">74</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-75">75</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-76">76</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-77">77</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-78">78</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-79">79</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-80">80</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-81">81</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-82">82</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-83">83</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-84">84</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-42" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-42"></a><span class="nd">@classmethod</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-43" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-43"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_gdal_array</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">md_arr</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">MDArray</span><span class="p">,</span> <span class="n">cf_role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Connectivity</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-44" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-44"></a><span class="w">    </span><span class="sd">"""Read connectivity from a GDAL MDArray, normalizing start_index.</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-45" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-45"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-46" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-46"></a><span class="sd">    Reads the raw index array, subtracts start_index if it is 1,</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-47" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-47"></a><span class="sd">    and replaces the original fill value with -1 for internal use.</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-48" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-48"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-49" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-49"></a><span class="sd">    Args:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-50" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-50"></a><span class="sd">        md_arr: GDAL MDArray containing the connectivity data.</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-51" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-51"></a><span class="sd">        cf_role: The cf_role attribute value for this connectivity.</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-52" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-52"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-53" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-53"></a><span class="sd">    Returns:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-54" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-54"></a><span class="sd">        Connectivity instance with 0-indexed data.</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-55" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-55"></a><span class="sd">    """</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-56" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-56"></a>    <span class="n">attrs</span> <span class="o">=</span> <span class="n">_read_attributes</span><span class="p">(</span><span class="n">md_arr</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-57" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-57"></a>    <span class="n">start_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="s2">"int"</span><span class="p">,</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start_index"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-58" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-58"></a>    <span class="n">raw_fill</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_FillValue"</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-59" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-59"></a>    <span class="k">if</span> <span class="n">raw_fill</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-60" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-60"></a>        <span class="n">raw_fill</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="s2">"int"</span><span class="p">,</span> <span class="n">raw_fill</span><span class="p">))</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-61" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-61"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-62" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-62"></a>        <span class="n">raw_fill</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-63" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-63"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-64" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-64"></a>    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">md_arr</span><span class="o">.</span><span class="n">ReadAsArray</span><span class="p">()</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-65" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-65"></a>    <span class="k">if</span> <span class="n">raw_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-66" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-66"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot read connectivity array for cf_role='</span><span class="si">{</span><span class="n">cf_role</span><span class="si">}</span><span class="s2">'."</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-67" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-67"></a>    <span class="c1"># `astype` already returns a fresh, writable array (mutated below), so the extra `.copy()`</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-68" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-68"></a>    <span class="c1"># only duplicated the connectivity array for no benefit (#982).</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-69" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-69"></a>    <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-70" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-70"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-71" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-71"></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">data</span> <span class="o">==</span> <span class="n">raw_fill</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-72" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-72"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-73" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-73"></a>    <span class="k">if</span> <span class="n">start_index</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-74" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-74"></a>        <span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span> <span class="o">-=</span> <span class="n">start_index</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-75" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-75"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-76" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-76"></a>    <span class="n">data</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-77" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-77"></a>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-78" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-78"></a>    <span class="n">result</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-79" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-79"></a>        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-80" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-80"></a>        <span class="n">fill_value</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-81" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-81"></a>        <span class="n">cf_role</span><span class="o">=</span><span class="n">cf_role</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-82" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-82"></a>        <span class="n">original_start_index</span><span class="o">=</span><span class="n">start_index</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-83" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-83"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-84" name="pyramids.netcdf.ugrid.Connectivity.from_gdal_array--source--__codelineno-0-84"></a>    <span class="k">return</span> <span class="n">result</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
 
 <div class="doc doc-object doc-function">
 

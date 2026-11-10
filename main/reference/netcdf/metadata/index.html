@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7835,13 +7835,13 @@ class. <code>NetCDFMetadata</code>'s only public method is <code>get_dimension</
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">nc</span> <span class="o">=</span> <span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"tests/data/netcdf/cf__4v__1d3-3d1__proj__y-desc.nc"</span><span class="p">,</span> <span class="n">open_as_multi_dimensional</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Read everything (groups, arrays, dimensions, attributes)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">md</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">()</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">md</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">()</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Convert to JSON</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">to_json</span><span class="p">(</span><span class="n">md</span><span class="p">))</span>
 </code></pre></div>
 <p>You can also pass open options (persisted into the result for provenance):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">md</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">(</span><span class="n">open_options</span><span class="o">=</span><span class="p">{</span><span class="s2">"OPEN_SHARED"</span><span class="p">:</span> <span class="s2">"YES"</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">md</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">(</span><span class="n">open_options</span><span class="o">=</span><span class="p">{</span><span class="s2">"OPEN_SHARED"</span><span class="p">:</span> <span class="s2">"YES"</span><span class="p">})</span>
 </code></pre></div>
 <h2 id="dimension-overview"><a class="toclink" href="#dimension-overview">Dimension overview</a><a class="headerlink" href="#dimension-overview" title="Permanent link">#</a></h2>
 <p>For convenience and backward compatibility, the returned metadata includes a <code>dimension_overview</code>

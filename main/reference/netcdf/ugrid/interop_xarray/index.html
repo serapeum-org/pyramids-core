@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7816,7 +7816,7 @@ scope: every guarded import happens inside the function that needs it, through
 <p>The one encoding trap -- the connectivity <code>start_index</code> / <code>_FillValue</code> round-trip -- is handled
 by :func:<code>_connectivity_to_disk</code> / :func:<code>_connectivity_from_disk</code>, which mirror the write-side
 reverse mapping in :func:<code>pyramids.netcdf.ugrid.io._write_connectivity_array</code> and the read-side
-normalisation in :meth:<code>pyramids.netcdf.ugrid.connectivity.Connectivity.from_gdal_array</code>. The
+normalisation in :meth:<code>pyramids.netcdf.ugrid.connectivity.Connectivity._from_gdal_array</code>. The
 internal 0-indexed / <code>-1</code>-fill arrays are never emitted to xarray.</p>
 
 

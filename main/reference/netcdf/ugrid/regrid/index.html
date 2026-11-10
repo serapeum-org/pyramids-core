@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8473,7 +8473,7 @@ anything else is refused. Defaults to <code>"face"</code>.</p>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-759" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-759"></a>            <span class="n">MeshSpatialIndex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_target</span><span class="p">)</span><span class="o">.</span><span class="n">face_polygons</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-760" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-760"></a>        <span class="p">)</span>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-761" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-761"></a>
-<a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-762" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-762"></a>        <span class="n">target_idx</span><span class="p">,</span> <span class="n">source_idx</span> <span class="o">=</span> <span class="n">source_index</span><span class="o">.</span><span class="n">face_strtree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+<a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-762" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-762"></a>        <span class="n">target_idx</span><span class="p">,</span> <span class="n">source_idx</span> <span class="o">=</span> <span class="n">source_index</span><span class="o">.</span><span class="n">face_rtree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-763" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-763"></a>            <span class="n">target_polys</span><span class="p">,</span> <span class="n">predicate</span><span class="o">=</span><span class="s2">"intersects"</span>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-764" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-764"></a>        <span class="p">)</span>
 <a id="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-765" name="pyramids.netcdf.ugrid.regrid.Regridder--source--__codelineno-0-765"></a>        <span class="n">intersections</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span>

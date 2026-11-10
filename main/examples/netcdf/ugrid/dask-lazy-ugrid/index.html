@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8069,10 +8069,10 @@ array. There is no <code>chunks=</code> here — this is the part that is <em>no
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">var</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'mesh2d_node_z'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">var</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="s1">'mesh2d_node_z'</span><span class="p">]</span>
 <span class="n">var</span><span class="o">.</span><span class="n">location</span><span class="p">,</span> <span class="n">var</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">var</span><span class="o">.</span><span class="n">has_time</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">var = u.get_data('mesh2d_node_z')
+<div class="clipboard-copy-txt" id="cell-3">var = u['mesh2d_node_z']
 var.location, var.shape, type(var.data).__name__, var.has_time</div>
 </div>
 </div>
@@ -8211,7 +8211,7 @@ shows what the bridge produced before we hand it to the lazy raster path.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7df45b5a0980&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f1154160ad0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

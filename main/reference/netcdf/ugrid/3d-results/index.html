@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7673,7 +7673,7 @@ volume axis, and a variable on the new <code>location="volume"</code> is indexed
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"estuary_3d.nc"</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">ds</span><span class="o">.</span><span class="n">volume_topology</span>          <span class="c1"># VolumeTopology, or None for a 2-D / uniform mesh</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">ds</span><span class="o">.</span><span class="n">n_volume</span>                 <span class="c1"># total volumes, or None</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">ds</span><span class="o">.</span><span class="n">n_layers</span>                 <span class="c1"># the MAX layer count over the columns (documented), for a ragged mesh</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">ds</span><span class="o">.</span><span class="n">n_layer</span>                  <span class="c1"># the MAX layer count over the columns (documented), for a ragged mesh</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># The k-th layer per column as a 2-D face field; columns shallower than k+1 layers are NaN,</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># never silently padded.</span>
@@ -7692,7 +7692,7 @@ volume axis, and a variable on the new <code>location="volume"</code> is indexed
 <code>layer_count</code>) are validated at construction, so a malformed topology fails early rather than at
 use. <code>to_dataframe()</code> lays a ragged variable out one row per volume, carrying the column
 (<code>element</code>) and the 0-based <code>layer</code> within it — no row is fabricated for an absent layer. The
-uniform-layer path (<code>n_layers</code>, <code>isel_layer</code>, <code>sel_layer</code>, <code>layer_values</code>) is unchanged whenever
+uniform-layer path (<code>n_layer</code>, <code>isel_layer</code>, <code>sel_layer</code>, <code>layer_values</code>) is unchanged whenever
 no <code>VolumeTopology</code> is set.</p>
 <h2 id="on-disk-layout"><a class="toclink" href="#on-disk-layout">On-disk layout</a><a class="headerlink" href="#on-disk-layout" title="Permanent link">#</a></h2>
 <p>Both features round-trip through the built-in NetCDF writer/reader and the xarray/Zarr bridge,

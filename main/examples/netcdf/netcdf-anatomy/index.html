@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9091,7 +9091,7 @@ the coordinate skeleton every variable is defined on.</p>
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="6-metadata-global-attributes-and-the-full-summary">6. Metadata — global attributes and the full summary<a class="anchor-link" href="#6-metadata-global-attributes-and-the-full-summary">¶</a></h2><p><code>global_attributes</code> returns the file-wide (CF <em>global</em>) attributes as a dict. <code>get_all_metadata()</code>
+<h2 id="6-metadata-global-attributes-and-the-full-summary">6. Metadata — global attributes and the full summary<a class="anchor-link" href="#6-metadata-global-attributes-and-the-full-summary">¶</a></h2><p><code>global_attributes</code> returns the file-wide (CF <em>global</em>) attributes as a dict. <code>refresh_metadata()</code>
 returns a <code>NetCDFMetadata</code> object whose printout summarises the dimensions and, per variable, its
 dims / shape / dtype / unit / scale-offset.</p>
 </div>
@@ -9232,9 +9232,9 @@ dims / shape / dtype / unit / scale-offset.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">())</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">())</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">print(nc.get_all_metadata())</div>
+<div class="clipboard-copy-txt" id="cell-8">print(nc.refresh_metadata())</div>
 </div>
 </div>
 </div>
@@ -9276,7 +9276,7 @@ dims / shape / dtype / unit / scale-offset.</p>
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><code>global_attributes</code> is the quick key/value view; <code>get_all_metadata()</code> is the structured, per-variable
+<p><code>global_attributes</code> is the quick key/value view; <code>refresh_metadata()</code> is the structured, per-variable
 report you skim to understand an unfamiliar file.</p>
 </div>
 </div>
@@ -10065,7 +10065,7 @@ dict(time_mean.dimension_sizes)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3758/2515305529.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
+<pre>/tmp/ipykernel_3949/2515305529.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
   time_mean = nc.reduce('time', how='mean')
 </pre>
 </div>
@@ -10165,7 +10165,7 @@ flowchart TB
         direction TB
         c1["variable_names · variables"]
         c2["dimension_sizes · dimension_names"]
-        c3["global_attributes · get_all_metadata · meta_data"]
+        c3["global_attributes · refresh_metadata · meta_data"]
         c4["group_names · get_group"]
         c5["get_time_values · time_stamp"]
         c6["to_kerchunk"]
@@ -10201,7 +10201,7 @@ flowchart TB
 <h2 id="takeaway">Takeaway<a class="anchor-link" href="#takeaway">¶</a></h2><ul>
 <li><code>NetCDF.read_file</code> gives you a <strong>container</strong>; <code>get_variable</code> descends to a <strong>variable subset</strong> that is a
 full georeferenced raster.</li>
-<li>Inspect structure with <code>variable_names</code>, <code>dimension_sizes</code>, <code>global_attributes</code> / <code>get_all_metadata</code>,
+<li>Inspect structure with <code>variable_names</code>, <code>dimension_sizes</code>, <code>global_attributes</code> / <code>refresh_metadata</code>,
 and <code>group_names</code> / <code>get_group</code> for NetCDF-4 groups.</li>
 <li>Read data with <code>read_array</code> — eager NumPy by default; <code>unpack=</code> for packed variables, <code>masked=</code> for a
 masked array, <code>window=</code> / <code>bbox=</code> for sub-reads, <code>chunks=</code> for lazy dask.</li>

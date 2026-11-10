@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7988,14 +7988,14 @@ Center      (  256.0,  256.0)</pre>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
 <span class="c1"># variable, its dims / shape / dtype / unit / scale-offset.</span>
-<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">()</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
+<div class="clipboard-copy-txt" id="cell-3"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
 # variable, its dims / shape / dtype / unit / scale-offset.
-meta = nc.get_all_metadata()
+meta = nc.refresh_metadata()
 print(meta)</div>
 </div>
 </div>
@@ -8359,7 +8359,7 @@ print('dimensions after reducing time:', dict(time_mean.dimension_sizes))</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3401/942131265.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
+<pre>/tmp/ipykernel_3598/942131265.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
   time_mean = nc.reduce('time', how='mean')
 </pre>
 </div>
@@ -8589,17 +8589,17 @@ glyph.add_features("coastline", "50m", zorder=5)</div>
 <div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>cropped tos bounds: [np.float64(-98.0), np.float64(8.0), np.float64(-60.0), np.float64(30.0)]
-cell sizes (x, y): 2.0 -1.0
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>/home/runner/work/pyramids-core/pyramids-core/.pixi/envs/docs/lib/python3.14/site-packages/osgeo/gdal.py:13408: RuntimeWarning: the input vector layer has a SRS, but the source raster dataset does not. Cutline results may be incorrect.
+  return _gdal.wrapper_GDALWarpDestName(*args)
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/runner/work/pyramids-core/pyramids-core/.pixi/envs/docs/lib/python3.14/site-packages/osgeo/gdal.py:13408: RuntimeWarning: the input vector layer has a SRS, but the source raster dataset does not. Cutline results may be incorrect.
-  return _gdal.wrapper_GDALWarpDestName(*args)
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>cropped tos bounds: [np.float64(-98.0), np.float64(8.0), np.float64(-60.0), np.float64(30.0)]
+cell sizes (x, y): 2.0 -1.0
 </pre>
 </div>
 </div>
@@ -8861,14 +8861,14 @@ Center      (  256.0,  256.0)</pre>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
 <span class="c1"># variable, its dims / shape / dtype / unit / scale-offset.</span>
-<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">()</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-15"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
+<div class="clipboard-copy-txt" id="cell-15"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
 # variable, its dims / shape / dtype / unit / scale-offset.
-meta = nc.get_all_metadata()
+meta = nc.refresh_metadata()
 print(meta)</div>
 </div>
 </div>
@@ -9429,14 +9429,14 @@ Center      (  256.0,  256.0)</pre>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
 <span class="c1"># variable, its dims / shape / dtype / unit / scale-offset.</span>
-<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">()</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-23"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
+<div class="clipboard-copy-txt" id="cell-23"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
 # variable, its dims / shape / dtype / unit / scale-offset.
-meta = nc.get_all_metadata()
+meta = nc.refresh_metadata()
 print(meta)</div>
 </div>
 </div>

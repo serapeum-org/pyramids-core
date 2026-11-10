@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7610,7 +7610,7 @@
 <p>UGRID topology detection from NetCDF files using GDAL's
 Multidimensional API, and UGRID-compliant NetCDF writing.</p>
 <p>On read, <code>parse_ugrid_topology</code> scans the root group for mesh topology variables and returns one
-<code>MeshTopologyInfo</code> per mesh, which <code>Mesh2d.from_gdal_group</code> turns into topology. On write, the topology
+<code>MeshTopologyInfo</code> per mesh, which <code>Mesh2d._from_gdal_group</code> turns into topology. On write, the topology
 and each data variable are emitted back as CF/UGRID-compliant arrays:</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
@@ -7637,7 +7637,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     </nav>
     <pre class="mermaid"><code>flowchart LR
     F[(".nc root group")] --&gt;|parse_ugrid_topology| TI["list[MeshTopologyInfo]"]
-    TI --&gt;|"Mesh2d.from_gdal_group"| M["Mesh2d"]
+    TI --&gt;|"Mesh2d._from_gdal_group"| M["Mesh2d"]
     M --&gt;|write_ugrid_topology| F
     V["MeshVariable"] --&gt;|write_ugrid_data_variable| F</code></pre> 
     

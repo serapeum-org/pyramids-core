@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -5845,17 +5845,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_gdal_group
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -8141,17 +8130,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_gdal_group
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -8234,7 +8212,7 @@ Hold "Ctrl" to enable pan &amp; zoom
       +fan_triangles
       +get_face_polygon(i)
       +build_edge_connectivity()
-      +from_gdal_group(rg, topo)$
+      +_from_gdal_group(rg, topo)$
     }
     class Connectivity {
       data · fill_value · cf_role
@@ -9583,7 +9561,7 @@ reference to GDAL objects.</p>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-617" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-617"></a>        <span class="k">return</span> <span class="n">neighbors</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-618" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-618"></a>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-619" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-619"></a>    <span class="nd">@classmethod</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-620" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-620"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">from_gdal_group</span><span class="p">(</span>
+<a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-620" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-620"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_from_gdal_group</span><span class="p">(</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-621" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-621"></a>        <span class="bp">cls</span><span class="p">,</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-622" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-622"></a>        <span class="n">rg</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">Group</span><span class="p">,</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-623" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-623"></a>        <span class="n">topo_info</span><span class="p">:</span> <span class="n">MeshTopologyInfo</span><span class="p">,</span>
@@ -9676,7 +9654,7 @@ reference to GDAL objects.</p>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-710" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-710"></a>        <span class="k">if</span> <span class="n">var_name</span><span class="p">:</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-711" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-711"></a>            <span class="n">arr</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">OpenMDArray</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-712" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-712"></a>            <span class="k">if</span> <span class="n">arr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-713" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-713"></a>                <span class="n">conn</span> <span class="o">=</span> <span class="n">Connectivity</span><span class="o">.</span><span class="n">from_gdal_array</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-713" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-713"></a>                <span class="n">conn</span> <span class="o">=</span> <span class="n">Connectivity</span><span class="o">.</span><span class="n">_from_gdal_array</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-714" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-714"></a>        <span class="k">return</span> <span class="n">conn</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-715" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-715"></a>
 <a id="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-716" name="pyramids.netcdf.ugrid.Mesh2d--source--__codelineno-0-716"></a>    <span class="nd">@staticmethod</span>
@@ -11297,292 +11275,6 @@ contains the indices of neighboring faces, padded with -1.</p>
 <a id="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-548" name="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-548"></a>        <span class="n">cf_role</span><span class="o">=</span><span class="s2">"face_face_connectivity"</span><span class="p">,</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-549" name="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-549"></a>        <span class="n">original_start_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
 <a id="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-550" name="pyramids.netcdf.ugrid.Mesh2d.build_face_face_connectivity--source--__codelineno-0-550"></a>    <span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group" class="doc doc-heading"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group" class="toclink">
-            <code class="highlight language-python"><span class="n">from_gdal_group</span><span class="p">(</span><span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-</a><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group" class="headerlink" title="Permanent link">#</a></h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Build Mesh2d from a GDAL root group and parsed topology info.</p>
-<p>Reads node coordinates, connectivity arrays, and optional
-face/edge center coordinates from the GDAL group using the
-variable names specified in the MeshTopologyInfo.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>rg</code>
-            </td>
-            <td>
-                  <code><span title="osgeo.gdal.Group">Group</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>GDAL root group from a multidimensional NetCDF file.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>topo_info</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.MeshTopologyInfo&lt;/code&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt; (&lt;code&gt;pyramids.netcdf.ugrid.models.MeshTopologyInfo&lt;/code&gt;)" href="../models/#pyramids.netcdf.ugrid.MeshTopologyInfo">MeshTopologyInfo</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Parsed UGRID topology metadata.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;pyramids.netcdf.ugrid.Mesh2d&lt;/code&gt; (&lt;code&gt;pyramids.netcdf.ugrid.mesh.Mesh2d&lt;/code&gt;)" href="#pyramids.netcdf.ugrid.Mesh2d">Mesh2d</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Mesh2d instance with all available mesh components.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If required node coordinate arrays cannot be read.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>src/pyramids/netcdf/ugrid/mesh.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-619">619</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-620">620</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-621">621</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-622">622</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-623">623</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-624">624</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-625">625</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-626">626</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-627">627</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-628">628</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-629">629</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-630">630</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-631">631</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-632">632</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-633">633</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-634">634</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-635">635</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-636">636</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-637">637</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-638">638</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-639">639</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-640">640</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-641">641</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-642">642</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-643">643</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-644">644</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-645">645</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-646">646</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-647">647</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-648">648</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-649">649</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-650">650</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-651">651</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-652">652</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-653">653</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-654">654</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-655">655</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-656">656</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-657">657</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-658">658</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-659">659</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-660">660</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-661">661</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-662">662</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-663">663</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-664">664</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-665">665</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-666">666</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-667">667</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-668">668</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-669">669</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-670">670</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-671">671</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-672">672</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-673">673</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-674">674</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-675">675</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-676">676</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-677">677</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-678">678</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-679">679</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-680">680</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-681">681</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-682">682</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-683">683</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-684">684</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-685">685</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-686">686</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-687">687</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-688">688</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-689">689</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-690">690</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-691">691</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-692">692</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-693">693</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-694">694</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-695">695</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-696">696</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-697">697</a></span>
-<span class="normal"><a href="#pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-698">698</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-619" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-619"></a><span class="nd">@classmethod</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-620" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-620"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_gdal_group</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-621" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-621"></a>    <span class="bp">cls</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-622" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-622"></a>    <span class="n">rg</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">Group</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-623" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-623"></a>    <span class="n">topo_info</span><span class="p">:</span> <span class="n">MeshTopologyInfo</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-624" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-624"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh2d</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-625" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-625"></a><span class="w">    </span><span class="sd">"""Build Mesh2d from a GDAL root group and parsed topology info.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-626" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-626"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-627" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-627"></a><span class="sd">    Reads node coordinates, connectivity arrays, and optional</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-628" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-628"></a><span class="sd">    face/edge center coordinates from the GDAL group using the</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-629" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-629"></a><span class="sd">    variable names specified in the MeshTopologyInfo.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-630" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-630"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-631" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-631"></a><span class="sd">    Args:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-632" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-632"></a><span class="sd">        rg: GDAL root group from a multidimensional NetCDF file.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-633" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-633"></a><span class="sd">        topo_info: Parsed UGRID topology metadata.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-634" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-634"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-635" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-635"></a><span class="sd">    Returns:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-636" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-636"></a><span class="sd">        Mesh2d instance with all available mesh components.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-637" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-637"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-638" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-638"></a><span class="sd">    Raises:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-639" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-639"></a><span class="sd">        ValueError: If required node coordinate arrays cannot be read.</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-640" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-640"></a><span class="sd">    """</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-641" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-641"></a>    <span class="n">node_x_arr</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">OpenMDArray</span><span class="p">(</span><span class="n">topo_info</span><span class="o">.</span><span class="n">node_x_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-642" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-642"></a>    <span class="n">node_y_arr</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">OpenMDArray</span><span class="p">(</span><span class="n">topo_info</span><span class="o">.</span><span class="n">node_y_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-643" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-643"></a>    <span class="k">if</span> <span class="n">node_x_arr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">node_y_arr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-644" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-644"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-645" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-645"></a>            <span class="sa">f</span><span class="s2">"Cannot read node coordinate arrays: "</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-646" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-646"></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">topo_info</span><span class="o">.</span><span class="n">node_x_var</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">topo_info</span><span class="o">.</span><span class="n">node_y_var</span><span class="si">}</span><span class="s2">"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-647" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-647"></a>        <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-648" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-648"></a>    <span class="n">node_x</span> <span class="o">=</span> <span class="n">node_x_arr</span><span class="o">.</span><span class="n">ReadAsArray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-649" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-649"></a>    <span class="n">node_y</span> <span class="o">=</span> <span class="n">node_y_arr</span><span class="o">.</span><span class="n">ReadAsArray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-650" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-650"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-651" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-651"></a>    <span class="n">face_node_conn</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_connectivity</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-652" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-652"></a>        <span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">face_node_var</span><span class="p">,</span> <span class="s2">"face_node_connectivity"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-653" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-653"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-654" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-654"></a>    <span class="n">edge_node_conn</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_connectivity</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-655" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-655"></a>        <span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">edge_node_var</span><span class="p">,</span> <span class="s2">"edge_node_connectivity"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-656" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-656"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-657" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-657"></a>    <span class="n">face_edge_conn</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_connectivity</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-658" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-658"></a>        <span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">face_edge_var</span><span class="p">,</span> <span class="s2">"face_edge_connectivity"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-659" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-659"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-660" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-660"></a>    <span class="n">face_face_conn</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_connectivity</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-661" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-661"></a>        <span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">face_face_var</span><span class="p">,</span> <span class="s2">"face_face_connectivity"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-662" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-662"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-663" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-663"></a>    <span class="n">edge_face_conn</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_connectivity</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-664" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-664"></a>        <span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">edge_face_var</span><span class="p">,</span> <span class="s2">"edge_face_connectivity"</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-665" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-665"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-666" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-666"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-667" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-667"></a>    <span class="n">face_x</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_coord_array</span><span class="p">(</span><span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">face_x_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-668" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-668"></a>    <span class="n">face_y</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_coord_array</span><span class="p">(</span><span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">face_y_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-669" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-669"></a>    <span class="n">edge_x</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_coord_array</span><span class="p">(</span><span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">edge_x_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-670" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-670"></a>    <span class="n">edge_y</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_coord_array</span><span class="p">(</span><span class="n">rg</span><span class="p">,</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">edge_y_var</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-671" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-671"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-672" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-672"></a>    <span class="n">crs</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-673" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-673"></a>    <span class="k">if</span> <span class="n">topo_info</span><span class="o">.</span><span class="n">crs_wkt</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-674" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-674"></a>        <span class="k">try</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-675" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-675"></a>            <span class="n">crs</span> <span class="o">=</span> <span class="n">PyProjCRS</span><span class="o">.</span><span class="n">from_wkt</span><span class="p">(</span><span class="n">topo_info</span><span class="o">.</span><span class="n">crs_wkt</span><span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-676" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-676"></a>        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-677" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-677"></a>            <span class="n">crs</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-678" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-678"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-679" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-679"></a>    <span class="k">if</span> <span class="n">face_node_conn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-680" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-680"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-681" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-681"></a>            <span class="sa">f</span><span class="s2">"Cannot read face_node_connectivity for mesh '</span><span class="si">{</span><span class="n">topo_info</span><span class="o">.</span><span class="n">mesh_name</span><span class="si">}</span><span class="s2">'."</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-682" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-682"></a>        <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-683" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-683"></a>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-684" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-684"></a>    <span class="n">result</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-685" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-685"></a>        <span class="n">node_x</span><span class="o">=</span><span class="n">node_x</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-686" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-686"></a>        <span class="n">node_y</span><span class="o">=</span><span class="n">node_y</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-687" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-687"></a>        <span class="n">face_node_connectivity</span><span class="o">=</span><span class="n">face_node_conn</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-688" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-688"></a>        <span class="n">edge_node_connectivity</span><span class="o">=</span><span class="n">edge_node_conn</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-689" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-689"></a>        <span class="n">face_edge_connectivity</span><span class="o">=</span><span class="n">face_edge_conn</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-690" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-690"></a>        <span class="n">face_face_connectivity</span><span class="o">=</span><span class="n">face_face_conn</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-691" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-691"></a>        <span class="n">edge_face_connectivity</span><span class="o">=</span><span class="n">edge_face_conn</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-692" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-692"></a>        <span class="n">face_x</span><span class="o">=</span><span class="n">face_x</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-693" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-693"></a>        <span class="n">face_y</span><span class="o">=</span><span class="n">face_y</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-694" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-694"></a>        <span class="n">edge_x</span><span class="o">=</span><span class="n">edge_x</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-695" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-695"></a>        <span class="n">edge_y</span><span class="o">=</span><span class="n">edge_y</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-696" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-696"></a>        <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-697" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-697"></a>    <span class="p">)</span>
-<a id="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-698" name="pyramids.netcdf.ugrid.Mesh2d.from_gdal_group--source--__codelineno-0-698"></a>    <span class="k">return</span> <span class="n">result</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

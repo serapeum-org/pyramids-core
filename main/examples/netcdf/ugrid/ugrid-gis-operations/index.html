@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8905,14 +8905,14 @@ New CRS: 4326
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">filled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="o">-</span><span class="mf">9999.0</span><span class="p">)</span>
-<span class="n">original</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">"depth"</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
-<span class="n">filled_arr</span> <span class="o">=</span> <span class="n">filled</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">"depth"</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+<span class="n">original</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"depth"</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+<span class="n">filled_arr</span> <span class="o">=</span> <span class="n">filled</span><span class="p">[</span><span class="s2">"depth"</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original (has NaN): </span><span class="si">{</span><span class="n">original</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Filled:             </span><span class="si">{</span><span class="n">filled_arr</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5">filled = ds.fillna(-9999.0)
-original = ds.get_data("depth").data
-filled_arr = filled.get_data("depth").data
+original = ds["depth"].data
+filled_arr = filled["depth"].data
 print(f"Original (has NaN): {original}")
 print(f"Filled:             {filled_arr}")</div>
 </div>
@@ -8969,15 +8969,15 @@ Filled:             [ 1.000e+00  2.000e+00  3.000e+00  4.000e+00  2.000e+00 -9.9
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">null_mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span>
 <span class="n">valid_mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"isnull:  </span><span class="si">{</span><span class="n">null_mask</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"notnull: </span><span class="si">{</span><span class="n">valid_mask</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"NaN count: </span><span class="si">{</span><span class="n">null_mask</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"isnull:  </span><span class="si">{</span><span class="n">null_mask</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"notnull: </span><span class="si">{</span><span class="n">valid_mask</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"NaN count: </span><span class="si">{</span><span class="n">null_mask</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">null_mask = ds.isnull()
 valid_mask = ds.notnull()
-print(f"isnull:  {null_mask.get_data('depth').data}")
-print(f"notnull: {valid_mask.get_data('depth').data}")
-print(f"NaN count: {null_mask.get_data('depth').data.sum()}")</div>
+print(f"isnull:  {null_mask['depth'].data}")
+print(f"notnull: {valid_mask['depth'].data}")
+print(f"NaN count: {null_mask['depth'].data.sum()}")</div>
 </div>
 </div>
 </div>
@@ -9032,12 +9032,12 @@ NaN count: 1
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">clamped</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">clip_values</span><span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Clamped:  </span><span class="si">{</span><span class="n">clamped</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original: </span><span class="si">{</span><span class="n">ds</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Clamped:  </span><span class="si">{</span><span class="n">clamped</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7">clamped = ds.clip_values(2.0, 7.0)
-print(f"Original: {ds.get_data('depth').data}")
-print(f"Clamped:  {clamped.get_data('depth').data}")</div>
+print(f"Original: {ds['depth'].data}")
+print(f"Clamped:  {clamped['depth'].data}")</div>
 </div>
 </div>
 </div>
@@ -9091,22 +9091,22 @@ Clamped:  [ 2.  2.  3.  4.  2. nan  5.  6.  3.  4.  7.  7.  4.  5.  6.  7.]
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">noisy</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
 <span class="n">noisy</span> <span class="o">=</span> <span class="n">noisy</span><span class="o">.</span><span class="n">with_variable</span><span class="p">(</span>
     <span class="s2">"depth"</span><span class="p">,</span>
-    <span class="n">noisy</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">"depth"</span><span class="p">)</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+    <span class="n">noisy</span><span class="p">[</span><span class="s2">"depth"</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
     <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">rounded</span> <span class="o">=</span> <span class="n">noisy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Noisy:   </span><span class="si">{</span><span class="n">noisy</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Rounded: </span><span class="si">{</span><span class="n">rounded</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Noisy:   </span><span class="si">{</span><span class="n">noisy</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Rounded: </span><span class="si">{</span><span class="n">rounded</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-8">noisy = ds.fillna(0.0)
 noisy = noisy.with_variable(
     "depth",
-    noisy.get_data("depth").data + np.random.default_rng(42).normal(0, 0.1, 16),
+    noisy["depth"].data + np.random.default_rng(42).normal(0, 0.1, 16),
     location="face",
 )
 rounded = noisy.round(1)
-print(f"Noisy:   {noisy.get_data('depth').data[:6]}")
-print(f"Rounded: {rounded.get_data('depth').data[:6]}")</div>
+print(f"Noisy:   {noisy['depth'].data[:6]}")
+print(f"Rounded: {rounded['depth'].data[:6]}")</div>
 </div>
 </div>
 </div>
@@ -9158,14 +9158,14 @@ Rounded: [ 1.   1.9  3.1  4.1  1.8 -0.1]
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">filled_int</span> <span class="o">=</span> <span class="n">filled</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original dtype: </span><span class="si">{</span><span class="n">filled</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cast dtype:     </span><span class="si">{</span><span class="n">filled_int</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Values:         </span><span class="si">{</span><span class="n">filled_int</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original dtype: </span><span class="si">{</span><span class="n">filled</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cast dtype:     </span><span class="si">{</span><span class="n">filled_int</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Values:         </span><span class="si">{</span><span class="n">filled_int</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-9">filled_int = filled.astype(np.int32)
-print(f"Original dtype: {filled.get_data('depth').data.dtype}")
-print(f"Cast dtype:     {filled_int.get_data('depth').data.dtype}")
-print(f"Values:         {filled_int.get_data('depth').data}")</div>
+print(f"Original dtype: {filled['depth'].data.dtype}")
+print(f"Cast dtype:     {filled_int['depth'].data.dtype}")
+print(f"Values:         {filled_int['depth'].data}")</div>
 </div>
 </div>
 </div>
@@ -9219,12 +9219,12 @@ Values:         [    1     2     3     4     2 -9999     5     6     3     4    
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">membership</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Values:    </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Is in set: </span><span class="si">{</span><span class="n">membership</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Values:    </span><span class="si">{</span><span class="n">ds</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Is in set: </span><span class="si">{</span><span class="n">membership</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10">membership = ds.isin([1.0, 3.0, 5.0, 7.0, 9.0])
-print(f"Values:    {ds.get_data('depth').data}")
-print(f"Is in set: {membership.get_data('depth').data}")</div>
+print(f"Values:    {ds['depth'].data}")
+print(f"Is in set: {membership['depth'].data}")</div>
 </div>
 </div>
 </div>
@@ -9709,10 +9709,10 @@ print(dist.reshape(4, 4))</div>
 <span class="n">island_data</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">6.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">]</span>
 
 <span class="n">ds_island</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">with_variable</span><span class="p">(</span><span class="s2">"depth"</span><span class="p">,</span> <span class="n">island_data</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Before sieve: </span><span class="si">{</span><span class="n">ds_island</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Before sieve: </span><span class="si">{</span><span class="n">ds_island</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <span class="n">sieved</span> <span class="o">=</span> <span class="n">ds_island</span><span class="o">.</span><span class="n">sieve</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After sieve (threshold=3): </span><span class="si">{</span><span class="n">sieved</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">'depth'</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After sieve (threshold=3): </span><span class="si">{</span><span class="n">sieved</span><span class="p">[</span><span class="s1">'depth'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"(The isolated face 0 was blanked to NaN)"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-18">island_data = np.full(16, np.nan)
@@ -9721,10 +9721,10 @@ island_data[4:8] = [2.0, 3.0, 4.0, 5.0]
 island_data[8:12] = [6.0, 7.0, 8.0, 9.0]
 
 ds_island = ds.with_variable("depth", island_data, location="face")
-print(f"Before sieve: {ds_island.get_data('depth').data}")
+print(f"Before sieve: {ds_island['depth'].data}")
 
 sieved = ds_island.sieve(threshold=3)
-print(f"After sieve (threshold=3): {sieved.get_data('depth').data}")
+print(f"After sieve (threshold=3): {sieved['depth'].data}")
 print("(The isolated face 0 was blanked to NaN)")</div>
 </div>
 </div>
@@ -9934,13 +9934,7 @@ print(f"Round-trip CRS:    {ds_roundtrip.epsg}")</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Serialized size: 15822 bytes
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Round-trip equals: True
+Round-trip equals: True
 Round-trip CRS:    28992
 </pre>
 </div>

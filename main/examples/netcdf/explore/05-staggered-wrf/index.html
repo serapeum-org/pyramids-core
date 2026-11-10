@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7946,14 +7946,14 @@ Center      (  256.0,  256.0)</pre>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each</span>
 <span class="c1"># variable, its dims / shape / dtype / unit / scale-offset.</span>
-<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_all_metadata</span><span class="p">()</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">refresh_metadata</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3"># get_all_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
+<div class="clipboard-copy-txt" id="cell-3"># refresh_metadata() returns a NetCDFMetadata whose summary lists dimensions and, for each
 # variable, its dims / shape / dtype / unit / scale-offset.
-meta = nc.get_all_metadata()
+meta = nc.refresh_metadata()
 print(meta)</div>
 </div>
 </div>
