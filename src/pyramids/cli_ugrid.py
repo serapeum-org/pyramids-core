@@ -178,19 +178,27 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
     )
     m_conv.set_defaults(func=_cmd_mesh_convert)
 
+    # Power-user primitives (low-level accessors, array/dim mechanics rarely run one-shot)
+    # collect under a single cross-cutting `mesh advanced`, fed by several registrars.
+    mesh_advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
     add_ugrid_read_commands(add_group(msub, "read", "read/open a mesh from a source"))
     add_ugrid_inspect_commands(
-        add_group(msub, "inspect", "topology, connectivity, variable metadata")
+        add_group(msub, "inspect", "topology, connectivity, variable metadata"),
+        mesh_advanced,
     )
-    add_ugrid_select_commands(add_group(msub, "select", "subset/select over the mesh"))
+    add_ugrid_select_commands(
+        add_group(msub, "select", "subset/select over the mesh"), mesh_advanced
+    )
     add_ugrid_export_commands(
-        add_group(msub, "export", "write a mesh to a file or format")
+        add_group(msub, "export", "write a mesh to a file or format"), mesh_advanced
     )
     add_ugrid_analysis_commands(
         add_group(msub, "analysis", "terrain/field analysis over the mesh")
     )
     add_ugrid_interp_commands(
-        add_group(msub, "interp", "interpolation, regridding, sampling")
+        add_group(msub, "interp", "interpolation, regridding, sampling"), mesh_advanced
     )
     add_ugrid_plot_commands(add_group(msub, "plot", "headless plotting"))
     add_ugrid_attrs_commands(

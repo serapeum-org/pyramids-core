@@ -42,7 +42,7 @@ def _run(argv: list[str]) -> int:
     """Dispatch ``argv`` through a throwaway ``mesh`` parser carrying the registrator.
 
     Args:
-        argv: The CLI tokens after ``pyramids`` (e.g. ``["mesh", "select", "squeeze", src, out]``).
+        argv: The CLI tokens after ``pyramids`` (e.g. ``["mesh", "advanced", "squeeze", src, out]``).
 
     Returns:
         int: The handler's return code.
@@ -51,7 +51,12 @@ def _run(argv: list[str]) -> int:
     groups = parser.add_subparsers(dest="group")
     mesh = groups.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_select_commands(add_group(msub, "select", "subset/select over the mesh"))
+    advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
+    add_ugrid_select_commands(
+        add_group(msub, "select", "subset/select over the mesh"), advanced
+    )
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -352,14 +357,16 @@ class TestTimeSelect:
         """thin keeps every N-th step."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "thin", src, out, "--step", "2"]) == 0
+        assert _run(["mesh", "advanced", "thin", src, out, "--step", "2"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_thin_step_zero_raises(self, tmp_path):
         """A stride below 1 is refused by the kernel (ValueError)."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError, match="step"):
-            _run(["mesh", "select", "thin", src, str(tmp_path / "o.nc"), "--step", "0"])
+            _run(
+                ["mesh", "advanced", "thin", src, str(tmp_path / "o.nc"), "--step", "0"]
+            )
 
     def test_head(self, tmp_path):
         """head keeps the leading N steps."""
@@ -379,14 +386,14 @@ class TestTimeSelect:
         """drop-isel removes steps by position."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "drop-isel", src, out, "--indices", "0"]) == 0
+        assert _run(["mesh", "advanced", "drop-isel", src, out, "--indices", "0"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 3
 
     def test_drop_sel(self, tmp_path):
         """drop-sel removes steps by coordinate value."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "drop-sel", src, out, "--values", "0"]) == 0
+        assert _run(["mesh", "advanced", "drop-sel", src, out, "--values", "0"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 3
 
     def test_drop_duplicates(self, tmp_path):
@@ -399,14 +406,14 @@ class TestTimeSelect:
         """
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "drop-duplicates", src, out]) == 0
+        assert _run(["mesh", "advanced", "drop-duplicates", src, out]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 4
 
     def test_squeeze(self, tmp_path):
         """squeeze collapses a single-step temporal variable to static."""
         src = _write_mesh(_temporal_mesh([5.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "squeeze", src, out]) == 0
+        assert _run(["mesh", "advanced", "squeeze", src, out]) == 0
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
     def test_drop_isel_on_static_raises(self, tmp_path):
@@ -415,7 +422,7 @@ class TestTimeSelect:
             _run(
                 [
                     "mesh",
-                    "select",
+                    "advanced",
                     "drop-isel",
                     str(_MESH),
                     str(tmp_path / "o.nc"),
@@ -446,7 +453,9 @@ class TestLayerSelect:
         """collapse-layer flattens the volume onto a 2-D face field."""
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "select", "collapse-layer", src, out, "--layer", "0"]) == 0
+        assert (
+            _run(["mesh", "advanced", "collapse-layer", src, out, "--layer", "0"]) == 0
+        )
         assert MeshDataset.read_file(out).get_data("sal").data.shape == (3,)
 
     def test_collapse_layer_rejects_non_face(self, tmp_path):
@@ -456,7 +465,7 @@ class TestLayerSelect:
             _run(
                 [
                     "mesh",
-                    "select",
+                    "advanced",
                     "collapse-layer",
                     src,
                     str(tmp_path / "o.nc"),
@@ -635,7 +644,7 @@ class TestValueOps:
             _run(
                 [
                     "mesh",
-                    "select",
+                    "advanced",
                     "drop-variables",
                     str(_MESH),
                     out,
@@ -653,7 +662,7 @@ class TestValueOps:
             _run(
                 [
                     "mesh",
-                    "select",
+                    "advanced",
                     "drop-variables",
                     str(_MESH),
                     str(tmp_path / "o.nc"),

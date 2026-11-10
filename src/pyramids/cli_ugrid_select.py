@@ -490,7 +490,9 @@ def _add_io_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
 
 
-def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
+def add_ugrid_select_commands(
+    msub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the ``mesh`` selection / subset commands on ``msub``.
 
     Args:
@@ -574,7 +576,7 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     )
     m_str.set_defaults(func=_cmd_mesh_sel_time_range)
 
-    m_cl = msub.add_parser(
+    m_cl = (advanced or msub).add_parser(
         "collapse-layer", help="collapse a 3-D volume to a 2-D face field"
     )
     _add_io_arguments(m_cl)
@@ -652,7 +654,7 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     m_cv.add_argument("--var", default=None, help=_HELP_VAR)
     m_cv.set_defaults(func=_cmd_mesh_clip_values)
 
-    m_thin = msub.add_parser("thin", help="keep every N-th time step")
+    m_thin = (advanced or msub).add_parser("thin", help="keep every N-th time step")
     _add_io_arguments(m_thin)
     m_thin.add_argument("--step", type=int, required=True, help="stride (>= 1)")
     m_thin.set_defaults(func=_cmd_mesh_thin)
@@ -675,7 +677,9 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     m_where.add_argument("--var", default=None, help=_HELP_VAR)
     m_where.set_defaults(func=_cmd_mesh_where)
 
-    m_dsel = msub.add_parser("drop-sel", help="drop time steps by coordinate value")
+    m_dsel = (advanced or msub).add_parser(
+        "drop-sel", help="drop time steps by coordinate value"
+    )
     _add_io_arguments(m_dsel)
     m_dsel.add_argument(
         "--values",
@@ -686,7 +690,9 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     )
     m_dsel.set_defaults(func=_cmd_mesh_drop_sel)
 
-    m_disel = msub.add_parser("drop-isel", help="drop time steps by position")
+    m_disel = (advanced or msub).add_parser(
+        "drop-isel", help="drop time steps by position"
+    )
     _add_io_arguments(m_disel)
     m_disel.add_argument(
         "--indices",
@@ -697,14 +703,16 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     )
     m_disel.set_defaults(func=_cmd_mesh_drop_isel)
 
-    m_dvar = msub.add_parser("drop-variables", help="drop whole data variables")
+    m_dvar = (advanced or msub).add_parser(
+        "drop-variables", help="drop whole data variables"
+    )
     _add_io_arguments(m_dvar)
     m_dvar.add_argument(
         "--names", nargs="+", required=True, help="variable name(s) to drop"
     )
     m_dvar.set_defaults(func=_cmd_mesh_drop_variables)
 
-    m_dd = msub.add_parser(
+    m_dd = (advanced or msub).add_parser(
         "drop-duplicates", help="keep the first of each repeated time stamp"
     )
     _add_io_arguments(m_dd)
@@ -724,6 +732,8 @@ def add_ugrid_select_commands(msub: argparse._SubParsersAction) -> None:
     )
     m_tail.set_defaults(func=_cmd_mesh_tail)
 
-    m_sq = msub.add_parser("squeeze", help="drop a length-1 time dimension")
+    m_sq = (advanced or msub).add_parser(
+        "squeeze", help="drop a length-1 time dimension"
+    )
     _add_io_arguments(m_sq)
     m_sq.set_defaults(func=_cmd_mesh_squeeze)

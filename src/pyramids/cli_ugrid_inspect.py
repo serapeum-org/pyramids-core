@@ -537,7 +537,9 @@ def _add_array_verb(
     parser.set_defaults(func=func)
 
 
-def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
+def add_ugrid_inspect_commands(
+    msub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the mesh inspection verbs on the ``mesh`` sub-action.
 
     Args:
@@ -545,10 +547,10 @@ def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
     """
     _add_summary(msub)
     _add_mesh_names(msub)
-    _add_get(msub)
-    _add_keys(msub)
-    _add_items(msub)
-    _add_values(msub)
+    _add_get(advanced or msub)
+    _add_keys(advanced or msub)
+    _add_items(advanced or msub)
+    _add_values(advanced or msub)
     _add_geometry_verb(
         msub,
         "exterior-edges",
@@ -573,7 +575,7 @@ def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
         "write the mesh outline polygon",
         _cmd_bounding_polygon,
     )
-    sparse = msub.add_parser(
+    sparse = (advanced or msub).add_parser(
         "sparse-adjacency", help="the mesh adjacency matrix (summary / .npz)"
     )
     sparse.add_argument("file", help=_HELP_MESH_FILE)
@@ -589,7 +591,7 @@ def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
     sparse.add_argument("--json", action="store_true", help=_HELP_JSON)
     sparse.set_defaults(func=_cmd_sparse_adjacency)
     _add_array_verb(
-        msub,
+        (advanced or msub),
         "connected-components",
         "label the mesh's connected components",
         _cmd_connected_components,
@@ -597,7 +599,7 @@ def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
         output_ext=".npy",
     )
     _add_array_verb(
-        msub,
+        (advanced or msub),
         "active-mask",
         "a variable's active-cell mask",
         _cmd_active_mask,
@@ -605,7 +607,7 @@ def add_ugrid_inspect_commands(msub: argparse._SubParsersAction) -> None:
         output_ext=".npy",
     )
     _add_array_verb(
-        msub,
+        (advanced or msub),
         "masked-values",
         "a variable's no-data-masked values",
         _cmd_masked_values,

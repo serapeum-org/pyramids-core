@@ -35,7 +35,7 @@ def _dispatch(argv: list[str]) -> int:
     """Register the group on a throwaway parser and run the selected command.
 
     Args:
-        argv: The argument vector, e.g. ``["mesh", "interp", "integrate", src, dst]``.
+        argv: The argument vector, e.g. ``["mesh", "advanced", "integrate", src, dst]``.
 
     Returns:
         int: The handler's exit code.
@@ -44,8 +44,11 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
+    advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
     add_ugrid_interp_commands(
-        add_group(msub, "interp", "interpolation, regridding, sampling")
+        add_group(msub, "interp", "interpolation, regridding, sampling"), advanced
     )
     args = parser.parse_args(argv)
     return args.func(args)
@@ -239,13 +242,13 @@ class TestFillFamily:
     def test_ffill(self, gappy, tmp_path):
         """ffill forward-fills gaps along the time axis."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "ffill", gappy, out]) == 0
+        assert _dispatch(["mesh", "advanced", "ffill", gappy, out]) == 0
         assert _reopen_has_depth(out)
 
     def test_bfill(self, gappy, tmp_path):
         """bfill back-fills gaps along the time axis."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "bfill", gappy, out, "--limit", "1"]) == 0
+        assert _dispatch(["mesh", "advanced", "bfill", gappy, out, "--limit", "1"]) == 0
         assert _reopen_has_depth(out)
 
     def test_fill_na_spatial(self, gappy, tmp_path):
@@ -296,7 +299,7 @@ class TestWindowed:
         rc = _dispatch(
             [
                 "mesh",
-                "interp",
+                "advanced",
                 "rolling",
                 plain,
                 out,
@@ -314,7 +317,7 @@ class TestWindowed:
         """coarsen block-reduces the time axis by a window."""
         out = str(tmp_path / "out.nc")
         assert (
-            _dispatch(["mesh", "interp", "coarsen", plain, out, "--window", "2"]) == 0
+            _dispatch(["mesh", "advanced", "coarsen", plain, out, "--window", "2"]) == 0
         )
         assert _reopen_has_depth(out)
 
@@ -325,19 +328,19 @@ class TestCalculus:
     def test_integrate(self, plain, tmp_path):
         """integrate collapses the time axis to a single integral."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "integrate", plain, out]) == 0
+        assert _dispatch(["mesh", "advanced", "integrate", plain, out]) == 0
         assert _reopen_has_depth(out)
 
     def test_cumulative_integrate(self, plain, tmp_path):
         """cumulative-integrate produces a running integral along the time axis."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "cumulative-integrate", plain, out]) == 0
+        assert _dispatch(["mesh", "advanced", "cumulative-integrate", plain, out]) == 0
         assert _reopen_has_depth(out)
 
     def test_differentiate(self, plain, tmp_path):
         """differentiate produces the derivative along the time axis."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "differentiate", plain, out]) == 0
+        assert _dispatch(["mesh", "advanced", "differentiate", plain, out]) == 0
         assert _reopen_has_depth(out)
 
 
@@ -369,13 +372,17 @@ class TestValueTransforms:
     def test_shift(self, plain, tmp_path):
         """shift moves values along the time axis by --periods."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "shift", plain, out, "--periods", "1"]) == 0
+        assert (
+            _dispatch(["mesh", "advanced", "shift", plain, out, "--periods", "1"]) == 0
+        )
         assert _reopen_has_depth(out)
 
     def test_dropna(self, gappy, tmp_path):
         """dropna drops time steps that carry missing values."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "dropna", gappy, out, "--how", "any"]) == 0
+        assert (
+            _dispatch(["mesh", "advanced", "dropna", gappy, out, "--how", "any"]) == 0
+        )
         assert _reopen_has_depth(out)
 
 
@@ -385,20 +392,20 @@ class TestErrors:
     def test_refuses_existing_without_overwrite(self, plain, tmp_path):
         """A second write to the same path without --overwrite raises ValueError."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "integrate", plain, out]) == 0
+        assert _dispatch(["mesh", "advanced", "integrate", plain, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _dispatch(["mesh", "interp", "integrate", plain, out])
+            _dispatch(["mesh", "advanced", "integrate", plain, out])
 
     def test_overwrite_allows_replacing(self, plain, tmp_path):
         """--overwrite replaces an existing output."""
         out = str(tmp_path / "out.nc")
-        assert _dispatch(["mesh", "interp", "integrate", plain, out]) == 0
+        assert _dispatch(["mesh", "advanced", "integrate", plain, out]) == 0
         assert (
-            _dispatch(["mesh", "interp", "integrate", plain, out, "--overwrite"]) == 0
+            _dispatch(["mesh", "advanced", "integrate", plain, out, "--overwrite"]) == 0
         )
 
     def test_unknown_variable_is_clean_valueerror(self, plain, tmp_path):
         """A typo'd --var surfaces as ValueError (remapped from KeyError), not KeyError."""
         out = str(tmp_path / "out.nc")
         with pytest.raises(ValueError, match="data variable"):
-            _dispatch(["mesh", "interp", "integrate", plain, out, "--var", "nope"])
+            _dispatch(["mesh", "advanced", "integrate", plain, out, "--var", "nope"])

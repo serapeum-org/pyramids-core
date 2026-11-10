@@ -43,8 +43,11 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
+    advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
     add_ugrid_export_commands(
-        add_group(msub, "export", "write a mesh to a file or format")
+        add_group(msub, "export", "write a mesh to a file or format"), advanced
     )
     args = parser.parse_args(argv)
     return args.func(args)
@@ -457,7 +460,9 @@ class TestSetCrs:
         """set-crs declares a CRS on a mesh that had none."""
         out = str(tmp_path / "declared.nc")
         assert (
-            _dispatch(["mesh", "export", "set-crs", str(_MESH), out, "--epsg", "4326"])
+            _dispatch(
+                ["mesh", "advanced", "set-crs", str(_MESH), out, "--epsg", "4326"]
+            )
             == 0
         )
         assert MeshDataset.read_file(out).epsg == 4326
@@ -465,7 +470,9 @@ class TestSetCrs:
     def test_neither_epsg_nor_crs_raises(self, tmp_path):
         """Omitting both --epsg and --crs is a clean error."""
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "export", "set-crs", str(_MESH), str(tmp_path / "x.nc")])
+            _dispatch(
+                ["mesh", "advanced", "set-crs", str(_MESH), str(tmp_path / "x.nc")]
+            )
 
 
 class TestBurn:
@@ -595,7 +602,7 @@ class TestWithVariable:
         rc = _dispatch(
             [
                 "mesh",
-                "export",
+                "advanced",
                 "with-variable",
                 str(_MESH),
                 out,
@@ -622,7 +629,7 @@ class TestRenameVariable:
         rc = _dispatch(
             [
                 "mesh",
-                "export",
+                "advanced",
                 "rename-variable",
                 str(_MESH),
                 out,
@@ -643,7 +650,7 @@ class TestRenameVariable:
             _dispatch(
                 [
                     "mesh",
-                    "export",
+                    "advanced",
                     "rename-variable",
                     str(_MESH),
                     str(tmp_path / "x.nc"),

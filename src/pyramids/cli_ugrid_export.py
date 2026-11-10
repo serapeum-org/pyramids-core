@@ -800,7 +800,9 @@ def _add_voronoi_polygons(msub: argparse._SubParsersAction) -> None:
     parser.set_defaults(func=_cmd_mesh_voronoi_polygons)
 
 
-def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
+def add_ugrid_export_commands(
+    msub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the mesh convert/export commands on the ``mesh`` sub-parser.
 
     Args:
@@ -817,10 +819,10 @@ def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
     _add_to_bytes(msub)
     _add_to_location(msub)
     _add_to_crs(msub)
-    _add_set_crs(msub)
+    _add_set_crs(advanced or msub)
     _add_burn(msub)
     _add_regrid(msub)
     _add_polygonize(msub)
     _add_attach_data(msub)
-    _add_with_variable(msub)
-    _add_rename_variable(msub)
+    _add_with_variable(advanced or msub)
+    _add_rename_variable(advanced or msub)
