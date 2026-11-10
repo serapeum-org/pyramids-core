@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+
 import pytest
 
 from pyramids._cli_groups import (
@@ -64,6 +66,35 @@ class TestSuggestingParser:
             "stderr should point the user at `warp`"
         )
 
+    def test_error_appends_backport_hint(self, capsys):
+        """`error()` appends the difflib hint when given an old-format (no-native) message.
+
+        Calling ``error`` directly with a pre-3.14-style invalid-choice message exercises the
+        backport branch deterministically, regardless of the running interpreter's native
+        argparse suggestions.
+        """
+        parser = SuggestingArgumentParser(prog="t")
+        with pytest.raises(SystemExit) as exc:
+            parser.error(
+                "argument cmd: invalid choice: 'wrp' (choose from 'warp', 'info')"
+            )
+        assert exc.value.code == 2, "error() exits 2"
+        assert "did you mean: warp?" in capsys.readouterr().err, (
+            "the backport hint should be appended to the message"
+        )
+
+    def test_non_choice_error_has_no_suggestion(self, capsys):
+        """A non-invalid-choice error passes through verbatim (no 'did you mean')."""
+        parser = SuggestingArgumentParser(prog="t")
+        parser.add_argument("--n", type=int, required=True)
+        with pytest.raises(SystemExit) as exc:
+            parser.parse_args([])
+        assert exc.value.code == 2, "a missing-required error still exits 2"
+        err = capsys.readouterr().err
+        assert "mean" not in err.lower(), (
+            "a non-choice error must not gain a did-you-mean hint"
+        )
+
 
 class TestAddGroup:
     """`add_group` mounts a nested group and returns its subparsers action."""
@@ -90,3 +121,131 @@ class TestAddGroup:
         add_group(top, "bands", "band ops")
         with pytest.raises(SystemExit):
             parser.parse_args(["bands"])
+
+    def test_explicit_dest_overrides_default(self):
+        """A caller-supplied ``dest`` names the attribute instead of ``<name>_command``."""
+        parser = SuggestingArgumentParser(prog="t")
+        top = parser.add_subparsers(
+            dest="group", required=True, parser_class=SuggestingArgumentParser
+        )
+        grp = add_group(top, "bands", "band ops", dest="chosen")
+        grp.add_parser("add").set_defaults(func=lambda a: None)
+        ns = parser.parse_args(["bands", "add"])
+        assert ns.chosen == "add", "the explicit dest should record the verb"
+        assert not hasattr(ns, "bands_command"), "the default dest must not also appear"
+
+
+def _subparsers(parser):
+    """Return a parser's first subparsers action (or ``None``)."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action
+    return None
+
+
+class TestGroupedCliStructure:
+    """Epic invariants: the real `pyramids` parser follows the grouped convention.
+
+    These lock in the restructure so a regression (a verb slipping back to the top level, a
+    primitive leaving `advanced`, or a core verb vanishing) fails loudly here rather than only
+    in a far-away help-surface test.
+    """
+
+    @pytest.fixture(scope="class")
+    def root(self):
+        """The top-level `pyramids` subparsers action, built from the real CLI."""
+        from pyramids.cli import _build_parser
+
+        return _subparsers(_build_parser())
+
+    def _group(self, root, name):
+        """Return the ``name`` group's subparsers action."""
+        return _subparsers(root.choices[name])
+
+    def test_top_level_lists_the_domain_groups(self, root):
+        """`pyramids` exposes exactly the domain groups — no flat verbs remain at the top."""
+        top = set(root.choices)
+        expected = {
+            "raster",
+            "vector",
+            "nc",
+            "collection",
+            "stac",
+            "fetch",
+            "mesh",
+            "process",
+            "completion",
+            "plugins",
+        }
+        assert expected <= top, f"missing top-level groups: {expected - top}"
+        for flat in (
+            "info",
+            "warp",
+            "clip",
+            "crop",
+            "to-cog",
+            "from-bytes",
+            "apply",
+            "cog",
+        ):
+            assert flat not in top, f"flat verb {flat!r} must not sit at the top level"
+
+    @pytest.mark.parametrize(
+        "domain, advanced_verbs, core_verbs",
+        [
+            (
+                "raster",
+                {"read-part", "read-tile", "preview", "point", "blocks", "checksum"},
+                {"info", "bounds", "crop", "warp", "merge", "calc"},
+            ),
+            (
+                "nc",
+                {"squeeze", "expand-dims", "assign-coords", "weighted", "rolling"},
+                {"info", "groups", "get-group", "list-vars", "extract", "sel", "crop"},
+            ),
+            (
+                "vector",
+                {"force-2d", "normalize", "shared-paths", "hilbert-distance"},
+                {"info", "bounds", "convert", "warp", "clip"},
+            ),
+            (
+                "mesh",
+                {"get", "keys", "squeeze", "connected-components", "set-crs"},
+                {"info", "extract", "convert"},
+            ),
+        ],
+    )
+    def test_advanced_tier_and_core_verbs(
+        self, root, domain, advanced_verbs, core_verbs
+    ):
+        """Each domain hides its primitives under `advanced` and keeps its task verbs at root.
+
+        Args:
+            root: The top-level subparsers action.
+            domain: The domain group under test.
+            advanced_verbs: A sample of primitives that must live under ``<domain> advanced``.
+            core_verbs: Task verbs that must remain directly under ``<domain>``.
+
+        Test scenario:
+            The sampled primitives resolve only under ``advanced`` (never at the domain root),
+            and every core verb is a direct child of the domain group.
+        """
+        group = self._group(root, domain)
+        root_verbs = set(group.choices)
+        advanced = set(_subparsers(group.choices["advanced"]).choices)
+        assert advanced_verbs <= advanced, (
+            f"{domain}: primitives missing from advanced: {advanced_verbs - advanced}"
+        )
+        assert not (advanced_verbs & root_verbs), (
+            f"{domain}: primitives must not also sit at the root: {advanced_verbs & root_verbs}"
+        )
+        assert core_verbs <= root_verbs, (
+            f"{domain}: core verbs missing from the root: {core_verbs - root_verbs}"
+        )
+
+    def test_process_tool_pair_is_a_subgroup(self, root):
+        """`process tool` resolves the old `tools`/`tool` ambiguity into `list`/`show`."""
+        process = self._group(root, "process")
+        assert {"run", "apply", "tool"} <= set(process.choices), "process verbs present"
+        tool = _subparsers(process.choices["tool"])
+        assert {"list", "show"} <= set(tool.choices), "`process tool list|show` present"
