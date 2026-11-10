@@ -65,7 +65,9 @@ class TestCli:
             Creating with a profile produces a valid COG on disk.
         """
         out = tmp_path / "out.tif"
-        code = main(["raster", "cog", "create", source_tif, str(out), "--profile", "deflate"])
+        code = main(
+            ["raster", "cog", "create", source_tif, str(out), "--profile", "deflate"]
+        )
         assert code == 0, "create should succeed"
         assert "valid COG" in capsys.readouterr().out, "should report validity"
         assert out.exists(), "output file should exist"
@@ -181,7 +183,9 @@ class TestCli:
         err = capsys.readouterr().err
         assert code == 1, "a second create without --overwrite must be refused"
         assert "already exists" in err, f"error should name the existing file: {err}"
-        assert main(["raster", "cog", "create", source_tif, str(out), "--overwrite"]) == 0
+        assert (
+            main(["raster", "cog", "create", source_tif, str(out), "--overwrite"]) == 0
+        )
 
     def test_validate_valid_returns_0(self, cog_tif, capsys):
         """`cog validate` returns 0 for a valid COG.

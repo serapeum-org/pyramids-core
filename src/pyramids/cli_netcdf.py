@@ -230,7 +230,9 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     nc = sub.add_parser("nc", help="NetCDF / multidim commands")
-    ncsub = nc.add_subparsers(dest="command", required=True, parser_class=SuggestingArgumentParser)
+    ncsub = nc.add_subparsers(
+        dest="command", required=True, parser_class=SuggestingArgumentParser
+    )
 
     nc_info = ncsub.add_parser("info", help="summarize a NetCDF file")
     nc_info.add_argument("file", help=_HELP_NC_FILE)
