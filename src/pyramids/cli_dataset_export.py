@@ -103,7 +103,7 @@ def _parse_creation_options(pairs: list[str] | None) -> dict[str, str]:
 
 
 def _cmd_to_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-bytes`` — serialize a raster to raw bytes.
+    """Handle ``pyramids raster export bytes`` — serialize a raster to raw bytes.
 
     Writes the encoded file contents to ``output`` when given, else to stdout
     (so it can be piped). Only single-file drivers are supported by the method.
@@ -128,7 +128,7 @@ def _cmd_to_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_cog_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-cog-bytes`` — serialize a raster to COG bytes.
+    """Handle ``pyramids raster export cog-bytes`` — serialize a raster to COG bytes.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``compression``,
@@ -152,7 +152,7 @@ def _cmd_to_cog_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-dataframe`` — write a cell table as CSV or Parquet.
+    """Handle ``pyramids raster export dataframe`` — write a cell table as CSV or Parquet.
 
     The frame carries a ``(band, y, x)`` MultiIndex and a single ``values``
     column; it is written with the index so the coordinates are preserved. The
@@ -179,7 +179,7 @@ def _cmd_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_polygons(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-polygons`` — dissolve equal-valued regions to polygons.
+    """Handle ``pyramids raster export polygons`` — dissolve equal-valued regions to polygons.
 
     Unlike ``pyramids shapes`` (one feature per cell), this merges connected
     equal-valued cells into one polygon per region and writes them to a vector
@@ -202,7 +202,7 @@ def _cmd_to_polygons(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_raster(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-raster`` — write a raster via :meth:`Dataset.to_file`.
+    """Handle ``pyramids raster export raster`` — write a raster via :meth:`Dataset.to_file`.
 
     Unlike ``pyramids convert`` it exposes the tile length and raw GDAL creation
     options. ``--band`` is forwarded as
@@ -240,7 +240,7 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_image(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-image`` — write a colour-mapped RGB image of a band.
+    """Handle ``pyramids raster export image`` — write a colour-mapped RGB image of a band.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``band``, ``cmap``,
@@ -260,7 +260,7 @@ def _cmd_to_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_xyz(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-xyz`` — write a lon/lat/value point table.
+    """Handle ``pyramids raster export xyz`` — write a lon/lat/value point table.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``bands``, ``overwrite``.
@@ -277,7 +277,7 @@ def _cmd_to_xyz(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-zarr`` — write the raster to a Zarr store.
+    """Handle ``pyramids raster export zarr`` — write the raster to a Zarr store.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``mode``, ``overwrite``.
@@ -294,7 +294,7 @@ def _cmd_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_stac_item(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-stac-item`` — write a STAC Item JSON document.
+    """Handle ``pyramids raster export stac-item`` — write a STAC Item JSON document.
 
     The item references the raster as an asset at ``--asset-href`` (defaulting to
     the input path). The item dictionary is scrubbed of non-finite floats before
@@ -318,7 +318,7 @@ def _cmd_to_stac_item(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_terrain_rgb(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-terrain-rgb`` — encode a DEM to terrain-RGB.
+    """Handle ``pyramids raster export terrain-rgb`` — encode a DEM to terrain-RGB.
 
     Writes one RGB(A) raster by default; with ``--tiles`` it writes an XYZ PNG
     pyramid rooted at ``output`` instead.

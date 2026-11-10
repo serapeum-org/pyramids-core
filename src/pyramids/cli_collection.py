@@ -286,7 +286,7 @@ def _cmd_collection_merge(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_to_file(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection to-file`` — write every timestep to a directory.
+    """Handle ``pyramids collection export file`` — write every timestep to a directory.
 
     Args:
         args: Parsed args with ``glob`` / source options, ``output``, ``driver``,
@@ -303,7 +303,7 @@ def _cmd_collection_to_file(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_to_cog(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection to-cog`` — write each timestep as its own COG.
+    """Handle ``pyramids collection export cog`` — write each timestep as its own COG.
 
     Args:
         args: Parsed args with ``glob`` / source options, ``output``, ``pattern``,
@@ -327,7 +327,7 @@ def _cmd_collection_to_cog(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_to_netcdf(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection to-netcdf`` — write the (T,B,R,C) cube to NetCDF.
+    """Handle ``pyramids collection export netcdf`` — write the (T,B,R,C) cube to NetCDF.
 
     Args:
         args: Parsed args with ``glob`` / source options, ``output``, ``time_dim``,
@@ -344,7 +344,7 @@ def _cmd_collection_to_netcdf(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection to-zarr`` — write the (T,B,R,C) cube to a Zarr store.
+    """Handle ``pyramids collection export zarr`` — write the (T,B,R,C) cube to a Zarr store.
 
     Args:
         args: Parsed args with ``glob`` / source options, ``output``, ``mode``,
@@ -362,7 +362,7 @@ def _cmd_collection_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_collection_to_kerchunk(args: argparse.Namespace) -> int:
-    """Handle ``pyramids collection to-kerchunk`` — write a kerchunk reference JSON.
+    """Handle ``pyramids collection export kerchunk`` — write a kerchunk reference JSON.
 
     Builds a single kerchunk reference over the stack's source files
     (:meth:`DatasetCollection.to_kerchunk`); the sources must be NetCDF/HDF5.

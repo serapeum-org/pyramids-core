@@ -46,7 +46,7 @@ _HELP_DRIVER = "OGR driver (default: inferred from the extension)"
 
 
 def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-file`` — re-write a mesh through a writer.
+    """Handle ``pyramids mesh export to-file`` — re-write a mesh through a writer.
 
     Round-trips the mesh to UGRID NetCDF, or, with ``--driver``, through a
     registered third-party mesh driver (2DM, Selafin, PLY, …).
@@ -65,7 +65,7 @@ def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_geodataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-geodataframe`` — write the mesh as a vector file.
+    """Handle ``pyramids mesh export to-geodataframe`` — write the mesh as a vector file.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``var``, ``location``,
@@ -107,7 +107,7 @@ def _cmd_mesh_voronoi_polygons(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-dataframe`` — write a tidy table (CSV or Parquet).
+    """Handle ``pyramids mesh export to-dataframe`` — write a tidy table (CSV or Parquet).
 
     The frame carries one row per element value with ``variable``/``element``/
     coordinate columns; the output format follows the extension (``.parquet`` →
@@ -135,7 +135,7 @@ def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-dataset`` — rasterize a variable to a GeoTIFF.
+    """Handle ``pyramids mesh export to-dataset`` — rasterize a variable to a GeoTIFF.
 
     Interpolates a mesh variable onto a regular grid and writes the resulting
     raster to ``output``.
@@ -165,7 +165,7 @@ def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-zarr`` — write the mesh to a Zarr store.
+    """Handle ``pyramids mesh export to-zarr`` — write the mesh to a Zarr store.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``overwrite``.
@@ -181,7 +181,7 @@ def _cmd_mesh_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_image(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-image`` — write a colour-mapped image of a variable.
+    """Handle ``pyramids mesh export to-image`` — write a colour-mapped image of a variable.
 
     The mesh is rasterised, then the raster's colour mapping (through cleopatra)
     produces the image. The Agg backend is forced first so a headless run never
@@ -210,7 +210,7 @@ def _cmd_mesh_to_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-bytes`` — serialise the mesh to a UGRID NetCDF buffer.
+    """Handle ``pyramids mesh export to-bytes`` — serialise the mesh to a UGRID NetCDF buffer.
 
     Writes the encoded bytes to ``output`` when given, else to stdout so they can
     be piped.
@@ -235,7 +235,7 @@ def _cmd_mesh_to_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-location`` — remap a variable onto another facet.
+    """Handle ``pyramids mesh export to-location`` — remap a variable onto another facet.
 
     Averages the contributing elements, so a face field asked for on the nodes
     becomes each node's mean of the surrounding faces, and writes the new mesh.
@@ -257,7 +257,7 @@ def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-crs`` — reproject the mesh to a target CRS.
+    """Handle ``pyramids mesh export to-crs`` — reproject the mesh to a target CRS.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``epsg``, ``overwrite``.
@@ -274,7 +274,7 @@ def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_set_crs(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh set-crs`` — declare the mesh's CRS (no reprojection).
+    """Handle ``pyramids mesh advanced set-crs`` — declare the mesh's CRS (no reprojection).
 
     Exactly one of ``--epsg`` / ``--crs`` must be given; the underlying method
     enforces that and raises a clean error otherwise.
@@ -388,7 +388,7 @@ def _cmd_mesh_attach_data(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh with-variable`` — add a variable from a ``.npy`` array.
+    """Handle ``pyramids mesh advanced with-variable`` — add a variable from a ``.npy`` array.
 
     The values are loaded from a NumPy ``.npy`` file: ``(n_elements,)`` for a
     static variable or ``(n_time, n_elements)`` for a temporal one.
@@ -412,7 +412,7 @@ def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_rename_variable(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh rename-variable`` — rename a data variable.
+    """Handle ``pyramids mesh advanced rename-variable`` — rename a data variable.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``old``, ``new``,

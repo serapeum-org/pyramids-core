@@ -976,7 +976,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     # Everything registers under the `raster` group: `pyramids raster <verb>`. The old flat
-    # verbs keep working via the deprecation shim (rewritten + warned, removed in 1.0.0).
+    # spellings were removed outright — there is no deprecation alias.
     raster_sub = add_group(
         sub,
         "raster",

@@ -47,7 +47,7 @@ def _cmd_nc_convert(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-dataframe`` — export variables to a CSV table.
+    """Handle ``pyramids nc io to-dataframe`` — export variables to a CSV table.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``vars``, ``dropna``,
@@ -65,7 +65,7 @@ def _cmd_nc_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_dict(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-dict`` — print the file's structure as a dict.
+    """Handle ``pyramids nc io to-dict`` — print the file's structure as a dict.
 
     ``--data`` includes the variable arrays (large); the default is structure and
     metadata only.
@@ -87,7 +87,7 @@ def _cmd_nc_to_dict(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-zarr`` — write one variable to a Zarr store.
+    """Handle ``pyramids nc io to-zarr`` — write one variable to a Zarr store.
 
     Zarr is written per variable (the container itself is not spatial), so ``--var``
     selects the gridded variable to store.
@@ -116,7 +116,7 @@ def _cmd_nc_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-kerchunk`` — write a kerchunk reference manifest.
+    """Handle ``pyramids nc io to-kerchunk`` — write a kerchunk reference manifest.
 
     Emits a JSON reference manifest for the file (its chunks addressed in place), written
     to ``output``. Needs the ``[lazy]`` extra.

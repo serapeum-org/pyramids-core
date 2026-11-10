@@ -1,10 +1,10 @@
 """CLI subcommands for the processing pipeline layer.
 
 Registers the geoprocessing subcommands on the top-level ``pyramids`` parser:
-``run`` (execute a pipeline YAML over inputs), ``apply`` (run one registered
-tool over a single input), ``tools`` (list the registered tools), and
-``tool <name>`` (print a tool's parameter schema). Help text is generated from
-the registry, never hand-written.
+``process run`` (execute a pipeline YAML over inputs), ``process apply`` (run one
+registered tool over a single input), ``process tool list`` (list the registered
+tools), and ``process tool show <name>`` (print a tool's parameter schema). Help
+text is generated from the registry, never hand-written.
 """
 
 from __future__ import annotations
