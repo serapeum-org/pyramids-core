@@ -414,26 +414,33 @@ class TestReduceTime:
 
     @requires_lazy
     def test_origin_on_named_dst_zone_does_not_crash(self, daily_files):
-        """origin anchoring survives a bin edge landing in a DST gap.
+        """origin anchoring survives a bin edge landing on a DST-nonexistent wall time.
 
         Test scenario:
-            A ``Europe/Amsterdam`` index whose daily bins (anchored on
-            ``times.min()`` at 02:30) place a window's left edge on the 2022-03-27
-            02:30 spring-forward gap. Bucketing/labelling in UTC must not raise a
-            nonexistent-time error, and every input timestep is assigned.
+            A ``Europe/Amsterdam`` index anchored (``origin="start"``) so that a
+            daily bin's left edge is UTC ``2022-03-27 02:30`` — which is
+            ``02:30`` local on the spring-forward day, a time that does not exist
+            in Amsterdam (the 02:00–03:00 gap). The UTC round-trip labels it
+            ``04:30+02:00`` without raising; a naive ``tz_localize(tz)`` labelling
+            would raise ``NonExistentTimeError`` here, so this guards that line.
+            Element 0 is ``03:30`` local = ``02:30`` UTC, which sets the anchor.
         """
         coll = DatasetCollection.from_files(daily_files)
         times = pd.DatetimeIndex(
             [
-                "2022-03-26 02:30",
-                "2022-03-27 14:00",
-                "2022-03-28 02:30",
-                "2022-03-29 02:30",
+                "2022-03-26 03:30",  # 02:30 UTC → anchors daily bins at 02:30 UTC
+                "2022-03-26 15:00",
+                "2022-03-27 12:00",  # lands in the bin keyed 2022-03-27 02:30 UTC
+                "2022-03-28 06:00",
             ]
         ).tz_localize("Europe/Amsterdam")
         result = coll.reduce_time(times, freq="1D", op="mean", origin="start")
-        assert len(result) >= 1, "DST-gap bin edge must not crash the labelling"
+        assert len(result) == 3, "three daily windows across the DST transition"
         assert all(label.tz is not None for label, _ in result), "labels stay tz-aware"
+        gap_edge_utc = pd.Timestamp("2022-03-27 02:30", tz="UTC")
+        assert any(label.tz_convert("UTC") == gap_edge_utc for label, _ in result), (
+            "the bin edge on the nonexistent local wall time is labelled via UTC"
+        )
 
     @requires_lazy
     def test_default_origin_preserves_tz_aware_labels(self, daily_files):
