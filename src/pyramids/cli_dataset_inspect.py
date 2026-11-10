@@ -410,6 +410,9 @@ def add_dataset_inspect_commands(
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     stats = sub.add_parser("stats", help="band statistics (min/max/mean/std)")
     stats.add_argument("file", help=_HELP_INSPECT_RASTER)

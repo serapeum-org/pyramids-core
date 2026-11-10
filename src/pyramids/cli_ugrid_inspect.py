@@ -544,6 +544,9 @@ def add_ugrid_inspect_commands(
 
     Args:
         msub: The ``mesh`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     _add_summary(msub)
     _add_mesh_names(msub)

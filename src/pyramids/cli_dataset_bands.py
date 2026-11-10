@@ -442,6 +442,9 @@ def add_dataset_bands_commands(
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     _add_add_band(sub)
     _add_select_bands(sub)

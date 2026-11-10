@@ -497,6 +497,9 @@ def add_ugrid_select_commands(
 
     Args:
         msub: The ``mesh`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     m_sel = msub.add_parser("sel", help="select time steps by coordinate value")
     _add_io_arguments(m_sel)

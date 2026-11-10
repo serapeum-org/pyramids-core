@@ -524,6 +524,9 @@ def add_vector_geom_commands(
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     buf = vsub.add_parser("buffer", help="buffer each geometry by a distance")
     _add_io(buf)

@@ -661,6 +661,9 @@ def _add_measurement_commands(
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     v_area = vsub.add_parser("geodesic-area", help="ellipsoidal area per feature")
     v_area.add_argument("src", help=_HELP_SRC_VECTOR)
@@ -734,6 +737,9 @@ def add_vector_tess_commands(
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action, shared with
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
             :func:`pyramids.cli_vector.add_vector_commands`.
     """
     _add_tessellation_commands(vsub)

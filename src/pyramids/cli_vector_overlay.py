@@ -381,6 +381,9 @@ def add_vector_overlay_commands(
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     for name, handler in (
         ("intersection", _cmd_vector_intersection),

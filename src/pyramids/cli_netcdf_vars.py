@@ -455,6 +455,9 @@ def add_nc_vars_commands(
 
     Args:
         ncsub: The ``nc`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     nc_rnv = ncsub.add_parser("rename-var", help="rename a variable")
     nc_rnv.add_argument("file", help=_HELP_NC_FILE)

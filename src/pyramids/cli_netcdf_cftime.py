@@ -459,6 +459,9 @@ def add_nc_cftime_commands(
 
     Args:
         ncsub: The ``nc`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     nc_cc = ncsub.add_parser(
         "convert-calendar", help="recast the time axis to a calendar"

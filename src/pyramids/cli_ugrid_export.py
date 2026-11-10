@@ -807,6 +807,9 @@ def add_ugrid_export_commands(
 
     Args:
         msub: The ``mesh`` group's ``add_subparsers`` action (shared with the
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
             Phase 1 ``info``/``extract``/``convert`` verbs).
     """
     _add_to_file(msub)
