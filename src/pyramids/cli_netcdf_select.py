@@ -298,7 +298,10 @@ def _cmd_nc_subset(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
+def add_nc_select_commands(
+    ncsub: argparse._SubParsersAction,
+    advanced: argparse._SubParsersAction | None = None,
+) -> None:
     """Register the ``nc`` selection / subset commands on ``ncsub``.
 
     Args:
@@ -359,7 +362,7 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_tail.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_tail.set_defaults(func=_cmd_nc_tail)
 
-    nc_di = ncsub.add_parser("drop-isel", help="drop bands by position")
+    nc_di = (advanced or ncsub).add_parser("drop-isel", help="drop bands by position")
     nc_di.add_argument("file", help=_HELP_NC_FILE)
     nc_di.add_argument("output", help=_HELP_OUTPUT)
     nc_di.add_argument(
@@ -372,7 +375,9 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_di.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_di.set_defaults(func=_cmd_nc_drop_isel)
 
-    nc_ds = ncsub.add_parser("drop-sel", help="drop bands by coordinate label")
+    nc_ds = (advanced or ncsub).add_parser(
+        "drop-sel", help="drop bands by coordinate label"
+    )
     nc_ds.add_argument("file", help=_HELP_NC_FILE)
     nc_ds.add_argument("output", help=_HELP_OUTPUT)
     nc_ds.add_argument(
@@ -391,7 +396,9 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_ds.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_ds.set_defaults(func=_cmd_nc_drop_sel)
 
-    nc_dd = ncsub.add_parser("drop-duplicates", help="drop repeated-stamp bands")
+    nc_dd = (advanced or ncsub).add_parser(
+        "drop-duplicates", help="drop repeated-stamp bands"
+    )
     nc_dd.add_argument("file", help=_HELP_NC_FILE)
     nc_dd.add_argument("output", help=_HELP_OUTPUT)
     nc_dd.add_argument("--dim", required=True, help="band dimension to de-duplicate")
@@ -425,7 +432,9 @@ def add_nc_select_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_dn.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_dn.set_defaults(func=_cmd_nc_dropna)
 
-    nc_pad = ncsub.add_parser("pad", help="grow dimensions with a constant fill")
+    nc_pad = (advanced or ncsub).add_parser(
+        "pad", help="grow dimensions with a constant fill"
+    )
     nc_pad.add_argument("file", help=_HELP_NC_FILE)
     nc_pad.add_argument("output", help=_HELP_OUTPUT)
     nc_pad.add_argument(

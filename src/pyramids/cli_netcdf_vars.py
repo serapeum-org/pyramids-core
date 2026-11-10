@@ -447,7 +447,10 @@ def _cmd_nc_assign_coords(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
+def add_nc_vars_commands(
+    ncsub: argparse._SubParsersAction,
+    advanced: argparse._SubParsersAction | None = None,
+) -> None:
     """Register the ``nc`` variable- and dimension-management commands on ``ncsub``.
 
     Args:
@@ -486,7 +489,9 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_rsv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rsv.set_defaults(func=_cmd_nc_resample_var)
 
-    nc_rnd = ncsub.add_parser("rename-dims", help="rename band dimensions")
+    nc_rnd = (advanced or ncsub).add_parser(
+        "rename-dims", help="rename band dimensions"
+    )
     nc_rnd.add_argument("file", help=_HELP_NC_FILE)
     nc_rnd.add_argument("output", help=_HELP_OUTPUT)
     nc_rnd.add_argument(
@@ -499,7 +504,7 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_rnd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rnd.set_defaults(func=_cmd_nc_rename_dims)
 
-    nc_drd = ncsub.add_parser("drop-dims", help="drop band dimensions")
+    nc_drd = (advanced or ncsub).add_parser("drop-dims", help="drop band dimensions")
     nc_drd.add_argument("file", help=_HELP_NC_FILE)
     nc_drd.add_argument("output", help=_HELP_OUTPUT)
     nc_drd.add_argument(
@@ -514,7 +519,9 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_drd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_drd.set_defaults(func=_cmd_nc_drop_dims)
 
-    nc_stc = ncsub.add_parser("set-coords", help="promote variables to aux coordinates")
+    nc_stc = (advanced or ncsub).add_parser(
+        "set-coords", help="promote variables to aux coordinates"
+    )
     nc_stc.add_argument("file", help=_HELP_NC_FILE)
     nc_stc.add_argument("output", help=_HELP_OUTPUT)
     nc_stc.add_argument(
@@ -523,7 +530,7 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_stc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_stc.set_defaults(func=_cmd_nc_set_coords)
 
-    nc_rtc = ncsub.add_parser(
+    nc_rtc = (advanced or ncsub).add_parser(
         "reset-coords", help="demote aux coordinates to variables"
     )
     nc_rtc.add_argument("file", help=_HELP_NC_FILE)
@@ -534,7 +541,9 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_rtc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rtc.set_defaults(func=_cmd_nc_reset_coords)
 
-    nc_sqz = ncsub.add_parser("squeeze", help="drop length-one band dimensions")
+    nc_sqz = (advanced or ncsub).add_parser(
+        "squeeze", help="drop length-one band dimensions"
+    )
     nc_sqz.add_argument("file", help=_HELP_NC_FILE)
     nc_sqz.add_argument("output", help=_HELP_OUTPUT)
     nc_sqz.add_argument(
@@ -578,7 +587,9 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_cpv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_cpv.set_defaults(func=_cmd_nc_crop_var)
 
-    nc_exd = ncsub.add_parser("expand-dims", help="lift a variable onto a new band dim")
+    nc_exd = (advanced or ncsub).add_parser(
+        "expand-dims", help="lift a variable onto a new band dim"
+    )
     nc_exd.add_argument("file", help=_HELP_NC_FILE)
     nc_exd.add_argument("output", help=_HELP_OUTPUT)
     nc_exd.add_argument("--var", required=True, help=_HELP_VAR)
@@ -594,7 +605,9 @@ def add_nc_vars_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_exd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_exd.set_defaults(func=_cmd_nc_expand_dims)
 
-    nc_asc = ncsub.add_parser("assign-coords", help="restamp existing band dimensions")
+    nc_asc = (advanced or ncsub).add_parser(
+        "assign-coords", help="restamp existing band dimensions"
+    )
     nc_asc.add_argument("file", help=_HELP_NC_FILE)
     nc_asc.add_argument("output", help=_HELP_OUTPUT)
     nc_asc.add_argument(

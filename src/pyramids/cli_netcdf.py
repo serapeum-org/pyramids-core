@@ -302,13 +302,23 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_crop.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_crop.set_defaults(func=_cmd_nc_crop)
 
+    # Power-user primitives (array/coord/dim mechanics rarely run one-shot) collect under a
+    # single cross-cutting `advanced` subgroup, fed by the vars/select/calc registrars.
+    nc_advanced = add_group(
+        ncsub, "advanced", "power-user primitives (array/coord/dim mechanics)"
+    )
     add_nc_inspect_commands(
         add_group(ncsub, "inspect", "summaries, metadata, dim/time values")
     )
-    add_nc_vars_commands(add_group(ncsub, "vars", "variable and dimension management"))
-    add_nc_select_commands(
-        add_group(ncsub, "select", "positional/label selection and subsetting")
+    add_nc_vars_commands(
+        add_group(ncsub, "vars", "variable and dimension management"), nc_advanced
     )
-    add_nc_cftime_commands(add_group(ncsub, "calc", "CF/time/calendar and calculus"))
+    add_nc_select_commands(
+        add_group(ncsub, "select", "positional/label selection and subsetting"),
+        nc_advanced,
+    )
+    add_nc_cftime_commands(
+        add_group(ncsub, "calc", "CF/time/calendar and calculus"), nc_advanced
+    )
     add_nc_io_commands(add_group(ncsub, "io", "format I/O and conversion"))
     add_nc_plot_commands(add_group(ncsub, "plot", "headless plotting"))
