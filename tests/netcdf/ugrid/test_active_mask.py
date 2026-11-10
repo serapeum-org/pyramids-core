@@ -252,7 +252,7 @@ class TestAccessors:
             _data=data,
         )
         ds = MeshDataset(base.mesh, {"wl": var}, {})
-        assert var.time_index == 1, "this variable stores time trailing"
+        assert var.time_axis_index == 1, "this variable stores time trailing"
         out = ds.masked_values("wl")
         np.testing.assert_array_equal(
             np.isnan(out), [[False, True, False], [True, False, False]]

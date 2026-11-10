@@ -64,7 +64,7 @@ class MeshSpatialIndex:
         return self._node_tree
 
     @property
-    def face_tree(self) -> Any:
+    def face_centroid_tree(self) -> Any:
         """KD-tree on face centroids. Lazy-built on first access."""
         if self._face_tree is None:
             cx, cy = self._mesh.face_centroids
@@ -72,7 +72,7 @@ class MeshSpatialIndex:
         return self._face_tree
 
     @property
-    def face_strtree(self) -> Any:
+    def face_rtree(self) -> Any:
         """Shapely STRtree on face polygons. Lazy-built on first access."""
         if self._face_strtree is None:
             self._face_polygons = self._build_face_polygons()
@@ -85,6 +85,40 @@ class MeshSpatialIndex:
         if self._face_polygons is None:
             self._face_polygons = self._build_face_polygons()
         return self._face_polygons
+
+    @property
+    def face_tree(self) -> Any:
+        """Deprecated alias for :attr:`face_centroid_tree`.
+
+        .. deprecated::
+            Renamed to ``face_centroid_tree`` (it is a KD-tree on face centroids).
+
+        Returns:
+            Any: The face-centroid KD-tree.
+        """
+        warnings.warn(
+            "MeshSpatialIndex.face_tree is deprecated; use face_centroid_tree.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.face_centroid_tree
+
+    @property
+    def face_strtree(self) -> Any:
+        """Deprecated alias for :attr:`face_rtree`.
+
+        .. deprecated::
+            Renamed to ``face_rtree`` (it drops shapely's ``STRtree`` type name).
+
+        Returns:
+            Any: The face-polygon R-tree.
+        """
+        warnings.warn(
+            "MeshSpatialIndex.face_strtree is deprecated; use face_rtree.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.face_rtree
 
     def _build_face_polygons(self) -> list[Any]:
         """Build Shapely Polygon objects for all mesh faces.
@@ -149,7 +183,7 @@ class MeshSpatialIndex:
             (n_queries, k) for array input.
         """
         points = np.column_stack([np.atleast_1d(x), np.atleast_1d(y)])
-        _, indices = self.face_tree.query(points, k=k)
+        _, indices = self.face_centroid_tree.query(points, k=k)
         result = np.asarray(indices)
         return result
 
@@ -225,7 +259,7 @@ class MeshSpatialIndex:
         result = np.full(len(x), -1, dtype=np.intp)
 
         points = shapely.points(x, y)
-        strtree = self.face_strtree
+        strtree = self.face_rtree
         # `intersects`, not `within`: `within` excludes the polygon boundary, so a point sitting
         # exactly on a face edge -- an interior edge shared by two faces, or one of the mesh's own
         # nodes -- matched no face at all and was reported as outside the mesh. A boundary point
@@ -273,7 +307,7 @@ def clip_mesh(
     spatial_idx = MeshSpatialIndex(mesh)
     # Reuse the index's lazily-built face STRtree instead of constructing a second one
     # over the same polygons.
-    tree = spatial_idx.face_strtree
+    tree = spatial_idx.face_rtree
 
     predicate = "intersects" if touch else "contains"
     candidates = tree.query(mask_geom, predicate=predicate)

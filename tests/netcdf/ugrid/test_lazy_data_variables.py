@@ -167,7 +167,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        var = MeshDataset.read_file(path).get_data("h")
+        var = MeshDataset.read_file(path)["h"]
         result = np.asarray(var.sel_time(1))
         assert calls == [(1, None)], (
             "sel_time should issue exactly one single-step slab read"
@@ -191,7 +191,7 @@ class TestWindowedTimeSelection:
         picked = MeshDataset.read_file(path).sel_time(1)
         out = tmp_path / "sel_time_out.nc"
         picked.to_file(out)
-        reread = MeshDataset.read_file(out).get_data("h")
+        reread = MeshDataset.read_file(out)["h"]
         assert np.asarray(reread.data).ndim == 1
         np.testing.assert_array_equal(np.asarray(reread.data), temporal[1])
 
@@ -207,7 +207,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = MeshDataset.read_file(path).get_data("h").sel_time_range(0, 2)
+        result = MeshDataset.read_file(path)["h"].sel_time_range(0, 2)
         assert calls == [(0, 2)], (
             "sel_time_range should issue exactly one range slab read"
         )
@@ -216,7 +216,7 @@ class TestWindowedTimeSelection:
     def test_cached_variable_slices_in_memory(self, temporal_file, monkeypatch):
         """Once `.data` is cached, `sel_time` slices in memory instead of re-reading the file."""
         path, temporal = temporal_file
-        var = MeshDataset.read_file(path).get_data("h")
+        var = MeshDataset.read_file(path)["h"]
         _ = var.data  # force the full load / cache
         calls = []
         monkeypatch.setattr(models, "_read_time_slab", lambda *a: calls.append(a))
@@ -228,7 +228,7 @@ class TestWindowedTimeSelection:
         path, temporal = temporal_file
         calls = []
         monkeypatch.setattr(models, "_read_time_slab", lambda *a: calls.append(a))
-        result = np.asarray(MeshDataset.read_file(path).get_data("h").sel_time(-1))
+        result = np.asarray(MeshDataset.read_file(path)["h"].sel_time(-1))
         assert calls == [], "a negative index must not take the windowed path"
         np.testing.assert_array_equal(result, temporal[-1])
 
@@ -250,7 +250,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = MeshDataset.read_file(path).get_data("h").sel_time_range(2, 1)
+        result = MeshDataset.read_file(path)["h"].sel_time_range(2, 1)
         assert calls == [], "a reversed range must not take the windowed path"
         np.testing.assert_array_equal(np.asarray(result.data), temporal[2:1])
 
@@ -272,7 +272,7 @@ class TestWindowedTimeSelection:
                 calls.append((start, stop)) or real(p, name, start, stop)
             ),
         )
-        result = MeshDataset.read_file(path).get_data("h").sel_time_range(1, 1)
+        result = MeshDataset.read_file(path)["h"].sel_time_range(1, 1)
         assert calls == [], "an empty range must not take the windowed path"
         assert np.asarray(result.data).shape[0] == 0
         np.testing.assert_array_equal(np.asarray(result.data), temporal[1:1])
@@ -290,7 +290,7 @@ class TestWindowedTimeSelection:
             ),
         )
         n_steps = temporal.shape[0]
-        result = MeshDataset.read_file(path).get_data("h").sel_time_range(0, n_steps)
+        result = MeshDataset.read_file(path)["h"].sel_time_range(0, n_steps)
         assert calls == [(0, n_steps)], "a full range should still window a single read"
         np.testing.assert_array_equal(np.asarray(result.data), temporal)
 
@@ -324,8 +324,8 @@ class TestStreamingWrite:
 
         back = MeshDataset.read_file(out)
         np.testing.assert_array_equal(
-            np.asarray(back.get_data("h").data),
-            np.asarray(MeshDataset.read_file(src).get_data("h").data),
+            np.asarray(back["h"].data),
+            np.asarray(MeshDataset.read_file(src)["h"].data),
         )
 
 

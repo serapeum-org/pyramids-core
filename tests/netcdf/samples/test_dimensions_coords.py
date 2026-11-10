@@ -36,7 +36,7 @@ def test_dimension_sizes_match_metadata(sample_name, sample):
     """``dimension_sizes`` agrees with the metadata DimensionInfo sizes."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         for name, size in nc.dimension_sizes.items():
             dim_info = meta.get_dimension(name)
             assert dim_info is not None and dim_info.size == size, (

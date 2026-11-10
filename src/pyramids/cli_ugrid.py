@@ -72,7 +72,7 @@ def _cmd_mesh_info(args: argparse.Namespace) -> int:
         "n_node": mesh.n_node,
         "n_edge": mesh.n_edge,
         "n_face": mesh.n_face,
-        "n_layers": mesh.n_layers,
+        "n_layers": mesh.n_layer,
         "epsg": mesh.epsg,
         "bounds": None if bounds is None else [json_safe(float(v)) for v in bounds],
         "variables": list(mesh.data_variable_names),

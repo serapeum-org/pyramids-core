@@ -717,7 +717,7 @@ def _dimension_list(
         The GDAL dimension objects for the variable's axes, element axis last.
     """
     names = var.dimensions if len(var.dimensions) == data.ndim else ()
-    time_axis = var.time_index if var.has_time else None
+    time_axis = var.time_axis_index if var.has_time else None
     dim_list = []
     for axis in range(data.ndim - 1):
         if axis == time_axis and "time" in dims:

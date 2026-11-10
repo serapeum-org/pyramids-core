@@ -15,7 +15,7 @@ def test_roundtrip_preserves_variable_set(sample_name, sample, tmp_path):
     """Writing then re-reading preserves the variable count and the rank histogram."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        before = nc.get_all_metadata()
+        before = nc.refresh_metadata()
         before_count = len(before.variables)
         before_ranks = sorted(len(v.shape) for v in before.variables.values())
     finally:
@@ -25,7 +25,7 @@ def test_roundtrip_preserves_variable_set(sample_name, sample, tmp_path):
 
     reopened = NetCDF.read_file(out)
     try:
-        after = reopened.get_all_metadata()
+        after = reopened.refresh_metadata()
         assert len(after.variables) == before_count, (
             f"{sample_name}: variable count {len(after.variables)} != {before_count} after round-trip"
         )
@@ -61,7 +61,7 @@ def test_roundtrip_preserves_packing(sample_name, sample, tmp_path):
     """A packed (int16 scale/offset) variable keeps its scale, offset, and dtype across a round-trip."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         packed = {
             name: (info.scale, info.offset, info.dtype)
             for name, info in meta.variables.items()
@@ -75,7 +75,7 @@ def test_roundtrip_preserves_packing(sample_name, sample, tmp_path):
 
     reopened = NetCDF.read_file(out)
     try:
-        after = reopened.get_all_metadata().variables
+        after = reopened.refresh_metadata().variables
         for name, (scale, offset, dtype) in packed.items():
             info = after[name]
             assert info.scale == pytest.approx(scale), (

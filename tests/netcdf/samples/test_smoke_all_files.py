@@ -19,7 +19,7 @@ def test_opens_and_metadata_matches_name(sample_name, sample, structural):
     _convention, expected_nvars, expected_histogram, _features = structural(sample_name)
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         assert len(meta.variables) == expected_nvars, (
             f"{sample_name}: metadata reports {len(meta.variables)} variables, "
             f"structural name encodes {expected_nvars}"

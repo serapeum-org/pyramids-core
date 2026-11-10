@@ -1,6 +1,6 @@
 # `NetCDF` — public API
 
-A one-line map of every public member the `NetCDF` class itself defines — 137 in all: 100 methods, 28 properties,
+A one-line map of every public member the `NetCDF` class itself defines — 138 in all: 101 methods, 28 properties,
 8 classmethods and 1 staticmethod, plus the four mapping dunders (`__getitem__`, `__contains__`, `__iter__`,
 `__len__`). `concat` and `merge` are counted among the methods: each is callable on the class
 (`NetCDF.concat([a, b], dim)`) and on a cube (`a.concat([b], dim)`, which joins the
@@ -190,7 +190,8 @@ A variable with no raster plane is the exception — see each member's docstring
 |-----------------------------|-----------------------------------------------------------------|
 | `metadata`                  | Structured metadata for this NetCDF (cached).                   |
 | `meta_data`                 | Deprecated alias for `metadata`.                                |
-| `get_all_metadata()`        | The same, re-traversed from GDAL rather than served from cache. |
+| `refresh_metadata()`        | Re-read metadata from GDAL, bypassing and refreshing the cache. |
+| `get_all_metadata()`        | Deprecated alias for `refresh_metadata()`.                      |
 | `global_attributes`         | Global attributes on the root group.                            |
 | `set_global_attribute()`    | Sets one global attribute on the root group.                    |
 | `delete_global_attribute()` | Deletes one global attribute from the root group.               |

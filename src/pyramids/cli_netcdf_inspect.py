@@ -32,7 +32,7 @@ def _metadata_payload(metadata: object) -> object:
     """Convert a metadata record to a JSON-friendly structure.
 
     Args:
-        metadata: The object returned by ``NetCDF.get_all_metadata``.
+        metadata: The object returned by ``NetCDF.refresh_metadata``.
 
     Returns:
         object: A dataclass converted with :func:`dataclasses.asdict`, else the
@@ -73,7 +73,7 @@ def _cmd_nc_metadata(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    payload = _metadata_payload(NetCDF.read_file(args.file).get_all_metadata())
+    payload = _metadata_payload(NetCDF.read_file(args.file).refresh_metadata())
     if args.json:
         print(json.dumps(json_sanitize(payload)))
     else:

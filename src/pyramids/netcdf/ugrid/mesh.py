@@ -617,7 +617,7 @@ class Mesh2d:
         return neighbors
 
     @classmethod
-    def from_gdal_group(
+    def _from_gdal_group(
         cls,
         rg: gdal.Group,
         topo_info: MeshTopologyInfo,
@@ -710,7 +710,7 @@ class Mesh2d:
         if var_name:
             arr = rg.OpenMDArray(var_name)
             if arr is not None:
-                conn = Connectivity.from_gdal_array(arr, role)
+                conn = Connectivity._from_gdal_array(arr, role)
         return conn
 
     @staticmethod

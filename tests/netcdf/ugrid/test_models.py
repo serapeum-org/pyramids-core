@@ -368,8 +368,8 @@ class TestMeshVariable:
         assert var.has_time is False, (
             "a layered non-temporal variable must not be temporal"
         )
-        assert var.time_index is None, (
-            f"time_index should be None, got {var.time_index}"
+        assert var.time_axis_index is None, (
+            f"time_index should be None, got {var.time_axis_index}"
         )
         assert var.n_time_steps == 0, (
             f"n_time_steps should be 0, got {var.n_time_steps}"
@@ -388,7 +388,9 @@ class TestMeshVariable:
         assert var.has_time is True, (
             "a variable with a 'time' dimension must be temporal"
         )
-        assert var.time_index == 0, f"time_index should be 0, got {var.time_index}"
+        assert var.time_axis_index == 0, (
+            f"time_index should be 0, got {var.time_axis_index}"
+        )
         assert var.n_time_steps == 3, (
             f"n_time_steps should be 3, got {var.n_time_steps}"
         )
@@ -405,8 +407,8 @@ class TestMeshVariable:
         assert var.has_time is True, (
             "a 2-D variable with unknown dims falls back to temporal"
         )
-        assert var.time_index == 0, (
-            f"fallback time_index should be 0, got {var.time_index}"
+        assert var.time_axis_index == 0, (
+            f"fallback time_index should be 0, got {var.time_axis_index}"
         )
 
     @pytest.mark.parametrize(

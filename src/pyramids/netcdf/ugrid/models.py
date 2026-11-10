@@ -459,7 +459,7 @@ class MeshVariable:
         return result
 
     @property
-    def time_index(self) -> int | None:
+    def time_axis_index(self) -> int | None:
         """Axis of the real time dimension, or `None` when the variable is not temporal.
 
         Identifies the time axis by name from `dimensions` (a dimension named `time`/`t`, or
@@ -487,18 +487,38 @@ class MeshVariable:
         return 0 if len(self.shape) > 1 else None
 
     @property
+    def time_index(self) -> int | None:
+        """Deprecated alias for :attr:`time_axis_index`.
+
+        .. deprecated::
+            Renamed to ``time_axis_index`` -- it returns the time *axis* number, not a
+            time *step*. Use :attr:`time_axis_index` instead.
+
+        Returns:
+            int | None: The 0-based index of the time axis, or ``None`` when the
+            variable has no time dimension.
+        """
+        warnings.warn(
+            "MeshVariable.time_index is deprecated; use time_axis_index (it is the time "
+            "axis number, not a step).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.time_axis_index
+
+    @property
     def has_time(self) -> bool:
         """True when the variable has a real time dimension.
 
-        Unlike a bare `ndim > 1` test, this is driven by `time_index`, so a non-temporal
+        Unlike a bare `ndim > 1` test, this is driven by `time_axis_index`, so a non-temporal
         `(n_layers, n_face)` variable is not mis-flagged as temporal (ARC-19).
         """
-        return self.time_index is not None
+        return self.time_axis_index is not None
 
     @property
     def n_time_steps(self) -> int:
         """Number of time steps. Returns 0 if the variable has no time dimension."""
-        idx = self.time_index
+        idx = self.time_axis_index
         result = self.shape[idx] if idx is not None and self.shape else 0
         return result
 
@@ -550,7 +570,7 @@ class MeshVariable:
         n_steps = self.n_time_steps
         return (
             self._source_path is not None
-            and self.time_index == 0
+            and self.time_axis_index == 0
             and start >= 0
             and start < n_steps
             and (stop is None or (start < stop <= n_steps))
@@ -605,7 +625,7 @@ class MeshVariable:
         if not self.has_time:
             raise ValueError(f"Variable '{self.name}' has no time dimension.")
         if isinstance(time, slice):
-            length = self.shape[cast("int", self.time_index)]
+            length = self.shape[cast("int", self.time_axis_index)]
             start, stop, step = time.indices(length)
             if step != 1:
                 raise ValueError(
@@ -710,7 +730,7 @@ class MeshVariable:
         """The active mask reduced the same way :meth:`_read_time_window` reduces the data.
 
         A per-step mask (:attr:`active_has_time`) is indexed on the variable's own time axis
-        (:attr:`time_index`, not assumed leading) — one step for ``stop is None``, the
+        (:attr:`time_axis_index`, not assumed leading) — one step for ``stop is None``, the
         ``[start, stop)`` range otherwise — so it stays aligned with the collapsed/sliced data
         even when time is a trailing axis. A static mask has no time axis and is returned
         unchanged. ``None`` stays ``None``.
@@ -720,7 +740,7 @@ class MeshVariable:
         mask = np.asarray(self.active)
         if not self.active_has_time:
             return mask
-        axis = self.time_index if self.time_index is not None else 0
+        axis = self.time_axis_index if self.time_axis_index is not None else 0
         if stop is None:
             return np.asarray(np.take(mask, start, axis=axis))
         return np.take(mask, np.arange(start, stop), axis=axis)
@@ -729,7 +749,7 @@ class MeshVariable:
         """The active mask taking the time steps at ``indices`` on the variable's time axis.
 
         The counterpart of :meth:`_time_sliced_active` for an arbitrary index sequence rather
-        than a contiguous range. Indexes :attr:`time_index` (not assumed leading). A static
+        than a contiguous range. Indexes :attr:`time_axis_index` (not assumed leading). A static
         mask is returned unchanged; ``None`` stays ``None``.
         """
         if self.active is None:
@@ -737,7 +757,7 @@ class MeshVariable:
         mask = np.asarray(self.active)
         if not self.active_has_time:
             return mask
-        axis = self.time_index if self.time_index is not None else 0
+        axis = self.time_axis_index if self.time_axis_index is not None else 0
         return np.take(mask, np.asarray(indices, dtype=np.intp), axis=axis)
 
     def _element_sliced_active(self, elements: np.ndarray) -> np.ndarray | None:
