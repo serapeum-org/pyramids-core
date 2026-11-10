@@ -42,16 +42,16 @@ class MeshSpatialIndex:
     Attributes:
         _mesh: Reference to the Mesh2d topology.
         _node_tree: KD-tree on node coordinates (lazy).
-        _face_tree: KD-tree on face centroids (lazy).
-        _face_strtree: STRtree on face polygons (lazy).
+        _face_centroid_tree: KD-tree on face centroids (lazy).
+        _face_rtree: R-tree on face polygons (lazy).
         _face_polygons: List of Shapely polygons (lazy).
     """
 
     def __init__(self, mesh: Mesh2d):
         self._mesh = mesh
         self._node_tree: Any = None
-        self._face_tree: Any = None
-        self._face_strtree: Any = None
+        self._face_centroid_tree: Any = None
+        self._face_rtree: Any = None
         self._face_polygons: list[Any] | None = None
 
     @property
@@ -66,18 +66,18 @@ class MeshSpatialIndex:
     @property
     def face_centroid_tree(self) -> Any:
         """KD-tree on face centroids. Lazy-built on first access."""
-        if self._face_tree is None:
+        if self._face_centroid_tree is None:
             cx, cy = self._mesh.face_centroids
-            self._face_tree = cKDTree(np.column_stack([cx, cy]))
-        return self._face_tree
+            self._face_centroid_tree = cKDTree(np.column_stack([cx, cy]))
+        return self._face_centroid_tree
 
     @property
     def face_rtree(self) -> Any:
         """Shapely STRtree on face polygons. Lazy-built on first access."""
-        if self._face_strtree is None:
+        if self._face_rtree is None:
             self._face_polygons = self._build_face_polygons()
-            self._face_strtree = STRtree(self._face_polygons)
-        return self._face_strtree
+            self._face_rtree = STRtree(self._face_polygons)
+        return self._face_rtree
 
     @property
     def face_polygons(self) -> list[Any]:
