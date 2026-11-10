@@ -152,7 +152,7 @@ class VolumeTopology:
     """Ragged (per-column) vertical layering for a genuinely 3-D unstructured mesh.
 
     A uniform 3-D output forces every column to the same layer count, so its data is a dense
-    ``(time?, n_layers, n_face)`` block. A real hydrodynamic mesh does not: a deep channel
+    ``(time?, n_layer, n_face)`` block. A real hydrodynamic mesh does not: a deep channel
     column may carry ten layers and a shallow one two. That data is *ragged* — a flat
     ``(time?, n_volume)`` array indexed through CSR-style offsets — and this value object
     carries the map from faces to volumes so a ``location="volume"`` variable can be sliced
@@ -465,7 +465,7 @@ class MeshVariable:
         Identifies the time axis by name from `dimensions` (a dimension named `time`/`t`, or
         `time…`/`…_time`/`…_time_…` per the CF/UGRID convention) rather than assuming any extra axis
         is time. The word-boundary match avoids substring false-positives like `runtime` / `lifetime`
-        / `daytime`, and a non-temporal multi-dimensional variable such as `(n_layers, n_face)`
+        / `daytime`, and a non-temporal multi-dimensional variable such as `(n_layer, n_face)`
         reports `None` (ARC-19). When `dimensions` is unknown — e.g. an array-built variable that
         carries no dimension names — it falls back to the historical heuristic (leading axis of a
         >1-D array).
@@ -510,7 +510,7 @@ class MeshVariable:
         """True when the variable has a real time dimension.
 
         Unlike a bare `ndim > 1` test, this is driven by `time_axis_index`, so a non-temporal
-        `(n_layers, n_face)` variable is not mis-flagged as temporal (ARC-19).
+        `(n_layer, n_face)` variable is not mis-flagged as temporal (ARC-19).
         """
         return self.time_axis_index is not None
 
