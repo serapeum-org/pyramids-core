@@ -46,4 +46,3 @@ Placed before the command, e.g. `pyramids --format json vector info roads.geojso
 `0` on success. An expected user error (missing file, bad CRS, unknown driver, …) prints a one-line `error: …` to
 stderr and exits `1`. An unknown subcommand or bad flag exits `2` (argparse). Set `PYRAMIDS_DEBUG=1` to re-raise the
 full traceback instead of the one-line message.
-

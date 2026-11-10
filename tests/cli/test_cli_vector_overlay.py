@@ -17,8 +17,8 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
-from pyramids.base._errors import _PyramidsError
 from pyramids._cli_groups import add_group
+from pyramids.base._errors import _PyramidsError
 from pyramids.cli import main
 from pyramids.cli_vector_overlay import add_vector_overlay_commands
 from pyramids.feature import FeatureCollection

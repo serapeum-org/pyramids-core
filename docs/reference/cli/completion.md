@@ -13,4 +13,3 @@ pyramids completion [-h] {bash,zsh,fish}
 | argument | | description |
 |---|---|---|
 | `shell` | required | the shell to emit a completion hook for (choices: `bash`, `zsh`, `fish`) |
-

@@ -2253,4 +2253,3 @@ pyramids mesh select where [-h] [--overwrite] --cond COND [--other OTHER] [--var
 | `--cond` | **required** | comparison '[VAR] OP NUMBER', e.g. 'depth > 3' or '> 3' |
 | `--other` | optional | value for unselected elements (default: NaN) |
 | `--var` | optional | variable to act on (default: the mesh's only data variable) |
-

@@ -1883,4 +1883,3 @@ pyramids vector tess voronoi-polygons [-h] [--layer LAYER] [--overwrite] [--tole
 | `--overwrite` | optional | replace the output if it exists |
 | `--tolerance` | optional | snap input coordinates to this grid before tessellating |
 | `--only-edges` | optional | return the tessellation edges as lines instead of polygons |
-

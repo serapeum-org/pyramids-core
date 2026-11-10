@@ -1875,4 +1875,3 @@ pyramids raster import zarr [-h] [--level LEVEL] [--data-name DATA_NAME] [--stor
 | `--data-name` | optional | explicit data-array name to read |
 | `--storage-options` | optional | fsspec storage options as a JSON object |
 | `--overwrite` | optional | replace the output if it already exists |
-

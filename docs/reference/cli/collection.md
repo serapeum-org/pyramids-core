@@ -294,4 +294,3 @@ pyramids collection export zarr [-h] [--source {files,zarr,archive}] [--member-g
 | `--date-format` | optional | with --source files: strptime format to parse each file's timestamp from its name (e.g. %%Y.%%m.%%d), giving the stack a time axis |
 | `--mode` | optional | Zarr write mode (default: w) |
 | `--overwrite` | optional | replace the output if it already exists |
-
