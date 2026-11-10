@@ -65,20 +65,20 @@ class TestTopLevelHelp:
     """Top-level help surface (T-2)."""
 
     def test_help_lists_groups(self, capsys):
-        """`pyramids --help` names the raster, cog, and new command groups."""
+        """`pyramids --help` names the top-level command groups."""
         with pytest.raises(SystemExit) as exc:
             main(["--help"])
         assert exc.value.code == 0
         out = capsys.readouterr().out
         for token in (
-            "cog",
+            "raster",
             "vector",
             "nc",
             "collection",
             "stac",
             "fetch",
             "mesh",
-            "apply",
+            "process",
         ):
             assert token in out, f"top-level help should list {token!r}"
 
