@@ -598,7 +598,9 @@ def _add_extract(sub: argparse._SubParsersAction) -> None:
     extract.set_defaults(func=_cmd_extract)
 
 
-def add_dataset_spatial_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_spatial_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the raster spatial / analysis commands on ``sub``.
 
     Args:
@@ -607,8 +609,8 @@ def add_dataset_spatial_commands(sub: argparse._SubParsersAction) -> None:
     _add_align(sub)
     _add_overlay(sub)
     _add_combine(sub)
-    _add_warped_view(sub)
-    _add_wrap_longitude(sub)
-    _add_translate(sub)
-    _add_transect(sub)
+    _add_warped_view(advanced or sub)
+    _add_wrap_longitude(advanced or sub)
+    _add_translate(advanced or sub)
+    _add_transect(advanced or sub)
     _add_extract(sub)

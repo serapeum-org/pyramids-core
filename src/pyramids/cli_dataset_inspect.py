@@ -403,7 +403,9 @@ def _cmd_checksum(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_inspect_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the raster inspection commands on ``sub``.
 
     Args:
@@ -457,7 +459,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     meta.add_argument("--json", action="store_true", help=_HELP_JSON)
     meta.set_defaults(func=_cmd_get_meta_data)
 
-    get_rat = sub.add_parser(
+    get_rat = (advanced or sub).add_parser(
         "get-attribute-table", help="a band's raster attribute table"
     )
     get_rat.add_argument("file", help=_HELP_INSPECT_RASTER)
@@ -467,7 +469,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     get_rat.add_argument("--json", action="store_true", help=_HELP_JSON)
     get_rat.set_defaults(func=_cmd_get_attribute_table)
 
-    set_rat = sub.add_parser(
+    set_rat = (advanced or sub).add_parser(
         "set-attribute-table",
         help="attach an attribute table to a raster band (edits the raster in place)",
     )
@@ -478,7 +480,9 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     )
     set_rat.set_defaults(func=_cmd_set_attribute_table)
 
-    mask = sub.add_parser("mask-flags", help="decode a band's GDAL mask flags")
+    mask = (advanced or sub).add_parser(
+        "mask-flags", help="decode a band's GDAL mask flags"
+    )
     mask.add_argument("file", help=_HELP_INSPECT_RASTER)
     mask.add_argument("--band", type=int, default=0, help=f"{_HELP_BAND} (default 0)")
     mask.add_argument("--json", action="store_true", help=_HELP_JSON)
@@ -551,7 +555,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     count.add_argument("--json", action="store_true", help=_HELP_JSON)
     count.set_defaults(func=_cmd_count_domain_cells)
 
-    same = sub.add_parser(
+    same = (advanced or sub).add_parser(
         "same-grid", help="whether two rasters share a grid (and CRS)"
     )
     same.add_argument("a", help="first raster path")
@@ -565,7 +569,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     same.add_argument("--json", action="store_true", help=_HELP_JSON)
     same.set_defaults(func=_cmd_same_grid)
 
-    checksum = sub.add_parser(
+    checksum = (advanced or sub).add_parser(
         "checksum", help="per-band GDAL checksum for integrity verification"
     )
     checksum.add_argument("file", help=_HELP_INSPECT_RASTER)

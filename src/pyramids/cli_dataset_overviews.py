@@ -352,7 +352,9 @@ def _cmd_read_tile(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_overviews_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the overview / windowed-read raster commands on ``sub``.
 
     Args:
@@ -369,7 +371,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     )
     recreate.set_defaults(func=_cmd_recreate_overviews)
 
-    read_overview = sub.add_parser(
+    read_overview = (advanced or sub).add_parser(
         "read-overview-array",
         help="read one overview level to a raster or --json stats",
     )
@@ -392,7 +394,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     read_overview.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     read_overview.set_defaults(func=_cmd_read_overview_array)
 
-    read_part = sub.add_parser(
+    read_part = (advanced or sub).add_parser(
         "read-part", help="read a geographic window to a raster (overview-decimated)"
     )
     read_part.add_argument("input", help=_HELP_SRC_RASTER)
@@ -424,7 +426,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     read_part.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     read_part.set_defaults(func=_cmd_read_part)
 
-    preview = sub.add_parser(
+    preview = (advanced or sub).add_parser(
         "preview", help="write a whole-image decimated thumbnail raster"
     )
     preview.add_argument("input", help=_HELP_SRC_RASTER)
@@ -440,7 +442,9 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     preview.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     preview.set_defaults(func=_cmd_preview)
 
-    point = sub.add_parser("point", help="sample band value(s) at a map coordinate")
+    point = (advanced or sub).add_parser(
+        "point", help="sample band value(s) at a map coordinate"
+    )
     point.add_argument("input", help="raster path to sample")
     point.add_argument("x", type=float, help="X / longitude / easting in --point-crs")
     point.add_argument("y", type=float, help="Y / latitude / northing in --point-crs")
@@ -453,7 +457,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     point.add_argument("--json", action="store_true", help=_HELP_JSON)
     point.set_defaults(func=_cmd_point)
 
-    read_tile = sub.add_parser(
+    read_tile = (advanced or sub).add_parser(
         "read-tile", help="read a Web-Mercator XYZ tile to an EPSG:3857 raster"
     )
     read_tile.add_argument("input", help=_HELP_SRC_RASTER)

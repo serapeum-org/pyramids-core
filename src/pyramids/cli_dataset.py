@@ -983,6 +983,11 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
         "single-raster (Dataset) operations: inspect, warp/clip/merge, bands, overviews, cog, io",
     )
     sub = raster_sub
+    # Power-user primitives (internal tile/overview reads, low-level band/mask/geotransform
+    # mechanics rarely run one-shot) collect under a single cross-cutting `raster advanced`.
+    raster_advanced = add_group(
+        sub, "advanced", "power-user primitives (internal reads, low-level mechanics)"
+    )
     _add_cog_commands(sub)
 
     raster_info = sub.add_parser("info", help="print raster metadata")
@@ -1150,7 +1155,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     )
     edit_info.set_defaults(func=_cmd_edit_info)
 
-    blocks = sub.add_parser(
+    blocks = raster_advanced.add_parser(
         "blocks", help="list a raster's native block (tile) windows"
     )
     blocks.add_argument("file", help=_HELP_INSPECT_RASTER)
@@ -1242,11 +1247,11 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     from pyramids.cli_dataset_spatial import add_dataset_spatial_commands
 
     add_dataset_read_commands(sub)
-    add_dataset_inspect_commands(sub)
-    add_dataset_bands_commands(sub)
-    add_dataset_spatial_commands(sub)
+    add_dataset_inspect_commands(sub, raster_advanced)
+    add_dataset_bands_commands(sub, raster_advanced)
+    add_dataset_spatial_commands(sub, raster_advanced)
     add_dataset_analysis_commands(sub)
-    add_dataset_overviews_commands(sub)
+    add_dataset_overviews_commands(sub, raster_advanced)
     add_dataset_export_commands(
         add_group(sub, "export", "write a raster to a file or format")
     )

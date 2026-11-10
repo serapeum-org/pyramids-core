@@ -62,14 +62,33 @@ class TestReadOverviewArray:
     def test_writes_decimated_raster(self, raster_with_overviews, tmp_path):
         """Writing level 0 (factor 2) produces an 8x8 raster from the 16x16 source."""
         out = str(tmp_path / "level0.tif")
-        assert main(["raster", "read-overview-array", raster_with_overviews, out]) == 0
+        assert (
+            main(
+                [
+                    "raster",
+                    "advanced",
+                    "read-overview-array",
+                    raster_with_overviews,
+                    out,
+                ]
+            )
+            == 0
+        )
         result = Dataset.read_file(out)
         assert (result.rows, result.columns) == (8, 8)
 
     def test_json_stats(self, raster_with_overviews, capsys):
         """--json prints the level's shape and stats without writing a file."""
         assert (
-            main(["raster", "read-overview-array", raster_with_overviews, "--json"])
+            main(
+                [
+                    "raster",
+                    "advanced",
+                    "read-overview-array",
+                    raster_with_overviews,
+                    "--json",
+                ]
+            )
             == 0
         )
         payload = json.loads(capsys.readouterr().out)
@@ -78,11 +97,17 @@ class TestReadOverviewArray:
 
     def test_no_overviews_errors(self, cli_raster):
         """A raster with no overviews exits 1 (not an 'unexpected failure')."""
-        assert main(["raster", "read-overview-array", cli_raster, "--json"]) == 1
+        assert (
+            main(["raster", "advanced", "read-overview-array", cli_raster, "--json"])
+            == 1
+        )
 
     def test_requires_output_or_json(self, raster_with_overviews, capsys):
         """Giving neither an output path nor --json exits 1 with a clear message."""
-        assert main(["raster", "read-overview-array", raster_with_overviews]) == 1
+        assert (
+            main(["raster", "advanced", "read-overview-array", raster_with_overviews])
+            == 1
+        )
         assert "OUTPUT path" in capsys.readouterr().err
 
     def test_output_and_json_together_errors(
@@ -91,7 +116,14 @@ class TestReadOverviewArray:
         """Passing both an OUTPUT path and --json exits 1 instead of silently skipping the write."""
         out = str(tmp_path / "both.tif")
         rc = main(
-            ["raster", "read-overview-array", raster_with_overviews, out, "--json"]
+            [
+                "raster",
+                "advanced",
+                "read-overview-array",
+                raster_with_overviews,
+                out,
+                "--json",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1, "output + --json is contradictory and must exit 1"
@@ -108,7 +140,18 @@ class TestReadPart:
         """A 4x4 map window of the 8x8 source writes a smaller raster."""
         out = str(tmp_path / "window.tif")
         rc = main(
-            ["raster", "read-part", cli_raster, out, "--bbox", "2", "2", "6", "6"]
+            [
+                "raster",
+                "advanced",
+                "read-part",
+                cli_raster,
+                out,
+                "--bbox",
+                "2",
+                "2",
+                "6",
+                "6",
+            ]
         )
         assert rc == 0
         result = Dataset.read_file(out)
@@ -121,6 +164,7 @@ class TestReadPart:
         rc = main(
             [
                 "raster",
+                "advanced",
                 "read-part",
                 cli_raster,
                 out,
@@ -137,11 +181,35 @@ class TestReadPart:
         """Writing over an existing output without --overwrite exits 1."""
         out = str(tmp_path / "w.tif")
         assert (
-            main(["raster", "read-part", cli_raster, out, "--bbox", "2", "2", "6", "6"])
+            main(
+                [
+                    "raster",
+                    "advanced",
+                    "read-part",
+                    cli_raster,
+                    out,
+                    "--bbox",
+                    "2",
+                    "2",
+                    "6",
+                    "6",
+                ]
+            )
             == 0
         )
         rc = main(
-            ["raster", "read-part", cli_raster, out, "--bbox", "2", "2", "6", "6"]
+            [
+                "raster",
+                "advanced",
+                "read-part",
+                cli_raster,
+                out,
+                "--bbox",
+                "2",
+                "2",
+                "6",
+                "6",
+            ]
         )
         assert rc == 1
 
@@ -151,6 +219,7 @@ class TestReadPart:
         rc = main(
             [
                 "raster",
+                "advanced",
                 "read-part",
                 cli_raster,
                 out,
@@ -173,6 +242,7 @@ class TestReadPart:
         rc = main(
             [
                 "raster",
+                "advanced",
                 "read-part",
                 cli_raster,
                 out,
@@ -197,6 +267,7 @@ class TestReadPart:
         rc = main(
             [
                 "raster",
+                "advanced",
                 "read-part",
                 cli_raster,
                 out,
@@ -218,14 +289,20 @@ class TestPreview:
     def test_writes_thumbnail(self, cli_raster, tmp_path):
         """--max-size 4 decimates the 8x8 source to a 4x4 thumbnail."""
         out = str(tmp_path / "thumb.tif")
-        assert main(["raster", "preview", cli_raster, out, "--max-size", "4"]) == 0
+        assert (
+            main(["raster", "advanced", "preview", cli_raster, out, "--max-size", "4"])
+            == 0
+        )
         result = Dataset.read_file(out)
         assert max(result.rows, result.columns) <= 4
 
     def test_missing_input_errors(self, tmp_path):
         """A missing input exits 1."""
         out = str(tmp_path / "thumb.tif")
-        assert main(["raster", "preview", str(tmp_path / "nope.tif"), out]) == 1
+        assert (
+            main(["raster", "advanced", "preview", str(tmp_path / "nope.tif"), out])
+            == 1
+        )
 
 
 class TestPoint:
@@ -234,7 +311,17 @@ class TestPoint:
     def test_samples_value(self, cli_raster, capsys):
         """Sampling the top-left cell centre returns the ramp's first value (0)."""
         rc = main(
-            ["raster", "point", cli_raster, "0.5", "7.5", "--band", "0", "--json"]
+            [
+                "raster",
+                "advanced",
+                "point",
+                cli_raster,
+                "0.5",
+                "7.5",
+                "--band",
+                "0",
+                "--json",
+            ]
         )
         assert rc == 0
         payload = json.loads(capsys.readouterr().out)
@@ -242,11 +329,13 @@ class TestPoint:
 
     def test_out_of_bounds_errors(self, cli_raster):
         """A point outside the raster extent exits 1."""
-        assert main(["raster", "point", cli_raster, "100", "100"]) == 1
+        assert main(["raster", "advanced", "point", cli_raster, "100", "100"]) == 1
 
     def test_samples_value_plain(self, cli_raster, capsys):
         """Without --json the sampled value is printed as a plain coordinate line."""
-        rc = main(["raster", "point", cli_raster, "0.5", "7.5", "--band", "0"])
+        rc = main(
+            ["raster", "advanced", "point", cli_raster, "0.5", "7.5", "--band", "0"]
+        )
         captured = capsys.readouterr()
         assert rc == 0, captured.err
         assert "0.5,7.5:" in captured.out, "plain branch must print the coordinate"
@@ -258,7 +347,10 @@ class TestReadTile:
     def test_writes_tile_raster(self, cli_raster, tmp_path):
         """The zoom-0 world tile intersects the raster and writes a 256x256 raster."""
         out = str(tmp_path / "tile.tif")
-        assert main(["raster", "read-tile", cli_raster, out, "0", "0", "0"]) == 0
+        assert (
+            main(["raster", "advanced", "read-tile", cli_raster, out, "0", "0", "0"])
+            == 0
+        )
         result = Dataset.read_file(out)
         assert (result.rows, result.columns) == (256, 256)
         assert result.epsg == 3857
@@ -268,7 +360,16 @@ class TestReadTile:
         out = str(tmp_path / "tile.tif")
         assert (
             main(
-                ["raster", "read-tile", str(tmp_path / "nope.tif"), out, "0", "0", "0"]
+                [
+                    "raster",
+                    "advanced",
+                    "read-tile",
+                    str(tmp_path / "nope.tif"),
+                    out,
+                    "0",
+                    "0",
+                    "0",
+                ]
             )
             == 1
         )

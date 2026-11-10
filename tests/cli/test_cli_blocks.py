@@ -28,7 +28,7 @@ class TestBlocksCommand:
 
     def test_json_lists_blocks(self, src_raster, capsys):
         """--json emits a list of block records with window + bounds."""
-        assert main(["raster", "blocks", src_raster, "--json"]) == 0
+        assert main(["raster", "advanced", "blocks", src_raster, "--json"]) == 0
         out = json.loads(capsys.readouterr().out)
         assert isinstance(out, list)
         assert len(out) >= 1
@@ -39,12 +39,12 @@ class TestBlocksCommand:
 
     def test_text_output(self, src_raster, capsys):
         """The default text form prints one readable line per block."""
-        assert main(["raster", "blocks", src_raster]) == 0
+        assert main(["raster", "advanced", "blocks", src_raster]) == 0
         assert "block 0:" in capsys.readouterr().out
 
     def test_out_of_range_band_errors(self, src_raster, capsys):
         """An out-of-range band exits 1 with a clear 'out of range' message (not 'unexpected')."""
-        rc = main(["raster", "blocks", src_raster, "--band", "9"])
+        rc = main(["raster", "advanced", "blocks", src_raster, "--band", "9"])
         assert rc == 1
         err = capsys.readouterr().err
         assert "out of range" in err
@@ -52,10 +52,10 @@ class TestBlocksCommand:
 
     def test_negative_band_rejected(self, src_raster, capsys):
         """A negative band is rejected (exit 1), not silently interpreted from the end."""
-        rc = main(["raster", "blocks", src_raster, "--band", "-1"])
+        rc = main(["raster", "advanced", "blocks", src_raster, "--band", "-1"])
         assert rc == 1
         assert "out of range" in capsys.readouterr().err
 
     def test_missing_file_errors(self, tmp_path, capsys):
         """A missing input exits 1."""
-        assert main(["raster", "blocks", str(tmp_path / "nope.tif")]) == 1
+        assert main(["raster", "advanced", "blocks", str(tmp_path / "nope.tif")]) == 1

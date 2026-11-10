@@ -435,7 +435,9 @@ def _add_geolocate(sub: argparse._SubParsersAction) -> None:
     parser.set_defaults(func=_cmd_geolocate)
 
 
-def add_dataset_bands_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_bands_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the band / mask / colour / sensor-model commands on ``sub``.
 
     Args:
@@ -443,10 +445,10 @@ def add_dataset_bands_commands(sub: argparse._SubParsersAction) -> None:
     """
     _add_add_band(sub)
     _add_select_bands(sub)
-    _add_get_band_by_color(sub)
-    _add_create_mask_band(sub)
-    _add_read_masks(sub)
-    _add_get_mask(sub)
+    _add_get_band_by_color(advanced or sub)
+    _add_create_mask_band(advanced or sub)
+    _add_read_masks(advanced or sub)
+    _add_get_mask(advanced or sub)
     _add_set_color_ramp(sub)
-    _add_set_rpcs(sub)
-    _add_geolocate(sub)
+    _add_set_rpcs(advanced or sub)
+    _add_geolocate(advanced or sub)
