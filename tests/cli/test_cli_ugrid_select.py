@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_select import (
     _COND_PATTERN,
     _build_condition,
@@ -41,7 +42,7 @@ def _run(argv: list[str]) -> int:
     """Dispatch ``argv`` through a throwaway ``mesh`` parser carrying the registrator.
 
     Args:
-        argv: The CLI tokens after ``pyramids`` (e.g. ``["mesh", "squeeze", src, out]``).
+        argv: The CLI tokens after ``pyramids`` (e.g. ``["mesh", "select", "squeeze", src, out]``).
 
     Returns:
         int: The handler's return code.
@@ -50,7 +51,7 @@ def _run(argv: list[str]) -> int:
     groups = parser.add_subparsers(dest="group")
     mesh = groups.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_select_commands(msub)
+    add_ugrid_select_commands(add_group(msub, "select", "subset/select over the mesh"))
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -198,14 +199,14 @@ class TestTimeSelect:
         """sel with one coordinate value writes a static (time-collapsed) mesh."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "sel", src, out, "--time", "1"]) == 0
+        assert _run(["mesh", "select", "sel", src, out, "--time", "1"]) == 0
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
     def test_sel_sequence_keeps_time(self, tmp_path):
         """sel with several values keeps the time axis, trimmed to those steps."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "sel", src, out, "--time", "1", "2"]) == 0
+        assert _run(["mesh", "select", "sel", src, out, "--time", "1", "2"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_sel_nearest_tolerance(self, tmp_path):
@@ -215,6 +216,7 @@ class TestTimeSelect:
         rc = _run(
             [
                 "mesh",
+                "select",
                 "sel",
                 src,
                 out,
@@ -232,14 +234,14 @@ class TestTimeSelect:
         """isel over several time positions keeps the time axis."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "isel", src, out, "--time", "0", "1"]) == 0
+        assert _run(["mesh", "select", "isel", src, out, "--time", "0", "1"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_isel_requires_an_axis(self, tmp_path):
         """isel with neither --time nor --element raises (mapped to ValueError)."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError):
-            _run(["mesh", "isel", src, str(tmp_path / "o.nc")])
+            _run(["mesh", "select", "isel", src, str(tmp_path / "o.nc")])
 
     def test_isel_single_time_collapses(self, tmp_path):
         """isel with one --time value collapses the axis and still serialises.
@@ -249,14 +251,14 @@ class TestTimeSelect:
         """
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "isel", src, out, "--time", "0"]) == 0
+        assert _run(["mesh", "select", "isel", src, out, "--time", "0"]) == 0
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
     def test_sel_time_collapses_and_serialises(self, tmp_path):
         """sel-time picks one step by position, collapses the axis, and round-trips."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "sel-time", src, out, "--index", "1"]) == 0
+        assert _run(["mesh", "select", "sel-time", src, out, "--index", "1"]) == 0
         written = MeshDataset.read_file(out)
         assert written.get_data("d").data.ndim == 1
         assert written.get_data("d").data.tolist() == [2.0, 3.0]
@@ -265,7 +267,17 @@ class TestTimeSelect:
         """An out-of-range --index is remapped to a clean ValueError."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError):
-            _run(["mesh", "sel-time", src, str(tmp_path / "o.nc"), "--index", "9"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "sel-time",
+                    src,
+                    str(tmp_path / "o.nc"),
+                    "--index",
+                    "9",
+                ]
+            )
 
     def test_sel_time_non_temporal_is_value_error(self, tmp_path):
         """sel-time on a static mesh is a clean ValueError, matching isel --time."""
@@ -278,7 +290,17 @@ class TestTimeSelect:
         )
         src = _write_mesh(static, tmp_path, name="static.nc")
         with pytest.raises(ValueError, match="time dimension"):
-            _run(["mesh", "sel-time", src, str(tmp_path / "o.nc"), "--index", "0"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "sel-time",
+                    src,
+                    str(tmp_path / "o.nc"),
+                    "--index",
+                    "0",
+                ]
+            )
 
     def test_sel_time_refuses_existing_output(self, tmp_path):
         """sel-time refuses to clobber an existing output unless --overwrite is given."""
@@ -286,9 +308,20 @@ class TestTimeSelect:
         out = tmp_path / "o.nc"
         out.write_text("sentinel")
         with pytest.raises(ValueError, match="exists"):
-            _run(["mesh", "sel-time", src, str(out), "--index", "0"])
+            _run(["mesh", "select", "sel-time", src, str(out), "--index", "0"])
         assert (
-            _run(["mesh", "sel-time", src, str(out), "--index", "0", "--overwrite"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "sel-time",
+                    src,
+                    str(out),
+                    "--index",
+                    "0",
+                    "--overwrite",
+                ]
+            )
             == 0
         )
         assert MeshDataset.read_file(str(out)).get_data("d").data.ndim == 1
@@ -298,7 +331,19 @@ class TestTimeSelect:
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert (
-            _run(["mesh", "sel-time-range", src, out, "--start", "1", "--stop", "3"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "sel-time-range",
+                    src,
+                    out,
+                    "--start",
+                    "1",
+                    "--stop",
+                    "3",
+                ]
+            )
             == 0
         )
         assert _nsteps(MeshDataset.read_file(out)) == 2
@@ -307,41 +352,41 @@ class TestTimeSelect:
         """thin keeps every N-th step."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "thin", src, out, "--step", "2"]) == 0
+        assert _run(["mesh", "select", "thin", src, out, "--step", "2"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_thin_step_zero_raises(self, tmp_path):
         """A stride below 1 is refused by the kernel (ValueError)."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError, match="step"):
-            _run(["mesh", "thin", src, str(tmp_path / "o.nc"), "--step", "0"])
+            _run(["mesh", "select", "thin", src, str(tmp_path / "o.nc"), "--step", "0"])
 
     def test_head(self, tmp_path):
         """head keeps the leading N steps."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "head", src, out, "--n", "2"]) == 0
+        assert _run(["mesh", "select", "head", src, out, "--n", "2"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_tail(self, tmp_path):
         """tail keeps the trailing N steps."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "tail", src, out, "--n", "2"]) == 0
+        assert _run(["mesh", "select", "tail", src, out, "--n", "2"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 2
 
     def test_drop_isel(self, tmp_path):
         """drop-isel removes steps by position."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "drop-isel", src, out, "--indices", "0"]) == 0
+        assert _run(["mesh", "select", "drop-isel", src, out, "--indices", "0"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 3
 
     def test_drop_sel(self, tmp_path):
         """drop-sel removes steps by coordinate value."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "drop-sel", src, out, "--values", "0"]) == 0
+        assert _run(["mesh", "select", "drop-sel", src, out, "--values", "0"]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 3
 
     def test_drop_duplicates(self, tmp_path):
@@ -354,14 +399,14 @@ class TestTimeSelect:
         """
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "drop-duplicates", src, out]) == 0
+        assert _run(["mesh", "select", "drop-duplicates", src, out]) == 0
         assert _nsteps(MeshDataset.read_file(out)) == 4
 
     def test_squeeze(self, tmp_path):
         """squeeze collapses a single-step temporal variable to static."""
         src = _write_mesh(_temporal_mesh([5.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "squeeze", src, out]) == 0
+        assert _run(["mesh", "select", "squeeze", src, out]) == 0
         assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
 
     def test_drop_isel_on_static_raises(self, tmp_path):
@@ -370,6 +415,7 @@ class TestTimeSelect:
             _run(
                 [
                     "mesh",
+                    "select",
                     "drop-isel",
                     str(_MESH),
                     str(tmp_path / "o.nc"),
@@ -386,21 +432,21 @@ class TestLayerSelect:
         """isel-layer selects one layer per column and writes a readable mesh."""
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "isel-layer", src, out, "--index", "0"]) == 0
+        assert _run(["mesh", "select", "isel-layer", src, out, "--index", "0"]) == 0
         assert "sal" in MeshDataset.read_file(out).data_variable_names
 
     def test_sel_layer(self, tmp_path):
         """sel-layer selects a layer by (positional) coordinate value."""
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "sel-layer", src, out, "--value", "1"]) == 0
+        assert _run(["mesh", "select", "sel-layer", src, out, "--value", "1"]) == 0
         assert "sal" in MeshDataset.read_file(out).data_variable_names
 
     def test_collapse_layer(self, tmp_path):
         """collapse-layer flattens the volume onto a 2-D face field."""
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "collapse-layer", src, out, "--layer", "0"]) == 0
+        assert _run(["mesh", "select", "collapse-layer", src, out, "--layer", "0"]) == 0
         assert MeshDataset.read_file(out).get_data("sal").data.shape == (3,)
 
     def test_collapse_layer_rejects_non_face(self, tmp_path):
@@ -410,6 +456,7 @@ class TestLayerSelect:
             _run(
                 [
                     "mesh",
+                    "select",
                     "collapse-layer",
                     src,
                     str(tmp_path / "o.nc"),
@@ -424,7 +471,17 @@ class TestLayerSelect:
         """sel-layer on a mesh with no layer dimension is a clean ValueError."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError, match="layer"):
-            _run(["mesh", "sel-layer", src, str(tmp_path / "o.nc"), "--value", "0"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "sel-layer",
+                    src,
+                    str(tmp_path / "o.nc"),
+                    "--value",
+                    "0",
+                ]
+            )
 
 
 class TestSpatialSubset:
@@ -437,6 +494,7 @@ class TestSpatialSubset:
         rc = _run(
             [
                 "mesh",
+                "select",
                 "subset-by-bounds",
                 str(_MESH),
                 out,
@@ -458,6 +516,7 @@ class TestSpatialSubset:
         rc = _run(
             [
                 "mesh",
+                "select",
                 "crop",
                 str(_MESH),
                 out,
@@ -476,7 +535,19 @@ class TestSpatialSubset:
         mask = _mask_file(tmp_path)
         out = str(tmp_path / "o.nc")
         assert (
-            _run(["mesh", "crop", str(_MESH), out, "--mask", mask, "--no-touch"]) == 0
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "crop",
+                    str(_MESH),
+                    out,
+                    "--mask",
+                    mask,
+                    "--no-touch",
+                ]
+            )
+            == 0
         )
         assert MeshDataset.read_file(out).n_face > 0
 
@@ -484,13 +555,18 @@ class TestSpatialSubset:
         """clip keeps the faces inside a polygon mask file."""
         mask = _mask_file(tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "clip", str(_MESH), out, "--mask", mask]) == 0
+        assert _run(["mesh", "select", "clip", str(_MESH), out, "--mask", mask]) == 0
         assert MeshDataset.read_file(out).n_face > 0
 
     def test_isel_element(self, tmp_path):
         """isel --element renumbers the mesh around the chosen faces."""
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "isel", str(_MESH), out, "--element", "0", "1", "2"]) == 0
+        assert (
+            _run(
+                ["mesh", "select", "isel", str(_MESH), out, "--element", "0", "1", "2"]
+            )
+            == 0
+        )
         assert MeshDataset.read_file(out).n_face == 3
 
 
@@ -502,7 +578,20 @@ class TestValueOps:
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert (
-            _run(["mesh", "clip-values", src, out, "--lower", "1", "--upper", "5"]) == 0
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "clip-values",
+                    src,
+                    out,
+                    "--lower",
+                    "1",
+                    "--upper",
+                    "5",
+                ]
+            )
+            == 0
         )
         assert float(np.nanmax(MeshDataset.read_file(out).get_data("d").data)) <= 5.0
 
@@ -510,7 +599,7 @@ class TestValueOps:
         """where masks the elements the comparison does not select."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "where", src, out, "--cond", "d > 3"]) == 0
+        assert _run(["mesh", "select", "where", src, out, "--cond", "d > 3"]) == 0
         data = MeshDataset.read_file(out).get_data("d").data
         assert np.isnan(data).any(), "elements failing the comparison must be masked"
 
@@ -518,13 +607,26 @@ class TestValueOps:
         """A bare '> N' --cond works, applying to the resolved variable."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
-        assert _run(["mesh", "where", src, out, "--cond", "> 3", "--other", "0"]) == 0
+        assert (
+            _run(["mesh", "select", "where", src, out, "--cond", "> 3", "--other", "0"])
+            == 0
+        )
 
     def test_where_bad_cond_raises(self, tmp_path):
         """A malformed --cond is refused before the mesh is touched."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0]), tmp_path)
         with pytest.raises(ValueError, match="--cond must be"):
-            _run(["mesh", "where", src, str(tmp_path / "o.nc"), "--cond", "garbage"])
+            _run(
+                [
+                    "mesh",
+                    "select",
+                    "where",
+                    src,
+                    str(tmp_path / "o.nc"),
+                    "--cond",
+                    "garbage",
+                ]
+            )
 
     def test_drop_variables(self, tmp_path):
         """drop-variables removes the named variable."""
@@ -533,6 +635,7 @@ class TestValueOps:
             _run(
                 [
                     "mesh",
+                    "select",
                     "drop-variables",
                     str(_MESH),
                     out,
@@ -550,6 +653,7 @@ class TestValueOps:
             _run(
                 [
                     "mesh",
+                    "select",
                     "drop-variables",
                     str(_MESH),
                     str(tmp_path / "o.nc"),
@@ -568,6 +672,7 @@ class TestWriterContract:
         minx, miny, maxx, maxy = _bbox_left_half()
         argv = [
             "mesh",
+            "select",
             "subset-by-bounds",
             str(_MESH),
             out,
@@ -587,6 +692,7 @@ class TestWriterContract:
         minx, miny, maxx, maxy = _bbox_left_half()
         base = [
             "mesh",
+            "select",
             "subset-by-bounds",
             str(_MESH),
             out,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import (
     info_print,
     json_safe,
@@ -177,12 +178,22 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
     )
     m_conv.set_defaults(func=_cmd_mesh_convert)
 
-    add_ugrid_read_commands(msub)
-    add_ugrid_inspect_commands(msub)
-    add_ugrid_select_commands(msub)
-    add_ugrid_export_commands(msub)
-    add_ugrid_analysis_commands(msub)
-    add_ugrid_interp_commands(msub)
-    add_ugrid_plot_commands(msub)
-    add_ugrid_attrs_commands(msub)
-    add_ugrid_join_commands(msub)
+    add_ugrid_read_commands(add_group(msub, "read", "read/open a mesh from a source"))
+    add_ugrid_inspect_commands(
+        add_group(msub, "inspect", "topology, connectivity, variable metadata")
+    )
+    add_ugrid_select_commands(add_group(msub, "select", "subset/select over the mesh"))
+    add_ugrid_export_commands(
+        add_group(msub, "export", "write a mesh to a file or format")
+    )
+    add_ugrid_analysis_commands(
+        add_group(msub, "analysis", "terrain/field analysis over the mesh")
+    )
+    add_ugrid_interp_commands(
+        add_group(msub, "interp", "interpolation, regridding, sampling")
+    )
+    add_ugrid_plot_commands(add_group(msub, "plot", "headless plotting"))
+    add_ugrid_attrs_commands(
+        add_group(msub, "attrs", "CF/attribute inspection and editing")
+    )
+    add_ugrid_join_commands(add_group(msub, "join", "merge/join meshes and data"))

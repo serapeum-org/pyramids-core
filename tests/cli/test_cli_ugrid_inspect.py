@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from scipy.sparse import load_npz
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_inspect import add_ugrid_inspect_commands
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf.ugrid import MeshDataset
@@ -31,7 +32,9 @@ def _run(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group")
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_inspect_commands(msub)
+    add_ugrid_inspect_commands(
+        add_group(msub, "inspect", "topology, connectivity, variable metadata")
+    )
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -54,7 +57,7 @@ class TestSummary:
 
     def test_json(self, capsys):
         """--json reports one record per variable with the default metrics."""
-        assert _run(["mesh", "summary", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "summary", str(_MESH), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         names = {record["variable"] for record in payload["summary"]}
         assert {"mesh2d_node_z", "mesh2d_edge_type"} <= names
@@ -64,6 +67,7 @@ class TestSummary:
         rc = _run(
             [
                 "mesh",
+                "inspect",
                 "summary",
                 str(_MESH),
                 "--variables",
@@ -82,7 +86,7 @@ class TestSummary:
     def test_unknown_variable_errors(self):
         """An unknown variable is a clean (mapped) error, not a KeyError."""
         with pytest.raises(ValueError):
-            _run(["mesh", "summary", str(_MESH), "--variables", "nope"])
+            _run(["mesh", "inspect", "summary", str(_MESH), "--variables", "nope"])
 
 
 class TestMeshNames:
@@ -90,12 +94,12 @@ class TestMeshNames:
 
     def test_json(self, capsys):
         """--json lists the topology names."""
-        assert _run(["mesh", "mesh-names", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "mesh-names", str(_MESH), "--json"]) == 0
         assert json.loads(capsys.readouterr().out)["mesh_names"] == ["mesh2d"]
 
     def test_plain(self, capsys):
         """The human form prints one name per line."""
-        assert _run(["mesh", "mesh-names", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "mesh-names", str(_MESH)]) == 0
         assert "mesh2d" in capsys.readouterr().out
 
 
@@ -104,20 +108,23 @@ class TestGet:
 
     def test_json(self, capsys):
         """get describes a single variable's metadata."""
-        assert _run(["mesh", "get", str(_MESH), "mesh2d_edge_type", "--json"]) == 0
+        assert (
+            _run(["mesh", "inspect", "get", str(_MESH), "mesh2d_edge_type", "--json"])
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["name"] == "mesh2d_edge_type"
         assert payload["location"] == "edge"
 
     def test_plain(self, capsys):
         """The human form prints key: value lines."""
-        assert _run(["mesh", "get", str(_MESH), "mesh2d_node_z"]) == 0
+        assert _run(["mesh", "inspect", "get", str(_MESH), "mesh2d_node_z"]) == 0
         assert "location:" in capsys.readouterr().out
 
     def test_unknown_variable_errors(self):
         """An unknown variable is a clean (mapped) error."""
         with pytest.raises(ValueError):
-            _run(["mesh", "get", str(_MESH), "nope"])
+            _run(["mesh", "inspect", "get", str(_MESH), "nope"])
 
 
 class TestKeysItemsValues:
@@ -125,17 +132,17 @@ class TestKeysItemsValues:
 
     def test_keys_json(self, capsys):
         """keys lists the variable names."""
-        assert _run(["mesh", "keys", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "keys", str(_MESH), "--json"]) == 0
         assert "mesh2d_edge_type" in json.loads(capsys.readouterr().out)["keys"]
 
     def test_keys_plain(self, capsys):
         """keys plain form prints one name per line."""
-        assert _run(["mesh", "keys", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "keys", str(_MESH)]) == 0
         assert "mesh2d_node_z" in capsys.readouterr().out
 
     def test_items_json(self, capsys):
         """items describes every (name, variable) pair."""
-        assert _run(["mesh", "items", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "items", str(_MESH), "--json"]) == 0
         items = json.loads(capsys.readouterr().out)["items"]
         assert {record["name"] for record in items} == {
             "mesh2d_node_z",
@@ -144,18 +151,18 @@ class TestKeysItemsValues:
 
     def test_items_plain(self, capsys):
         """items plain form prints one record per variable."""
-        assert _run(["mesh", "items", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "items", str(_MESH)]) == 0
         assert "mesh2d_node_z" in capsys.readouterr().out
 
     def test_values_json(self, capsys):
         """values describes every variable (no key)."""
-        assert _run(["mesh", "values", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "values", str(_MESH), "--json"]) == 0
         values = json.loads(capsys.readouterr().out)["values"]
         assert len(values) == 2
 
     def test_values_plain(self, capsys):
         """values plain form prints one record per variable."""
-        assert _run(["mesh", "values", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "values", str(_MESH)]) == 0
         assert "location" in capsys.readouterr().out
 
 
@@ -165,7 +172,7 @@ class TestGeometryVerbs:
     def test_exterior_edges(self, tmp_path):
         """exterior-edges writes the boundary edges as LineStrings."""
         out = str(tmp_path / "edges.geojson")
-        assert _run(["mesh", "exterior-edges", str(_MESH), out]) == 0
+        assert _run(["mesh", "inspect", "exterior-edges", str(_MESH), out]) == 0
         fc = FeatureCollection.read_file(out)
         assert len(fc) > 0
         assert set(fc.geometry.geom_type) == {"LineString"}
@@ -173,7 +180,7 @@ class TestGeometryVerbs:
     def test_exterior_faces(self, tmp_path):
         """exterior-faces writes the boundary faces as Polygons."""
         out = str(tmp_path / "faces.geojson")
-        assert _run(["mesh", "exterior-faces", str(_MESH), out]) == 0
+        assert _run(["mesh", "inspect", "exterior-faces", str(_MESH), out]) == 0
         fc = FeatureCollection.read_file(out)
         assert len(fc) > 0
         assert set(fc.geometry.geom_type) == {"Polygon"}
@@ -181,14 +188,17 @@ class TestGeometryVerbs:
     def test_bounding_polygon(self, tmp_path):
         """bounding-polygon writes the single outline polygon."""
         out = str(tmp_path / "bp.geojson")
-        assert _run(["mesh", "bounding-polygon", str(_MESH), out]) == 0
+        assert _run(["mesh", "inspect", "bounding-polygon", str(_MESH), out]) == 0
         fc = FeatureCollection.read_file(out)
         assert set(fc.geometry.geom_type) == {"Polygon"}
 
     def test_circumcenters_triangular(self, tmp_path):
         """circumcenters writes one point per triangular face."""
         out = str(tmp_path / "cc.geojson")
-        assert _run(["mesh", "circumcenters", _triangle_mesh(tmp_path), out]) == 0
+        assert (
+            _run(["mesh", "inspect", "circumcenters", _triangle_mesh(tmp_path), out])
+            == 0
+        )
         fc = FeatureCollection.read_file(out)
         assert len(fc) == 2
         assert set(fc.geometry.geom_type) == {"Point"}
@@ -196,19 +206,35 @@ class TestGeometryVerbs:
     def test_circumcenters_non_triangular_errors(self, tmp_path):
         """circumcenters on a non-triangular mesh is a clean error."""
         with pytest.raises(ValueError, match="triangular"):
-            _run(["mesh", "circumcenters", str(_MESH), str(tmp_path / "x.geojson")])
+            _run(
+                [
+                    "mesh",
+                    "inspect",
+                    "circumcenters",
+                    str(_MESH),
+                    str(tmp_path / "x.geojson"),
+                ]
+            )
 
     def test_refuses_existing(self, tmp_path):
         """A second geometry write without --overwrite is refused."""
         out = str(tmp_path / "bp.geojson")
-        assert _run(["mesh", "bounding-polygon", str(_MESH), out]) == 0
+        assert _run(["mesh", "inspect", "bounding-polygon", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "bounding-polygon", str(_MESH), out])
+            _run(["mesh", "inspect", "bounding-polygon", str(_MESH), out])
 
     def test_unknown_extension_errors(self, tmp_path):
         """An unknown output extension with no --driver is refused."""
         with pytest.raises(ValueError, match="cannot infer a vector driver"):
-            _run(["mesh", "bounding-polygon", str(_MESH), str(tmp_path / "o.weird")])
+            _run(
+                [
+                    "mesh",
+                    "inspect",
+                    "bounding-polygon",
+                    str(_MESH),
+                    str(tmp_path / "o.weird"),
+                ]
+            )
 
 
 class TestSparseAdjacency:
@@ -216,28 +242,34 @@ class TestSparseAdjacency:
 
     def test_json(self, capsys):
         """--json reports the matrix kind, shape, and non-zero count."""
-        assert _run(["mesh", "sparse-adjacency", str(_MESH), "--json"]) == 0
+        assert _run(["mesh", "inspect", "sparse-adjacency", str(_MESH), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["kind"] == "face"
         assert payload["nnz"] > 0
 
     def test_plain(self, capsys):
         """The human form prints key: value lines."""
-        assert _run(["mesh", "sparse-adjacency", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "sparse-adjacency", str(_MESH)]) == 0
         assert "nnz:" in capsys.readouterr().out
 
     def test_writes_npz(self, tmp_path):
         """--output persists the matrix as a .npz readable by scipy."""
         out = str(tmp_path / "adj.npz")
-        assert _run(["mesh", "sparse-adjacency", str(_MESH), "--output", out]) == 0
+        assert (
+            _run(["mesh", "inspect", "sparse-adjacency", str(_MESH), "--output", out])
+            == 0
+        )
         assert load_npz(out).nnz > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second --output write without --overwrite is refused."""
         out = str(tmp_path / "adj.npz")
-        assert _run(["mesh", "sparse-adjacency", str(_MESH), "--output", out]) == 0
+        assert (
+            _run(["mesh", "inspect", "sparse-adjacency", str(_MESH), "--output", out])
+            == 0
+        )
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "sparse-adjacency", str(_MESH), "--output", out])
+            _run(["mesh", "inspect", "sparse-adjacency", str(_MESH), "--output", out])
 
 
 class TestConnectedComponents:
@@ -245,20 +277,27 @@ class TestConnectedComponents:
 
     def test_json(self, capsys):
         """--json reports the element and component counts."""
-        assert _run(["mesh", "connected-components", str(_MESH), "--json"]) == 0
+        assert (
+            _run(["mesh", "inspect", "connected-components", str(_MESH), "--json"]) == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["n_components"] >= 1
         assert payload["n_elements"] > 0
 
     def test_plain(self, capsys):
         """The human form prints key: value lines."""
-        assert _run(["mesh", "connected-components", str(_MESH)]) == 0
+        assert _run(["mesh", "inspect", "connected-components", str(_MESH)]) == 0
         assert "n_components:" in capsys.readouterr().out
 
     def test_writes_npy(self, tmp_path):
         """--output persists the label array."""
         out = str(tmp_path / "labels.npy")
-        assert _run(["mesh", "connected-components", str(_MESH), "--output", out]) == 0
+        assert (
+            _run(
+                ["mesh", "inspect", "connected-components", str(_MESH), "--output", out]
+            )
+            == 0
+        )
         assert np.load(out).size > 0
 
 
@@ -267,13 +306,18 @@ class TestActiveMask:
 
     def test_none_json(self, capsys):
         """A variable with no active mask reports null under --json."""
-        rc = _run(["mesh", "active-mask", str(_MESH), "mesh2d_edge_type", "--json"])
+        rc = _run(
+            ["mesh", "inspect", "active-mask", str(_MESH), "mesh2d_edge_type", "--json"]
+        )
         assert rc == 0
         assert json.loads(capsys.readouterr().out)["active_mask"] is None
 
     def test_none_plain(self, capsys):
         """The human form prints the null mask as key: value lines."""
-        assert _run(["mesh", "active-mask", str(_MESH), "mesh2d_edge_type"]) == 0
+        assert (
+            _run(["mesh", "inspect", "active-mask", str(_MESH), "mesh2d_edge_type"])
+            == 0
+        )
         assert "active_mask:" in capsys.readouterr().out
 
     def test_output_without_mask_errors(self, tmp_path):
@@ -282,6 +326,7 @@ class TestActiveMask:
             _run(
                 [
                     "mesh",
+                    "inspect",
                     "active-mask",
                     str(_MESH),
                     "mesh2d_edge_type",
@@ -293,7 +338,7 @@ class TestActiveMask:
     def test_unknown_variable_errors(self):
         """An unknown variable is a clean (mapped) error."""
         with pytest.raises(ValueError):
-            _run(["mesh", "active-mask", str(_MESH), "nope"])
+            _run(["mesh", "inspect", "active-mask", str(_MESH), "nope"])
 
     def _masked_mesh(self):
         """Build an in-memory mesh whose ``depth`` variable carries an active mask."""
@@ -311,7 +356,10 @@ class TestActiveMask:
         monkeypatch.setattr(
             MeshDataset, "read_file", lambda *a, **k: self._masked_mesh()
         )
-        assert _run(["mesh", "active-mask", "ignored.nc", "depth", "--json"]) == 0
+        assert (
+            _run(["mesh", "inspect", "active-mask", "ignored.nc", "depth", "--json"])
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["n_elements"] == 2
         assert payload["n_active"] == 1
@@ -323,7 +371,18 @@ class TestActiveMask:
         )
         out = str(tmp_path / "mask.npy")
         assert (
-            _run(["mesh", "active-mask", "ignored.nc", "depth", "--output", out]) == 0
+            _run(
+                [
+                    "mesh",
+                    "inspect",
+                    "active-mask",
+                    "ignored.nc",
+                    "depth",
+                    "--output",
+                    out,
+                ]
+            )
+            == 0
         )
         assert np.load(out).tolist() == [True, False]
 
@@ -333,7 +392,16 @@ class TestMaskedValues:
 
     def test_json(self, capsys):
         """--json reports the element and finite-value counts."""
-        rc = _run(["mesh", "masked-values", str(_MESH), "mesh2d_edge_type", "--json"])
+        rc = _run(
+            [
+                "mesh",
+                "inspect",
+                "masked-values",
+                str(_MESH),
+                "mesh2d_edge_type",
+                "--json",
+            ]
+        )
         assert rc == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["n_elements"] > 0
@@ -341,14 +409,25 @@ class TestMaskedValues:
 
     def test_plain(self, capsys):
         """The human form prints key: value lines."""
-        assert _run(["mesh", "masked-values", str(_MESH), "mesh2d_edge_type"]) == 0
+        assert (
+            _run(["mesh", "inspect", "masked-values", str(_MESH), "mesh2d_edge_type"])
+            == 0
+        )
         assert "n_finite:" in capsys.readouterr().out
 
     def test_writes_npy(self, tmp_path):
         """--output persists the masked value array."""
         out = str(tmp_path / "vals.npy")
         rc = _run(
-            ["mesh", "masked-values", str(_MESH), "mesh2d_edge_type", "--output", out]
+            [
+                "mesh",
+                "inspect",
+                "masked-values",
+                str(_MESH),
+                "mesh2d_edge_type",
+                "--output",
+                out,
+            ]
         )
         assert rc == 0
         assert np.load(out).size > 0
@@ -356,4 +435,4 @@ class TestMaskedValues:
     def test_unknown_variable_errors(self):
         """An unknown variable is a clean (mapped) error."""
         with pytest.raises(ValueError):
-            _run(["mesh", "masked-values", str(_MESH), "nope"])
+            _run(["mesh", "inspect", "masked-values", str(_MESH), "nope"])
