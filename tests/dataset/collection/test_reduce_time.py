@@ -335,6 +335,59 @@ class TestReduceTime:
         assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), "mean(0,1,2,3) = 1.5"
 
     @requires_lazy
+    def test_naive_origin_timestamp_on_tz_aware_index(self, daily_files):
+        """A naive origin Timestamp is treated as UTC for a tz-aware index.
+
+        Test scenario:
+            A UTC index with a naive ``origin`` whose wall time equals the UTC
+            minimum anchors the same single window as ``times.min()`` would.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00+00",
+                "2022-01-02 00:00+00",
+                "2022-01-03 00:00+00",
+                "2022-01-04 05:00+00",
+            ],
+            format="mixed",
+            utc=True,
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=pd.Timestamp("2022-01-01 20:00")
+        )
+        assert len(result) == 1, "a naive origin (read as UTC) collapses the span"
+        assert result[0][0] == times.min(), "anchored on the UTC minimum"
+
+    @requires_lazy
+    def test_tz_aware_origin_timestamp_on_naive_index(self, daily_files):
+        """A tz-aware origin Timestamp is reduced to wall time for a naive index.
+
+        Test scenario:
+            A naive index with a tz-aware ``origin`` whose wall time equals the
+            naive minimum anchors the single whole-window bucket.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00",
+                "2022-01-02 00:00",
+                "2022-01-03 00:00",
+                "2022-01-04 05:00",
+            ]
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times,
+            freq=f"{span_days}D",
+            op="mean",
+            origin=pd.Timestamp("2022-01-01 20:00", tz="UTC"),
+        )
+        assert len(result) == 1, "a tz-aware origin reduced to wall time collapses the span"
+        assert result[0][0] == times.min(), "anchored on the naive minimum"
+
+    @requires_lazy
     def test_origin_timestamp_on_non_utc_fixed_offset(self, daily_files):
         """A non-UTC fixed-offset index round-trips its offset through anchoring.
 
