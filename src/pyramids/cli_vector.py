@@ -215,14 +215,22 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_clip.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_clip.set_defaults(func=_cmd_vector_clip)
 
+    # Power-user primitives (geometry micro-ops rarely run one-shot) collect under a single
+    # cross-cutting `vector advanced` subgroup, fed by the geom/overlay/tess registrars.
+    vec_advanced = add_group(
+        vsub, "advanced", "power-user primitives (geometry micro-ops)"
+    )
     add_vector_inspect_commands(
         add_group(vsub, "inspect", "inspect a vector's schema/validity")
     )
-    add_vector_geom_commands(add_group(vsub, "geom", "unary geometry operations"))
+    add_vector_geom_commands(
+        add_group(vsub, "geom", "unary geometry operations"), vec_advanced
+    )
     add_vector_overlay_commands(
-        add_group(vsub, "overlay", "overlay / set ops, joins, filter")
+        add_group(vsub, "overlay", "overlay / set ops, joins, filter"), vec_advanced
     )
     add_vector_tess_commands(
-        add_group(vsub, "tess", "tessellation, binning, sampling, measures")
+        add_group(vsub, "tess", "tessellation, binning, sampling, measures"),
+        vec_advanced,
     )
     add_vector_io_commands(add_group(vsub, "io", "format I/O and remote readers"))

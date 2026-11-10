@@ -41,8 +41,9 @@ def _build_parser():
     sub = parser.add_subparsers(dest="group", required=True)
     vector = sub.add_parser("vector")
     vsub = vector.add_subparsers(dest="command", required=True)
+    advanced = add_group(vsub, "advanced", "power-user primitives (geometry micro-ops)")
     add_vector_overlay_commands(
-        add_group(vsub, "overlay", "overlay / set ops, joins, filter")
+        add_group(vsub, "overlay", "overlay / set ops, joins, filter"), advanced
     )
     return parser
 
@@ -611,7 +612,9 @@ class TestSharedPaths:
         """shared-paths writes the common segment of two lines."""
         out = str(tmp_path / "sp.geojson")
         assert (
-            run(["vector", "overlay", "shared-paths", lines_a, out, "--other", lines_b])
+            run(
+                ["vector", "advanced", "shared-paths", lines_a, out, "--other", lines_b]
+            )
             == 0
         )
         assert len(FeatureCollection.read_file(out)) == 1
@@ -621,7 +624,7 @@ class TestSharedPaths:
         rc = run(
             [
                 "vector",
-                "overlay",
+                "advanced",
                 "shared-paths",
                 lines_a,
                 str(tmp_path / "o.geojson"),
@@ -643,7 +646,15 @@ class TestShortestLine:
         out = str(tmp_path / "sl.geojson")
         assert (
             run(
-                ["vector", "overlay", "shortest-line", lines_a, out, "--other", lines_b]
+                [
+                    "vector",
+                    "advanced",
+                    "shortest-line",
+                    lines_a,
+                    out,
+                    "--other",
+                    lines_b,
+                ]
             )
             == 0
         )
@@ -657,7 +668,7 @@ class TestShortestLine:
         rc = run(
             [
                 "vector",
-                "overlay",
+                "advanced",
                 "shortest-line",
                 lines_a,
                 str(tmp_path / "o.geojson"),
@@ -786,7 +797,7 @@ class TestMainErrorContract:
         rc = main(
             [
                 "vector",
-                "overlay",
+                "advanced",
                 "shared-paths",
                 _G_POLYGONS,
                 out,
