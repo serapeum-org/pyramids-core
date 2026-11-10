@@ -528,6 +528,10 @@ def add_vector_geom_commands(
             When given, rarely-one-shot primitive verbs register there instead of on the
             main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
+    # Primitive geometry micro-ops register on `advanced` when it is provided (else on the
+    # group root, for the isolation parsers). Bind it once so each registration is a plain
+    # attribute access rather than an inline ``or`` (keeps this registrar's complexity low).
+    adv = advanced or vsub
     buf = vsub.add_parser("buffer", help="buffer each geometry by a distance")
     _add_io(buf)
     buf.add_argument("--distance", type=float, required=True, help="buffer distance")
@@ -558,7 +562,7 @@ def add_vector_geom_commands(
     )
     simp.set_defaults(func=_cmd_vector_simplify)
 
-    scov = (advanced or vsub).add_parser(
+    scov = adv.add_parser(
         "simplify-coverage", help="topology-preserving coverage simplification"
     )
     _add_io(scov)
@@ -571,39 +575,31 @@ def add_vector_geom_commands(
     _add_io(valid)
     valid.set_defaults(func=_cmd_vector_make_valid)
 
-    norm = (advanced or vsub).add_parser(
-        "normalize", help="normalize geometries to canonical form"
-    )
+    norm = adv.add_parser("normalize", help="normalize geometries to canonical form")
     _add_io(norm)
     norm.set_defaults(func=_cmd_vector_normalize)
 
-    rev = (advanced or vsub).add_parser(
-        "reverse", help="reverse coordinate (winding) order"
-    )
+    rev = adv.add_parser("reverse", help="reverse coordinate (winding) order")
     _add_io(rev)
     rev.set_defaults(func=_cmd_vector_reverse)
 
-    f2d = (advanced or vsub).add_parser("force-2d", help="drop the Z coordinate")
+    f2d = adv.add_parser("force-2d", help="drop the Z coordinate")
     _add_io(f2d)
     f2d.set_defaults(func=_cmd_vector_force_2d)
 
-    f3d = (advanced or vsub).add_parser("force-3d", help="add a constant Z coordinate")
+    f3d = adv.add_parser("force-3d", help="add a constant Z coordinate")
     _add_io(f3d)
     f3d.add_argument("--z", type=float, default=0.0, help="Z value to assign")
     f3d.set_defaults(func=_cmd_vector_force_3d)
 
-    seg = (advanced or vsub).add_parser(
-        "segmentize", help="densify edges to a max segment length"
-    )
+    seg = adv.add_parser("segmentize", help="densify edges to a max segment length")
     _add_io(seg)
     seg.add_argument(
         "--max-length", type=float, required=True, help="maximum segment length"
     )
     seg.set_defaults(func=_cmd_vector_segmentize)
 
-    rrp = (advanced or vsub).add_parser(
-        "remove-repeated-points", help="drop duplicate vertices"
-    )
+    rrp = adv.add_parser("remove-repeated-points", help="drop duplicate vertices")
     _add_io(rrp)
     rrp.add_argument(
         "--tolerance",
@@ -613,14 +609,12 @@ def add_vector_geom_commands(
     )
     rrp.set_defaults(func=_cmd_vector_remove_repeated_points)
 
-    off = (advanced or vsub).add_parser(
-        "offset-curve", help="offset a line by a distance"
-    )
+    off = adv.add_parser("offset-curve", help="offset a line by a distance")
     _add_io(off)
     off.add_argument("--distance", type=float, required=True, help="offset distance")
     off.set_defaults(func=_cmd_vector_offset_curve)
 
-    rep = (advanced or vsub).add_parser(
+    rep = adv.add_parser(
         "representative-point", help="a point guaranteed inside each geometry"
     )
     _add_io(rep)
@@ -642,22 +636,20 @@ def add_vector_geom_commands(
     _add_io(mbc)
     mbc.set_defaults(func=_cmd_vector_minimum_bounding_circle)
 
-    mrr = (advanced or vsub).add_parser(
+    mrr = adv.add_parser(
         "minimum-rotated-rectangle", help="the smallest enclosing rectangle"
     )
     _add_io(mrr)
     mrr.set_defaults(func=_cmd_vector_minimum_rotated_rectangle)
 
-    mic = (advanced or vsub).add_parser(
+    mic = adv.add_parser(
         "maximum-inscribed-circle", help="the largest circle fitting inside"
     )
     _add_io(mic)
     mic.add_argument("--tolerance", type=float, help="search tolerance")
     mic.set_defaults(func=_cmd_vector_maximum_inscribed_circle)
 
-    aff = (advanced or vsub).add_parser(
-        "affine-transform", help="apply a 2-D affine matrix"
-    )
+    aff = adv.add_parser("affine-transform", help="apply a 2-D affine matrix")
     _add_io(aff)
     aff.add_argument(
         "--matrix",
@@ -692,9 +684,7 @@ def add_vector_geom_commands(
     tra.add_argument("--zoff", type=float, default=0.0, help="Z offset")
     tra.set_defaults(func=_cmd_vector_translate)
 
-    snap = (advanced or vsub).add_parser(
-        "snap", help="snap geometries to another layer's vertices"
-    )
+    snap = adv.add_parser("snap", help="snap geometries to another layer's vertices")
     _add_io(snap)
     snap.add_argument("--other", required=True, help="vector file to snap towards")
     snap.add_argument(
@@ -702,37 +692,31 @@ def add_vector_geom_commands(
     )
     snap.set_defaults(func=_cmd_vector_snap)
 
-    area = (advanced or vsub).add_parser(
-        "build-area", help="build polygonal areas from linework"
-    )
+    area = adv.add_parser("build-area", help="build polygonal areas from linework")
     _add_io(area)
     area.set_defaults(func=_cmd_vector_build_area)
 
-    eup = (advanced or vsub).add_parser(
+    eup = adv.add_parser(
         "extract-unique-points", help="the distinct vertices of each geometry"
     )
     _add_io(eup)
     eup.set_defaults(func=_cmd_vector_extract_unique_points)
 
-    prec = (advanced or vsub).add_parser(
-        "set-precision", help="snap coordinates to a grid size"
-    )
+    prec = adv.add_parser("set-precision", help="snap coordinates to a grid size")
     _add_io(prec)
     prec.add_argument(
         "--grid-size", type=float, required=True, help="coordinate grid size"
     )
     prec.set_defaults(func=_cmd_vector_set_precision)
 
-    wc = (advanced or vsub).add_parser(
+    wc = adv.add_parser(
         "with-coordinates", help="attach per-vertex x/y coordinate columns"
     )
     _add_io(wc)
     wc.add_argument("--driver", help=_HELP_DRIVER)
     wc.set_defaults(func=_cmd_vector_with_coordinates)
 
-    wcen = (advanced or vsub).add_parser(
-        "with-centroid", help="attach per-feature centroid columns"
-    )
+    wcen = adv.add_parser("with-centroid", help="attach per-feature centroid columns")
     _add_io(wcen)
     wcen.add_argument("--driver", help=_HELP_DRIVER)
     wcen.set_defaults(func=_cmd_vector_with_centroid)
