@@ -62,8 +62,9 @@ class TestSuggestingParser:
             parser.parse_args(["wrp"])
         assert exc.value.code == 2, "an invalid choice exits with code 2"
         err = capsys.readouterr().err
-        assert "warp" in err and "mean" in err.lower(), (
-            "stderr should point the user at `warp`"
+        assert "warp" in err, "stderr should name the nearest valid verb `warp`"
+        assert "mean" in err.lower(), (
+            "stderr should phrase it as a did-you-mean suggestion"
         )
 
     def test_error_appends_backport_hint(self, capsys):
