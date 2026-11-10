@@ -220,7 +220,8 @@ nav:
               - GIS operations: examples/netcdf/ugrid/ugrid-gis-operations.ipynb
   - Reference:
     - Command line (CLI):
-      - Overview & global flags: reference/cli/index.md
+      - Overview: reference/cli.md
+      - Global flags & conventions: reference/cli/index.md
       - raster: reference/cli/raster.md
       - vector: reference/cli/vector.md
       - nc (NetCDF): reference/cli/nc.md
@@ -231,7 +232,6 @@ nav:
       - fetch (OGC): reference/cli/fetch.md
       - completion: reference/cli/completion.md
       - plugins: reference/cli/plugins.md
-      - Grouped command summary: reference/cli.md
     - Dataset:
       - Overview: reference/dataset/index.md
       - I/O Operations: reference/dataset/io.md
