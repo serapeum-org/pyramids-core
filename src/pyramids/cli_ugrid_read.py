@@ -10,11 +10,11 @@ call. Registered by :func:`add_ugrid_read_commands` onto the ``mesh`` sub-action
 Commands registered here:
 
 - ``read-all`` → :meth:`MeshDataset.read_all` (writes one NetCDF per topology)
-- ``mesh read arrays`` → :meth:`MeshDataset.from_arrays` (node/face ``.npy`` arrays)
-- ``mesh read geodataframe`` → :meth:`MeshDataset.from_geodataframe` (a polygon vector layer)
-- ``mesh read structured`` → :meth:`MeshDataset.from_structured` (a raster, one quad per cell)
-- ``mesh read zarr`` → :meth:`MeshDataset.from_zarr` (optional ``[lazy]`` extra)
-- ``mesh read bytes`` → :meth:`MeshDataset.from_bytes` (a file or stdin)
+- ``arrays`` → :meth:`MeshDataset.from_arrays` (node/face ``.npy`` arrays)
+- ``geodataframe`` → :meth:`MeshDataset.from_geodataframe` (a polygon vector layer)
+- ``structured`` → :meth:`MeshDataset.from_structured` (a raster, one quad per cell)
+- ``zarr`` → :meth:`MeshDataset.from_zarr` (optional ``[lazy]`` extra)
+- ``bytes`` → :meth:`MeshDataset.from_bytes` (a file or stdin)
 - ``open-mf`` → :meth:`MeshDataset.open_mfdataset` (concatenate several files)
 """
 
@@ -257,7 +257,7 @@ def _add_read_all(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_arrays(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh read arrays``."""
+    """Register ``arrays``."""
     parser = msub.add_parser("arrays", help="build a mesh from node/face .npy arrays")
     parser.add_argument("node_x", help=".npy of node x coordinates")
     parser.add_argument("node_y", help=".npy of node y coordinates")
@@ -292,7 +292,7 @@ def _add_from_arrays(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_geodataframe(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh read geodataframe``."""
+    """Register ``geodataframe``."""
     parser = msub.add_parser(
         "geodataframe", help="build a mesh from a polygon vector layer"
     )
@@ -306,7 +306,7 @@ def _add_from_geodataframe(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_structured(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh read structured``."""
+    """Register ``structured``."""
     parser = msub.add_parser(
         "structured", help="build a quad mesh from a raster (one quad per cell)"
     )
@@ -326,7 +326,7 @@ def _add_from_structured(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh read zarr``."""
+    """Register ``zarr``."""
     parser = msub.add_parser(
         "zarr", help="read a pyramids-written Zarr store (needs the [lazy] extra)"
     )
@@ -337,7 +337,7 @@ def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_bytes(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh read bytes``."""
+    """Register ``bytes``."""
     parser = msub.add_parser("bytes", help="open a mesh held as raw bytes")
     parser.add_argument(
         "input", nargs="?", help="file of raw mesh bytes (omit with --stdin)"
