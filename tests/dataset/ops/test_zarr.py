@@ -8,6 +8,7 @@ returns :class:`dask.delayed.Delayed`.
 from __future__ import annotations
 
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -15,6 +16,8 @@ import pytest
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
+from pyramids.dataset.collection import DatasetCollection
+from pyramids.dataset.ops._zarr import is_cube_store, is_zarr_store
 
 pytestmark = pytest.mark.core
 
@@ -581,3 +584,84 @@ class TestResolveStore:
         result = _resolve_store("s3://bucket/x.zarr", {"anon": True})
         assert result == "FAKE_FSSPEC_STORE", f"unexpected: {result}"
         assert calls == [("s3://bucket/x.zarr", {"anon": True})], f"calls={calls}"
+
+
+class TestReadFileRoutesZarr:
+    """`Dataset.read_file` routes a single-raster `.zarr` store to `from_zarr` (#1457)."""
+
+    def test_is_zarr_store_detects_by_suffix(self):
+        """`.zarr` paths/URLs are detected; other rasters are not.
+
+        Test scenario:
+            Local and remote `.zarr` paths (incl. a trailing slash and a `Path`) are stores; a
+            GeoTIFF and an `s3://` tif are not. This drives `read_file`'s routing, remote URLs
+            (DoD item 3) included -- no store is opened.
+        """
+        assert is_zarr_store("x.zarr")
+        assert is_zarr_store("X.ZARR")
+        assert is_zarr_store("store.zarr/")
+        assert is_zarr_store("s3://bucket/path/x.zarr")
+        assert is_zarr_store(Path("dir") / "x.zarr")
+        assert not is_zarr_store("x.tif")
+        assert not is_zarr_store("s3://bucket/x.tif")
+
+    @pytest.mark.lazy
+    def test_read_file_routes_single_store_to_from_zarr(self, small_dataset, tmp_path):
+        """`read_file("x.zarr")` preserves CRS/geotransform/values identically to `from_zarr`.
+
+        Test scenario:
+            A single-raster store read via `read_file` must match the one read via `from_zarr`;
+            GDAL's generic Zarr driver would drop the georeferencing (#1457).
+        """
+        store = str(tmp_path / "single.zarr")
+        small_dataset.to_zarr(store)
+        via_read = Dataset.read_file(store)
+        via_from = Dataset.from_zarr(store)
+        assert via_read.epsg == via_from.epsg == small_dataset.epsg
+        assert (
+            via_read.geotransform == via_from.geotransform == small_dataset.geotransform
+        )
+        np.testing.assert_array_equal(via_read.read_array(), via_from.read_array())
+
+    @pytest.mark.lazy
+    def test_read_file_round_trips_to_zarr(self, small_dataset, tmp_path):
+        """`to_zarr` then `read_file` recovers the original values and geobox."""
+        store = str(tmp_path / "rt.zarr")
+        small_dataset.to_zarr(store)
+        reloaded = Dataset.read_file(store)
+        assert reloaded.epsg == small_dataset.epsg
+        assert reloaded.geotransform == small_dataset.geotransform
+        np.testing.assert_array_equal(reloaded.read_array(), small_dataset.read_array())
+
+    @pytest.mark.lazy
+    def test_is_cube_store_distinguishes_single_from_cube(
+        self, small_dataset, tmp_path
+    ):
+        """`is_cube_store` is False for a single raster and True for a cube."""
+        single = str(tmp_path / "single.zarr")
+        small_dataset.to_zarr(single)
+        assert not is_cube_store(single)
+        t1, t2 = str(tmp_path / "2020.01.01.tif"), str(tmp_path / "2020.01.02.tif")
+        small_dataset.to_file(t1)
+        small_dataset.to_file(t2)
+        cube = str(tmp_path / "cube.zarr")
+        DatasetCollection.from_files([t1, t2]).to_zarr(cube)
+        assert is_cube_store(cube)
+
+    @pytest.mark.lazy
+    def test_read_file_cube_store_raises_pointing_at_collection(
+        self, small_dataset, tmp_path
+    ):
+        """A `.zarr` cube store errors with a pointer to `DatasetCollection.from_zarr`.
+
+        Test scenario:
+            A store written by `DatasetCollection.to_zarr` is a 4-D cube, not a single Dataset,
+            so `read_file` must refuse it clearly rather than mis-read it as a single raster.
+        """
+        t1, t2 = str(tmp_path / "2020.01.01.tif"), str(tmp_path / "2020.01.02.tif")
+        small_dataset.to_file(t1)
+        small_dataset.to_file(t2)
+        cube = str(tmp_path / "cube.zarr")
+        DatasetCollection.from_files([t1, t2]).to_zarr(cube)
+        with pytest.raises(ValueError, match="DatasetCollection.from_zarr"):
+            Dataset.read_file(cube)

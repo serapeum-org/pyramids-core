@@ -113,6 +113,8 @@ from pyramids.dataset.ops._focal import (
     slope,
 )
 from pyramids.dataset.ops._zarr import (
+    is_cube_store,
+    is_zarr_store,
     read_dataset_from_zarr,
     write_dataset_to_zarr,
 )
@@ -4855,9 +4857,21 @@ class Dataset(RasterBase):
             Dataset:
                 Opened dataset instance.
 
+        Notes:
+            A ``.zarr`` store written by :meth:`to_zarr` is a GeoZarr store; ``read_file``
+            routes it to :meth:`from_zarr` so its CRS, geotransform and band roles are
+            recovered (GDAL's generic Zarr driver drops that metadata, returning a
+            georeferenceless raster). A cube store written by
+            :meth:`pyramids.dataset.DatasetCollection.to_zarr` is a 4-D ``(time, band, y,
+            x)`` stack, not a single raster, so ``read_file`` raises ``ValueError`` pointing
+            at :meth:`pyramids.dataset.DatasetCollection.from_zarr`. Pass ``driver=`` or
+            ``vsi=`` to bypass the routing and open the store through GDAL directly.
+
         See Also:
             - :meth:`read_array`: read the values stored in a dataset band.
             - :meth:`from_bytes`: open a raster held in memory.
+            - :meth:`from_zarr`: open a single-raster GeoZarr store (what a ``.zarr`` path
+              routes to, with control over ``level`` / ``chunks`` / ``storage_options``).
             - :attr:`gdal_env`: the config captured by ``gdal_env=``.
             - :meth:`pyramids.dataset.DatasetCollection.from_archive`: open
               *every* member of an archive as a temporal stack.
@@ -4887,6 +4901,19 @@ class Dataset(RasterBase):
             )
             _warn_ignored_gdal_args(preempting.name, read_only, file_i, vsi, gdal_env)
             return _read_via_driver(preempting, str(path), open_options)
+        # A `.zarr` store is a GeoZarr store whose CRS / geotransform / band roles were written by
+        # `to_zarr`; route it to the GeoZarr-aware `from_zarr` so that metadata survives -- GDAL's
+        # generic Zarr driver drops it, returning a georeferenceless raster (#1457). An explicit
+        # `driver=` (handled above) or `vsi=` opts out, and a cube store (DatasetCollection.to_zarr,
+        # a 4-D time/band/y/x array) is not a single Dataset, so it errors with a pointer rather than
+        # being mis-read by the single-raster reader.
+        if vsi is None and is_zarr_store(path):
+            if is_cube_store(path):
+                raise ValueError(
+                    f"{str(path)!r} is a cube Zarr store (time, band, y, x), not a single "
+                    "raster -- open it with DatasetCollection.from_zarr(...)."
+                )
+            return cls.from_zarr(path)
         # Normalize once here so the value captured on the instance below is the
         # KEY=VALUE list form (a raw dict would lose its values when the base
         # __init__ tuple-ifies it). _io.read_file re-normalizes idempotently for

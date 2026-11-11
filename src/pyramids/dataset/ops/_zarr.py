@@ -973,5 +973,38 @@ def _resolve_store(
     return store
 
 
+def is_zarr_store(source: Any) -> bool:
+    """Whether ``source`` names a ``.zarr`` store.
+
+    ``True`` for a local path or cloud URL whose final component ends in ``.zarr``
+    (case-insensitive; trailing separators ignored), and for a pre-built
+    :class:`zarr.storage.Store` / mapping object. This is the cheap suffix check
+    :meth:`pyramids.dataset.Dataset.read_file` uses to route a GeoZarr store to
+    :meth:`~pyramids.dataset.Dataset.from_zarr` instead of GDAL's generic Zarr driver.
+    """
+    if not isinstance(source, (str, Path)):
+        return True
+    return str(source).rstrip("/\\").lower().endswith(".zarr")
+
+
+def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> bool:
+    """Whether a pyramids Zarr ``store`` holds a temporal cube rather than a single raster.
+
+    :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes a 4-D ``data`` array
+    ``(time, band, y, x)``, whereas a single :meth:`pyramids.dataset.Dataset.to_zarr`
+    store's ``data`` array is 3-D ``(band, y, x)``. Opens the root group read-only and
+    inspects the ``data`` array's rank.
+    """
+    zarr = _require_zarr()
+    root = zarr.open_group(_resolve_store(store, storage_options), mode="r")
+    data = root.get("data", None)
+    return data is not None and getattr(data, "ndim", None) == 4
+
+
 # Keep the dunder explicit so users importing from the module see the surface.
-__all__ = ["write_dataset_to_zarr", "read_dataset_from_zarr"]
+__all__ = [
+    "write_dataset_to_zarr",
+    "read_dataset_from_zarr",
+    "is_zarr_store",
+    "is_cube_store",
+]
