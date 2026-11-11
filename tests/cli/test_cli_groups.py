@@ -295,6 +295,12 @@ class TestGroupedCliStructure:
         assert {"dataframe", "open-mf", "concat", "merge"} <= imp, (
             f"nc import readers missing: {imp}"
         )
+        assert not ({"open-mf", "concat", "merge"} & exp), (
+            f"a reader leaked into nc export: {exp}"
+        )
+        assert not ({"convert", "zarr", "kerchunk", "combine-kerchunk"} & imp), (
+            f"a writer leaked into nc import: {imp}"
+        )
 
     @pytest.mark.parametrize("subsystem", ["export", "read"])
     def test_mesh_io_verbs_have_no_prefix(self, root, subsystem):
