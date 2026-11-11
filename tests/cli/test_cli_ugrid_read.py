@@ -96,7 +96,7 @@ class TestReadAll:
 
 
 class TestFromArrays:
-    """``pyramids mesh from-arrays``."""
+    """``pyramids mesh read arrays``."""
 
     def test_builds_from_arrays(self, tmp_path):
         """from-arrays with a per-face variable writes a readable mesh."""
@@ -141,7 +141,7 @@ class TestFromArrays:
 
 
 class TestFromGeodataframe:
-    """``pyramids mesh from-geodataframe``."""
+    """``pyramids mesh read geodataframe``."""
 
     def _polygons(self, tmp_path) -> str:
         """Write a two-polygon GeoJSON layer with a CRS."""
@@ -175,7 +175,7 @@ class TestFromGeodataframe:
 
 
 class TestFromStructured:
-    """``pyramids mesh from-structured``."""
+    """``pyramids mesh read structured``."""
 
     def _raster(self, tmp_path) -> str:
         """Write a tiny 3x3 raster with a CRS."""
@@ -211,7 +211,7 @@ class TestFromStructured:
 
 
 class TestFromBytes:
-    """``pyramids mesh from-bytes``."""
+    """``pyramids mesh read bytes``."""
 
     def test_from_file(self, tmp_path):
         """from-bytes reads a file of raw bytes and writes the mesh."""
@@ -264,7 +264,7 @@ class TestOpenMf:
 
 
 class TestFromZarr:
-    """``pyramids mesh from-zarr``."""
+    """``pyramids mesh read zarr``."""
 
     def _store(self, tmp_path) -> str:
         """Write a pyramids Zarr store from the shipped mesh (needs the [lazy] extra)."""

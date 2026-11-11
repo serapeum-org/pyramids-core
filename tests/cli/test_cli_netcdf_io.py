@@ -64,7 +64,7 @@ class TestNcConvert:
 
 
 class TestNcToDataframe:
-    """`pyramids nc to-dataframe`."""
+    """`pyramids nc export dataframe`."""
 
     def test_writes_csv(self, tmp_path):
         """to-dataframe writes a non-empty CSV for the selected variable."""
@@ -78,7 +78,7 @@ class TestNcToDataframe:
 
 
 class TestNcToDict:
-    """`pyramids nc to-dict`."""
+    """`pyramids nc export dict`."""
 
     def test_json_structure(self, capsys):
         """--json emits the file's structure as strict-valid JSON with the expected keys."""
@@ -94,7 +94,7 @@ class TestNcToDict:
 
 
 class TestNcToZarr:
-    """`pyramids nc to-zarr` (needs the [lazy] extra for zarr)."""
+    """`pyramids nc export zarr` (needs the [lazy] extra for zarr)."""
 
     @pytest.mark.lazy
     def test_writes_zarr_store(self, tmp_path):
@@ -138,7 +138,7 @@ class TestNcToZarr:
 
 
 class TestNcFromDataframe:
-    """`pyramids nc from-dataframe` (issue #1467)."""
+    """`pyramids nc import dataframe` (issue #1467)."""
 
     def test_round_trips_from_csv(self, tmp_path):
         """A CSV written by to-dataframe rebuilds into a readable cube."""
@@ -204,7 +204,7 @@ class TestNcFromDataframe:
 
 
 class TestNcFromDict:
-    """`pyramids nc from-dict` (issue #1467)."""
+    """`pyramids nc import dict` (issue #1467)."""
 
     def test_round_trips_from_json(self, tmp_path):
         """A JSON structure dump rebuilds into a cube with the same variables."""
@@ -275,7 +275,7 @@ class TestNcMerge:
 
 
 class TestNcToKerchunk:
-    """`pyramids nc to-kerchunk` (needs kerchunk + h5py; issue #1467)."""
+    """`pyramids nc export kerchunk` (needs kerchunk + h5py; issue #1467)."""
 
     @pytest.mark.netcdf_lazy
     def test_writes_manifest(self, tmp_path):

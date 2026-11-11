@@ -152,7 +152,7 @@ def attach_registered(monkeypatch):
 
 
 class TestToFile:
-    """`pyramids mesh to-file`."""
+    """`pyramids mesh export file`."""
 
     def test_round_trips(self, tmp_path):
         """to-file re-writes a readable UGRID NetCDF."""
@@ -183,7 +183,7 @@ class TestToFile:
 
 
 class TestToGeodataframe:
-    """`pyramids mesh to-geodataframe`."""
+    """`pyramids mesh export geodataframe`."""
 
     def test_writes_faces(self, tmp_path):
         """The default face location writes polygons."""
@@ -225,7 +225,7 @@ class TestToGeodataframe:
 
 
 class TestToDataframe:
-    """`pyramids mesh to-dataframe`."""
+    """`pyramids mesh export dataframe`."""
 
     def test_writes_csv(self, tmp_path):
         """A CSV is written with one row per element value."""
@@ -273,7 +273,7 @@ class TestToDataframe:
 
 
 class TestToDataset:
-    """`pyramids mesh to-dataset`."""
+    """`pyramids mesh export dataset`."""
 
     def test_rasterizes_to_geotiff(self, tmp_path):
         """to-dataset writes a single-band raster."""
@@ -340,7 +340,7 @@ class TestToDataset:
 
 
 class TestToZarr:
-    """`pyramids mesh to-zarr`."""
+    """`pyramids mesh export zarr`."""
 
     def test_writes_store(self, tmp_path):
         """to-zarr writes a Zarr store directory."""
@@ -350,7 +350,7 @@ class TestToZarr:
 
 
 class TestToImage:
-    """`pyramids mesh to-image`."""
+    """`pyramids mesh export image`."""
 
     def test_writes_png(self, tmp_path):
         """to-image writes a readable colour-mapped image."""
@@ -379,7 +379,7 @@ class TestToImage:
 
 
 class TestToBytes:
-    """`pyramids mesh to-bytes`."""
+    """`pyramids mesh export bytes`."""
 
     def test_writes_file(self, tmp_path):
         """to-bytes writes the NetCDF buffer to a file."""
@@ -401,7 +401,7 @@ class TestToBytes:
 
 
 class TestToLocation:
-    """`pyramids mesh to-location`."""
+    """`pyramids mesh export location`."""
 
     def test_remaps_to_face(self, tmp_path):
         """A node variable remapped onto faces writes a readable mesh."""
@@ -424,7 +424,7 @@ class TestToLocation:
 
 
 class TestToCrs:
-    """`pyramids mesh to-crs`."""
+    """`pyramids mesh export crs`."""
 
     def test_reprojects(self, tmp_path):
         """to-crs reprojects a CRS-bearing mesh to the target EPSG."""
