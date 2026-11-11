@@ -7,6 +7,7 @@ silently regress. Grouped by ARC id.
 from __future__ import annotations
 
 import base64
+import warnings
 
 import geopandas as gpd
 import pytest
@@ -209,3 +210,44 @@ class TestArc42ListLayersCache:
         assert set(layers) == {"a", "b"}, (
             f"stale list_layers cache after write: {layers}"
         )
+
+
+class TestExplodeGeomTypeParam:
+    """FeatureCollection.explode renames ``geometry=`` to ``geom_type=`` with a shim."""
+
+    @staticmethod
+    def _multipolygon_fc() -> FeatureCollection:
+        multi = MultiPolygon(
+            [
+                Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
+                Polygon([(2, 2), (3, 2), (3, 3), (2, 3)]),
+            ]
+        )
+        return FeatureCollection(
+            gpd.GeoDataFrame({"n": ["m"]}, geometry=[multi], crs="EPSG:4326")
+        )
+
+    def test_geom_type_keyword_works_without_warning(self):
+        """The new ``geom_type=`` keyword explodes and emits no warning."""
+        fc = self._multipolygon_fc()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = fc.explode(geom_type="multipolygon")
+        assert len(result) == 2, f"expected 2 polygons, got {len(result)}"
+        assert set(result.geom_type) == {"Polygon"}
+
+    def test_positional_argument_maps_to_geom_type(self):
+        """A positional argument is the geometry type and emits no warning."""
+        fc = self._multipolygon_fc()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = fc.explode("multipolygon")
+        assert len(result) == 2, f"expected 2 polygons, got {len(result)}"
+
+    def test_geometry_keyword_is_deprecated_but_still_works(self):
+        """The old ``geometry=`` keyword still explodes but warns DeprecationWarning."""
+        fc = self._multipolygon_fc()
+        with pytest.warns(DeprecationWarning, match="geom_type"):
+            result = fc.explode(geometry="multipolygon")
+        assert len(result) == 2, f"expected 2 polygons, got {len(result)}"
+        assert set(result.geom_type) == {"Polygon"}
