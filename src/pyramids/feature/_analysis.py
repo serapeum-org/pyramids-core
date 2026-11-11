@@ -34,9 +34,9 @@ if TYPE_CHECKING:
 def with_coordinates(fc: FeatureCollection) -> FeatureCollection:
     """Explode multi-geometries and attach per-vertex ``x`` / ``y`` columns."""
     gdf = _geom._explode_multipart(
-        gpd.GeoDataFrame(fc, copy=True), geometry="multipolygon"
+        gpd.GeoDataFrame(fc, copy=True), geom_type="multipolygon"
     )
-    gdf = _geom._explode_multipart(gdf, geometry="geometrycollection")
+    gdf = _geom._explode_multipart(gdf, geom_type="geometrycollection")
     result = type(fc)(gdf)
     result["x"] = result.apply(
         _geom._get_coords, geom_col="geometry", coord_type="x", axis=1

@@ -236,7 +236,7 @@ def _get_poly_coords(geometry: Polygon, coord_type: str) -> list:
 
 
 def _explode_multipart(
-    gdf: GeoDataFrame, geometry: str = "multipolygon"
+    gdf: GeoDataFrame, geom_type: str = "multipolygon"
 ) -> GeoDataFrame:
     """Explode multi-geometries into per-row single geometries.
 
@@ -251,7 +251,7 @@ def _explode_multipart(
 
     Args:
         gdf (GeoDataFrame): The GeoDataFrame to process. Not mutated.
-        geometry (str): The geometry type to explode
+        geom_type (str): The geometry type to explode
             (`"multipolygon"` or `"geometrycollection"`).
 
     Returns:
@@ -322,13 +322,13 @@ def _explode_multipart(
     # `GeoDataFrame.explode` (runs in C; ARC-56); the non-matching rows are
     # preserved and come first in the result.
     gdf = gdf.copy()
-    is_match = gdf.geometry.geom_type.str.lower() == geometry
+    is_match = gdf.geometry.geom_type.str.lower() == geom_type
     preserved = gdf[~is_match]
     matching = gdf[is_match]
     if matching.empty:
         return preserved.reset_index(drop=True)
     # Call geopandas' explode UNBOUND: `matching` may be a FeatureCollection, whose
-    # own `explode(geometry=…)` override would otherwise shadow the vectorized
+    # own `explode(geom_type=…)` override would otherwise shadow the vectorized
     # GeoDataFrame.explode(index_parts=…) we want here (the FC is-a GeoDataFrame trap).
     exploded = GeoDataFrame.explode(matching, index_parts=False)
     result = gpd.GeoDataFrame(pd.concat([preserved, exploded]), crs=gdf.crs)

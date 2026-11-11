@@ -25,6 +25,7 @@ internal only; see :mod:`pyramids.feature._ogr`.
 from __future__ import annotations
 
 import math
+import warnings
 from collections.abc import Callable, Iterable, Iterator
 from numbers import Number
 from pathlib import Path
@@ -2505,16 +2506,21 @@ class FeatureCollection(GeoDataFrame):
             **creation_options,
         )
 
-    def explode(self, geometry: str = "multipolygon") -> FeatureCollection:
+    def explode(
+        self, geom_type: str = "multipolygon", *, geometry: str | None = None
+    ) -> FeatureCollection:
         """Explode multi-geometry rows into per-row single geometries.
 
         Returns a new ``FeatureCollection`` where every row whose geometry
-        type matches ``geometry`` is split so each child geometry becomes
+        type matches ``geom_type`` is split so each child geometry becomes
         its own row. The current frame is not mutated.
 
         Args:
-            geometry (str): The geometry type to explode (case-insensitive).
+            geom_type (str): The geometry type to explode (case-insensitive).
                 Defaults to ``"multipolygon"``.
+            geometry (str | None): Deprecated keyword-only alias for ``geom_type``;
+                passing it emits a ``DeprecationWarning`` and will be removed in a
+                future release.
 
         Returns:
             FeatureCollection: A new collection with the same CRS as
@@ -2548,7 +2554,15 @@ class FeatureCollection(GeoDataFrame):
 
                 ```
         """
-        return FeatureCollection(_geom._explode_multipart(self, geometry=geometry))
+        if geometry is not None:
+            warnings.warn(
+                "FeatureCollection.explode(geometry=...) is deprecated; use "
+                "geom_type=... instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            geom_type = geometry
+        return FeatureCollection(_geom._explode_multipart(self, geom_type=geom_type))
 
     def with_coordinates(self) -> FeatureCollection:
         """Return a new FeatureCollection with per-vertex `x` and `y` columns.
