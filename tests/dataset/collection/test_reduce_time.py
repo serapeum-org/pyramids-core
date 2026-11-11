@@ -167,6 +167,335 @@ class TestReduceTime:
         )
 
     @requires_lazy
+    def test_accepts_mixed_precision_timestamp_strings(self, daily_files):
+        """Strings mixing fractional and whole seconds parse without raising.
+
+        Test scenario:
+            A scene-stack-style list where some timestamps carry microseconds
+            and some do not (and all carry a UTC offset) — a bare
+            ``pd.to_datetime`` would raise on the first non-matching element.
+            All four fall in one January month, so ``freq='1MS'`` yields a
+            single window whose mean of 0,1,2,3 is 1.5.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022/01/01 09:41:12.345000+00",
+            "2022/01/08 09:43:06+00",
+            "2022/01/15 09:41:12.500000+00",
+            "2022/01/22 09:43:06+00",
+        ]
+        result = coll.reduce_time(times, freq="1MS", op="mean")
+        assert len(result) == 1, "all four are one January month → one window"
+        assert float(result[0][1].read_array()[0, 0]) == pytest.approx(1.5), (
+            "mean(0,1,2,3) should be 1.5"
+        )
+
+    @requires_lazy
+    def test_origin_start_collapses_straddling_span_to_one_window(self, daily_files):
+        """A span-wide window splits under default anchoring but unifies with origin.
+
+        Test scenario:
+            Four timestamps whose extremes straddle an epoch-anchored N-day
+            boundary. ``freq=f'{span_days}D'`` with the default (epoch/start_day)
+            anchor splits the stack into two windows — silently dropping scenes
+            for a caller that takes ``result[0]`` — while ``origin='start'``
+            anchors the first bin on ``times.min()`` and collapses it to one.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022-01-01 20:00+00",
+            "2022-01-02 00:00+00",
+            "2022-01-03 00:00+00",
+            "2022-01-04 05:00+00",
+        ]
+        parsed = pd.to_datetime(times, format="mixed", utc=True)
+        span_days = (parsed.max() - parsed.min()).days + 1
+        freq = f"{span_days}D"
+
+        default = coll.reduce_time(times, freq=freq, op="mean")
+        assert len(default) == 2, (
+            "epoch-anchored bins split the straddling span into two windows"
+        )
+
+        anchored = coll.reduce_time(times, freq=freq, op="mean", origin="start")
+        assert len(anchored) == 1, "origin='start' collapses the span to one window"
+        assert float(anchored[0][1].read_array()[0, 0]) == pytest.approx(1.5), (
+            "one window → mean(0,1,2,3) = 1.5"
+        )
+
+    @requires_lazy
+    def test_accepts_strings_with_differing_utc_offsets(self, daily_files):
+        """Timestamps carrying different UTC offsets parse to one tz-aware index.
+
+        Test scenario:
+            A list whose elements use ``+00``, ``+05`` and ``-03`` cannot be
+            combined by the DatetimeIndex constructor; the fallback re-parses
+            with ``utc=True``. All four map to January in UTC, so ``freq='1MS'``
+            yields a single window whose mean of 0,1,2,3 is 1.5.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022/01/01 09:00:00+00",
+            "2022/01/08 09:00:00+05",
+            "2022/01/15 09:00:00-03",
+            "2022/01/22 09:00:00+00",
+        ]
+        result = coll.reduce_time(times, freq="1MS", op="mean")
+        assert len(result) == 1, "all four map to one January month in UTC"
+        label, ds = result[0]
+        assert label.tz is not None, "mixed-offset parse should yield a tz-aware label"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), (
+            "mean(0,1,2,3) should be 1.5"
+        )
+
+    @requires_lazy
+    def test_origin_start_on_naive_times(self, daily_files):
+        """origin='start' also anchors bins for a timezone-naive index.
+
+        Test scenario:
+            The straddling-span case with naive (no-offset) timestamps. The
+            default anchor splits it into two windows; ``origin='start'`` anchors
+            on ``times.min()`` and collapses it to one. Exercises the branch where
+            no timezone re-attachment is needed.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = [
+            "2022-01-01 20:00",
+            "2022-01-02 00:00",
+            "2022-01-03 00:00",
+            "2022-01-04 05:00",
+        ]
+        parsed = pd.to_datetime(times)
+        assert parsed.tz is None, "fixture inputs must be timezone-naive"
+        span_days = (parsed.max() - parsed.min()).days + 1
+        freq = f"{span_days}D"
+
+        default = coll.reduce_time(times, freq=freq, op="mean")
+        assert len(default) == 2, "epoch-anchored bins split the naive straddling span"
+
+        anchored = coll.reduce_time(times, freq=freq, op="mean", origin="start")
+        assert len(anchored) == 1, "origin='start' collapses the span to one window"
+        label, ds = anchored[0]
+        assert label.tz is None, "a naive index keeps naive window labels"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), (
+            "one window → mean(0,1,2,3) = 1.5"
+        )
+
+    @requires_lazy
+    def test_origin_timestamp_on_tz_aware_index(self, daily_files):
+        """origin as an explicit tz-aware Timestamp anchors a tz-aware index.
+
+        Test scenario:
+            The documented ``origin=times.min()`` call on a tz-aware (UTC) index.
+            The anchor lands the four straddling timestamps in one bin; the
+            window label is the anchor instant (tz-aware), mean 0..3 is 1.5.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00+00",
+                "2022-01-02 00:00+00",
+                "2022-01-03 00:00+00",
+                "2022-01-04 05:00+00",
+            ],
+            format="mixed",
+            utc=True,
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
+        assert len(result) == 1, "a tz-aware Timestamp origin should collapse the span"
+        label, ds = result[0]
+        assert label.tz is not None, "a tz-aware index keeps tz-aware window labels"
+        assert label == times.min(), "the single window is anchored on times.min()"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), "mean(0,1,2,3) = 1.5"
+
+    @requires_lazy
+    def test_origin_timestamp_on_naive_index(self, daily_files):
+        """origin as a naive Timestamp anchors a timezone-naive index.
+
+        Test scenario:
+            A naive index with ``origin=times.min()`` collapses the straddling
+            span to one naive-labelled window.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00",
+                "2022-01-02 00:00",
+                "2022-01-03 00:00",
+                "2022-01-04 05:00",
+            ]
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
+        assert len(result) == 1, "a naive Timestamp origin should collapse the span"
+        label, ds = result[0]
+        assert label.tz is None, "a naive index keeps naive window labels"
+        assert label == times.min(), "the single window is anchored on times.min()"
+        assert float(ds.read_array()[0, 0]) == pytest.approx(1.5), "mean(0,1,2,3) = 1.5"
+
+    @requires_lazy
+    def test_naive_origin_timestamp_on_tz_aware_index(self, daily_files):
+        """A naive origin Timestamp is treated as UTC for a tz-aware index.
+
+        Test scenario:
+            A UTC index with a naive ``origin`` whose wall time equals the UTC
+            minimum anchors the same single window as ``times.min()`` would.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00+00",
+                "2022-01-02 00:00+00",
+                "2022-01-03 00:00+00",
+                "2022-01-04 05:00+00",
+            ],
+            format="mixed",
+            utc=True,
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times,
+            freq=f"{span_days}D",
+            op="mean",
+            origin=pd.Timestamp("2022-01-01 20:00"),
+        )
+        assert len(result) == 1, "a naive origin (read as UTC) collapses the span"
+        assert result[0][0] == times.min(), "anchored on the UTC minimum"
+
+    @requires_lazy
+    def test_tz_aware_origin_timestamp_on_naive_index(self, daily_files):
+        """A tz-aware origin Timestamp is reduced to wall time for a naive index.
+
+        Test scenario:
+            A naive index with a tz-aware ``origin`` whose wall time equals the
+            naive minimum anchors the single whole-window bucket.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00",
+                "2022-01-02 00:00",
+                "2022-01-03 00:00",
+                "2022-01-04 05:00",
+            ]
+        )
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times,
+            freq=f"{span_days}D",
+            op="mean",
+            origin=pd.Timestamp("2022-01-01 20:00", tz="UTC"),
+        )
+        assert len(result) == 1, (
+            "a tz-aware origin reduced to wall time collapses the span"
+        )
+        assert result[0][0] == times.min(), "anchored on the naive minimum"
+
+    @requires_lazy
+    def test_origin_timestamp_on_non_utc_fixed_offset(self, daily_files):
+        """A non-UTC fixed-offset index round-trips its offset through anchoring.
+
+        Test scenario:
+            An index localised to UTC+5 (``Etc/GMT-5``) with ``origin=times.min()``.
+            The tz-naive bucketing must not corrupt the instant: the single window
+            label equals ``times.min()`` and stays tz-aware.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.DatetimeIndex(
+            [
+                "2022-01-01 20:00",
+                "2022-01-02 00:00",
+                "2022-01-03 00:00",
+                "2022-01-04 05:00",
+            ]
+        ).tz_localize("Etc/GMT-5")
+        span_days = (times.max() - times.min()).days + 1
+        result = coll.reduce_time(
+            times, freq=f"{span_days}D", op="mean", origin=times.min()
+        )
+        assert len(result) == 1, "origin should collapse the span for a +05 index"
+        label, _ = result[0]
+        assert label.tz is not None, "the +05 offset is preserved on the label"
+        assert label == times.min(), (
+            "the window label is the anchor instant, offset intact"
+        )
+
+    @requires_lazy
+    def test_origin_on_named_dst_zone_does_not_crash(self, daily_files):
+        """origin anchoring survives a bin edge landing on a DST-nonexistent wall time.
+
+        Test scenario:
+            A ``Europe/Amsterdam`` index anchored (``origin="start"``) so that a
+            daily bin's left edge is UTC ``2022-03-27 02:30`` — which is
+            ``02:30`` local on the spring-forward day, a time that does not exist
+            in Amsterdam (the 02:00–03:00 gap). The UTC round-trip labels it
+            ``04:30+02:00`` without raising; a naive ``tz_localize(tz)`` labelling
+            would raise ``NonExistentTimeError`` here, so this guards that line.
+            Element 0 is ``03:30`` local = ``02:30`` UTC, which sets the anchor.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.DatetimeIndex(
+            [
+                "2022-03-26 03:30",  # 02:30 UTC → anchors daily bins at 02:30 UTC
+                "2022-03-26 15:00",
+                "2022-03-27 12:00",  # lands in the bin keyed 2022-03-27 02:30 UTC
+                "2022-03-28 06:00",
+            ]
+        ).tz_localize("Europe/Amsterdam")
+        result = coll.reduce_time(times, freq="1D", op="mean", origin="start")
+        assert len(result) == 3, "three daily windows across the DST transition"
+        assert all(label.tz is not None for label, _ in result), "labels stay tz-aware"
+        gap_edge_utc = pd.Timestamp("2022-03-27 02:30", tz="UTC")
+        assert any(label.tz_convert("UTC") == gap_edge_utc for label, _ in result), (
+            "the bin edge on the nonexistent local wall time is labelled via UTC"
+        )
+
+    @requires_lazy
+    def test_default_origin_preserves_tz_aware_labels(self, daily_files):
+        """The default (origin=None) tz-aware path is unchanged by the fix.
+
+        Test scenario:
+            Without ``origin`` a tz-aware straddling span still splits into two
+            epoch-anchored windows (the opt-in nature of the fix), and the labels
+            remain tz-aware.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = pd.to_datetime(
+            [
+                "2022-01-01 20:00+00",
+                "2022-01-02 00:00+00",
+                "2022-01-03 00:00+00",
+                "2022-01-04 05:00+00",
+            ],
+            format="mixed",
+            utc=True,
+        )
+        result = coll.reduce_time(times, freq="3D", op="mean")
+        assert len(result) == 2, "default anchoring is unchanged → still two windows"
+        assert all(label.tz is not None for label, _ in result), (
+            "default labels stay tz-aware"
+        )
+
+    @requires_lazy
+    def test_unparseable_string_raises_friendly_error(self, daily_files):
+        """A malformed timestamp string raises the documented friendly ValueError.
+
+        Test scenario:
+            One garbage string among valid ones is coerced to NaT by the fallback
+            parse and caught by the NaT guard, yielding the 'unparseable / NaT'
+            message rather than pandas' raw parse error.
+        """
+        coll = DatasetCollection.from_files(daily_files)
+        times = ["not a date", "2022-01-02", "2022-01-03", "2022-01-04"]
+        with pytest.raises(ValueError, match="unparseable / NaT"):
+            coll.reduce_time(times, freq="1MS", op="mean")
+
+    @requires_lazy
     def test_invalid_op_raises(self, daily_files, daily_times):
         """An unsupported op raises ValueError before any reduction.
 

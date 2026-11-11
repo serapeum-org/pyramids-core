@@ -44,13 +44,18 @@ class TestPlotHistogram:
     def test_writes_png(self, cli_raster, tmp_path):
         """A histogram PNG is written and non-empty."""
         out = str(tmp_path / "hist.png")
-        assert main(["plot-histogram", cli_raster, out]) == 0, "must exit 0"
+        assert main(["raster", "plot-histogram", cli_raster, out]) == 0, "must exit 0"
         assert os.path.getsize(out) > 0, "histogram image must be non-empty"
 
     def test_missing_input_exits_1(self, tmp_path, capsys):
         """A missing input exits 1 with a one-line error."""
         rc = main(
-            ["plot-histogram", str(tmp_path / "nope.tif"), str(tmp_path / "h.png")]
+            [
+                "raster",
+                "plot-histogram",
+                str(tmp_path / "nope.tif"),
+                str(tmp_path / "h.png"),
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1, "missing input must exit 1"
@@ -63,7 +68,7 @@ class TestPlotVectorField:
     def test_writes_png(self, uv_raster, tmp_path):
         """A vector-field PNG is written and non-empty."""
         out = str(tmp_path / "field.png")
-        assert main(["plot-vector-field", uv_raster, out]) == 0, "must exit 0"
+        assert main(["raster", "plot-vector-field", uv_raster, out]) == 0, "must exit 0"
         assert os.path.getsize(out) > 0, "vector-field image must be non-empty"
 
     def test_overwrite_guard(self, uv_raster, tmp_path):
@@ -71,7 +76,7 @@ class TestPlotVectorField:
         out = str(tmp_path / "field.png")
         with open(out, "w", encoding="utf-8") as handle:
             handle.write("x")
-        rc = main(["plot-vector-field", uv_raster, out])
+        rc = main(["raster", "plot-vector-field", uv_raster, out])
         assert rc == 1, "existing output without --overwrite must exit 1"
 
 
@@ -81,10 +86,12 @@ class TestAnimate:
     def test_writes_gif(self, uv_raster, tmp_path):
         """A multi-band GIF animation is written and non-empty."""
         out = str(tmp_path / "anim.gif")
-        assert main(["animate", uv_raster, out]) == 0, "must exit 0"
+        assert main(["raster", "animate", uv_raster, out]) == 0, "must exit 0"
         assert os.path.getsize(out) > 0, "animation must be non-empty"
 
     def test_missing_input_exits_1(self, tmp_path):
         """A missing input exits 1."""
-        rc = main(["animate", str(tmp_path / "nope.tif"), str(tmp_path / "a.gif")])
+        rc = main(
+            ["raster", "animate", str(tmp_path / "nope.tif"), str(tmp_path / "a.gif")]
+        )
         assert rc == 1, "missing input must exit 1"

@@ -89,18 +89,20 @@ class TestNcSummary:
 
     def test_json_summary(self, capsys):
         """--json emits a per-variable statistics mapping, strict-valid JSON."""
-        assert main(["nc", "summary", str(_NC), "--vars", "tas", "--json"]) == 0
+        assert (
+            main(["nc", "inspect", "summary", str(_NC), "--vars", "tas", "--json"]) == 0
+        )
         payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "tas" in payload
 
     def test_plain_summary(self, capsys):
         """The plain form prints a table that names the variable."""
-        assert main(["nc", "summary", str(_NC), "--vars", "tas"]) == 0
+        assert main(["nc", "inspect", "summary", str(_NC), "--vars", "tas"]) == 0
         assert "tas" in capsys.readouterr().out
 
     def test_unknown_variable_errors_cleanly(self, capsys):
         """An unknown --vars exits 1 with a clean error, not the catch-all (H1)."""
-        rc = main(["nc", "summary", str(_NC), "--vars", "nosuchvar"])
+        rc = main(["nc", "inspect", "summary", str(_NC), "--vars", "nosuchvar"])
         err = capsys.readouterr().err
         assert rc == 1
         assert "nosuchvar" in err
@@ -113,13 +115,13 @@ class TestNcMetadata:
 
     def test_json_metadata(self, capsys):
         """--json emits a strict-valid metadata record naming the variables."""
-        assert main(["nc", "metadata", str(_NC), "--json"]) == 0
+        assert main(["nc", "inspect", "metadata", str(_NC), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "variables" in payload
 
     def test_plain_metadata(self, capsys):
         """The plain form prints the metadata record to stdout."""
-        assert main(["nc", "metadata", str(_NC)]) == 0
+        assert main(["nc", "inspect", "metadata", str(_NC)]) == 0
         assert capsys.readouterr().out.strip() != ""
 
 
@@ -128,25 +130,31 @@ class TestNcDimValues:
 
     def test_existing_dimension(self, capsys):
         """--json lists a dimension's coordinate values."""
-        assert main(["nc", "dim-values", str(_NC), "--dim", "lat", "--json"]) == 0
+        assert (
+            main(["nc", "inspect", "dim-values", str(_NC), "--dim", "lat", "--json"])
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["dim"] == "lat"
         assert len(payload["values"]) > 0
 
     def test_missing_dimension_is_empty(self, capsys):
         """A dimension with no coordinate values reports an empty list, not an error."""
-        assert main(["nc", "dim-values", str(_NC), "--dim", "nope", "--json"]) == 0
+        assert (
+            main(["nc", "inspect", "dim-values", str(_NC), "--dim", "nope", "--json"])
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["values"] == []
 
     def test_plain_existing(self, capsys):
         """The plain form prints the dimension name and its values."""
-        assert main(["nc", "dim-values", str(_NC), "--dim", "lat"]) == 0
+        assert main(["nc", "inspect", "dim-values", str(_NC), "--dim", "lat"]) == 0
         assert "lat:" in capsys.readouterr().out
 
     def test_plain_missing(self, capsys):
         """The plain form reports a dimension with no coordinate values."""
-        assert main(["nc", "dim-values", str(_NC), "--dim", "nope"]) == 0
+        assert main(["nc", "inspect", "dim-values", str(_NC), "--dim", "nope"]) == 0
         assert "no coordinate values" in capsys.readouterr().out
 
 
@@ -155,7 +163,7 @@ class TestNcTimeValues:
 
     def test_json_time_values(self, capsys):
         """--json lists the formatted time-axis labels."""
-        assert main(["nc", "time-values", str(_NC), "--json"]) == 0
+        assert main(["nc", "inspect", "time-values", str(_NC), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["var"] == "time"
         assert "2000-05-16" in payload["values"]
@@ -163,19 +171,30 @@ class TestNcTimeValues:
     def test_non_time_var_is_empty(self, capsys):
         """A --var that is not a time axis yields an empty list and exit 0 (documented)."""
         assert (
-            main(["nc", "time-values", str(_NC), "--var", "nosuchtime", "--json"]) == 0
+            main(
+                [
+                    "nc",
+                    "inspect",
+                    "time-values",
+                    str(_NC),
+                    "--var",
+                    "nosuchtime",
+                    "--json",
+                ]
+            )
+            == 0
         )
         payload = json.loads(capsys.readouterr().out)
         assert payload["values"] == []
 
     def test_plain_time_values(self, capsys):
         """The plain form prints the variable name and its labels."""
-        assert main(["nc", "time-values", str(_NC)]) == 0
+        assert main(["nc", "inspect", "time-values", str(_NC)]) == 0
         assert "time:" in capsys.readouterr().out
 
     def test_raw_emits_numeric_offsets(self, capsys):
         """--raw emits the stored numeric offsets instead of decoded labels (issue #1467)."""
-        assert main(["nc", "time-values", str(_NC), "--raw", "--json"]) == 0
+        assert main(["nc", "inspect", "time-values", str(_NC), "--raw", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["values"]
         assert all(isinstance(value, (int, float)) for value in payload["values"])
@@ -186,7 +205,7 @@ class TestNcTimeValues:
         The global flag stores on ``output_format`` so it does not collide with the verb's
         ``--format`` (which keeps dest ``format``).
         """
-        assert main(["--format", "json", "nc", "time-values", str(_NC)]) == 0
+        assert main(["--format", "json", "nc", "inspect", "time-values", str(_NC)]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["var"] == "time", (
             "global --format json must still emit the JSON payload"
@@ -194,7 +213,7 @@ class TestNcTimeValues:
 
     def test_verb_format_strftime_still_controls_labels(self, capsys):
         """The verb's own `--format` strftime still formats the labels (no clobber)."""
-        assert main(["nc", "time-values", str(_NC), "--format", "%Y"]) == 0
+        assert main(["nc", "inspect", "time-values", str(_NC), "--format", "%Y"]) == 0
         assert "time:" in capsys.readouterr().out, (
             "the verb --format should still render labels"
         )
@@ -205,6 +224,7 @@ class TestNcTimeValues:
             main(
                 [
                     "nc",
+                    "inspect",
                     "time-values",
                     str(_NC),
                     "--var",
@@ -225,22 +245,60 @@ class TestNcSetAttr:
         """set-attr writes the attribute into OUT and leaves the source unchanged."""
         out = str(tmp_path / "out.nc")
         assert (
-            main(["nc", "set-attr", str(_NC), out, "--name", "foo", "--value", "bar"])
+            main(
+                [
+                    "nc",
+                    "inspect",
+                    "set-attr",
+                    str(_NC),
+                    out,
+                    "--name",
+                    "foo",
+                    "--value",
+                    "bar",
+                ]
+            )
             == 0
         )
-        written = NetCDF.read_file(out).get_all_metadata().global_attributes
+        written = NetCDF.read_file(out).refresh_metadata().global_attributes
         assert written.get("foo") == "bar"
-        source = NetCDF.read_file(str(_NC)).get_all_metadata().global_attributes
+        source = NetCDF.read_file(str(_NC)).refresh_metadata().global_attributes
         assert "foo" not in source
 
     def test_refuses_existing(self, tmp_path):
         """A second set-attr without --overwrite is refused."""
         out = str(tmp_path / "out.nc")
         assert (
-            main(["nc", "set-attr", str(_NC), out, "--name", "a", "--value", "b"]) == 0
+            main(
+                [
+                    "nc",
+                    "inspect",
+                    "set-attr",
+                    str(_NC),
+                    out,
+                    "--name",
+                    "a",
+                    "--value",
+                    "b",
+                ]
+            )
+            == 0
         )
         assert (
-            main(["nc", "set-attr", str(_NC), out, "--name", "a", "--value", "b"]) == 1
+            main(
+                [
+                    "nc",
+                    "inspect",
+                    "set-attr",
+                    str(_NC),
+                    out,
+                    "--name",
+                    "a",
+                    "--value",
+                    "b",
+                ]
+            )
+            == 1
         )
 
 
@@ -250,11 +308,16 @@ class TestNcDelAttr:
     def test_deletes_existing_attribute(self, tmp_path):
         """del-attr removes an existing global attribute in the written copy."""
         out = str(tmp_path / "out.nc")
-        assert main(["nc", "del-attr", str(_NC), out, "--name", "title"]) == 0
-        written = NetCDF.read_file(out).get_all_metadata().global_attributes
+        assert (
+            main(["nc", "inspect", "del-attr", str(_NC), out, "--name", "title"]) == 0
+        )
+        written = NetCDF.read_file(out).refresh_metadata().global_attributes
         assert "title" not in written
 
     def test_missing_attribute_is_noop(self, tmp_path):
         """Deleting a missing attribute still succeeds (idempotent)."""
         out = str(tmp_path / "out.nc")
-        assert main(["nc", "del-attr", str(_NC), out, "--name", "not_present"]) == 0
+        assert (
+            main(["nc", "inspect", "del-attr", str(_NC), out, "--name", "not_present"])
+            == 0
+        )

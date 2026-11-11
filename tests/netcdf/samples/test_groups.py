@@ -35,7 +35,7 @@ def test_metadata_aggregates_group_variables(sample_name, sample, structural):
     _conv, nvars, _hist, _feats = structural(sample_name)
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         assert len(meta.groups) > 1, f"{sample_name}: expected subgroups"
         assert len(meta.variables) == nvars
     finally:

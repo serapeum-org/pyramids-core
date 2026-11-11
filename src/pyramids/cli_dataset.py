@@ -20,6 +20,7 @@ import numpy as np
 from osgeo import osr
 from pandas import DataFrame
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import force_agg_backend, info_print, map_lookup_errors
 from pyramids._cli_shared import json_safe as _json_safe
 from pyramids._cli_shared import refuse_existing as _refuse_existing
@@ -100,7 +101,7 @@ def _report_cog_create(args: argparse.Namespace, out: object) -> int:
 
 
 def _cmd_create(args: argparse.Namespace) -> int:
-    """Handle `pyramids cog create`.
+    """Handle `pyramids raster cog create`.
 
     Args:
         args: Parsed arguments with `input`, `output`, `profile`,
@@ -135,7 +136,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
-    """Handle `pyramids cog validate`.
+    """Handle `pyramids raster cog validate`.
 
     Args:
         args: Parsed arguments with `file` and `strict`.
@@ -168,7 +169,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_info(args: argparse.Namespace) -> int:
-    """Handle `pyramids cog info`.
+    """Handle `pyramids raster cog info`.
 
     Args:
         args: Parsed arguments with `file`.
@@ -198,7 +199,7 @@ def _cmd_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_raster_info(args: argparse.Namespace) -> int:
-    """Handle `pyramids info` — print raster metadata.
+    """Handle `pyramids raster info` — print raster metadata.
 
     Args:
         args: Parsed arguments with `file` and `json`.
@@ -234,7 +235,7 @@ def _cmd_raster_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_blocks(args: argparse.Namespace) -> int:
-    """Handle `pyramids blocks` — list a raster's native block (tile) windows.
+    """Handle `pyramids raster advanced blocks` — list a raster's native block (tile) windows.
 
     Iterates the native blocking of the chosen band and reports each block's pixel
     window (`col_off`, `row_off`, `cols`, `rows`) and map-space `bounds`.
@@ -281,7 +282,7 @@ def _cmd_blocks(args: argparse.Namespace) -> int:
 
 
 def _cmd_bounds(args: argparse.Namespace) -> int:
-    """Handle `pyramids bounds` — print the bounding box.
+    """Handle `pyramids raster bounds` — print the bounding box.
 
     With `--crs` the four corners are reprojected and the min/max taken —
     a corner-based approximation (no edge densification).
@@ -324,7 +325,7 @@ def _cmd_bounds(args: argparse.Namespace) -> int:
 
 
 def _cmd_clip(args: argparse.Namespace) -> int:
-    """Handle `pyramids clip` — crop a raster by bbox or vector mask.
+    """Handle `pyramids raster crop` — crop a raster by bbox or vector mask.
 
     Args:
         args: Parsed arguments with `input`, `output`, `bbox`, and `vector`.
@@ -370,7 +371,7 @@ def _cmd_clip(args: argparse.Namespace) -> int:
 
 
 def _cmd_warp(args: argparse.Namespace) -> int:
-    """Handle `pyramids warp` — reproject a raster.
+    """Handle `pyramids raster warp` — reproject a raster.
 
     Args:
         args: Parsed arguments with `input`, `output`, `crs`, `resampling`.
@@ -387,7 +388,7 @@ def _cmd_warp(args: argparse.Namespace) -> int:
 
 
 def _cmd_georeference(args: argparse.Namespace) -> int:
-    """Handle `pyramids georeference` — warp a raster from ground-control points.
+    """Handle `pyramids raster georeference` — warp a raster from ground-control points.
 
     Args:
         args: Parsed args with `input`, `output`, `gcp` (list of [pixel, line,
@@ -436,7 +437,7 @@ def _cmd_georeference(args: argparse.Namespace) -> int:
 
 
 def _cmd_orthorectify(args: argparse.Namespace) -> int:
-    """Handle `pyramids orthorectify` — orthorectify a raster from its RPCs.
+    """Handle `pyramids raster orthorectify` — orthorectify a raster from its RPCs.
 
     Args:
         args: Parsed args with `input`, `output`, `dem`, `rpc_height`, `to_crs`,
@@ -459,7 +460,7 @@ def _cmd_orthorectify(args: argparse.Namespace) -> int:
 
 
 def _cmd_calc(args: argparse.Namespace) -> int:
-    """Handle `pyramids calc` — evaluate a band expression into a new raster.
+    """Handle `pyramids raster calc` — evaluate a band expression into a new raster.
 
     The expression operates on the input rasters bound to ``A``, ``B``, ... in
     order; it is evaluated by a small AST whitelist, never ``eval``. Every input
@@ -512,14 +513,14 @@ def _cmd_calc(args: argparse.Namespace) -> int:
         # layer written by a naive writer — is on the template's grid whenever
         # its geotransform and size match, and `calc` accepted it before this
         # check existed. Comparing CRSes would reject it and send the user to
-        # `pyramids warp`, which cannot warp a raster that has no source CRS.
+        # `pyramids raster warp`, which cannot warp a raster that has no source CRS.
         # `compare_crs=False` is the same predicate with that one clause off, so
         # the two questions cannot drift apart.
         if not template.same_grid(ds, compare_crs=bool(ds.crs)):
             raise AlignmentError(
                 f"{path!r} does not share the grid/CRS of {inputs[0]!r}, so the "
                 "expression cannot be evaluated cell by cell; align the inputs "
-                "first (`pyramids warp`) and re-run"
+                "first (`pyramids raster warp`) and re-run"
             )
         if not ds.crs:
             # Only now, once the grid matched, is it honest to say we are assuming
@@ -563,7 +564,7 @@ _SHAPES_MAX_CELLS = 4_000_000
 
 
 def _cmd_shapes(args: argparse.Namespace) -> int:
-    """Handle `pyramids shapes` — vectorize a raster to a vector file.
+    """Handle `pyramids raster shapes` — vectorize a raster to a vector file.
 
     Emits **one feature per cell** (a square polygon, or a centre point with
     ``--geometry point``) carrying the band value — it is *not* a region-
@@ -664,7 +665,7 @@ def _apply_nodata(ds: Dataset, raw: str) -> None:
 
 
 def _cmd_edit_info(args: argparse.Namespace) -> int:
-    """Handle `pyramids edit-info` — edit a raster's CRS / nodata / tags in place.
+    """Handle `pyramids raster edit-info` — edit a raster's CRS / nodata / tags in place.
 
     Args:
         args: Parsed args with `input` and any of `crs`, `nodata`, `tag`.
@@ -691,7 +692,7 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
         raise ValueError(
             f"cannot edit {args.input!r} in place — its format does not support "
             f"update-mode writes. Re-save it to a writable format first "
-            f"(`pyramids convert {args.input} out.tif`) and edit that."
+            f"(`pyramids raster convert {args.input} out.tif`) and edit that."
         ) from exc
     edited = False
     if args.crs is not None:
@@ -719,7 +720,7 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_merge(args: argparse.Namespace) -> int:
-    """Handle `pyramids merge` — mosaic rasters into one file.
+    """Handle `pyramids raster merge` — mosaic rasters into one file.
 
     Args:
         args: Parsed arguments with `inputs` (>= 2 paths), `output`, and the
@@ -763,7 +764,7 @@ _OVERVIEW_RESAMPLING_ALIASES = {
 
 
 def _cmd_overview(args: argparse.Namespace) -> int:
-    """Handle `pyramids overview` — build image pyramids in place.
+    """Handle `pyramids raster overview` — build image pyramids in place.
 
     Args:
         args: Parsed arguments with `file`, `resampling`, and `levels`.
@@ -798,7 +799,7 @@ def _cmd_overview(args: argparse.Namespace) -> int:
 
 
 def _cmd_sample(args: argparse.Namespace) -> int:
-    """Handle `pyramids sample` — read band values at points.
+    """Handle `pyramids raster sample` — read band values at points.
 
     Points outside the raster extent sample as the band's no-data fill
     (NaN when none is set) and are printed as `None` / JSON `null`.
@@ -842,7 +843,7 @@ def _cmd_sample(args: argparse.Namespace) -> int:
 
 
 def _cmd_convert(args: argparse.Namespace) -> int:
-    """Handle `pyramids convert` — re-save a raster in another format.
+    """Handle `pyramids raster convert` — re-save a raster in another format.
 
     The driver is inferred from the output extension unless `--driver` is
     given — a pyramids catalog driver name (e.g. ``geotiff``, ``ascii``)
@@ -883,7 +884,7 @@ def _parse_subdataset_key(raw: str) -> int | str:
 
 
 def _cmd_subdataset(args: argparse.Namespace) -> int:
-    """Handle `pyramids subdataset` — extract one subdataset to a raster.
+    """Handle `pyramids raster subdataset` — extract one subdataset to a raster.
 
     Opens one nested raster of a multi-subdataset container (a NetCDF/HDF store, a
     multi-subdataset GeoTIFF, a Sentinel product, …) by index or name via
@@ -905,7 +906,7 @@ def _cmd_subdataset(args: argparse.Namespace) -> int:
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
-    """Handle `pyramids render` — save a quick-look PNG via cleopatra (headless).
+    """Handle `pyramids raster render` — save a quick-look PNG via cleopatra (headless).
 
     All plotting goes through cleopatra (`Dataset.plot`), never raw matplotlib;
     the Agg backend is forced before any plot import so no GUI window blocks the
@@ -974,6 +975,24 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
+    # Everything registers under the `raster` group: `pyramids raster <verb>`. The old flat
+    # spellings were removed outright — there is no deprecation alias.
+    raster_sub = add_group(
+        sub,
+        "raster",
+        "single-raster (Dataset) operations: inspect, warp/clip/merge, bands, overviews, cog, io",
+    )
+    sub = raster_sub
+    # Power-user primitives (internal tile/overview reads, low-level band/mask/geotransform
+    # mechanics rarely run one-shot) collect under a single cross-cutting `raster advanced`.
+    raster_advanced = add_group(
+        sub, "advanced", "power-user primitives (internal reads, low-level mechanics)"
+    )
+    # `overview` is a noun-verb subgroup: `create` (build pyramids) + `recreate` (rebuild
+    # existing ones), matching Dataset.create_overviews / Dataset.recreate_overviews.
+    overview_group = add_group(
+        sub, "overview", "build or rebuild a raster's image pyramids (overviews)"
+    )
     _add_cog_commands(sub)
 
     raster_info = sub.add_parser("info", help="print raster metadata")
@@ -989,7 +1008,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     bounds.add_argument("--json", action="store_true", help=_HELP_JSON)
     bounds.set_defaults(func=_cmd_bounds)
 
-    clip = sub.add_parser("clip", help="crop a raster by bbox or vector mask")
+    clip = sub.add_parser("crop", help="crop a raster by bbox or vector mask")
     clip.add_argument("input", help=_HELP_SRC_RASTER)
     clip.add_argument("output", help=_HELP_DST_RASTER)
     clip_how = clip.add_mutually_exclusive_group(required=True)
@@ -1030,7 +1049,9 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     merge.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     merge.set_defaults(func=_cmd_merge)
 
-    overview = sub.add_parser("overview", help="build image pyramids in place")
+    overview = overview_group.add_parser(
+        "create", help="build a raster's image pyramids in place"
+    )
     overview.add_argument("file", help="raster path to build overviews for")
     overview.add_argument(
         "--resampling",
@@ -1141,7 +1162,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     )
     edit_info.set_defaults(func=_cmd_edit_info)
 
-    blocks = sub.add_parser(
+    blocks = raster_advanced.add_parser(
         "blocks", help="list a raster's native block (tile) windows"
     )
     blocks.add_argument("file", help=_HELP_INSPECT_RASTER)
@@ -1233,10 +1254,12 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     from pyramids.cli_dataset_spatial import add_dataset_spatial_commands
 
     add_dataset_read_commands(sub)
-    add_dataset_inspect_commands(sub)
-    add_dataset_bands_commands(sub)
-    add_dataset_spatial_commands(sub)
+    add_dataset_inspect_commands(sub, raster_advanced)
+    add_dataset_bands_commands(sub, raster_advanced)
+    add_dataset_spatial_commands(sub, raster_advanced)
     add_dataset_analysis_commands(sub)
-    add_dataset_overviews_commands(sub)
-    add_dataset_export_commands(sub)
+    add_dataset_overviews_commands(sub, raster_advanced, overview_group)
+    add_dataset_export_commands(
+        add_group(sub, "export", "write a raster to a file or format")
+    )
     add_dataset_plot_commands(sub)

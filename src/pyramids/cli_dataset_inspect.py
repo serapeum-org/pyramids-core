@@ -10,7 +10,7 @@ Commands registered by :func:`add_dataset_inspect_commands`:
 
 - ``stats`` → :meth:`Dataset.stats`
 - ``histogram`` → :meth:`Dataset.get_histogram`
-- ``get-meta-data`` → :meth:`Dataset.get_meta_data`
+- ``get-metadata`` → :meth:`Dataset.get_meta_data`
 - ``get-attribute-table`` → :meth:`Dataset.get_attribute_table`
 - ``set-attribute-table`` → :meth:`Dataset.set_attribute_table` (edits the raster
   **in place** — the attribute table is written into the file, so there is no
@@ -76,7 +76,7 @@ def _read_table(path: str) -> DataFrame:
 
 
 def _cmd_stats(args: argparse.Namespace) -> int:
-    """Handle `pyramids stats` — band statistics (min/max/mean/std).
+    """Handle `pyramids raster stats` — band statistics (min/max/mean/std).
 
     Args:
         args: Parsed arguments with `file`, `band`, `exact`, and `json`.
@@ -108,7 +108,7 @@ def _cmd_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_histogram(args: argparse.Namespace) -> int:
-    """Handle `pyramids histogram` — a band's value histogram.
+    """Handle `pyramids raster histogram` — a band's value histogram.
 
     Args:
         args: Parsed arguments with `file`, `band`, `bins`, `min_value`,
@@ -142,7 +142,7 @@ def _cmd_histogram(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_meta_data(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-meta-data` — a GDAL metadata domain's contents.
+    """Handle `pyramids raster get-metadata` — a GDAL metadata domain's contents.
 
     Args:
         args: Parsed arguments with `file`, `domain`, and `json`.
@@ -164,7 +164,7 @@ def _cmd_get_meta_data(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_attribute_table(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-attribute-table` — a band's raster attribute table.
+    """Handle `pyramids raster advanced get-attribute-table` — a band's raster attribute table.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -189,7 +189,7 @@ def _cmd_get_attribute_table(args: argparse.Namespace) -> int:
 
 
 def _cmd_set_attribute_table(args: argparse.Namespace) -> int:
-    """Handle `pyramids set-attribute-table` — attach an attribute table in place.
+    """Handle `pyramids raster advanced set-attribute-table` — attach an attribute table in place.
 
     The table is read from a CSV/JSON file and written **into** the raster (the
     raster is edited in place), so there is no output path and no `--overwrite`.
@@ -212,7 +212,7 @@ def _cmd_set_attribute_table(args: argparse.Namespace) -> int:
 
 
 def _cmd_mask_flags(args: argparse.Namespace) -> int:
-    """Handle `pyramids mask-flags` — decode a band's GDAL mask flags.
+    """Handle `pyramids raster advanced mask-flags` — decode a band's GDAL mask flags.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -239,7 +239,7 @@ def _cmd_mask_flags(args: argparse.Namespace) -> int:
 
 
 def _cmd_footprint(args: argparse.Namespace) -> int:
-    """Handle `pyramids footprint` — the covered extent of a band as polygons.
+    """Handle `pyramids raster footprint` — the covered extent of a band as polygons.
 
     Writes the polygons to `output` when given; otherwise emits them as GeoJSON
     with `--json`, or prints a one-line summary.
@@ -285,7 +285,7 @@ def _cmd_footprint(args: argparse.Namespace) -> int:
 
 
 def _cmd_cell_area(args: argparse.Namespace) -> int:
-    """Handle `pyramids cell-area` — per-cell ground area summary.
+    """Handle `pyramids raster cell-area` — per-cell ground area summary.
 
     The per-cell grid can be large (and is a broadcast view), so the command
     reports its summary (min/max/mean and the full-grid total), not the array.
@@ -316,7 +316,7 @@ def _cmd_cell_area(args: argparse.Namespace) -> int:
 
 
 def _cmd_domain_area(args: argparse.Namespace) -> int:
-    """Handle `pyramids domain-area` — ground area of a band's valid cells.
+    """Handle `pyramids raster domain-area` — ground area of a band's valid cells.
 
     Args:
         args: Parsed arguments with `file`, `band`, `unit`, and `json`.
@@ -335,7 +335,7 @@ def _cmd_domain_area(args: argparse.Namespace) -> int:
 
 
 def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
-    """Handle `pyramids count-domain-cells` — number of a band's valid cells.
+    """Handle `pyramids raster count-domain-cells` — number of a band's valid cells.
 
     Args:
         args: Parsed arguments with `file`, `band`, and `json`.
@@ -353,7 +353,7 @@ def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
 
 
 def _cmd_same_grid(args: argparse.Namespace) -> int:
-    """Handle `pyramids same-grid` — whether two rasters share a grid (and CRS).
+    """Handle `pyramids raster advanced same-grid` — whether two rasters share a grid (and CRS).
 
     Args:
         args: Parsed arguments with `a`, `b`, `no_compare_crs`, and `json`.
@@ -372,7 +372,7 @@ def _cmd_same_grid(args: argparse.Namespace) -> int:
 
 
 def _cmd_checksum(args: argparse.Namespace) -> int:
-    """Handle `pyramids checksum` — per-band GDAL checksum for integrity checks.
+    """Handle `pyramids raster advanced checksum` — per-band GDAL checksum for integrity checks.
 
     Reports the GDAL checksum of every band, or of a single `--band`; two rasters
     that read back the same values share the same checksum(s), so it is a cheap
@@ -403,11 +403,16 @@ def _cmd_checksum(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_inspect_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the raster inspection commands on ``sub``.
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     stats = sub.add_parser("stats", help="band statistics (min/max/mean/std)")
     stats.add_argument("file", help=_HELP_INSPECT_RASTER)
@@ -447,7 +452,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     histogram.add_argument("--json", action="store_true", help=_HELP_JSON)
     histogram.set_defaults(func=_cmd_histogram)
 
-    meta = sub.add_parser("get-meta-data", help="a GDAL metadata domain's contents")
+    meta = sub.add_parser("get-metadata", help="a GDAL metadata domain's contents")
     meta.add_argument("file", help=_HELP_INSPECT_RASTER)
     meta.add_argument(
         "--domain",
@@ -457,7 +462,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     meta.add_argument("--json", action="store_true", help=_HELP_JSON)
     meta.set_defaults(func=_cmd_get_meta_data)
 
-    get_rat = sub.add_parser(
+    get_rat = (advanced or sub).add_parser(
         "get-attribute-table", help="a band's raster attribute table"
     )
     get_rat.add_argument("file", help=_HELP_INSPECT_RASTER)
@@ -467,7 +472,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     get_rat.add_argument("--json", action="store_true", help=_HELP_JSON)
     get_rat.set_defaults(func=_cmd_get_attribute_table)
 
-    set_rat = sub.add_parser(
+    set_rat = (advanced or sub).add_parser(
         "set-attribute-table",
         help="attach an attribute table to a raster band (edits the raster in place)",
     )
@@ -478,7 +483,9 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     )
     set_rat.set_defaults(func=_cmd_set_attribute_table)
 
-    mask = sub.add_parser("mask-flags", help="decode a band's GDAL mask flags")
+    mask = (advanced or sub).add_parser(
+        "mask-flags", help="decode a band's GDAL mask flags"
+    )
     mask.add_argument("file", help=_HELP_INSPECT_RASTER)
     mask.add_argument("--band", type=int, default=0, help=f"{_HELP_BAND} (default 0)")
     mask.add_argument("--json", action="store_true", help=_HELP_JSON)
@@ -551,7 +558,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     count.add_argument("--json", action="store_true", help=_HELP_JSON)
     count.set_defaults(func=_cmd_count_domain_cells)
 
-    same = sub.add_parser(
+    same = (advanced or sub).add_parser(
         "same-grid", help="whether two rasters share a grid (and CRS)"
     )
     same.add_argument("a", help="first raster path")
@@ -565,7 +572,7 @@ def add_dataset_inspect_commands(sub: argparse._SubParsersAction) -> None:
     same.add_argument("--json", action="store_true", help=_HELP_JSON)
     same.set_defaults(func=_cmd_same_grid)
 
-    checksum = sub.add_parser(
+    checksum = (advanced or sub).add_parser(
         "checksum", help="per-band GDAL checksum for integrity verification"
     )
     checksum.add_argument("file", help=_HELP_INSPECT_RASTER)

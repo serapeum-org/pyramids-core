@@ -164,7 +164,7 @@ class TestUnreadableVariable:
 
     def test_the_layer_count_tolerates_it(self, unreadable):
         """`n_layers` is metadata-only, so an unreadable variable simply has no layer axis."""
-        assert unreadable.n_layers is None
+        assert unreadable.n_layer is None
 
     def test_the_tidy_frame_skips_it_and_keeps_the_columns(self, unreadable):
         """With nothing readable to tabulate the frame is empty but still correctly shaped."""

@@ -1,9 +1,10 @@
 """NetCDF I/O export, construction, and combine commands for the ``pyramids nc`` group.
 
-Thin wrappers over :class:`pyramids.netcdf.NetCDF`: export methods — round-trip to a
-NetCDF (`convert`), tabular export (`to-dataframe`), a structured dump (`to-dict`), a
-per-variable Zarr store (`to-zarr`) and kerchunk reference manifests (`to-kerchunk`,
-`combine-kerchunk`); construction from a CSV / JSON dump (`from-dataframe`, `from-dict`);
+Thin wrappers over :class:`pyramids.netcdf.NetCDF`, split across two subgroups —
+``nc export`` (writers) and ``nc import`` (readers). Writers: round-trip to a NetCDF
+(`convert`), tabular export (`dataframe`), a structured dump (`dict`), a per-variable
+Zarr store (`zarr`) and kerchunk reference manifests (`kerchunk`, `combine-kerchunk`).
+Readers: construction from a CSV / JSON dump (`dataframe`, `dict`);
 a lazy multi-file stack report (`open-mf`); and multi-cube joins (`concat`, `merge`). No
 xarray is imported here — the underlying methods own that; the CLI only marshals paths
 and scalar options. The kerchunk and `open-mf` verbs need the pyramids-lazy backend,
@@ -32,7 +33,7 @@ _HELP_DST_NETCDF = "destination NetCDF path"
 
 
 def _cmd_nc_convert(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc convert`` — re-write a file as a NetCDF.
+    """Handle ``pyramids nc export convert`` — re-write a file as a NetCDF.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``overwrite``.
@@ -47,7 +48,7 @@ def _cmd_nc_convert(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-dataframe`` — export variables to a CSV table.
+    """Handle ``pyramids nc export dataframe`` — export variables to a CSV table.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``vars``, ``dropna``,
@@ -65,7 +66,7 @@ def _cmd_nc_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_dict(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-dict`` — print the file's structure as a dict.
+    """Handle ``pyramids nc export dict`` — print the file's structure as a dict.
 
     ``--data`` includes the variable arrays (large); the default is structure and
     metadata only.
@@ -87,7 +88,7 @@ def _cmd_nc_to_dict(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-zarr`` — write one variable to a Zarr store.
+    """Handle ``pyramids nc export zarr`` — write one variable to a Zarr store.
 
     Zarr is written per variable (the container itself is not spatial), so ``--var``
     selects the gridded variable to store.
@@ -116,7 +117,7 @@ def _cmd_nc_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc to-kerchunk`` — write a kerchunk reference manifest.
+    """Handle ``pyramids nc export kerchunk`` — write a kerchunk reference manifest.
 
     Emits a JSON reference manifest for the file (its chunks addressed in place), written
     to ``output``. Needs the pyramids-lazy backend.
@@ -140,7 +141,7 @@ def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_combine_kerchunk(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc combine-kerchunk`` — a combined manifest over many files.
+    """Handle ``pyramids nc export combine-kerchunk`` — a combined manifest over many files.
 
     Emits one kerchunk manifest spanning ``--inputs``, concatenated along ``--concat-dims``
     with ``--identical-dims`` shared, written to ``output``. Needs the pyramids-lazy backend.
@@ -166,7 +167,7 @@ def _cmd_nc_combine_kerchunk(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_open_mf(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc open-mf`` — report the lazy stack of a variable over files.
+    """Handle ``pyramids nc import open-mf`` — report the lazy stack of a variable over files.
 
     Opens ``--paths`` and stacks ``--var`` into one lazy dask array, then reports the
     stack's shape, dtype and chunk sizes (no data is computed). Needs the pyramids-lazy backend.
@@ -195,12 +196,12 @@ def _cmd_nc_open_mf(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_from_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc from-dataframe`` — build a cube from a MultiIndex CSV.
+    """Handle ``pyramids nc import dataframe`` — build a cube from a MultiIndex CSV.
 
     Reads ``file`` into a DataFrame indexed by ``--index-col`` (innermost last are the
     ``y`` / ``x`` grid axes; outer levels are band dimensions), builds a container with
     ``NetCDF.from_dataframe`` and writes it to ``output``. A CSV written by
-    ``nc to-dataframe`` round-trips with its index columns named on ``--index-col``.
+    ``nc export dataframe`` round-trips with its index columns named on ``--index-col``.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``index_col``, ``crs``, ``x``,
@@ -230,9 +231,9 @@ def _cmd_nc_from_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_from_dict(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc from-dict`` — build a cube from a JSON structure dump.
+    """Handle ``pyramids nc import dict`` — build a cube from a JSON structure dump.
 
-    Reads ``file`` as the JSON payload produced by ``nc to-dict --json --data``, rebuilds
+    Reads ``file`` as the JSON payload produced by ``nc export dict --json --data``, rebuilds
     the container with ``NetCDF.from_dict`` and writes it to ``output``.
 
     Args:
@@ -253,7 +254,7 @@ def _cmd_nc_from_dict(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_concat(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc concat`` — join cubes end to end along a dimension.
+    """Handle ``pyramids nc import concat`` — join cubes end to end along a dimension.
 
     Reads every ``--inputs`` cube, joins them along ``--dim`` in the given order (same
     grid, same variables, agreeing on every other dimension) and writes the result to
@@ -278,7 +279,7 @@ def _cmd_nc_concat(args: argparse.Namespace) -> int:
 
 
 def _cmd_nc_merge(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc merge`` — put the variables of several cubes side by side.
+    """Handle ``pyramids nc import merge`` — put the variables of several cubes side by side.
 
     Reads every ``--inputs`` cube (all on the same grid, agreeing on every dimension) and
     writes a single container holding the union of their variables to ``output``.
@@ -302,19 +303,23 @@ def _cmd_nc_merge(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
-    """Register the ``nc`` I/O export commands on ``ncsub``.
+def add_nc_io_commands(
+    export_sub: argparse._SubParsersAction,
+    import_sub: argparse._SubParsersAction,
+) -> None:
+    """Register the ``nc`` export (writer) and import (reader) commands.
 
     Args:
-        ncsub: The ``nc`` group's ``add_subparsers`` action.
+        export_sub: The ``nc export`` subgroup's ``add_subparsers`` action (writers).
+        import_sub: The ``nc import`` subgroup's ``add_subparsers`` action (readers).
     """
-    nc_conv = ncsub.add_parser("convert", help="re-write a file as a NetCDF")
+    nc_conv = export_sub.add_parser("convert", help="re-write a file as a NetCDF")
     nc_conv.add_argument("file", help=_HELP_NC_FILE)
     nc_conv.add_argument("output", help=_HELP_DST_NETCDF)
     nc_conv.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_conv.set_defaults(func=_cmd_nc_convert)
 
-    nc_df = ncsub.add_parser("to-dataframe", help="export variables to a CSV table")
+    nc_df = export_sub.add_parser("dataframe", help="export variables to a CSV table")
     nc_df.add_argument("file", help=_HELP_NC_FILE)
     nc_df.add_argument("output", help="destination CSV path")
     nc_df.add_argument("--vars", nargs="+", help="variables to export (default: all)")
@@ -324,7 +329,7 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_df.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_df.set_defaults(func=_cmd_nc_to_dataframe)
 
-    nc_dict = ncsub.add_parser("to-dict", help="print the file's structure as a dict")
+    nc_dict = export_sub.add_parser("dict", help="print the file's structure as a dict")
     nc_dict.add_argument("file", help=_HELP_NC_FILE)
     nc_dict.add_argument("--json", action="store_true", help="emit JSON")
     nc_dict.add_argument(
@@ -332,14 +337,14 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     )
     nc_dict.set_defaults(func=_cmd_nc_to_dict)
 
-    nc_zarr = ncsub.add_parser("to-zarr", help="write one variable to a Zarr store")
+    nc_zarr = export_sub.add_parser("zarr", help="write one variable to a Zarr store")
     nc_zarr.add_argument("file", help=_HELP_NC_FILE)
     nc_zarr.add_argument("output", help="destination .zarr store path")
     nc_zarr.add_argument("--var", required=True, help="variable to store")
     nc_zarr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_zarr.set_defaults(func=_cmd_nc_to_zarr)
 
-    nc_k = ncsub.add_parser("to-kerchunk", help="write a kerchunk reference manifest")
+    nc_k = export_sub.add_parser("kerchunk", help="write a kerchunk reference manifest")
     nc_k.add_argument("file", help=_HELP_NC_FILE)
     nc_k.add_argument("output", help="destination manifest JSON path")
     nc_k.add_argument(
@@ -358,7 +363,7 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_k.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_k.set_defaults(func=_cmd_nc_to_kerchunk)
 
-    nc_ck = ncsub.add_parser(
+    nc_ck = export_sub.add_parser(
         "combine-kerchunk", help="write a combined kerchunk manifest over many files"
     )
     nc_ck.add_argument("output", help="destination manifest JSON path")
@@ -387,7 +392,9 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_ck.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_ck.set_defaults(func=_cmd_nc_combine_kerchunk)
 
-    nc_mf = ncsub.add_parser("open-mf", help="report a lazy variable stack over files")
+    nc_mf = import_sub.add_parser(
+        "open-mf", help="report a lazy variable stack over files"
+    )
     nc_mf.add_argument(
         "--paths", nargs="+", required=True, help="NetCDF paths to stack"
     )
@@ -397,8 +404,8 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_mf.add_argument("--json", action="store_true", help="emit JSON")
     nc_mf.set_defaults(func=_cmd_nc_open_mf)
 
-    nc_fdf = ncsub.add_parser(
-        "from-dataframe", help="build a cube from a MultiIndex CSV"
+    nc_fdf = import_sub.add_parser(
+        "dataframe", help="build a cube from a MultiIndex CSV"
     )
     nc_fdf.add_argument("file", help="source CSV path")
     nc_fdf.add_argument("output", help=_HELP_DST_NETCDF)
@@ -431,22 +438,26 @@ def add_nc_io_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_fdf.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_fdf.set_defaults(func=_cmd_nc_from_dataframe)
 
-    nc_fd = ncsub.add_parser(
-        "from-dict", help="build a cube from a JSON structure dump"
+    nc_fd = import_sub.add_parser(
+        "dict", help="build a cube from a JSON structure dump"
     )
-    nc_fd.add_argument("file", help="source JSON path (as 'nc to-dict --json --data')")
+    nc_fd.add_argument(
+        "file", help="source JSON path (as 'nc export dict --json --data')"
+    )
     nc_fd.add_argument("output", help=_HELP_DST_NETCDF)
     nc_fd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_fd.set_defaults(func=_cmd_nc_from_dict)
 
-    nc_cat = ncsub.add_parser("concat", help="join cubes end to end along a dimension")
+    nc_cat = import_sub.add_parser(
+        "concat", help="join cubes end to end along a dimension"
+    )
     nc_cat.add_argument("output", help=_HELP_DST_NETCDF)
     nc_cat.add_argument("--inputs", nargs="+", required=True, help=_HELP_INPUTS)
     nc_cat.add_argument("--dim", required=True, help="dimension to join along")
     nc_cat.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_cat.set_defaults(func=_cmd_nc_concat)
 
-    nc_mg = ncsub.add_parser(
+    nc_mg = import_sub.add_parser(
         "merge", help="put the variables of several cubes together"
     )
     nc_mg.add_argument("output", help=_HELP_DST_NETCDF)

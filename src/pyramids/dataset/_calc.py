@@ -1,4 +1,4 @@
-"""Safe string-expression evaluator shared by `Dataset.calc` and the `pyramids calc` CLI.
+"""Safe string-expression evaluator shared by `Dataset.calc` and the `pyramids raster calc` CLI.
 
 A deliberately small AST interpreter for band-algebra expressions over named raster
 arrays (``A``, ``B``, …). It never uses ``eval``/``exec``: a hostile expression

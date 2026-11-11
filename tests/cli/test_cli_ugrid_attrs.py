@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_attrs import add_ugrid_attrs_commands
 from pyramids.netcdf.ugrid import MeshDataset
 
@@ -33,7 +34,9 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_attrs_commands(msub)
+    add_ugrid_attrs_commands(
+        add_group(msub, "attrs", "CF/attribute inspection and editing")
+    )
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -45,7 +48,17 @@ class TestMeshSetAttr:
         """set-attr writes a new mesh whose global attributes include the value."""
         out = str(tmp_path / "set.nc")
         rc = _dispatch(
-            ["mesh", "set-attr", str(_MESH), out, "--name", "author", "--value", "me"]
+            [
+                "mesh",
+                "attrs",
+                "set-attr",
+                str(_MESH),
+                out,
+                "--name",
+                "author",
+                "--value",
+                "me",
+            ]
         )
         assert rc == 0
         assert MeshDataset.read_file(out).global_attributes.get("author") == "me"
@@ -56,7 +69,17 @@ class TestMeshSetAttr:
         before = dict(MeshDataset.read_file(str(_MESH)).global_attributes)
         assert (
             _dispatch(
-                ["mesh", "set-attr", str(_MESH), out, "--name", "k", "--value", "v"]
+                [
+                    "mesh",
+                    "attrs",
+                    "set-attr",
+                    str(_MESH),
+                    out,
+                    "--name",
+                    "k",
+                    "--value",
+                    "v",
+                ]
             )
             == 0
         )
@@ -68,13 +91,33 @@ class TestMeshSetAttr:
         out = str(tmp_path / "s.nc")
         assert (
             _dispatch(
-                ["mesh", "set-attr", str(_MESH), out, "--name", "a", "--value", "1"]
+                [
+                    "mesh",
+                    "attrs",
+                    "set-attr",
+                    str(_MESH),
+                    out,
+                    "--name",
+                    "a",
+                    "--value",
+                    "1",
+                ]
             )
             == 0
         )
         with pytest.raises(ValueError):
             _dispatch(
-                ["mesh", "set-attr", str(_MESH), out, "--name", "a", "--value", "1"]
+                [
+                    "mesh",
+                    "attrs",
+                    "set-attr",
+                    str(_MESH),
+                    out,
+                    "--name",
+                    "a",
+                    "--value",
+                    "1",
+                ]
             )
 
     def test_overwrite_allows_replacement(self, tmp_path):
@@ -82,13 +125,24 @@ class TestMeshSetAttr:
         out = str(tmp_path / "s.nc")
         assert (
             _dispatch(
-                ["mesh", "set-attr", str(_MESH), out, "--name", "a", "--value", "1"]
+                [
+                    "mesh",
+                    "attrs",
+                    "set-attr",
+                    str(_MESH),
+                    out,
+                    "--name",
+                    "a",
+                    "--value",
+                    "1",
+                ]
             )
             == 0
         )
         rc = _dispatch(
             [
                 "mesh",
+                "attrs",
                 "set-attr",
                 str(_MESH),
                 out,
@@ -113,6 +167,7 @@ class TestMeshDelAttr:
             _dispatch(
                 [
                     "mesh",
+                    "attrs",
                     "set-attr",
                     str(_MESH),
                     with_attr,
@@ -125,18 +180,29 @@ class TestMeshDelAttr:
             == 0
         )
         out = str(tmp_path / "without.nc")
-        assert _dispatch(["mesh", "del-attr", with_attr, out, "--name", "tag"]) == 0
+        assert (
+            _dispatch(["mesh", "attrs", "del-attr", with_attr, out, "--name", "tag"])
+            == 0
+        )
         assert "tag" not in MeshDataset.read_file(out).global_attributes
 
     def test_missing_attribute_is_noop(self, tmp_path):
         """Dropping an absent attribute writes an unchanged copy (exit 0)."""
         out = str(tmp_path / "noop.nc")
-        assert _dispatch(["mesh", "del-attr", str(_MESH), out, "--name", "absent"]) == 0
+        assert (
+            _dispatch(
+                ["mesh", "attrs", "del-attr", str(_MESH), out, "--name", "absent"]
+            )
+            == 0
+        )
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second del-attr onto the same path without --overwrite is refused."""
         out = str(tmp_path / "d.nc")
-        assert _dispatch(["mesh", "del-attr", str(_MESH), out, "--name", "x"]) == 0
+        assert (
+            _dispatch(["mesh", "attrs", "del-attr", str(_MESH), out, "--name", "x"])
+            == 0
+        )
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "del-attr", str(_MESH), out, "--name", "x"])
+            _dispatch(["mesh", "attrs", "del-attr", str(_MESH), out, "--name", "x"])

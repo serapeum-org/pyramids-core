@@ -436,7 +436,7 @@ class MeshDataset(_MeshFacades):
         if not lazy:
             # The built-in reader always defers variable values to first `.data` access and has
             # no eager mode, so `lazy=False` cannot be honoured. Raise here -- after topology is
-            # confirmed, before `from_gdal_group` reads any geometry -- so the rejection is cheap
+            # confirmed, before `_from_gdal_group` reads any geometry -- so the rejection is cheap
             # and both `read_file` and `read_all` get it. A driver-backed file never reaches this:
             # it raised `NoMeshTopologyError` above, and `lazy` is forwarded to the driver instead.
             raise TypeError(
@@ -459,7 +459,7 @@ class MeshDataset(_MeshFacades):
                     f"{available}."
                 )
             topo_info = chosen[0]
-        mesh = Mesh2d.from_gdal_group(rg, topo_info)
+        mesh = Mesh2d._from_gdal_group(rg, topo_info)
 
         # Resolve to an absolute path before threading it into the lazy variable loaders:
         # data reads are deferred to first `.data` access (PERF-3), which re-opens the file.
@@ -719,28 +719,8 @@ class MeshDataset(_MeshFacades):
         """Number of mesh edges."""
         return self._mesh.n_edge
 
-    def get_data(self, variable_name: str) -> MeshVariable:
-        """Get a data variable by name.
-
-        Args:
-            variable_name: Name of the data variable.
-
-        Returns:
-            MeshVariable instance.
-
-        Raises:
-            KeyError: If the variable name is not found.
-        """
-        if variable_name not in self._data_variables:
-            raise KeyError(
-                f"Variable '{variable_name}' not found. "
-                f"Available: {self.data_variable_names}"
-            )
-        result = self._data_variables[variable_name]
-        return result
-
     def __getitem__(self, key: str) -> MeshVariable:
-        """Get a data variable by name using bracket notation.
+        """Get a data variable by name using bracket notation -- the xarray idiom ``mesh[name]``.
 
         Args:
             key: The variable name.
@@ -751,7 +731,33 @@ class MeshDataset(_MeshFacades):
         Raises:
             KeyError: No variable is named ``key``; the message lists the available names.
         """
-        return self.get_data(key)
+        if key not in self._data_variables:
+            raise KeyError(
+                f"Variable '{key}' not found. Available: {self.data_variable_names}"
+            )
+        return self._data_variables[key]
+
+    def get_data(self, variable_name: str) -> MeshVariable:
+        """Deprecated alias for ``mesh[variable_name]``.
+
+        Deprecated: Use subscription ``mesh[name]`` (or :meth:`get` for a default) instead; it is the same lookup and
+            matches the xarray idiom.
+
+        Args:
+            variable_name: Name of the data variable.
+
+        Returns:
+            MeshVariable: The variable.
+
+        Raises:
+            KeyError: No variable is named ``variable_name``.
+        """
+        warnings.warn(
+            "MeshDataset.get_data is deprecated; use mesh[name] (or mesh.get(name, default)).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self[variable_name]
 
     def __contains__(self, key: str) -> bool:
         """Whether ``key`` names a data variable of this dataset.
@@ -969,14 +975,14 @@ class MeshDataset(_MeshFacades):
             ValueError: The variable exists but holds no data (nothing was loaded and it
                 carries no lazy loader), so there is nothing to interpolate.
         """
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         data = var.data
         if data is None:
             raise ValueError(f"Variable '{variable_name}' has no data loaded.")
         if var.has_time:
             # First step along the variable's own time axis (not blindly axis 0, which for
             # a trailing-time variable would take the first face) — see `_element_values`.
-            data = np.take(np.asarray(data), 0, axis=cast("int", var.time_index))
+            data = np.take(np.asarray(data), 0, axis=cast("int", var.time_axis_index))
 
         grid_array, geotransform = mesh_to_grid(
             mesh=self._mesh,
@@ -1632,7 +1638,7 @@ class MeshDataset(_MeshFacades):
 
         data_dict: dict[str, Any] = {}
         if variable_name is not None:
-            var = self.get_data(variable_name)
+            var = self[variable_name]
             if var.location == location:
                 # For a temporal variable only the first step is tabulated; the windowed read
                 # pulls just that slab instead of loading every step to slice `[0]` (#982).
@@ -2364,7 +2370,7 @@ class MeshDataset(_MeshFacades):
         """The axis holding the layer dimension, or ``None`` when the variable has none.
 
         A mesh variable's axes read ``[time?, layer?, element]`` — the element axis is the
-        last and time is whichever :attr:`MeshVariable.time_index` names, so a remaining
+        last and time is whichever :attr:`MeshVariable.time_axis_index` names, so a remaining
         middle axis is the layer. A 2-D variable whose dimension names mark it non-temporal
         is therefore ``(layer, element)`` with layer axis 0.
 
@@ -2389,10 +2395,10 @@ class MeshDataset(_MeshFacades):
         rank = len(var.shape)
         if rank < 2:
             return None
-        if var.time_index == rank - 1:
+        if var.time_axis_index == rank - 1:
             # Time sits where the element axis belongs, so the layout is not one we can read.
             return None
-        axes = [axis for axis in range(rank - 1) if axis != var.time_index]
+        axes = [axis for axis in range(rank - 1) if axis != var.time_axis_index]
         return axes[0] if axes else None
 
     @property
@@ -2411,13 +2417,13 @@ class MeshDataset(_MeshFacades):
         """The total number of volumes, or ``None`` when the mesh has no volume topology.
 
         The flat ``volume``-axis length of a ragged 3-D mesh (the sum of every column's layer
-        count). ``None`` for a 2-D or uniform-layer mesh, where :attr:`n_layers` applies
+        count). ``None`` for a 2-D or uniform-layer mesh, where :attr:`n_layer` applies
         instead.
         """
         return None if self._volume_topology is None else self._volume_topology.n_volume
 
     @property
-    def n_layers(self) -> int | None:
+    def n_layer(self) -> int | None:
         """The number of layers, or ``None`` when no variable is layered.
 
         A 3-D mesh output puts some variables on the ``n`` layer centres and others on the
@@ -2427,13 +2433,13 @@ class MeshDataset(_MeshFacades):
         indexes each variable on its own layer axis.
 
         Reporting ``n`` means the ``n + 1`` is not visible here, so a caller iterating
-        ``range(n_layers)`` over an interface variable would skip its last interface. Read
-        :attr:`n_layer_interfaces` for that count rather than inferring it: it answers ``None``
+        ``range(n_layer)`` over an interface variable would skip its last interface. Read
+        :attr:`n_layer_interface` for that count rather than inferring it: it answers ``None``
         unless a variable really sits on the interfaces.
 
         For a **ragged** 3-D mesh (:attr:`volume_topology` set) there is no single layer count:
         this reports the **maximum** over the columns — the number of layer *slots* — so
-        ``range(n_layers)`` covers the deepest column, and :meth:`isel_layer` makes the absent
+        ``range(n_layer)`` covers the deepest column, and :meth:`isel_layer` makes the absent
         shallow-column layers explicit (NaN) rather than padding them silently.
 
         Returns:
@@ -2450,14 +2456,14 @@ class MeshDataset(_MeshFacades):
         return min(counts) if counts else None
 
     @property
-    def n_layer_interfaces(self) -> int | None:
+    def n_layer_interface(self) -> int | None:
         """The number of layer interfaces, or ``None`` when nothing sits on them.
 
-        The companion to :attr:`n_layers`. A 3-D output's vertical velocities and fluxes live on
-        the ``n + 1`` interfaces between the ``n`` layer centres, and ``n_layers`` deliberately
+        The companion to :attr:`n_layer`. A 3-D output's vertical velocities and fluxes live on
+        the ``n + 1`` interfaces between the ``n`` layer centres, and ``n_layer`` deliberately
         reports the centre count -- so this is where the other half of the pair is readable.
 
-        It is **not** simply ``n_layers + 1``, which is always computable: that would assert
+        It is **not** simply ``n_layer + 1``, which is always computable: that would assert
         that something in the dataset is interface-located. Only a variable actually carrying
         that count makes it true, so a centres-only dataset answers ``None``.
 
@@ -2467,7 +2473,7 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             ValueError: The layered variables carry counts that are not a layer-centre /
-                layer-interface pair -- the same guard :attr:`n_layers` applies, so the two
+                layer-interface pair -- the same guard :attr:`n_layer` applies, so the two
                 properties agree about what is readable.
         """
         counts = self._layer_counts()
@@ -2475,6 +2481,38 @@ class MeshDataset(_MeshFacades):
             return None
         interfaces = min(counts) + 1
         return interfaces if interfaces in counts else None
+
+    @property
+    def n_layers(self) -> int | None:
+        """Deprecated alias for :attr:`n_layer`.
+
+        Deprecated: Renamed to ``n_layer`` (singular, matching ``n_node``/``n_face``/``n_edge``).
+
+        Returns:
+            int | None: The layer-centre count, or ``None`` when no variable is layered.
+        """
+        warnings.warn(
+            "MeshDataset.n_layers is deprecated; use n_layer.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.n_layer
+
+    @property
+    def n_layer_interfaces(self) -> int | None:
+        """Deprecated alias for :attr:`n_layer_interface`.
+
+        Deprecated: Renamed to ``n_layer_interface`` (singular, matching the ``n_*`` family).
+
+        Returns:
+            int | None: The layer-interface count, or ``None`` when nothing sits on them.
+        """
+        warnings.warn(
+            "MeshDataset.n_layer_interfaces is deprecated; use n_layer_interface.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.n_layer_interface
 
     def _layer_counts(self) -> set[int]:
         """The distinct layer counts across the layered variables, validated.
@@ -2593,7 +2631,7 @@ class MeshDataset(_MeshFacades):
         Raises:
             ValueError: No layer dimension, or the value is not among the layer coordinates.
         """
-        count = self.n_layers
+        count = self.n_layer
         if count is None:
             raise ValueError(
                 "sel_layer needs at least one variable with a layer dimension; this "
@@ -2873,7 +2911,7 @@ class MeshDataset(_MeshFacades):
             else np.full((topology.n_volume, 2), np.nan, dtype="float64")
         )
         if var.has_time:
-            time_axis = cast("int", var.time_index)
+            time_axis = cast("int", var.time_axis_index)
             stamps = var.attributes.get("time_values")
             steps = (
                 list(stamps)
@@ -2944,7 +2982,7 @@ class MeshDataset(_MeshFacades):
         Resolves the three against each other and refuses anything left over, so
         :meth:`_arrange_for_rows` is left with the transpose and the labels.
 
-        An axis can be claimed twice: `var.time_index` may name the axis that holds the
+        An axis can be claimed twice: `var.time_axis_index` may name the axis that holds the
         elements. :meth:`_element_axis` settles that by the declared element count, and the
         element reading wins -- so such an axis is *not* walked as a step, and the caller is
         told which axes were.
@@ -2964,7 +3002,7 @@ class MeshDataset(_MeshFacades):
                 indices past the element count with NaN coordinates, a frame a caller joins on.
         """
         element_axis = self._element_axis(var, values)
-        time_axis = cast("int | None", var.time_index) if var.has_time else None
+        time_axis = cast("int | None", var.time_axis_index) if var.has_time else None
         time_axis = None if time_axis == element_axis else time_axis
         layer_axis = self._layer_axis(var)
         layer_axis = None if layer_axis == element_axis else layer_axis
@@ -3285,7 +3323,7 @@ class MeshDataset(_MeshFacades):
 
                 ```
         """
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         return None if var.active is None else np.asarray(var.active, dtype=bool)
 
     def masked_values(self, variable_name: str) -> np.typing.NDArray:
@@ -3327,7 +3365,7 @@ class MeshDataset(_MeshFacades):
 
                 ```
         """
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         data = var.data
         if data is None:
             raise ValueError(f"Variable {variable_name!r} has no loaded data.")
@@ -3362,18 +3400,18 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             ValueError: The variable has no loaded data, or is not per-element after the
-                time collapse (e.g. a layered ``(n_layers, n_face)`` non-temporal variable).
+                time collapse (e.g. a layered ``(n_layer, n_face)`` non-temporal variable).
         """
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         data = var.data
         if data is None:
             raise ValueError(f"Variable {variable_name!r} has no loaded data.")
         if var.has_time:
             # Take the step along the variable's own time axis, not blindly axis 0 — a
             # mesh variable may store time as a trailing axis (e.g. (nFaces, time)), and
-            # the rest of this module keys off var.time_index for exactly that reason.
+            # the rest of this module keys off var.time_axis_index for exactly that reason.
             data = np.take(
-                np.asarray(data), time_index, axis=cast("int", var.time_index)
+                np.asarray(data), time_index, axis=cast("int", var.time_axis_index)
             )
         result = gaps_as_nan(np.asarray(data), var.nodata)
         if apply_active and var.active is not None and result.ndim == 1:
@@ -3384,7 +3422,7 @@ class MeshDataset(_MeshFacades):
                 mask = mask[time_index]
             result = np.where(mask, result, np.nan)
         if result.ndim != 1:
-            # A non-temporal multi-dimensional variable (e.g. layered (n_layers, n_face))
+            # A non-temporal multi-dimensional variable (e.g. layered (n_layer, n_face))
             # has no single per-element vector; reducing it over an arbitrary axis would
             # silently return a per-column scalar. Refuse rather than mislead.
             raise ValueError(
@@ -3853,7 +3891,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to reduce.")
@@ -4030,7 +4068,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(
@@ -4267,7 +4305,7 @@ class MeshDataset(_MeshFacades):
             ):
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to fit.")
@@ -4417,7 +4455,7 @@ class MeshDataset(_MeshFacades):
             ):
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(
@@ -4462,7 +4500,7 @@ class MeshDataset(_MeshFacades):
             ):
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to integrate.")
@@ -4585,7 +4623,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(
@@ -4732,7 +4770,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to restamp.")
@@ -4812,7 +4850,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(
@@ -5216,7 +5254,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to select.")
@@ -5449,7 +5487,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time or var.n_time_steps != 1:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to squeeze.")
@@ -5487,7 +5525,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to diff.")
@@ -5544,7 +5582,7 @@ class MeshDataset(_MeshFacades):
             if not var.has_time:
                 new_vars[name] = var
                 continue
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data.")
@@ -5765,7 +5803,7 @@ class MeshDataset(_MeshFacades):
         keep = np.ones(length, dtype=bool)
         for name in temporal:
             var = self._data_variables[name]
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             data = var.data
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to dropna.")
@@ -6028,13 +6066,13 @@ class MeshDataset(_MeshFacades):
                 kind=None if kind == "auto" else kind,
             )
             return render_via_backend(self, backend, **forwarded, **kwargs)
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         data = var.data
         if data is None:
             raise ValueError(f"Variable {variable_name!r} has no loaded data to plot.")
         if var.has_time:
             # First step along the variable's own time axis (see `_element_values`).
-            data = np.take(np.asarray(data), 0, axis=cast("int", var.time_index))
+            data = np.take(np.asarray(data), 0, axis=cast("int", var.time_axis_index))
         if title is None:
             title = variable_name
         if basemap and self.epsg is None:
@@ -6227,7 +6265,7 @@ class MeshDataset(_MeshFacades):
                 be anchored at, is not per-element after the time collapse, or
                 ``time_index`` is outside its time axis.
         """
-        var = self.get_data(variable_name)
+        var = self[variable_name]
         if var.data is None:
             raise ValueError(
                 f"plot_vector_field: {role} component {variable_name!r} has no loaded data "
@@ -6242,7 +6280,7 @@ class MeshDataset(_MeshFacades):
             )
         shape = np.asarray(var.data).shape
         if var.has_time:
-            axis = cast("int", var.time_index)
+            axis = cast("int", var.time_axis_index)
             if not -len(shape) <= axis < len(shape):
                 # `time_index` is derived from `dimensions` by name, so a variable declaring
                 # more axes than its data has yields an axis past the array's rank. Indexing
@@ -6346,7 +6384,7 @@ class MeshDataset(_MeshFacades):
                 f"single frame. Use plot() for a static variable."
             )
         data = np.asarray(var.data)
-        axis = cast("int", var.time_index)
+        axis = cast("int", var.time_axis_index)
         frames = np.moveaxis(data, axis, 0)
         if frames.ndim != 2:
             raise ValueError(
@@ -6693,7 +6731,7 @@ def _apply_active_mask(
 
     The data's element axis is the last axis, except for a trailing-time variable (``time``
     last, e.g. ``(n_face, time)``), where it is the axis before time — the layout
-    :attr:`MeshVariable.time_index` already describes and the rest of the module keys off, so a
+    :attr:`MeshVariable.time_axis_index` already describes and the rest of the module keys off, so a
     mask applies correctly whichever way the variable stores time.
 
     Args:
@@ -6706,7 +6744,7 @@ def _apply_active_mask(
     masked = np.asarray(values, dtype="float64")
     mask = np.asarray(var.active, dtype=bool)
     ndim = masked.ndim
-    time_axis = var.time_index
+    time_axis = var.time_axis_index
     trailing_time = time_axis is not None and time_axis == ndim - 1 and ndim >= 2
     elem_axis = ndim - 2 if trailing_time else ndim - 1
     target = [1] * ndim
@@ -6762,7 +6800,7 @@ def _coarsened_variable(
             f"coarsen: {name!r} has {len(coord)} step(s), fewer than one window of "
             f"{window}; there would be nothing to report."
         )
-    axis = cast("int", var.time_index)
+    axis = cast("int", var.time_axis_index)
     labels = [coord[index * window] for index in range(blocks)]
     reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis)
     # The axis is re-binned, so a per-step mask no longer lines up with it.
@@ -6943,7 +6981,7 @@ def _fitted_dimensions(
     """Dimension names for a fit result, with the time axis replaced by ``axis_name``.
 
     Names are synthesised when the source variable carries none, which an array-built variable
-    does not. That matters for correctness rather than tidiness: :attr:`MeshVariable.time_index`
+    does not. That matters for correctness rather than tidiness: :attr:`MeshVariable.time_axis_index`
     falls back to "the leading axis of a >1-D array" when there are no names, so a
     ``(deg + 1, n_face)`` fit would otherwise report ``has_time == True`` and be reduced over
     its coefficient axis as though that were time.
@@ -7085,7 +7123,7 @@ def _collapse_variable_to_step(var: MeshVariable, index: int) -> MeshVariable:
     """
     if not var.has_data_source:
         raise ValueError(f"Variable {var.name!r} has no loaded data to select.")
-    axis = cast("int", var.time_index)
+    axis = cast("int", var.time_axis_index)
     if axis == 0:
         # Leading time: the windowed read pulls only this slab from disk (#982).
         # `_read_time_window` is the raw-slab primitive `sel_time` wrapped; used directly so
@@ -7116,7 +7154,7 @@ def _concat_temporal_variable(
     Raises:
         ValueError: A part's same-named variable is static, or has no loaded data.
     """
-    axis = cast("int", var.time_index)
+    axis = cast("int", var.time_axis_index)
     arrays: list[np.typing.NDArray] = []
     times: list[Any] = []
     has_times = True
@@ -7375,7 +7413,7 @@ def _time_coordinate_name(variables: dict[str, MeshVariable]) -> str | None:
     """The name of the time dimension the temporal variables share, or ``None``.
 
     Taken from the first temporal variable's own ``dimensions`` at its
-    :attr:`MeshVariable.time_index`, so it follows whatever the file calls the axis rather than
+    :attr:`MeshVariable.time_axis_index`, so it follows whatever the file calls the axis rather than
     assuming ``"time"``. A CF coordinate variable is conventionally named after its dimension,
     which is what makes this usable as the array name to open.
 
@@ -7393,7 +7431,7 @@ def _time_coordinate_name(variables: dict[str, MeshVariable]) -> str | None:
     """
     result = None
     for var in variables.values():
-        axis = var.time_index
+        axis = var.time_axis_index
         if var.has_time and axis is not None:
             result = (
                 var.dimensions[axis] if axis < len(var.dimensions) else DEFAULT_TIME_DIM

@@ -219,7 +219,19 @@ nav:
               - Dask (mesh → raster bridge): examples/netcdf/ugrid/dask-lazy-ugrid.ipynb
               - GIS operations: examples/netcdf/ugrid/ugrid-gis-operations.ipynb
   - Reference:
-    - Command line (CLI): reference/cli.md
+    - Command line (CLI):
+      - Overview: reference/cli.md
+      - Global flags & conventions: reference/cli/index.md
+      - raster: reference/cli/raster.md
+      - vector: reference/cli/vector.md
+      - nc (NetCDF): reference/cli/nc.md
+      - collection: reference/cli/collection.md
+      - mesh (UGRID): reference/cli/mesh.md
+      - process: reference/cli/process.md
+      - stac: reference/cli/stac.md
+      - fetch (OGC): reference/cli/fetch.md
+      - completion: reference/cli/completion.md
+      - plugins: reference/cli/plugins.md
     - Dataset:
       - Overview: reference/dataset/index.md
       - I/O Operations: reference/dataset/io.md

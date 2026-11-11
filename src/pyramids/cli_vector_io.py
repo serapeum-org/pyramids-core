@@ -63,7 +63,7 @@ def _needs_parquet_extra() -> Iterator[None]:
 
 
 def _cmd_vector_from_bbox(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-bbox`` — write a one-feature bbox polygon.
+    """Handle ``pyramids vector import bbox`` — write a one-feature bbox polygon.
 
     Args:
         args: Parsed args with ``output``, ``bbox``, ``epsg``, ``overwrite``.
@@ -81,7 +81,7 @@ def _cmd_vector_from_bbox(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_read_parquet(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector read-parquet`` — convert a GeoParquet to a vector file.
+    """Handle ``pyramids vector import parquet`` — convert a GeoParquet to a vector file.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``overwrite``.
@@ -97,7 +97,7 @@ def _cmd_vector_read_parquet(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_parquet(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-parquet`` — write a GeoParquet file.
+    """Handle ``pyramids vector export parquet`` — write a GeoParquet file.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
@@ -113,7 +113,7 @@ def _cmd_vector_to_parquet(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_feather(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-feather`` — write a GeoFeather file.
+    """Handle ``pyramids vector export feather`` — write a GeoFeather file.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
@@ -129,7 +129,7 @@ def _cmd_vector_to_feather(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_json(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-json`` — emit the GeoJSON string.
+    """Handle ``pyramids vector export json`` — emit the GeoJSON string.
 
     Writes to ``--out`` when given, else prints to stdout (for piping).
 
@@ -151,7 +151,7 @@ def _cmd_vector_to_json(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_geo_dict(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-geo-dict`` — print the GeoJSON mapping.
+    """Handle ``pyramids vector export geo-dict`` — print the GeoJSON mapping.
 
     Args:
         args: Parsed args with ``src``, ``layer``, ``json``.
@@ -169,7 +169,7 @@ def _cmd_vector_to_geo_dict(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_wkt(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-wkt`` — write a WKT table to CSV.
+    """Handle ``pyramids vector export wkt`` — write a WKT table to CSV.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``overwrite``.
@@ -186,7 +186,7 @@ def _cmd_vector_to_wkt(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_wkb(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-wkb`` — write a WKB table to CSV.
+    """Handle ``pyramids vector export wkb`` — write a WKB table to CSV.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``hex``, ``overwrite``.
@@ -202,7 +202,7 @@ def _cmd_vector_to_wkb(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_mvt(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-mvt`` — write a Mapbox Vector Tiles archive.
+    """Handle ``pyramids vector export mvt`` — write a Mapbox Vector Tiles archive.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``min_zoom``,
@@ -219,7 +219,7 @@ def _cmd_vector_to_mvt(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_to_pmtiles(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector to-pmtiles`` — write a PMTiles archive.
+    """Handle ``pyramids vector export pmtiles`` — write a PMTiles archive.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``layer``, ``min_zoom``,
@@ -236,7 +236,7 @@ def _cmd_vector_to_pmtiles(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_ogc_features(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-ogc-features`` — read an OGC API Features service.
+    """Handle ``pyramids vector import ogc-features`` — read an OGC API Features service.
 
     Args:
         args: Parsed args with ``endpoint``, ``collection``, ``bbox``, ``output``,
@@ -256,7 +256,7 @@ def _cmd_vector_from_ogc_features(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_featureserver(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-featureserver`` — read an Esri FeatureServer layer.
+    """Handle ``pyramids vector import featureserver`` — read an Esri FeatureServer layer.
 
     Args:
         args: Parsed args with ``url``, ``where``, ``out_fields``, ``output``,
@@ -275,7 +275,7 @@ def _cmd_vector_from_featureserver(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_vectortileserver(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-vectortileserver`` — read a vector-tile service.
+    """Handle ``pyramids vector import vectortileserver`` — read a vector-tile service.
 
     Args:
         args: Parsed args with ``url``, ``layer``, ``bbox``, ``output``, ``overwrite``.
@@ -292,7 +292,7 @@ def _cmd_vector_from_vectortileserver(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_xyz(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-xyz`` — build a point layer from CSV columns.
+    """Handle ``pyramids vector import xyz`` — build a point layer from CSV columns.
 
     Reads the ``--x`` / ``--y`` (and optional ``--z``) columns of a CSV as parallel
     coordinate arrays and writes the resulting point FeatureCollection.
@@ -317,7 +317,7 @@ def _cmd_vector_from_xyz(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_features(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-features`` — build an FC from GeoJSON features.
+    """Handle ``pyramids vector import features`` — build an FC from GeoJSON features.
 
     Reads a JSON file holding either a GeoJSON ``FeatureCollection`` mapping or a bare
     list of GeoJSON Feature dicts, and writes the resulting FeatureCollection.
@@ -341,7 +341,7 @@ def _cmd_vector_from_features(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_from_records(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector from-records`` — build an FC from a CSV with a WKT column.
+    """Handle ``pyramids vector import records`` — build an FC from a CSV with a WKT column.
 
     Reads a CSV whose ``--geometry`` column holds WKT geometries; every other column
     becomes an attribute. The WKT is parsed to shapely geometries before the
@@ -369,7 +369,7 @@ def _cmd_vector_from_records(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_read_gpx(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector read-gpx`` — write every non-empty GPX sub-layer.
+    """Handle ``pyramids vector import gpx`` — write every non-empty GPX sub-layer.
 
     Reads all non-empty sub-layers of a GPX file (waypoints, routes, tracks,
     route_points, track_points) and writes each as a named layer in a single
@@ -400,13 +400,17 @@ def _cmd_vector_read_gpx(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
-    """Register the ``vector`` I/O, export, and remote-reader commands on ``vsub``.
+def add_vector_io_commands(
+    export_sub: argparse._SubParsersAction,
+    import_sub: argparse._SubParsersAction,
+) -> None:
+    """Register the ``vector`` export (writer) and import (reader) commands.
 
     Args:
-        vsub: The ``vector`` group's ``add_subparsers`` action.
+        export_sub: The ``vector export`` subgroup's ``add_subparsers`` action (writers).
+        import_sub: The ``vector import`` subgroup's ``add_subparsers`` action (readers).
     """
-    v_bbox = vsub.add_parser("from-bbox", help="write a one-feature bbox polygon")
+    v_bbox = import_sub.add_parser("bbox", help="write a one-feature bbox polygon")
     v_bbox.add_argument("output", help=_HELP_OUTPUT)
     v_bbox.add_argument(
         "--bbox",
@@ -420,49 +424,51 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_bbox.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_bbox.set_defaults(func=_cmd_vector_from_bbox)
 
-    v_rpq = vsub.add_parser(
-        "read-parquet", help="convert a GeoParquet to a vector file"
+    v_rpq = import_sub.add_parser(
+        "parquet", help="convert a GeoParquet to a vector file"
     )
     v_rpq.add_argument("src", help="source GeoParquet path")
     v_rpq.add_argument("output", help=_HELP_OUTPUT)
     v_rpq.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_rpq.set_defaults(func=_cmd_vector_read_parquet)
 
-    v_tpq = vsub.add_parser("to-parquet", help="write a GeoParquet file")
+    v_tpq = export_sub.add_parser("parquet", help="write a GeoParquet file")
     v_tpq.add_argument("src", help=_HELP_SRC)
     v_tpq.add_argument("output", help="destination .parquet path")
     v_tpq.add_argument("--layer", help=_HELP_LAYER)
     v_tpq.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_tpq.set_defaults(func=_cmd_vector_to_parquet)
 
-    v_tf = vsub.add_parser("to-feather", help="write a GeoFeather file")
+    v_tf = export_sub.add_parser("feather", help="write a GeoFeather file")
     v_tf.add_argument("src", help=_HELP_SRC)
     v_tf.add_argument("output", help="destination .feather path")
     v_tf.add_argument("--layer", help=_HELP_LAYER)
     v_tf.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_tf.set_defaults(func=_cmd_vector_to_feather)
 
-    v_tj = vsub.add_parser("to-json", help="emit the GeoJSON string (stdout or --out)")
+    v_tj = export_sub.add_parser(
+        "json", help="emit the GeoJSON string (stdout or --out)"
+    )
     v_tj.add_argument("src", help=_HELP_SRC)
     v_tj.add_argument("--layer", help=_HELP_LAYER)
     v_tj.add_argument("--out", help="write to this path instead of stdout")
     v_tj.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_tj.set_defaults(func=_cmd_vector_to_json)
 
-    v_gd = vsub.add_parser("to-geo-dict", help="print the GeoJSON mapping")
+    v_gd = export_sub.add_parser("geo-dict", help="print the GeoJSON mapping")
     v_gd.add_argument("src", help=_HELP_SRC)
     v_gd.add_argument("--layer", help=_HELP_LAYER)
     v_gd.add_argument("--json", action="store_true", help=_HELP_JSON)
     v_gd.set_defaults(func=_cmd_vector_to_geo_dict)
 
-    v_wkt = vsub.add_parser("to-wkt", help="write a WKT table to CSV")
+    v_wkt = export_sub.add_parser("wkt", help="write a WKT table to CSV")
     v_wkt.add_argument("src", help=_HELP_SRC)
     v_wkt.add_argument("output", help="destination .csv path")
     v_wkt.add_argument("--layer", help=_HELP_LAYER)
     v_wkt.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_wkt.set_defaults(func=_cmd_vector_to_wkt)
 
-    v_wkb = vsub.add_parser("to-wkb", help="write a WKB table to CSV")
+    v_wkb = export_sub.add_parser("wkb", help="write a WKB table to CSV")
     v_wkb.add_argument("src", help=_HELP_SRC)
     v_wkb.add_argument("output", help="destination .csv path")
     v_wkb.add_argument("--layer", help=_HELP_LAYER)
@@ -470,7 +476,7 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_wkb.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_wkb.set_defaults(func=_cmd_vector_to_wkb)
 
-    v_mvt = vsub.add_parser("to-mvt", help="write a Mapbox Vector Tiles archive")
+    v_mvt = export_sub.add_parser("mvt", help="write a Mapbox Vector Tiles archive")
     v_mvt.add_argument("src", help=_HELP_SRC)
     v_mvt.add_argument("output", help="destination .mvt path")
     v_mvt.add_argument("--layer", help=_HELP_LAYER)
@@ -479,7 +485,7 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_mvt.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_mvt.set_defaults(func=_cmd_vector_to_mvt)
 
-    v_pm = vsub.add_parser("to-pmtiles", help="write a PMTiles archive")
+    v_pm = export_sub.add_parser("pmtiles", help="write a PMTiles archive")
     v_pm.add_argument("src", help=_HELP_SRC)
     v_pm.add_argument("output", help="destination .pmtiles path")
     v_pm.add_argument("--layer", help=_HELP_LAYER)
@@ -488,8 +494,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_pm.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_pm.set_defaults(func=_cmd_vector_to_pmtiles)
 
-    v_ogc = vsub.add_parser(
-        "from-ogc-features", help="read an OGC API Features service"
+    v_ogc = import_sub.add_parser(
+        "ogc-features", help="read an OGC API Features service"
     )
     v_ogc.add_argument("output", help=_HELP_OUTPUT)
     v_ogc.add_argument("--endpoint", required=True, help="service base URL")
@@ -504,8 +510,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_ogc.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_ogc.set_defaults(func=_cmd_vector_from_ogc_features)
 
-    v_fs = vsub.add_parser(
-        "from-featureserver", help="read an Esri FeatureServer layer"
+    v_fs = import_sub.add_parser(
+        "featureserver", help="read an Esri FeatureServer layer"
     )
     v_fs.add_argument("output", help=_HELP_OUTPUT)
     v_fs.add_argument("--url", required=True, help="FeatureServer layer URL")
@@ -514,7 +520,7 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_fs.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_fs.set_defaults(func=_cmd_vector_from_featureserver)
 
-    v_vts = vsub.add_parser("from-vectortileserver", help="read a vector-tile service")
+    v_vts = import_sub.add_parser("vectortileserver", help="read a vector-tile service")
     v_vts.add_argument("output", help=_HELP_OUTPUT)
     v_vts.add_argument("--url", required=True, help="vector-tile service URL")
     v_vts.add_argument("--layer", help="layer name")
@@ -528,8 +534,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_vts.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_vts.set_defaults(func=_cmd_vector_from_vectortileserver)
 
-    v_xyz = vsub.add_parser(
-        "from-xyz", help="build a point layer from CSV x/y/z columns"
+    v_xyz = import_sub.add_parser(
+        "xyz", help="build a point layer from CSV x/y/z columns"
     )
     v_xyz.add_argument("csv", help="source CSV path")
     v_xyz.add_argument("output", help=_HELP_OUTPUT)
@@ -542,8 +548,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_xyz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_xyz.set_defaults(func=_cmd_vector_from_xyz)
 
-    v_ff = vsub.add_parser(
-        "from-features", help="build an FC from a GeoJSON features file"
+    v_ff = import_sub.add_parser(
+        "features", help="build an FC from a GeoJSON features file"
     )
     v_ff.add_argument(
         "src", help="source JSON path (FeatureCollection or feature list)"
@@ -554,8 +560,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_ff.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_ff.set_defaults(func=_cmd_vector_from_features)
 
-    v_fr = vsub.add_parser(
-        "from-records", help="build an FC from a CSV with a WKT geometry column"
+    v_fr = import_sub.add_parser(
+        "records", help="build an FC from a CSV with a WKT geometry column"
     )
     v_fr.add_argument("csv", help="source CSV path")
     v_fr.add_argument("output", help=_HELP_OUTPUT)
@@ -567,8 +573,8 @@ def add_vector_io_commands(vsub: argparse._SubParsersAction) -> None:
     v_fr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_fr.set_defaults(func=_cmd_vector_from_records)
 
-    v_gpx = vsub.add_parser(
-        "read-gpx", help="write every non-empty GPX sub-layer to a multi-layer output"
+    v_gpx = import_sub.add_parser(
+        "gpx", help="write every non-empty GPX sub-layer to a multi-layer output"
     )
     v_gpx.add_argument("src", help="source .gpx path")
     v_gpx.add_argument("output", help="destination multi-layer path (e.g. .gpkg)")

@@ -57,7 +57,7 @@ class TestProcessingCli:
         Test scenario:
             Output contains slope and interpolate_to_raster and exits 0.
         """
-        rc = main(["tools"])
+        rc = main(["process", "tool", "list"])
         out = capsys.readouterr().out
         assert rc == 0, out
         assert "slope" in out, out
@@ -69,7 +69,7 @@ class TestProcessingCli:
         Test scenario:
             Output includes the input header and the 'band' param; exit 0.
         """
-        rc = main(["tool", "slope"])
+        rc = main(["process", "tool", "show", "slope"])
         out = capsys.readouterr().out
         assert rc == 0, out
         assert "Dataset -> Array" in out, out
@@ -81,7 +81,7 @@ class TestProcessingCli:
         Test scenario:
             An unknown tool name prints 'unknown tool' to stderr and returns 1.
         """
-        rc = main(["tool", "nope"])
+        rc = main(["process", "tool", "show", "nope"])
         err = capsys.readouterr().err
         assert rc == 1, err
         assert "unknown tool" in err, err
@@ -103,7 +103,15 @@ class TestProcessingCli:
         ).to_yaml(str(yaml_path))
         out_dir = tmp_path / "out"
         rc = main(
-            ["run", str(yaml_path), "--inputs", points_geojson, "--out", str(out_dir)]
+            [
+                "process",
+                "run",
+                str(yaml_path),
+                "--inputs",
+                points_geojson,
+                "--out",
+                str(out_dir),
+            ]
         )
         assert rc == 0, "run should exit 0"
         assert list(out_dir.glob("*.tif")), list(out_dir.iterdir())
@@ -122,7 +130,15 @@ class TestProcessingCli:
         Pipeline([("slope", {})]).to_yaml(str(yaml_path))
         out_dir = tmp_path / "out"
         rc = main(
-            ["run", str(yaml_path), "--inputs", "C:/no/such.tif", "--out", str(out_dir)]
+            [
+                "process",
+                "run",
+                str(yaml_path),
+                "--inputs",
+                "C:/no/such.tif",
+                "--out",
+                str(out_dir),
+            ]
         )
         captured = capsys.readouterr()
         assert rc == 1, captured.err
@@ -144,20 +160,30 @@ class TestApply:
     def test_apply_slope_writes_output(self, dem_raster, tmp_path):
         """apply runs a single Array-output tool and writes a georeferenced raster."""
         out = str(tmp_path / "slope.tif")
-        rc = main(["apply", "slope", dem_raster, out, "--set", "units=degrees"])
+        rc = main(
+            ["process", "apply", "slope", dem_raster, out, "--set", "units=degrees"]
+        )
         assert rc == 0, "apply must exit 0"
         assert Dataset.read_file(out).band_count >= 1
 
     def test_unknown_tool_errors(self, dem_raster, tmp_path, capsys):
         """An unknown tool exits 1 naming the registry."""
-        rc = main(["apply", "nope", dem_raster, str(tmp_path / "o.tif")])
+        rc = main(["process", "apply", "nope", dem_raster, str(tmp_path / "o.tif")])
         assert rc == 1
         assert "unknown tool" in capsys.readouterr().err
 
     def test_unknown_param_errors(self, dem_raster, tmp_path, capsys):
         """An unknown --set parameter exits 1 with a schema-driven message."""
         rc = main(
-            ["apply", "slope", dem_raster, str(tmp_path / "o.tif"), "--set", "bogus=1"]
+            [
+                "process",
+                "apply",
+                "slope",
+                dem_raster,
+                str(tmp_path / "o.tif"),
+                "--set",
+                "bogus=1",
+            ]
         )
         assert rc == 1
         assert "unknown parameter" in capsys.readouterr().err
@@ -166,6 +192,7 @@ class TestApply:
         """A value outside an OptionList's choices exits 1."""
         rc = main(
             [
+                "process",
                 "apply",
                 "slope",
                 dem_raster,
@@ -179,7 +206,13 @@ class TestApply:
     def test_missing_required_param_errors(self, points_geojson, tmp_path, capsys):
         """Omitting a required parameter fails at pipeline construction."""
         rc = main(
-            ["apply", "interpolate_to_raster", points_geojson, str(tmp_path / "o.tif")]
+            [
+                "process",
+                "apply",
+                "interpolate_to_raster",
+                points_geojson,
+                str(tmp_path / "o.tif"),
+            ]
         )
         assert rc == 1
         assert "missing required parameter" in capsys.readouterr().err
@@ -187,8 +220,8 @@ class TestApply:
     def test_refuses_existing(self, dem_raster, tmp_path):
         """A second apply without --overwrite is refused."""
         out = str(tmp_path / "s.tif")
-        assert main(["apply", "slope", dem_raster, out]) == 0
-        assert main(["apply", "slope", dem_raster, out]) == 1
+        assert main(["process", "apply", "slope", dem_raster, out]) == 0
+        assert main(["process", "apply", "slope", dem_raster, out]) == 1
 
 
 class TestRunManifest:
@@ -201,6 +234,7 @@ class TestRunManifest:
         manifest = tmp_path / "manifest.yaml"
         rc = main(
             [
+                "process",
                 "run",
                 yaml_path,
                 "--inputs",
@@ -230,6 +264,7 @@ class TestRunMultiInput:
         out_dir = tmp_path / "out"
         rc = main(
             [
+                "process",
                 "run",
                 yaml_path,
                 "--inputs",
@@ -253,6 +288,7 @@ class TestRunQuiet:
         rc = main(
             [
                 "--quiet",
+                "process",
                 "run",
                 yaml_path,
                 "--inputs",
@@ -271,6 +307,7 @@ class TestRunQuiet:
         rc = main(
             [
                 "--quiet",
+                "process",
                 "run",
                 str(yaml_path),
                 "--inputs",
@@ -298,6 +335,7 @@ class TestRunParallel:
         out_dir = tmp_path / "out"
         rc = main(
             [
+                "process",
                 "run",
                 yaml_path,
                 "--inputs",
@@ -318,6 +356,7 @@ class TestRunParallel:
         yaml_path = _interp_pipeline(tmp_path)
         rc = main(
             [
+                "process",
                 "run",
                 yaml_path,
                 "--inputs",

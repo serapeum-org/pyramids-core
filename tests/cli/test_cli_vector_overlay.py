@@ -17,6 +17,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
+from pyramids._cli_groups import add_group
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli import main
 from pyramids.cli_vector_overlay import add_vector_overlay_commands
@@ -40,7 +41,10 @@ def _build_parser():
     sub = parser.add_subparsers(dest="group", required=True)
     vector = sub.add_parser("vector")
     vsub = vector.add_subparsers(dest="command", required=True)
-    add_vector_overlay_commands(vsub)
+    advanced = add_group(vsub, "advanced", "power-user primitives (geometry micro-ops)")
+    add_vector_overlay_commands(
+        add_group(vsub, "overlay", "overlay / set ops, joins, filter"), advanced
+    )
     return parser
 
 
@@ -157,7 +161,10 @@ class TestIntersection:
     def test_writes_overlap(self, pair_a, pair_b, tmp_path):
         """The element-wise intersection writes the two overlap strips."""
         out = str(tmp_path / "x.geojson")
-        assert run(["vector", "intersection", pair_a, out, "--other", pair_b]) == 0
+        assert (
+            run(["vector", "overlay", "intersection", pair_a, out, "--other", pair_b])
+            == 0
+        )
         back = FeatureCollection.read_file(out)
         assert len(back) == 2
         assert back.total_bounds[0] == 1.0, (
@@ -169,6 +176,7 @@ class TestIntersection:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "intersection",
                 pair_a,
                 str(tmp_path / "o.geojson"),
@@ -188,7 +196,10 @@ class TestDifference:
     def test_writes_remainder(self, pair_a, pair_b, tmp_path):
         """The difference keeps the non-overlapping remainder of each feature."""
         out = str(tmp_path / "d.geojson")
-        assert run(["vector", "difference", pair_a, out, "--other", pair_b]) == 0
+        assert (
+            run(["vector", "overlay", "difference", pair_a, out, "--other", pair_b])
+            == 0
+        )
         back = FeatureCollection.read_file(out)
         assert len(back) == 2
         assert back.total_bounds[0] == 0.0, "the left edge of feature 0 survives"
@@ -198,6 +209,7 @@ class TestDifference:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "difference",
                 pair_a,
                 str(tmp_path / "o.geojson"),
@@ -215,7 +227,17 @@ class TestSymmetricDifference:
     def test_writes_symmetric(self, pair_a, pair_b, tmp_path):
         """The symmetric difference writes both exclusive parts per pair."""
         out = str(tmp_path / "s.geojson")
-        rc = run(["vector", "symmetric-difference", pair_a, out, "--other", pair_b])
+        rc = run(
+            [
+                "vector",
+                "overlay",
+                "symmetric-difference",
+                pair_a,
+                out,
+                "--other",
+                pair_b,
+            ]
+        )
         assert rc == 0
         back = FeatureCollection.read_file(out)
         assert len(back) == 2
@@ -227,6 +249,7 @@ class TestSymmetricDifference:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "symmetric-difference",
                 pair_a,
                 str(tmp_path / "o.geojson"),
@@ -244,7 +267,7 @@ class TestUnion:
     def test_writes_union(self, pair_a, pair_b, tmp_path):
         """The element-wise union merges each overlapping pair into one polygon."""
         out = str(tmp_path / "u.geojson")
-        assert run(["vector", "union", pair_a, out, "--other", pair_b]) == 0
+        assert run(["vector", "overlay", "union", pair_a, out, "--other", pair_b]) == 0
         back = FeatureCollection.read_file(out)
         assert len(back) == 2
         assert back.total_bounds[2] == 7.0, "feature 1's union reaches x=7"
@@ -254,6 +277,7 @@ class TestUnion:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "union",
                 pair_a,
                 str(tmp_path / "o.geojson"),
@@ -271,7 +295,7 @@ class TestIntersectionAll:
     def test_disjoint_gives_empty(self, pair_a, tmp_path):
         """Intersecting all disjoint features yields a single (empty) geometry."""
         out = str(tmp_path / "ia.geojson")
-        assert run(["vector", "intersection-all", pair_a, out]) == 0
+        assert run(["vector", "overlay", "intersection-all", pair_a, out]) == 0
         back = FeatureCollection.read_file(out)
         assert len(back) == 1
 
@@ -280,6 +304,7 @@ class TestIntersectionAll:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "intersection-all",
                 str(tmp_path / "nope.geojson"),
                 str(tmp_path / "o.geojson"),
@@ -295,14 +320,17 @@ class TestUnionAll:
     def test_writes_single_union(self, pair_a, tmp_path):
         """union-all collapses the layer to one multi-part geometry."""
         out = str(tmp_path / "ua.geojson")
-        assert run(["vector", "union-all", pair_a, out, "--method", "unary"]) == 0
+        assert (
+            run(["vector", "overlay", "union-all", pair_a, out, "--method", "unary"])
+            == 0
+        )
         back = FeatureCollection.read_file(out)
         assert len(back) == 1
 
     def test_grid_size_accepted(self, pair_a, tmp_path):
         """--grid-size is forwarded and still produces one geometry."""
         out = str(tmp_path / "uag.geojson")
-        rc = run(["vector", "union-all", pair_a, out, "--grid-size", "0.5"])
+        rc = run(["vector", "overlay", "union-all", pair_a, out, "--grid-size", "0.5"])
         assert rc == 0
         assert len(FeatureCollection.read_file(out)) == 1
 
@@ -312,6 +340,7 @@ class TestUnionAll:
             run(
                 [
                     "vector",
+                    "overlay",
                     "union-all",
                     pair_a,
                     str(tmp_path / "o.geojson"),
@@ -331,6 +360,7 @@ class TestOverlay:
             [
                 "vector",
                 "overlay",
+                "apply",
                 _COELLO_POLYGONS,
                 out,
                 "--right",
@@ -350,6 +380,7 @@ class TestOverlay:
                 [
                     "vector",
                     "overlay",
+                    "apply",
                     _COELLO_POLYGONS,
                     str(tmp_path / "o.geojson"),
                     "--right",
@@ -365,6 +396,7 @@ class TestOverlay:
             [
                 "vector",
                 "overlay",
+                "apply",
                 _COELLO_POLYGONS,
                 str(tmp_path / "o.geojson"),
                 "--right",
@@ -381,13 +413,13 @@ class TestDissolve:
     def test_dissolve_all(self, pair_a, tmp_path):
         """A plain dissolve merges every feature into one row."""
         out = str(tmp_path / "di.geojson")
-        assert run(["vector", "dissolve", pair_a, out]) == 0
+        assert run(["vector", "overlay", "dissolve", pair_a, out]) == 0
         assert len(FeatureCollection.read_file(out)) == 1
 
     def test_dissolve_by_keeps_groups(self, pair_a, tmp_path):
         """Dissolving by a distinct column keeps one row per group."""
         out = str(tmp_path / "dib.geojson")
-        assert run(["vector", "dissolve", pair_a, out, "--by", "id"]) == 0
+        assert run(["vector", "overlay", "dissolve", pair_a, out, "--by", "id"]) == 0
         assert len(FeatureCollection.read_file(out)) == 2
 
     def test_missing_src_exits_one(self, tmp_path, capsys):
@@ -395,6 +427,7 @@ class TestDissolve:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "dissolve",
                 str(tmp_path / "nope.geojson"),
                 str(tmp_path / "o.geojson"),
@@ -413,6 +446,7 @@ class TestSjoin:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "sjoin",
                 _COELLO_POLYGONS,
                 out,
@@ -431,6 +465,7 @@ class TestSjoin:
             run(
                 [
                     "vector",
+                    "overlay",
                     "sjoin",
                     _COELLO_POLYGONS,
                     str(tmp_path / "o.geojson"),
@@ -446,6 +481,7 @@ class TestSjoin:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "sjoin",
                 _COELLO_POLYGONS,
                 str(tmp_path / "o.geojson"),
@@ -464,7 +500,15 @@ class TestSjoinNearest:
         """A nearest join matches every left feature to its closest right one."""
         out = str(tmp_path / "sn.geojson")
         rc = run(
-            ["vector", "sjoin-nearest", _COELLO_POLYGONS, out, "--right", _G_POLYGONS]
+            [
+                "vector",
+                "overlay",
+                "sjoin-nearest",
+                _COELLO_POLYGONS,
+                out,
+                "--right",
+                _G_POLYGONS,
+            ]
         )
         assert rc == 0
         assert len(FeatureCollection.read_file(out)) >= 4
@@ -473,10 +517,21 @@ class TestSjoinNearest:
         """A tiny --max-distance drops matches beyond it (fewer rows)."""
         wide = str(tmp_path / "wide.geojson")
         narrow = str(tmp_path / "narrow.geojson")
-        run(["vector", "sjoin-nearest", _COELLO_POLYGONS, wide, "--right", _G_POLYGONS])
+        run(
+            [
+                "vector",
+                "overlay",
+                "sjoin-nearest",
+                _COELLO_POLYGONS,
+                wide,
+                "--right",
+                _G_POLYGONS,
+            ]
+        )
         rc = run(
             [
                 "vector",
+                "overlay",
                 "sjoin-nearest",
                 _COELLO_POLYGONS,
                 narrow,
@@ -496,6 +551,7 @@ class TestSjoinNearest:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "sjoin-nearest",
                 _COELLO_POLYGONS,
                 str(tmp_path / "o.geojson"),
@@ -513,7 +569,20 @@ class TestClipByRect:
     def test_clip_window(self, pair_a, tmp_path):
         """clip-by-rect trims the layer to the requested window."""
         out = str(tmp_path / "cr.geojson")
-        rc = run(["vector", "clip-by-rect", pair_a, out, "--rect", "0", "0", "2", "2"])
+        rc = run(
+            [
+                "vector",
+                "overlay",
+                "clip-by-rect",
+                pair_a,
+                out,
+                "--rect",
+                "0",
+                "0",
+                "2",
+                "2",
+            ]
+        )
         assert rc == 0
         back = FeatureCollection.read_file(out)
         assert back.total_bounds[2] <= 2.0, "nothing survives beyond x=2"
@@ -524,6 +593,7 @@ class TestClipByRect:
             run(
                 [
                     "vector",
+                    "overlay",
                     "clip-by-rect",
                     pair_a,
                     str(tmp_path / "o.geojson"),
@@ -541,7 +611,12 @@ class TestSharedPaths:
     def test_shared_segment(self, lines_a, lines_b, tmp_path):
         """shared-paths writes the common segment of two lines."""
         out = str(tmp_path / "sp.geojson")
-        assert run(["vector", "shared-paths", lines_a, out, "--other", lines_b]) == 0
+        assert (
+            run(
+                ["vector", "advanced", "shared-paths", lines_a, out, "--other", lines_b]
+            )
+            == 0
+        )
         assert len(FeatureCollection.read_file(out)) == 1
 
     def test_missing_other_exits_one(self, lines_a, tmp_path, capsys):
@@ -549,6 +624,7 @@ class TestSharedPaths:
         rc = run(
             [
                 "vector",
+                "advanced",
                 "shared-paths",
                 lines_a,
                 str(tmp_path / "o.geojson"),
@@ -568,7 +644,20 @@ class TestShortestLine:
     def test_writes_connectors(self, lines_a, lines_b, tmp_path):
         """shortest-line writes the nearest-point connector line per pair."""
         out = str(tmp_path / "sl.geojson")
-        assert run(["vector", "shortest-line", lines_a, out, "--other", lines_b]) == 0
+        assert (
+            run(
+                [
+                    "vector",
+                    "advanced",
+                    "shortest-line",
+                    lines_a,
+                    out,
+                    "--other",
+                    lines_b,
+                ]
+            )
+            == 0
+        )
         back = FeatureCollection.read_file(out)
         assert len(back) == 1
         geom_types = {str(t) for t in back.geometry.geom_type.dropna().unique()}
@@ -579,6 +668,7 @@ class TestShortestLine:
         rc = run(
             [
                 "vector",
+                "advanced",
                 "shortest-line",
                 lines_a,
                 str(tmp_path / "o.geojson"),
@@ -596,7 +686,7 @@ class TestExplode:
     def test_splits_multipart(self, multipart, tmp_path):
         """explode turns a single two-part MultiPolygon into two single-part rows."""
         out = str(tmp_path / "ex.geojson")
-        assert run(["vector", "explode", multipart, out]) == 0
+        assert run(["vector", "overlay", "explode", multipart, out]) == 0
         back = FeatureCollection.read_file(out)
         assert len(back) == 2
 
@@ -605,6 +695,7 @@ class TestExplode:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "explode",
                 str(tmp_path / "nope.geojson"),
                 str(tmp_path / "o.geojson"),
@@ -623,6 +714,7 @@ class TestFilter:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "filter",
                 _COELLO_POLYGONS,
                 out,
@@ -643,6 +735,7 @@ class TestFilter:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "filter",
                 _COELLO_POLYGONS,
                 str(tmp_path / "o.geojson"),
@@ -662,6 +755,7 @@ class TestFilter:
         rc = run(
             [
                 "vector",
+                "overlay",
                 "filter",
                 _COELLO_POLYGONS,
                 out,
@@ -682,6 +776,7 @@ class TestFilter:
             run(
                 [
                     "vector",
+                    "overlay",
                     "filter",
                     _COELLO_POLYGONS,
                     str(tmp_path / "o.geojson"),
@@ -699,7 +794,17 @@ class TestMainErrorContract:
     def test_shared_paths_non_lineal_errors_cleanly(self, tmp_path, capsys):
         """shared-paths on polygons raises GEOSException, mapped to a clean error."""
         out = str(tmp_path / "sp.geojson")
-        rc = main(["vector", "shared-paths", _G_POLYGONS, out, "--other", _G_POLYGONS])
+        rc = main(
+            [
+                "vector",
+                "advanced",
+                "shared-paths",
+                _G_POLYGONS,
+                out,
+                "--other",
+                _G_POLYGONS,
+            ]
+        )
         err = capsys.readouterr().err
         assert rc == 1
         assert "unexpected failure" not in err
@@ -708,7 +813,9 @@ class TestMainErrorContract:
     def test_dissolve_bad_by_errors_cleanly(self, tmp_path, capsys):
         """dissolve with an unknown --by column exits 1 with a clean error."""
         out = str(tmp_path / "ds.geojson")
-        rc = main(["vector", "dissolve", _G_POLYGONS, out, "--by", "nosuchcol"])
+        rc = main(
+            ["vector", "overlay", "dissolve", _G_POLYGONS, out, "--by", "nosuchcol"]
+        )
         err = capsys.readouterr().err
         assert rc == 1
         assert "unexpected failure" not in err
@@ -717,7 +824,7 @@ class TestMainErrorContract:
     def test_overlay_writes_requested_format(self, tmp_path):
         """intersection-all to .shp writes a real shapefile (sidecars present), not GeoJSON (H1)."""
         out = tmp_path / "inter.shp"
-        rc = main(["vector", "intersection-all", _G_POLYGONS, str(out)])
+        rc = main(["vector", "overlay", "intersection-all", _G_POLYGONS, str(out)])
         assert rc == 0
         assert (tmp_path / "inter.shx").exists()
         assert (tmp_path / "inter.dbf").exists()
@@ -726,7 +833,17 @@ class TestMainErrorContract:
         """Two layers in different CRS exit 1 with a clear 'different CRS' error (M1)."""
         geog = str(_DATA / "geometries" / "multi-polygons.geojson")  # EPSG:4326
         out = str(tmp_path / "x.geojson")
-        rc = main(["vector", "intersection", _COELLO_POLYGONS, out, "--other", geog])
+        rc = main(
+            [
+                "vector",
+                "overlay",
+                "intersection",
+                _COELLO_POLYGONS,
+                out,
+                "--other",
+                geog,
+            ]
+        )
         err = capsys.readouterr().err
         assert rc == 1  # _COELLO_POLYGONS is EPSG:32618
         assert "different CRS" in err

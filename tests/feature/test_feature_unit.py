@@ -373,7 +373,7 @@ class TestExplodeGdf:
 
     def test_no_multipolygon_unchanged(self, simple_polygon_gdf: GeoDataFrame):
         """A GDF without multi-geometries should be returned with same row count."""
-        result = _explode_multipart(simple_polygon_gdf.copy(), geometry="multipolygon")
+        result = _explode_multipart(simple_polygon_gdf.copy(), geom_type="multipolygon")
         assert len(result) == len(simple_polygon_gdf)
 
     def test_input_gdf_not_mutated(self):
@@ -394,7 +394,7 @@ class TestExplodeGdf:
         original_len = len(gdf)
         original_first_type = gdf.geometry.iloc[0].geom_type
 
-        _explode_multipart(gdf, geometry="multipolygon")
+        _explode_multipart(gdf, geom_type="multipolygon")
 
         # Input row count + geometries are unchanged.
         assert len(gdf) == original_len, (
@@ -418,7 +418,7 @@ class TestExplodeGdf:
         single = box(10.0, 10.0, 11.0, 11.0)
         gdf = gpd.GeoDataFrame(geometry=[mpoly, single], crs="EPSG:4326")
 
-        out = _explode_multipart(gdf, geometry="multipolygon")
+        out = _explode_multipart(gdf, geom_type="multipolygon")
         assert out is not gdf, "return value must be a fresh GeoDataFrame"
         assert len(out) == 4, f"expected 4 exploded rows, got {len(out)}"
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_join import add_ugrid_join_commands
 from pyramids.netcdf.ugrid import MeshDataset
 
@@ -33,7 +34,7 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_join_commands(msub)
+    add_ugrid_join_commands(add_group(msub, "join", "merge/join meshes and data"))
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -61,23 +62,27 @@ class TestMeshConcat:
         """concat writes a readable same-topology mesh from two inputs."""
         first, second = _two_copies(tmp_path)
         out = str(tmp_path / "concat.nc")
-        assert _dispatch(["mesh", "concat", out, "--inputs", first, second]) == 0
+        assert (
+            _dispatch(["mesh", "join", "concat", out, "--inputs", first, second]) == 0
+        )
         assert MeshDataset.read_file(out).n_face > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second concat without --overwrite is refused."""
         first, second = _two_copies(tmp_path)
         out = str(tmp_path / "c.nc")
-        assert _dispatch(["mesh", "concat", out, "--inputs", first, second]) == 0
+        assert (
+            _dispatch(["mesh", "join", "concat", out, "--inputs", first, second]) == 0
+        )
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "concat", out, "--inputs", first, second])
+            _dispatch(["mesh", "join", "concat", out, "--inputs", first, second])
 
     def test_single_input_raises(self, tmp_path):
         """A join with fewer than two inputs is a clean ValueError."""
         first, _second = _two_copies(tmp_path)
         out = str(tmp_path / "x.nc")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "concat", out, "--inputs", first])
+            _dispatch(["mesh", "join", "concat", out, "--inputs", first])
 
 
 class TestMeshMerge:
@@ -88,7 +93,17 @@ class TestMeshMerge:
         first, second = _two_copies(tmp_path)
         out = str(tmp_path / "merge.nc")
         rc = _dispatch(
-            ["mesh", "merge", out, "--inputs", first, second, "--compat", "override"]
+            [
+                "mesh",
+                "join",
+                "merge",
+                out,
+                "--inputs",
+                first,
+                second,
+                "--compat",
+                "override",
+            ]
         )
         assert rc == 0
         assert len(MeshDataset.read_file(out).data_variable_names) > 0
@@ -98,7 +113,7 @@ class TestMeshMerge:
         first, second = _two_copies(tmp_path)
         out = str(tmp_path / "m.nc")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "merge", out, "--inputs", first, second])
+            _dispatch(["mesh", "join", "merge", out, "--inputs", first, second])
 
     def test_refuses_existing(self, tmp_path):
         """A second merge without --overwrite is refused."""
@@ -108,6 +123,7 @@ class TestMeshMerge:
             _dispatch(
                 [
                     "mesh",
+                    "join",
                     "merge",
                     out,
                     "--inputs",
@@ -123,6 +139,7 @@ class TestMeshMerge:
             _dispatch(
                 [
                     "mesh",
+                    "join",
                     "merge",
                     out,
                     "--inputs",
@@ -138,4 +155,4 @@ class TestMeshMerge:
         first, _second = _two_copies(tmp_path)
         out = str(tmp_path / "x.nc")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "merge", out, "--inputs", first])
+            _dispatch(["mesh", "join", "merge", out, "--inputs", first])

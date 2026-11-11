@@ -33,6 +33,7 @@ from collections.abc import Iterator
 import numpy as np
 import pandas as pd
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base.georeference import GeoReference
@@ -448,7 +449,7 @@ def _cmd_dataset_like(args: argparse.Namespace) -> int:
 
 def _add_from_bytes(sub: argparse._SubParsersAction) -> None:
     """Register ``from-bytes``."""
-    parser = sub.add_parser("from-bytes", help="open a raster held as raw bytes")
+    parser = sub.add_parser("bytes", help="open a raster held as raw bytes")
     parser.add_argument(
         "input", nargs="?", help="file of raw raster bytes (omit with --stdin)"
     )
@@ -469,7 +470,7 @@ def _add_from_bytes(sub: argparse._SubParsersAction) -> None:
 def _add_from_dataframe(sub: argparse._SubParsersAction) -> None:
     """Register ``from-dataframe``."""
     parser = sub.add_parser(
-        "from-dataframe", help="rebuild a raster from a (band, y, x) CSV table"
+        "dataframe", help="rebuild a raster from a (band, y, x) CSV table"
     )
     parser.add_argument("csv", help="source CSV path")
     parser.add_argument("output", help=_HELP_OUTPUT)
@@ -510,9 +511,7 @@ def _add_grid_options(parser: argparse.ArgumentParser) -> None:
 
 def _add_from_points(sub: argparse._SubParsersAction) -> None:
     """Register ``from-points``."""
-    parser = sub.add_parser(
-        "from-points", help="interpolate a point vector layer to a grid"
-    )
+    parser = sub.add_parser("points", help="interpolate a point vector layer to a grid")
     parser.add_argument("vector", help="source point vector path")
     parser.add_argument("output", help=_HELP_OUTPUT)
     parser.add_argument(
@@ -531,7 +530,7 @@ def _add_from_points(sub: argparse._SubParsersAction) -> None:
 
 def _add_from_point_arrays(sub: argparse._SubParsersAction) -> None:
     """Register ``from-point-arrays``."""
-    parser = sub.add_parser("from-point-arrays", help="grid raw x/y/z columns of a CSV")
+    parser = sub.add_parser("point-arrays", help="grid raw x/y/z columns of a CSV")
     parser.add_argument("csv", help="source CSV path")
     parser.add_argument("output", help=_HELP_OUTPUT)
     parser.add_argument("--x", required=True, help="column holding the x coordinates")
@@ -551,7 +550,7 @@ def _add_from_point_arrays(sub: argparse._SubParsersAction) -> None:
 def _add_from_band_files(sub: argparse._SubParsersAction) -> None:
     """Register ``from-band-files``."""
     parser = sub.add_parser(
-        "from-band-files", help="stack single-band rasters into a multiband raster"
+        "band-files", help="stack single-band rasters into a multiband raster"
     )
     parser.add_argument(
         "files", nargs="+", help="single-band raster paths (one per band, in order)"
@@ -583,7 +582,7 @@ def _add_from_band_files(sub: argparse._SubParsersAction) -> None:
 def _add_from_archive(sub: argparse._SubParsersAction) -> None:
     """Register ``from-archive``."""
     parser = sub.add_parser(
-        "from-archive", help="stack the raster members of a zip/tar/gzip archive"
+        "archive", help="stack the raster members of a zip/tar/gzip archive"
     )
     parser.add_argument(
         "archive", help="archive path or URL (.zip / .tar / .tar.gz / .gz)"
@@ -622,7 +621,7 @@ def _add_from_archive(sub: argparse._SubParsersAction) -> None:
 
 def _add_from_zarr(sub: argparse._SubParsersAction) -> None:
     """Register ``from-zarr``."""
-    parser = sub.add_parser("from-zarr", help="read a pyramids-written Zarr store")
+    parser = sub.add_parser("zarr", help="read a pyramids-written Zarr store")
     parser.add_argument("store", help="input store (path / fsspec URL)")
     parser.add_argument("output", help=_HELP_OUTPUT)
     parser.add_argument(
@@ -731,13 +730,15 @@ def add_dataset_read_commands(sub: argparse._SubParsersAction) -> None:
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
-    _add_from_bytes(sub)
-    _add_from_dataframe(sub)
-    _add_from_points(sub)
-    _add_from_point_arrays(sub)
-    _add_from_band_files(sub)
-    _add_from_archive(sub)
-    _add_from_zarr(sub)
+    # from-* readers group under `raster import <source>`; create*/*-like stay raster verbs.
+    import_sub = add_group(sub, "import", "read/open a raster from another source")
+    _add_from_bytes(import_sub)
+    _add_from_dataframe(import_sub)
+    _add_from_points(import_sub)
+    _add_from_point_arrays(import_sub)
+    _add_from_band_files(import_sub)
+    _add_from_archive(import_sub)
+    _add_from_zarr(import_sub)
     _add_create(sub)
     _add_create_empty(sub)
     _add_empty_like(sub)

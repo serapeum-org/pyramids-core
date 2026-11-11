@@ -4,7 +4,7 @@ A 3-D mesh output puts scalars on the `n` layer **centres** and vertical fluxes 
 layer **interfaces**, so a file carrying both 20 and 21 is correct rather than contradictory.
 `n_layers` reports 20, the layer count proper -- which is right, and was also the whole of the
 information available: nothing said a variable in the dataset had 21 layers, so
-`range(ds.n_layers)` over an interface variable silently skipped its last interface.
+`range(ds.n_layer)` over an interface variable silently skipped its last interface.
 `n_layer_interfaces` makes that visible instead of leaving it to be inferred.
 """
 
@@ -42,11 +42,11 @@ class TestLayerCentreCount:
         """A dataset with only per-element variables has no layer count."""
         dataset = _layered({})
 
-        assert dataset.n_layers is None, f"expected None, got {dataset.n_layers!r}"
+        assert dataset.n_layer is None, f"expected None, got {dataset.n_layer!r}"
 
     def test_a_single_count_is_that_count(self):
         """Centres only: the obvious case."""
-        assert _layered({"temp": 20}).n_layers == 20
+        assert _layered({"temp": 20}).n_layer == 20
 
     def test_the_centre_interface_pair_reports_the_centre_count(self):
         """20 centres and 21 interfaces is a 20-layer mesh.
@@ -57,11 +57,11 @@ class TestLayerCentreCount:
             behaviour) made `n_layers` unusable on a real file; reporting 21 would name a
             layer count the mesh does not have.
         """
-        assert _layered({"temp": 20, "w": 21}).n_layers == 20
+        assert _layered({"temp": 20, "w": 21}).n_layer == 20
 
     def test_the_pair_is_order_independent(self):
         """The interface variable coming first changes nothing."""
-        assert _layered({"w": 21, "temp": 20}).n_layers == 20
+        assert _layered({"w": 21, "temp": 20}).n_layer == 20
 
     def test_a_real_disagreement_still_raises(self):
         """Two counts that are not a centre/interface pair are an inconsistency.
@@ -71,7 +71,7 @@ class TestLayerCentreCount:
             there is no count to report and guessing one would be worse than refusing.
         """
         with pytest.raises(ValueError, match="disagree on their layer count"):
-            _ = _layered({"temp": 20, "other": 25}).n_layers
+            _ = _layered({"temp": 20, "other": 25}).n_layer
 
     def test_three_consecutive_counts_also_raise(self):
         """`{20, 21, 22}` is not a pair either, though each neighbour differs by one.
@@ -82,7 +82,7 @@ class TestLayerCentreCount:
             inconsistency and the narrow test is what catches it.
         """
         with pytest.raises(ValueError, match="disagree on their layer count"):
-            _ = _layered({"a": 20, "b": 21, "c": 22}).n_layers
+            _ = _layered({"a": 20, "b": 21, "c": 22}).n_layer
 
 
 class TestLayerInterfaceCount:
@@ -92,9 +92,9 @@ class TestLayerInterfaceCount:
         """20 centres and 21 interfaces: both counts are now readable."""
         dataset = _layered({"temp": 20, "w": 21})
 
-        assert dataset.n_layers == 20
-        assert dataset.n_layer_interfaces == 21, (
-            f"the interface count should be visible, got {dataset.n_layer_interfaces!r}"
+        assert dataset.n_layer == 20
+        assert dataset.n_layer_interface == 21, (
+            f"the interface count should be visible, got {dataset.n_layer_interface!r}"
         )
 
     def test_it_is_none_when_nothing_sits_on_interfaces(self):
@@ -107,15 +107,15 @@ class TestLayerInterfaceCount:
         """
         dataset = _layered({"temp": 20})
 
-        assert dataset.n_layers == 20
-        assert dataset.n_layer_interfaces is None, (
+        assert dataset.n_layer == 20
+        assert dataset.n_layer_interface is None, (
             f"nothing sits on interfaces, so expected None, got "
-            f"{dataset.n_layer_interfaces!r}"
+            f"{dataset.n_layer_interface!r}"
         )
 
     def test_it_is_none_with_no_layered_variable(self):
         """No layers at all means no interfaces either."""
-        assert _layered({}).n_layer_interfaces is None
+        assert _layered({}).n_layer_interface is None
 
     def test_it_raises_on_the_same_inconsistency_as_n_layers(self):
         """The two properties agree about what is readable.
@@ -125,4 +125,4 @@ class TestLayerInterfaceCount:
             inconsistent set would let a caller past the guard the other property applies.
         """
         with pytest.raises(ValueError, match="disagree on their layer count"):
-            _ = _layered({"temp": 20, "other": 25}).n_layer_interfaces
+            _ = _layered({"temp": 20, "other": 25}).n_layer_interface

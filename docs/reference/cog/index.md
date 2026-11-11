@@ -43,7 +43,7 @@ classDiagram
 | Structured inspection | `cog_info` · `COGInfo` · `OverviewLevel` | [Read & inspect](read.md) |
 | Validate | `validate` · `ValidationReport` · `Dataset.is_cog` | [Read & inspect](read.md) |
 | Overview-decimated reads | `read_part` · `preview` · `point` · `read_tile` | [Read & inspect](read.md) |
-| Command line | `pyramids cog create\|validate\|info` | [CLI](cli.md) |
+| Command line | `pyramids raster cog create\|validate\|info` | [CLI](cli.md) |
 
 See the [COG cookbook](../../tutorials/cog.md) for an end-to-end walkthrough and the
 [COG basics notebook](../../examples/cog/cog-basics.ipynb) for a runnable, offline example.

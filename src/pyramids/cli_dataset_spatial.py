@@ -2,14 +2,14 @@
 
 Holds the top-level raster commands that combine, align, reproject, reshape, or
 sample a :class:`~pyramids.dataset.Dataset` and did not fit the core group in
-:mod:`pyramids.cli_dataset`: ``align``, ``overlay``, ``combine``,
+:mod:`pyramids.cli_dataset`: ``align``, ``combine``,
 ``warped-view``, ``wrap-longitude``, ``translate``, ``transect``, and
 ``extract``. Each handler is a thin 1:1 wrapper over an existing ``Dataset``
 call — no business logic lives here — and registers itself on the top-level
 parser via :func:`add_dataset_spatial_commands`.
 
 Two-raster operations whose result is only meaningful when the operands share a
-grid (``overlay``, ``combine``) guard the pairing with
+grid (``combine``) guard the pairing with
 :func:`pyramids._cli_shared.require_matching_crs` up front, so a CRS mismatch
 raises a clean message instead of producing geometrically meaningless output.
 ``align`` deliberately does **not** guard, because it reprojects a source whose
@@ -19,7 +19,7 @@ a supported use, not a mistake.
 Deferred: none. Every assigned method maps onto a one-shot verb — the
 ``Dataset``-returning ones (``align``/``combine``/``warped-view``/
 ``wrap-longitude``/``translate``) write their result to an output raster, and
-the data-returning ones (``overlay``/``transect``/``extract``) write a profile /
+the data-returning ones (``transect``/``extract``) write a profile /
 table to a CSV or JSON output (or print it with ``--json``).
 """
 
@@ -28,7 +28,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sys
 
 import numpy as np
 from shapely.geometry import LineString
@@ -55,7 +54,7 @@ _HELP_BAND = "zero-based band index"
 # Named element-wise binary operations for `combine`, each a numpy ufunc taking
 # the two operands' matching cells. Kept to the unambiguous, order-independent or
 # clearly-ordered arithmetic a one-shot verb can name without a free-form
-# expression (that is what `pyramids calc` is for).
+# expression (that is what `pyramids raster calc` is for).
 _COMBINE_OPS = {
     "add": np.add,
     "subtract": np.subtract,
@@ -67,7 +66,7 @@ _COMBINE_OPS = {
 
 
 def _cmd_align(args: argparse.Namespace) -> int:
-    """Handle `pyramids align` — resample a raster onto a reference raster's grid.
+    """Handle `pyramids raster align` — resample a raster onto a reference raster's grid.
 
     The input is resampled onto the reference's coordinate system, dimensions,
     and cell size (``Dataset.align``). This is *not* guarded by
@@ -90,56 +89,8 @@ def _cmd_align(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_overlay(args: argparse.Namespace) -> int:
-    """Handle the deprecated `pyramids overlay` — group a raster's values by a class raster.
-
-    .. deprecated::
-        Use ``pyramids zonal-stats <raster> --classes <class_raster>`` instead. This verb warns on stderr and
-        still prints the per-class value counts / mapping for back-compat.
-
-    For each class in the (aligned) class raster, collects the base-raster values
-    that fall in that class. Prints a per-class value count by default, or the full
-    ``{class: [values]}`` mapping with ``--json``.
-
-    Args:
-        args: Parsed arguments with ``input``, ``classes``, ``band``,
-            ``exclude_value``, and ``json``.
-
-    Returns:
-        int: ``0`` on success.
-    """
-    base = Dataset.read_file(args.input)
-    classes = Dataset.read_file(args.classes)
-    require_matching_crs(base, classes)
-    with map_lookup_errors():
-        gdf = base.zonal_stats(
-            classes,
-            stats=("count",),
-            band=args.band,
-            exclude_value=args.exclude_value,
-            raw_values=True,
-        )
-    grouped = {
-        key: list(vals) for key, vals in zip(gdf.index, gdf["raw_values"]) if len(vals)
-    }
-    payload = {
-        str(key): [float(value) for value in values] for key, values in grouped.items()
-    }
-    if args.json:
-        print(json.dumps(json_sanitize(payload)))
-    else:
-        for key, values in payload.items():
-            print(f"class {key}: {len(values)} value(s)")
-    print(
-        "warning: the 'overlay' command is deprecated and will be removed in a future "
-        "release; use 'zonal-stats <raster> --classes <class_raster>'.",
-        file=sys.stderr,
-    )
-    return 0
-
-
 def _cmd_combine(args: argparse.Namespace) -> int:
-    """Handle `pyramids combine` — combine two aligned rasters cell by cell.
+    """Handle `pyramids raster combine` — combine two aligned rasters cell by cell.
 
     Applies the ``--op`` element-wise binary operation to the two rasters'
     matching cells (``Dataset.combine``) and writes the result. The operands must
@@ -163,7 +114,7 @@ def _cmd_combine(args: argparse.Namespace) -> int:
 
 
 def _cmd_warped_view(args: argparse.Namespace) -> int:
-    """Handle `pyramids warped-view` — write an on-the-fly reprojected raster.
+    """Handle `pyramids raster advanced warped-view` — write an on-the-fly reprojected raster.
 
     Builds the lazy warped VRT view (``Dataset.warped_view``) and materialises it
     to the output path. Unlike ``warp`` this can also set an output ``--cell-size``
@@ -190,7 +141,7 @@ def _cmd_warped_view(args: argparse.Namespace) -> int:
 
 
 def _cmd_wrap_longitude(args: argparse.Namespace) -> int:
-    """Handle `pyramids wrap-longitude` — shift a global grid 0..360 -> -180..180.
+    """Handle `pyramids raster advanced wrap-longitude` — shift a global grid 0..360 -> -180..180.
 
     A pure column roll (no resampling) via ``Dataset.wrap_longitude``; the input
     must span the whole globe in the 0..360 frame.
@@ -210,7 +161,7 @@ def _cmd_wrap_longitude(args: argparse.Namespace) -> int:
 
 
 def _cmd_translate(args: argparse.Namespace) -> int:
-    """Handle `pyramids translate` — subset / rescale / retype a raster.
+    """Handle `pyramids raster advanced translate` — subset / rescale / retype a raster.
 
     A ``gdal_translate``-style one-shot over ``Dataset.translate``: extract a
     pixel (``--src-win``) or projected (``--proj-win``) window, rescale values
@@ -329,7 +280,7 @@ def _write_transect(args: argparse.Namespace, profile) -> None:
 
 
 def _cmd_transect(args: argparse.Namespace) -> int:
-    """Handle `pyramids transect` — sample a band along a line.
+    """Handle `pyramids raster advanced transect` — sample a band along a line.
 
     Densifies ``--line`` into ordered positions (a fixed ``--n`` count or one
     roughly every ``--step`` metres) and samples the band at each
@@ -354,7 +305,7 @@ def _cmd_transect(args: argparse.Namespace) -> int:
 
 
 def _cmd_extract(args: argparse.Namespace) -> int:
-    """Handle `pyramids extract` — pull a raster's values (optionally at points).
+    """Handle `pyramids raster extract` — pull a raster's values (optionally at points).
 
     Reads every cell value (``Dataset.extract``), dropping no-data and any
     ``--exclude-value``; with ``--mask`` (a point vector) it reads the values at
@@ -405,24 +356,6 @@ def _add_align(sub: argparse._SubParsersAction) -> None:
     )
     align.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     align.set_defaults(func=_cmd_align)
-
-
-def _add_overlay(sub: argparse._SubParsersAction) -> None:
-    """Register the ``overlay`` command on ``sub``."""
-    overlay = sub.add_parser(
-        "overlay", help="group a raster's values by a class raster"
-    )
-    overlay.add_argument("input", help="base raster whose values to group")
-    overlay.add_argument("classes", help="aligned class raster")
-    overlay.add_argument("--band", type=int, default=0, help=_HELP_BAND)
-    overlay.add_argument(
-        "--exclude-value",
-        dest="exclude_value",
-        type=float,
-        help="value to drop from the grouped output (in physical units)",
-    )
-    overlay.add_argument("--json", action="store_true", help=_HELP_JSON)
-    overlay.set_defaults(func=_cmd_overlay)
 
 
 def _add_combine(sub: argparse._SubParsersAction) -> None:
@@ -598,17 +531,21 @@ def _add_extract(sub: argparse._SubParsersAction) -> None:
     extract.set_defaults(func=_cmd_extract)
 
 
-def add_dataset_spatial_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_spatial_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the raster spatial / analysis commands on ``sub``.
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     _add_align(sub)
-    _add_overlay(sub)
     _add_combine(sub)
-    _add_warped_view(sub)
-    _add_wrap_longitude(sub)
-    _add_translate(sub)
-    _add_transect(sub)
+    _add_warped_view(advanced or sub)
+    _add_wrap_longitude(advanced or sub)
+    _add_translate(advanced or sub)
+    _add_transect(advanced or sub)
     _add_extract(sub)

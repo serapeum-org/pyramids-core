@@ -23,7 +23,7 @@ classDiagram
       +fan_triangles
       +get_face_polygon(i)
       +build_edge_connectivity()
-      +from_gdal_group(rg, topo)$
+      +_from_gdal_group(rg, topo)$
     }
     class Connectivity {
       data · fill_value · cf_role

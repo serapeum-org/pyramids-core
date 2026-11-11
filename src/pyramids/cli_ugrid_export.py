@@ -9,7 +9,7 @@ raster, a Zarr store, an image, or a raw byte buffer. No mesh logic lives here.
 These sit alongside the Phase 1 ``mesh info|extract|convert`` verbs in
 :mod:`pyramids.cli_ugrid`; the registrator here is wired onto the same ``mesh``
 sub-parser by the top-level CLI. The existing ``mesh convert`` already wraps
-``to_feature_collection``; the ``to-geodataframe`` verb here is its distinct
+``to_feature_collection``; the ``export geodataframe`` verb here is its distinct
 sibling (``MeshDataset.to_geodataframe``) and does not duplicate it.
 
 Voronoi:
@@ -46,7 +46,7 @@ _HELP_DRIVER = "OGR driver (default: inferred from the extension)"
 
 
 def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-file`` — re-write a mesh through a writer.
+    """Handle ``pyramids mesh export file`` — re-write a mesh through a writer.
 
     Round-trips the mesh to UGRID NetCDF, or, with ``--driver``, through a
     registered third-party mesh driver (2DM, Selafin, PLY, …).
@@ -65,7 +65,7 @@ def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_geodataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-geodataframe`` — write the mesh as a vector file.
+    """Handle ``pyramids mesh export geodataframe`` — write the mesh as a vector file.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``var``, ``location``,
@@ -107,7 +107,7 @@ def _cmd_mesh_voronoi_polygons(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-dataframe`` — write a tidy table (CSV or Parquet).
+    """Handle ``pyramids mesh export dataframe`` — write a tidy table (CSV or Parquet).
 
     The frame carries one row per element value with ``variable``/``element``/
     coordinate columns; the output format follows the extension (``.parquet`` →
@@ -135,7 +135,7 @@ def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-dataset`` — rasterize a variable to a GeoTIFF.
+    """Handle ``pyramids mesh export dataset`` — rasterize a variable to a GeoTIFF.
 
     Interpolates a mesh variable onto a regular grid and writes the resulting
     raster to ``output``.
@@ -165,7 +165,7 @@ def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-zarr`` — write the mesh to a Zarr store.
+    """Handle ``pyramids mesh export zarr`` — write the mesh to a Zarr store.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``overwrite``.
@@ -181,7 +181,7 @@ def _cmd_mesh_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_image(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-image`` — write a colour-mapped image of a variable.
+    """Handle ``pyramids mesh export image`` — write a colour-mapped image of a variable.
 
     The mesh is rasterised, then the raster's colour mapping (through cleopatra)
     produces the image. The Agg backend is forced first so a headless run never
@@ -210,7 +210,7 @@ def _cmd_mesh_to_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-bytes`` — serialise the mesh to a UGRID NetCDF buffer.
+    """Handle ``pyramids mesh export bytes`` — serialise the mesh to a UGRID NetCDF buffer.
 
     Writes the encoded bytes to ``output`` when given, else to stdout so they can
     be piped.
@@ -235,7 +235,7 @@ def _cmd_mesh_to_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-location`` — remap a variable onto another facet.
+    """Handle ``pyramids mesh export location`` — remap a variable onto another facet.
 
     Averages the contributing elements, so a face field asked for on the nodes
     becomes each node's mean of the surrounding faces, and writes the new mesh.
@@ -257,7 +257,7 @@ def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh to-crs`` — reproject the mesh to a target CRS.
+    """Handle ``pyramids mesh export crs`` — reproject the mesh to a target CRS.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``epsg``, ``overwrite``.
@@ -274,7 +274,7 @@ def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_set_crs(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh set-crs`` — declare the mesh's CRS (no reprojection).
+    """Handle ``pyramids mesh advanced set-crs`` — declare the mesh's CRS (no reprojection).
 
     Exactly one of ``--epsg`` / ``--crs`` must be given; the underlying method
     enforces that and raises a clean error otherwise.
@@ -388,7 +388,7 @@ def _cmd_mesh_attach_data(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh with-variable`` — add a variable from a ``.npy`` array.
+    """Handle ``pyramids mesh advanced with-variable`` — add a variable from a ``.npy`` array.
 
     The values are loaded from a NumPy ``.npy`` file: ``(n_elements,)`` for a
     static variable or ``(n_time, n_elements)`` for a temporal one.
@@ -412,7 +412,7 @@ def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
 
 
 def _cmd_mesh_rename_variable(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh rename-variable`` — rename a data variable.
+    """Handle ``pyramids mesh advanced rename-variable`` — rename a data variable.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``old``, ``new``,
@@ -431,14 +431,12 @@ def _cmd_mesh_rename_variable(args: argparse.Namespace) -> int:
 
 
 def _add_to_file(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-file``.
+    """Register ``mesh export file``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
-    parser = msub.add_parser(
-        "to-file", help="re-write a mesh (UGRID NetCDF or a driver)"
-    )
+    parser = msub.add_parser("file", help="re-write a mesh (UGRID NetCDF or a driver)")
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
     parser.add_argument(
@@ -450,13 +448,13 @@ def _add_to_file(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_geodataframe(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-geodataframe``.
+    """Register ``mesh export geodataframe``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-geodataframe", help="write the mesh elements as a vector file"
+        "geodataframe", help="write the mesh elements as a vector file"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help=_HELP_VECTOR_OUTPUT)
@@ -472,13 +470,13 @@ def _add_to_geodataframe(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_dataframe(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-dataframe``.
+    """Register ``mesh export dataframe``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-dataframe", help="write a tidy value table (CSV, or Parquet by extension)"
+        "dataframe", help="write a tidy value table (CSV, or Parquet by extension)"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help="destination .csv or .parquet path")
@@ -493,13 +491,13 @@ def _add_to_dataframe(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_dataset(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-dataset``.
+    """Register ``mesh export dataset``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-dataset", help="rasterize a mesh variable to a regular-grid GeoTIFF"
+        "dataset", help="rasterize a mesh variable to a regular-grid GeoTIFF"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help="destination raster path")
@@ -532,12 +530,12 @@ def _add_to_dataset(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_zarr(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-zarr``.
+    """Register ``mesh export zarr``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
-    parser = msub.add_parser("to-zarr", help="write the mesh to a Zarr store")
+    parser = msub.add_parser("zarr", help="write the mesh to a Zarr store")
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help="destination Zarr store path")
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
@@ -545,13 +543,13 @@ def _add_to_zarr(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_image(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-image``.
+    """Register ``mesh export image``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-image", help="write a colour-mapped image of a mesh variable (PNG/JPEG)"
+        "image", help="write a colour-mapped image of a mesh variable (PNG/JPEG)"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help="destination image path (e.g. out.png)")
@@ -573,13 +571,13 @@ def _add_to_image(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_bytes(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-bytes``.
+    """Register ``mesh export bytes``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-bytes", help="serialise the mesh to a UGRID NetCDF byte buffer"
+        "bytes", help="serialise the mesh to a UGRID NetCDF byte buffer"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument(
@@ -590,13 +588,13 @@ def _add_to_bytes(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_location(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-location``.
+    """Register ``mesh export location``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
     parser = msub.add_parser(
-        "to-location", help="remap a variable onto another mesh facet (node/edge/face)"
+        "location", help="remap a variable onto another mesh facet (node/edge/face)"
     )
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
@@ -609,12 +607,12 @@ def _add_to_location(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_to_crs(msub: argparse._SubParsersAction) -> None:
-    """Register ``mesh to-crs``.
+    """Register ``mesh export crs``.
 
     Args:
         msub: The ``mesh`` sub-parser action.
     """
-    parser = msub.add_parser("to-crs", help="reproject the mesh to a target CRS")
+    parser = msub.add_parser("crs", help="reproject the mesh to a target CRS")
     parser.add_argument("file", help=_HELP_MESH_FILE)
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
     parser.add_argument(
@@ -800,11 +798,16 @@ def _add_voronoi_polygons(msub: argparse._SubParsersAction) -> None:
     parser.set_defaults(func=_cmd_mesh_voronoi_polygons)
 
 
-def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
+def add_ugrid_export_commands(
+    msub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the mesh convert/export commands on the ``mesh`` sub-parser.
 
     Args:
         msub: The ``mesh`` group's ``add_subparsers`` action (shared with the
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
             Phase 1 ``info``/``extract``/``convert`` verbs).
     """
     _add_to_file(msub)
@@ -817,10 +820,10 @@ def add_ugrid_export_commands(msub: argparse._SubParsersAction) -> None:
     _add_to_bytes(msub)
     _add_to_location(msub)
     _add_to_crs(msub)
-    _add_set_crs(msub)
+    _add_set_crs(advanced or msub)
     _add_burn(msub)
     _add_regrid(msub)
     _add_polygonize(msub)
     _add_attach_data(msub)
-    _add_with_variable(msub)
-    _add_rename_variable(msub)
+    _add_with_variable(advanced or msub)
+    _add_rename_variable(advanced or msub)

@@ -51,7 +51,7 @@ print(georeferenced.bbox)                   # ~ [10, 49, 11, 50]
 From the command line:
 
 ```bash
-pyramids georeference raw.tif out.tif \
+pyramids raster georeference raw.tif out.tif \
     --gcp 0 0 10 50 --gcp 8 0 11 50 --gcp 0 8 10 49 --gcp 8 8 11 49 \
     --gcp-crs 4326
 ```
@@ -73,8 +73,8 @@ if ds.has_rpcs:
 From the command line:
 
 ```bash
-pyramids orthorectify scene.tif ortho.tif --dem dem.tif
-pyramids orthorectify scene.tif ortho.tif --rpc-height 120
+pyramids raster orthorectify scene.tif ortho.tif --dem dem.tif
+pyramids raster orthorectify scene.tif ortho.tif --rpc-height 120
 ```
 
 ## Scope

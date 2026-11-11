@@ -101,7 +101,7 @@ class TestMultiTopology:
 
 class TestLayerSelection:
     def test_n_layers(self):
-        assert _layered(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])).n_layers == 3
+        assert _layered(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])).n_layer == 3
 
     def test_n_layers_is_none_without_layers(self):
         flat = MeshDataset.from_arrays(
@@ -110,7 +110,7 @@ class TestLayerSelection:
             face_node_connectivity=FACES,
             data={"d": np.array([1.0, 2.0])},
         )
-        assert flat.n_layers is None
+        assert flat.n_layer is None
 
     def test_isel_layer_int_collapses_the_axis(self):
         out = _layered(np.array([[1.0, 2.0], [3.0, 4.0]])).isel_layer(1)

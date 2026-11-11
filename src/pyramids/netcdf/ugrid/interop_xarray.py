@@ -16,7 +16,7 @@ scope: every guarded import happens inside the function that needs it, through
 The one encoding trap -- the connectivity ``start_index`` / ``_FillValue`` round-trip -- is handled
 by :func:`_connectivity_to_disk` / :func:`_connectivity_from_disk`, which mirror the write-side
 reverse mapping in :func:`pyramids.netcdf.ugrid.io._write_connectivity_array` and the read-side
-normalisation in :meth:`pyramids.netcdf.ugrid.connectivity.Connectivity.from_gdal_array`. The
+normalisation in :meth:`pyramids.netcdf.ugrid.connectivity.Connectivity._from_gdal_array`. The
 internal 0-indexed / ``-1``-fill arrays are never emitted to xarray.
 """
 
@@ -67,7 +67,13 @@ _FILE_FILL = -999
 #: CF conventions string stamped on the exported dataset, matching the file writer.
 _CONVENTIONS = UGRID_CONVENTIONS
 
-_XARRAY_HINT = extra_hint("xarray is required for UGRID xarray interop.", "interop")
+# xarray is an optional peer dependency, not a pyramids extra (there is no `[interop]` extra), so point
+# users at xarray itself rather than at a non-existent `pyramids-core[interop]` / `pyramids-interop` (#1512).
+_XARRAY_HINT = (
+    "xarray is required for UGRID xarray interop. Install it with one of:\n"
+    "  - PyPI:        pip install xarray\n"
+    "  - conda-forge: conda install -c conda-forge xarray"
+)
 _ZARR_HINT = extra_hint("Zarr IO requires the optional 'zarr' dependency.", "lazy")
 _DASK_HINT = extra_hint(
     "A chunked mesh read requires the optional 'dask' dependency.", "lazy"
@@ -124,7 +130,7 @@ def _connectivity_from_disk(
     """Decode an on-disk connectivity array to the internal 0-indexed / ``-1``-fill form.
 
     The inverse of :func:`_connectivity_to_disk`, mirroring
-    :meth:`pyramids.netcdf.ugrid.connectivity.Connectivity.from_gdal_array`: subtract the
+    :meth:`pyramids.netcdf.ugrid.connectivity.Connectivity._from_gdal_array`: subtract the
     ``start_index`` from the valid entries and remap the file ``_FillValue`` to ``-1``.
 
     Args:
@@ -157,7 +163,7 @@ def _variable_dims(var: MeshVariable, mesh_name: str) -> tuple[str, ...]:
 
     Prefers the variable's own ``dimensions`` when they match its rank (file-read variables carry
     them), so a round trip preserves the exact dimension names -- and therefore
-    :attr:`MeshVariable.time_index` / :attr:`~MeshVariable.has_time`. Otherwise it synthesises names:
+    :attr:`MeshVariable.time_axis_index` / :attr:`~MeshVariable.has_time`. Otherwise it synthesises names:
     the element axis last (keyed to the mesh ``location`` so same-mesh variables share it), a leading
     ``"time"`` axis for a temporal variable, and generic names for any intervening layer axes. The
     element axis is always last, honouring the mesh-variable invariant.
@@ -184,7 +190,7 @@ def _variable_dims(var: MeshVariable, mesh_name: str) -> tuple[str, ...]:
         result = (elem_dim,)
     else:
         leading = [
-            "time" if axis == var.time_index else f"{var.name}_axis{axis}"
+            "time" if axis == var.time_axis_index else f"{var.name}_axis{axis}"
             for axis in range(ndim - 1)
         ]
         result = (*leading, elem_dim)

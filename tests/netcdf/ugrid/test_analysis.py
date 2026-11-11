@@ -155,7 +155,7 @@ class TestNonTimeFirstAxis:
 
     def test_time_index_is_trailing(self):
         mesh = self._mesh_time_trailing()
-        assert mesh["d"].time_index == 1
+        assert mesh["d"].time_axis_index == 1
 
     def test_summary_reduces_over_all_steps(self):
         mesh = self._mesh_time_trailing()

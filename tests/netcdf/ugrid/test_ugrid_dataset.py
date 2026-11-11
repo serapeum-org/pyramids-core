@@ -120,7 +120,7 @@ class TestUgridDatasetDataAccess:
             Getting 'mesh2d_node_z' should return a MeshVariable with node location.
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
-        var = ds.get_data("mesh2d_node_z")
+        var = ds["mesh2d_node_z"]
         assert isinstance(var, MeshVariable), f"Expected MeshVariable, got {type(var)}"
         assert var.location == "node", f"Expected location 'node', got '{var.location}'"
 
@@ -128,7 +128,7 @@ class TestUgridDatasetDataAccess:
         """Test bracket notation for data access.
 
         Test scenario:
-            ds["mesh2d_node_z"] should work like ds.get_data("mesh2d_node_z").
+            ds["mesh2d_node_z"] should work like ds["mesh2d_node_z"].
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
         var = ds["mesh2d_node_z"]
@@ -142,7 +142,7 @@ class TestUgridDatasetDataAccess:
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
         with pytest.raises(KeyError, match="not found"):
-            ds.get_data("nonexistent_variable")
+            ds["nonexistent_variable"]
 
     def test_data_array_shape(self, ugrid_convention_nc_path):
         """Test that data arrays have expected shapes.

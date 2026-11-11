@@ -1,16 +1,28 @@
-"""Core Zarr-store resolution, shared by the eager and lazy paths.
+"""Core Zarr-store resolution and routing predicates, shared by the eager and lazy paths.
 
 The ``Dataset`` Zarr read/write bodies moved to the ``pyramids-lazy`` compute backend
 (``Dataset.to_zarr`` / ``from_zarr`` dispatch through ``require_compute_backend``). What stays here is
-:func:`_resolve_store`, the small store-target resolver that both the eager STAC loader
-(``stac._loader``) and the lazy backend use; the backend reaches it through the core re-export facade
-rather than importing this private module directly.
+small and backend-free:
+
+* :func:`_resolve_store` — the store-target resolver that both the eager STAC loader
+  (``stac._loader``) and the lazy backend use; the backend reaches it through the core re-export
+  facade rather than importing this private module directly.
+* :func:`is_zarr_store` — the cheap suffix check :meth:`Dataset.read_file` uses to decide whether a
+  path is a Zarr store at all (no store is opened, so it needs neither ``zarr`` nor the backend).
+* :func:`classify_zarr_store` / :func:`is_cube_store` — look *inside* a store to tell a single raster
+  from a temporal cube from a foreign store. Opening the store needs the optional ``zarr`` package,
+  which ships with the ``pyramids-lazy`` backend, so these delegate to the backend and report
+  ``"other"`` whenever no backend is installed, the backend predates the classify capability, or the
+  store cannot be confirmed. That makes ``read_file`` fall back to GDAL for a ``.zarr`` on a bare-core
+  install, exactly as before this routing existed.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+
+from pyramids.base._compute_backend import require_compute_backend
 
 
 def _resolve_store(
@@ -31,3 +43,86 @@ def _resolve_store(
             return FsspecStore.from_url(str(store), storage_options=storage_options)
         return str(store)
     return store
+
+
+def is_zarr_store(source: Any) -> bool:
+    """Whether ``source`` names a ``.zarr`` store.
+
+    The cheap suffix check :meth:`pyramids.dataset.Dataset.read_file` uses to route a Zarr store to the
+    Zarr reader instead of GDAL's generic driver. No store is opened — only the name is inspected — so
+    it needs neither the ``zarr`` package nor the compute backend.
+
+    Args:
+        source: A local path, cloud URL (``str`` / :class:`~pathlib.Path`), or a pre-built store /
+            mapping object.
+
+    Returns:
+        ``True`` when ``source`` is a store: a path/URL whose final component ends in ``.zarr``
+        (case-insensitive, trailing separators ignored), or any non-``str`` / non-``Path`` object
+        (taken to be an already-opened store). ``False`` otherwise.
+
+    Examples:
+        A local or remote ``.zarr`` path is a store; the match ignores case and a trailing separator,
+        and a GeoTIFF is not a store:
+
+        >>> is_zarr_store("elevation.zarr")
+        True
+        >>> is_zarr_store("s3://bucket/cube.zarr/")
+        True
+        >>> is_zarr_store("elevation.tif")
+        False
+    """
+    if not isinstance(source, (str, Path)):
+        return True
+    return str(source).rstrip("/\\").lower().endswith(".zarr")
+
+
+def classify_zarr_store(store: Any, storage_options: dict[str, Any] | None = None) -> str:
+    """Classify a ``.zarr`` store for :meth:`~pyramids.dataset.Dataset.read_file` routing.
+
+    Returns one of:
+
+    - ``"single"`` — a pyramids-written single-raster GeoZarr store; route it to
+      :meth:`~pyramids.dataset.Dataset.from_zarr`.
+    - ``"cube"`` — a pyramids-written temporal cube; it is not a single raster.
+    - ``"other"`` — anything else: a foreign / xarray-written store, a plain file that merely ends in
+      ``.zarr``, a store that cannot be opened here, or an install without a classify-capable backend.
+      The caller should let GDAL handle it.
+
+    Opening the store to inspect it needs the ``zarr`` package, which ships with the ``pyramids-lazy``
+    compute backend, so the real work is delegated to the backend's own ``classify_zarr_store``. When
+    no backend is installed, the installed backend predates the capability, or classification raises
+    for any reason, ``"other"`` is returned so ``read_file`` falls back to GDAL — a bare-core install
+    reads a ``.zarr`` through GDAL exactly as before this routing existed.
+
+    Args:
+        store: A ``.zarr`` store — path / fsspec URL / store object.
+        storage_options: fsspec options forwarded to the backend for a cloud URL.
+
+    Returns:
+        ``"single"``, ``"cube"``, or ``"other"``.
+    """
+    try:
+        backend = require_compute_backend()
+    except ImportError:
+        # No lazy backend installed — core cannot open a Zarr store itself, so leave it to GDAL.
+        return "other"
+    classify = getattr(backend, "classify_zarr_store", None)
+    if classify is None:
+        # A backend that predates the classify capability: fall back to GDAL rather than guess.
+        return "other"
+    try:
+        result = classify(store, storage_options)
+    except Exception:  # noqa: BLE001 - any backend failure means "let GDAL try", never surface it.
+        return "other"
+    return result if result in ("single", "cube") else "other"
+
+
+def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> bool:
+    """Whether a pyramids Zarr ``store`` holds a temporal cube rather than a single raster.
+
+    Thin predicate over :func:`classify_zarr_store`: ``True`` only for a pyramids-written
+    ``(time, band, y, x)`` cube (as :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes). A
+    single raster, a foreign store, an unreadable path, or a backend-less install is ``False``.
+    """
+    return classify_zarr_store(store, storage_options) == "cube"

@@ -20,6 +20,7 @@ import io
 import json
 from typing import Any
 
+from pyramids._cli_groups import SuggestingArgumentParser, add_group
 from pyramids._cli_shared import (
     emit,
     info_print,
@@ -229,7 +230,9 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     nc = sub.add_parser("nc", help="NetCDF / multidim commands")
-    ncsub = nc.add_subparsers(dest="command", required=True)
+    ncsub = nc.add_subparsers(
+        dest="command", required=True, parser_class=SuggestingArgumentParser
+    )
 
     nc_info = ncsub.add_parser("info", help="summarize a NetCDF file")
     nc_info.add_argument("file", help=_HELP_NC_FILE)
@@ -301,9 +304,26 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     nc_crop.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_crop.set_defaults(func=_cmd_nc_crop)
 
-    add_nc_inspect_commands(ncsub)
-    add_nc_vars_commands(ncsub)
-    add_nc_select_commands(ncsub)
-    add_nc_cftime_commands(ncsub)
-    add_nc_io_commands(ncsub)
-    add_nc_plot_commands(ncsub)
+    # Power-user primitives (array/coord/dim mechanics rarely run one-shot) collect under a
+    # single cross-cutting `advanced` subgroup, fed by the vars/select/calc registrars.
+    nc_advanced = add_group(
+        ncsub, "advanced", "power-user primitives (array/coord/dim mechanics)"
+    )
+    add_nc_inspect_commands(
+        add_group(ncsub, "inspect", "summaries, metadata, dim/time values")
+    )
+    add_nc_vars_commands(
+        add_group(ncsub, "vars", "variable and dimension management"), nc_advanced
+    )
+    add_nc_select_commands(
+        add_group(ncsub, "select", "positional/label selection and subsetting"),
+        nc_advanced,
+    )
+    add_nc_cftime_commands(
+        add_group(ncsub, "calc", "CF/time/calendar and calculus"), nc_advanced
+    )
+    add_nc_io_commands(
+        add_group(ncsub, "export", "write a NetCDF to a file or format"),
+        add_group(ncsub, "import", "read / combine NetCDF sources"),
+    )
+    add_nc_plot_commands(add_group(ncsub, "plot", "headless plotting"))

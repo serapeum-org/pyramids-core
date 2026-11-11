@@ -79,7 +79,7 @@ class TestStats:
 
     def test_json(self, multiband, capsys):
         """--json emits one record per band with the four statistics."""
-        assert main(["stats", multiband, "--json"]) == 0
+        assert main(["raster", "stats", multiband, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert len(payload["stats"]) == 2
         first = payload["stats"][0]
@@ -88,14 +88,14 @@ class TestStats:
 
     def test_text_single_band(self, raster, capsys):
         """A --band selection prints just that band's line."""
-        assert main(["stats", raster, "--band", "0"]) == 0
+        assert main(["raster", "stats", raster, "--band", "0"]) == 0
         out = capsys.readouterr().out
         assert "min=" in out
         assert "std=" in out
 
     def test_bad_band_errors(self, raster, capsys):
         """An out-of-range band exits 1 without the 'unexpected failure' branch."""
-        assert main(["stats", raster, "--band", "9"]) == 1
+        assert main(["raster", "stats", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -104,7 +104,7 @@ class TestHistogram:
 
     def test_json(self, raster, capsys):
         """--json emits counts and (low, high) ranges of the requested bin count."""
-        assert main(["histogram", raster, "--bins", "4", "--json"]) == 0
+        assert main(["raster", "histogram", raster, "--bins", "4", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert len(payload["counts"]) == 4
         assert len(payload["ranges"]) == 4
@@ -112,21 +112,21 @@ class TestHistogram:
 
     def test_text(self, raster, capsys):
         """The text form prints one line per bucket."""
-        assert main(["histogram", raster, "--bins", "3"]) == 0
+        assert main(["raster", "histogram", raster, "--bins", "3"]) == 0
         assert capsys.readouterr().out.count("\n") == 3
 
     def test_bad_band_errors(self, raster, capsys):
         """A bad band is a clean error (IndexError remapped), not 'unexpected failure'."""
-        assert main(["histogram", raster, "--band", "9"]) == 1
+        assert main(["raster", "histogram", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
 class TestGetMetaData:
-    """`pyramids get-meta-data` reads a GDAL metadata domain."""
+    """`pyramids get-metadata` reads a GDAL metadata domain."""
 
     def test_json(self, raster, capsys):
         """--json emits the domain and its metadata mapping."""
-        assert main(["get-meta-data", raster, "--json"]) == 0
+        assert main(["raster", "get-metadata", raster, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["domain"] == ""
         assert isinstance(payload["metadata"], dict)
@@ -139,7 +139,9 @@ class TestGetMetaData:
                 ``AREA_OR_POINT``.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["get-meta-data", raster]) == 0, "default domain should succeed"
+        assert main(["raster", "get-metadata", raster]) == 0, (
+            "default domain should succeed"
+        )
         out = capsys.readouterr().out
         assert "AREA_OR_POINT: Area" in out, (
             "the dict domain should print key: value lines"
@@ -159,7 +161,7 @@ class TestGetMetaData:
         handle.SetMetadata(["<x>hi</x>"], "xml:TEST")
         handle.FlushCache()
         handle = None
-        assert main(["get-meta-data", raster, "--domain", "xml:TEST"]) == 0, (
+        assert main(["raster", "get-metadata", raster, "--domain", "xml:TEST"]) == 0, (
             "reading an xml domain should succeed"
         )
         assert capsys.readouterr().out.strip() == "<x>hi</x>", (
@@ -168,7 +170,7 @@ class TestGetMetaData:
 
     def test_missing_file_errors(self, capsys):
         """A missing file exits 1."""
-        assert main(["get-meta-data", _MISSING]) == 1
+        assert main(["raster", "get-metadata", _MISSING]) == 1
 
 
 class TestAttributeTable:
@@ -176,7 +178,9 @@ class TestAttributeTable:
 
     def test_get_empty_json(self, raster, capsys):
         """A band with no table emits a null attribute_table."""
-        assert main(["get-attribute-table", raster, "--json"]) == 0
+        assert (
+            main(["raster", "advanced", "get-attribute-table", raster, "--json"]) == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["attribute_table"] is None
 
@@ -184,9 +188,11 @@ class TestAttributeTable:
         """`set-attribute-table` persists a CSV table that `get` reads back."""
         csv = str(tmp_path / "rat.csv")
         pd.DataFrame({"Value": [1, 2], "Class": ["a", "b"]}).to_csv(csv, index=False)
-        assert main(["set-attribute-table", raster, csv]) == 0
+        assert main(["raster", "advanced", "set-attribute-table", raster, csv]) == 0
         capsys.readouterr()
-        assert main(["get-attribute-table", raster, "--json"]) == 0
+        assert (
+            main(["raster", "advanced", "get-attribute-table", raster, "--json"]) == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["attribute_table"] == [
             {"Value": 1, "Class": "a"},
@@ -200,7 +206,7 @@ class TestAttributeTable:
             raster: Single-band raster fixture that carries no attribute table.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["get-attribute-table", raster]) == 0, (
+        assert main(["raster", "advanced", "get-attribute-table", raster]) == 0, (
             "a missing table is not an error"
         )
         assert capsys.readouterr().out.strip() == "band 0 has no attribute table", (
@@ -217,11 +223,11 @@ class TestAttributeTable:
         """
         csv = str(tmp_path / "rat.csv")
         pd.DataFrame({"Value": [1, 2], "Class": ["a", "b"]}).to_csv(csv, index=False)
-        assert main(["set-attribute-table", raster, csv]) == 0, (
+        assert main(["raster", "advanced", "set-attribute-table", raster, csv]) == 0, (
             "writing the table should succeed"
         )
         capsys.readouterr()
-        assert main(["get-attribute-table", raster]) == 0, (
+        assert main(["raster", "advanced", "get-attribute-table", raster]) == 0, (
             "reading the table should succeed"
         )
         out = capsys.readouterr().out
@@ -238,13 +244,13 @@ class TestAttributeTable:
         """
         table = str(tmp_path / "rat.json")
         pd.DataFrame({"Value": [1, 2], "Class": ["a", "b"]}).to_json(table)
-        assert main(["set-attribute-table", raster, table]) == 0, (
-            "a .json table should be accepted"
-        )
+        assert (
+            main(["raster", "advanced", "set-attribute-table", raster, table]) == 0
+        ), "a .json table should be accepted"
         capsys.readouterr()
-        assert main(["get-attribute-table", raster, "--json"]) == 0, (
-            "the table should read back"
-        )
+        assert (
+            main(["raster", "advanced", "get-attribute-table", raster, "--json"]) == 0
+        ), "the table should read back"
         payload = json.loads(capsys.readouterr().out)
         assert payload["attribute_table"] == [
             {"Value": 1, "Class": "a"},
@@ -253,7 +259,10 @@ class TestAttributeTable:
 
     def test_get_bad_band_errors(self, raster, capsys):
         """A bad band on `get-attribute-table` exits 1, not 'unexpected failure'."""
-        assert main(["get-attribute-table", raster, "--band", "9"]) == 1
+        assert (
+            main(["raster", "advanced", "get-attribute-table", raster, "--band", "9"])
+            == 1
+        )
         assert "unexpected failure" not in capsys.readouterr().err
 
     def test_set_bad_table_extension_errors(self, raster, tmp_path, capsys):
@@ -261,7 +270,7 @@ class TestAttributeTable:
         bad = str(tmp_path / "rat.txt")
         with open(bad, "w", encoding="utf8") as handle:
             handle.write("nope")
-        assert main(["set-attribute-table", raster, bad]) == 1
+        assert main(["raster", "advanced", "set-attribute-table", raster, bad]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -270,7 +279,7 @@ class TestMaskFlags:
 
     def test_json(self, raster, capsys):
         """A no-data raster reports the nodata flag true and the others false."""
-        assert main(["mask-flags", raster, "--json"]) == 0
+        assert main(["raster", "advanced", "mask-flags", raster, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["nodata"] is True
         assert payload["all_valid"] is False
@@ -282,14 +291,16 @@ class TestMaskFlags:
             raster: Single-band raster fixture with a nodata sentinel.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["mask-flags", raster]) == 0, "decoding mask flags should succeed"
+        assert main(["raster", "advanced", "mask-flags", raster]) == 0, (
+            "decoding mask flags should succeed"
+        )
         out = capsys.readouterr().out
         assert "nodata: True" in out, "the nodata flag line should be present"
         assert "all_valid: False" in out, "the all_valid flag line should be present"
 
     def test_bad_band_errors(self, raster, capsys):
         """A bad band exits 1 without the 'unexpected failure' branch."""
-        assert main(["mask-flags", raster, "--band", "9"]) == 1
+        assert main(["raster", "advanced", "mask-flags", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -298,7 +309,7 @@ class TestFootprint:
 
     def test_json(self, raster, capsys):
         """--json emits a GeoJSON FeatureCollection for the covered cells."""
-        assert main(["footprint", raster, "--json"]) == 0
+        assert main(["raster", "footprint", raster, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["type"] == "FeatureCollection"
         assert len(payload["features"]) >= 1
@@ -306,7 +317,7 @@ class TestFootprint:
     def test_write_vector(self, raster, tmp_path, capsys):
         """An output path writes a readable vector file."""
         out = str(tmp_path / "fp.geojson")
-        assert main(["footprint", raster, out]) == 0
+        assert main(["raster", "footprint", raster, out]) == 0
         assert FeatureCollection.feature_count(out) >= 1
 
     def test_text_summary(self, raster, capsys):
@@ -316,7 +327,7 @@ class TestFootprint:
             raster: Single-band EPSG:4326 (geographic) raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["footprint", raster]) == 0, (
+        assert main(["raster", "footprint", raster]) == 0, (
             "summarising the footprint should succeed"
         )
         captured = capsys.readouterr()
@@ -342,7 +353,7 @@ class TestFootprint:
                 top_left_corner=(0, 8000), cell_size=1000.0, epsg=3857
             ),
         ).to_file(path)
-        assert main(["footprint", path]) == 0, (
+        assert main(["raster", "footprint", path]) == 0, (
             "projected footprint summary must succeed"
         )
         out = capsys.readouterr().out
@@ -358,7 +369,7 @@ class TestFootprint:
             nodata_only: Raster fixture whose single band is entirely no-data.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["footprint", nodata_only, "--json"]) == 0, (
+        assert main(["raster", "footprint", nodata_only, "--json"]) == 0, (
             "an empty footprint is not an error"
         )
         payload = json.loads(capsys.readouterr().out)
@@ -374,7 +385,7 @@ class TestFootprint:
             nodata_only: Raster fixture whose single band is entirely no-data.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["footprint", nodata_only]) == 0, (
+        assert main(["raster", "footprint", nodata_only]) == 0, (
             "an empty footprint is not an error"
         )
         assert "no covered cells" in capsys.readouterr().out, (
@@ -383,7 +394,7 @@ class TestFootprint:
 
     def test_missing_file_errors(self, capsys):
         """A missing input exits 1."""
-        assert main(["footprint", _MISSING, "--json"]) == 1
+        assert main(["raster", "footprint", _MISSING, "--json"]) == 1
 
 
 class TestCellArea:
@@ -391,7 +402,7 @@ class TestCellArea:
 
     def test_json(self, raster, capsys):
         """--json emits the unit and the min/max/mean/total summary."""
-        assert main(["cell-area", raster, "--unit", "km2", "--json"]) == 0
+        assert main(["raster", "cell-area", raster, "--unit", "km2", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["unit"] == "km2"
         assert payload["total"] > 0
@@ -403,14 +414,16 @@ class TestCellArea:
             raster: Single-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["cell-area", raster]) == 0, "summarising cell area should succeed"
+        assert main(["raster", "cell-area", raster]) == 0, (
+            "summarising cell area should succeed"
+        )
         out = capsys.readouterr().out
         assert "unit: m2" in out, "the default unit should be reported"
         assert "total:" in out, "the full-grid total should be reported"
 
     def test_missing_file_errors(self, capsys):
         """A missing input exits 1 with a clean message."""
-        assert main(["cell-area", _MISSING]) == 1
+        assert main(["raster", "cell-area", _MISSING]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -419,7 +432,7 @@ class TestDomainArea:
 
     def test_json(self, raster, capsys):
         """--json emits the band, unit and area."""
-        assert main(["domain-area", raster, "--unit", "km2", "--json"]) == 0
+        assert main(["raster", "domain-area", raster, "--unit", "km2", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["unit"] == "km2"
         assert payload["area"] > 0
@@ -431,7 +444,7 @@ class TestDomainArea:
             raster: Single-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["domain-area", raster]) == 0, (
+        assert main(["raster", "domain-area", raster]) == 0, (
             "computing the domain area should succeed"
         )
         assert capsys.readouterr().out.strip().endswith("m2"), (
@@ -440,7 +453,7 @@ class TestDomainArea:
 
     def test_bad_band_errors(self, raster, capsys):
         """A bad band exits 1 with a clean message."""
-        assert main(["domain-area", raster, "--band", "9"]) == 1
+        assert main(["raster", "domain-area", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -449,7 +462,7 @@ class TestCountDomainCells:
 
     def test_json(self, raster, capsys):
         """--json emits the integer count (64 for a gap-free 8x8 ramp)."""
-        assert main(["count-domain-cells", raster, "--json"]) == 0
+        assert main(["raster", "count-domain-cells", raster, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["count"] == 64
 
@@ -460,7 +473,7 @@ class TestCountDomainCells:
             raster: Single-band gap-free 8x8 ramp fixture (64 valid cells).
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["count-domain-cells", raster]) == 0, (
+        assert main(["raster", "count-domain-cells", raster]) == 0, (
             "counting valid cells should succeed"
         )
         assert capsys.readouterr().out.strip() == "64", (
@@ -469,7 +482,7 @@ class TestCountDomainCells:
 
     def test_bad_band_errors(self, raster, capsys):
         """A bad band exits 1 with a clean message."""
-        assert main(["count-domain-cells", raster, "--band", "9"]) == 1
+        assert main(["raster", "count-domain-cells", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
 
@@ -478,12 +491,14 @@ class TestSameGrid:
 
     def test_identical_true(self, raster, capsys):
         """Two reads of the same raster share a grid."""
-        assert main(["same-grid", raster, raster, "--json"]) == 0
+        assert main(["raster", "advanced", "same-grid", raster, raster, "--json"]) == 0
         assert json.loads(capsys.readouterr().out)["same_grid"] is True
 
     def test_different_false(self, raster, other_grid, capsys):
         """A raster on a different grid is reported false (still exit 0)."""
-        assert main(["same-grid", raster, other_grid, "--json"]) == 0
+        assert (
+            main(["raster", "advanced", "same-grid", raster, other_grid, "--json"]) == 0
+        )
         assert json.loads(capsys.readouterr().out)["same_grid"] is False
 
     def test_text_true(self, raster, capsys):
@@ -493,7 +508,7 @@ class TestSameGrid:
             raster: Single-band raster fixture compared against itself.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["same-grid", raster, raster]) == 0, (
+        assert main(["raster", "advanced", "same-grid", raster, raster]) == 0, (
             "comparing identical grids should succeed"
         )
         assert capsys.readouterr().out.strip() == "true", "identical grids print true"
@@ -506,14 +521,14 @@ class TestSameGrid:
             other_grid: Raster fixture on a different grid.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["same-grid", raster, other_grid]) == 0, (
+        assert main(["raster", "advanced", "same-grid", raster, other_grid]) == 0, (
             "comparing different grids should succeed"
         )
         assert capsys.readouterr().out.strip() == "false", "different grids print false"
 
     def test_missing_file_errors(self, raster, capsys):
         """A missing second raster exits 1."""
-        assert main(["same-grid", raster, _MISSING]) == 1
+        assert main(["raster", "advanced", "same-grid", raster, _MISSING]) == 1
 
 
 class TestChecksum:
@@ -526,7 +541,7 @@ class TestChecksum:
             multiband: Two-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", multiband, "--json"]) == 0
+        assert main(["raster", "advanced", "checksum", multiband, "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert set(payload) == {"checksums"}, "all-band JSON has only 'checksums'"
         assert len(payload["checksums"]) == 2, "one checksum per band"
@@ -539,7 +554,10 @@ class TestChecksum:
             multiband: Two-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", multiband, "--band", "0", "--json"]) == 0
+        assert (
+            main(["raster", "advanced", "checksum", multiband, "--band", "0", "--json"])
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["band"] == 0
         assert isinstance(payload["checksum"], int)
@@ -551,7 +569,7 @@ class TestChecksum:
             multiband: Two-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", multiband]) == 0
+        assert main(["raster", "advanced", "checksum", multiband]) == 0
         out = capsys.readouterr().out
         assert out.count("\n") == 2, "one line per band"
         assert out.startswith("band 0: "), "text lists each band index"
@@ -563,7 +581,7 @@ class TestChecksum:
             raster: Single-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", raster, "--band", "0"]) == 0
+        assert main(["raster", "advanced", "checksum", raster, "--band", "0"]) == 0
         assert capsys.readouterr().out.strip().isdigit(), "a single band prints an int"
 
     def test_bad_band_errors(self, raster, capsys):
@@ -573,7 +591,7 @@ class TestChecksum:
             raster: Single-band raster fixture.
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", raster, "--band", "9"]) == 1
+        assert main(["raster", "advanced", "checksum", raster, "--band", "9"]) == 1
         assert "unexpected failure" not in capsys.readouterr().err
 
     def test_missing_file_errors(self, capsys):
@@ -582,5 +600,5 @@ class TestChecksum:
         Args:
             capsys: Pytest stdout/stderr capture fixture.
         """
-        assert main(["checksum", _MISSING]) == 1
+        assert main(["raster", "advanced", "checksum", _MISSING]) == 1
         assert "Traceback" not in capsys.readouterr().err

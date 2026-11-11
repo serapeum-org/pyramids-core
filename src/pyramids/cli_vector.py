@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 
+from pyramids._cli_groups import SuggestingArgumentParser, add_group
 from pyramids._cli_shared import (
     emit,
     info_print,
@@ -163,7 +164,9 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     vector = sub.add_parser("vector", help="vector (FeatureCollection) commands")
-    vsub = vector.add_subparsers(dest="command", required=True)
+    vsub = vector.add_subparsers(
+        dest="command", required=True, parser_class=SuggestingArgumentParser
+    )
 
     v_info = vsub.add_parser("info", help="print vector metadata")
     v_info.add_argument("src", help=_HELP_SRC_VECTOR)
@@ -214,8 +217,27 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
     v_clip.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     v_clip.set_defaults(func=_cmd_vector_clip)
 
-    add_vector_inspect_commands(vsub)
-    add_vector_geom_commands(vsub)
-    add_vector_overlay_commands(vsub)
-    add_vector_tess_commands(vsub)
-    add_vector_io_commands(vsub)
+    # Power-user primitives (geometry micro-ops rarely run one-shot) collect under a single
+    # cross-cutting `vector advanced` subgroup, fed by the geom/overlay/tess registrars.
+    vec_advanced = add_group(
+        vsub, "advanced", "power-user primitives (geometry micro-ops)"
+    )
+    add_vector_inspect_commands(
+        add_group(vsub, "inspect", "inspect a vector's schema/validity")
+    )
+    add_vector_geom_commands(
+        add_group(vsub, "geom", "unary geometry operations"), vec_advanced
+    )
+    add_vector_overlay_commands(
+        add_group(vsub, "overlay", "overlay / set ops, joins, filter"), vec_advanced
+    )
+    add_vector_tess_commands(
+        add_group(vsub, "tess", "tessellation, binning, sampling, measures"),
+        vec_advanced,
+    )
+    add_vector_io_commands(
+        add_group(vsub, "export", "write a vector to a file or format"),
+        add_group(
+            vsub, "import", "read / construct a vector from a source or remote service"
+        ),
+    )

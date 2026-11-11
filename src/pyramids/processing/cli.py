@@ -1,10 +1,10 @@
 """CLI subcommands for the processing pipeline layer.
 
 Registers the geoprocessing subcommands on the top-level ``pyramids`` parser:
-``run`` (execute a pipeline YAML over inputs), ``apply`` (run one registered
-tool over a single input), ``tools`` (list the registered tools), and
-``tool <name>`` (print a tool's parameter schema). Help text is generated from
-the registry, never hand-written.
+``process run`` (execute a pipeline YAML over inputs), ``process apply`` (run one
+registered tool over a single input), ``process tool list`` (list the registered
+tools), and ``process tool show <name>`` (print a tool's parameter schema). Help
+text is generated from the registry, never hand-written.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from pyramids._cli_groups import add_group
 from pyramids._cli_shared import info_print, refuse_existing
 from pyramids.processing.pipeline import Pipeline
 from pyramids.processing.registry import resolve, tool_names
@@ -153,11 +154,13 @@ def _cmd_tool(args: argparse.Namespace) -> int:
 
 
 def add_processing_commands(sub: argparse._SubParsersAction) -> None:
-    """Register the ``run`` / ``apply`` / ``tools`` / ``tool`` subcommands on ``sub``.
+    """Register the ``process run|apply`` and ``process tool list|show`` subcommands on ``sub``.
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
+    # Everything registers under the `process` group: `pyramids process <verb>`.
+    sub = add_group(sub, "process", "run processing pipelines and inspect tools")
     run_p = sub.add_parser("run", help="run a pipeline YAML over inputs")
     run_p.add_argument("pipeline", help="pipeline YAML path")
     run_p.add_argument(
@@ -195,23 +198,26 @@ def add_processing_commands(sub: argparse._SubParsersAction) -> None:
     apply_p = sub.add_parser(
         "apply", help="run one registered tool over a single input"
     )
-    apply_p.add_argument("name", help="tool name (see 'pyramids tools')")
+    apply_p.add_argument("name", help="tool name (see 'pyramids process tool list')")
     apply_p.add_argument("input", help="source raster or vector path")
     apply_p.add_argument("output", help="destination path")
     apply_p.add_argument(
         "--set",
         action="append",
         metavar="KEY=VALUE",
-        help="set a tool parameter; repeat for each (see 'pyramids tool NAME')",
+        help="set a tool parameter; repeat for each (see 'pyramids process tool show NAME')",
     )
     apply_p.add_argument(
         "--overwrite", action="store_true", help="replace the output if it exists"
     )
     apply_p.set_defaults(func=_cmd_apply)
 
-    tools_p = sub.add_parser("tools", help="list registered processing tools")
-    tools_p.set_defaults(func=_cmd_tools)
+    # The `tools` (list) / `tool` (show schema) pair becomes a `tool` subgroup, resolving the
+    # ambiguous singular/plural: `process tool list` and `process tool show NAME`.
+    tool_sub = add_group(sub, "tool", "inspect registered processing tools")
+    list_p = tool_sub.add_parser("list", help="list registered processing tools")
+    list_p.set_defaults(func=_cmd_tools)
 
-    tool_p = sub.add_parser("tool", help="print a tool's parameter schema")
-    tool_p.add_argument("name", help="tool name (see 'pyramids tools')")
-    tool_p.set_defaults(func=_cmd_tool)
+    show_p = tool_sub.add_parser("show", help="print a tool's parameter schema")
+    show_p.add_argument("name", help="tool name (see 'pyramids process tool list')")
+    show_p.set_defaults(func=_cmd_tool)

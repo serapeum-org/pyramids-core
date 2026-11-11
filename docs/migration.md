@@ -165,6 +165,28 @@ that leaked out of an empty table lookup. Only affects code catching the old typ
 
 ### unreleased
 
+**`Dataset.read_file` now opens a single-raster `.zarr` store through the GeoZarr reader (issue #1457).** A
+`.zarr` path previously fell through to GDAL's generic Zarr driver, which does **not** round-trip the GeoZarr
+metadata `to_zarr` writes — `read_file("x.zarr")` returned a georeferenceless raster (`epsg` `None`, an identity
+geotransform). It now routes to `Dataset.from_zarr`, so CRS, geotransform and band roles are recovered, identical
+to calling `from_zarr` directly. This is a silent behavior change: code that read a `.zarr` through `read_file` and
+relied on the (wrong) missing georeferencing will now see the real CRS and transform.
+
+- A **cube** store written by `DatasetCollection.to_zarr` is a 4-D `(time, band, y, x)` stack, not a single
+  raster. `read_file` now raises `ValueError` pointing at `DatasetCollection.from_zarr` instead of mis-reading it
+  through GDAL. Open cubes with `DatasetCollection.from_zarr`.
+- **Only pyramids-written GeoZarr stores are claimed.** A `.zarr` store is routed only when it carries the
+  pyramids layout (a `data` array beside a `spatial_ref` node). Any other `.zarr` — a foreign / xarray-written
+  store, a plain file that merely ends in `.zarr`, or a remote store needing credentials this call cannot forward
+  — falls through to GDAL and is read exactly as before, so no previously-working read breaks.
+- Because a routed GeoZarr store is read by `from_zarr`, the GDAL-only arguments (`read_only`, `file_i`,
+  `open_options`, `gdal_env`) do not apply on that path; passing a non-default one emits a `UserWarning`.
+- To bypass the routing and open a `.zarr` through GDAL directly (the old behavior), pass an explicit `driver=` or
+  `vsi=` to `read_file`.
+- Remote `.zarr` URLs (`s3://…/x.zarr`, `gs://…`, …) route the same way when they are reachable without extra
+  credentials; for fsspec credentials call `from_zarr(store, storage_options=…)` directly, since `read_file` does
+  not take `storage_options`.
+
 **Naming cleanup (issue #1462): several members renamed to a single canonical spelling.** Each old name keeps
 working as a `DeprecationWarning`-emitting alias (so existing code runs unchanged), except
 `Cell.array_to_map_coordinates`, which is **removed** — it duplicated `Dataset.xy`, so call `xy` instead (note the
@@ -1088,13 +1110,80 @@ from pyramids.base.crs import crs_from_user_input
 
 ### unreleased
 
-**`pyramids calc` refuses inputs that do not share the first input's grid.** Hard change — it used to let the
+**The CLI now follows one `pyramids <domain> [<subsystem>] <verb>` convention — the flat top-level verbs were
+removed.** Hard change, no deprecation shim: every command that used to sit at the top level now lives under a
+domain group, and the large families gained a subsystem level. Run `pyramids <group> --help` to see a group's
+subcommands, and `pyramids completion …` to refresh shell completion for the new nested paths.
+
+The move is mechanical — prefix the domain group (and, in the big families, the subsystem). The structural map:
+
+| old | new |
+|---|---|
+| `pyramids info\|bounds\|warp\|merge\|sample\|convert\|calc\|render\|rasterize\|georeference\|… <args>` | `pyramids raster <verb> <args>` |
+| `pyramids to-<fmt> …` (cog, zarr, xyz, polygons, image, dataframe, stac-item, terrain-rgb, …) | `pyramids raster export <fmt> …` |
+| `pyramids from-<src> …` (bytes, dataframe, points, point-arrays, band-files, archive, zarr) | `pyramids raster import <src> …` |
+| `pyramids cog create\|validate\|info …` | `pyramids raster cog create\|validate\|info …` |
+| `pyramids vector <verb>` (non-core: buffer, intersection, voronoi, export parquet, …) | `pyramids vector <inspect\|geom\|overlay\|tess\|export\|import> <verb>` |
+| `pyramids nc <verb>` (non-core: time-values, isel, polyfit, export zarr, plot render, …) | `pyramids nc <inspect\|vars\|select\|calc\|export\|import\|plot> <verb>` |
+| `pyramids mesh <verb>` (non-core: slope, read-all, export zarr, …) | `pyramids mesh <read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join> <verb>` |
+| `pyramids collection to-file\|to-cog\|to-netcdf\|to-zarr\|to-kerchunk …` | `pyramids collection export file\|cog\|netcdf\|zarr\|kerchunk …` |
+| `pyramids apply\|run …` | `pyramids process apply\|run …` |
+| `pyramids tools` / `pyramids tool <name>` | `pyramids process tool list` / `pyramids process tool show <name>` |
+
+Core verbs stay at each domain's root and are **not** prefixed with a subsystem: `vector info\|bounds\|convert\|
+warp\|clip`, `nc info\|groups\|get-group\|list-vars\|extract\|sel\|crop`, `mesh info\|extract\|convert`, and the
+`collection` reductions/transforms (`info`, `reduce`, `resample`, `merge`, `reproject`, `crop`, `align`).
+
+Several verbs were also renamed to match the Python API as they moved (naming audit CLI-1/2/3/4/6):
+
+| old | new | why |
+|---|---|---|
+| `pyramids get-meta-data` | `pyramids raster get-metadata` | finish the `#1462` hyphenation cleanup |
+| `pyramids clip` (raster) | `pyramids raster crop` | match `Dataset.crop`; frees the `clip` token |
+| `pyramids overview` | `pyramids raster overview create` | noun-verb pair with `recreate`, matching `Dataset.create_overviews` |
+| `pyramids recreate-overviews` | `pyramids raster overview recreate` | matches `Dataset.recreate_overviews` |
+| `pyramids collection stats` | `pyramids collection reduce` | it is a time reduction, not band statistics (`--reduce <op>` still names the op) |
+| `pyramids mesh sel-time[-range]` | `pyramids mesh select isel-time[-range]` | track the positional-selection method rename |
+
+The deprecated `pyramids overlay` verb (a `0.70`-era alias of `zonal-stats`) is **removed** — use
+`pyramids raster zonal-stats <raster> --classes <class_raster>`.
+
+**Export/import prefix dropped, and two doubled verbs renamed (a consistency follow-up).** To match
+`raster export`/`import`, the redundant `to-`/`from-` prefix is gone from `mesh export` / `mesh read`, and the
+single `nc io` and `vector io` subgroups are each split into `<domain> export` (writers) /
+`<domain> import` (readers):
+
+| old | new |
+|---|---|
+| `pyramids mesh export to-<fmt> …` (to-file, to-zarr, to-crs, …) | `pyramids mesh export <fmt> …` |
+| `pyramids mesh read from-<src> …` (from-arrays, from-zarr, …) | `pyramids mesh read <src> …` |
+| `pyramids nc io to-<fmt> …` (to-dataframe, to-zarr, to-kerchunk, …) | `pyramids nc export <fmt> …` |
+| `pyramids nc io from-<src> …` (from-dataframe, from-dict) | `pyramids nc import <src> …` |
+| `pyramids nc io open-mf\|concat\|merge …` | `pyramids nc import open-mf\|concat\|merge …` |
+| `pyramids nc io convert\|combine-kerchunk …` | `pyramids nc export convert\|combine-kerchunk …` |
+| `pyramids vector io to-<fmt> …` (to-parquet, to-json, to-feather, to-mvt, …) | `pyramids vector export <fmt> …` |
+| `pyramids vector io from-<src> …` (from-xyz, from-features, from-featureserver, …) | `pyramids vector import <src> …` |
+| `pyramids vector io read-parquet\|read-gpx …` | `pyramids vector import parquet\|gpx …` |
+| `pyramids nc plot plot …` | `pyramids nc plot render …` |
+| `pyramids vector overlay overlay …` | `pyramids vector overlay apply …` |
+
+**Rarely-one-shot primitives moved under a per-domain `advanced` subgroup.** To keep each domain's help focused
+on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim
+mechanics, geometry micro-ops, low-level accessors) now live under `pyramids <domain> advanced <verb>` — e.g.
+`raster read-part` → `raster advanced read-part`, `nc squeeze` → `nc advanced squeeze`, `vector force-2d` →
+`vector advanced force-2d`, `mesh get` → `mesh advanced get`. The capability is unchanged; only the path moved
+(hard move, no alias). Run `pyramids <domain> advanced --help` to list a domain's primitives.
+
+`pyramids --help` lists the groups (`raster`, `vector`, `nc`, `collection`, `stac`, `fetch`, `mesh`, `process`,
+`completion`, `plugins`); an unknown subcommand prints a "did you mean …?" suggestion.
+
+**`pyramids raster calc` refuses inputs that do not share the first input's grid.** Hard change — it used to let the
 bound names broadcast against each other and wrote the answer on the first input's grid, a georeferenced result
-to a question the inputs never agreed on. Warp them onto a common grid first (`pyramids warp`). An input carrying
+to a question the inputs never agreed on. Warp them onto a common grid first (`pyramids raster warp`). An input carrying
 no CRS tag at all is compared on its pixel grid alone, so an untagged mask or QA layer sitting on the template's
 cells is still accepted.
 
-**`pyramids calc` preserves a rotated or anisotropic geotransform.** Bug fix, silent before. The output was
+**`pyramids raster calc` preserves a rotated or anisotropic geotransform.** Bug fix, silent before. The output was
 rebuilt from the template's top-left corner and cell size, which collapses to a north-up square-pixel grid: an
 input at `(100, 2, 0.5, 200, 0.25, -3)` was written out as `(100, 2, 0, 200, 0, -2)`, with its skew zeroed and
 its y-resolution changed. The whole geotransform is now copied. The output's no-data value is unchanged — still
@@ -1104,12 +1193,53 @@ for `uint8`, `65535` for `uint16`).
 ### 0.47.0
 
 **`pyramids calc` refuses a first input with no CRS.** The result cannot be georeferenced and pyramids will not
-stamp a default; set a CRS on the input first. `pyramids georeference` is unaffected — its GCPs and `--gcp-crs`
+stamp a default; set a CRS on the input first. `pyramids raster georeference` is unaffected — its GCPs and `--gcp-crs`
 replace the georeference wholesale.
 
 ## netcdf
 
 ### unreleased
+
+**`NetCDF.get_all_metadata` is now `NetCDF.refresh_metadata`.** "all" implied it returned *more* metadata than
+the cached `metadata` property; the only difference is that it is an uncached re-read. The new name says so, and
+it now also **stores the fresh result as the cached value** (so a later `.metadata` read returns it), matching
+the `refresh_from_db` / `Session.refresh` idiom. `get_all_metadata` keeps working as a `DeprecationWarning`-emitting
+alias — note it is **not** byte-for-byte behaviour-preserving: it inherits the new cache write, so after calling it
+`nc.metadata` returns the freshly re-read value rather than any previously cached one.
+
+```python
+# Before
+md = nc.get_all_metadata()
+# After
+md = nc.refresh_metadata()   # same metadata, and nc.metadata now returns it too
+```
+
+**Mesh naming cleanup (`netcdf/ugrid/`).** Several `MeshDataset` / `MeshVariable` / `MeshSpatialIndex` members
+were renamed for consistency with the `n_*` family, the `sel`/`isel` rule, and the xarray idiom. Each old name
+keeps working as a `DeprecationWarning`-emitting alias (behaviour identical) **except** the two GDAL-fed
+constructors, which were internal plumbing and are now private with **no** alias.
+
+| old | new | note |
+|---|---|---|
+| `MeshVariable.time_index` | `MeshVariable.time_axis_index` | returns the time *axis number*, not a time *step* |
+| `MeshDataset.n_layers` | `MeshDataset.n_layer` | singular, matching `n_node`/`n_face`/`n_edge` |
+| `MeshDataset.n_layer_interfaces` | `MeshDataset.n_layer_interface` | singular `n_*` family |
+| `MeshDataset.get_data(name)` | `mesh[name]` (or `mesh.get(name, default)`) | `get_data` duplicated subscription |
+| `MeshSpatialIndex.face_tree` | `MeshSpatialIndex.face_centroid_tree` | it is a KD-tree on face centroids |
+| `MeshSpatialIndex.face_strtree` | `MeshSpatialIndex.face_rtree` | drops shapely's `STRtree` type name |
+| `Mesh2d.from_gdal_group` | `Mesh2d._from_gdal_group` | **private, no alias** — internal GDAL path |
+| `Connectivity.from_gdal_array` | `Connectivity._from_gdal_array` | **private, no alias** — internal GDAL path |
+
+```python
+# Before
+var = mesh.get_data("salinity")
+axis = var.time_index
+n = mesh.n_layers
+# After
+var = mesh["salinity"]          # or mesh.get("salinity") for a default
+axis = var.time_axis_index
+n = mesh.n_layer
+```
 
 **`NetCDF.meta_data` is now `NetCDF.metadata`** (part of the dataset naming cleanup, issue #1462). `meta_data`
 keeps working as a `DeprecationWarning`-emitting alias and still returns the same cached `NetCDFMetadata`. See the

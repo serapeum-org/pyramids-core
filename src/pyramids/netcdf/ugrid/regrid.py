@@ -759,7 +759,7 @@ class Regridder:
             MeshSpatialIndex(self._target).face_polygons, dtype=object
         )
 
-        target_idx, source_idx = source_index.face_strtree.query(
+        target_idx, source_idx = source_index.face_rtree.query(
             target_polys, predicate="intersects"
         )
         intersections = shapely.intersection(

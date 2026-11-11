@@ -187,3 +187,26 @@ class TestTwoDriftedGuardsNowMatchTheRest:
             "The pyramids plotting specs require cleopatra (the [viz] extra)."
         )
         assert "conda install -c conda-forge pyramids-viz" in _VIZ_HINT
+
+
+class TestTheXarrayInteropHintPointsAtARealRoute:
+    """#1512: xarray is an optional peer dependency, not a pyramids extra."""
+
+    def test_it_names_xarray_directly_not_a_phantom_extra(self):
+        """The hint must resolve xarray, not send users to a non-existent `[interop]` extra.
+
+        Test scenario:
+            There is no `interop` extra on the wheel and no `pyramids-interop` conda package, so the
+            guard points at `xarray` itself on both channels and names neither phantom route.
+        """
+        from pyramids.netcdf.ugrid.interop_xarray import _XARRAY_HINT
+
+        assert "xarray is required" in _XARRAY_HINT, "lead phrase must be preserved"
+        assert "pip install xarray" in _XARRAY_HINT, "PyPI route must resolve xarray"
+        assert "conda install -c conda-forge xarray" in _XARRAY_HINT, (
+            "conda route must resolve xarray"
+        )
+        assert "pyramids-core[interop]" not in _XARRAY_HINT, (
+            "no phantom [interop] extra"
+        )
+        assert "pyramids-interop" not in _XARRAY_HINT, "no phantom conda package"

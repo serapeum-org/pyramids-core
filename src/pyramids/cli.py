@@ -6,11 +6,13 @@ in its own ``cli_<domain>.py`` module and registers itself on the top-level
 parser via an ``add_<domain>_commands(sub)`` function; this module only wires the
 groups together, provides the global flags, and runs the dispatch loop.
 
-Command groups:
+Command groups (all now `pyramids <domain> [<subsystem>] <verb>`):
 
-- raster / COG (`pyramids.cli_dataset`) — `info`, `bounds`, `clip`, `warp`,
-  `merge`, `overview`, `sample`, `convert`, `georeference`, `orthorectify`,
-  `edit-info`, `calc`, `shapes`, `rasterize`, `render`, and `cog create|validate|info`
+- raster (`pyramids.cli_dataset`) — the full single-raster (`Dataset`) surface under
+  `pyramids raster …`: `info`, `bounds`, `clip`, `warp`, `merge`, `sample`, `convert`,
+  `georeference`, `orthorectify`, `edit-info`, `calc`, `shapes`, `rasterize`, `render`, the
+  band/inspect/overview/read/io/export/plot verbs, and `raster cog create|validate|info`.
+  (The old flat spellings — `pyramids info`, `pyramids warp`, … — were removed.)
 - vector (`pyramids.cli_vector` + `cli_vector_{inspect,geom,overlay,tess,io}`) — the full
   `FeatureCollection` surface: core (`info`/`bounds`/`convert`/`warp`/`clip`), inspection, unary geometry ops,
   overlay/set ops + predicate `filter`, tessellation/binning/sampling, measurements, I/O export, and remote
@@ -20,12 +22,12 @@ Command groups:
   management, positional/label selection & subsetting, CF/time/calendar/calculus, I/O export, and headless
   plotting (each sub-module documents its own commands; `pyramids nc --help` lists them)
 - collection (`pyramids.cli_collection`) — the full `DatasetCollection` surface:
-  `collection info|stats|resample|merge|to-file|to-cog|to-netcdf|to-zarr|to-kerchunk|reproject|crop|align`
+  `collection info|reduce|resample|merge|export {file,cog,netcdf,zarr,kerchunk}|reproject|crop|align`
   (each verb opens via `--source files|zarr|archive`)
 - STAC (`pyramids.cli_stac`) — `stac search|download` (`[stac]` extra)
 - OGC (`pyramids.cli_ogc`) — `fetch wms|wcs|wfs`
 - UGRID mesh (`pyramids.cli_ugrid`) — `mesh info|extract|convert`
-- processing (`pyramids.processing.cli`) — `run`, `apply`, `tools`, `tool`
+- processing (`pyramids.processing.cli`) — `process run|apply` and `process tool list|show`
 
 The top-level `--version`/`-V` prints the version, and global `--quiet`/`-q`
 (before the command) suppresses informational output. Every command maps 1:1 onto
@@ -46,6 +48,7 @@ from shapely.errors import GEOSException
 
 from pyramids import __version__
 from pyramids._cli_config import apply_config_defaults, find_config_file, load_config
+from pyramids._cli_groups import SuggestingArgumentParser
 from pyramids._cli_shared import OUTPUT_FORMATS, resolved_format
 from pyramids.base._errors import _PyramidsError
 from pyramids.cli_collection import add_collection_commands
@@ -77,7 +80,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ``--quiet`` flags and every command group registered via its
         ``add_<domain>_commands`` function.
     """
-    parser = argparse.ArgumentParser(
+    parser = SuggestingArgumentParser(
         prog="pyramids", description="pyramids GIS toolkit"
     )
     parser.add_argument(
@@ -91,7 +94,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "-q",
         action="store_true",
         help="suppress informational output, e.g. 'wrote ...' (errors still print); "
-        "place it before the command, e.g. `pyramids --quiet warp ...`",
+        "place it before the command, e.g. `pyramids --quiet raster warp ...`",
     )
     parser.add_argument(
         "--format",
@@ -122,7 +125,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="show a progress indicator on stderr for multi-item write verbs (a no-op "
         "when output is not an interactive terminal or when --quiet is set)",
     )
-    sub = parser.add_subparsers(dest="group", required=True)
+    sub = parser.add_subparsers(
+        dest="group", required=True, parser_class=SuggestingArgumentParser
+    )
 
     add_dataset_commands(sub)
     add_vector_commands(sub)
@@ -175,7 +180,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     Examples:
         - Inspect a COG from the shell:
             ```python
-            >>> main(["cog", "info", "scene.tif"])  # doctest: +SKIP
+            >>> main(["raster", "cog", "info", "scene.tif"])  # doctest: +SKIP
             0
 
             ```

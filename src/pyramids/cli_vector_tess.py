@@ -660,11 +660,16 @@ def _add_tessellation_commands(vsub: argparse._SubParsersAction) -> None:
     v_itr.set_defaults(func=_cmd_vector_interpolate_to_raster)
 
 
-def _add_measurement_commands(vsub: argparse._SubParsersAction) -> None:
+def _add_measurement_commands(
+    vsub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the geodesic and geometry-measurement commands.
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     v_area = vsub.add_parser("geodesic-area", help="ellipsoidal area per feature")
     v_area.add_argument("src", help=_HELP_SRC_VECTOR)
@@ -692,24 +697,32 @@ def _add_measurement_commands(vsub: argparse._SubParsersAction) -> None:
     v_dist.add_argument("--json", action="store_true", help=_HELP_JSON)
     v_dist.set_defaults(func=_cmd_vector_distance)
 
-    v_haus = vsub.add_parser("hausdorff-distance", help="Hausdorff distance to --other")
+    v_haus = (advanced or vsub).add_parser(
+        "hausdorff-distance", help="Hausdorff distance to --other"
+    )
     v_haus.add_argument("src", help=_HELP_SRC_VECTOR)
     v_haus.add_argument("--other", required=True, help=_HELP_OTHER)
     v_haus.add_argument("--json", action="store_true", help=_HELP_JSON)
     v_haus.set_defaults(func=_cmd_vector_hausdorff_distance)
 
-    v_fre = vsub.add_parser("frechet-distance", help="Frechet distance to --other")
+    v_fre = (advanced or vsub).add_parser(
+        "frechet-distance", help="Frechet distance to --other"
+    )
     v_fre.add_argument("src", help=_HELP_SRC_VECTOR)
     v_fre.add_argument("--other", required=True, help=_HELP_OTHER)
     v_fre.add_argument("--json", action="store_true", help=_HELP_JSON)
     v_fre.set_defaults(func=_cmd_vector_frechet_distance)
 
-    v_clear = vsub.add_parser("minimum-clearance", help="minimum clearance per feature")
+    v_clear = (advanced or vsub).add_parser(
+        "minimum-clearance", help="minimum clearance per feature"
+    )
     v_clear.add_argument("src", help=_HELP_SRC_VECTOR)
     v_clear.add_argument("--json", action="store_true", help=_HELP_JSON)
     v_clear.set_defaults(func=_cmd_vector_minimum_clearance)
 
-    v_hil = vsub.add_parser("hilbert-distance", help="Hilbert-curve index per feature")
+    v_hil = (advanced or vsub).add_parser(
+        "hilbert-distance", help="Hilbert-curve index per feature"
+    )
     v_hil.add_argument("src", help=_HELP_SRC_VECTOR)
     v_hil.add_argument("--level", type=int, default=16, help="Hilbert-curve level")
     v_hil.add_argument("--json", action="store_true", help=_HELP_JSON)
@@ -723,12 +736,17 @@ def _add_measurement_commands(vsub: argparse._SubParsersAction) -> None:
     v_coords.set_defaults(func=_cmd_vector_get_coordinates)
 
 
-def add_vector_tess_commands(vsub: argparse._SubParsersAction) -> None:
+def add_vector_tess_commands(
+    vsub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the tessellation, binning, sampling and measurement commands.
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action, shared with
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
             :func:`pyramids.cli_vector.add_vector_commands`.
     """
     _add_tessellation_commands(vsub)
-    _add_measurement_commands(vsub)
+    _add_measurement_commands(vsub, advanced)

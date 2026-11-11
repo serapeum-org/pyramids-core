@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import Polygon
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_analysis import add_ugrid_analysis_commands
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf.ugrid import MeshDataset
@@ -86,7 +87,9 @@ def _run(argv):
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_analysis_commands(msub)
+    add_ugrid_analysis_commands(
+        add_group(msub, "analysis", "terrain/field analysis over the mesh")
+    )
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -102,55 +105,69 @@ class TestTerrainWriters:
 
     def test_slope_writes_a_mesh_with_the_derived_variable(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
-        assert _run(["mesh", "slope", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "slope", ramp_file, out]) == 0
         assert "slope" in MeshDataset.read_file(out).data_variable_names
 
     def test_slope_radians(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
-        assert _run(["mesh", "slope", ramp_file, out, "--units", "radians"]) == 0
+        assert (
+            _run(["mesh", "analysis", "slope", ramp_file, out, "--units", "radians"])
+            == 0
+        )
         assert os.path.exists(out)
 
     def test_aspect_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "aspect.nc")
-        assert _run(["mesh", "aspect", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "aspect", ramp_file, out]) == 0
         assert "aspect" in MeshDataset.read_file(out).data_variable_names
 
     def test_hillshade_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "hs.nc")
-        assert _run(["mesh", "hillshade", ramp_file, out, "--azimuth", "270"]) == 0
+        assert (
+            _run(["mesh", "analysis", "hillshade", ramp_file, out, "--azimuth", "270"])
+            == 0
+        )
         assert "hillshade" in MeshDataset.read_file(out).data_variable_names
 
     def test_focal_mean_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "fm.nc")
-        assert _run(["mesh", "focal-mean", ramp_file, out, "--rings", "2"]) == 0
+        assert (
+            _run(["mesh", "analysis", "focal-mean", ramp_file, out, "--rings", "2"])
+            == 0
+        )
         assert "focal_mean" in MeshDataset.read_file(out).data_variable_names
 
     def test_focal_std_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "fs.nc")
-        assert _run(["mesh", "focal-std", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "focal-std", ramp_file, out]) == 0
         assert "focal_std" in MeshDataset.read_file(out).data_variable_names
 
     def test_proximity_writes_distances(self, ramp_file, tmp_path):
         out = str(tmp_path / "prox.nc")
-        assert _run(["mesh", "proximity", ramp_file, out, "--target-faces", "0"]) == 0
+        assert (
+            _run(
+                ["mesh", "analysis", "proximity", ramp_file, out, "--target-faces", "0"]
+            )
+            == 0
+        )
         values = MeshDataset.read_file(out)["proximity"].data
         assert values.tolist() == [0, 1, 2, 3]
 
     def test_refuses_existing_without_overwrite(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
-        assert _run(["mesh", "slope", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "slope", ramp_file, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "slope", ramp_file, out])
+            _run(["mesh", "analysis", "slope", ramp_file, out])
 
     def test_overwrite_replaces(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
-        assert _run(["mesh", "slope", ramp_file, out]) == 0
-        assert _run(["mesh", "slope", ramp_file, out, "--overwrite"]) == 0
+        assert _run(["mesh", "analysis", "slope", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "slope", ramp_file, out, "--overwrite"]) == 0
 
     def test_unknown_variable_is_a_clean_error(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
         with pytest.raises(ValueError):
-            _run(["mesh", "slope", ramp_file, out, "--var", "nope"])
+            _run(["mesh", "analysis", "slope", ramp_file, out, "--var", "nope"])
 
 
 class TestMorphologyWriters:
@@ -159,7 +176,19 @@ class TestMorphologyWriters:
     def test_cluster_labels_two_pools(self, mesh_file, tmp_path):
         out = str(tmp_path / "cl.nc")
         assert (
-            _run(["mesh", "cluster", mesh_file, out, "--lower", "1", "--upper", "10"])
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "cluster",
+                    mesh_file,
+                    out,
+                    "--lower",
+                    "1",
+                    "--upper",
+                    "10",
+                ]
+            )
             == 0
         )
         labels = MeshDataset.read_file(out)["v"].data
@@ -167,19 +196,32 @@ class TestMorphologyWriters:
 
     def test_sieve_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "sv.nc")
-        assert _run(["mesh", "sieve", ramp_file, out, "--threshold", "1"]) == 0
+        assert (
+            _run(["mesh", "analysis", "sieve", ramp_file, out, "--threshold", "1"]) == 0
+        )
         assert os.path.exists(out)
 
     def test_binary_dilation_writes_a_mesh(self, mask_file, tmp_path):
         out = str(tmp_path / "dil.nc")
         assert (
-            _run(["mesh", "binary-dilation", mask_file, out, "--iterations", "1"]) == 0
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "binary-dilation",
+                    mask_file,
+                    out,
+                    "--iterations",
+                    "1",
+                ]
+            )
+            == 0
         )
         assert os.path.exists(out)
 
     def test_binary_erosion_writes_a_mesh(self, mask_file, tmp_path):
         out = str(tmp_path / "ero.nc")
-        assert _run(["mesh", "binary-erosion", mask_file, out]) == 0
+        assert _run(["mesh", "analysis", "binary-erosion", mask_file, out]) == 0
         assert os.path.exists(out)
 
 
@@ -187,24 +229,27 @@ class TestSummaries:
     """Printing / vector-summary verbs."""
 
     def test_domain_area_json(self, ramp_file, capsys):
-        rc, payload = _run_capture(["mesh", "domain-area", ramp_file, "--json"], capsys)
+        rc, payload = _run_capture(
+            ["mesh", "analysis", "domain-area", ramp_file, "--json"], capsys
+        )
         assert rc == 0
         assert payload["area"] == pytest.approx(4.0)
 
     def test_domain_area_text(self, ramp_file, capsys):
-        assert _run(["mesh", "domain-area", ramp_file]) == 0
+        assert _run(["mesh", "analysis", "domain-area", ramp_file]) == 0
         assert "area:" in capsys.readouterr().out
 
     def test_count_domain_cells_json(self, ramp_file, capsys):
         rc, payload = _run_capture(
-            ["mesh", "count-domain-cells", ramp_file, "--json"], capsys
+            ["mesh", "analysis", "count-domain-cells", ramp_file, "--json"], capsys
         )
         assert rc == 0
         assert payload["count"] == 4
 
     def test_histogram_json(self, ramp_file, capsys):
         rc, records = _run_capture(
-            ["mesh", "histogram", ramp_file, "--bins", "4", "--json"], capsys
+            ["mesh", "analysis", "histogram", ramp_file, "--bins", "4", "--json"],
+            capsys,
         )
         assert rc == 0
         assert sum(r["count"] for r in records) == 4
@@ -212,7 +257,19 @@ class TestSummaries:
     def test_histogram_csv(self, ramp_file, tmp_path):
         out = str(tmp_path / "hist.csv")
         assert (
-            _run(["mesh", "histogram", ramp_file, "--bins", "4", "--output", out]) == 0
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "histogram",
+                    ramp_file,
+                    "--bins",
+                    "4",
+                    "--output",
+                    out,
+                ]
+            )
+            == 0
         )
         frame = pd.read_csv(out)
         assert list(frame.columns) == ["bin_left", "bin_right", "count"]
@@ -221,6 +278,7 @@ class TestSummaries:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "histogram",
                 ramp_file,
                 "--bins",
@@ -239,6 +297,7 @@ class TestSummaries:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "zonal-stats",
                 ramp_file,
                 zones_file,
@@ -261,6 +320,7 @@ class TestSummaries:
             _run(
                 [
                     "mesh",
+                    "analysis",
                     "zonal-stats",
                     ramp_file,
                     zones_file,
@@ -278,6 +338,7 @@ class TestSummaries:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "zonal-stats",
                 ramp_file,
                 zones_file,
@@ -302,30 +363,34 @@ class TestSummaries:
         FeatureCollection(gpd.GeoDataFrame(geometry=[poly], crs=3857)).to_file(
             zones, driver="geojson"
         )
-        rc = _run(["mesh", "zonal-stats", geo_mesh, zones, "--var", "v", "--json"])
+        rc = _run(
+            ["mesh", "analysis", "zonal-stats", geo_mesh, zones, "--var", "v", "--json"]
+        )
         assert rc == 0
 
     def test_histogram_prints_records_as_text(self, ramp_file, capsys):
         """Without --json or --output the records print one per line."""
-        assert _run(["mesh", "histogram", ramp_file, "--bins", "2"]) == 0
+        assert _run(["mesh", "analysis", "histogram", ramp_file, "--bins", "2"]) == 0
         assert "count" in capsys.readouterr().out
 
     def test_footprint_json(self, ramp_file, capsys):
-        rc, payload = _run_capture(["mesh", "footprint", ramp_file, "--json"], capsys)
+        rc, payload = _run_capture(
+            ["mesh", "analysis", "footprint", ramp_file, "--json"], capsys
+        )
         assert rc == 0
         assert payload["area"] == pytest.approx(4.0)
         assert payload["wkt"].startswith("POLYGON")
 
     def test_footprint_vector(self, ramp_file, tmp_path):
         out = str(tmp_path / "fp.geojson")
-        assert _run(["mesh", "footprint", ramp_file, "--output", out]) == 0
+        assert _run(["mesh", "analysis", "footprint", ramp_file, "--output", out]) == 0
         assert len(FeatureCollection.read_file(out)) == 1
 
     def test_footprint_vector_refuses_existing(self, ramp_file, tmp_path):
         out = str(tmp_path / "fp.geojson")
-        assert _run(["mesh", "footprint", ramp_file, "--output", out]) == 0
+        assert _run(["mesh", "analysis", "footprint", ramp_file, "--output", out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "footprint", ramp_file, "--output", out])
+            _run(["mesh", "analysis", "footprint", ramp_file, "--output", out])
 
 
 class TestSampling:
@@ -333,7 +398,17 @@ class TestSampling:
 
     def test_sample_point_json(self, ramp_file, capsys):
         rc, records = _run_capture(
-            ["mesh", "sample-point", ramp_file, "--x", "1.0", "--y", "0.5", "--json"],
+            [
+                "mesh",
+                "analysis",
+                "sample-point",
+                ramp_file,
+                "--x",
+                "1.0",
+                "--y",
+                "0.5",
+                "--json",
+            ],
             capsys,
         )
         assert rc == 0
@@ -341,7 +416,17 @@ class TestSampling:
 
     def test_sample_point_outside_is_nan(self, ramp_file, capsys):
         rc, records = _run_capture(
-            ["mesh", "sample-point", ramp_file, "--x", "-100", "--y", "-100", "--json"],
+            [
+                "mesh",
+                "analysis",
+                "sample-point",
+                ramp_file,
+                "--x",
+                "-100",
+                "--y",
+                "-100",
+                "--json",
+            ],
             capsys,
         )
         assert rc == 0
@@ -353,6 +438,7 @@ class TestSampling:
             _run(
                 [
                     "mesh",
+                    "analysis",
                     "sample-point",
                     ramp_file,
                     "--x",
@@ -373,6 +459,7 @@ class TestSampling:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "sample",
                 ramp_file,
                 "--var",
@@ -392,6 +479,7 @@ class TestSampling:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "sample",
                 ramp_file,
                 "--var",
@@ -415,6 +503,7 @@ class TestSampling:
             _run(
                 [
                     "mesh",
+                    "analysis",
                     "sample",
                     ramp_file,
                     "--var",
@@ -437,6 +526,7 @@ class TestSampling:
             _run(
                 [
                     "mesh",
+                    "analysis",
                     "sample-line",
                     ramp_file,
                     "--coords",
@@ -456,6 +546,7 @@ class TestSampling:
         rc, records = _run_capture(
             [
                 "mesh",
+                "analysis",
                 "sample-line",
                 ramp_file,
                 "--coords",
@@ -472,15 +563,36 @@ class TestSampling:
 
     def test_sample_line_rejects_odd_coords(self, ramp_file):
         with pytest.raises(ValueError, match="even number"):
-            _run(["mesh", "sample-line", ramp_file, "--coords", "0", "0.5", "5"])
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "sample-line",
+                    ramp_file,
+                    "--coords",
+                    "0",
+                    "0.5",
+                    "5",
+                ]
+            )
 
     def test_sample_line_rejects_single_point(self, ramp_file):
         with pytest.raises(ValueError, match="pairs"):
-            _run(["mesh", "sample-line", ramp_file, "--coords", "0", "0.5"])
+            _run(["mesh", "analysis", "sample-line", ramp_file, "--coords", "0", "0.5"])
 
     def test_sample_random_json(self, ramp_file, capsys):
         rc, records = _run_capture(
-            ["mesh", "sample-random", ramp_file, "-n", "5", "--seed", "1", "--json"],
+            [
+                "mesh",
+                "analysis",
+                "sample-random",
+                ramp_file,
+                "-n",
+                "5",
+                "--seed",
+                "1",
+                "--json",
+            ],
             capsys,
         )
         assert rc == 0
@@ -489,7 +601,17 @@ class TestSampling:
     def test_sample_random_long_n_flag(self, ramp_file, capsys):
         """--n is accepted as the long spelling of -n (parity with head/tail) (N2)."""
         rc, records = _run_capture(
-            ["mesh", "sample-random", ramp_file, "--n", "4", "--seed", "1", "--json"],
+            [
+                "mesh",
+                "analysis",
+                "sample-random",
+                ramp_file,
+                "--n",
+                "4",
+                "--seed",
+                "1",
+                "--json",
+            ],
             capsys,
         )
         assert rc == 0, "the --n long flag must be accepted"
@@ -501,6 +623,7 @@ class TestSampling:
             _run(
                 [
                     "mesh",
+                    "analysis",
                     "sample-random",
                     ramp_file,
                     "-n",
@@ -522,14 +645,28 @@ class TestContour:
     @pytest.mark.plot
     def test_contour_writes_lines(self, ramp_file, tmp_path):
         out = str(tmp_path / "contour.geojson")
-        assert _run(["mesh", "contour", ramp_file, out, "--levels", "3"]) == 0
+        assert (
+            _run(["mesh", "analysis", "contour", ramp_file, out, "--levels", "3"]) == 0
+        )
         assert len(FeatureCollection.read_file(out)) >= 1
 
     @pytest.mark.plot
     def test_contour_explicit_levels(self, ramp_file, tmp_path):
         out = str(tmp_path / "contour.geojson")
         assert (
-            _run(["mesh", "contour", ramp_file, out, "--levels", "1.5", "2.5", "3.5"])
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "contour",
+                    ramp_file,
+                    out,
+                    "--levels",
+                    "1.5",
+                    "2.5",
+                    "3.5",
+                ]
+            )
             == 0
         )
         assert os.path.exists(out)
@@ -537,13 +674,13 @@ class TestContour:
     @pytest.mark.plot
     def test_contour_default_levels(self, ramp_file, tmp_path):
         out = str(tmp_path / "contour.geojson")
-        assert _run(["mesh", "contour", ramp_file, out]) == 0
+        assert _run(["mesh", "analysis", "contour", ramp_file, out]) == 0
         assert os.path.exists(out)
 
     def test_contour_unknown_driver_is_refused(self, ramp_file, tmp_path):
         out = str(tmp_path / "contour.weird")
         with pytest.raises(ValueError, match="driver"):
-            _run(["mesh", "contour", ramp_file, out, "--levels", "3"])
+            _run(["mesh", "analysis", "contour", ramp_file, out, "--levels", "3"])
 
 
 class TestPolyfit:
@@ -573,7 +710,7 @@ class TestPolyfit:
         src = self._ramp_file(tmp_path)
         out = str(tmp_path / "pf.nc")
 
-        assert _run(["mesh", "polyfit", src, out, "--degree", "1"]) == 0
+        assert _run(["mesh", "analysis", "polyfit", src, out, "--degree", "1"]) == 0
 
         back = MeshDataset.read_file(out)
         assert back["v"].dimensions[0] == "coefficient", f"got {back['v'].dimensions}"
@@ -583,12 +720,12 @@ class TestPolyfit:
         """`--degree` is required; argparse rejects the call without it."""
         src = self._ramp_file(tmp_path)
         with pytest.raises(SystemExit):
-            _run(["mesh", "polyfit", src, str(tmp_path / "pf.nc")])
+            _run(["mesh", "analysis", "polyfit", src, str(tmp_path / "pf.nc")])
 
     def test_polyfit_refuses_an_existing_output(self, tmp_path):
         """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
         src = self._ramp_file(tmp_path)
         out = str(tmp_path / "pf.nc")
-        assert _run(["mesh", "polyfit", src, out, "--degree", "1"]) == 0
+        assert _run(["mesh", "analysis", "polyfit", src, out, "--degree", "1"]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "polyfit", src, out, "--degree", "1"])
+            _run(["mesh", "analysis", "polyfit", src, out, "--degree", "1"])

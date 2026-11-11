@@ -18,6 +18,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_export import add_ugrid_export_commands
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
@@ -42,7 +43,12 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_export_commands(msub)
+    advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
+    add_ugrid_export_commands(
+        add_group(msub, "export", "write a mesh to a file or format"), advanced
+    )
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -146,41 +152,43 @@ def attach_registered(monkeypatch):
 
 
 class TestToFile:
-    """`pyramids mesh to-file`."""
+    """`pyramids mesh export file`."""
 
     def test_round_trips(self, tmp_path):
-        """to-file re-writes a readable UGRID NetCDF."""
+        """export file re-writes a readable UGRID NetCDF."""
         out = str(tmp_path / "copy.nc")
-        assert _dispatch(["mesh", "to-file", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "file", str(_MESH), out]) == 0
         assert set(MeshDataset.read_file(out).data_variable_names)
 
     def test_refuses_existing(self, tmp_path):
         """A second write without --overwrite raises."""
         out = str(tmp_path / "c.nc")
-        assert _dispatch(["mesh", "to-file", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "file", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _dispatch(["mesh", "to-file", str(_MESH), out])
+            _dispatch(["mesh", "export", "file", str(_MESH), out])
 
     def test_overwrite_allows_replacement(self, tmp_path):
         """--overwrite replaces an existing output."""
         out = str(tmp_path / "c.nc")
-        assert _dispatch(["mesh", "to-file", str(_MESH), out]) == 0
-        assert _dispatch(["mesh", "to-file", str(_MESH), out, "--overwrite"]) == 0
+        assert _dispatch(["mesh", "export", "file", str(_MESH), out]) == 0
+        assert (
+            _dispatch(["mesh", "export", "file", str(_MESH), out, "--overwrite"]) == 0
+        )
 
     def test_quiet_suppresses_chatter(self, tmp_path, capsys):
         """--quiet silences the 'wrote …' line."""
         out = str(tmp_path / "q.nc")
-        assert _dispatch(["--quiet", "mesh", "to-file", str(_MESH), out]) == 0
+        assert _dispatch(["--quiet", "mesh", "export", "file", str(_MESH), out]) == 0
         assert capsys.readouterr().out == ""
 
 
 class TestToGeodataframe:
-    """`pyramids mesh to-geodataframe`."""
+    """`pyramids mesh export geodataframe`."""
 
     def test_writes_faces(self, tmp_path):
         """The default face location writes polygons."""
         out = str(tmp_path / "faces.geojson")
-        assert _dispatch(["mesh", "to-geodataframe", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "geodataframe", str(_MESH), out]) == 0
         assert set(FeatureCollection.read_file(out).geometry.geom_type) == {"Polygon"}
 
     def test_writes_nodes_with_var(self, tmp_path):
@@ -189,7 +197,8 @@ class TestToGeodataframe:
         rc = _dispatch(
             [
                 "mesh",
-                "to-geodataframe",
+                "export",
+                "geodataframe",
                 str(_MESH),
                 out,
                 "--location",
@@ -205,18 +214,32 @@ class TestToGeodataframe:
         """An unknown extension with no --driver raises before any read."""
         with pytest.raises(ValueError, match="cannot infer a vector driver"):
             _dispatch(
-                ["mesh", "to-geodataframe", str(_MESH), str(tmp_path / "x.weird")]
+                [
+                    "mesh",
+                    "export",
+                    "geodataframe",
+                    str(_MESH),
+                    str(tmp_path / "x.weird"),
+                ]
             )
 
 
 class TestToDataframe:
-    """`pyramids mesh to-dataframe`."""
+    """`pyramids mesh export dataframe`."""
 
     def test_writes_csv(self, tmp_path):
         """A CSV is written with one row per element value."""
         out = str(tmp_path / "t.csv")
         rc = _dispatch(
-            ["mesh", "to-dataframe", str(_MESH), out, "--variables", "mesh2d_node_z"]
+            [
+                "mesh",
+                "export",
+                "dataframe",
+                str(_MESH),
+                out,
+                "--variables",
+                "mesh2d_node_z",
+            ]
         )
         assert rc == 0
         assert len(pd.read_csv(out)) > 0
@@ -225,7 +248,9 @@ class TestToDataframe:
     def test_writes_parquet(self, tmp_path):
         """A .parquet extension is written through the Parquet writer (needs [parquet])."""
         out = str(tmp_path / "t.parquet")
-        assert _dispatch(["mesh", "to-dataframe", str(_MESH), out, "--dropna"]) == 0
+        assert (
+            _dispatch(["mesh", "export", "dataframe", str(_MESH), out, "--dropna"]) == 0
+        )
         assert len(pd.read_parquet(out)) >= 0
 
     def test_missing_parquet_extra_is_clean(self, tmp_path, monkeypatch):
@@ -236,19 +261,28 @@ class TestToDataframe:
 
         monkeypatch.setattr(pd.DataFrame, "to_parquet", _boom)
         with pytest.raises(ValueError, match=r"\[parquet\] extra"):
-            _dispatch(["mesh", "to-dataframe", str(_MESH), str(tmp_path / "t.parquet")])
+            _dispatch(
+                [
+                    "mesh",
+                    "export",
+                    "dataframe",
+                    str(_MESH),
+                    str(tmp_path / "t.parquet"),
+                ]
+            )
 
 
 class TestToDataset:
-    """`pyramids mesh to-dataset`."""
+    """`pyramids mesh export dataset`."""
 
     def test_rasterizes_to_geotiff(self, tmp_path):
-        """to-dataset writes a single-band raster."""
+        """export dataset writes a single-band raster."""
         out = str(tmp_path / "grid.tif")
         rc = _dispatch(
             [
                 "mesh",
-                "to-dataset",
+                "export",
+                "dataset",
                 str(_MESH),
                 out,
                 "--var",
@@ -267,7 +301,8 @@ class TestToDataset:
         rc = _dispatch(
             [
                 "mesh",
-                "to-dataset",
+                "export",
+                "dataset",
                 str(_MESH),
                 out,
                 "--var",
@@ -292,7 +327,8 @@ class TestToDataset:
             _dispatch(
                 [
                     "mesh",
-                    "to-dataset",
+                    "export",
+                    "dataset",
                     str(_MESH),
                     str(tmp_path / "x.tif"),
                     "--var",
@@ -304,21 +340,21 @@ class TestToDataset:
 
 
 class TestToZarr:
-    """`pyramids mesh to-zarr`."""
+    """`pyramids mesh export zarr`."""
 
     def test_writes_store(self, tmp_path):
-        """to-zarr writes a Zarr store directory."""
+        """export zarr writes a Zarr store directory."""
         out = str(tmp_path / "m.zarr")
-        assert _dispatch(["mesh", "to-zarr", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "zarr", str(_MESH), out]) == 0
         assert Path(out).exists()
 
 
 class TestToImage:
-    """`pyramids mesh to-image`."""
+    """`pyramids mesh export image`."""
 
     def test_writes_png(self, tmp_path):
-        """to-image writes a readable colour-mapped image."""
-        # Pillow — and the cleopatra/matplotlib viz stack the `to-image` command renders
+        """export image writes a readable colour-mapped image."""
+        # Pillow — and the cleopatra/matplotlib viz stack the `export image` command renders
         # with — only ships in the [viz] extra. Import it here, not at module top level, so
         # this module still *collects* (and its non-viz export tests still run) in the core /
         # lazy / interop wheel envs, which have no Pillow.
@@ -327,7 +363,8 @@ class TestToImage:
         rc = _dispatch(
             [
                 "mesh",
-                "to-image",
+                "export",
+                "image",
                 str(_MESH),
                 out,
                 "--var",
@@ -342,29 +379,29 @@ class TestToImage:
 
 
 class TestToBytes:
-    """`pyramids mesh to-bytes`."""
+    """`pyramids mesh export bytes`."""
 
     def test_writes_file(self, tmp_path):
-        """to-bytes writes the NetCDF buffer to a file."""
+        """export bytes writes the NetCDF buffer to a file."""
         out = str(tmp_path / "m.nc")
-        assert _dispatch(["mesh", "to-bytes", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "bytes", str(_MESH), out]) == 0
         assert Path(out).stat().st_size > 0
 
     def test_writes_stdout(self, capsysbinary):
         """With no output path the bytes go to stdout."""
-        assert _dispatch(["mesh", "to-bytes", str(_MESH)]) == 0
+        assert _dispatch(["mesh", "export", "bytes", str(_MESH)]) == 0
         assert len(capsysbinary.readouterr().out) > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second write to the same file without --overwrite raises."""
         out = str(tmp_path / "m.nc")
-        assert _dispatch(["mesh", "to-bytes", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "export", "bytes", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _dispatch(["mesh", "to-bytes", str(_MESH), out])
+            _dispatch(["mesh", "export", "bytes", str(_MESH), out])
 
 
 class TestToLocation:
-    """`pyramids mesh to-location`."""
+    """`pyramids mesh export location`."""
 
     def test_remaps_to_face(self, tmp_path):
         """A node variable remapped onto faces writes a readable mesh."""
@@ -372,7 +409,8 @@ class TestToLocation:
         rc = _dispatch(
             [
                 "mesh",
-                "to-location",
+                "export",
+                "location",
                 str(_MESH),
                 out,
                 "--location",
@@ -386,12 +424,14 @@ class TestToLocation:
 
 
 class TestToCrs:
-    """`pyramids mesh to-crs`."""
+    """`pyramids mesh export crs`."""
 
     def test_reprojects(self, tmp_path):
-        """to-crs reprojects a CRS-bearing mesh to the target EPSG."""
+        """export crs reprojects a CRS-bearing mesh to the target EPSG."""
         out = str(tmp_path / "rep.nc")
-        rc = _dispatch(["mesh", "to-crs", _crs_mesh(tmp_path), out, "--epsg", "3857"])
+        rc = _dispatch(
+            ["mesh", "export", "crs", _crs_mesh(tmp_path), out, "--epsg", "3857"]
+        )
         assert rc == 0
         assert MeshDataset.read_file(out).epsg == 3857
 
@@ -399,7 +439,15 @@ class TestToCrs:
         """Reprojecting a mesh with no CRS is a clean error."""
         with pytest.raises(ValueError, match="source CRS"):
             _dispatch(
-                ["mesh", "to-crs", str(_MESH), str(tmp_path / "x.nc"), "--epsg", "3857"]
+                [
+                    "mesh",
+                    "export",
+                    "crs",
+                    str(_MESH),
+                    str(tmp_path / "x.nc"),
+                    "--epsg",
+                    "3857",
+                ]
             )
 
 
@@ -409,13 +457,20 @@ class TestSetCrs:
     def test_assigns_epsg(self, tmp_path):
         """set-crs declares a CRS on a mesh that had none."""
         out = str(tmp_path / "declared.nc")
-        assert _dispatch(["mesh", "set-crs", str(_MESH), out, "--epsg", "4326"]) == 0
+        assert (
+            _dispatch(
+                ["mesh", "advanced", "set-crs", str(_MESH), out, "--epsg", "4326"]
+            )
+            == 0
+        )
         assert MeshDataset.read_file(out).epsg == 4326
 
     def test_neither_epsg_nor_crs_raises(self, tmp_path):
         """Omitting both --epsg and --crs is a clean error."""
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "set-crs", str(_MESH), str(tmp_path / "x.nc")])
+            _dispatch(
+                ["mesh", "advanced", "set-crs", str(_MESH), str(tmp_path / "x.nc")]
+            )
 
 
 class TestBurn:
@@ -427,6 +482,7 @@ class TestBurn:
         rc = _dispatch(
             [
                 "mesh",
+                "export",
                 "burn",
                 str(_MESH),
                 out,
@@ -449,6 +505,7 @@ class TestBurn:
         rc = _dispatch(
             [
                 "mesh",
+                "export",
                 "burn",
                 str(_MESH),
                 out,
@@ -470,7 +527,9 @@ class TestRegrid:
         """regrid carries a face variable onto the target mesh."""
         face = _face_mesh(tmp_path)
         out = str(tmp_path / "regridded.nc")
-        rc = _dispatch(["mesh", "regrid", face, out, "--target", face, "--var", "fv"])
+        rc = _dispatch(
+            ["mesh", "export", "regrid", face, out, "--target", face, "--var", "fv"]
+        )
         assert rc == 0
         assert "fv" in MeshDataset.read_file(out).data_variable_names
 
@@ -481,7 +540,9 @@ class TestPolygonize:
     def test_dissolves_to_polygons(self, tmp_path):
         """polygonize writes one feature per merged region."""
         out = str(tmp_path / "poly.geojson")
-        rc = _dispatch(["mesh", "polygonize", _face_mesh(tmp_path), out, "--var", "fv"])
+        rc = _dispatch(
+            ["mesh", "export", "polygonize", _face_mesh(tmp_path), out, "--var", "fv"]
+        )
         assert rc == 0
         assert len(FeatureCollection.read_file(out)) > 0
 
@@ -497,6 +558,7 @@ class TestAttachData:
         rc = _dispatch(
             [
                 "mesh",
+                "export",
                 "attach-data",
                 str(_MESH),
                 out,
@@ -516,6 +578,7 @@ class TestAttachData:
             _dispatch(
                 [
                     "mesh",
+                    "export",
                     "attach-data",
                     str(_MESH),
                     str(tmp_path / "o.nc"),
@@ -537,6 +600,7 @@ class TestWithVariable:
         rc = _dispatch(
             [
                 "mesh",
+                "advanced",
                 "with-variable",
                 str(_MESH),
                 out,
@@ -563,6 +627,7 @@ class TestRenameVariable:
         rc = _dispatch(
             [
                 "mesh",
+                "advanced",
                 "rename-variable",
                 str(_MESH),
                 out,
@@ -583,6 +648,7 @@ class TestRenameVariable:
             _dispatch(
                 [
                     "mesh",
+                    "advanced",
                     "rename-variable",
                     str(_MESH),
                     str(tmp_path / "x.nc"),
@@ -615,7 +681,7 @@ class TestVoronoiPolygons:
         src = self._mesh_file(tmp_path)
         out = tmp_path / "vor.gpkg"
 
-        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        assert _dispatch(["mesh", "export", "voronoi-polygons", src, str(out)]) == 0
 
         cells = FeatureCollection.read_file(str(out))
         assert len(cells) == 4
@@ -625,7 +691,7 @@ class TestVoronoiPolygons:
         """The output driver is inferred from the extension (R1 N4)."""
         src = self._mesh_file(tmp_path)
         out = tmp_path / "vor.geojson"
-        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        assert _dispatch(["mesh", "export", "voronoi-polygons", src, str(out)]) == 0
         assert out.exists(), "the .geojson output must be created"
         assert out.stat().st_size > 0, "the output must not be empty"
 
@@ -633,6 +699,6 @@ class TestVoronoiPolygons:
         """Without `--overwrite`, writing over an existing file is refused (R1 N4)."""
         src = self._mesh_file(tmp_path)
         out = tmp_path / "vor.gpkg"
-        assert _dispatch(["mesh", "voronoi-polygons", src, str(out)]) == 0
+        assert _dispatch(["mesh", "export", "voronoi-polygons", src, str(out)]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _dispatch(["mesh", "voronoi-polygons", src, str(out)])
+            _dispatch(["mesh", "export", "voronoi-polygons", src, str(out)])

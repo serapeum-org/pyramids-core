@@ -1756,7 +1756,7 @@ class Analysis(_Engine["Dataset"]):
     def calc(self, expr: str, *others: Dataset, dtype: str | None = None) -> Dataset:
         """Evaluate a string band-algebra expression over this and other rasters.
 
-        The Python counterpart of the ``pyramids calc`` CLI: ``self`` is bound to
+        The Python counterpart of the ``pyramids raster calc`` CLI: ``self`` is bound to
         ``A`` and each dataset in ``others`` to ``B``, ``C``, ... (up to ``Z``), then
         ``expr`` is evaluated cell by cell by a small AST whitelist -- never
         ``eval`` / ``exec``. Only arithmetic over the bound arrays, comparisons, and a
@@ -1773,7 +1773,7 @@ class Analysis(_Engine["Dataset"]):
         and dataset-level metadata, and declares **no** no-data value -- a computed
         array has no inherent sentinel.
 
-        It therefore differs on purpose from the ``pyramids calc`` CLI in three ways:
+        It therefore differs on purpose from the ``pyramids raster calc`` CLI in three ways:
         the CLI refuses a CRS-less input, writes no metadata, and stamps the ``-9999``
         no-data default; the engine permits an un-georeferenced in-memory result,
         carries metadata (like :meth:`combine`), and leaves the result sentinel-free.

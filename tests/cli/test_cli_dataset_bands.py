@@ -146,14 +146,14 @@ class TestAddBand:
     def test_appends_a_band(self, single_band, three_band, tmp_path):
         """The output has one more band than the input."""
         out = str(tmp_path / "added.tif")
-        rc = main(["add-band", single_band, out, "--source", three_band])
+        rc = main(["raster", "add-band", single_band, out, "--source", three_band])
         assert rc == 0, "add-band must exit 0"
         assert Dataset.read_file(out).band_count == 2, "a band must be appended"
 
     def test_mismatched_source_dims_error(self, single_band, geoloc_raster, capsys):
         """A source band of different dimensions exits 1 with a clean error."""
         out = str(single_band).replace("single", "mismatch")
-        rc = main(["add-band", single_band, out, "--source", geoloc_raster])
+        rc = main(["raster", "add-band", single_band, out, "--source", geoloc_raster])
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -163,14 +163,14 @@ class TestSelectBands:
     def test_subsets_and_reorders(self, three_band, tmp_path):
         """Selecting two 1-based bands yields a two-band raster."""
         out = str(tmp_path / "subset.tif")
-        rc = main(["select-bands", three_band, out, "--bands", "3", "1"])
+        rc = main(["raster", "select-bands", three_band, out, "--bands", "3", "1"])
         assert rc == 0, "select-bands must exit 0"
         assert Dataset.read_file(out).band_count == 2, "two bands must be kept"
 
     def test_out_of_range_band_error(self, three_band, tmp_path, capsys):
         """An out-of-range band index exits 1 with a clean error."""
         out = str(tmp_path / "bad.tif")
-        rc = main(["select-bands", three_band, out, "--bands", "9"])
+        rc = main(["raster", "select-bands", three_band, out, "--bands", "9"])
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -179,23 +179,62 @@ class TestGetBandByColor:
 
     def test_prints_band_index(self, rgb_band, capsys):
         """The matching band's 0-based index is printed."""
-        assert main(["get-band-by-color", rgb_band, "--color", "red"]) == 0
+        assert (
+            main(
+                ["raster", "advanced", "get-band-by-color", rgb_band, "--color", "red"]
+            )
+            == 0
+        )
         assert capsys.readouterr().out.strip() == "0", "red is band 0"
 
     def test_json_payload(self, rgb_band, capsys):
         """--json wraps the colour and band index."""
-        assert main(["get-band-by-color", rgb_band, "--color", "blue", "--json"]) == 0
+        assert (
+            main(
+                [
+                    "raster",
+                    "advanced",
+                    "get-band-by-color",
+                    rgb_band,
+                    "--color",
+                    "blue",
+                    "--json",
+                ]
+            )
+            == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload == {"color": "blue", "band": 2}, f"wrong payload: {payload}"
 
     def test_absent_color_is_none(self, rgb_band, capsys):
         """A colour no band carries prints `none` and still exits 0."""
-        assert main(["get-band-by-color", rgb_band, "--color", "alpha"]) == 0
+        assert (
+            main(
+                [
+                    "raster",
+                    "advanced",
+                    "get-band-by-color",
+                    rgb_band,
+                    "--color",
+                    "alpha",
+                ]
+            )
+            == 0
+        )
         assert capsys.readouterr().out.strip() == "none", "no alpha band"
 
     def test_missing_file_error(self, tmp_path, capsys):
         """A missing input exits 1 with a clean error."""
-        rc = main(["get-band-by-color", str(tmp_path / "nope.tif"), "--color", "red"])
+        rc = main(
+            [
+                "raster",
+                "advanced",
+                "get-band-by-color",
+                str(tmp_path / "nope.tif"),
+                "--color",
+                "red",
+            ]
+        )
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -205,13 +244,13 @@ class TestCreateMaskBand:
     def test_writes_per_dataset_mask(self, single_band, tmp_path):
         """The output carries a per-dataset mask band."""
         out = str(tmp_path / "masked.tif")
-        rc = main(["create-mask-band", single_band, out])
+        rc = main(["raster", "advanced", "create-mask-band", single_band, out])
         assert rc == 0, "create-mask-band must exit 0"
         assert Dataset.read_file(out).mask_flags().per_dataset, "mask must persist"
 
     def test_overwrite_without_flag_error(self, single_band, three_band, capsys):
         """Writing over an existing output without --overwrite exits 1."""
-        rc = main(["create-mask-band", single_band, three_band])
+        rc = main(["raster", "advanced", "create-mask-band", single_band, three_band])
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -221,7 +260,9 @@ class TestReadMasks:
     def test_writes_mask_raster(self, nodata_raster, tmp_path):
         """The mask raster marks the nodata column as 0 and valid cells as 255."""
         out = str(tmp_path / "masks.tif")
-        rc = main(["read-masks", nodata_raster, out, "--band", "0"])
+        rc = main(
+            ["raster", "advanced", "read-masks", nodata_raster, out, "--band", "0"]
+        )
         assert rc == 0, "read-masks must exit 0"
         mask = np.asarray(Dataset.read_file(out).read_array())
         assert bool((mask[:, 1] == 0).all()), "nodata column must be 0"
@@ -230,7 +271,9 @@ class TestReadMasks:
     def test_bad_band_error(self, nodata_raster, tmp_path, capsys):
         """An out-of-range band exits 1 with a clean error (no traceback)."""
         out = str(tmp_path / "masks_bad.tif")
-        rc = main(["read-masks", nodata_raster, out, "--band", "5"])
+        rc = main(
+            ["raster", "advanced", "read-masks", nodata_raster, out, "--band", "5"]
+        )
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -240,13 +283,23 @@ class TestGetMask:
     def test_writes_single_band_mask(self, nodata_raster, tmp_path):
         """A single-band mask raster is written for the requested band."""
         out = str(tmp_path / "mask0.tif")
-        rc = main(["get-mask", nodata_raster, out, "--band", "0"])
+        rc = main(["raster", "advanced", "get-mask", nodata_raster, out, "--band", "0"])
         assert rc == 0, "get-mask must exit 0"
         assert Dataset.read_file(out).band_count == 1, "one mask band expected"
 
     def test_overwrite_without_flag_error(self, nodata_raster, single_band, capsys):
         """Writing over an existing output without --overwrite exits 1."""
-        rc = main(["get-mask", nodata_raster, single_band, "--band", "0"])
+        rc = main(
+            [
+                "raster",
+                "advanced",
+                "get-mask",
+                nodata_raster,
+                single_band,
+                "--band",
+                "0",
+            ]
+        )
         _assert_clean_error(rc, capsys.readouterr().err)
 
 
@@ -263,6 +316,7 @@ class TestSetColorRamp:
         out = str(tmp_path / "ramped.tif")
         rc = main(
             [
+                "raster",
                 "set-color-ramp",
                 single_band,
                 out,
@@ -289,6 +343,7 @@ class TestSetColorRamp:
         out = str(tmp_path / "ramped_bad.tif")
         rc = main(
             [
+                "raster",
                 "set-color-ramp",
                 single_band,
                 out,
@@ -312,7 +367,9 @@ class TestSetRpcs:
         with open(rpc_path, "w", encoding="utf-8") as handle:
             json.dump({key: "0" for key in _RPC_KEYS}, handle)
         out = str(tmp_path / "with_rpc.tif")
-        rc = main(["set-rpcs", single_band, out, "--rpc-json", rpc_path])
+        rc = main(
+            ["raster", "advanced", "set-rpcs", single_band, out, "--rpc-json", rpc_path]
+        )
         assert rc == 0, "set-rpcs must exit 0"
         assert Dataset.read_file(out).has_rpcs, "RPC metadata must persist"
 
@@ -322,7 +379,9 @@ class TestSetRpcs:
         with open(rpc_path, "w", encoding="utf-8") as handle:
             json.dump({"LINE_OFF": "0"}, handle)
         out = str(tmp_path / "with_rpc_bad.tif")
-        rc = main(["set-rpcs", single_band, out, "--rpc-json", rpc_path])
+        rc = main(
+            ["raster", "advanced", "set-rpcs", single_band, out, "--rpc-json", rpc_path]
+        )
         _assert_clean_error(rc, capsys.readouterr().err)
 
     def test_non_object_json_error(self, single_band, tmp_path, capsys):
@@ -331,7 +390,9 @@ class TestSetRpcs:
         with open(rpc_path, "w", encoding="utf-8") as handle:
             json.dump(["LINE_OFF", "SAMP_OFF"], handle)
         out = str(tmp_path / "with_rpc_list.tif")
-        rc = main(["set-rpcs", single_band, out, "--rpc-json", rpc_path])
+        rc = main(
+            ["raster", "advanced", "set-rpcs", single_band, out, "--rpc-json", rpc_path]
+        )
         err = capsys.readouterr().err
         _assert_clean_error(rc, err)
         assert "JSON object" in err, (
@@ -345,7 +406,17 @@ class TestGeolocate:
     def test_grids_from_geolocation_arrays(self, geoloc_raster, tmp_path):
         """A raster with a GEOLOCATION domain warps to a north-up grid."""
         out = str(tmp_path / "geo.tif")
-        rc = main(["geolocate", geoloc_raster, out, "--to-crs", "EPSG:4326"])
+        rc = main(
+            [
+                "raster",
+                "advanced",
+                "geolocate",
+                geoloc_raster,
+                out,
+                "--to-crs",
+                "EPSG:4326",
+            ]
+        )
         assert rc == 0, "geolocate must exit 0"
         result = Dataset.read_file(out)
         assert result.epsg == 4326, "output must be in the requested CRS"
@@ -354,5 +425,5 @@ class TestGeolocate:
     def test_no_geolocation_error(self, single_band, tmp_path, capsys):
         """A plain raster (no GEOLOCATION domain) exits 1 with a clean error."""
         out = str(tmp_path / "geo_bad.tif")
-        rc = main(["geolocate", single_band, out])
+        rc = main(["raster", "advanced", "geolocate", single_band, out])
         _assert_clean_error(rc, capsys.readouterr().err)
