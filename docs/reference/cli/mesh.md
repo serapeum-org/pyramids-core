@@ -189,8 +189,8 @@ pyramids mesh info [-h] [--json] file
 ## Subsystem `mesh advanced`
 
 Power-user **primitives** — low-level / rarely-one-shot operations (array, coord & dimension mechanics, internal
-reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay uncluttered;
-the capability is unchanged, only the path is longer.
+reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay
+uncluttered; the capability is unchanged, only the path is one level deeper.
 
 #### `pyramids mesh advanced active-mask`
 
@@ -2253,3 +2253,4 @@ pyramids mesh select where [-h] [--overwrite] --cond COND [--other OTHER] [--var
 | `--cond` | **required** | comparison '[VAR] OP NUMBER', e.g. 'depth > 3' or '> 3' |
 | `--other` | optional | value for unselected elements (default: NaN) |
 | `--var` | optional | variable to act on (default: the mesh's only data variable) |
+

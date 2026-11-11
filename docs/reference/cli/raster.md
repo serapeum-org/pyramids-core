@@ -35,15 +35,12 @@ suggestion.
 - `match-histogram` — match a band onto a reference's distribution
 - `merge` — mosaic rasters into one file
 - `orthorectify` — orthorectify a raster from its RPC sensor model
-- `overlay` — group a raster's values by a class raster
-- `overview` — build image pyramids in place
 - `pan-sharpen` — fuse a multispectral raster with a finer pan band
 - `percentile-stretch` — stretch a band between two percentiles into [0, 1]
 - `plot-histogram` — save a band's value-distribution histogram (PNG)
 - `plot-vector-field` — save a two-band (u, v) vector-field plot (PNG)
 - `proximity` — distance-to-target raster
 - `rasterize` — burn a vector into a new raster
-- `recreate-overviews` — regenerate a raster's existing overviews in place
 - `render` — save a quick-look PNG of a raster
 - `sample` — read band values at points
 - `select-bands` — subset bands into a new raster
@@ -99,6 +96,9 @@ suggestion.
   - `point-arrays` — grid raw x/y/z columns of a CSV
   - `points` — interpolate a point vector layer to a grid
   - `zarr` — read a pyramids-written Zarr store
+- `overview` …
+  - `create` — build a raster's image pyramids in place
+  - `recreate` — regenerate a raster's existing overviews in place
 
 ## Core verbs
 
@@ -676,42 +676,6 @@ pyramids raster orthorectify [-h] [--dem DEM] [--rpc-height RPC_HEIGHT] [--to-cr
 | `--resampling` | optional | resampling method |
 | `--overwrite` | optional | replace the output if it already exists |
 
-#### `pyramids raster overlay`
-
-group a raster's values by a class raster
-
-```text
-pyramids raster overlay [-h] [--band BAND] [--exclude-value EXCLUDE_VALUE] [--json] input classes
-```
-
-| argument | | description |
-|---|---|---|
-| `input` | required | base raster whose values to group |
-| `classes` | required | aligned class raster |
-
-| option | | description |
-|---|---|---|
-| `--band` | optional | zero-based band index |
-| `--exclude-value` | optional | value to drop from the grouped output (in physical units) |
-| `--json` | optional | emit JSON instead of text |
-
-#### `pyramids raster overview`
-
-build image pyramids in place
-
-```text
-pyramids raster overview [-h] [--resampling RESAMPLING] [--levels LEVELS [LEVELS ...]] file
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | raster path to build overviews for |
-
-| option | | description |
-|---|---|---|
-| `--resampling` | optional | overview resampling: nearest (alias 'nearest neighbor'), average, gauss, cubic, mode, ... |
-| `--levels` | optional | power-of-two decimation levels (2, 4, 8, ... 2048); e.g. 2 4 8 |
-
 #### `pyramids raster pan-sharpen`
 
 fuse a multispectral raster with a finer pan band
@@ -839,22 +803,6 @@ pyramids raster rasterize [-h] [--cell-size CELL_SIZE] [--like LIKE] [--column C
 | `--like` | optional | template raster whose grid/CRS the output adopts |
 | `--column` | optional | attribute column to burn (default: all non-geometry columns) |
 | `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids raster recreate-overviews`
-
-regenerate a raster's existing overviews in place
-
-```text
-pyramids raster recreate-overviews [-h] [--resampling RESAMPLING] file
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | raster path whose overviews to regenerate |
-
-| option | | description |
-|---|---|---|
-| `--resampling` | optional | overview resampling (nearest, average, gauss, cubic, mode, ...) |
 
 #### `pyramids raster render`
 
@@ -1054,8 +1002,8 @@ pyramids raster zonal-stats [-h] [--classes CLASSES] [--stats STATS [STATS ...]]
 ## Subsystem `raster advanced`
 
 Power-user **primitives** — low-level / rarely-one-shot operations (array, coord & dimension mechanics, internal
-reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay uncluttered;
-the capability is unchanged, only the path is longer.
+reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay
+uncluttered; the capability is unchanged, only the path is one level deeper.
 
 #### `pyramids raster advanced blocks`
 
@@ -1875,3 +1823,41 @@ pyramids raster import zarr [-h] [--level LEVEL] [--data-name DATA_NAME] [--stor
 | `--data-name` | optional | explicit data-array name to read |
 | `--storage-options` | optional | fsspec storage options as a JSON object |
 | `--overwrite` | optional | replace the output if it already exists |
+
+## Subsystem `raster overview`
+
+Build or rebuild a raster's image pyramids (overviews).
+
+#### `pyramids raster overview create`
+
+build a raster's image pyramids in place
+
+```text
+pyramids raster overview create [-h] [--resampling RESAMPLING] [--levels LEVELS [LEVELS ...]] file
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | raster path to build overviews for |
+
+| option | | description |
+|---|---|---|
+| `--resampling` | optional | overview resampling: nearest (alias 'nearest neighbor'), average, gauss, cubic, mode, ... |
+| `--levels` | optional | power-of-two decimation levels (2, 4, 8, ... 2048); e.g. 2 4 8 |
+
+#### `pyramids raster overview recreate`
+
+regenerate a raster's existing overviews in place
+
+```text
+pyramids raster overview recreate [-h] [--resampling RESAMPLING] file
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | raster path whose overviews to regenerate |
+
+| option | | description |
+|---|---|---|
+| `--resampling` | optional | overview resampling (nearest, average, gauss, cubic, mode, ...) |
+

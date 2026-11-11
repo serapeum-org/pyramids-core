@@ -52,3 +52,4 @@ pyramids stac search [-h] --collections COLLECTIONS [COLLECTIONS ...] [--bbox MI
 | `--datetime` | optional | RFC3339 instant or range (e.g. 2020-01-01/2020-12-31) |
 | `--max-items` | optional |  |
 | `--json` | optional | emit JSON |
+

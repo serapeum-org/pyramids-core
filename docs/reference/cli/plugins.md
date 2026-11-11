@@ -23,3 +23,4 @@ pyramids plugins list [-h] [--json]
 | option | | description |
 |---|---|---|
 | `--json` | optional | emit JSON |
+

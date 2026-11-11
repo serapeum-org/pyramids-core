@@ -125,3 +125,4 @@ pyramids fetch wmts [-h] --layer LAYER --bbox MINX MINY MAXX MAXY [--crs CRS] [-
 | `--output-crs` | optional | reproject the result to this CRS |
 | `--resample` | optional | resampling method (default: nearest) |
 | `--overwrite` | optional | replace the output if it exists |
+

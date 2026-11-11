@@ -208,8 +208,8 @@ pyramids vector warp [-h] --crs CRS [--driver DRIVER] [--layer LAYER] [--overwri
 ## Subsystem `vector advanced`
 
 Power-user **primitives** — low-level / rarely-one-shot operations (array, coord & dimension mechanics, internal
-reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay uncluttered;
-the capability is unchanged, only the path is longer.
+reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay
+uncluttered; the capability is unchanged, only the path is one level deeper.
 
 #### `pyramids vector advanced affine-transform`
 
@@ -1883,3 +1883,4 @@ pyramids vector tess voronoi-polygons [-h] [--layer LAYER] [--overwrite] [--tole
 | `--overwrite` | optional | replace the output if it exists |
 | `--tolerance` | optional | snap input coordinates to this grid before tessellating |
 | `--only-edges` | optional | return the tessellation edges as lines instead of polygons |
+

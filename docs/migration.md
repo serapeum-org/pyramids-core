@@ -1112,14 +1112,19 @@ Core verbs stay at each domain's root and are **not** prefixed with a subsystem:
 warp\|clip`, `nc info\|groups\|get-group\|list-vars\|extract\|sel\|crop`, `mesh info\|extract\|convert`, and the
 `collection` reductions/transforms (`info`, `reduce`, `resample`, `merge`, `reproject`, `crop`, `align`).
 
-Four verbs were also renamed to match the Python API as they moved (naming audit CLI-1/3/4/6):
+Several verbs were also renamed to match the Python API as they moved (naming audit CLI-1/2/3/4/6):
 
 | old | new | why |
 |---|---|---|
 | `pyramids get-meta-data` | `pyramids raster get-metadata` | finish the `#1462` hyphenation cleanup |
 | `pyramids clip` (raster) | `pyramids raster crop` | match `Dataset.crop`; frees the `clip` token |
+| `pyramids overview` | `pyramids raster overview create` | noun-verb pair with `recreate`, matching `Dataset.create_overviews` |
+| `pyramids recreate-overviews` | `pyramids raster overview recreate` | matches `Dataset.recreate_overviews` |
 | `pyramids collection stats` | `pyramids collection reduce` | it is a time reduction, not band statistics (`--reduce <op>` still names the op) |
 | `pyramids mesh sel-time[-range]` | `pyramids mesh select isel-time[-range]` | track the positional-selection method rename |
+
+The deprecated `pyramids overlay` verb (a `0.70`-era alias of `zonal-stats`) is **removed** — use
+`pyramids raster zonal-stats <raster> --classes <class_raster>`.
 
 **Rarely-one-shot primitives moved under a per-domain `advanced` subgroup.** To keep each domain's help focused
 on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim

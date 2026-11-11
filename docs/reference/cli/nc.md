@@ -210,8 +210,8 @@ pyramids nc sel [-h] --time TIME [--var VAR] [--overwrite] file output
 ## Subsystem `nc advanced`
 
 Power-user **primitives** — low-level / rarely-one-shot operations (array, coord & dimension mechanics, internal
-reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay uncluttered;
-the capability is unchanged, only the path is longer.
+reads, geometry micro-ops). Kept here, rather than at the domain's top level, so the common task verbs stay
+uncluttered; the capability is unchanged, only the path is one level deeper.
 
 #### `pyramids nc advanced assign-coords`
 
@@ -1377,3 +1377,4 @@ pyramids nc vars set-var [-h] --var VAR --raster RASTER [--overwrite] file outpu
 | `--var` | **required** | name for the new variable |
 | `--raster` | **required** | raster to store as the variable |
 | `--overwrite` | optional | replace the output if it already exists |
+
