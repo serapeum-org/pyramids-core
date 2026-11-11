@@ -374,11 +374,16 @@ def _add_src_out(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
 
 
-def add_vector_overlay_commands(vsub: argparse._SubParsersAction) -> None:
+def add_vector_overlay_commands(
+    vsub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the overlay / set-theoretic / filter commands on the vector group.
 
     Args:
         vsub: The ``vector`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     for name, handler in (
         ("intersection", _cmd_vector_intersection),
@@ -388,7 +393,12 @@ def add_vector_overlay_commands(vsub: argparse._SubParsersAction) -> None:
         ("shared-paths", _cmd_vector_shared_paths),
         ("shortest-line", _cmd_vector_shortest_line),
     ):
-        parser = vsub.add_parser(name, help=f"{name.replace('-', ' ')} with --other")
+        target = (
+            advanced
+            if (advanced is not None and name in {"shared-paths", "shortest-line"})
+            else vsub
+        )
+        parser = target.add_parser(name, help=f"{name.replace('-', ' ')} with --other")
         _add_src_out(parser)
         parser.add_argument("--other", required=True, help=_HELP_OTHER)
         parser.set_defaults(func=handler)

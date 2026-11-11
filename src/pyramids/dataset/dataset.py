@@ -1099,7 +1099,7 @@ class Dataset(RasterBase):
 
         Evaluate a string band-algebra expression (``self`` bound to ``A``, each of
         ``others`` to ``B``, ``C``, ...) and return the result as a new dataset on
-        this one's grid/CRS. The Python counterpart of the ``pyramids calc`` CLI; see
+        this one's grid/CRS. The Python counterpart of the ``pyramids raster calc`` CLI; see
         the engine method for the allowed grammar and alignment rules.
 
         Args:

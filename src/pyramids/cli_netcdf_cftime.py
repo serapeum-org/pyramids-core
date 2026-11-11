@@ -451,11 +451,17 @@ def _cmd_nc_weighted(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
+def add_nc_cftime_commands(
+    ncsub: argparse._SubParsersAction,
+    advanced: argparse._SubParsersAction | None = None,
+) -> None:
     """Register the ``nc`` CF-time / calendar / calculus commands on ``ncsub``.
 
     Args:
         ncsub: The ``nc`` group's ``add_subparsers`` action.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     nc_cc = ncsub.add_parser(
         "convert-calendar", help="recast the time axis to a calendar"
@@ -484,7 +490,9 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_ic.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_ic.set_defaults(func=_cmd_nc_interp_calendar)
 
-    nc_gb = ncsub.add_parser("groupby-bins", help="bin a dimension and reduce each bin")
+    nc_gb = (advanced or ncsub).add_parser(
+        "groupby-bins", help="bin a dimension and reduce each bin"
+    )
     nc_gb.add_argument("file", help=_HELP_NC_FILE)
     nc_gb.add_argument("output", help=_HELP_OUTPUT)
     nc_gb.add_argument("--dim", required=True, help=_HELP_DIM)
@@ -495,7 +503,7 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_gb.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_gb.set_defaults(func=_cmd_nc_groupby_bins)
 
-    nc_rl = ncsub.add_parser(
+    nc_rl = (advanced or ncsub).add_parser(
         "rolling", help="moving-window reduction along a dimension"
     )
     nc_rl.add_argument("file", help=_HELP_NC_FILE)
@@ -511,7 +519,7 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_rl.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rl.set_defaults(func=_cmd_nc_rolling)
 
-    nc_re = ncsub.add_parser(
+    nc_re = (advanced or ncsub).add_parser(
         "rolling-exp", help="exponentially weighted moving reduction"
     )
     nc_re.add_argument("file", help=_HELP_NC_FILE)
@@ -524,7 +532,9 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_re.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_re.set_defaults(func=_cmd_nc_rolling_exp)
 
-    nc_sh = ncsub.add_parser("shift", help="shift values along a dimension")
+    nc_sh = (advanced or ncsub).add_parser(
+        "shift", help="shift values along a dimension"
+    )
     nc_sh.add_argument("file", help=_HELP_NC_FILE)
     nc_sh.add_argument("output", help=_HELP_OUTPUT)
     nc_sh.add_argument("--dim", required=True, help=_HELP_DIM)
@@ -534,14 +544,16 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_sh.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_sh.set_defaults(func=_cmd_nc_shift)
 
-    nc_in = ncsub.add_parser("integrate", help="integrate over a dimension")
+    nc_in = (advanced or ncsub).add_parser(
+        "integrate", help="integrate over a dimension"
+    )
     nc_in.add_argument("file", help=_HELP_NC_FILE)
     nc_in.add_argument("output", help=_HELP_OUTPUT)
     nc_in.add_argument("--dim", required=True, help=_HELP_DIM)
     nc_in.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_in.set_defaults(func=_cmd_nc_integrate)
 
-    nc_ci = ncsub.add_parser(
+    nc_ci = (advanced or ncsub).add_parser(
         "cumulative-integrate", help="running integral along a dimension"
     )
     nc_ci.add_argument("file", help=_HELP_NC_FILE)
@@ -550,7 +562,7 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_ci.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_ci.set_defaults(func=_cmd_nc_cumulative_integrate)
 
-    nc_df = ncsub.add_parser(
+    nc_df = (advanced or ncsub).add_parser(
         "differentiate", help="derivative of values along a dimension"
     )
     nc_df.add_argument("file", help=_HELP_NC_FILE)
@@ -607,7 +619,7 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_rd.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_rd.set_defaults(func=_cmd_nc_reduce)
 
-    nc_il = ncsub.add_parser(
+    nc_il = (advanced or ncsub).add_parser(
         "interp-like", help="interpolate onto a target cube's band axes"
     )
     nc_il.add_argument("file", help=_HELP_NC_FILE)
@@ -621,7 +633,9 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_il.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_il.set_defaults(func=_cmd_nc_interp_like)
 
-    nc_co = ncsub.add_parser("coarsen", help="block-reduce a dimension by a window")
+    nc_co = (advanced or ncsub).add_parser(
+        "coarsen", help="block-reduce a dimension by a window"
+    )
     nc_co.add_argument("file", help=_HELP_NC_FILE)
     nc_co.add_argument("output", help=_HELP_OUTPUT)
     nc_co.add_argument("--dim", required=True, help=_HELP_DIM)
@@ -641,7 +655,7 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_co.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_co.set_defaults(func=_cmd_nc_coarsen)
 
-    nc_cu = ncsub.add_parser(
+    nc_cu = (advanced or ncsub).add_parser(
         "cumulative", help="running total/product along a dimension"
     )
     nc_cu.add_argument("file", help=_HELP_NC_FILE)
@@ -656,7 +670,9 @@ def add_nc_cftime_commands(ncsub: argparse._SubParsersAction) -> None:
     nc_cu.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     nc_cu.set_defaults(func=_cmd_nc_cumulative)
 
-    nc_we = ncsub.add_parser("weighted", help="weighted reduction over dimension(s)")
+    nc_we = (advanced or ncsub).add_parser(
+        "weighted", help="weighted reduction over dimension(s)"
+    )
     nc_we.add_argument("file", help=_HELP_NC_FILE)
     nc_we.add_argument("output", help=_HELP_OUTPUT)
     nc_we.add_argument(

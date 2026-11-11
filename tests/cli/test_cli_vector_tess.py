@@ -490,6 +490,7 @@ class TestMainErrorContract:
         rc = main(
             [
                 "vector",
+                "tess",
                 "sample-points",
                 _POLYGONS,
                 out,
@@ -508,7 +509,17 @@ class TestMainErrorContract:
         """--agg other than count without --column exits 1 cleanly (L2)."""
         out = str(tmp_path / "h.geojson")
         rc = main(
-            ["vector", "h3-bin", _POINTS, out, "--resolution", "7", "--agg", "mean"]
+            [
+                "vector",
+                "tess",
+                "h3-bin",
+                _POINTS,
+                out,
+                "--resolution",
+                "7",
+                "--agg",
+                "mean",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1
@@ -517,9 +528,12 @@ class TestMainErrorContract:
     def test_get_coordinates_overwrite(self, tmp_path):
         """get-coordinates refuses an existing CSV, then replaces it with --overwrite (L1)."""
         out = str(tmp_path / "c.csv")
-        assert main(["vector", "get-coordinates", _POINTS, out]) == 0
-        assert main(["vector", "get-coordinates", _POINTS, out]) == 1
-        assert main(["vector", "get-coordinates", _POINTS, out, "--overwrite"]) == 0
+        assert main(["vector", "tess", "get-coordinates", _POINTS, out]) == 0
+        assert main(["vector", "tess", "get-coordinates", _POINTS, out]) == 1
+        assert (
+            main(["vector", "tess", "get-coordinates", _POINTS, out, "--overwrite"])
+            == 0
+        )
 
 
 def test_sample_points_non_pointpats_importerror_propagates(tmp_path, monkeypatch):

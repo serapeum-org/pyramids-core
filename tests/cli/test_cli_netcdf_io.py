@@ -53,14 +53,14 @@ class TestNcConvert:
     def test_rewrites_as_netcdf(self, tmp_path):
         """convert re-writes the file as a readable NetCDF."""
         out = str(tmp_path / "out.nc")
-        assert main(["nc", "convert", str(_NC), out]) == 0
+        assert main(["nc", "io", "convert", str(_NC), out]) == 0
         assert Dataset.read_file(out) is not None
 
     def test_refuses_existing(self, tmp_path):
         """A second convert without --overwrite is refused."""
         out = str(tmp_path / "out.nc")
-        assert main(["nc", "convert", str(_NC), out]) == 0
-        assert main(["nc", "convert", str(_NC), out]) == 1
+        assert main(["nc", "io", "convert", str(_NC), out]) == 0
+        assert main(["nc", "io", "convert", str(_NC), out]) == 1
 
 
 class TestNcToDataframe:
@@ -69,7 +69,9 @@ class TestNcToDataframe:
     def test_writes_csv(self, tmp_path):
         """to-dataframe writes a non-empty CSV for the selected variable."""
         out = tmp_path / "out.csv"
-        assert main(["nc", "to-dataframe", str(_NC), str(out), "--vars", "tas"]) == 0
+        assert (
+            main(["nc", "io", "to-dataframe", str(_NC), str(out), "--vars", "tas"]) == 0
+        )
         assert out.exists()
         assert out.stat().st_size > 0
 
@@ -79,14 +81,14 @@ class TestNcToDict:
 
     def test_json_structure(self, capsys):
         """--json emits the file's structure as strict-valid JSON with the expected keys."""
-        assert main(["nc", "to-dict", str(_NC), "--json"]) == 0
+        assert main(["nc", "io", "to-dict", str(_NC), "--json"]) == 0
         payload = json.loads(capsys.readouterr().out, parse_constant=_reject_non_finite)
         assert "data_vars" in payload
         assert "coords" in payload
 
     def test_plain_structure(self, capsys):
         """The plain form prints key: value lines for the structure."""
-        assert main(["nc", "to-dict", str(_NC)]) == 0
+        assert main(["nc", "io", "to-dict", str(_NC)]) == 0
         assert "data_vars:" in capsys.readouterr().out
 
 
@@ -97,14 +99,14 @@ class TestNcToZarr:
     def test_writes_zarr_store(self, tmp_path):
         """to-zarr writes a per-variable Zarr store."""
         out = tmp_path / "out.zarr"
-        assert main(["nc", "to-zarr", str(_NC), str(out), "--var", "tas"]) == 0
+        assert main(["nc", "io", "to-zarr", str(_NC), str(out), "--var", "tas"]) == 0
         assert out.exists()
 
     @pytest.mark.lazy
     def test_unknown_variable_errors(self, tmp_path, capsys):
         """An unknown --var exits 1 with a clean error, not a traceback."""
         rc = main(
-            ["nc", "to-zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "nope"]
+            ["nc", "io", "to-zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "nope"]
         )
         err = capsys.readouterr().err
         assert rc == 1
@@ -117,7 +119,9 @@ class TestNcToZarr:
         monkeypatch.setattr(
             cli_netcdf_io.NetCDF, "get_variable", lambda self, *a, **k: object()
         )
-        rc = main(["nc", "to-zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "tas"])
+        rc = main(
+            ["nc", "io", "to-zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "tas"]
+        )
         err = capsys.readouterr().err
         assert rc == 1
         assert "not exposable as a raster plane" in err
@@ -130,11 +134,12 @@ class TestNcFromDataframe:
     def test_round_trips_from_csv(self, tmp_path):
         """A CSV written by to-dataframe rebuilds into a readable cube."""
         csv = str(tmp_path / "frame.csv")
-        assert main(["nc", "to-dataframe", str(_NC_BANDS), csv]) == 0
+        assert main(["nc", "io", "to-dataframe", str(_NC_BANDS), csv]) == 0
         out = str(tmp_path / "rebuilt.nc")
         rc = main(
             [
                 "nc",
+                "io",
                 "from-dataframe",
                 csv,
                 out,
@@ -151,10 +156,11 @@ class TestNcFromDataframe:
     def test_refuses_existing(self, tmp_path):
         """A second from-dataframe without --overwrite is refused."""
         csv = str(tmp_path / "frame.csv")
-        assert main(["nc", "to-dataframe", str(_NC_BANDS), csv]) == 0
+        assert main(["nc", "io", "to-dataframe", str(_NC_BANDS), csv]) == 0
         out = str(tmp_path / "rebuilt.nc")
         argv = [
             "nc",
+            "io",
             "from-dataframe",
             csv,
             out,
@@ -170,9 +176,17 @@ class TestNcFromDataframe:
     def test_bad_index_cols_errors(self, tmp_path, capsys):
         """A tidy (single-index) frame exits 1 cleanly, not with a traceback."""
         csv = str(tmp_path / "frame.csv")
-        assert main(["nc", "to-dataframe", str(_NC_BANDS), csv]) == 0
+        assert main(["nc", "io", "to-dataframe", str(_NC_BANDS), csv]) == 0
         rc = main(
-            ["nc", "from-dataframe", csv, str(tmp_path / "o.nc"), "--index-col", "lat"]
+            [
+                "nc",
+                "io",
+                "from-dataframe",
+                csv,
+                str(tmp_path / "o.nc"),
+                "--index-col",
+                "lat",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1
@@ -189,7 +203,7 @@ class TestNcFromDict:
         src = tmp_path / "dump.json"
         src.write_text(json.dumps(json_sanitize(payload)), encoding="utf-8")
         out = str(tmp_path / "rebuilt.nc")
-        assert main(["nc", "from-dict", str(src), out]) == 0
+        assert main(["nc", "io", "from-dict", str(src), out]) == 0
         assert "Band1" in list(NetCDF.read_file(out).variable_names)
 
     def test_refuses_existing(self, tmp_path):
@@ -198,8 +212,8 @@ class TestNcFromDict:
         src = tmp_path / "dump.json"
         src.write_text(json.dumps(json_sanitize(payload)), encoding="utf-8")
         out = str(tmp_path / "rebuilt.nc")
-        assert main(["nc", "from-dict", str(src), out]) == 0
-        assert main(["nc", "from-dict", str(src), out]) == 1
+        assert main(["nc", "io", "from-dict", str(src), out]) == 0
+        assert main(["nc", "io", "from-dict", str(src), out]) == 1
 
 
 class TestNcConcat:
@@ -210,7 +224,7 @@ class TestNcConcat:
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
         out = str(tmp_path / "cat.nc")
-        rc = main(["nc", "concat", out, "--inputs", a, b, "--dim", "time"])
+        rc = main(["nc", "io", "concat", out, "--inputs", a, b, "--dim", "time"])
         assert rc == 0
         assert NetCDF.read_file(out).dimension_sizes["time"] == 4
 
@@ -219,8 +233,8 @@ class TestNcConcat:
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
         out = str(tmp_path / "cat.nc")
-        assert main(["nc", "concat", out, "--inputs", a, b, "--dim", "time"]) == 0
-        assert main(["nc", "concat", out, "--inputs", a, b, "--dim", "time"]) == 1
+        assert main(["nc", "io", "concat", out, "--inputs", a, b, "--dim", "time"]) == 0
+        assert main(["nc", "io", "concat", out, "--inputs", a, b, "--dim", "time"]) == 1
 
 
 class TestNcMerge:
@@ -231,7 +245,7 @@ class TestNcMerge:
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0], name="rain")
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0], name="temp")
         out = str(tmp_path / "mg.nc")
-        rc = main(["nc", "merge", out, "--inputs", a, b])
+        rc = main(["nc", "io", "merge", out, "--inputs", a, b])
         assert rc == 0
         names = list(NetCDF.read_file(out).variable_names)
         assert "rain" in names
@@ -241,8 +255,8 @@ class TestNcMerge:
         """A second merge without --overwrite is refused."""
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0], name="rain")
         out = str(tmp_path / "mg.nc")
-        assert main(["nc", "merge", out, "--inputs", a]) == 0
-        assert main(["nc", "merge", out, "--inputs", a]) == 1
+        assert main(["nc", "io", "merge", out, "--inputs", a]) == 0
+        assert main(["nc", "io", "merge", out, "--inputs", a]) == 1
 
 
 class TestNcToKerchunk:
@@ -253,7 +267,7 @@ class TestNcToKerchunk:
         """to-kerchunk writes a non-empty JSON reference manifest for an HDF5 cube."""
         src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
         out = tmp_path / "ref.json"
-        assert main(["nc", "to-kerchunk", src, str(out)]) == 0
+        assert main(["nc", "io", "to-kerchunk", src, str(out)]) == 0
         assert out.exists()
         assert out.stat().st_size > 0
 
@@ -262,8 +276,8 @@ class TestNcToKerchunk:
         """A second to-kerchunk without --overwrite is refused."""
         src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
         out = str(tmp_path / "ref.json")
-        assert main(["nc", "to-kerchunk", src, out]) == 0
-        assert main(["nc", "to-kerchunk", src, out]) == 1
+        assert main(["nc", "io", "to-kerchunk", src, out]) == 0
+        assert main(["nc", "io", "to-kerchunk", src, out]) == 1
 
 
 class TestNcCombineKerchunk:
@@ -275,7 +289,7 @@ class TestNcCombineKerchunk:
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
         out = tmp_path / "combined.json"
-        rc = main(["nc", "combine-kerchunk", str(out), "--inputs", a, b])
+        rc = main(["nc", "io", "combine-kerchunk", str(out), "--inputs", a, b])
         assert rc == 0
         assert out.exists()
         assert out.stat().st_size > 0
@@ -289,7 +303,9 @@ class TestNcOpenMf:
         """open-mf reports the lazy stack's shape/dtype over several files."""
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
-        assert main(["nc", "open-mf", "--paths", a, b, "--var", "t", "--json"]) == 0
+        assert (
+            main(["nc", "io", "open-mf", "--paths", a, b, "--var", "t", "--json"]) == 0
+        )
         payload = json.loads(capsys.readouterr().out)
         assert payload["files"] == 2
         assert payload["shape"][0] == 2
@@ -300,7 +316,7 @@ class TestNcOpenMf:
         """Without --json the stack report prints as 'key: value' lines."""
         a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
         b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
-        assert main(["nc", "open-mf", "--paths", a, b, "--var", "t"]) == 0
+        assert main(["nc", "io", "open-mf", "--paths", a, b, "--var", "t"]) == 0
         out = capsys.readouterr().out
         assert "variable: t" in out
         assert "files: 2" in out
@@ -317,7 +333,7 @@ class TestLazyExtraContract:
     def test_open_mf_missing_extra_is_clean(self, monkeypatch, capsys):
         """A raw ImportError from open_mfdataset becomes a clean one-line error."""
         monkeypatch.setattr(NetCDF, "open_mfdataset", _raise_import)
-        rc = main(["nc", "open-mf", "--paths", "a.nc", "--var", "t"])
+        rc = main(["nc", "io", "open-mf", "--paths", "a.nc", "--var", "t"])
         err = capsys.readouterr().err
         assert rc == 1, "a missing extra must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
@@ -326,7 +342,7 @@ class TestLazyExtraContract:
     def test_to_kerchunk_missing_extra_is_clean(self, monkeypatch, tmp_path, capsys):
         """A raw ImportError from to_kerchunk becomes a clean one-line error."""
         monkeypatch.setattr(NetCDF, "to_kerchunk", _raise_import)
-        rc = main(["nc", "to-kerchunk", str(_NC), str(tmp_path / "ref.json")])
+        rc = main(["nc", "io", "to-kerchunk", str(_NC), str(tmp_path / "ref.json")])
         err = capsys.readouterr().err
         assert rc == 1, "a missing extra must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"

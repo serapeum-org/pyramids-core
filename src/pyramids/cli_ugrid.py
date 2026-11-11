@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 
+from pyramids._cli_groups import SuggestingArgumentParser, add_group
 from pyramids._cli_shared import (
     info_print,
     json_safe,
@@ -135,7 +136,9 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
     mesh = sub.add_parser("mesh", help="UGRID mesh commands")
-    msub = mesh.add_subparsers(dest="command", required=True)
+    msub = mesh.add_subparsers(
+        dest="command", required=True, parser_class=SuggestingArgumentParser
+    )
 
     m_info = msub.add_parser("info", help="print mesh metadata")
     m_info.add_argument("file", help=_HELP_MESH_FILE)
@@ -179,12 +182,30 @@ def add_ugrid_commands(sub: argparse._SubParsersAction) -> None:
     )
     m_conv.set_defaults(func=_cmd_mesh_convert)
 
-    add_ugrid_read_commands(msub)
-    add_ugrid_inspect_commands(msub)
-    add_ugrid_select_commands(msub)
-    add_ugrid_export_commands(msub)
-    add_ugrid_analysis_commands(msub)
-    add_ugrid_interp_commands(msub)
-    add_ugrid_plot_commands(msub)
-    add_ugrid_attrs_commands(msub)
-    add_ugrid_join_commands(msub)
+    # Power-user primitives (low-level accessors, array/dim mechanics rarely run one-shot)
+    # collect under a single cross-cutting `mesh advanced`, fed by several registrars.
+    mesh_advanced = add_group(
+        msub, "advanced", "power-user primitives (accessors, array/dim mechanics)"
+    )
+    add_ugrid_read_commands(add_group(msub, "read", "read/open a mesh from a source"))
+    add_ugrid_inspect_commands(
+        add_group(msub, "inspect", "topology, connectivity, variable metadata"),
+        mesh_advanced,
+    )
+    add_ugrid_select_commands(
+        add_group(msub, "select", "subset/select over the mesh"), mesh_advanced
+    )
+    add_ugrid_export_commands(
+        add_group(msub, "export", "write a mesh to a file or format"), mesh_advanced
+    )
+    add_ugrid_analysis_commands(
+        add_group(msub, "analysis", "terrain/field analysis over the mesh")
+    )
+    add_ugrid_interp_commands(
+        add_group(msub, "interp", "interpolation, regridding, sampling"), mesh_advanced
+    )
+    add_ugrid_plot_commands(add_group(msub, "plot", "headless plotting"))
+    add_ugrid_attrs_commands(
+        add_group(msub, "attrs", "CF/attribute inspection and editing")
+    )
+    add_ugrid_join_commands(add_group(msub, "join", "merge/join meshes and data"))

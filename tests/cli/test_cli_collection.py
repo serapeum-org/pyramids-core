@@ -115,7 +115,7 @@ class TestCollectionInfoSources:
 
 
 class TestCollectionStats:
-    """`pyramids collection stats`.
+    """`pyramids collection reduce`.
 
     Marked ``lazy``, not ``core``: ``stats --reduce`` calls the DatasetCollection reducers, which
     route through ``pyramids.dataset._reduce_ops.resolve_dask_op`` and require the optional ``dask``
@@ -129,21 +129,21 @@ class TestCollectionStats:
     def test_mean_reduction(self, cli_stack, tmp_path):
         """--reduce mean writes the element-wise mean across the stack."""
         out = str(tmp_path / "mean.tif")
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "mean"]) == 0
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "mean"]) == 0
         # mean of constant rasters 0, 1, 2 is 1.0 everywhere.
         assert np.allclose(np.asarray(Dataset.read_file(out).read_array()), 1.0)
 
     def test_refuses_existing(self, cli_stack, tmp_path):
         """A second stats write without --overwrite is refused."""
         out = str(tmp_path / "m.tif")
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "max"]) == 0
-        assert main(["collection", "stats", cli_stack, out, "--reduce", "max"]) == 1
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "max"]) == 0
+        assert main(["collection", "reduce", cli_stack, out, "--reduce", "max"]) == 1
 
     def test_carries_base_no_data_value(self, tmp_path):
         """The reduction output carries the base stack's no-data, not -9999 (L2)."""
         glob = _stack_with(tmp_path, epsg=4326, no_data=-1.0)
         out = str(tmp_path / "nd.tif")
-        assert main(["collection", "stats", glob, out, "--reduce", "mean"]) == 0
+        assert main(["collection", "reduce", glob, out, "--reduce", "mean"]) == 0
         assert Dataset.read_file(out).no_data_value[0] == -1.0, (
             "stats must carry the base no-data sentinel, not from_array's -9999 default"
         )
@@ -152,7 +152,7 @@ class TestCollectionStats:
         """A non-4326 stack keeps its CRS on the reduction output (M2 via crs_spec)."""
         glob = _stack_with(tmp_path, epsg=32633, no_data=-9999.0)
         out = str(tmp_path / "utm.tif")
-        assert main(["collection", "stats", glob, out, "--reduce", "sum"]) == 0
+        assert main(["collection", "reduce", glob, out, "--reduce", "sum"]) == 0
         assert Dataset.read_file(out).epsg == 32633, "output CRS must match the stack"
 
 
@@ -363,33 +363,35 @@ class TestCollectionMerge:
 
 
 class TestCollectionToFile:
-    """`pyramids collection to-file` — write every timestep to a directory."""
+    """`pyramids collection export file` — write every timestep to a directory."""
 
     pytestmark = pytest.mark.lazy
 
     def test_writes_each_timestep(self, cli_stack, tmp_path):
         """Each timestep lands as its own file in the output directory."""
         out = str(tmp_path / "steps")
-        assert main(["collection", "to-file", cli_stack, out]) == 0
+        assert main(["collection", "export", "file", cli_stack, out]) == 0
         assert sorted(os.listdir(out)) == ["0.tif", "1.tif", "2.tif"]
 
     def test_refuses_non_empty_dir(self, cli_stack, tmp_path):
         """A second write into a populated dir is refused unless --overwrite."""
         out = str(tmp_path / "steps")
-        assert main(["collection", "to-file", cli_stack, out]) == 0
-        assert main(["collection", "to-file", cli_stack, out]) == 1
-        assert main(["collection", "to-file", cli_stack, out, "--overwrite"]) == 0
+        assert main(["collection", "export", "file", cli_stack, out]) == 0
+        assert main(["collection", "export", "file", cli_stack, out]) == 1
+        assert (
+            main(["collection", "export", "file", cli_stack, out, "--overwrite"]) == 0
+        )
 
 
 class TestCollectionToCog:
-    """`pyramids collection to-cog` — each timestep as its own COG."""
+    """`pyramids collection export cog` — each timestep as its own COG."""
 
     pytestmark = pytest.mark.lazy
 
     def test_writes_cogs(self, cli_stack, tmp_path):
         """Each timestep is written as a COG under the slice-named pattern."""
         out = str(tmp_path / "cogs")
-        assert main(["collection", "to-cog", cli_stack, out]) == 0
+        assert main(["collection", "export", "cog", cli_stack, out]) == 0
         assert sorted(os.listdir(out)) == [
             "slice_0000.tif",
             "slice_0001.tif",
@@ -399,57 +401,60 @@ class TestCollectionToCog:
     def test_overwrite_guard(self, cli_stack, tmp_path):
         """A re-run is refused unless --overwrite, which the method enforces."""
         out = str(tmp_path / "cogs")
-        assert main(["collection", "to-cog", cli_stack, out]) == 0
-        assert main(["collection", "to-cog", cli_stack, out]) == 1
-        assert main(["collection", "to-cog", cli_stack, out, "--overwrite"]) == 0
+        assert main(["collection", "export", "cog", cli_stack, out]) == 0
+        assert main(["collection", "export", "cog", cli_stack, out]) == 1
+        assert main(["collection", "export", "cog", cli_stack, out, "--overwrite"]) == 0
 
 
 class TestCollectionToNetcdf:
-    """`pyramids collection to-netcdf` — write the (T,B,R,C) cube to NetCDF."""
+    """`pyramids collection export netcdf` — write the (T,B,R,C) cube to NetCDF."""
 
     pytestmark = pytest.mark.lazy
 
     def test_writes_netcdf(self, cli_stack, tmp_path):
         """The cube is written to a single NetCDF file."""
         out = str(tmp_path / "cube.nc")
-        assert main(["collection", "to-netcdf", cli_stack, out]) == 0
+        assert main(["collection", "export", "netcdf", cli_stack, out]) == 0
         assert os.path.exists(out)
 
     def test_single_variable(self, cli_stack, tmp_path):
         """--no-var-per-band writes one variable for all bands."""
         out = str(tmp_path / "single.nc")
         assert (
-            main(["collection", "to-netcdf", cli_stack, out, "--no-var-per-band"]) == 0
+            main(
+                ["collection", "export", "netcdf", cli_stack, out, "--no-var-per-band"]
+            )
+            == 0
         )
         assert os.path.exists(out)
 
     def test_refuses_existing(self, cli_stack, tmp_path):
         """A second write without --overwrite is refused."""
         out = str(tmp_path / "c.nc")
-        assert main(["collection", "to-netcdf", cli_stack, out]) == 0
-        assert main(["collection", "to-netcdf", cli_stack, out]) == 1
+        assert main(["collection", "export", "netcdf", cli_stack, out]) == 0
+        assert main(["collection", "export", "netcdf", cli_stack, out]) == 1
 
 
 class TestCollectionToZarr:
-    """`pyramids collection to-zarr` — write the (T,B,R,C) cube to a Zarr store."""
+    """`pyramids collection export zarr` — write the (T,B,R,C) cube to a Zarr store."""
 
     pytestmark = pytest.mark.lazy
 
     def test_writes_zarr(self, cli_stack, tmp_path):
         """The cube is written to a Zarr store readable back through --source zarr."""
         store = str(tmp_path / "cube.zarr")
-        assert main(["collection", "to-zarr", cli_stack, store]) == 0
+        assert main(["collection", "export", "zarr", cli_stack, store]) == 0
         assert os.path.isdir(store)
 
     def test_refuses_existing(self, cli_stack, tmp_path):
         """A second write without --overwrite is refused."""
         store = str(tmp_path / "c.zarr")
-        assert main(["collection", "to-zarr", cli_stack, store]) == 0
-        assert main(["collection", "to-zarr", cli_stack, store]) == 1
+        assert main(["collection", "export", "zarr", cli_stack, store]) == 0
+        assert main(["collection", "export", "zarr", cli_stack, store]) == 1
 
 
 class TestCollectionToKerchunk:
-    """`pyramids collection to-kerchunk` — write a kerchunk reference JSON."""
+    """`pyramids collection export kerchunk` — write a kerchunk reference JSON."""
 
     pytestmark = pytest.mark.lazy
 
@@ -472,7 +477,9 @@ class TestCollectionToKerchunk:
             return {}
 
         monkeypatch.setattr(DatasetCollection, "to_kerchunk", _fake_to_kerchunk)
-        rc = main(["collection", "to-kerchunk", cli_stack, out, "--concat-dim", "t"])
+        rc = main(
+            ["collection", "export", "kerchunk", cli_stack, out, "--concat-dim", "t"]
+        )
         assert rc == 0
         assert captured == {"output_path": out, "concat_dim": "t"}
         assert os.path.exists(out)
@@ -480,7 +487,7 @@ class TestCollectionToKerchunk:
     def test_geotiff_sources_error(self, cli_stack, tmp_path, capsys):
         """A GeoTIFF-backed stack reports the NetCDF/HDF5-only limit cleanly."""
         out = str(tmp_path / "ref.json")
-        rc = main(["collection", "to-kerchunk", cli_stack, out])
+        rc = main(["collection", "export", "kerchunk", cli_stack, out])
         assert rc == 1
         assert "kerchunk" in capsys.readouterr().err.lower()
 
@@ -612,13 +619,21 @@ class TestCollectionResamplePattern:
 
 
 class TestCollectionToCogPattern:
-    """`collection to-cog` validates --pattern up front, like resample (M1/L1)."""
+    """`collection export cog` validates --pattern up front, like resample (M1/L1)."""
 
     def test_unknown_placeholder_is_clean(self, tmp_path, capsys):
         """An unknown --pattern placeholder fails fast with a clean error (M1)."""
         out = str(tmp_path / "cog")
         rc = main(
-            ["collection", "to-cog", "no/such/*.tif", out, "--pattern", "{bad}.tif"]
+            [
+                "collection",
+                "export",
+                "cog",
+                "no/such/*.tif",
+                out,
+                "--pattern",
+                "{bad}.tif",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1, "a bad pattern must exit 1"
@@ -629,7 +644,15 @@ class TestCollectionToCogPattern:
         """A --pattern lacking {i} is rejected so slices cannot collide (L1)."""
         out = str(tmp_path / "cog")
         rc = main(
-            ["collection", "to-cog", "no/such/*.tif", out, "--pattern", "{name}.tif"]
+            [
+                "collection",
+                "export",
+                "cog",
+                "no/such/*.tif",
+                out,
+                "--pattern",
+                "{name}.tif",
+            ]
         )
         err = capsys.readouterr().err
         assert rc == 1, "a fixed pattern must exit 1"
@@ -641,7 +664,7 @@ class TestCollectionToCogPattern:
         out = tmp_path / "cog"
         out.mkdir()
         (out / "stale.txt").write_text("x", encoding="utf-8")
-        rc = main(["collection", "to-cog", "no/such/*.tif", str(out)])
+        rc = main(["collection", "export", "cog", "no/such/*.tif", str(out)])
         err = capsys.readouterr().err
         assert rc == 1, "a non-empty output dir must be refused"
         assert "not empty" in err, f"should be the output-dir guard, got: {err!r}"

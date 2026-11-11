@@ -362,11 +362,16 @@ def _add_writer_io(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
 
 
-def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
+def add_ugrid_interp_commands(
+    msub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the interp/fill/time/calculus ``mesh`` commands on ``msub``.
 
     Args:
         msub: The ``mesh`` group's ``add_subparsers`` action (shared with the Phase 1
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
             ``mesh`` commands).
     """
     m_il = msub.add_parser("interp-like", help="interpolate onto another mesh's grid")
@@ -447,13 +452,17 @@ def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
     m_fn.add_argument("--var", default=None, help=_HELP_VAR)
     m_fn.set_defaults(func=_cmd_mesh_fillna)
 
-    m_ff = msub.add_parser("ffill", help="forward-fill gaps along a dimension")
+    m_ff = (advanced or msub).add_parser(
+        "ffill", help="forward-fill gaps along a dimension"
+    )
     _add_writer_io(m_ff)
     m_ff.add_argument("--limit", type=int, default=None, help=_HELP_LIMIT)
     m_ff.add_argument("--dim", default=None, help=_HELP_DIM)
     m_ff.set_defaults(func=_cmd_mesh_ffill)
 
-    m_bf = msub.add_parser("bfill", help="back-fill gaps along a dimension")
+    m_bf = (advanced or msub).add_parser(
+        "bfill", help="back-fill gaps along a dimension"
+    )
     _add_writer_io(m_bf)
     m_bf.add_argument("--limit", type=int, default=None, help=_HELP_LIMIT)
     m_bf.add_argument("--dim", default=None, help=_HELP_DIM)
@@ -513,7 +522,9 @@ def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
     )
     m_rs.set_defaults(func=_cmd_mesh_resample)
 
-    m_rl = msub.add_parser("rolling", help="moving-window reduction along a dimension")
+    m_rl = (advanced or msub).add_parser(
+        "rolling", help="moving-window reduction along a dimension"
+    )
     _add_writer_io(m_rl)
     m_rl.add_argument(
         "--window", type=int, required=True, help="window length in steps"
@@ -539,7 +550,9 @@ def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
     m_rl.add_argument("--dim", default=None, help=_HELP_DIM)
     m_rl.set_defaults(func=_cmd_mesh_rolling)
 
-    m_co = msub.add_parser("coarsen", help="block-reduce the time axis by a window")
+    m_co = (advanced or msub).add_parser(
+        "coarsen", help="block-reduce the time axis by a window"
+    )
     _add_writer_io(m_co)
     m_co.add_argument(
         "--window", type=int, required=True, help="number of steps per block"
@@ -550,19 +563,21 @@ def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
     m_co.add_argument("--var", default=None, help=_HELP_VAR)
     m_co.set_defaults(func=_cmd_mesh_coarsen)
 
-    m_ig = msub.add_parser("integrate", help="integrate a variable over the time axis")
+    m_ig = (advanced or msub).add_parser(
+        "integrate", help="integrate a variable over the time axis"
+    )
     _add_writer_io(m_ig)
     m_ig.add_argument("--var", default=None, help=_HELP_VAR)
     m_ig.set_defaults(func=_cmd_mesh_integrate)
 
-    m_ci = msub.add_parser(
+    m_ci = (advanced or msub).add_parser(
         "cumulative-integrate", help="running integral along the time axis"
     )
     _add_writer_io(m_ci)
     m_ci.add_argument("--var", default=None, help=_HELP_VAR)
     m_ci.set_defaults(func=_cmd_mesh_cumulative_integrate)
 
-    m_df = msub.add_parser(
+    m_df = (advanced or msub).add_parser(
         "differentiate", help="derivative of a variable along the time axis"
     )
     _add_writer_io(m_df)
@@ -577,14 +592,18 @@ def add_ugrid_interp_commands(msub: argparse._SubParsersAction) -> None:
     m_cu.add_argument("--var", default=None, help=_HELP_VAR)
     m_cu.set_defaults(func=_cmd_mesh_convert_units)
 
-    m_sh = msub.add_parser("shift", help="shift values along the time axis")
+    m_sh = (advanced or msub).add_parser(
+        "shift", help="shift values along the time axis"
+    )
     _add_writer_io(m_sh)
     m_sh.add_argument(
         "--periods", type=int, default=1, help="number of steps to shift (default: 1)"
     )
     m_sh.set_defaults(func=_cmd_mesh_shift)
 
-    m_dn = msub.add_parser("dropna", help="drop time steps that carry missing values")
+    m_dn = (advanced or msub).add_parser(
+        "dropna", help="drop time steps that carry missing values"
+    )
     _add_writer_io(m_dn)
     m_dn.add_argument(
         "--how",

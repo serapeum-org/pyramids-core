@@ -61,7 +61,7 @@ def _write_mask_raster(template: Dataset, mask: np.ndarray, output: str) -> None
 
 
 def _cmd_add_band(args: argparse.Namespace) -> int:
-    """Handle `pyramids add-band` — append a band read from another raster.
+    """Handle `pyramids raster add-band` — append a band read from another raster.
 
     Args:
         args: Parsed args with `input`, `output`, `source` (raster the new band
@@ -81,7 +81,7 @@ def _cmd_add_band(args: argparse.Namespace) -> int:
 
 
 def _cmd_select_bands(args: argparse.Namespace) -> int:
-    """Handle `pyramids select-bands` — subset bands into a new raster.
+    """Handle `pyramids raster select-bands` — subset bands into a new raster.
 
     Band selectors are **1-based** (matching the product band numbering), and
     order is preserved — duplicates are allowed.
@@ -102,7 +102,7 @@ def _cmd_select_bands(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_band_by_color(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-band-by-color` — print the band for a colour.
+    """Handle `pyramids raster advanced get-band-by-color` — print the band for a colour.
 
     Prints the 0-based band index whose colour interpretation matches `--color`,
     or `none` / JSON `null` when no band carries it.
@@ -123,7 +123,7 @@ def _cmd_get_band_by_color(args: argparse.Namespace) -> int:
 
 
 def _cmd_create_mask_band(args: argparse.Namespace) -> int:
-    """Handle `pyramids create-mask-band` — add a mask band and save a copy.
+    """Handle `pyramids raster advanced create-mask-band` — add a mask band and save a copy.
 
     Args:
         args: Parsed args with `input`, `output`, `per_band`, and `overwrite`.
@@ -142,7 +142,7 @@ def _cmd_create_mask_band(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_masks(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-masks` — write per-band mask array(s) as a raster.
+    """Handle `pyramids raster advanced read-masks` — write per-band mask array(s) as a raster.
 
     Writes a raster of mask values (`0` out-of-domain, `255` valid). With
     `--band` a single-band mask raster is written; without it, every band's mask
@@ -165,7 +165,7 @@ def _cmd_read_masks(args: argparse.Namespace) -> int:
 
 
 def _cmd_get_mask(args: argparse.Namespace) -> int:
-    """Handle `pyramids get-mask` — write one band's mask as a raster.
+    """Handle `pyramids raster advanced get-mask` — write one band's mask as a raster.
 
     Args:
         args: Parsed args with `input`, `output`, `band` (0-based), and
@@ -184,7 +184,7 @@ def _cmd_get_mask(args: argparse.Namespace) -> int:
 
 
 def _cmd_set_color_ramp(args: argparse.Namespace) -> int:
-    """Handle `pyramids set-color-ramp` — attach an interpolated colour table.
+    """Handle `pyramids raster set-color-ramp` — attach an interpolated colour table.
 
     Fills a colour for every integer value in `[--start-value, --end-value]`,
     either as a two-colour linear ramp (`--start-color` + `--end-color`) or by
@@ -214,7 +214,7 @@ def _cmd_set_color_ramp(args: argparse.Namespace) -> int:
 
 
 def _cmd_set_rpcs(args: argparse.Namespace) -> int:
-    """Handle `pyramids set-rpcs` — attach RPC metadata and save a copy.
+    """Handle `pyramids raster advanced set-rpcs` — attach RPC metadata and save a copy.
 
     Reads the rational-polynomial coefficients from a JSON object file
     (`--rpc-json`) — the five `*_OFF` offsets, the five `*_SCALE` scales, and the
@@ -247,7 +247,7 @@ def _cmd_set_rpcs(args: argparse.Namespace) -> int:
 
 
 def _cmd_geolocate(args: argparse.Namespace) -> int:
-    """Handle `pyramids geolocate` — warp from geolocation arrays onto a grid.
+    """Handle `pyramids raster advanced geolocate` — warp from geolocation arrays onto a grid.
 
     Resamples a swath / curvilinear raster whose georeferencing is carried by
     per-pixel lon/lat arrays (the GDAL `GEOLOCATION` domain) onto a north-up
@@ -435,18 +435,23 @@ def _add_geolocate(sub: argparse._SubParsersAction) -> None:
     parser.set_defaults(func=_cmd_geolocate)
 
 
-def add_dataset_bands_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_bands_commands(
+    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+) -> None:
     """Register the band / mask / colour / sensor-model commands on ``sub``.
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
     """
     _add_add_band(sub)
     _add_select_bands(sub)
-    _add_get_band_by_color(sub)
-    _add_create_mask_band(sub)
-    _add_read_masks(sub)
-    _add_get_mask(sub)
+    _add_get_band_by_color(advanced or sub)
+    _add_create_mask_band(advanced or sub)
+    _add_read_masks(advanced or sub)
+    _add_get_mask(advanced or sub)
     _add_set_color_ramp(sub)
-    _add_set_rpcs(sub)
-    _add_geolocate(sub)
+    _add_set_rpcs(advanced or sub)
+    _add_geolocate(advanced or sub)

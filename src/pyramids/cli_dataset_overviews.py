@@ -2,14 +2,14 @@
 
 Holds the raster commands that read a *decimated* or *windowed* view of a
 `Dataset` — the overview-pyramid and cloud-native partial-read verbs that the
-single-shot `cli_dataset` group does not cover: `recreate-overviews`,
+single-shot `cli_dataset` group does not cover: `overview recreate`,
 `read-overview-array`, `read-part`, `preview`, `point`, and `read-tile`. Every
 handler maps 1:1 onto an existing `Dataset` method; the window/tile reads write
 their array to an output raster (georeferenced from the method's own transform),
 and `point` prints the sampled value(s).
 
 The top-level `overview` command (in `cli_dataset`) already *builds* pyramids in
-place via `create_overviews`; this module never duplicates it — `recreate-overviews`
+place via `create_overviews`; this module never duplicates it — `overview recreate`
 regenerates the levels that already exist.
 
 Deferred (no sensible one-shot file/stdout result, so intentionally not shipped):
@@ -137,7 +137,7 @@ def _write_raster(
 
 
 def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
-    """Handle `pyramids recreate-overviews` — regenerate existing overviews in place.
+    """Handle `pyramids raster overview recreate` — regenerate existing overviews in place.
 
     Unlike `overview` (which *builds* pyramids via `create_overviews`), this
     regenerates the levels a raster already has; a raster with none is left
@@ -159,7 +159,7 @@ def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_overview_array(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-overview-array` — read one overview level.
+    """Handle `pyramids raster advanced read-overview-array` — read one overview level.
 
     Writes the decimated level to `output` as a georeferenced raster, or — with
     `--json` — prints its shape / dtype / min / max / mean instead.
@@ -217,7 +217,7 @@ def _cmd_read_overview_array(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_part(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-part` — read a geographic window to a raster.
+    """Handle `pyramids raster advanced read-part` — read a geographic window to a raster.
 
     Reads a `--bbox` window decimated from the nearest overview and writes it as
     a georeferenced raster using the window's own transform.
@@ -257,7 +257,7 @@ def _cmd_read_part(args: argparse.Namespace) -> int:
 
 
 def _cmd_preview(args: argparse.Namespace) -> int:
-    """Handle `pyramids preview` — write a whole-image decimated thumbnail.
+    """Handle `pyramids raster advanced preview` — write a whole-image decimated thumbnail.
 
     Args:
         args: Parsed args with `input`, `output`, `max_size`, `resampling`,
@@ -285,7 +285,7 @@ def _cmd_preview(args: argparse.Namespace) -> int:
 
 
 def _cmd_point(args: argparse.Namespace) -> int:
-    """Handle `pyramids point` — sample band value(s) at a map coordinate.
+    """Handle `pyramids raster advanced point` — sample band value(s) at a map coordinate.
 
     Args:
         args: Parsed args with `input`, `x`, `y`, `point_crs`, `band`, `json`.
@@ -310,7 +310,7 @@ def _cmd_point(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_tile(args: argparse.Namespace) -> int:
-    """Handle `pyramids read-tile` — read a Web-Mercator XYZ tile to a raster.
+    """Handle `pyramids raster advanced read-tile` — read a Web-Mercator XYZ tile to a raster.
 
     Reads slippy-map tile `(z, x, y)` and writes it as an EPSG:3857 raster whose
     geotransform comes from the tile's own Web-Mercator bounds.
@@ -352,14 +352,24 @@ def _cmd_read_tile(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
+def add_dataset_overviews_commands(
+    sub: argparse._SubParsersAction,
+    advanced: argparse._SubParsersAction | None = None,
+    overview_group: argparse._SubParsersAction | None = None,
+) -> None:
     """Register the overview / windowed-read raster commands on ``sub``.
 
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
+        advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
+            When given, rarely-one-shot primitive verbs register there instead of on the
+            main subsystem; isolation parsers omit it so those verbs stay flat locally.
+        overview_group: The ``raster overview`` subgroup's subparsers action, or ``None``.
+            When given, ``recreate`` registers there (``raster overview recreate``); an
+            isolation parser omits it, so the verb stays flat as ``recreate`` on ``sub``.
     """
-    recreate = sub.add_parser(
-        "recreate-overviews", help="regenerate a raster's existing overviews in place"
+    recreate = (overview_group or sub).add_parser(
+        "recreate", help="regenerate a raster's existing overviews in place"
     )
     recreate.add_argument("file", help="raster path whose overviews to regenerate")
     recreate.add_argument(
@@ -369,7 +379,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     )
     recreate.set_defaults(func=_cmd_recreate_overviews)
 
-    read_overview = sub.add_parser(
+    read_overview = (advanced or sub).add_parser(
         "read-overview-array",
         help="read one overview level to a raster or --json stats",
     )
@@ -392,7 +402,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     read_overview.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     read_overview.set_defaults(func=_cmd_read_overview_array)
 
-    read_part = sub.add_parser(
+    read_part = (advanced or sub).add_parser(
         "read-part", help="read a geographic window to a raster (overview-decimated)"
     )
     read_part.add_argument("input", help=_HELP_SRC_RASTER)
@@ -424,7 +434,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     read_part.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     read_part.set_defaults(func=_cmd_read_part)
 
-    preview = sub.add_parser(
+    preview = (advanced or sub).add_parser(
         "preview", help="write a whole-image decimated thumbnail raster"
     )
     preview.add_argument("input", help=_HELP_SRC_RASTER)
@@ -440,7 +450,9 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     preview.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     preview.set_defaults(func=_cmd_preview)
 
-    point = sub.add_parser("point", help="sample band value(s) at a map coordinate")
+    point = (advanced or sub).add_parser(
+        "point", help="sample band value(s) at a map coordinate"
+    )
     point.add_argument("input", help="raster path to sample")
     point.add_argument("x", type=float, help="X / longitude / easting in --point-crs")
     point.add_argument("y", type=float, help="Y / latitude / northing in --point-crs")
@@ -453,7 +465,7 @@ def add_dataset_overviews_commands(sub: argparse._SubParsersAction) -> None:
     point.add_argument("--json", action="store_true", help=_HELP_JSON)
     point.set_defaults(func=_cmd_point)
 
-    read_tile = sub.add_parser(
+    read_tile = (advanced or sub).add_parser(
         "read-tile", help="read a Web-Mercator XYZ tile to an EPSG:3857 raster"
     )
     read_tile.add_argument("input", help=_HELP_SRC_RASTER)

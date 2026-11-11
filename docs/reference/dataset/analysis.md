@@ -257,7 +257,7 @@ the operators to build masks, never to order rasters.
 
 ### The shell equivalent
 
-`pyramids calc "(A - B) / (A + B)" a.tif b.tif out.tif` is the same operation for N
+`pyramids raster calc "(A - B) / (A + B)" a.tif b.tif out.tif` is the same operation for N
 rasters from a shell. It shares the grid rule — the inputs must already share a grid
 — but not the domain semantics: `calc` evaluates over the raw arrays, so no-data
 cells take part in the arithmetic, and it broadcasts the bound names against each

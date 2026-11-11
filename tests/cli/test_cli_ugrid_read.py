@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from shapely.geometry import Polygon
 
+from pyramids._cli_groups import add_group
 from pyramids.base.georeference import GeoReference
 from pyramids.cli_ugrid_read import _parse_kv, add_ugrid_read_commands
 from pyramids.dataset import Dataset
@@ -33,7 +34,7 @@ def _run(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group")
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_read_commands(msub)
+    add_ugrid_read_commands(add_group(msub, "read", "read/open a mesh from a source"))
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -70,7 +71,7 @@ class TestReadAll:
         """read-all writes one NetCDF per topology into the output directory."""
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        assert _run(["mesh", "read-all", str(_MESH), str(out_dir)]) == 0
+        assert _run(["mesh", "read", "read-all", str(_MESH), str(out_dir)]) == 0
         assert (out_dir / "mesh2d.nc").exists()
 
     def test_eager_rejected_by_native_reader(self, tmp_path):
@@ -83,15 +84,15 @@ class TestReadAll:
         out_dir = tmp_path / "eager"
         out_dir.mkdir()
         with pytest.raises(TypeError, match="lazy=False"):
-            _run(["mesh", "read-all", str(_MESH), str(out_dir), "--eager"])
+            _run(["mesh", "read", "read-all", str(_MESH), str(out_dir), "--eager"])
 
     def test_refuses_existing(self, tmp_path):
         """A second read-all without --overwrite is refused."""
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        assert _run(["mesh", "read-all", str(_MESH), str(out_dir)]) == 0
+        assert _run(["mesh", "read", "read-all", str(_MESH), str(out_dir)]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "read-all", str(_MESH), str(out_dir)])
+            _run(["mesh", "read", "read-all", str(_MESH), str(out_dir)])
 
 
 class TestFromArrays:
@@ -106,6 +107,7 @@ class TestFromArrays:
         rc = _run(
             [
                 "mesh",
+                "read",
                 "from-arrays",
                 node_x,
                 node_y,
@@ -126,16 +128,16 @@ class TestFromArrays:
         """from-arrays with no --data builds a bare topology."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "bare.nc")
-        assert _run(["mesh", "from-arrays", node_x, node_y, faces, out]) == 0
+        assert _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out]) == 0
         assert MeshDataset.read_file(out).n_face == 2
 
     def test_refuses_existing(self, tmp_path):
         """A second from-arrays without --overwrite is refused."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "m.nc")
-        assert _run(["mesh", "from-arrays", node_x, node_y, faces, out]) == 0
+        assert _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "from-arrays", node_x, node_y, faces, out])
+            _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out])
 
 
 class TestFromGeodataframe:
@@ -158,16 +160,19 @@ class TestFromGeodataframe:
     def test_builds_from_polygons(self, tmp_path):
         """from-geodataframe turns polygons into faces."""
         out = str(tmp_path / "mg.nc")
-        assert _run(["mesh", "from-geodataframe", self._polygons(tmp_path), out]) == 0
+        assert (
+            _run(["mesh", "read", "from-geodataframe", self._polygons(tmp_path), out])
+            == 0
+        )
         assert MeshDataset.read_file(out).n_face == 2
 
     def test_refuses_existing(self, tmp_path):
         """A second from-geodataframe without --overwrite is refused."""
         polygons = self._polygons(tmp_path)
         out = str(tmp_path / "mg.nc")
-        assert _run(["mesh", "from-geodataframe", polygons, out]) == 0
+        assert _run(["mesh", "read", "from-geodataframe", polygons, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "from-geodataframe", polygons, out])
+            _run(["mesh", "read", "from-geodataframe", polygons, out])
 
 
 class TestFromStructured:
@@ -185,7 +190,9 @@ class TestFromStructured:
     def test_builds_quad_mesh(self, tmp_path):
         """from-structured makes one quad face per raster cell."""
         out = str(tmp_path / "fs.nc")
-        assert _run(["mesh", "from-structured", self._raster(tmp_path), out]) == 0
+        assert (
+            _run(["mesh", "read", "from-structured", self._raster(tmp_path), out]) == 0
+        )
         assert MeshDataset.read_file(out).n_face == 9
 
     def test_band_names(self, tmp_path):
@@ -194,6 +201,7 @@ class TestFromStructured:
         rc = _run(
             [
                 "mesh",
+                "read",
                 "from-structured",
                 self._raster(tmp_path),
                 out,
@@ -211,7 +219,7 @@ class TestFromBytes:
     def test_from_file(self, tmp_path):
         """from-bytes reads a file of raw bytes and writes the mesh."""
         out = str(tmp_path / "fb.nc")
-        assert _run(["mesh", "from-bytes", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "from-bytes", str(_MESH), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_from_stdin(self, tmp_path, monkeypatch):
@@ -219,20 +227,20 @@ class TestFromBytes:
         data = _MESH.read_bytes()
         monkeypatch.setattr("sys.stdin", types.SimpleNamespace(buffer=io.BytesIO(data)))
         out = str(tmp_path / "fbs.nc")
-        assert _run(["mesh", "from-bytes", out, "--stdin"]) == 0
+        assert _run(["mesh", "read", "from-bytes", out, "--stdin"]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_requires_source(self, tmp_path):
         """With neither an input path nor --stdin, from-bytes errors cleanly."""
         with pytest.raises(ValueError, match="input path or --stdin"):
-            _run(["mesh", "from-bytes", str(tmp_path / "x.nc")])
+            _run(["mesh", "read", "from-bytes", str(tmp_path / "x.nc")])
 
     def test_refuses_existing(self, tmp_path):
         """A second from-bytes without --overwrite is refused."""
         out = str(tmp_path / "fb.nc")
-        assert _run(["mesh", "from-bytes", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "from-bytes", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "from-bytes", str(_MESH), out])
+            _run(["mesh", "read", "from-bytes", str(_MESH), out])
 
 
 class TestOpenMf:
@@ -241,21 +249,21 @@ class TestOpenMf:
     def test_single_file(self, tmp_path):
         """open-mf over a single file writes a combined mesh."""
         out = str(tmp_path / "omf.nc")
-        assert _run(["mesh", "open-mf", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "open-mf", str(_MESH), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_no_sort(self, tmp_path):
         """--no-sort keeps the given order and still writes."""
         out = str(tmp_path / "omf2.nc")
-        assert _run(["mesh", "open-mf", str(_MESH), out, "--no-sort"]) == 0
+        assert _run(["mesh", "read", "open-mf", str(_MESH), out, "--no-sort"]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second open-mf without --overwrite is refused."""
         out = str(tmp_path / "omf.nc")
-        assert _run(["mesh", "open-mf", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "open-mf", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "open-mf", str(_MESH), out])
+            _run(["mesh", "read", "open-mf", str(_MESH), out])
 
 
 class TestFromZarr:
@@ -270,16 +278,16 @@ class TestFromZarr:
     def test_round_trip(self, tmp_path):
         """from-zarr reads a store written by to_zarr and writes a NetCDF."""
         out = str(tmp_path / "fz.nc")
-        assert _run(["mesh", "from-zarr", self._store(tmp_path), out]) == 0
+        assert _run(["mesh", "read", "from-zarr", self._store(tmp_path), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second from-zarr without --overwrite is refused."""
         store = self._store(tmp_path)
         out = str(tmp_path / "fz.nc")
-        assert _run(["mesh", "from-zarr", store, out]) == 0
+        assert _run(["mesh", "read", "from-zarr", store, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "from-zarr", store, out])
+            _run(["mesh", "read", "from-zarr", store, out])
 
     def test_missing_extra_is_clean_error(self, tmp_path, monkeypatch):
         """A missing [lazy] extra (ImportError) is remapped to a clean ValueError."""
@@ -292,5 +300,11 @@ class TestFromZarr:
         )
         with pytest.raises(ValueError, match=r"\[lazy\] extra"):
             _run(
-                ["mesh", "from-zarr", str(tmp_path / "s.zarr"), str(tmp_path / "o.nc")]
+                [
+                    "mesh",
+                    "read",
+                    "from-zarr",
+                    str(tmp_path / "s.zarr"),
+                    str(tmp_path / "o.nc"),
+                ]
             )

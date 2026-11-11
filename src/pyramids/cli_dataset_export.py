@@ -18,7 +18,7 @@ Deferred:
     - ``Dataset.write_array`` — patches an existing raster in place from an
       in-memory ``numpy`` array. A CLI has no array to supply and the call
       produces no new output file (it mutates the input), so it is not a sensible
-      one-shot export verb; use ``pyramids calc`` / ``pyramids convert`` to
+      one-shot export verb; use ``pyramids raster calc`` / ``pyramids raster convert`` to
       produce a new raster instead.
 """
 
@@ -103,7 +103,7 @@ def _parse_creation_options(pairs: list[str] | None) -> dict[str, str]:
 
 
 def _cmd_to_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-bytes`` — serialize a raster to raw bytes.
+    """Handle ``pyramids raster export bytes`` — serialize a raster to raw bytes.
 
     Writes the encoded file contents to ``output`` when given, else to stdout
     (so it can be piped). Only single-file drivers are supported by the method.
@@ -128,7 +128,7 @@ def _cmd_to_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_cog_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-cog-bytes`` — serialize a raster to COG bytes.
+    """Handle ``pyramids raster export cog-bytes`` — serialize a raster to COG bytes.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``compression``,
@@ -152,7 +152,7 @@ def _cmd_to_cog_bytes(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_dataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-dataframe`` — write a cell table as CSV or Parquet.
+    """Handle ``pyramids raster export dataframe`` — write a cell table as CSV or Parquet.
 
     The frame carries a ``(band, y, x)`` MultiIndex and a single ``values``
     column; it is written with the index so the coordinates are preserved. The
@@ -179,9 +179,9 @@ def _cmd_to_dataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_polygons(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-polygons`` — dissolve equal-valued regions to polygons.
+    """Handle ``pyramids raster export polygons`` — dissolve equal-valued regions to polygons.
 
-    Unlike ``pyramids shapes`` (one feature per cell), this merges connected
+    Unlike ``pyramids raster shapes`` (one feature per cell), this merges connected
     equal-valued cells into one polygon per region and writes them to a vector
     file whose driver follows the extension (or ``--driver``).
 
@@ -202,9 +202,9 @@ def _cmd_to_polygons(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_raster(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-raster`` — write a raster via :meth:`Dataset.to_file`.
+    """Handle ``pyramids raster export raster`` — write a raster via :meth:`Dataset.to_file`.
 
-    Unlike ``pyramids convert`` it exposes the tile length and raw GDAL creation
+    Unlike ``pyramids raster convert`` it exposes the tile length and raw GDAL creation
     options. ``--band`` is forwarded as
     ``to_file``'s ``band`` argument, which selects the single band only for ASCII
     grid drivers; GeoTIFF and the other raster drivers write every band. It is
@@ -240,7 +240,7 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_image(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-image`` — write a colour-mapped RGB image of a band.
+    """Handle ``pyramids raster export image`` — write a colour-mapped RGB image of a band.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``band``, ``cmap``,
@@ -260,7 +260,7 @@ def _cmd_to_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_xyz(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-xyz`` — write a lon/lat/value point table.
+    """Handle ``pyramids raster export xyz`` — write a lon/lat/value point table.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``bands``, ``overwrite``.
@@ -277,7 +277,7 @@ def _cmd_to_xyz(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-zarr`` — write the raster to a Zarr store.
+    """Handle ``pyramids raster export zarr`` — write the raster to a Zarr store.
 
     Args:
         args: Parsed args with ``input``, ``output``, ``mode``, ``overwrite``.
@@ -294,7 +294,7 @@ def _cmd_to_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_stac_item(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-stac-item`` — write a STAC Item JSON document.
+    """Handle ``pyramids raster export stac-item`` — write a STAC Item JSON document.
 
     The item references the raster as an asset at ``--asset-href`` (defaulting to
     the input path). The item dictionary is scrubbed of non-finite floats before
@@ -318,7 +318,7 @@ def _cmd_to_stac_item(args: argparse.Namespace) -> int:
 
 
 def _cmd_to_terrain_rgb(args: argparse.Namespace) -> int:
-    """Handle ``pyramids to-terrain-rgb`` — encode a DEM to terrain-RGB.
+    """Handle ``pyramids raster export terrain-rgb`` — encode a DEM to terrain-RGB.
 
     Writes one RGB(A) raster by default; with ``--tiles`` it writes an XYZ PNG
     pyramid rooted at ``output`` instead.
@@ -350,7 +350,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     Args:
         sub: The top-level ``add_subparsers`` action from the main CLI parser.
     """
-    to_bytes = sub.add_parser("to-bytes", help="serialize a raster to raw bytes")
+    to_bytes = sub.add_parser("bytes", help="serialize a raster to raw bytes")
     to_bytes.add_argument("input", help=_HELP_SRC_RASTER)
     to_bytes.add_argument(
         "output", nargs="?", help="destination file (default: write to stdout)"
@@ -362,7 +362,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_bytes.set_defaults(func=_cmd_to_bytes)
 
     to_cog_bytes = sub.add_parser(
-        "to-cog-bytes", help="serialize a raster to Cloud Optimized GeoTIFF bytes"
+        "cog-bytes", help="serialize a raster to Cloud Optimized GeoTIFF bytes"
     )
     to_cog_bytes.add_argument("input", help=_HELP_SRC_RASTER)
     to_cog_bytes.add_argument("output", help="destination .tif path")
@@ -374,7 +374,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_cog_bytes.set_defaults(func=_cmd_to_cog_bytes)
 
     to_df = sub.add_parser(
-        "to-dataframe", help="write a per-cell table (CSV, or Parquet by extension)"
+        "dataframe", help="write a per-cell table (CSV, or Parquet by extension)"
     )
     to_df.add_argument("input", help=_HELP_SRC_RASTER)
     to_df.add_argument("output", help="destination .csv or .parquet path")
@@ -389,7 +389,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_df.set_defaults(func=_cmd_to_dataframe)
 
     to_poly = sub.add_parser(
-        "to-polygons",
+        "polygons",
         help="dissolve connected equal-valued cells into polygons (vector file)",
     )
     to_poly.add_argument("input", help=_HELP_SRC_RASTER)
@@ -404,7 +404,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_poly.set_defaults(func=_cmd_to_polygons)
 
     to_raster = sub.add_parser(
-        "to-raster", help="write a raster (to_file alias) with band/tiling options"
+        "raster", help="write a raster (to_file alias) with band/tiling options"
     )
     to_raster.add_argument("input", help=_HELP_SRC_RASTER)
     to_raster.add_argument("output", help="destination raster path")
@@ -432,7 +432,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_raster.set_defaults(func=_cmd_to_raster)
 
     to_image = sub.add_parser(
-        "to-image", help="write a colour-mapped RGB image of a band (PNG/JPEG)"
+        "image", help="write a colour-mapped RGB image of a band (PNG/JPEG)"
     )
     to_image.add_argument("input", help=_HELP_SRC_RASTER)
     to_image.add_argument("output", help="destination image path (e.g. out.png)")
@@ -451,7 +451,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_image.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_image.set_defaults(func=_cmd_to_image)
 
-    to_xyz = sub.add_parser("to-xyz", help="write a lon/lat/value XYZ point table")
+    to_xyz = sub.add_parser("xyz", help="write a lon/lat/value XYZ point table")
     to_xyz.add_argument("input", help=_HELP_SRC_RASTER)
     to_xyz.add_argument("output", help="destination .xyz path")
     to_xyz.add_argument(
@@ -463,14 +463,14 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_xyz.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_xyz.set_defaults(func=_cmd_to_xyz)
 
-    to_zarr = sub.add_parser("to-zarr", help="write the raster to a Zarr store")
+    to_zarr = sub.add_parser("zarr", help="write the raster to a Zarr store")
     to_zarr.add_argument("input", help=_HELP_SRC_RASTER)
     to_zarr.add_argument("output", help="destination Zarr store path")
     to_zarr.add_argument("--mode", default="w", help="Zarr open mode (default: w)")
     to_zarr.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     to_zarr.set_defaults(func=_cmd_to_zarr)
 
-    to_stac = sub.add_parser("to-stac-item", help="write a STAC Item JSON document")
+    to_stac = sub.add_parser("stac-item", help="write a STAC Item JSON document")
     to_stac.add_argument("input", help=_HELP_SRC_RASTER)
     to_stac.add_argument("output", help="destination .json path")
     to_stac.add_argument("--item-id", required=True, help="STAC item identifier")
@@ -484,7 +484,7 @@ def add_dataset_export_commands(sub: argparse._SubParsersAction) -> None:
     to_stac.set_defaults(func=_cmd_to_stac_item)
 
     to_terrain = sub.add_parser(
-        "to-terrain-rgb", help="encode a DEM to Mapbox/Terrarium terrain-RGB"
+        "terrain-rgb", help="encode a DEM to Mapbox/Terrarium terrain-RGB"
     )
     to_terrain.add_argument("input", help="source elevation raster path")
     to_terrain.add_argument(

@@ -2067,7 +2067,7 @@ class Spatial(_Engine["Dataset"]):
                 for the one case where a missing CRS is not a mismatch: an input
                 that carries no CRS tag at all still sits on this raster's cells
                 when its geotransform and size match, and inherits this one's
-                georeferencing downstream. `pyramids calc` uses it for exactly
+                georeferencing downstream. `pyramids raster calc` uses it for exactly
                 that.
 
         Returns:

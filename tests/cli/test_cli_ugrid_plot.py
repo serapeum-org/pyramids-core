@@ -25,6 +25,7 @@ os.environ["MPLBACKEND"] = "Agg"
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
 
+from pyramids._cli_groups import add_group
 from pyramids.cli_ugrid_plot import add_ugrid_plot_commands  # noqa: E402
 from pyramids.netcdf.ugrid import MeshDataset  # noqa: E402
 
@@ -52,7 +53,7 @@ def _dispatch(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="group", required=True)
     mesh = sub.add_parser("mesh")
     msub = mesh.add_subparsers(dest="command", required=True)
-    add_ugrid_plot_commands(msub)
+    add_ugrid_plot_commands(add_group(msub, "plot", "headless plotting"))
     args = parser.parse_args(argv)
     return args.func(args)
 
@@ -88,7 +89,10 @@ class TestMeshPlot:
         """plot renders a variable and saves the figure."""
         out = str(tmp_path / "mesh.png")
         assert (
-            _dispatch(["mesh", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]) == 0
+            _dispatch(
+                ["mesh", "plot", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]
+            )
+            == 0
         )
         assert os.path.exists(out)
 
@@ -96,19 +100,36 @@ class TestMeshPlot:
         """A plot onto an existing path without --overwrite is refused."""
         out = str(tmp_path / "m.png")
         assert (
-            _dispatch(["mesh", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]) == 0
+            _dispatch(
+                ["mesh", "plot", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]
+            )
+            == 0
         )
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "plot", str(_MESH), out, "--var", "mesh2d_node_z"])
+            _dispatch(
+                ["mesh", "plot", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]
+            )
 
     def test_overwrite_allows_replacement(self, tmp_path):
         """--overwrite replaces an existing output."""
         out = str(tmp_path / "m.png")
         assert (
-            _dispatch(["mesh", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]) == 0
+            _dispatch(
+                ["mesh", "plot", "plot", str(_MESH), out, "--var", "mesh2d_node_z"]
+            )
+            == 0
         )
         rc = _dispatch(
-            ["mesh", "plot", str(_MESH), out, "--var", "mesh2d_node_z", "--overwrite"]
+            [
+                "mesh",
+                "plot",
+                "plot",
+                str(_MESH),
+                out,
+                "--var",
+                "mesh2d_node_z",
+                "--overwrite",
+            ]
         )
         assert rc == 0
 
@@ -116,7 +137,7 @@ class TestMeshPlot:
         """A typo'd --var is remapped to a clean ValueError (not a bare KeyError)."""
         out = str(tmp_path / "x.png")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "plot", str(_MESH), out, "--var", "nope"])
+            _dispatch(["mesh", "plot", "plot", str(_MESH), out, "--var", "nope"])
 
 
 class TestMeshPlotOutline:
@@ -125,15 +146,15 @@ class TestMeshPlotOutline:
     def test_writes_png(self, tmp_path):
         """plot-outline saves the wireframe figure."""
         out = str(tmp_path / "outline.png")
-        assert _dispatch(["mesh", "plot-outline", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "plot", "plot-outline", str(_MESH), out]) == 0
         assert os.path.exists(out)
 
     def test_refuses_existing(self, tmp_path):
         """A second outline without --overwrite is refused."""
         out = str(tmp_path / "o.png")
-        assert _dispatch(["mesh", "plot-outline", str(_MESH), out]) == 0
+        assert _dispatch(["mesh", "plot", "plot-outline", str(_MESH), out]) == 0
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "plot-outline", str(_MESH), out])
+            _dispatch(["mesh", "plot", "plot-outline", str(_MESH), out])
 
 
 class TestMeshPlotVectorField:
@@ -148,7 +169,9 @@ class TestMeshPlotVectorField:
         )
         out = str(tmp_path / "vf.png")
         assert (
-            _dispatch(["mesh", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"])
+            _dispatch(
+                ["mesh", "plot", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"]
+            )
             == 0
         )
         assert os.path.exists(out)
@@ -162,11 +185,15 @@ class TestMeshPlotVectorField:
         )
         out = str(tmp_path / "vf.png")
         assert (
-            _dispatch(["mesh", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"])
+            _dispatch(
+                ["mesh", "plot", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"]
+            )
             == 0
         )
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"])
+            _dispatch(
+                ["mesh", "plot", "plot-vector-field", mesh, out, "--u", "u", "--v", "v"]
+            )
 
     def test_unknown_variable_raises(self, tmp_path):
         """An unknown component variable is a clean ValueError."""
@@ -175,6 +202,7 @@ class TestMeshPlotVectorField:
             _dispatch(
                 [
                     "mesh",
+                    "plot",
                     "plot-vector-field",
                     str(_MESH),
                     out,
@@ -193,7 +221,15 @@ class TestMeshPlotHistogram:
         """plot-histogram saves a variable's value distribution."""
         out = str(tmp_path / "hist.png")
         rc = _dispatch(
-            ["mesh", "plot-histogram", str(_MESH), out, "--var", "mesh2d_edge_type"]
+            [
+                "mesh",
+                "plot",
+                "plot-histogram",
+                str(_MESH),
+                out,
+                "--var",
+                "mesh2d_edge_type",
+            ]
         )
         assert rc == 0
         assert os.path.exists(out)
@@ -202,7 +238,9 @@ class TestMeshPlotHistogram:
         """With no --var, the only data variable is histogrammed (bins forwarded)."""
         mesh = _write_mesh(tmp_path / "single.nc", {"d": [1.0, 2.0]}, {"d": "face"})
         out = str(tmp_path / "h.png")
-        assert _dispatch(["mesh", "plot-histogram", mesh, out, "--bins", "5"]) == 0
+        assert (
+            _dispatch(["mesh", "plot", "plot-histogram", mesh, out, "--bins", "5"]) == 0
+        )
         assert os.path.exists(out)
 
     def test_refuses_existing(self, tmp_path):
@@ -210,20 +248,38 @@ class TestMeshPlotHistogram:
         out = str(tmp_path / "h.png")
         assert (
             _dispatch(
-                ["mesh", "plot-histogram", str(_MESH), out, "--var", "mesh2d_edge_type"]
+                [
+                    "mesh",
+                    "plot",
+                    "plot-histogram",
+                    str(_MESH),
+                    out,
+                    "--var",
+                    "mesh2d_edge_type",
+                ]
             )
             == 0
         )
         with pytest.raises(ValueError):
             _dispatch(
-                ["mesh", "plot-histogram", str(_MESH), out, "--var", "mesh2d_edge_type"]
+                [
+                    "mesh",
+                    "plot",
+                    "plot-histogram",
+                    str(_MESH),
+                    out,
+                    "--var",
+                    "mesh2d_edge_type",
+                ]
             )
 
     def test_unknown_variable_raises(self, tmp_path):
         """A typo'd --var is a clean ValueError."""
         out = str(tmp_path / "x.png")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "plot-histogram", str(_MESH), out, "--var", "nope"])
+            _dispatch(
+                ["mesh", "plot", "plot-histogram", str(_MESH), out, "--var", "nope"]
+            )
 
 
 class TestMeshAnimate:
@@ -237,7 +293,9 @@ class TestMeshAnimate:
             {"d": "face"},
         )
         out = str(tmp_path / "anim.gif")
-        assert _dispatch(["mesh", "animate", mesh, out, "--interval", "50"]) == 0
+        assert (
+            _dispatch(["mesh", "plot", "animate", mesh, out, "--interval", "50"]) == 0
+        )
         assert os.path.exists(out)
 
     def test_refuses_existing(self, tmp_path):
@@ -248,12 +306,14 @@ class TestMeshAnimate:
             {"d": "face"},
         )
         out = str(tmp_path / "anim.gif")
-        assert _dispatch(["mesh", "animate", mesh, out]) == 0
+        assert _dispatch(["mesh", "plot", "animate", mesh, out]) == 0
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "animate", mesh, out])
+            _dispatch(["mesh", "plot", "animate", mesh, out])
 
     def test_no_time_axis_raises(self, tmp_path):
         """A mesh variable with no time axis is a clean ValueError, not a KeyError."""
         out = str(tmp_path / "x.gif")
         with pytest.raises(ValueError):
-            _dispatch(["mesh", "animate", str(_MESH), out, "--var", "mesh2d_node_z"])
+            _dispatch(
+                ["mesh", "plot", "animate", str(_MESH), out, "--var", "mesh2d_node_z"]
+            )

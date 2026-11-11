@@ -1088,13 +1088,61 @@ from pyramids.base.crs import crs_from_user_input
 
 ### unreleased
 
-**`pyramids calc` refuses inputs that do not share the first input's grid.** Hard change — it used to let the
+**The CLI now follows one `pyramids <domain> [<subsystem>] <verb>` convention — the flat top-level verbs were
+removed.** Hard change, no deprecation shim: every command that used to sit at the top level now lives under a
+domain group, and the large families gained a subsystem level. Run `pyramids <group> --help` to see a group's
+subcommands, and `pyramids completion …` to refresh shell completion for the new nested paths.
+
+The move is mechanical — prefix the domain group (and, in the big families, the subsystem). The structural map:
+
+| old | new |
+|---|---|
+| `pyramids info\|bounds\|warp\|merge\|sample\|convert\|calc\|render\|rasterize\|georeference\|… <args>` | `pyramids raster <verb> <args>` |
+| `pyramids to-<fmt> …` (cog, zarr, xyz, polygons, image, dataframe, stac-item, terrain-rgb, …) | `pyramids raster export <fmt> …` |
+| `pyramids from-<src> …` (bytes, dataframe, points, point-arrays, band-files, archive, zarr) | `pyramids raster import <src> …` |
+| `pyramids cog create\|validate\|info …` | `pyramids raster cog create\|validate\|info …` |
+| `pyramids vector <verb>` (non-core: buffer, intersection, voronoi, to-parquet, …) | `pyramids vector <inspect\|geom\|overlay\|tess\|io> <verb>` |
+| `pyramids nc <verb>` (non-core: time-values, isel, polyfit, to-zarr, render, …) | `pyramids nc <inspect\|vars\|select\|calc\|io\|plot> <verb>` |
+| `pyramids mesh <verb>` (non-core: slope, read-all, to-zarr, …) | `pyramids mesh <read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join> <verb>` |
+| `pyramids collection to-file\|to-cog\|to-netcdf\|to-zarr\|to-kerchunk …` | `pyramids collection export file\|cog\|netcdf\|zarr\|kerchunk …` |
+| `pyramids apply\|run …` | `pyramids process apply\|run …` |
+| `pyramids tools` / `pyramids tool <name>` | `pyramids process tool list` / `pyramids process tool show <name>` |
+
+Core verbs stay at each domain's root and are **not** prefixed with a subsystem: `vector info\|bounds\|convert\|
+warp\|clip`, `nc info\|groups\|get-group\|list-vars\|extract\|sel\|crop`, `mesh info\|extract\|convert`, and the
+`collection` reductions/transforms (`info`, `reduce`, `resample`, `merge`, `reproject`, `crop`, `align`).
+
+Several verbs were also renamed to match the Python API as they moved (naming audit CLI-1/2/3/4/6):
+
+| old | new | why |
+|---|---|---|
+| `pyramids get-meta-data` | `pyramids raster get-metadata` | finish the `#1462` hyphenation cleanup |
+| `pyramids clip` (raster) | `pyramids raster crop` | match `Dataset.crop`; frees the `clip` token |
+| `pyramids overview` | `pyramids raster overview create` | noun-verb pair with `recreate`, matching `Dataset.create_overviews` |
+| `pyramids recreate-overviews` | `pyramids raster overview recreate` | matches `Dataset.recreate_overviews` |
+| `pyramids collection stats` | `pyramids collection reduce` | it is a time reduction, not band statistics (`--reduce <op>` still names the op) |
+| `pyramids mesh sel-time[-range]` | `pyramids mesh select isel-time[-range]` | track the positional-selection method rename |
+
+The deprecated `pyramids overlay` verb (a `0.70`-era alias of `zonal-stats`) is **removed** — use
+`pyramids raster zonal-stats <raster> --classes <class_raster>`.
+
+**Rarely-one-shot primitives moved under a per-domain `advanced` subgroup.** To keep each domain's help focused
+on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim
+mechanics, geometry micro-ops, low-level accessors) now live under `pyramids <domain> advanced <verb>` — e.g.
+`raster read-part` → `raster advanced read-part`, `nc squeeze` → `nc advanced squeeze`, `vector force-2d` →
+`vector advanced force-2d`, `mesh get` → `mesh advanced get`. The capability is unchanged; only the path moved
+(hard move, no alias). Run `pyramids <domain> advanced --help` to list a domain's primitives.
+
+`pyramids --help` lists the groups (`raster`, `vector`, `nc`, `collection`, `stac`, `fetch`, `mesh`, `process`,
+`completion`, `plugins`); an unknown subcommand prints a "did you mean …?" suggestion.
+
+**`pyramids raster calc` refuses inputs that do not share the first input's grid.** Hard change — it used to let the
 bound names broadcast against each other and wrote the answer on the first input's grid, a georeferenced result
-to a question the inputs never agreed on. Warp them onto a common grid first (`pyramids warp`). An input carrying
+to a question the inputs never agreed on. Warp them onto a common grid first (`pyramids raster warp`). An input carrying
 no CRS tag at all is compared on its pixel grid alone, so an untagged mask or QA layer sitting on the template's
 cells is still accepted.
 
-**`pyramids calc` preserves a rotated or anisotropic geotransform.** Bug fix, silent before. The output was
+**`pyramids raster calc` preserves a rotated or anisotropic geotransform.** Bug fix, silent before. The output was
 rebuilt from the template's top-left corner and cell size, which collapses to a north-up square-pixel grid: an
 input at `(100, 2, 0.5, 200, 0.25, -3)` was written out as `(100, 2, 0, 200, 0, -2)`, with its skew zeroed and
 its y-resolution changed. The whole geotransform is now copied. The output's no-data value is unchanged — still
@@ -1104,7 +1152,7 @@ for `uint8`, `65535` for `uint16`).
 ### 0.47.0
 
 **`pyramids calc` refuses a first input with no CRS.** The result cannot be georeferenced and pyramids will not
-stamp a default; set a CRS on the input first. `pyramids georeference` is unaffected — its GCPs and `--gcp-crs`
+stamp a default; set a CRS on the input first. `pyramids raster georeference` is unaffected — its GCPs and `--gcp-crs`
 replace the georeference wholesale.
 
 ## netcdf
