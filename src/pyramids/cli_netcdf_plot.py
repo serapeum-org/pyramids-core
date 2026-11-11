@@ -26,7 +26,7 @@ _HELP_VAR = "variable to plot"
 
 
 def _cmd_nc_plot(args: argparse.Namespace) -> int:
-    """Handle ``pyramids nc plot`` — save a map of one variable (via cleopatra).
+    """Handle ``pyramids nc plot render`` — save a map of one variable (via cleopatra).
 
     Args:
         args: Parsed args with ``file``, ``output``, ``var``, ``kind``, ``title``,
@@ -93,7 +93,7 @@ def add_nc_plot_commands(ncsub: argparse._SubParsersAction) -> None:
     Args:
         ncsub: The ``nc`` group's ``add_subparsers`` action.
     """
-    nc_plot = ncsub.add_parser("plot", help="save a map of one variable (PNG)")
+    nc_plot = ncsub.add_parser("render", help="save a map of one variable (PNG)")
     nc_plot.add_argument("file", help=_HELP_NC_FILE)
     nc_plot.add_argument("output", help="destination image path")
     nc_plot.add_argument("--var", required=True, help=_HELP_VAR)

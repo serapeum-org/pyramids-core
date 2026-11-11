@@ -360,7 +360,7 @@ class TestOverlay:
             [
                 "vector",
                 "overlay",
-                "overlay",
+                "apply",
                 _COELLO_POLYGONS,
                 out,
                 "--right",
@@ -380,7 +380,7 @@ class TestOverlay:
                 [
                     "vector",
                     "overlay",
-                    "overlay",
+                    "apply",
                     _COELLO_POLYGONS,
                     str(tmp_path / "o.geojson"),
                     "--right",
@@ -396,7 +396,7 @@ class TestOverlay:
             [
                 "vector",
                 "overlay",
-                "overlay",
+                "apply",
                 _COELLO_POLYGONS,
                 str(tmp_path / "o.geojson"),
                 "--right",

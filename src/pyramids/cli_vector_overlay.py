@@ -204,7 +204,7 @@ def _cmd_vector_union_all(args: argparse.Namespace) -> int:
 
 
 def _cmd_vector_overlay(args: argparse.Namespace) -> int:
-    """Handle ``pyramids vector overlay`` — a spatial overlay of two layers.
+    """Handle ``pyramids vector overlay apply`` — a spatial overlay of two layers.
 
     Args:
         args: Parsed args with ``src``, ``output``, ``right``, ``how``, ``layer``,
@@ -422,7 +422,7 @@ def add_vector_overlay_commands(
     )
     v_union_all.set_defaults(func=_cmd_vector_union_all)
 
-    v_overlay = vsub.add_parser("overlay", help="spatial overlay of two layers")
+    v_overlay = vsub.add_parser("apply", help="spatial overlay of two layers (--how)")
     _add_src_out(v_overlay)
     v_overlay.add_argument("--right", required=True, help=_HELP_RIGHT)
     v_overlay.add_argument(
