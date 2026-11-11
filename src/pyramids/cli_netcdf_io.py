@@ -1,9 +1,10 @@
 """NetCDF I/O export, construction, and combine commands for the ``pyramids nc`` group.
 
-Thin wrappers over :class:`pyramids.netcdf.NetCDF`: export methods — round-trip to a
-NetCDF (`convert`), tabular export (`to-dataframe`), a structured dump (`to-dict`), a
-per-variable Zarr store (`to-zarr`) and kerchunk reference manifests (`to-kerchunk`,
-`combine-kerchunk`); construction from a CSV / JSON dump (`from-dataframe`, `from-dict`);
+Thin wrappers over :class:`pyramids.netcdf.NetCDF`, split across two subgroups —
+``nc export`` (writers) and ``nc import`` (readers). Writers: round-trip to a NetCDF
+(`convert`), tabular export (`dataframe`), a structured dump (`dict`), a per-variable
+Zarr store (`zarr`) and kerchunk reference manifests (`kerchunk`, `combine-kerchunk`).
+Readers: construction from a CSV / JSON dump (`dataframe`, `dict`);
 a lazy multi-file stack report (`open-mf`); and multi-cube joins (`concat`, `merge`). No
 xarray is imported here — the underlying methods own that; the CLI only marshals paths
 and scalar options. The kerchunk and `open-mf` verbs need the ``[lazy]`` optional extra,
