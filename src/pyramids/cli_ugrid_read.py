@@ -10,11 +10,11 @@ call. Registered by :func:`add_ugrid_read_commands` onto the ``mesh`` sub-action
 Commands registered here:
 
 - ``read-all`` → :meth:`MeshDataset.read_all` (writes one NetCDF per topology)
-- ``from-arrays`` → :meth:`MeshDataset.from_arrays` (node/face ``.npy`` arrays)
-- ``from-geodataframe`` → :meth:`MeshDataset.from_geodataframe` (a polygon vector layer)
-- ``from-structured`` → :meth:`MeshDataset.from_structured` (a raster, one quad per cell)
-- ``from-zarr`` → :meth:`MeshDataset.from_zarr` (optional ``[lazy]`` extra)
-- ``from-bytes`` → :meth:`MeshDataset.from_bytes` (a file or stdin)
+- ``mesh read arrays`` → :meth:`MeshDataset.from_arrays` (node/face ``.npy`` arrays)
+- ``mesh read geodataframe`` → :meth:`MeshDataset.from_geodataframe` (a polygon vector layer)
+- ``mesh read structured`` → :meth:`MeshDataset.from_structured` (a raster, one quad per cell)
+- ``mesh read zarr`` → :meth:`MeshDataset.from_zarr` (optional ``[lazy]`` extra)
+- ``mesh read bytes`` → :meth:`MeshDataset.from_bytes` (a file or stdin)
 - ``open-mf`` → :meth:`MeshDataset.open_mfdataset` (concatenate several files)
 """
 
@@ -89,7 +89,7 @@ def _cmd_read_all(args: argparse.Namespace) -> int:
 
 
 def _cmd_from_arrays(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh from-arrays`` — build a mesh from ``.npy`` arrays.
+    """Handle ``pyramids mesh read arrays`` — build a mesh from ``.npy`` arrays.
 
     Reads the node coordinates and face-node connectivity from NumPy ``.npy`` files
     and, optionally, one ``.npy`` per data variable (``--data NAME=PATH``) with its
@@ -123,7 +123,7 @@ def _cmd_from_arrays(args: argparse.Namespace) -> int:
 
 
 def _cmd_from_geodataframe(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh from-geodataframe`` — build a mesh from polygons.
+    """Handle ``pyramids mesh read geodataframe`` — build a mesh from polygons.
 
     Reads a polygon vector layer; each polygon becomes one face and the layer's
     attribute columns become per-face variables.
@@ -143,7 +143,7 @@ def _cmd_from_geodataframe(args: argparse.Namespace) -> int:
 
 
 def _cmd_from_structured(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh from-structured`` — build a quad mesh from a raster.
+    """Handle ``pyramids mesh read structured`` — build a quad mesh from a raster.
 
     Each raster cell becomes one quad face (shared corners deduplicated) and each
     band becomes a per-face variable.
@@ -166,7 +166,7 @@ def _cmd_from_structured(args: argparse.Namespace) -> int:
 
 
 def _cmd_from_zarr(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh from-zarr`` — read a pyramids-written Zarr store.
+    """Handle ``pyramids mesh read zarr`` — read a pyramids-written Zarr store.
 
     Args:
         args: Parsed args with ``store``, ``output``, ``overwrite``.
@@ -183,7 +183,7 @@ def _cmd_from_zarr(args: argparse.Namespace) -> int:
 
 
 def _cmd_from_bytes(args: argparse.Namespace) -> int:
-    """Handle ``pyramids mesh from-bytes`` — open a mesh held as raw bytes.
+    """Handle ``pyramids mesh read bytes`` — open a mesh held as raw bytes.
 
     Reads the bytes from ``input`` (a file) or, with ``--stdin``, from standard
     input, opens them via :meth:`MeshDataset.from_bytes`, and writes the result.
@@ -257,10 +257,8 @@ def _add_read_all(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_arrays(msub: argparse._SubParsersAction) -> None:
-    """Register ``from-arrays``."""
-    parser = msub.add_parser(
-        "from-arrays", help="build a mesh from node/face .npy arrays"
-    )
+    """Register ``mesh read arrays``."""
+    parser = msub.add_parser("arrays", help="build a mesh from node/face .npy arrays")
     parser.add_argument("node_x", help=".npy of node x coordinates")
     parser.add_argument("node_y", help=".npy of node y coordinates")
     parser.add_argument(
@@ -294,9 +292,9 @@ def _add_from_arrays(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_geodataframe(msub: argparse._SubParsersAction) -> None:
-    """Register ``from-geodataframe``."""
+    """Register ``mesh read geodataframe``."""
     parser = msub.add_parser(
-        "from-geodataframe", help="build a mesh from a polygon vector layer"
+        "geodataframe", help="build a mesh from a polygon vector layer"
     )
     parser.add_argument("vector", help="source polygon vector path")
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
@@ -308,9 +306,9 @@ def _add_from_geodataframe(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_structured(msub: argparse._SubParsersAction) -> None:
-    """Register ``from-structured``."""
+    """Register ``mesh read structured``."""
     parser = msub.add_parser(
-        "from-structured", help="build a quad mesh from a raster (one quad per cell)"
+        "structured", help="build a quad mesh from a raster (one quad per cell)"
     )
     parser.add_argument("raster", help="source raster path")
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
@@ -328,9 +326,9 @@ def _add_from_structured(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
-    """Register ``from-zarr``."""
+    """Register ``mesh read zarr``."""
     parser = msub.add_parser(
-        "from-zarr", help="read a pyramids-written Zarr store (needs the [lazy] extra)"
+        "zarr", help="read a pyramids-written Zarr store (needs the [lazy] extra)"
     )
     parser.add_argument("store", help="input Zarr store (path / fsspec URL)")
     parser.add_argument("output", help=_HELP_MESH_OUTPUT)
@@ -339,8 +337,8 @@ def _add_from_zarr(msub: argparse._SubParsersAction) -> None:
 
 
 def _add_from_bytes(msub: argparse._SubParsersAction) -> None:
-    """Register ``from-bytes``."""
-    parser = msub.add_parser("from-bytes", help="open a mesh held as raw bytes")
+    """Register ``mesh read bytes``."""
+    parser = msub.add_parser("bytes", help="open a mesh held as raw bytes")
     parser.add_argument(
         "input", nargs="?", help="file of raw mesh bytes (omit with --stdin)"
     )

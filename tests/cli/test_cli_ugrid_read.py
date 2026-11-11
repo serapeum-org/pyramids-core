@@ -108,7 +108,7 @@ class TestFromArrays:
             [
                 "mesh",
                 "read",
-                "from-arrays",
+                "arrays",
                 node_x,
                 node_y,
                 faces,
@@ -128,16 +128,16 @@ class TestFromArrays:
         """from-arrays with no --data builds a bare topology."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "bare.nc")
-        assert _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out]) == 0
+        assert _run(["mesh", "read", "arrays", node_x, node_y, faces, out]) == 0
         assert MeshDataset.read_file(out).n_face == 2
 
     def test_refuses_existing(self, tmp_path):
         """A second from-arrays without --overwrite is refused."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "m.nc")
-        assert _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out]) == 0
+        assert _run(["mesh", "read", "arrays", node_x, node_y, faces, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "read", "from-arrays", node_x, node_y, faces, out])
+            _run(["mesh", "read", "arrays", node_x, node_y, faces, out])
 
 
 class TestFromGeodataframe:
@@ -161,8 +161,7 @@ class TestFromGeodataframe:
         """from-geodataframe turns polygons into faces."""
         out = str(tmp_path / "mg.nc")
         assert (
-            _run(["mesh", "read", "from-geodataframe", self._polygons(tmp_path), out])
-            == 0
+            _run(["mesh", "read", "geodataframe", self._polygons(tmp_path), out]) == 0
         )
         assert MeshDataset.read_file(out).n_face == 2
 
@@ -170,9 +169,9 @@ class TestFromGeodataframe:
         """A second from-geodataframe without --overwrite is refused."""
         polygons = self._polygons(tmp_path)
         out = str(tmp_path / "mg.nc")
-        assert _run(["mesh", "read", "from-geodataframe", polygons, out]) == 0
+        assert _run(["mesh", "read", "geodataframe", polygons, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "read", "from-geodataframe", polygons, out])
+            _run(["mesh", "read", "geodataframe", polygons, out])
 
 
 class TestFromStructured:
@@ -190,9 +189,7 @@ class TestFromStructured:
     def test_builds_quad_mesh(self, tmp_path):
         """from-structured makes one quad face per raster cell."""
         out = str(tmp_path / "fs.nc")
-        assert (
-            _run(["mesh", "read", "from-structured", self._raster(tmp_path), out]) == 0
-        )
+        assert _run(["mesh", "read", "structured", self._raster(tmp_path), out]) == 0
         assert MeshDataset.read_file(out).n_face == 9
 
     def test_band_names(self, tmp_path):
@@ -202,7 +199,7 @@ class TestFromStructured:
             [
                 "mesh",
                 "read",
-                "from-structured",
+                "structured",
                 self._raster(tmp_path),
                 out,
                 "--band-names",
@@ -219,7 +216,7 @@ class TestFromBytes:
     def test_from_file(self, tmp_path):
         """from-bytes reads a file of raw bytes and writes the mesh."""
         out = str(tmp_path / "fb.nc")
-        assert _run(["mesh", "read", "from-bytes", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "bytes", str(_MESH), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_from_stdin(self, tmp_path, monkeypatch):
@@ -227,20 +224,20 @@ class TestFromBytes:
         data = _MESH.read_bytes()
         monkeypatch.setattr("sys.stdin", types.SimpleNamespace(buffer=io.BytesIO(data)))
         out = str(tmp_path / "fbs.nc")
-        assert _run(["mesh", "read", "from-bytes", out, "--stdin"]) == 0
+        assert _run(["mesh", "read", "bytes", out, "--stdin"]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_requires_source(self, tmp_path):
         """With neither an input path nor --stdin, from-bytes errors cleanly."""
         with pytest.raises(ValueError, match="input path or --stdin"):
-            _run(["mesh", "read", "from-bytes", str(tmp_path / "x.nc")])
+            _run(["mesh", "read", "bytes", str(tmp_path / "x.nc")])
 
     def test_refuses_existing(self, tmp_path):
         """A second from-bytes without --overwrite is refused."""
         out = str(tmp_path / "fb.nc")
-        assert _run(["mesh", "read", "from-bytes", str(_MESH), out]) == 0
+        assert _run(["mesh", "read", "bytes", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "read", "from-bytes", str(_MESH), out])
+            _run(["mesh", "read", "bytes", str(_MESH), out])
 
 
 class TestOpenMf:
@@ -278,16 +275,16 @@ class TestFromZarr:
     def test_round_trip(self, tmp_path):
         """from-zarr reads a store written by to_zarr and writes a NetCDF."""
         out = str(tmp_path / "fz.nc")
-        assert _run(["mesh", "read", "from-zarr", self._store(tmp_path), out]) == 0
+        assert _run(["mesh", "read", "zarr", self._store(tmp_path), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_refuses_existing(self, tmp_path):
         """A second from-zarr without --overwrite is refused."""
         store = self._store(tmp_path)
         out = str(tmp_path / "fz.nc")
-        assert _run(["mesh", "read", "from-zarr", store, out]) == 0
+        assert _run(["mesh", "read", "zarr", store, out]) == 0
         with pytest.raises(ValueError, match="already exists"):
-            _run(["mesh", "read", "from-zarr", store, out])
+            _run(["mesh", "read", "zarr", store, out])
 
     def test_missing_extra_is_clean_error(self, tmp_path, monkeypatch):
         """A missing [lazy] extra (ImportError) is remapped to a clean ValueError."""
@@ -303,7 +300,7 @@ class TestFromZarr:
                 [
                     "mesh",
                     "read",
-                    "from-zarr",
+                    "zarr",
                     str(tmp_path / "s.zarr"),
                     str(tmp_path / "o.nc"),
                 ]
