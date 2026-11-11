@@ -1101,7 +1101,7 @@ The move is mechanical — prefix the domain group (and, in the big families, th
 | `pyramids to-<fmt> …` (cog, zarr, xyz, polygons, image, dataframe, stac-item, terrain-rgb, …) | `pyramids raster export <fmt> …` |
 | `pyramids from-<src> …` (bytes, dataframe, points, point-arrays, band-files, archive, zarr) | `pyramids raster import <src> …` |
 | `pyramids cog create\|validate\|info …` | `pyramids raster cog create\|validate\|info …` |
-| `pyramids vector <verb>` (non-core: buffer, intersection, voronoi, to-parquet, …) | `pyramids vector <inspect\|geom\|overlay\|tess\|io> <verb>` |
+| `pyramids vector <verb>` (non-core: buffer, intersection, voronoi, export parquet, …) | `pyramids vector <inspect\|geom\|overlay\|tess\|export\|import> <verb>` |
 | `pyramids nc <verb>` (non-core: time-values, isel, polyfit, export zarr, plot render, …) | `pyramids nc <inspect\|vars\|select\|calc\|export\|import\|plot> <verb>` |
 | `pyramids mesh <verb>` (non-core: slope, read-all, export zarr, …) | `pyramids mesh <read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join> <verb>` |
 | `pyramids collection to-file\|to-cog\|to-netcdf\|to-zarr\|to-kerchunk …` | `pyramids collection export file\|cog\|netcdf\|zarr\|kerchunk …` |
@@ -1128,7 +1128,8 @@ The deprecated `pyramids overlay` verb (a `0.70`-era alias of `zonal-stats`) is 
 
 **Export/import prefix dropped, and two doubled verbs renamed (a consistency follow-up).** To match
 `raster export`/`import`, the redundant `to-`/`from-` prefix is gone from `mesh export` / `mesh read`, and the
-single `nc io` subgroup is split into `nc export` (writers) / `nc import` (readers):
+single `nc io` and `vector io` subgroups are each split into `<domain> export` (writers) /
+`<domain> import` (readers):
 
 | old | new |
 |---|---|
@@ -1138,6 +1139,9 @@ single `nc io` subgroup is split into `nc export` (writers) / `nc import` (reade
 | `pyramids nc io from-<src> …` (from-dataframe, from-dict) | `pyramids nc import <src> …` |
 | `pyramids nc io open-mf\|concat\|merge …` | `pyramids nc import open-mf\|concat\|merge …` |
 | `pyramids nc io convert\|combine-kerchunk …` | `pyramids nc export convert\|combine-kerchunk …` |
+| `pyramids vector io to-<fmt> …` (to-parquet, to-json, to-feather, to-mvt, …) | `pyramids vector export <fmt> …` |
+| `pyramids vector io from-<src> …` (from-xyz, from-features, from-featureserver, …) | `pyramids vector import <src> …` |
+| `pyramids vector io read-parquet\|read-gpx …` | `pyramids vector import parquet\|gpx …` |
 | `pyramids nc plot plot …` | `pyramids nc plot render …` |
 | `pyramids vector overlay overlay …` | `pyramids vector overlay apply …` |
 
