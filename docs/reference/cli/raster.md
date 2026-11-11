@@ -1860,4 +1860,3 @@ pyramids raster overview recreate [-h] [--resampling RESAMPLING] file
 | option | | description |
 |---|---|---|
 | `--resampling` | optional | overview resampling (nearest, average, gauss, cubic, mode, ...) |
-

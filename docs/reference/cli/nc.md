@@ -1377,4 +1377,3 @@ pyramids nc vars set-var [-h] --var VAR --raster RASTER [--overwrite] file outpu
 | `--var` | **required** | name for the new variable |
 | `--raster` | **required** | raster to store as the variable |
 | `--overwrite` | optional | replace the output if it already exists |
-

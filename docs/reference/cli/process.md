@@ -79,4 +79,3 @@ pyramids process tool show [-h] name
 | argument | | description |
 |---|---|---|
 | `name` | required | tool name (see 'pyramids process tool list') |
-
