@@ -13,7 +13,11 @@ exercised by its own suite. What pyramids-core owns, and what is tested here, is
 
 from pathlib import Path
 
+import pytest
+
 from pyramids.dataset.ops import _zarr
+
+pytestmark = pytest.mark.core
 
 
 class TestIsZarrStore:
@@ -37,6 +41,13 @@ class TestIsZarrStore:
         assert not _zarr.is_zarr_store("x.tif")
         assert not _zarr.is_zarr_store("s3://bucket/x.tif")
         assert not _zarr.is_zarr_store(Path("plain") / "raster.tif")
+
+    def test_detects_zarr_url_with_query_or_fragment(self):
+        """A ``.zarr`` cloud URL carrying a ``?query`` or ``#fragment`` is still a store."""
+        assert _zarr.is_zarr_store("s3://bucket/x.zarr?versionId=9")
+        assert _zarr.is_zarr_store("s3://bucket/x.zarr#frag")
+        assert _zarr.is_zarr_store("s3://bucket/x.zarr/?versionId=9")
+        assert not _zarr.is_zarr_store("s3://bucket/x.tif?versionId=9")
 
 
 class TestClassifyDispatch:
@@ -98,6 +109,36 @@ class TestClassifyDispatch:
         monkeypatch.setattr(_zarr, "require_compute_backend", lambda: _Backend())
         assert _zarr.classify_zarr_store("x.zarr") == "other"
 
+    def test_other_for_branded_missing_backend(self, monkeypatch):
+        """The *real* absent-backend exception (``OptionalPackageDoesNotExist``) degrades to ``"other"``.
+
+        The production path raises the branded ``OptionalPackageDoesNotExist`` (an ``ImportError``
+        subclass), not a bare ``ImportError``; pin that exact type so the degradation is not passing
+        only by the subclass relationship.
+        """
+        from pyramids.base._errors import OptionalPackageDoesNotExist
+
+        def _raise():
+            raise OptionalPackageDoesNotExist("install pyramids-lazy")
+
+        monkeypatch.setattr(_zarr, "require_compute_backend", _raise)
+        assert _zarr.classify_zarr_store("x.zarr") == "other"
+        assert _zarr.is_cube_store("x.zarr") is False
+
+    def test_other_when_backend_resolution_raises_non_importerror(self, monkeypatch):
+        """A *non*-``ImportError`` from backend resolution still degrades to ``"other"`` (never escapes).
+
+        A broken ``pyramids_lazy`` can raise a plain ``RuntimeError`` at import / factory time;
+        ``read_file``'s routing must not propagate it (that would crash the generic read path on any
+        ``.zarr``), so backend resolution is guarded by a broad ``except`` and returns ``"other"``.
+        """
+
+        def _raise():
+            raise RuntimeError("pyramids_lazy is installed but broken at import time")
+
+        monkeypatch.setattr(_zarr, "require_compute_backend", _raise)
+        assert _zarr.classify_zarr_store("x.zarr") == "other"
+
 
 class TestResolveStore:
     """``_resolve_store`` normalizes a store target for zarr v3 / dask."""
@@ -121,8 +162,10 @@ class TestResolveStore:
         """A URL with ``storage_options`` is wrapped in a v3 ``FsspecStore`` so options reach fsspec.
 
         Test scenario:
-            ``FsspecStore.from_url`` is stubbed (no real network) and must receive the URL string and
-            the storage options, and its result is returned verbatim.
+            ``_resolve_store`` resolves ``zarr.storage`` through the core ``require_optional`` seam and
+            calls ``FsspecStore.from_url`` with the URL and options. Both are stubbed through that seam
+            (so no real ``zarr`` is needed — this stays a ``core`` test), and the store it builds is
+            returned verbatim.
         """
         captured = {}
         sentinel = object()
@@ -134,7 +177,17 @@ class TestResolveStore:
                 captured["storage_options"] = storage_options
                 return sentinel
 
-        monkeypatch.setattr("zarr.storage.FsspecStore", _FakeFsspecStore)
+        class _FakeZarrStorage:
+            FsspecStore = _FakeFsspecStore
+
+        def _fake_require_optional(module_name, message, *, return_module=False):
+            assert module_name == "zarr.storage", (
+                f"unexpected optional module: {module_name}"
+            )
+            assert return_module, "store resolution needs the module object back"
+            return _FakeZarrStorage
+
+        monkeypatch.setattr(_zarr, "require_optional", _fake_require_optional)
         opts = {"key": "secret"}
         result = _zarr._resolve_store("s3://bucket/x.zarr", opts)
         assert result is sentinel, f"expected the FsspecStore, got {result!r}"
@@ -144,3 +197,20 @@ class TestResolveStore:
         assert captured["storage_options"] is opts, (
             "storage_options must reach fsspec unchanged"
         )
+
+    def test_storage_options_without_zarr_raises_branded(self, monkeypatch):
+        """Without the lazy ``zarr`` stack, a URL + ``storage_options`` surfaces the branded hint.
+
+        Test scenario:
+            ``_resolve_store`` goes through ``require_optional``, so a missing ``zarr`` raises
+            ``OptionalPackageDoesNotExist`` (carrying the install hint) rather than a bare
+            ``ModuleNotFoundError``.
+        """
+        from pyramids.base._errors import OptionalPackageDoesNotExist
+
+        def _fake_require_optional(module_name, message, *, return_module=False):
+            raise OptionalPackageDoesNotExist(message)
+
+        monkeypatch.setattr(_zarr, "require_optional", _fake_require_optional)
+        with pytest.raises(OptionalPackageDoesNotExist):
+            _zarr._resolve_store("s3://bucket/x.zarr", {"key": "v"})
