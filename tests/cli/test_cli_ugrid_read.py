@@ -99,7 +99,7 @@ class TestFromArrays:
     """``pyramids mesh read arrays``."""
 
     def test_builds_from_arrays(self, tmp_path):
-        """from-arrays with a per-face variable writes a readable mesh."""
+        """read arrays with a per-face variable writes a readable mesh."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         values = tmp_path / "z.npy"
         np.save(values, np.array([10.0, 20.0]))
@@ -125,14 +125,14 @@ class TestFromArrays:
         assert "z" in mesh.keys()
 
     def test_builds_without_data(self, tmp_path):
-        """from-arrays with no --data builds a bare topology."""
+        """read arrays with no --data builds a bare topology."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "bare.nc")
         assert _run(["mesh", "read", "arrays", node_x, node_y, faces, out]) == 0
         assert MeshDataset.read_file(out).n_face == 2
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-arrays without --overwrite is refused."""
+        """A second read arrays without --overwrite is refused."""
         node_x, node_y, faces = _triangle_arrays(tmp_path)
         out = str(tmp_path / "m.nc")
         assert _run(["mesh", "read", "arrays", node_x, node_y, faces, out]) == 0
@@ -158,7 +158,7 @@ class TestFromGeodataframe:
         return path
 
     def test_builds_from_polygons(self, tmp_path):
-        """from-geodataframe turns polygons into faces."""
+        """read geodataframe turns polygons into faces."""
         out = str(tmp_path / "mg.nc")
         assert (
             _run(["mesh", "read", "geodataframe", self._polygons(tmp_path), out]) == 0
@@ -166,7 +166,7 @@ class TestFromGeodataframe:
         assert MeshDataset.read_file(out).n_face == 2
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-geodataframe without --overwrite is refused."""
+        """A second read geodataframe without --overwrite is refused."""
         polygons = self._polygons(tmp_path)
         out = str(tmp_path / "mg.nc")
         assert _run(["mesh", "read", "geodataframe", polygons, out]) == 0
@@ -187,7 +187,7 @@ class TestFromStructured:
         return path
 
     def test_builds_quad_mesh(self, tmp_path):
-        """from-structured makes one quad face per raster cell."""
+        """read structured makes one quad face per raster cell."""
         out = str(tmp_path / "fs.nc")
         assert _run(["mesh", "read", "structured", self._raster(tmp_path), out]) == 0
         assert MeshDataset.read_file(out).n_face == 9
@@ -214,7 +214,7 @@ class TestFromBytes:
     """``pyramids mesh read bytes``."""
 
     def test_from_file(self, tmp_path):
-        """from-bytes reads a file of raw bytes and writes the mesh."""
+        """read bytes reads a file of raw bytes and writes the mesh."""
         out = str(tmp_path / "fb.nc")
         assert _run(["mesh", "read", "bytes", str(_MESH), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
@@ -228,12 +228,12 @@ class TestFromBytes:
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_requires_source(self, tmp_path):
-        """With neither an input path nor --stdin, from-bytes errors cleanly."""
+        """With neither an input path nor --stdin, read bytes errors cleanly."""
         with pytest.raises(ValueError, match="input path or --stdin"):
             _run(["mesh", "read", "bytes", str(tmp_path / "x.nc")])
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-bytes without --overwrite is refused."""
+        """A second read bytes without --overwrite is refused."""
         out = str(tmp_path / "fb.nc")
         assert _run(["mesh", "read", "bytes", str(_MESH), out]) == 0
         with pytest.raises(ValueError, match="already exists"):
@@ -273,13 +273,13 @@ class TestFromZarr:
         return store
 
     def test_round_trip(self, tmp_path):
-        """from-zarr reads a store written by to_zarr and writes a NetCDF."""
+        """read zarr reads a store written by to_zarr and writes a NetCDF."""
         out = str(tmp_path / "fz.nc")
         assert _run(["mesh", "read", "zarr", self._store(tmp_path), out]) == 0
         assert MeshDataset.read_file(out).n_node > 0
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-zarr without --overwrite is refused."""
+        """A second read zarr without --overwrite is refused."""
         store = self._store(tmp_path)
         out = str(tmp_path / "fz.nc")
         assert _run(["mesh", "read", "zarr", store, out]) == 0

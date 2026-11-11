@@ -67,7 +67,7 @@ class TestNcToDataframe:
     """`pyramids nc export dataframe`."""
 
     def test_writes_csv(self, tmp_path):
-        """to-dataframe writes a non-empty CSV for the selected variable."""
+        """export dataframe writes a non-empty CSV for the selected variable."""
         out = tmp_path / "out.csv"
         assert (
             main(["nc", "export", "dataframe", str(_NC), str(out), "--vars", "tas"])
@@ -98,7 +98,7 @@ class TestNcToZarr:
 
     @pytest.mark.lazy
     def test_writes_zarr_store(self, tmp_path):
-        """to-zarr writes a per-variable Zarr store."""
+        """export zarr writes a per-variable Zarr store."""
         out = tmp_path / "out.zarr"
         assert main(["nc", "export", "zarr", str(_NC), str(out), "--var", "tas"]) == 0
         assert out.exists()
@@ -141,7 +141,7 @@ class TestNcFromDataframe:
     """`pyramids nc import dataframe` (issue #1467)."""
 
     def test_round_trips_from_csv(self, tmp_path):
-        """A CSV written by to-dataframe rebuilds into a readable cube."""
+        """A CSV written by export dataframe rebuilds into a readable cube."""
         csv = str(tmp_path / "frame.csv")
         assert main(["nc", "export", "dataframe", str(_NC_BANDS), csv]) == 0
         out = str(tmp_path / "rebuilt.nc")
@@ -163,7 +163,7 @@ class TestNcFromDataframe:
         assert NetCDF.read_file(out).epsg == 4326
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-dataframe without --overwrite is refused."""
+        """A second import dataframe without --overwrite is refused."""
         csv = str(tmp_path / "frame.csv")
         assert main(["nc", "export", "dataframe", str(_NC_BANDS), csv]) == 0
         out = str(tmp_path / "rebuilt.nc")
@@ -216,7 +216,7 @@ class TestNcFromDict:
         assert "Band1" in list(NetCDF.read_file(out).variable_names)
 
     def test_refuses_existing(self, tmp_path):
-        """A second from-dict without --overwrite is refused."""
+        """A second import dict without --overwrite is refused."""
         payload = NetCDF.read_file(str(_NC_BANDS)).to_dict(data=True)
         src = tmp_path / "dump.json"
         src.write_text(json.dumps(json_sanitize(payload)), encoding="utf-8")
@@ -279,7 +279,7 @@ class TestNcToKerchunk:
 
     @pytest.mark.netcdf_lazy
     def test_writes_manifest(self, tmp_path):
-        """to-kerchunk writes a non-empty JSON reference manifest for an HDF5 cube."""
+        """export kerchunk writes a non-empty JSON reference manifest for an HDF5 cube."""
         src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
         out = tmp_path / "ref.json"
         assert main(["nc", "export", "kerchunk", src, str(out)]) == 0
@@ -288,7 +288,7 @@ class TestNcToKerchunk:
 
     @pytest.mark.netcdf_lazy
     def test_refuses_existing(self, tmp_path):
-        """A second to-kerchunk without --overwrite is refused."""
+        """A second export kerchunk without --overwrite is refused."""
         src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
         out = str(tmp_path / "ref.json")
         assert main(["nc", "export", "kerchunk", src, out]) == 0

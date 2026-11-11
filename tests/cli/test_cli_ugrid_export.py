@@ -155,7 +155,7 @@ class TestToFile:
     """`pyramids mesh export file`."""
 
     def test_round_trips(self, tmp_path):
-        """to-file re-writes a readable UGRID NetCDF."""
+        """export file re-writes a readable UGRID NetCDF."""
         out = str(tmp_path / "copy.nc")
         assert _dispatch(["mesh", "export", "file", str(_MESH), out]) == 0
         assert set(MeshDataset.read_file(out).data_variable_names)
@@ -276,7 +276,7 @@ class TestToDataset:
     """`pyramids mesh export dataset`."""
 
     def test_rasterizes_to_geotiff(self, tmp_path):
-        """to-dataset writes a single-band raster."""
+        """export dataset writes a single-band raster."""
         out = str(tmp_path / "grid.tif")
         rc = _dispatch(
             [
@@ -343,7 +343,7 @@ class TestToZarr:
     """`pyramids mesh export zarr`."""
 
     def test_writes_store(self, tmp_path):
-        """to-zarr writes a Zarr store directory."""
+        """export zarr writes a Zarr store directory."""
         out = str(tmp_path / "m.zarr")
         assert _dispatch(["mesh", "export", "zarr", str(_MESH), out]) == 0
         assert Path(out).exists()
@@ -353,8 +353,8 @@ class TestToImage:
     """`pyramids mesh export image`."""
 
     def test_writes_png(self, tmp_path):
-        """to-image writes a readable colour-mapped image."""
-        # Pillow — and the cleopatra/matplotlib viz stack the `to-image` command renders
+        """export image writes a readable colour-mapped image."""
+        # Pillow — and the cleopatra/matplotlib viz stack the `export image` command renders
         # with — only ships in the [viz] extra. Import it here, not at module top level, so
         # this module still *collects* (and its non-viz export tests still run) in the core /
         # lazy / interop wheel envs, which have no Pillow.
@@ -382,7 +382,7 @@ class TestToBytes:
     """`pyramids mesh export bytes`."""
 
     def test_writes_file(self, tmp_path):
-        """to-bytes writes the NetCDF buffer to a file."""
+        """export bytes writes the NetCDF buffer to a file."""
         out = str(tmp_path / "m.nc")
         assert _dispatch(["mesh", "export", "bytes", str(_MESH), out]) == 0
         assert Path(out).stat().st_size > 0
@@ -427,7 +427,7 @@ class TestToCrs:
     """`pyramids mesh export crs`."""
 
     def test_reprojects(self, tmp_path):
-        """to-crs reprojects a CRS-bearing mesh to the target EPSG."""
+        """export crs reprojects a CRS-bearing mesh to the target EPSG."""
         out = str(tmp_path / "rep.nc")
         rc = _dispatch(
             ["mesh", "export", "crs", _crs_mesh(tmp_path), out, "--epsg", "3857"]
