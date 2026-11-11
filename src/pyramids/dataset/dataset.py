@@ -415,7 +415,12 @@ def _warn_ignored_gdal_args(
 
 
 def _warn_ignored_zarr_args(
-    read_only: bool, file_i: int, gdal_env: Any, *, options: Any
+    read_only: bool,
+    file_i: int,
+    gdal_env: Any,
+    *,
+    warn_on_container: bool,
+    options: Any,
 ) -> None:
     """Warn that GDAL-only `read_file` arguments are dropped when a `.zarr` routes to from_zarr.
 
@@ -426,6 +431,7 @@ def _warn_ignored_zarr_args(
         read_only: The `read_file` ``read_only`` argument.
         file_i: The `read_file` ``file_i`` argument.
         gdal_env: The `read_file` ``gdal_env`` argument.
+        warn_on_container: The `read_file` ``warn_on_container`` argument.
         options: The `read_file` ``open_options`` argument (pre-normalization).
     """
     ignored = []
@@ -435,6 +441,8 @@ def _warn_ignored_zarr_args(
         ignored.append(f"file_i={file_i}")
     if gdal_env is not None:
         ignored.append("gdal_env")
+    if not warn_on_container:
+        ignored.append("warn_on_container=False")
     if options:
         ignored.append("open_options")
     if ignored:
@@ -4955,7 +4963,11 @@ class Dataset(RasterBase):
                 )
             if kind == "single":
                 _warn_ignored_zarr_args(
-                    read_only, file_i, gdal_env, options=open_options
+                    read_only,
+                    file_i,
+                    gdal_env,
+                    warn_on_container=warn_on_container,
+                    options=open_options,
                 )
                 return cls.from_zarr(path)
             # kind == "other": a foreign / plain-file / credentialed-remote `.zarr` that is not

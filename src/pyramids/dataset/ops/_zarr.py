@@ -1021,13 +1021,16 @@ def classify_zarr_store(
     - ``"cube"`` -- a pyramids-written temporal cube (a 4-D ``data`` array beside a
       ``spatial_ref`` node); it is not a single raster.
     - ``"other"`` -- anything else: a foreign / xarray-written store, a plain file that
-      merely ends in ``.zarr``, or a store that cannot be opened here (e.g. a remote store
-      needing credentials this call cannot forward). The caller should let GDAL handle it.
+      merely ends in ``.zarr``, a store that cannot be opened here (e.g. a remote store
+      needing credentials this call cannot forward), or an install without the optional
+      ``zarr`` package. The caller should let GDAL handle it.
 
     Only pyramids-written stores are claimed, so a foreign ``.zarr`` GDAL can already read is
     left to GDAL rather than mis-routed. The store is opened read-only for metadata only; any
-    open failure is reported as ``"other"`` so the caller falls back rather than surfacing an
-    opaque zarr error.
+    failure to open and confirm it -- including the optional ``zarr`` package being absent --
+    is reported as ``"other"`` so the caller falls back to GDAL rather than surfacing an opaque
+    error. This never raises for a missing ``zarr``: a zarr-less install reads a ``.zarr``
+    through GDAL exactly as before this routing existed.
 
     Args:
         store: A ``.zarr`` store -- path / fsspec URL / :class:`zarr.storage.Store`.
@@ -1035,9 +1038,6 @@ def classify_zarr_store(
 
     Returns:
         ``"single"``, ``"cube"``, or ``"other"``.
-
-    Raises:
-        OptionalPackageDoesNotExist: When the optional ``zarr`` dependency is not installed.
 
     Examples:
         A pyramids single-raster store classifies as ``"single"`` and a cube as ``"cube"``;
@@ -1053,12 +1053,19 @@ def classify_zarr_store(
     See Also:
         is_zarr_store: the cheap suffix check that decides whether to classify at all.
     """
-    zarr = _require_zarr()
     try:
+        zarr = _require_zarr()
         root = zarr.open_group(_resolve_store(store, storage_options), mode="r")
-    except Exception:  # noqa: BLE001
-        # Any open failure -- not a zarr group, a plain file, missing credentials -- means the
-        # caller should fall back to GDAL rather than surface an opaque zarr error.
+    except Exception as exc:  # noqa: BLE001
+        # Report "other" for any reason the store cannot be opened and confirmed here -- the
+        # optional `zarr` package being absent, a plain file, a missing group, or credentials
+        # this call cannot forward -- so read_file falls back to GDAL (a zarr-less install
+        # reads a `.zarr` through GDAL exactly as before this routing existed) rather than
+        # surfacing an opaque error. A genuinely corrupted pyramids store also lands here and
+        # is handed to GDAL, which raises its own read error; the reason is logged for triage.
+        logging.getLogger(__name__).debug(
+            "classify_zarr_store: %r -> 'other' (%s)", store, exc
+        )
         return "other"
     data = root.get("data", None)
     # A pyramids GeoZarr store always writes the `data` array beside a `spatial_ref` node; a
@@ -1085,10 +1092,8 @@ def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> 
         storage_options: fsspec options forwarded to :func:`_resolve_store` for a cloud URL.
 
     Returns:
-        ``True`` for a pyramids cube store; ``False`` otherwise.
-
-    Raises:
-        OptionalPackageDoesNotExist: When the optional ``zarr`` dependency is not installed.
+        ``True`` for a pyramids cube store; ``False`` otherwise (including a zarr-less install,
+        which cannot open the store and so cannot call it a cube).
 
     Examples:
         A single-raster store is not a cube, while a cube store is (both need a real on-disk
