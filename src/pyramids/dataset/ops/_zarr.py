@@ -176,8 +176,9 @@ def classify_zarr_store(
         return "other"
     try:
         result = classify(store, storage_options)
-    except Exception as exc:  # noqa: BLE001 - any backend failure means "let GDAL try", never raise.
-        # A present-but-broken backend (e.g. a drifted classify signature raising TypeError) degrades
+    except Exception as exc:  # noqa: BLE001
+        # Broad by design: any backend failure means "let GDAL try", never surface it. A
+        # present-but-broken backend (e.g. a drifted classify signature raising TypeError) degrades
         # here; the debug log distinguishes it from the absent-backend case above.
         logger.debug(
             "classify_zarr_store: backend classify failed for %r -> 'other' (%s)",
