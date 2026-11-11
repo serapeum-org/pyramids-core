@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9768,15 +9768,15 @@ subcommands, and <code>pyramids completion …</code> to refresh shell completio
 <td><code>pyramids raster cog create\|validate\|info …</code></td>
 </tr>
 <tr>
-<td><code>pyramids vector &lt;verb&gt;</code> (non-core: buffer, intersection, voronoi, to-parquet, …)</td>
-<td><code>pyramids vector &lt;inspect\|geom\|overlay\|tess\|io&gt; &lt;verb&gt;</code></td>
+<td><code>pyramids vector &lt;verb&gt;</code> (non-core: buffer, intersection, voronoi, export parquet, …)</td>
+<td><code>pyramids vector &lt;inspect\|geom\|overlay\|tess\|export\|import&gt; &lt;verb&gt;</code></td>
 </tr>
 <tr>
-<td><code>pyramids nc &lt;verb&gt;</code> (non-core: time-values, isel, polyfit, to-zarr, render, …)</td>
-<td><code>pyramids nc &lt;inspect\|vars\|select\|calc\|io\|plot&gt; &lt;verb&gt;</code></td>
+<td><code>pyramids nc &lt;verb&gt;</code> (non-core: time-values, isel, polyfit, export zarr, plot render, …)</td>
+<td><code>pyramids nc &lt;inspect\|vars\|select\|calc\|export\|import\|plot&gt; &lt;verb&gt;</code></td>
 </tr>
 <tr>
-<td><code>pyramids mesh &lt;verb&gt;</code> (non-core: slope, read-all, to-zarr, …)</td>
+<td><code>pyramids mesh &lt;verb&gt;</code> (non-core: slope, read-all, export zarr, …)</td>
 <td><code>pyramids mesh &lt;read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join&gt; &lt;verb&gt;</code></td>
 </tr>
 <tr>
@@ -9840,6 +9840,64 @@ warp\|clip</code>, <code>nc info\|groups\|get-group\|list-vars\|extract\|sel\|cr
 </table>
 <p>The deprecated <code>pyramids overlay</code> verb (a <code>0.70</code>-era alias of <code>zonal-stats</code>) is <strong>removed</strong> — use
 <code>pyramids raster zonal-stats &lt;raster&gt; --classes &lt;class_raster&gt;</code>.</p>
+<p><strong>Export/import prefix dropped, and two doubled verbs renamed (a consistency follow-up).</strong> To match
+<code>raster export</code>/<code>import</code>, the redundant <code>to-</code>/<code>from-</code> prefix is gone from <code>mesh export</code> / <code>mesh read</code>, and the
+single <code>nc io</code> and <code>vector io</code> subgroups are each split into <code>&lt;domain&gt; export</code> (writers) /
+<code>&lt;domain&gt; import</code> (readers):</p>
+<table>
+<thead>
+<tr>
+<th>old</th>
+<th>new</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyramids mesh export to-&lt;fmt&gt; …</code> (to-file, to-zarr, to-crs, …)</td>
+<td><code>pyramids mesh export &lt;fmt&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids mesh read from-&lt;src&gt; …</code> (from-arrays, from-zarr, …)</td>
+<td><code>pyramids mesh read &lt;src&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids nc io to-&lt;fmt&gt; …</code> (to-dataframe, to-zarr, to-kerchunk, …)</td>
+<td><code>pyramids nc export &lt;fmt&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids nc io from-&lt;src&gt; …</code> (from-dataframe, from-dict)</td>
+<td><code>pyramids nc import &lt;src&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids nc io open-mf\|concat\|merge …</code></td>
+<td><code>pyramids nc import open-mf\|concat\|merge …</code></td>
+</tr>
+<tr>
+<td><code>pyramids nc io convert\|combine-kerchunk …</code></td>
+<td><code>pyramids nc export convert\|combine-kerchunk …</code></td>
+</tr>
+<tr>
+<td><code>pyramids vector io to-&lt;fmt&gt; …</code> (to-parquet, to-json, to-feather, to-mvt, …)</td>
+<td><code>pyramids vector export &lt;fmt&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids vector io from-&lt;src&gt; …</code> (from-xyz, from-features, from-featureserver, …)</td>
+<td><code>pyramids vector import &lt;src&gt; …</code></td>
+</tr>
+<tr>
+<td><code>pyramids vector io read-parquet\|read-gpx …</code></td>
+<td><code>pyramids vector import parquet\|gpx …</code></td>
+</tr>
+<tr>
+<td><code>pyramids nc plot plot …</code></td>
+<td><code>pyramids nc plot render …</code></td>
+</tr>
+<tr>
+<td><code>pyramids vector overlay overlay …</code></td>
+<td><code>pyramids vector overlay apply …</code></td>
+</tr>
+</tbody>
+</table>
 <p><strong>Rarely-one-shot primitives moved under a per-domain <code>advanced</code> subgroup.</strong> To keep each domain's help focused
 on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim
 mechanics, geometry micro-ops, low-level accessors) now live under <code>pyramids &lt;domain&gt; advanced &lt;verb&gt;</code> — e.g.
