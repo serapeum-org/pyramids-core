@@ -1008,43 +1008,101 @@ def is_zarr_store(source: Any) -> bool:
     return str(source).rstrip("/\\").lower().endswith(".zarr")
 
 
-def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> bool:
-    """Whether a pyramids Zarr ``store`` holds a temporal cube rather than a single raster.
+def classify_zarr_store(
+    store: Any, storage_options: dict[str, Any] | None = None
+) -> str:
+    """Classify a ``.zarr`` store for :meth:`~pyramids.dataset.Dataset.read_file` routing.
 
-    :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes a 4-D ``data`` array
-    ``(time, band, y, x)``, whereas a single :meth:`pyramids.dataset.Dataset.to_zarr`
-    store's ``data`` array is 3-D ``(band, y, x)``. Opens the root group read-only and
-    inspects the ``data`` array's rank; a store with no ``data`` array is not a cube.
+    Returns one of:
+
+    - ``"single"`` -- a pyramids-written single-raster GeoZarr store (a 3-D ``data`` array
+      beside a ``spatial_ref`` node); route it to
+      :meth:`~pyramids.dataset.Dataset.from_zarr`.
+    - ``"cube"`` -- a pyramids-written temporal cube (a 4-D ``data`` array beside a
+      ``spatial_ref`` node); it is not a single raster.
+    - ``"other"`` -- anything else: a foreign / xarray-written store, a plain file that
+      merely ends in ``.zarr``, or a store that cannot be opened here (e.g. a remote store
+      needing credentials this call cannot forward). The caller should let GDAL handle it.
+
+    Only pyramids-written stores are claimed, so a foreign ``.zarr`` GDAL can already read is
+    left to GDAL rather than mis-routed. The store is opened read-only for metadata only; any
+    open failure is reported as ``"other"`` so the caller falls back rather than surfacing an
+    opaque zarr error.
 
     Args:
-        store: A ``.zarr`` store — path / fsspec URL / :class:`zarr.storage.Store`.
+        store: A ``.zarr`` store -- path / fsspec URL / :class:`zarr.storage.Store`.
         storage_options: fsspec options forwarded to :func:`_resolve_store` for a cloud URL.
 
     Returns:
-        ``True`` when the store's ``data`` array is 4-D (a cube written by
-        ``DatasetCollection.to_zarr``); ``False`` for a single raster or a store with no
-        ``data`` array.
+        ``"single"``, ``"cube"``, or ``"other"``.
 
     Raises:
         OptionalPackageDoesNotExist: When the optional ``zarr`` dependency is not installed.
 
     Examples:
-        A single-raster store is not a cube, while a store written by
-        ``DatasetCollection.to_zarr`` is (both need a real on-disk store, so these are
-        illustrative):
+        A pyramids single-raster store classifies as ``"single"`` and a cube as ``"cube"``;
+        a foreign or unreadable store as ``"other"`` (all need a real store, so illustrative):
 
-        >>> is_cube_store("single_raster.zarr")  # doctest: +SKIP
+        >>> classify_zarr_store("elevation.zarr")         # doctest: +SKIP
+        'single'
+        >>> classify_zarr_store("timeseries_cube.zarr")   # doctest: +SKIP
+        'cube'
+        >>> classify_zarr_store("xarray_export.zarr")      # doctest: +SKIP
+        'other'
+
+    See Also:
+        is_zarr_store: the cheap suffix check that decides whether to classify at all.
+    """
+    zarr = _require_zarr()
+    try:
+        root = zarr.open_group(_resolve_store(store, storage_options), mode="r")
+    except Exception:  # noqa: BLE001
+        # Any open failure -- not a zarr group, a plain file, missing credentials -- means the
+        # caller should fall back to GDAL rather than surface an opaque zarr error.
+        return "other"
+    data = root.get("data", None)
+    # A pyramids GeoZarr store always writes the `data` array beside a `spatial_ref` node; a
+    # foreign store (other variable names, no spatial_ref) is left for GDAL to read.
+    if data is None or "spatial_ref" not in root:
+        return "other"
+    ndim = getattr(data, "ndim", None)
+    if ndim == 4:
+        return "cube"
+    if ndim == 3:
+        return "single"
+    return "other"
+
+
+def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> bool:
+    """Whether a pyramids Zarr ``store`` holds a temporal cube rather than a single raster.
+
+    Thin predicate over :func:`classify_zarr_store`: ``True`` only for a pyramids-written 4-D
+    ``(time, band, y, x)`` cube (as :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes).
+    A single raster, a foreign store, or an unreadable path is ``False``.
+
+    Args:
+        store: A ``.zarr`` store -- path / fsspec URL / :class:`zarr.storage.Store`.
+        storage_options: fsspec options forwarded to :func:`_resolve_store` for a cloud URL.
+
+    Returns:
+        ``True`` for a pyramids cube store; ``False`` otherwise.
+
+    Raises:
+        OptionalPackageDoesNotExist: When the optional ``zarr`` dependency is not installed.
+
+    Examples:
+        A single-raster store is not a cube, while a cube store is (both need a real on-disk
+        store, so these are illustrative):
+
+        >>> is_cube_store("single_raster.zarr")      # doctest: +SKIP
         False
-        >>> is_cube_store("time_series_cube.zarr")  # doctest: +SKIP
+        >>> is_cube_store("time_series_cube.zarr")   # doctest: +SKIP
         True
 
     See Also:
-        is_zarr_store: the cheap suffix check that decides whether to inspect at all.
+        classify_zarr_store: the three-way classification used for routing.
     """
-    zarr = _require_zarr()
-    root = zarr.open_group(_resolve_store(store, storage_options), mode="r")
-    data = root.get("data", None)
-    return data is not None and getattr(data, "ndim", None) == 4
+    return classify_zarr_store(store, storage_options) == "cube"
 
 
 # Keep the dunder explicit so users importing from the module see the surface.
@@ -1053,4 +1111,5 @@ __all__ = [
     "read_dataset_from_zarr",
     "is_zarr_store",
     "is_cube_store",
+    "classify_zarr_store",
 ]

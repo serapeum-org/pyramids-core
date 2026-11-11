@@ -113,7 +113,7 @@ from pyramids.dataset.ops._focal import (
     slope,
 )
 from pyramids.dataset.ops._zarr import (
-    is_cube_store,
+    classify_zarr_store,
     is_zarr_store,
     read_dataset_from_zarr,
     write_dataset_to_zarr,
@@ -409,6 +409,39 @@ def _warn_ignored_gdal_args(
         warnings.warn(
             f"raster driver {driver_name!r} handles this source; the GDAL-only read_file "
             f"argument(s) {ignored} are ignored on the plugin path.",
+            UserWarning,
+            stacklevel=3,
+        )
+
+
+def _warn_ignored_zarr_args(
+    read_only: bool, file_i: int, gdal_env: Any, *, options: Any
+) -> None:
+    """Warn that GDAL-only `read_file` arguments are dropped when a `.zarr` routes to from_zarr.
+
+    A single-raster GeoZarr store is read by :meth:`Dataset.from_zarr`, which takes none of the
+    GDAL-path arguments, so any non-default one is flagged rather than silently ignored.
+
+    Args:
+        read_only: The `read_file` ``read_only`` argument.
+        file_i: The `read_file` ``file_i`` argument.
+        gdal_env: The `read_file` ``gdal_env`` argument.
+        options: The `read_file` ``open_options`` argument (pre-normalization).
+    """
+    ignored = []
+    if not read_only:
+        ignored.append("read_only=False")
+    if file_i:
+        ignored.append(f"file_i={file_i}")
+    if gdal_env is not None:
+        ignored.append("gdal_env")
+    if options:
+        ignored.append("open_options")
+    if ignored:
+        warnings.warn(
+            f"a GeoZarr store routes to Dataset.from_zarr; the GDAL-only read_file "
+            f"argument(s) {ignored} are ignored. Use Dataset.from_zarr(...) for "
+            f"zarr-specific options (level / chunks / storage_options).",
             UserWarning,
             stacklevel=3,
         )
@@ -4858,14 +4891,20 @@ class Dataset(RasterBase):
                 Opened dataset instance.
 
         Notes:
-            A ``.zarr`` store written by :meth:`to_zarr` is a GeoZarr store; ``read_file``
-            routes it to :meth:`from_zarr` so its CRS, geotransform and band roles are
-            recovered (GDAL's generic Zarr driver drops that metadata, returning a
+            A single-raster ``.zarr`` store written by :meth:`to_zarr` is a GeoZarr store;
+            ``read_file`` routes it to :meth:`from_zarr` so its CRS, geotransform and band
+            roles are recovered (GDAL's generic Zarr driver drops that metadata, returning a
             georeferenceless raster). A cube store written by
             :meth:`pyramids.dataset.DatasetCollection.to_zarr` is a 4-D ``(time, band, y,
             x)`` stack, not a single raster, so ``read_file`` raises ``ValueError`` pointing
-            at :meth:`pyramids.dataset.DatasetCollection.from_zarr`. Pass ``driver=`` or
-            ``vsi=`` to bypass the routing and open the store through GDAL directly.
+            at :meth:`pyramids.dataset.DatasetCollection.from_zarr`. Only pyramids-written
+            GeoZarr stores are claimed: any other ``.zarr`` -- a foreign / xarray-written
+            store, a plain file that merely ends in ``.zarr``, or a remote store needing
+            credentials this call cannot forward -- falls through to GDAL and is read exactly
+            as before. Because a GeoZarr store is read by :meth:`from_zarr`, the GDAL-only
+            arguments (``read_only`` / ``file_i`` / ``open_options`` / ``gdal_env``) do not
+            apply on that path and a non-default one warns; pass ``driver=`` or ``vsi=`` to
+            bypass the routing and open through GDAL directly.
 
         See Also:
             - :meth:`read_array`: read the values stored in a dataset band.
@@ -4908,12 +4947,20 @@ class Dataset(RasterBase):
         # a 4-D time/band/y/x array) is not a single Dataset, so it errors with a pointer rather than
         # being mis-read by the single-raster reader.
         if vsi is None and is_zarr_store(path):
-            if is_cube_store(path):
+            kind = classify_zarr_store(path)
+            if kind == "cube":
                 raise ValueError(
                     f"{str(path)!r} is a cube Zarr store (time, band, y, x), not a single "
                     "raster -- open it with DatasetCollection.from_zarr(...)."
                 )
-            return cls.from_zarr(path)
+            if kind == "single":
+                _warn_ignored_zarr_args(
+                    read_only, file_i, gdal_env, options=open_options
+                )
+                return cls.from_zarr(path)
+            # kind == "other": a foreign / plain-file / credentialed-remote `.zarr` that is not
+            # a pyramids GeoZarr store. Fall through to the GDAL path below, which applies
+            # `gdal_env` credentials and reads whatever GDAL can -- exactly as before this fix.
         # Normalize once here so the value captured on the instance below is the
         # KEY=VALUE list form (a raw dict would lose its values when the base
         # __init__ tuple-ifies it). _io.read_file re-normalizes idempotently for

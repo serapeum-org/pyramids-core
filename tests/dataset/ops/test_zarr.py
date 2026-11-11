@@ -17,7 +17,11 @@ from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.collection import DatasetCollection
-from pyramids.dataset.ops._zarr import is_cube_store, is_zarr_store
+from pyramids.dataset.ops._zarr import (
+    classify_zarr_store,
+    is_cube_store,
+    is_zarr_store,
+)
 
 pytestmark = pytest.mark.core
 
@@ -695,12 +699,13 @@ class TestReadFileRoutesZarr:
     def test_read_file_vsi_opts_out_of_zarr_routing(
         self, small_dataset, tmp_path, monkeypatch
     ):
-        """An explicit ``vsi=`` bypasses the zarr routing before the store is inspected.
+        """An explicit ``vsi=`` bypasses the zarr routing before the store is classified.
 
         Test scenario:
-            With ``vsi`` set, the ``vsi is None`` guard short-circuits, so ``is_cube_store`` is
-            never consulted and the read falls through to the GDAL path (which then fails on the
-            inapplicable ``vsi``). Proven by a tracker that must stay empty.
+            With ``vsi`` set, the ``vsi is None`` guard short-circuits, so
+            ``classify_zarr_store`` is never consulted and the read falls through to the GDAL
+            path (which then fails on the inapplicable ``vsi``). Proven by a tracker that must
+            stay empty.
         """
         import pyramids.dataset.dataset as dataset_module
 
@@ -709,11 +714,92 @@ class TestReadFileRoutesZarr:
         consulted: list[str] = []
         monkeypatch.setattr(
             dataset_module,
-            "is_cube_store",
-            lambda *a, **k: consulted.append("called") or False,
+            "classify_zarr_store",
+            lambda *a, **k: consulted.append("called") or "single",
         )
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="archive kind"):
             Dataset.read_file(store, vsi="/vsimem/does-not-apply")
         assert consulted == [], (
-            "vsi= must bypass zarr routing before is_cube_store is consulted"
+            "vsi= must bypass zarr routing before classify_zarr_store is consulted"
         )
+
+    @pytest.mark.lazy
+    def test_classify_zarr_store_single_cube_foreign_plain(
+        self, small_dataset, tmp_path
+    ):
+        """``classify_zarr_store`` labels pyramids stores and leaves everything else to GDAL.
+
+        Test scenario:
+            A pyramids single-raster store is ``"single"``, a pyramids cube is ``"cube"``, a
+            foreign store (other array names, no ``spatial_ref``) is ``"other"``, and a plain
+            file that merely ends in ``.zarr`` is ``"other"`` (unopenable -> not claimed).
+        """
+        single = str(tmp_path / "single.zarr")
+        small_dataset.to_zarr(single)
+        assert classify_zarr_store(single) == "single"
+
+        t1, t2 = str(tmp_path / "2020.01.01.tif"), str(tmp_path / "2020.01.02.tif")
+        small_dataset.to_file(t1)
+        small_dataset.to_file(t2)
+        cube = str(tmp_path / "cube.zarr")
+        DatasetCollection.from_files([t1, t2]).to_zarr(cube)
+        assert classify_zarr_store(cube) == "cube"
+
+        foreign = str(tmp_path / "foreign.zarr")
+        group = zarr.open_group(foreign, mode="w")
+        group.create_array("temperature", shape=(2, 3), dtype="f4")
+        assert classify_zarr_store(foreign) == "other"
+
+        plain = tmp_path / "plain.zarr"
+        plain.write_bytes(b"not a zarr store")
+        assert classify_zarr_store(str(plain)) == "other"
+
+    @pytest.mark.lazy
+    def test_read_file_foreign_zarr_falls_through_to_gdal(self, tmp_path):
+        """A foreign ``.zarr`` is handed to GDAL, not mis-routed to ``from_zarr``.
+
+        Test scenario:
+            A store with a non-``data`` array and no ``spatial_ref`` is not a pyramids GeoZarr
+            store, so ``read_file`` must not raise the opaque ``from_zarr`` auto-detect
+            ``KeyError``; it falls through to GDAL (which reads it or raises its own error).
+        """
+        foreign = str(tmp_path / "foreign.zarr")
+        group = zarr.open_group(foreign, mode="w")
+        group.create_array("temperature", shape=(2, 3), dtype="f4")
+        try:
+            Dataset.read_file(foreign)
+        except Exception as exc:
+            assert "spatial_ref" not in str(exc), (
+                f"opaque from_zarr error leaked: {exc}"
+            )
+            assert "detect" not in str(exc).lower(), (
+                f"opaque from_zarr error leaked: {exc}"
+            )
+
+    @pytest.mark.lazy
+    def test_read_file_plain_file_named_zarr_falls_through_to_gdal(self, tmp_path):
+        """A plain file whose name ends in ``.zarr`` falls through to GDAL's own error.
+
+        Test scenario:
+            ``read_file`` must not surface a zarr ``GroupNotFoundError`` for a non-store file;
+            classification returns ``"other"`` and GDAL raises its ordinary open error.
+        """
+        plain = tmp_path / "plain.zarr"
+        plain.write_bytes(b"not a zarr store")
+        with pytest.raises((RuntimeError, OSError)):
+            Dataset.read_file(str(plain))
+
+    @pytest.mark.lazy
+    def test_read_file_warns_when_gdal_args_ignored_on_route(
+        self, small_dataset, tmp_path
+    ):
+        """Routing a GeoZarr store to ``from_zarr`` warns about dropped GDAL-only arguments.
+
+        Test scenario:
+            ``read_only=False`` cannot apply to the ``from_zarr`` path, so ``read_file`` emits a
+            ``UserWarning`` naming ``from_zarr`` rather than silently discarding the argument.
+        """
+        store = str(tmp_path / "single.zarr")
+        small_dataset.to_zarr(store)
+        with pytest.warns(UserWarning, match="from_zarr"):
+            Dataset.read_file(store, read_only=False)
