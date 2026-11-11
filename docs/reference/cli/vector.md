@@ -75,6 +75,7 @@ suggestion.
   - `to-wkb` — write a WKB table to CSV
   - `to-wkt` — write a WKT table to CSV
 - `overlay` …
+  - `apply` — spatial overlay of two layers (--how)
   - `clip-by-rect` — clip to an axis-aligned window
   - `difference` — difference with --other
   - `dissolve` — merge features, optionally grouped
@@ -82,7 +83,6 @@ suggestion.
   - `filter` — keep features matching a mask predicate
   - `intersection` — intersection with --other
   - `intersection-all` — intersection of all features
-  - `overlay` — spatial overlay of two layers
   - `sjoin` — predicate-based spatial join
   - `sjoin-nearest` — nearest-neighbour spatial join
   - `symmetric-difference` — symmetric difference with --other
@@ -1313,6 +1313,26 @@ pyramids vector io to-wkt [-h] [--layer LAYER] [--overwrite] src output
 
 ## Subsystem `vector overlay`
 
+#### `pyramids vector overlay apply`
+
+spatial overlay of two layers (--how)
+
+```text
+pyramids vector overlay apply [-h] [--layer LAYER] [--overwrite] --right RIGHT [--how {intersection,union,identity,symmetric_difference,difference}] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination vector path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name/index for a multi-layer source |
+| `--overwrite` | optional | replace the output if it already exists |
+| `--right` | **required** | right-hand vector path to combine with the source |
+| `--how` | optional | overlay mode (choices: `intersection`, `union`, `identity`, `symmetric_difference`, `difference`) |
+
 #### `pyramids vector overlay clip-by-rect`
 
 clip to an axis-aligned window
@@ -1446,26 +1466,6 @@ pyramids vector overlay intersection-all [-h] [--layer LAYER] [--overwrite] src 
 |---|---|---|
 | `--layer` | optional | layer name/index for a multi-layer source |
 | `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector overlay overlay`
-
-spatial overlay of two layers
-
-```text
-pyramids vector overlay overlay [-h] [--layer LAYER] [--overwrite] --right RIGHT [--how {intersection,union,identity,symmetric_difference,difference}] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination vector path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name/index for a multi-layer source |
-| `--overwrite` | optional | replace the output if it already exists |
-| `--right` | **required** | right-hand vector path to combine with the source |
-| `--how` | optional | overlay mode (choices: `intersection`, `union`, `identity`, `symmetric_difference`, `difference`) |
 
 #### `pyramids vector overlay sjoin`
 

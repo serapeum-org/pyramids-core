@@ -1102,8 +1102,8 @@ The move is mechanical — prefix the domain group (and, in the big families, th
 | `pyramids from-<src> …` (bytes, dataframe, points, point-arrays, band-files, archive, zarr) | `pyramids raster import <src> …` |
 | `pyramids cog create\|validate\|info …` | `pyramids raster cog create\|validate\|info …` |
 | `pyramids vector <verb>` (non-core: buffer, intersection, voronoi, to-parquet, …) | `pyramids vector <inspect\|geom\|overlay\|tess\|io> <verb>` |
-| `pyramids nc <verb>` (non-core: time-values, isel, polyfit, to-zarr, render, …) | `pyramids nc <inspect\|vars\|select\|calc\|io\|plot> <verb>` |
-| `pyramids mesh <verb>` (non-core: slope, read-all, to-zarr, …) | `pyramids mesh <read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join> <verb>` |
+| `pyramids nc <verb>` (non-core: time-values, isel, polyfit, export zarr, plot render, …) | `pyramids nc <inspect\|vars\|select\|calc\|export\|import\|plot> <verb>` |
+| `pyramids mesh <verb>` (non-core: slope, read-all, export zarr, …) | `pyramids mesh <read\|inspect\|select\|export\|analysis\|interp\|plot\|attrs\|join> <verb>` |
 | `pyramids collection to-file\|to-cog\|to-netcdf\|to-zarr\|to-kerchunk …` | `pyramids collection export file\|cog\|netcdf\|zarr\|kerchunk …` |
 | `pyramids apply\|run …` | `pyramids process apply\|run …` |
 | `pyramids tools` / `pyramids tool <name>` | `pyramids process tool list` / `pyramids process tool show <name>` |
@@ -1125,6 +1125,21 @@ Several verbs were also renamed to match the Python API as they moved (naming au
 
 The deprecated `pyramids overlay` verb (a `0.70`-era alias of `zonal-stats`) is **removed** — use
 `pyramids raster zonal-stats <raster> --classes <class_raster>`.
+
+**Export/import prefix dropped, and two doubled verbs renamed (a consistency follow-up).** To match
+`raster export`/`import`, the redundant `to-`/`from-` prefix is gone from `mesh export` / `mesh read`, and the
+single `nc io` subgroup is split into `nc export` (writers) / `nc import` (readers):
+
+| old | new |
+|---|---|
+| `pyramids mesh export to-<fmt> …` (to-file, to-zarr, to-crs, …) | `pyramids mesh export <fmt> …` |
+| `pyramids mesh read from-<src> …` (from-arrays, from-zarr, …) | `pyramids mesh read <src> …` |
+| `pyramids nc io to-<fmt> …` (to-dataframe, to-zarr, to-kerchunk, …) | `pyramids nc export <fmt> …` |
+| `pyramids nc io from-<src> …` (from-dataframe, from-dict) | `pyramids nc import <src> …` |
+| `pyramids nc io open-mf\|concat\|merge …` | `pyramids nc import open-mf\|concat\|merge …` |
+| `pyramids nc io convert\|combine-kerchunk …` | `pyramids nc export convert\|combine-kerchunk …` |
+| `pyramids nc plot plot …` | `pyramids nc plot render …` |
+| `pyramids vector overlay overlay …` | `pyramids vector overlay apply …` |
 
 **Rarely-one-shot primitives moved under a per-domain `advanced` subgroup.** To keep each domain's help focused
 on the verbs people actually run, low-level power-user primitives (internal tile/overview reads, array/coord/dim

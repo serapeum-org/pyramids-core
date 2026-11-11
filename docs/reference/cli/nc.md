@@ -42,6 +42,19 @@ and `pyramids nc <subsystem> --help` for a subsystem. An unknown verb prints a *
   - `interpolate-na` — fill gaps along a dimension
   - `polyfit` — least-squares polynomial fit along a dimension
   - `reduce` — collapse a dimension with an aggregation
+- `export` …
+  - `combine-kerchunk` — write a combined kerchunk manifest over many files
+  - `convert` — re-write a file as a NetCDF
+  - `dataframe` — export variables to a CSV table
+  - `dict` — print the file's structure as a dict
+  - `kerchunk` — write a kerchunk reference manifest
+  - `zarr` — write one variable to a Zarr store
+- `import` …
+  - `concat` — join cubes end to end along a dimension
+  - `dataframe` — build a cube from a MultiIndex CSV
+  - `dict` — build a cube from a JSON structure dump
+  - `merge` — put the variables of several cubes together
+  - `open-mf` — report a lazy variable stack over files
 - `inspect` …
   - `del-attr` — delete a global attribute
   - `dim-values` — a dimension's coordinate values
@@ -49,22 +62,10 @@ and `pyramids nc <subsystem> --help` for a subsystem. An unknown verb prints a *
   - `set-attr` — set a global attribute
   - `summary` — per-variable statistics
   - `time-values` — the formatted time-axis labels
-- `io` …
-  - `combine-kerchunk` — write a combined kerchunk manifest over many files
-  - `concat` — join cubes end to end along a dimension
-  - `convert` — re-write a file as a NetCDF
-  - `from-dataframe` — build a cube from a MultiIndex CSV
-  - `from-dict` — build a cube from a JSON structure dump
-  - `merge` — put the variables of several cubes together
-  - `open-mf` — report a lazy variable stack over files
-  - `to-dataframe` — export variables to a CSV table
-  - `to-dict` — print the file's structure as a dict
-  - `to-kerchunk` — write a kerchunk reference manifest
-  - `to-zarr` — write one variable to a Zarr store
 - `plot` …
   - `animate` — save an animation over a dimension
-  - `plot` — save a map of one variable (PNG)
   - `plot-histogram` — save a variable's value histogram (PNG)
+  - `render` — save a map of one variable (PNG)
 - `select` …
   - `dropna` — drop steps that hold missing cells
   - `head` — keep the first N bands
@@ -752,6 +753,214 @@ pyramids nc calc reduce [-h] --dim DIM [--how HOW] [--groupby GROUPBY] [--overwr
 | `--groupby` | optional | optional coordinate to group by first |
 | `--overwrite` | optional | replace the output if it already exists |
 
+## Subsystem `nc export`
+
+Write the data out to a file or format.
+
+#### `pyramids nc export combine-kerchunk`
+
+write a combined kerchunk manifest over many files
+
+```text
+pyramids nc export combine-kerchunk [-h] --inputs INPUTS [INPUTS ...] [--concat-dims CONCAT_DIMS [CONCAT_DIMS ...]] [--identical-dims IDENTICAL_DIMS [IDENTICAL_DIMS ...]] [--inline-threshold INLINE_THRESHOLD] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination manifest JSON path |
+
+| option | | description |
+|---|---|---|
+| `--inputs` | **required** | two or more NetCDF paths |
+| `--concat-dims` | optional | dimension(s) to concatenate along (default: time) |
+| `--identical-dims` | optional | dimensions expected identical across files (default: lat lon) |
+| `--inline-threshold` | optional | embed chunks smaller than this many bytes (default: 500) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc export convert`
+
+re-write a file as a NetCDF
+
+```text
+pyramids nc export convert [-h] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+| `output` | required | destination NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc export dataframe`
+
+export variables to a CSV table
+
+```text
+pyramids nc export dataframe [-h] [--vars VARS [VARS ...]] [--dropna] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+| `output` | required | destination CSV path |
+
+| option | | description |
+|---|---|---|
+| `--vars` | optional | variables to export (default: all) |
+| `--dropna` | optional | drop rows with any missing value |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc export dict`
+
+print the file's structure as a dict
+
+```text
+pyramids nc export dict [-h] [--json] [--data] file
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--json` | optional | emit JSON |
+| `--data` | optional | include variable arrays (large) |
+
+#### `pyramids nc export kerchunk`
+
+write a kerchunk reference manifest
+
+```text
+pyramids nc export kerchunk [-h] [--inline-threshold INLINE_THRESHOLD] [--vlen-encode VLEN_ENCODE] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+| `output` | required | destination manifest JSON path |
+
+| option | | description |
+|---|---|---|
+| `--inline-threshold` | optional | embed chunks smaller than this many bytes (default: 500) |
+| `--vlen-encode` | optional | variable-length string encoding mode (default: embed) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc export zarr`
+
+write one variable to a Zarr store
+
+```text
+pyramids nc export zarr [-h] --var VAR [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+| `output` | required | destination .zarr store path |
+
+| option | | description |
+|---|---|---|
+| `--var` | **required** | variable to store |
+| `--overwrite` | optional | replace the output if it already exists |
+
+## Subsystem `nc import`
+
+Read / construct the data from another source.
+
+#### `pyramids nc import concat`
+
+join cubes end to end along a dimension
+
+```text
+pyramids nc import concat [-h] --inputs INPUTS [INPUTS ...] --dim DIM [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--inputs` | **required** | two or more NetCDF paths |
+| `--dim` | **required** | dimension to join along |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc import dataframe`
+
+build a cube from a MultiIndex CSV
+
+```text
+pyramids nc import dataframe [-h] --index-col INDEX_COL [INDEX_COL ...] [--crs CRS] [--x X] [--y Y] [--vars VARS [VARS ...]] [--no-data-value NO_DATA_VALUE] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source CSV path |
+| `output` | required | destination NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--index-col` | **required** | index columns, innermost last (y/x grid axes; outer are band dims) |
+| `--crs` | optional | CRS for the result (EPSG or string) |
+| `--x` | optional | index level holding the x coordinates |
+| `--y` | optional | index level holding the y coordinates |
+| `--vars` | optional | columns to use (default: all) |
+| `--no-data-value` | optional | sentinel for gaps (default: NaN) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc import dict`
+
+build a cube from a JSON structure dump
+
+```text
+pyramids nc import dict [-h] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source JSON path (as 'nc export dict --json --data') |
+| `output` | required | destination NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc import merge`
+
+put the variables of several cubes together
+
+```text
+pyramids nc import merge [-h] --inputs INPUTS [INPUTS ...] [--compat {no_conflicts,override}] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--inputs` | **required** | two or more NetCDF paths |
+| `--compat` | optional | how to treat a shared variable (default: no_conflicts) (choices: `no_conflicts`, `override`) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc import open-mf`
+
+report a lazy variable stack over files
+
+```text
+pyramids nc import open-mf [-h] --paths PATHS [PATHS ...] --var VAR [--json]
+```
+
+| option | | description |
+|---|---|---|
+| `--paths` | **required** | NetCDF paths to stack |
+| `--var` | **required** | variable to stack across the files |
+| `--json` | optional | emit JSON |
+
 ## Subsystem `nc inspect`
 
 #### `pyramids nc inspect del-attr`
@@ -860,208 +1069,6 @@ pyramids nc inspect time-values [-h] [--var VAR] [--format FORMAT] [--raw] [--js
 | `--raw` | optional | emit the stored numeric offsets instead of decoded labels |
 | `--json` | optional | emit JSON |
 
-## Subsystem `nc io`
-
-#### `pyramids nc io combine-kerchunk`
-
-write a combined kerchunk manifest over many files
-
-```text
-pyramids nc io combine-kerchunk [-h] --inputs INPUTS [INPUTS ...] [--concat-dims CONCAT_DIMS [CONCAT_DIMS ...]] [--identical-dims IDENTICAL_DIMS [IDENTICAL_DIMS ...]] [--inline-threshold INLINE_THRESHOLD] [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination manifest JSON path |
-
-| option | | description |
-|---|---|---|
-| `--inputs` | **required** | two or more NetCDF paths |
-| `--concat-dims` | optional | dimension(s) to concatenate along (default: time) |
-| `--identical-dims` | optional | dimensions expected identical across files (default: lat lon) |
-| `--inline-threshold` | optional | embed chunks smaller than this many bytes (default: 500) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io concat`
-
-join cubes end to end along a dimension
-
-```text
-pyramids nc io concat [-h] --inputs INPUTS [INPUTS ...] --dim DIM [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--inputs` | **required** | two or more NetCDF paths |
-| `--dim` | **required** | dimension to join along |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io convert`
-
-re-write a file as a NetCDF
-
-```text
-pyramids nc io convert [-h] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-| `output` | required | destination NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io from-dataframe`
-
-build a cube from a MultiIndex CSV
-
-```text
-pyramids nc io from-dataframe [-h] --index-col INDEX_COL [INDEX_COL ...] [--crs CRS] [--x X] [--y Y] [--vars VARS [VARS ...]] [--no-data-value NO_DATA_VALUE] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source CSV path |
-| `output` | required | destination NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--index-col` | **required** | index columns, innermost last (y/x grid axes; outer are band dims) |
-| `--crs` | optional | CRS for the result (EPSG or string) |
-| `--x` | optional | index level holding the x coordinates |
-| `--y` | optional | index level holding the y coordinates |
-| `--vars` | optional | columns to use (default: all) |
-| `--no-data-value` | optional | sentinel for gaps (default: NaN) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io from-dict`
-
-build a cube from a JSON structure dump
-
-```text
-pyramids nc io from-dict [-h] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source JSON path (as 'nc to-dict --json --data') |
-| `output` | required | destination NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io merge`
-
-put the variables of several cubes together
-
-```text
-pyramids nc io merge [-h] --inputs INPUTS [INPUTS ...] [--compat {no_conflicts,override}] [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--inputs` | **required** | two or more NetCDF paths |
-| `--compat` | optional | how to treat a shared variable (default: no_conflicts) (choices: `no_conflicts`, `override`) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io open-mf`
-
-report a lazy variable stack over files
-
-```text
-pyramids nc io open-mf [-h] --paths PATHS [PATHS ...] --var VAR [--json]
-```
-
-| option | | description |
-|---|---|---|
-| `--paths` | **required** | NetCDF paths to stack |
-| `--var` | **required** | variable to stack across the files |
-| `--json` | optional | emit JSON |
-
-#### `pyramids nc io to-dataframe`
-
-export variables to a CSV table
-
-```text
-pyramids nc io to-dataframe [-h] [--vars VARS [VARS ...]] [--dropna] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-| `output` | required | destination CSV path |
-
-| option | | description |
-|---|---|---|
-| `--vars` | optional | variables to export (default: all) |
-| `--dropna` | optional | drop rows with any missing value |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io to-dict`
-
-print the file's structure as a dict
-
-```text
-pyramids nc io to-dict [-h] [--json] [--data] file
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--json` | optional | emit JSON |
-| `--data` | optional | include variable arrays (large) |
-
-#### `pyramids nc io to-kerchunk`
-
-write a kerchunk reference manifest
-
-```text
-pyramids nc io to-kerchunk [-h] [--inline-threshold INLINE_THRESHOLD] [--vlen-encode VLEN_ENCODE] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-| `output` | required | destination manifest JSON path |
-
-| option | | description |
-|---|---|---|
-| `--inline-threshold` | optional | embed chunks smaller than this many bytes (default: 500) |
-| `--vlen-encode` | optional | variable-length string encoding mode (default: embed) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids nc io to-zarr`
-
-write one variable to a Zarr store
-
-```text
-pyramids nc io to-zarr [-h] --var VAR [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-| `output` | required | destination .zarr store path |
-
-| option | | description |
-|---|---|---|
-| `--var` | **required** | variable to store |
-| `--overwrite` | optional | replace the output if it already exists |
-
 ## Subsystem `nc plot`
 
 #### `pyramids nc plot animate`
@@ -1084,27 +1091,6 @@ pyramids nc plot animate [-h] --var VAR [--dim DIM] [--fps FPS] [--overwrite] fi
 | `--fps` | optional | frames per second |
 | `--overwrite` | optional | replace the output if it already exists |
 
-#### `pyramids nc plot plot`
-
-save a map of one variable (PNG)
-
-```text
-pyramids nc plot plot [-h] --var VAR [--kind {auto,imshow,pcolormesh,contour}] [--title TITLE] [--dpi DPI] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | NetCDF path |
-| `output` | required | destination image path |
-
-| option | | description |
-|---|---|---|
-| `--var` | **required** | variable to plot |
-| `--kind` | optional | render kind (default: auto) (choices: `auto`, `imshow`, `pcolormesh`, `contour`) |
-| `--title` | optional | plot title |
-| `--dpi` | optional | output DPI |
-| `--overwrite` | optional | replace the output if it already exists |
-
 #### `pyramids nc plot plot-histogram`
 
 save a variable's value histogram (PNG)
@@ -1121,6 +1107,27 @@ pyramids nc plot plot-histogram [-h] --var VAR [--dpi DPI] [--overwrite] file ou
 | option | | description |
 |---|---|---|
 | `--var` | **required** | variable to plot |
+| `--dpi` | optional | output DPI |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids nc plot render`
+
+save a map of one variable (PNG)
+
+```text
+pyramids nc plot render [-h] --var VAR [--kind {auto,imshow,pcolormesh,contour}] [--title TITLE] [--dpi DPI] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | NetCDF path |
+| `output` | required | destination image path |
+
+| option | | description |
+|---|---|---|
+| `--var` | **required** | variable to plot |
+| `--kind` | optional | render kind (default: auto) (choices: `auto`, `imshow`, `pcolormesh`, `contour`) |
+| `--title` | optional | plot title |
 | `--dpi` | optional | output DPI |
 | `--overwrite` | optional | replace the output if it already exists |
 

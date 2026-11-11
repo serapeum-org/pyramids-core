@@ -64,18 +64,18 @@ listing and `pyramids mesh <subsystem> --help` for a subsystem. An unknown verb 
 - `export` …
   - `attach-data` — attach a results-only file's variables to the mesh
   - `burn` — burn a vector layer onto the mesh faces
+  - `bytes` — serialise the mesh to a UGRID NetCDF byte buffer
+  - `crs` — reproject the mesh to a target CRS
+  - `dataframe` — write a tidy value table (CSV, or Parquet by extension)
+  - `dataset` — rasterize a mesh variable to a regular-grid GeoTIFF
+  - `file` — re-write a mesh (UGRID NetCDF or a driver)
+  - `geodataframe` — write the mesh elements as a vector file
+  - `image` — write a colour-mapped image of a mesh variable (PNG/JPEG)
+  - `location` — remap a variable onto another mesh facet (node/edge/face)
   - `polygonize` — dissolve equal-valued faces into polygons (vector file)
   - `regrid` — regrid a variable onto another mesh
-  - `to-bytes` — serialise the mesh to a UGRID NetCDF byte buffer
-  - `to-crs` — reproject the mesh to a target CRS
-  - `to-dataframe` — write a tidy value table (CSV, or Parquet by extension)
-  - `to-dataset` — rasterize a mesh variable to a regular-grid GeoTIFF
-  - `to-file` — re-write a mesh (UGRID NetCDF or a driver)
-  - `to-geodataframe` — write the mesh elements as a vector file
-  - `to-image` — write a colour-mapped image of a mesh variable (PNG/JPEG)
-  - `to-location` — remap a variable onto another mesh facet (node/edge/face)
-  - `to-zarr` — write the mesh to a Zarr store
   - `voronoi-polygons` — Voronoi (Thiessen) cells of the mesh nodes, as a vector file
+  - `zarr` — write the mesh to a Zarr store
 - `inspect` …
   - `bounding-polygon` — write the mesh outline polygon
   - `circumcenters` — write triangle circumcenters as points
@@ -104,13 +104,13 @@ listing and `pyramids mesh <subsystem> --help` for a subsystem. An unknown verb 
   - `plot-outline` — save the mesh wireframe/outline (PNG)
   - `plot-vector-field` — save a two-variable (u, v) vector-field plot (PNG)
 - `read` …
-  - `from-arrays` — build a mesh from node/face .npy arrays
-  - `from-bytes` — open a mesh held as raw bytes
-  - `from-geodataframe` — build a mesh from a polygon vector layer
-  - `from-structured` — build a quad mesh from a raster (one quad per cell)
-  - `from-zarr` — read a pyramids-written Zarr store (needs the [lazy] extra)
+  - `arrays` — build a mesh from node/face .npy arrays
+  - `bytes` — open a mesh held as raw bytes
+  - `geodataframe` — build a mesh from a polygon vector layer
   - `open-mf` — concatenate several mesh files into one dataset
   - `read-all` — write every topology in a file to its own NetCDF
+  - `structured` — build a quad mesh from a raster (one quad per cell)
+  - `zarr` — read a pyramids-written Zarr store (needs the [lazy] extra)
 - `select` …
   - `clip` — clip the mesh to a polygon mask
   - `clip-values` — clamp a variable's values to [lower, upper]
@@ -1189,6 +1189,161 @@ pyramids mesh export burn [-h] --geometry GEOMETRY --value VALUE [--name NAME] [
 | `--no-all-touched` | optional | only burn faces whose centroid falls inside (default: every touched face) |
 | `--overwrite` | optional | replace the output if it already exists |
 
+#### `pyramids mesh export bytes`
+
+serialise the mesh to a UGRID NetCDF byte buffer
+
+```text
+pyramids mesh export bytes [-h] [--overwrite] file [output]
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | optional | destination file (default: write to stdout) |
+
+| option | | description |
+|---|---|---|
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export crs`
+
+reproject the mesh to a target CRS
+
+```text
+pyramids mesh export crs [-h] --epsg EPSG [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination UGRID NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--epsg` | **required** | target EPSG code (e.g. 4326) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export dataframe`
+
+write a tidy value table (CSV, or Parquet by extension)
+
+```text
+pyramids mesh export dataframe [-h] [--variables VARIABLES [VARIABLES ...]] [--dropna] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination .csv or .parquet path |
+
+| option | | description |
+|---|---|---|
+| `--variables` | optional | variable names to include (default: all) |
+| `--dropna` | optional | drop rows whose value is no-data (NaN) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export dataset`
+
+rasterize a mesh variable to a regular-grid GeoTIFF
+
+```text
+pyramids mesh export dataset [-h] --var VAR --cell-size CELL_SIZE [--method METHOD] [--bounds XMIN YMIN XMAX YMAX] [--epsg EPSG] [--nodata NODATA] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination raster path |
+
+| option | | description |
+|---|---|---|
+| `--var` | **required** | mesh variable to rasterize |
+| `--cell-size` | **required** | grid cell size in coordinate units |
+| `--method` | optional | interpolation method (default: nearest) |
+| `--bounds` | optional | target bounds (default: the mesh bounds) |
+| `--epsg` | optional | target EPSG code (default: mesh CRS) |
+| `--nodata` | optional | output no-data value (default: -9999) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export file`
+
+re-write a mesh (UGRID NetCDF or a driver)
+
+```text
+pyramids mesh export file [-h] [--driver DRIVER] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination UGRID NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--driver` | optional | registered mesh driver (default: built-in UGRID NetCDF writer) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export geodataframe`
+
+write the mesh elements as a vector file
+
+```text
+pyramids mesh export geodataframe [-h] [--var VAR] [--location LOCATION] [--driver DRIVER] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination vector path |
+
+| option | | description |
+|---|---|---|
+| `--var` | optional | mesh variable to operate on (default: the only data variable) (carried as a column) |
+| `--location` | optional | mesh location: face / node / edge (default: face) |
+| `--driver` | optional | OGR driver (default: inferred from the extension) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export image`
+
+write a colour-mapped image of a mesh variable (PNG/JPEG)
+
+```text
+pyramids mesh export image [-h] [--var VAR] [--cell-size CELL_SIZE] [--cmap CMAP] [--method METHOD] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination image path (e.g. out.png) |
+
+| option | | description |
+|---|---|---|
+| `--var` | optional | mesh variable to operate on (default: the only data variable) |
+| `--cell-size` | optional | rasterisation cell size (default: ~512 px across the longer side) |
+| `--cmap` | optional | matplotlib colormap (default: viridis) |
+| `--method` | optional | rasterisation method (default: nearest) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export location`
+
+remap a variable onto another mesh facet (node/edge/face)
+
+```text
+pyramids mesh export location [-h] --location LOCATION [--var VAR] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination UGRID NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--location` | **required** | target facet: node / edge / face |
+| `--var` | optional | mesh variable to operate on (default: the only data variable) |
+| `--overwrite` | optional | replace the output if it already exists |
+
 #### `pyramids mesh export polygonize`
 
 dissolve equal-valued faces into polygons (vector file)
@@ -1229,178 +1384,6 @@ pyramids mesh export regrid [-h] --target TARGET [--method METHOD] [--var VAR] [
 | `--var` | optional | mesh variable to operate on (default: the only data variable) |
 | `--overwrite` | optional | replace the output if it already exists |
 
-#### `pyramids mesh export to-bytes`
-
-serialise the mesh to a UGRID NetCDF byte buffer
-
-```text
-pyramids mesh export to-bytes [-h] [--overwrite] file [output]
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | optional | destination file (default: write to stdout) |
-
-| option | | description |
-|---|---|---|
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-crs`
-
-reproject the mesh to a target CRS
-
-```text
-pyramids mesh export to-crs [-h] --epsg EPSG [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination UGRID NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--epsg` | **required** | target EPSG code (e.g. 4326) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-dataframe`
-
-write a tidy value table (CSV, or Parquet by extension)
-
-```text
-pyramids mesh export to-dataframe [-h] [--variables VARIABLES [VARIABLES ...]] [--dropna] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination .csv or .parquet path |
-
-| option | | description |
-|---|---|---|
-| `--variables` | optional | variable names to include (default: all) |
-| `--dropna` | optional | drop rows whose value is no-data (NaN) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-dataset`
-
-rasterize a mesh variable to a regular-grid GeoTIFF
-
-```text
-pyramids mesh export to-dataset [-h] --var VAR --cell-size CELL_SIZE [--method METHOD] [--bounds XMIN YMIN XMAX YMAX] [--epsg EPSG] [--nodata NODATA] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination raster path |
-
-| option | | description |
-|---|---|---|
-| `--var` | **required** | mesh variable to rasterize |
-| `--cell-size` | **required** | grid cell size in coordinate units |
-| `--method` | optional | interpolation method (default: nearest) |
-| `--bounds` | optional | target bounds (default: the mesh bounds) |
-| `--epsg` | optional | target EPSG code (default: mesh CRS) |
-| `--nodata` | optional | output no-data value (default: -9999) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-file`
-
-re-write a mesh (UGRID NetCDF or a driver)
-
-```text
-pyramids mesh export to-file [-h] [--driver DRIVER] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination UGRID NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--driver` | optional | registered mesh driver (default: built-in UGRID NetCDF writer) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-geodataframe`
-
-write the mesh elements as a vector file
-
-```text
-pyramids mesh export to-geodataframe [-h] [--var VAR] [--location LOCATION] [--driver DRIVER] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination vector path |
-
-| option | | description |
-|---|---|---|
-| `--var` | optional | mesh variable to operate on (default: the only data variable) (carried as a column) |
-| `--location` | optional | mesh location: face / node / edge (default: face) |
-| `--driver` | optional | OGR driver (default: inferred from the extension) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-image`
-
-write a colour-mapped image of a mesh variable (PNG/JPEG)
-
-```text
-pyramids mesh export to-image [-h] [--var VAR] [--cell-size CELL_SIZE] [--cmap CMAP] [--method METHOD] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination image path (e.g. out.png) |
-
-| option | | description |
-|---|---|---|
-| `--var` | optional | mesh variable to operate on (default: the only data variable) |
-| `--cell-size` | optional | rasterisation cell size (default: ~512 px across the longer side) |
-| `--cmap` | optional | matplotlib colormap (default: viridis) |
-| `--method` | optional | rasterisation method (default: nearest) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-location`
-
-remap a variable onto another mesh facet (node/edge/face)
-
-```text
-pyramids mesh export to-location [-h] --location LOCATION [--var VAR] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination UGRID NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--location` | **required** | target facet: node / edge / face |
-| `--var` | optional | mesh variable to operate on (default: the only data variable) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh export to-zarr`
-
-write the mesh to a Zarr store
-
-```text
-pyramids mesh export to-zarr [-h] [--overwrite] file output
-```
-
-| argument | | description |
-|---|---|---|
-| `file` | required | source UGRID NetCDF path |
-| `output` | required | destination Zarr store path |
-
-| option | | description |
-|---|---|---|
-| `--overwrite` | optional | replace the output if it already exists |
-
 #### `pyramids mesh export voronoi-polygons`
 
 Voronoi (Thiessen) cells of the mesh nodes, as a vector file
@@ -1417,6 +1400,23 @@ pyramids mesh export voronoi-polygons [-h] [--driver DRIVER] [--overwrite] file 
 | option | | description |
 |---|---|---|
 | `--driver` | optional | OGR driver (default: inferred from the extension) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh export zarr`
+
+write the mesh to a Zarr store
+
+```text
+pyramids mesh export zarr [-h] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | source UGRID NetCDF path |
+| `output` | required | destination Zarr store path |
+
+| option | | description |
+|---|---|---|
 | `--overwrite` | optional | replace the output if it already exists |
 
 ## Subsystem `mesh inspect`
@@ -1871,12 +1871,12 @@ pyramids mesh plot plot-vector-field [-h] --u U --v V [--kind {quiver,barbs,stre
 
 ## Subsystem `mesh read`
 
-#### `pyramids mesh read from-arrays`
+#### `pyramids mesh read arrays`
 
 build a mesh from node/face .npy arrays
 
 ```text
-pyramids mesh read from-arrays [-h] [--data NAME=PATH] [--data-location NAME=LOC] [--epsg EPSG] [--mesh-name MESH_NAME] [--overwrite] node_x node_y faces output
+pyramids mesh read arrays [-h] [--data NAME=PATH] [--data-location NAME=LOC] [--epsg EPSG] [--mesh-name MESH_NAME] [--overwrite] node_x node_y faces output
 ```
 
 | argument | | description |
@@ -1894,12 +1894,12 @@ pyramids mesh read from-arrays [-h] [--data NAME=PATH] [--data-location NAME=LOC
 | `--mesh-name` | optional | topology name to stamp on the mesh (default: mesh2d) |
 | `--overwrite` | optional | replace the output if it already exists |
 
-#### `pyramids mesh read from-bytes`
+#### `pyramids mesh read bytes`
 
 open a mesh held as raw bytes
 
 ```text
-pyramids mesh read from-bytes [-h] [--stdin] [--suffix SUFFIX] [--overwrite] [input] output
+pyramids mesh read bytes [-h] [--stdin] [--suffix SUFFIX] [--overwrite] [input] output
 ```
 
 | argument | | description |
@@ -1913,12 +1913,12 @@ pyramids mesh read from-bytes [-h] [--stdin] [--suffix SUFFIX] [--overwrite] [in
 | `--suffix` | optional | extension hint for driver detection (default: .nc) |
 | `--overwrite` | optional | replace the output if it already exists |
 
-#### `pyramids mesh read from-geodataframe`
+#### `pyramids mesh read geodataframe`
 
 build a mesh from a polygon vector layer
 
 ```text
-pyramids mesh read from-geodataframe [-h] [--mesh-name MESH_NAME] [--overwrite] vector output
+pyramids mesh read geodataframe [-h] [--mesh-name MESH_NAME] [--overwrite] vector output
 ```
 
 | argument | | description |
@@ -1929,42 +1929,6 @@ pyramids mesh read from-geodataframe [-h] [--mesh-name MESH_NAME] [--overwrite] 
 | option | | description |
 |---|---|---|
 | `--mesh-name` | optional | topology name to stamp on the mesh (default: mesh2d) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh read from-structured`
-
-build a quad mesh from a raster (one quad per cell)
-
-```text
-pyramids mesh read from-structured [-h] [--band-names BAND_NAMES [BAND_NAMES ...]] [--mesh-name MESH_NAME] [--overwrite] raster output
-```
-
-| argument | | description |
-|---|---|---|
-| `raster` | required | source raster path |
-| `output` | required | destination UGRID NetCDF path |
-
-| option | | description |
-|---|---|---|
-| `--band-names` | optional | names for the per-face variables, one per band |
-| `--mesh-name` | optional | topology name to stamp on the mesh (default: mesh2d) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids mesh read from-zarr`
-
-read a pyramids-written Zarr store (needs the [lazy] extra)
-
-```text
-pyramids mesh read from-zarr [-h] [--overwrite] store output
-```
-
-| argument | | description |
-|---|---|---|
-| `store` | required | input Zarr store (path / fsspec URL) |
-| `output` | required | destination UGRID NetCDF path |
-
-| option | | description |
-|---|---|---|
 | `--overwrite` | optional | replace the output if it already exists |
 
 #### `pyramids mesh read open-mf`
@@ -2004,6 +1968,42 @@ pyramids mesh read read-all [-h] [--driver DRIVER] [--eager] [--overwrite] file 
 |---|---|---|
 | `--driver` | optional | mesh driver name, bypassing detection (default: detect) |
 | `--eager` | optional | read variable values eagerly instead of lazily |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh read structured`
+
+build a quad mesh from a raster (one quad per cell)
+
+```text
+pyramids mesh read structured [-h] [--band-names BAND_NAMES [BAND_NAMES ...]] [--mesh-name MESH_NAME] [--overwrite] raster output
+```
+
+| argument | | description |
+|---|---|---|
+| `raster` | required | source raster path |
+| `output` | required | destination UGRID NetCDF path |
+
+| option | | description |
+|---|---|---|
+| `--band-names` | optional | names for the per-face variables, one per band |
+| `--mesh-name` | optional | topology name to stamp on the mesh (default: mesh2d) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh read zarr`
+
+read a pyramids-written Zarr store (needs the [lazy] extra)
+
+```text
+pyramids mesh read zarr [-h] [--overwrite] store output
+```
+
+| argument | | description |
+|---|---|---|
+| `store` | required | input Zarr store (path / fsspec URL) |
+| `output` | required | destination UGRID NetCDF path |
+
+| option | | description |
+|---|---|---|
 | `--overwrite` | optional | replace the output if it already exists |
 
 ## Subsystem `mesh select`
