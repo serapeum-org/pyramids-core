@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -766,15 +767,31 @@ class TestReadFileRoutesZarr:
         foreign = str(tmp_path / "foreign.zarr")
         group = zarr.open_group(foreign, mode="w")
         group.create_array("temperature", shape=(2, 3), dtype="f4")
-        try:
-            Dataset.read_file(foreign)
-        except Exception as exc:
-            assert "spatial_ref" not in str(exc), (
-                f"opaque from_zarr error leaked: {exc}"
-            )
-            assert "detect" not in str(exc).lower(), (
-                f"opaque from_zarr error leaked: {exc}"
-            )
+        ds = Dataset.read_file(foreign)
+        assert isinstance(ds, Dataset), f"expected a Dataset from GDAL, got {type(ds)}"
+        assert ds.band_count == 1, (
+            f"GDAL should have read the foreign store's one array; got {ds.band_count} bands"
+        )
+
+    @pytest.mark.lazy
+    def test_classify_returns_other_when_zarr_missing(self, tmp_path, monkeypatch):
+        """A zarr-less install classifies every ``.zarr`` as ``"other"`` -- never a raise.
+
+        Test scenario:
+            With the optional ``zarr`` package unavailable, ``classify_zarr_store`` must swallow
+            ``OptionalPackageDoesNotExist`` and return ``"other"`` so ``read_file`` falls through
+            to GDAL exactly as before the routing existed, rather than raising on a ``.zarr``.
+        """
+        import pyramids.dataset.ops._zarr as zarr_ops
+
+        monkeypatch.setattr(
+            zarr_ops,
+            "_require_zarr",
+            Mock(side_effect=OptionalPackageDoesNotExist("zarr")),
+        )
+        target = str(tmp_path / "anything.zarr")
+        assert zarr_ops.classify_zarr_store(target) == "other"
+        assert zarr_ops.is_cube_store(target) is False
 
     @pytest.mark.lazy
     def test_read_file_plain_file_named_zarr_falls_through_to_gdal(self, tmp_path):
