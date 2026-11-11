@@ -988,6 +988,11 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     raster_advanced = add_group(
         sub, "advanced", "power-user primitives (internal reads, low-level mechanics)"
     )
+    # `overview` is a noun-verb subgroup: `create` (build pyramids) + `recreate` (rebuild
+    # existing ones), matching Dataset.create_overviews / Dataset.recreate_overviews.
+    overview_group = add_group(
+        sub, "overview", "build or rebuild a raster's image pyramids (overviews)"
+    )
     _add_cog_commands(sub)
 
     raster_info = sub.add_parser("info", help="print raster metadata")
@@ -1044,7 +1049,9 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     merge.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
     merge.set_defaults(func=_cmd_merge)
 
-    overview = sub.add_parser("overview", help="build image pyramids in place")
+    overview = overview_group.add_parser(
+        "create", help="build a raster's image pyramids in place"
+    )
     overview.add_argument("file", help="raster path to build overviews for")
     overview.add_argument(
         "--resampling",
@@ -1251,7 +1258,7 @@ def add_dataset_commands(sub: argparse._SubParsersAction) -> None:
     add_dataset_bands_commands(sub, raster_advanced)
     add_dataset_spatial_commands(sub, raster_advanced)
     add_dataset_analysis_commands(sub)
-    add_dataset_overviews_commands(sub, raster_advanced)
+    add_dataset_overviews_commands(sub, raster_advanced, overview_group)
     add_dataset_export_commands(
         add_group(sub, "export", "write a raster to a file or format")
     )

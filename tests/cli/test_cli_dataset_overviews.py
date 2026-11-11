@@ -1,6 +1,6 @@
 """Tests for the overview / windowed-read `Dataset` CLI verbs.
 
-Covers `recreate-overviews`, `read-overview-array`, `read-part`, `preview`,
+Covers `overview recreate`, `read-overview-array`, `read-part`, `preview`,
 `point`, and `read-tile` (wired in via ``add_dataset_commands``). Each command
 is dispatched through :func:`pyramids.cli.main` so the real error contract
 (clean exit 1 for the mapped exceptions) is exercised.
@@ -41,11 +41,11 @@ def raster_with_overviews(tmp_path) -> str:
 
 
 class TestRecreateOverviews:
-    """`pyramids recreate-overviews` regenerates existing overviews in place."""
+    """`pyramids raster overview recreate` regenerates existing overviews in place."""
 
     def test_happy_path(self, raster_with_overviews):
         """Regenerating succeeds and the overviews survive the rewrite."""
-        assert main(["raster", "recreate-overviews", raster_with_overviews]) == 0
+        assert main(["raster", "overview", "recreate", raster_with_overviews]) == 0
         assert all(
             count > 0
             for count in Dataset.read_file(raster_with_overviews).overview_count
@@ -53,7 +53,7 @@ class TestRecreateOverviews:
 
     def test_missing_input_errors(self, tmp_path):
         """A missing input exits 1."""
-        assert main(["raster", "recreate-overviews", str(tmp_path / "nope.tif")]) == 1
+        assert main(["raster", "overview", "recreate", str(tmp_path / "nope.tif")]) == 1
 
 
 class TestReadOverviewArray:

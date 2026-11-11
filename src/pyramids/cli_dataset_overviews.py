@@ -2,14 +2,14 @@
 
 Holds the raster commands that read a *decimated* or *windowed* view of a
 `Dataset` — the overview-pyramid and cloud-native partial-read verbs that the
-single-shot `cli_dataset` group does not cover: `recreate-overviews`,
+single-shot `cli_dataset` group does not cover: `overview recreate`,
 `read-overview-array`, `read-part`, `preview`, `point`, and `read-tile`. Every
 handler maps 1:1 onto an existing `Dataset` method; the window/tile reads write
 their array to an output raster (georeferenced from the method's own transform),
 and `point` prints the sampled value(s).
 
 The top-level `overview` command (in `cli_dataset`) already *builds* pyramids in
-place via `create_overviews`; this module never duplicates it — `recreate-overviews`
+place via `create_overviews`; this module never duplicates it — `overview recreate`
 regenerates the levels that already exist.
 
 Deferred (no sensible one-shot file/stdout result, so intentionally not shipped):
@@ -137,7 +137,7 @@ def _write_raster(
 
 
 def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
-    """Handle `pyramids raster recreate-overviews` — regenerate existing overviews in place.
+    """Handle `pyramids raster overview recreate` — regenerate existing overviews in place.
 
     Unlike `overview` (which *builds* pyramids via `create_overviews`), this
     regenerates the levels a raster already has; a raster with none is left
@@ -353,7 +353,9 @@ def _cmd_read_tile(args: argparse.Namespace) -> int:
 
 
 def add_dataset_overviews_commands(
-    sub: argparse._SubParsersAction, advanced: argparse._SubParsersAction | None = None
+    sub: argparse._SubParsersAction,
+    advanced: argparse._SubParsersAction | None = None,
+    overview_group: argparse._SubParsersAction | None = None,
 ) -> None:
     """Register the overview / windowed-read raster commands on ``sub``.
 
@@ -362,9 +364,12 @@ def add_dataset_overviews_commands(
         advanced: The cross-cutting ``advanced`` group's subparsers action, or ``None``.
             When given, rarely-one-shot primitive verbs register there instead of on the
             main subsystem; isolation parsers omit it so those verbs stay flat locally.
+        overview_group: The ``raster overview`` subgroup's subparsers action, or ``None``.
+            When given, ``recreate`` registers there (``raster overview recreate``); an
+            isolation parser omits it, so the verb stays flat as ``recreate`` on ``sub``.
     """
-    recreate = sub.add_parser(
-        "recreate-overviews", help="regenerate a raster's existing overviews in place"
+    recreate = (overview_group or sub).add_parser(
+        "recreate", help="regenerate a raster's existing overviews in place"
     )
     recreate.add_argument("file", help="raster path whose overviews to regenerate")
     recreate.add_argument(

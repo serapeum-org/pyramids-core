@@ -171,42 +171,6 @@ class TestAlign:
         _assert_one_line_error(rc, capsys.readouterr().err)
 
 
-class TestOverlay:
-    """`pyramids overlay`."""
-
-    def test_groups_values_by_class(self, ramp, classes, capsys):
-        """--json maps each class to the base values that fall in it."""
-        assert main(["raster", "overlay", ramp, classes, "--json"]) == 0, (
-            "overlay must exit 0"
-        )
-        payload = json.loads(capsys.readouterr().out)
-        assert sorted(payload) == ["0", "1"], f"wrong class keys: {list(payload)}"
-        assert len(payload["0"]) == 32, "class 0 should hold the top four rows"
-        assert len(payload["1"]) == 32, "class 1 should hold the bottom four rows"
-        assert payload["0"] == pytest.approx(list(range(32))), "class 0 values wrong"
-
-    def test_text_output_prints_per_class_counts(self, ramp, classes, capsys):
-        """Without --json, each class prints a human-readable value count."""
-        assert main(["raster", "overlay", ramp, classes]) == 0, "overlay must exit 0"
-        out = capsys.readouterr().out
-        assert "class 0: 32 value(s)" in out, f"missing class-0 count line: {out!r}"
-        assert "class 1: 32 value(s)" in out, f"missing class-1 count line: {out!r}"
-
-    def test_crs_mismatch_one_line_error(self, ramp, ramp_3857, capsys):
-        """Two rasters on different CRSes exit 1 before any grouping."""
-        rc = main(["raster", "overlay", ramp, ramp_3857])
-        _assert_one_line_error(rc, capsys.readouterr().err)
-
-    def test_out_of_range_band_clean_error(self, ramp, classes, capsys):
-        """An out-of-range --band is a clean user error, not 'unexpected failure'."""
-        rc = main(["raster", "overlay", ramp, classes, "--band", "99"])
-        err = capsys.readouterr().err
-        _assert_one_line_error(rc, err)
-        assert "unexpected failure" not in err, (
-            f"band error must be mapped cleanly: {err!r}"
-        )
-
-
 class TestCombine:
     """`pyramids combine`."""
 

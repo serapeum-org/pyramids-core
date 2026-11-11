@@ -98,7 +98,8 @@ _HELP_ARGVS = [
     ["raster", "crop", "--help"],
     ["raster", "warp", "--help"],
     ["raster", "merge", "--help"],
-    ["raster", "overview", "--help"],
+    ["raster", "overview", "create", "--help"],
+    ["raster", "overview", "recreate", "--help"],
     ["raster", "sample", "--help"],
     ["raster", "convert", "--help"],
     ["raster", "georeference", "--help"],
@@ -154,7 +155,6 @@ _HELP_ARGVS = [
     ["raster", "advanced", "geolocate", "--help"],
     # issue #1436: spatial ops
     ["raster", "align", "--help"],
-    ["raster", "overlay", "--help"],
     ["raster", "combine", "--help"],
     ["raster", "advanced", "warped-view", "--help"],
     ["raster", "advanced", "wrap-longitude", "--help"],
@@ -173,7 +173,6 @@ _HELP_ARGVS = [
     ["raster", "convert-units", "--help"],
     ["raster", "contour", "--help"],
     # issue #1436: overviews / windowed reads
-    ["raster", "recreate-overviews", "--help"],
     ["raster", "advanced", "read-overview-array", "--help"],
     ["raster", "advanced", "read-part", "--help"],
     ["raster", "advanced", "preview", "--help"],

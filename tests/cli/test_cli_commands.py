@@ -452,7 +452,10 @@ class TestOverviewCommand:
 
     def test_builds_requested_levels(self, src_raster, capsys):
         """--levels builds that many overview levels in place."""
-        assert main(["raster", "overview", src_raster, "--levels", "2", "4"]) == 0
+        assert (
+            main(["raster", "overview", "create", src_raster, "--levels", "2", "4"])
+            == 0
+        )
         assert Dataset.read_file(src_raster).overview_count[0] == 2, (
             "expected 2 overview levels"
         )
@@ -463,6 +466,7 @@ class TestOverviewCommand:
             [
                 "raster",
                 "overview",
+                "create",
                 src_raster,
                 "--levels",
                 "2",
@@ -474,7 +478,7 @@ class TestOverviewCommand:
 
     def test_non_power_of_two_levels_rejected(self, src_raster, capsys):
         """A non-power-of-two --levels is rejected up front with a clear error (L6)."""
-        rc = main(["raster", "overview", src_raster, "--levels", "3", "5"])
+        rc = main(["raster", "overview", "create", src_raster, "--levels", "3", "5"])
         err = capsys.readouterr().err
         assert rc == 1, "non-power-of-two levels must exit 1"
         assert "power-of-two" in err, f"error should name the constraint: {err}"
