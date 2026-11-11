@@ -19,11 +19,14 @@ small and backend-free:
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
 from pyramids.base._compute_backend import require_compute_backend
-from pyramids.base._utils import require_optional
+from pyramids.base._utils import lazy_extra_hint, require_optional
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_store(
@@ -46,8 +49,10 @@ def _resolve_store(
         if storage_options:
             zarr_storage = require_optional(
                 "zarr.storage",
-                "reading a cloud Zarr store with `storage_options` needs the lazy stack; "
-                "install it with `pip install pyramids-lazy`.",
+                lazy_extra_hint(
+                    "reading a cloud Zarr store with `storage_options` requires the "
+                    "optional 'zarr' dependency."
+                ),
                 return_module=True,
             )
             return zarr_storage.FsspecStore.from_url(
@@ -88,10 +93,14 @@ def is_zarr_store(source: Any) -> bool:
     """
     if not isinstance(source, (str, Path)):
         return True
+    text = str(source)
     # Strip a URL query string / fragment before the suffix test so a versioned or fragment-tagged
-    # cloud store (`s3://bucket/x.zarr?versionId=...`, `...x.zarr#frag`) still matches.
-    name = str(source).split("?", 1)[0].split("#", 1)[0].rstrip("/\\")
-    return name.lower().endswith(".zarr")
+    # cloud store (`s3://bucket/x.zarr?versionId=...`, `...x.zarr#frag`) still matches — but ONLY for
+    # URL-like sources (a scheme is present). `#` is a legal filename character on POSIX and Windows
+    # and `?` is legal on POSIX, so a local path must be matched verbatim, never truncated.
+    if "://" in text:
+        text = text.split("?", 1)[0].split("#", 1)[0]
+    return text.rstrip("/\\").lower().endswith(".zarr")
 
 
 def classify_zarr_store(
@@ -142,7 +151,7 @@ def classify_zarr_store(
     """
     try:
         backend = require_compute_backend()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         # No usable lazy backend — absent, or installed but too old / malformed (a `pyramids_lazy`
         # that fails at import, or one `require_compute_backend` rejects for its api_version /
         # structural contract, both raised as ImportError subclasses; plus any other resolution
@@ -150,14 +159,31 @@ def classify_zarr_store(
         # itself, so it falls back to GDAL rather than crash the generic read path over an optional
         # backend. The actionable "install / upgrade pyramids-lazy" error is NOT lost — an explicit
         # `Dataset.from_zarr(...)` calls `require_compute_backend()` unguarded and still surfaces it.
+        # Logged at debug so a silently-disabled or broken backend stays discoverable.
+        logger.debug(
+            "classify_zarr_store: no usable compute backend for %r -> 'other' (%s)",
+            store,
+            exc,
+        )
         return "other"
     classify = getattr(backend, "classify_zarr_store", None)
     if classify is None:
         # A backend that predates the classify capability: fall back to GDAL rather than guess.
+        logger.debug(
+            "classify_zarr_store: backend %r exposes no classify_zarr_store -> 'other'",
+            backend,
+        )
         return "other"
     try:
         result = classify(store, storage_options)
-    except Exception:  # noqa: BLE001 - any backend failure means "let GDAL try", never surface it.
+    except Exception as exc:  # noqa: BLE001 - any backend failure means "let GDAL try", never raise.
+        # A present-but-broken backend (e.g. a drifted classify signature raising TypeError) degrades
+        # here; the debug log distinguishes it from the absent-backend case above.
+        logger.debug(
+            "classify_zarr_store: backend classify failed for %r -> 'other' (%s)",
+            store,
+            exc,
+        )
         return "other"
     return result if result in ("single", "cube") else "other"
 
