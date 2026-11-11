@@ -13,7 +13,7 @@ be driven directly or wrapped by thin ``MeshDataset`` facades:
   per-face array set to a value wherever a face is touched / covered by the geometry.
 
 All three reuse the lazily-built :class:`~pyramids.netcdf.ugrid.spatial.MeshSpatialIndex`
-(``face_strtree`` / ``face_polygons``) rather than constructing a second spatial index.
+(``face_rtree`` / ``face_polygons``) rather than constructing a second spatial index.
 """
 
 from __future__ import annotations
@@ -238,7 +238,7 @@ def sample_line(
     line_geom = _as_linestring(line)
     index = MeshSpatialIndex(mesh)
     polygons = index.face_polygons
-    candidates = np.asarray(index.face_strtree.query(line_geom, predicate="intersects"))
+    candidates = np.asarray(index.face_rtree.query(line_geom, predicate="intersects"))
 
     ordered: list[tuple[float, int]] = []
     for face_i in candidates:
@@ -317,7 +317,7 @@ def burn(
     if not geom.is_empty:
         index = MeshSpatialIndex(mesh)
         candidates = np.asarray(
-            index.face_strtree.query(geom, predicate="intersects"), dtype=np.intp
+            index.face_rtree.query(geom, predicate="intersects"), dtype=np.intp
         )
         if candidates.size:
             if all_touched or geom.area <= _ZERO_AREA:

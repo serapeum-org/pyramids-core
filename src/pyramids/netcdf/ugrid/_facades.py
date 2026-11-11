@@ -1016,7 +1016,7 @@ class _MeshFacades:
                 np.asarray(var.data),
                 numeric_targets,
                 method=method,
-                axis=cast("int", var.time_index),
+                axis=cast("int", var.time_axis_index),
                 bounds=bounds,
             )
             new_var = var.with_data(np.asarray(moved))

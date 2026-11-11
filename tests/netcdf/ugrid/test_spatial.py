@@ -215,7 +215,7 @@ class TestMeshSpatialIndexKDTree:
         """
         idx = MeshSpatialIndex(unit_square_mesh)
         assert idx._node_tree is None, "Node tree should be None initially"
-        assert idx._face_tree is None, "Face tree should be None initially"
+        assert idx._face_centroid_tree is None, "Face tree should be None initially"
         _ = idx.node_tree
         assert idx._node_tree is not None, "Node tree should be built after access"
 

@@ -145,7 +145,7 @@ def _cmd_get(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        variable = mesh.get_data(args.variable)
+        variable = mesh[args.variable]
     payload = _describe_variable(variable)
     if args.json:
         print(json.dumps(json_sanitize(payload)))

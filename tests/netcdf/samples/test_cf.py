@@ -23,7 +23,7 @@ def test_cfinfo_matches_declared_convention(sample_name, sample, caps):
     """CFInfo reports a CF version + data variables for CF files; COARDS files declare COARDS."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         if caps.get("convention") == "cf":
             assert meta.cf is not None and meta.cf.cf_version, (
                 f"{sample_name}: missing CF version"
@@ -43,7 +43,7 @@ def test_tos_bounds_and_classification(sample):
     """The tos file classifies its data/coordinate/bounds variables and maps bounds to their coordinates."""
     nc = NetCDF.read_file(sample("cf__7v__1d3-2d3-3d1__y-asc.nc"))
     try:
-        cf_info = nc.get_all_metadata().cf
+        cf_info = nc.refresh_metadata().cf
         assert cf_info.classifications["tos"] == "data"
         assert cf_info.classifications["lat"] == "coordinate"
         assert cf_info.classifications["lat_bnds"] == "bounds"
@@ -96,7 +96,7 @@ def test_validate_cf_returns_list(sample):
     """``validate_cf`` returns a list of messages (warnings/errors) for a CF file without raising."""
     nc = NetCDF.read_file(sample("cf__7v__1d3-2d3-3d1__y-asc.nc"))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         report = cf.validate_cf(meta.global_attributes, meta.variables, meta.dimensions)
         assert isinstance(report, list)
     finally:

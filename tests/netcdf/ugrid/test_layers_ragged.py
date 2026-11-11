@@ -130,7 +130,7 @@ class TestDatasetAccessors:
         assert ds.n_volume == 6
 
     def test_n_layers_reports_the_max(self):
-        assert _volume_dataset().n_layers == 3
+        assert _volume_dataset().n_layer == 3
 
     def test_a_2d_dataset_has_no_volume_topology(self):
         ds = MeshDataset.from_arrays(

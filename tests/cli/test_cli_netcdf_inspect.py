@@ -260,9 +260,9 @@ class TestNcSetAttr:
             )
             == 0
         )
-        written = NetCDF.read_file(out).get_all_metadata().global_attributes
+        written = NetCDF.read_file(out).refresh_metadata().global_attributes
         assert written.get("foo") == "bar"
-        source = NetCDF.read_file(str(_NC)).get_all_metadata().global_attributes
+        source = NetCDF.read_file(str(_NC)).refresh_metadata().global_attributes
         assert "foo" not in source
 
     def test_refuses_existing(self, tmp_path):
@@ -311,7 +311,7 @@ class TestNcDelAttr:
         assert (
             main(["nc", "inspect", "del-attr", str(_NC), out, "--name", "title"]) == 0
         )
-        written = NetCDF.read_file(out).get_all_metadata().global_attributes
+        written = NetCDF.read_file(out).refresh_metadata().global_attributes
         assert "title" not in written
 
     def test_missing_attribute_is_noop(self, tmp_path):

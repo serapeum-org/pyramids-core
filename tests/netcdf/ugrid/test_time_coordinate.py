@@ -166,7 +166,7 @@ class TestResampleUnblocked:
 class TestFittedDimensionNames:
     """`_fitted_dimensions` is what stops a fit result being read as a time series.
 
-    `MeshVariable.time_index` reads `dimensions` when present and otherwise falls back to "the
+    `MeshVariable.time_axis_index` reads `dimensions` when present and otherwise falls back to "the
     leading axis of a >1-D array" - so a `(deg+1, n_face)` fit with no dimension names reported
     `has_time == True` and would have been reduced over its coefficient axis as though that
     were time. These pin both naming paths.
@@ -527,7 +527,7 @@ class TestRoundTripWithoutHandSetDimensions:
         ds = self._from_arrays_with_stamps()
         assert ds["depth"].dimensions == (), "from_arrays leaves this empty"
         assert ds["depth"].has_time
-        assert ds["depth"].time_index == 0
+        assert ds["depth"].time_axis_index == 0
         assert _time_coordinate_name(ds._data_variables) is not None
 
     def test_a_dataset_that_cannot_write_its_coordinate_says_so(self):

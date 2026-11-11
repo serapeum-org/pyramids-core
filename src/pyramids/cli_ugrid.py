@@ -73,7 +73,9 @@ def _cmd_mesh_info(args: argparse.Namespace) -> int:
         "n_node": mesh.n_node,
         "n_edge": mesh.n_edge,
         "n_face": mesh.n_face,
-        "n_layers": mesh.n_layers,
+        # Output key kept as "n_layers" (a frozen CLI JSON contract) though the property is
+        # now mesh.n_layer -- do not "fix" the key to match the attribute.
+        "n_layers": mesh.n_layer,
         "epsg": mesh.epsg,
         "bounds": None if bounds is None else [json_safe(float(v)) for v in bounds],
         "variables": list(mesh.data_variable_names),

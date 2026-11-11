@@ -9916,7 +9916,9 @@ class NetCDF(Dataset):
         back to the classic `NETCDF_DIM_*` parser (`dimensions.py`) when
         opened in classic mode (no root group available).
 
-        Cached on first access. Invalidated by add_variable/remove_variable.
+        Cached on first access. Invalidated by add_variable/remove_variable, and
+        rewritten by :meth:`refresh_metadata` (which re-reads from GDAL and stores the
+        fresh result here).
 
         Returns:
             NetCDFMetadata
@@ -9953,23 +9955,47 @@ class NetCDF(Dataset):
         else:
             self._cached_meta_data = value
 
-    def get_all_metadata(self, open_options: dict | None = None) -> NetCDFMetadata:
-        """Get full MDIM metadata (uncached).
+    def refresh_metadata(self, open_options: dict | None = None) -> NetCDFMetadata:
+        """Re-read metadata from GDAL, bypassing the cache, and refresh it.
 
-        Unlike `meta_data` (which is cached), this always re-traverses
-        the GDAL multidimensional structure.
+        :attr:`metadata` is a lazy cached property; this re-traverses the GDAL
+        multidimensional structure every call, stores the fresh result as the new
+        cached value (so later :attr:`metadata` reads see it), and returns it. Use
+        this after the file has changed underneath the object, or to force a fresh
+        read with specific ``open_options``.
 
         Args:
             open_options: Driver-specific open options forwarded to
                 `get_metadata()`. Defaults to None.
 
         Returns:
-            NetCDFMetadata
+            NetCDFMetadata: The freshly re-read metadata (also now cached).
         """
         result = get_metadata(
             self._raster, open_options, start_group=self._working_group()
         )
+        self._cached_meta_data = result
         return result
+
+    def get_all_metadata(self, open_options: dict | None = None) -> NetCDFMetadata:
+        """Deprecated alias for :meth:`refresh_metadata`.
+
+        Deprecated: Renamed to ``refresh_metadata`` -- the difference from :attr:`metadata` is that it is an uncached
+            re-read, not that it returns "all" metadata. Use :meth:`refresh_metadata` instead.
+
+        Args:
+            open_options: Driver-specific open options forwarded to
+                `get_metadata()`. Defaults to None.
+
+        Returns:
+            NetCDFMetadata: The freshly re-read metadata.
+        """
+        warnings.warn(
+            "NetCDF.get_all_metadata is deprecated; use refresh_metadata.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.refresh_metadata(open_options)
 
     def get_time_variable(
         self, var_name: str = "time", time_format: str = "%Y-%m-%d"

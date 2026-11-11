@@ -404,6 +404,6 @@ class TestOtherCfConsumers:
             global_attributes={"Conventions": "CF-1.8 UGRID-1.0"},
             topology_info=topology,
         ).to_file(path)
-        assert MeshDataset.read_file(path).get_data("h").units == "m", (
+        assert MeshDataset.read_file(path)["h"].units == "m", (
             "the mesh variable's units must survive the round trip"
         )

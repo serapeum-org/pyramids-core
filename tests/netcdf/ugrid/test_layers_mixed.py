@@ -46,7 +46,7 @@ def centres_and_interfaces() -> MeshDataset:
 
 class TestMixedLayerCounts:
     def test_n_layers_reports_the_centre_count(self, centres_and_interfaces):
-        assert centres_and_interfaces.n_layers == 3
+        assert centres_and_interfaces.n_layer == 3
 
     def test_sel_layer_works(self, centres_and_interfaces):
         picked = centres_and_interfaces.sel_layer(1)
@@ -64,10 +64,10 @@ class TestMixedLayerCounts:
 
     def test_genuinely_inconsistent_counts_still_raise(self):
         with pytest.raises(ValueError, match="disagree on their layer count"):
-            _ = _layered({"a": 3, "b": 7}).n_layers
+            _ = _layered({"a": 3, "b": 7}).n_layer
 
     def test_a_single_layer_count_is_unchanged(self):
-        assert _layered({"a": 5}).n_layers == 5
+        assert _layered({"a": 5}).n_layer == 5
 
 
 class TestLayerAxisDetection:
@@ -80,10 +80,10 @@ class TestLayerAxisDetection:
             data_locations={"v": "face"},
         )
         dataset["v"].dimensions = ("time", "mesh2d_nLayers", "mesh2d_nFaces")
-        assert dataset.n_layers == 3
+        assert dataset.n_layer == 3
 
     def test_a_named_non_temporal_two_d_variable_is_layered(self):
-        assert _layered({"a": 4}).n_layers == 4
+        assert _layered({"a": 4}).n_layer == 4
 
     def test_a_variable_whose_time_dimension_is_last_has_no_layer_axis(self):
         # Time in the element slot breaks the [time?, layer?, element] layout, so no axis can
@@ -96,4 +96,4 @@ class TestLayerAxisDetection:
             data_locations={"v": "face"},
         )
         dataset["v"].dimensions = ("mesh2d_nFaces", "time")
-        assert dataset.n_layers is None
+        assert dataset.n_layer is None

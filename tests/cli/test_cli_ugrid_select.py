@@ -139,7 +139,7 @@ def _nsteps(mesh: MeshDataset) -> int:
     Returns:
         int: The leading (time) dimension length of ``d``'s values.
     """
-    return int(mesh.get_data("d").data.shape[0])
+    return int(mesh["d"].data.shape[0])
 
 
 def _bbox_left_half() -> tuple[float, float, float, float]:
@@ -182,7 +182,7 @@ class TestHelpers:
         """A comparison becomes the matching boolean mask over the variable's values."""
         mesh = _temporal_mesh([0.0, 1.0])
         mask = _build_condition(mesh, "d", "d > 3")
-        assert mask.tolist() == (mesh.get_data("d").data > 3).tolist()
+        assert mask.tolist() == (mesh["d"].data > 3).tolist()
 
     def test_build_condition_bad_expression(self):
         """A non-comparison --cond is refused with a clear ValueError."""
@@ -205,7 +205,7 @@ class TestTimeSelect:
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "sel", src, out, "--time", "1"]) == 0
-        assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
+        assert MeshDataset.read_file(out)["d"].data.ndim == 1
 
     def test_sel_sequence_keeps_time(self, tmp_path):
         """sel with several values keeps the time axis, trimmed to those steps."""
@@ -257,7 +257,7 @@ class TestTimeSelect:
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "isel", src, out, "--time", "0"]) == 0
-        assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
+        assert MeshDataset.read_file(out)["d"].data.ndim == 1
 
     def test_sel_time_collapses_and_serialises(self, tmp_path):
         """isel-time picks one step by position, collapses the axis, and round-trips."""
@@ -265,8 +265,8 @@ class TestTimeSelect:
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "isel-time", src, out, "--index", "1"]) == 0
         written = MeshDataset.read_file(out)
-        assert written.get_data("d").data.ndim == 1
-        assert written.get_data("d").data.tolist() == [2.0, 3.0]
+        assert written["d"].data.ndim == 1
+        assert written["d"].data.tolist() == [2.0, 3.0]
 
     def test_sel_time_bad_index_is_value_error(self, tmp_path):
         """An out-of-range --index is remapped to a clean ValueError."""
@@ -329,7 +329,7 @@ class TestTimeSelect:
             )
             == 0
         )
-        assert MeshDataset.read_file(str(out)).get_data("d").data.ndim == 1
+        assert MeshDataset.read_file(str(out))["d"].data.ndim == 1
 
     def test_sel_time_range(self, tmp_path):
         """isel-time-range keeps the half-open [start, stop) window."""
@@ -414,7 +414,7 @@ class TestTimeSelect:
         src = _write_mesh(_temporal_mesh([5.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "advanced", "squeeze", src, out]) == 0
-        assert MeshDataset.read_file(out).get_data("d").data.ndim == 1
+        assert MeshDataset.read_file(out)["d"].data.ndim == 1
 
     def test_drop_isel_on_static_raises(self, tmp_path):
         """A time op on a mesh with no time dimension is a clean ValueError."""
@@ -456,7 +456,7 @@ class TestLayerSelect:
         assert (
             _run(["mesh", "advanced", "collapse-layer", src, out, "--layer", "0"]) == 0
         )
-        assert MeshDataset.read_file(out).get_data("sal").data.shape == (3,)
+        assert MeshDataset.read_file(out)["sal"].data.shape == (3,)
 
     def test_collapse_layer_rejects_non_face(self, tmp_path):
         """A non-face --location is refused by the kernel."""
@@ -602,14 +602,14 @@ class TestValueOps:
             )
             == 0
         )
-        assert float(np.nanmax(MeshDataset.read_file(out).get_data("d").data)) <= 5.0
+        assert float(np.nanmax(MeshDataset.read_file(out)["d"].data)) <= 5.0
 
     def test_where_with_variable_in_cond(self, tmp_path):
         """where masks the elements the comparison does not select."""
         src = _write_mesh(_temporal_mesh([0.0, 1.0, 2.0, 3.0]), tmp_path)
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "where", src, out, "--cond", "d > 3"]) == 0
-        data = MeshDataset.read_file(out).get_data("d").data
+        data = MeshDataset.read_file(out)["d"].data
         assert np.isnan(data).any(), "elements failing the comparison must be masked"
 
     def test_where_bare_operator(self, tmp_path):

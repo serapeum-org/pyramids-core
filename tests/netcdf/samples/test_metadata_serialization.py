@@ -32,7 +32,7 @@ def test_to_json_is_string_and_parses(sample_name, sample):
     """``to_json`` returns a non-empty JSON string that ``json.loads`` accepts."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        payload = to_json(nc.get_all_metadata())
+        payload = to_json(nc.refresh_metadata())
         assert isinstance(payload, str) and payload
         json.loads(payload)
     finally:
@@ -43,7 +43,7 @@ def test_from_json_roundtrip_preserves_structure(sample_name, sample):
     """``from_json(to_json(m))`` preserves variable names, dimension names, and convention."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         restored = from_json(to_json(meta))
         assert set(restored.variables) == set(meta.variables), (
             f"{sample_name}: variable set changed"
@@ -66,7 +66,7 @@ def test_from_json_roundtrip_preserves_cf(sample_name, sample):
     """
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata()
+        meta = nc.refresh_metadata()
         restored = from_json(to_json(meta))
         assert (restored.cf is None) == (meta.cf is None), (
             f"{sample_name}: cf presence changed across round-trip"
@@ -83,7 +83,7 @@ def test_to_dict_is_json_serializable(sample_name, sample):
     """``to_dict`` returns a mapping that ``json.dumps`` can serialize without custom encoders."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        as_dict = to_dict(nc.get_all_metadata())
+        as_dict = to_dict(nc.refresh_metadata())
         assert isinstance(as_dict, dict)
         json.dumps(as_dict)
     finally:

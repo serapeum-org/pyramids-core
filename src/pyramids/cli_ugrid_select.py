@@ -122,7 +122,7 @@ def _build_condition(mesh: MeshDataset, variable_name: str, expr: str) -> Any:
             f"--cond must be '[VAR] OP NUMBER' with OP one of {sorted(_WHERE_OPERATORS)}, "
             f"got {expr!r}"
         )
-    values = mesh.get_data(variable_name).data
+    values = mesh[variable_name].data
     return _WHERE_OPERATORS[match.group("op")](values, float(match.group("value")))
 
 

@@ -11,8 +11,8 @@ they back `MeshDataset.clip` and `MeshDataset.subset_by_bounds`:
 classDiagram
     class MeshSpatialIndex {
       +node_tree
-      +face_tree
-      +face_strtree
+      +face_centroid_tree
+      +face_rtree
       +face_polygons
       +locate_nearest_node(x, y, k)
       +locate_nearest_face(x, y, k)
@@ -22,7 +22,7 @@ classDiagram
     }
     class Mesh2d
     MeshSpatialIndex o-- Mesh2d : mesh
-    note for MeshSpatialIndex "node_tree / face_tree / face_strtree are lazy"
+    note for MeshSpatialIndex "node_tree / face_centroid_tree / face_rtree are lazy"
 ```
 
 ::: pyramids.netcdf.ugrid.MeshSpatialIndex

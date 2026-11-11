@@ -10,7 +10,7 @@ pytestmark = pytest.mark.core
 
 def _largest_variable(nc):
     """Name of the highest-rank variable (the data variable on most gridded files)."""
-    meta = nc.get_all_metadata().variables
+    meta = nc.refresh_metadata().variables
     return max(meta, key=lambda name: len(meta[name].shape))
 
 
@@ -31,7 +31,7 @@ def test_unpack_applies_scale_offset(sample_name, sample):
     """The default read returns floating-point data consistent with raw * scale + offset."""
     nc = NetCDF.read_file(sample(sample_name))
     try:
-        meta = nc.get_all_metadata().variables
+        meta = nc.refresh_metadata().variables
         name = next(n for n, info in meta.items() if info.scale is not None)
         info = meta[name]
         raw = nc.read_array(variable=name, unpack=False)
@@ -64,7 +64,7 @@ def test_masked_read_matches_shape(sample_name, sample):
     try:
         name = next(
             n
-            for n, info in nc.get_all_metadata().variables.items()
+            for n, info in nc.refresh_metadata().variables.items()
             if info.scale is not None
         )
         plain = nc.read_array(variable=name)
