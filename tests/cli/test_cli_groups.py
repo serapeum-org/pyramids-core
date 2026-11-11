@@ -305,7 +305,9 @@ class TestGroupedCliStructure:
     def test_vector_io_split_into_export_import(self, root):
         """`vector io` is gone, replaced by `vector export` (writers) / `vector import` (readers)."""
         vector = self._group(root, "vector")
-        assert "io" not in vector.choices, "the combined `vector io` subgroup must be removed"
+        assert "io" not in vector.choices, (
+            "the combined `vector io` subgroup must be removed"
+        )
         exp = set(_subparsers(vector.choices["export"]).choices)
         imp = set(_subparsers(vector.choices["import"]).choices)
         assert {"parquet", "feather", "json", "wkt", "wkb", "mvt", "pmtiles"} <= exp, (
