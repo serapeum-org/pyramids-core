@@ -68,7 +68,9 @@ class TestClassifyDispatch:
             def classify_zarr_store(self, store, storage_options=None):
                 return self._verdict
 
-        monkeypatch.setattr(_zarr, "require_compute_backend", lambda: _Backend("single"))
+        monkeypatch.setattr(
+            _zarr, "require_compute_backend", lambda: _Backend("single")
+        )
         assert _zarr.classify_zarr_store("x.zarr") == "single"
         assert _zarr.is_cube_store("x.zarr") is False
 
@@ -95,3 +97,50 @@ class TestClassifyDispatch:
 
         monkeypatch.setattr(_zarr, "require_compute_backend", lambda: _Backend())
         assert _zarr.classify_zarr_store("x.zarr") == "other"
+
+
+class TestResolveStore:
+    """``_resolve_store`` normalizes a store target for zarr v3 / dask."""
+
+    def test_plain_string_passed_through(self):
+        """A plain path string is returned unchanged for zarr/dask to resolve directly."""
+        assert _zarr._resolve_store("local/x.zarr", None) == "local/x.zarr"
+
+    def test_path_is_stringified(self):
+        """A :class:`~pathlib.Path` is converted to ``str`` (zarr v3 takes a string target)."""
+        result = _zarr._resolve_store(Path("dir") / "x.zarr", None)
+        assert isinstance(result, str), f"expected str, got {type(result)}"
+        assert result.endswith("x.zarr"), f"unexpected store target: {result}"
+
+    def test_prebuilt_store_returned_unchanged(self):
+        """A non-str / non-Path (an already-built store / mapping) is returned as-is."""
+        store = {"already": "a store"}
+        assert _zarr._resolve_store(store, None) is store
+
+    def test_storage_options_build_fsspec_store(self, monkeypatch):
+        """A URL with ``storage_options`` is wrapped in a v3 ``FsspecStore`` so options reach fsspec.
+
+        Test scenario:
+            ``FsspecStore.from_url`` is stubbed (no real network) and must receive the URL string and
+            the storage options, and its result is returned verbatim.
+        """
+        captured = {}
+        sentinel = object()
+
+        class _FakeFsspecStore:
+            @staticmethod
+            def from_url(url, storage_options):
+                captured["url"] = url
+                captured["storage_options"] = storage_options
+                return sentinel
+
+        monkeypatch.setattr("zarr.storage.FsspecStore", _FakeFsspecStore)
+        opts = {"key": "secret"}
+        result = _zarr._resolve_store("s3://bucket/x.zarr", opts)
+        assert result is sentinel, f"expected the FsspecStore, got {result!r}"
+        assert captured["url"] == "s3://bucket/x.zarr", (
+            f"wrong url forwarded: {captured['url']}"
+        )
+        assert captured["storage_options"] is opts, (
+            "storage_options must reach fsspec unchanged"
+        )
