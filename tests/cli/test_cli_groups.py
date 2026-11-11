@@ -302,6 +302,25 @@ class TestGroupedCliStructure:
             f"a writer leaked into nc import: {imp}"
         )
 
+    def test_vector_io_split_into_export_import(self, root):
+        """`vector io` is gone, replaced by `vector export` (writers) / `vector import` (readers)."""
+        vector = self._group(root, "vector")
+        assert "io" not in vector.choices, "the combined `vector io` subgroup must be removed"
+        exp = set(_subparsers(vector.choices["export"]).choices)
+        imp = set(_subparsers(vector.choices["import"]).choices)
+        assert {"parquet", "feather", "json", "wkt", "wkb", "mvt", "pmtiles"} <= exp, (
+            f"vector export writers missing: {exp}"
+        )
+        assert {"bbox", "xyz", "features", "featureserver", "parquet", "gpx"} <= imp, (
+            f"vector import readers missing: {imp}"
+        )
+        assert not ({"bbox", "xyz", "features", "gpx"} & exp), (
+            f"a reader leaked into vector export: {exp}"
+        )
+        assert not ({"feather", "wkt", "mvt", "pmtiles"} & imp), (
+            f"a writer leaked into vector import: {imp}"
+        )
+
     @pytest.mark.parametrize("subsystem", ["export", "read"])
     def test_mesh_io_verbs_have_no_prefix(self, root, subsystem):
         """`mesh export`/`mesh read` verbs carry no leftover `to-`/`from-` prefix.
