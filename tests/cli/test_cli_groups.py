@@ -27,6 +27,13 @@ class TestSuggestion:
             "the close verb should be suggested"
         )
 
+    def test_close_match_unquoted_choices(self):
+        """The 3.12+ unquoted ``(choose from a, b)`` format is parsed too (not just quoted)."""
+        msg = "argument cmd: invalid choice: 'wrp' (choose from warp, info, merge)"
+        assert _suggestion(msg) == "did you mean: warp?", (
+            "the backport must handle the unquoted choice listing argparse emits on Python 3.12+"
+        )
+
     def test_native_suggestion_is_not_doubled(self):
         """A message that already carries a native 'maybe you meant' is left alone."""
         msg = "invalid choice: 'wrp', maybe you meant 'warp'? (choose from 'warp', 'info')"

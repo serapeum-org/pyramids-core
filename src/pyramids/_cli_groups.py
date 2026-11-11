@@ -39,7 +39,13 @@ def _suggestion(message: str) -> str | None:
     choose = _CHOOSE_FROM.search(message)
     if bad is None or choose is None or "meant" in message:
         return None
-    choices = re.findall(r"'([^']*)'", choose.group(1))
+    # argparse quotes the choices on <=3.11 (``'a', 'b'``) but not on 3.12+ (``a, b``);
+    # try the quoted form first, then fall back to a plain comma split so the backport
+    # works on every supported interpreter.
+    listing = choose.group(1)
+    choices = re.findall(r"'([^']*)'", listing)
+    if not choices:
+        choices = [c.strip() for c in listing.split(",") if c.strip()]
     close = difflib.get_close_matches(bad.group(1), choices, n=3)
     return f"did you mean: {', '.join(close)}?" if close else None
 
