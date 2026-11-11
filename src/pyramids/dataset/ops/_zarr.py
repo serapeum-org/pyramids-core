@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from pyramids.base._compute_backend import require_compute_backend
+from pyramids.base._utils import require_optional
 
 
 def _resolve_store(
@@ -35,12 +36,23 @@ def _resolve_store(
     (fsspec-backed for `s3://` / `gs://` / … URLs). When ``storage_options`` is supplied for a URL, a
     v3 :class:`zarr.storage.FsspecStore` is built so the options reach fsspec. Pre-built stores are
     returned unchanged.
+
+    Raises:
+        OptionalPackageDoesNotExist: When ``storage_options`` is given but ``zarr`` (the ``[lazy]`` /
+            ``pyramids-lazy`` stack) is not installed, so the branded install hint is surfaced rather
+            than a bare ``ModuleNotFoundError``.
     """
     if isinstance(store, (str, Path)):
         if storage_options:
-            from zarr.storage import FsspecStore
-
-            return FsspecStore.from_url(str(store), storage_options=storage_options)
+            zarr_storage = require_optional(
+                "zarr.storage",
+                "reading a cloud Zarr store with `storage_options` needs the lazy stack; "
+                "install it with `pip install pyramids-lazy`.",
+                return_module=True,
+            )
+            return zarr_storage.FsspecStore.from_url(
+                str(store), storage_options=storage_options
+            )
         return str(store)
     return store
 
@@ -71,10 +83,15 @@ def is_zarr_store(source: Any) -> bool:
         True
         >>> is_zarr_store("elevation.tif")
         False
+        >>> is_zarr_store("s3://bucket/x.zarr?versionId=9")
+        True
     """
     if not isinstance(source, (str, Path)):
         return True
-    return str(source).rstrip("/\\").lower().endswith(".zarr")
+    # Strip a URL query string / fragment before the suffix test so a versioned or fragment-tagged
+    # cloud store (`s3://bucket/x.zarr?versionId=...`, `...x.zarr#frag`) still matches.
+    name = str(source).split("?", 1)[0].split("#", 1)[0].rstrip("/\\")
+    return name.lower().endswith(".zarr")
 
 
 def classify_zarr_store(
@@ -93,9 +110,12 @@ def classify_zarr_store(
 
     Opening the store to inspect it needs the ``zarr`` package, which ships with the ``pyramids-lazy``
     compute backend, so the real work is delegated to the backend's own ``classify_zarr_store``. When
-    no backend is installed, the installed backend predates the capability, or classification raises
-    for any reason, ``"other"`` is returned so ``read_file`` falls back to GDAL — a bare-core install
-    reads a ``.zarr`` through GDAL exactly as before this routing existed.
+    no usable backend is present (absent, or installed but too old / malformed), the backend predates
+    the capability, or classification raises for any reason, ``"other"`` is returned so ``read_file``
+    falls back to GDAL — a bare-core install reads a ``.zarr`` through GDAL exactly as before this
+    routing existed. This routing never raises; an explicit
+    :meth:`~pyramids.dataset.Dataset.from_zarr` still surfaces ``require_compute_backend``'s branded
+    "install / upgrade pyramids-lazy" error.
 
     Args:
         store: A ``.zarr`` store — path / fsspec URL / store object.
@@ -122,8 +142,14 @@ def classify_zarr_store(
     """
     try:
         backend = require_compute_backend()
-    except ImportError:
-        # No lazy backend installed — core cannot open a Zarr store itself, so leave it to GDAL.
+    except Exception:  # noqa: BLE001
+        # No usable lazy backend — absent, or installed but too old / malformed (a `pyramids_lazy`
+        # that fails at import, or one `require_compute_backend` rejects for its api_version /
+        # structural contract, both raised as ImportError subclasses; plus any other resolution
+        # failure). read_file's routing is deliberately lenient: core cannot open a Zarr store
+        # itself, so it falls back to GDAL rather than crash the generic read path over an optional
+        # backend. The actionable "install / upgrade pyramids-lazy" error is NOT lost — an explicit
+        # `Dataset.from_zarr(...)` calls `require_compute_backend()` unguarded and still surfaces it.
         return "other"
     classify = getattr(backend, "classify_zarr_store", None)
     if classify is None:
