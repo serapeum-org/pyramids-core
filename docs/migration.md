@@ -165,6 +165,28 @@ that leaked out of an empty table lookup. Only affects code catching the old typ
 
 ### unreleased
 
+**`Dataset.read_file` now opens a single-raster `.zarr` store through the GeoZarr reader (issue #1457).** A
+`.zarr` path previously fell through to GDAL's generic Zarr driver, which does **not** round-trip the GeoZarr
+metadata `to_zarr` writes — `read_file("x.zarr")` returned a georeferenceless raster (`epsg` `None`, an identity
+geotransform). It now routes to `Dataset.from_zarr`, so CRS, geotransform and band roles are recovered, identical
+to calling `from_zarr` directly. This is a silent behavior change: code that read a `.zarr` through `read_file` and
+relied on the (wrong) missing georeferencing will now see the real CRS and transform.
+
+- A **cube** store written by `DatasetCollection.to_zarr` is a 4-D `(time, band, y, x)` stack, not a single
+  raster. `read_file` now raises `ValueError` pointing at `DatasetCollection.from_zarr` instead of mis-reading it
+  through GDAL. Open cubes with `DatasetCollection.from_zarr`.
+- **Only pyramids-written GeoZarr stores are claimed.** A `.zarr` store is routed only when it carries the
+  pyramids layout (a `data` array beside a `spatial_ref` node). Any other `.zarr` — a foreign / xarray-written
+  store, a plain file that merely ends in `.zarr`, or a remote store needing credentials this call cannot forward
+  — falls through to GDAL and is read exactly as before, so no previously-working read breaks.
+- Because a routed GeoZarr store is read by `from_zarr`, the GDAL-only arguments (`read_only`, `file_i`,
+  `open_options`, `gdal_env`) do not apply on that path; passing a non-default one emits a `UserWarning`.
+- To bypass the routing and open a `.zarr` through GDAL directly (the old behavior), pass an explicit `driver=` or
+  `vsi=` to `read_file`.
+- Remote `.zarr` URLs (`s3://…/x.zarr`, `gs://…`, …) route the same way when they are reachable without extra
+  credentials; for fsspec credentials call `from_zarr(store, storage_options=…)` directly, since `read_file` does
+  not take `storage_options`.
+
 **Naming cleanup (issue #1462): several members renamed to a single canonical spelling.** Each old name keeps
 working as a `DeprecationWarning`-emitting alias (so existing code runs unchanged), except
 `Cell.array_to_map_coordinates`, which is **removed** — it duplicated `Dataset.xy`, so call `xy` instead (note the
