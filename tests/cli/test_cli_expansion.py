@@ -542,6 +542,7 @@ class TestResamplingVocab:
                 [
                     "raster",
                     "overview",
+                    "create",
                     cli_raster,
                     "--levels",
                     "2",
@@ -559,6 +560,7 @@ class TestResamplingVocab:
                 [
                     "raster",
                     "overview",
+                    "create",
                     cli_raster,
                     "--levels",
                     "2",
