@@ -976,11 +976,32 @@ def _resolve_store(
 def is_zarr_store(source: Any) -> bool:
     """Whether ``source`` names a ``.zarr`` store.
 
-    ``True`` for a local path or cloud URL whose final component ends in ``.zarr``
-    (case-insensitive; trailing separators ignored), and for a pre-built
-    :class:`zarr.storage.Store` / mapping object. This is the cheap suffix check
-    :meth:`pyramids.dataset.Dataset.read_file` uses to route a GeoZarr store to
-    :meth:`~pyramids.dataset.Dataset.from_zarr` instead of GDAL's generic Zarr driver.
+    This is the cheap suffix check :meth:`pyramids.dataset.Dataset.read_file` uses to
+    route a GeoZarr store to :meth:`~pyramids.dataset.Dataset.from_zarr` instead of GDAL's
+    generic Zarr driver. No store is opened — only the name is inspected.
+
+    Args:
+        source: A local path, cloud URL (``str`` / :class:`~pathlib.Path`), or a pre-built
+            :class:`zarr.storage.Store` / mapping object.
+
+    Returns:
+        ``True`` when ``source`` is a store: a path/URL whose final component ends in
+        ``.zarr`` (case-insensitive, trailing separators ignored), or any non-``str``/
+        non-``Path`` object (taken to be an already-opened store). ``False`` otherwise.
+
+    Examples:
+        A local or remote ``.zarr`` path is a store; the match ignores case and a trailing
+        separator, and a GeoTIFF is not a store:
+
+        >>> is_zarr_store("elevation.zarr")
+        True
+        >>> is_zarr_store("s3://bucket/cube.zarr/")
+        True
+        >>> is_zarr_store("elevation.tif")
+        False
+
+    See Also:
+        is_cube_store: tell a single-raster store from a temporal-cube store.
     """
     if not isinstance(source, (str, Path)):
         return True
@@ -993,7 +1014,32 @@ def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> 
     :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes a 4-D ``data`` array
     ``(time, band, y, x)``, whereas a single :meth:`pyramids.dataset.Dataset.to_zarr`
     store's ``data`` array is 3-D ``(band, y, x)``. Opens the root group read-only and
-    inspects the ``data`` array's rank.
+    inspects the ``data`` array's rank; a store with no ``data`` array is not a cube.
+
+    Args:
+        store: A ``.zarr`` store — path / fsspec URL / :class:`zarr.storage.Store`.
+        storage_options: fsspec options forwarded to :func:`_resolve_store` for a cloud URL.
+
+    Returns:
+        ``True`` when the store's ``data`` array is 4-D (a cube written by
+        ``DatasetCollection.to_zarr``); ``False`` for a single raster or a store with no
+        ``data`` array.
+
+    Raises:
+        OptionalPackageDoesNotExist: When the optional ``zarr`` dependency is not installed.
+
+    Examples:
+        A single-raster store is not a cube, while a store written by
+        ``DatasetCollection.to_zarr`` is (both need a real on-disk store, so these are
+        illustrative):
+
+        >>> is_cube_store("single_raster.zarr")  # doctest: +SKIP
+        False
+        >>> is_cube_store("time_series_cube.zarr")  # doctest: +SKIP
+        True
+
+    See Also:
+        is_zarr_store: the cheap suffix check that decides whether to inspect at all.
     """
     zarr = _require_zarr()
     root = zarr.open_group(_resolve_store(store, storage_options), mode="r")
