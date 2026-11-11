@@ -49,6 +49,19 @@ class TestIsZarrStore:
         assert _zarr.is_zarr_store("s3://bucket/x.zarr/?versionId=9")
         assert not _zarr.is_zarr_store("s3://bucket/x.tif?versionId=9")
 
+    def test_local_paths_with_hash_or_question_mark_matched_verbatim(self):
+        """A local ``.zarr`` path containing ``#`` / ``?`` is matched verbatim (only URLs are stripped).
+
+        ``#`` is a legal filename character on POSIX and Windows and ``?`` on POSIX, so the
+        query/fragment strip must apply only to URL-like sources (a scheme is present). A local store
+        must never be truncated, or ``read_file`` would misroute it to GDAL and drop its georeferencing.
+        """
+        assert _zarr.is_zarr_store("my#dir/elevation.zarr")
+        assert _zarr.is_zarr_store("v#1.zarr")
+        assert _zarr.is_zarr_store("data/file?.zarr")
+        assert _zarr.is_zarr_store("C:/data/a#b.zarr")
+        assert _zarr.is_zarr_store(Path("m#d") / "x.zarr")
+
 
 class TestClassifyDispatch:
     """``classify_zarr_store`` delegates to the backend and degrades to ``"other"``."""
@@ -124,6 +137,27 @@ class TestClassifyDispatch:
         monkeypatch.setattr(_zarr, "require_compute_backend", _raise)
         assert _zarr.classify_zarr_store("x.zarr") == "other"
         assert _zarr.is_cube_store("x.zarr") is False
+
+    def test_absent_or_broken_backend_logs_a_debug_breadcrumb(
+        self, monkeypatch, caplog
+    ):
+        """A degraded classification leaves a debug breadcrumb so a broken backend stays discoverable.
+
+        The routing degrades to ``"other"`` silently by contract, but a ``debug``-level log distinguishes
+        "no usable backend" from a healthy "foreign store" classification for an operator debugging why a
+        ``.zarr`` is being read by GDAL.
+        """
+        import logging
+
+        def _raise():
+            raise ImportError("no compute backend installed")
+
+        monkeypatch.setattr(_zarr, "require_compute_backend", _raise)
+        with caplog.at_level(logging.DEBUG, logger="pyramids.dataset.ops._zarr"):
+            assert _zarr.classify_zarr_store("x.zarr") == "other"
+        assert any(
+            "no usable compute backend" in r.getMessage() for r in caplog.records
+        ), "an absent/broken backend should leave a debug breadcrumb"
 
     def test_other_when_backend_resolution_raises_non_importerror(self, monkeypatch):
         """A *non*-``ImportError`` from backend resolution still degrades to ``"other"`` (never escapes).
