@@ -665,3 +665,55 @@ class TestReadFileRoutesZarr:
         DatasetCollection.from_files([t1, t2]).to_zarr(cube)
         with pytest.raises(ValueError, match="DatasetCollection.from_zarr"):
             Dataset.read_file(cube)
+
+    def test_is_zarr_store_accepts_store_object_and_backslash(self):
+        """A pre-built store object is a store; a trailing Windows separator is stripped.
+
+        Test scenario:
+            A non-``str``/``Path`` object (a ``zarr.storage.Store`` / mapping) is treated as a
+            store, and a path ending in a backslash still matches ``.zarr``; a plain raster does
+            not.
+        """
+        assert is_zarr_store({"a mapping": "stands in for a zarr.Store"})
+        assert is_zarr_store("store.zarr\\")
+        assert not is_zarr_store(Path("plain") / "raster.tif")
+
+    @pytest.mark.lazy
+    def test_is_cube_store_false_without_data_array(self, tmp_path):
+        """A Zarr group with no ``data`` array is not a cube.
+
+        Test scenario:
+            ``is_cube_store`` inspects the ``data`` array's rank; a group that has no ``data``
+            node at all is reported as not-a-cube (so routing would fall to the single-raster
+            reader) rather than raising.
+        """
+        store = str(tmp_path / "empty.zarr")
+        zarr.open_group(store, mode="w")
+        assert not is_cube_store(store)
+
+    @pytest.mark.lazy
+    def test_read_file_vsi_opts_out_of_zarr_routing(
+        self, small_dataset, tmp_path, monkeypatch
+    ):
+        """An explicit ``vsi=`` bypasses the zarr routing before the store is inspected.
+
+        Test scenario:
+            With ``vsi`` set, the ``vsi is None`` guard short-circuits, so ``is_cube_store`` is
+            never consulted and the read falls through to the GDAL path (which then fails on the
+            inapplicable ``vsi``). Proven by a tracker that must stay empty.
+        """
+        import pyramids.dataset.dataset as dataset_module
+
+        store = str(tmp_path / "single.zarr")
+        small_dataset.to_zarr(store)
+        consulted: list[str] = []
+        monkeypatch.setattr(
+            dataset_module,
+            "is_cube_store",
+            lambda *a, **k: consulted.append("called") or False,
+        )
+        with pytest.raises(Exception):
+            Dataset.read_file(store, vsi="/vsimem/does-not-apply")
+        assert consulted == [], (
+            "vsi= must bypass zarr routing before is_cube_store is consulted"
+        )
