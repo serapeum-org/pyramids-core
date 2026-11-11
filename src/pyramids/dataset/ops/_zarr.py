@@ -77,7 +77,9 @@ def is_zarr_store(source: Any) -> bool:
     return str(source).rstrip("/\\").lower().endswith(".zarr")
 
 
-def classify_zarr_store(store: Any, storage_options: dict[str, Any] | None = None) -> str:
+def classify_zarr_store(
+    store: Any, storage_options: dict[str, Any] | None = None
+) -> str:
     """Classify a ``.zarr`` store for :meth:`~pyramids.dataset.Dataset.read_file` routing.
 
     Returns one of:
@@ -101,6 +103,22 @@ def classify_zarr_store(store: Any, storage_options: dict[str, Any] | None = Non
 
     Returns:
         ``"single"``, ``"cube"``, or ``"other"``.
+
+    Examples:
+        A pyramids single-raster store is ``"single"`` and a temporal cube is ``"cube"``; a foreign or
+        unreadable store -- and a bare-core install with no classify-capable backend -- is ``"other"``
+        (each needs a real store / backend, so these are illustrative):
+
+        >>> classify_zarr_store("elevation.zarr")          # doctest: +SKIP
+        'single'
+        >>> classify_zarr_store("timeseries_cube.zarr")    # doctest: +SKIP
+        'cube'
+        >>> classify_zarr_store("xarray_export.zarr")      # doctest: +SKIP
+        'other'
+
+    See Also:
+        is_zarr_store: the cheap suffix check that decides whether to classify at all.
+        is_cube_store: the thin cube-only predicate over this classification.
     """
     try:
         backend = require_compute_backend()
@@ -124,5 +142,25 @@ def is_cube_store(store: Any, storage_options: dict[str, Any] | None = None) -> 
     Thin predicate over :func:`classify_zarr_store`: ``True`` only for a pyramids-written
     ``(time, band, y, x)`` cube (as :meth:`pyramids.dataset.DatasetCollection.to_zarr` writes). A
     single raster, a foreign store, an unreadable path, or a backend-less install is ``False``.
+
+    Args:
+        store: A ``.zarr`` store — path / fsspec URL / store object.
+        storage_options: fsspec options forwarded to the backend for a cloud URL.
+
+    Returns:
+        ``True`` for a pyramids cube store; ``False`` otherwise (including a backend-less install,
+        which cannot open the store and so cannot call it a cube).
+
+    Examples:
+        A single-raster store is not a cube, while a cube store is (both need a real on-disk store and
+        the lazy backend, so these are illustrative):
+
+        >>> is_cube_store("single_raster.zarr")      # doctest: +SKIP
+        False
+        >>> is_cube_store("time_series_cube.zarr")   # doctest: +SKIP
+        True
+
+    See Also:
+        classify_zarr_store: the three-way classification this predicate reads.
     """
     return classify_zarr_store(store, storage_options) == "cube"
