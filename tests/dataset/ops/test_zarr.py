@@ -790,6 +790,21 @@ class TestReadFileRoutesZarr:
             Dataset.read_file(str(plain))
 
     @pytest.mark.lazy
+    def test_classify_data_as_group_is_other(self, tmp_path):
+        """A store whose ``data`` node is a Group (not an Array) is ``"other"``, not a cube.
+
+        Test scenario:
+            A malformed store with a ``spatial_ref`` node but a ``data`` *group* has no array
+            rank; classification returns ``"other"`` (``ndim`` is ``None``) so ``read_file``
+            falls through to GDAL rather than raising the single-raster reader's ``TypeError``.
+        """
+        store = str(tmp_path / "data_group.zarr")
+        root = zarr.open_group(store, mode="w")
+        root.create_group("data")
+        root.create_array("spatial_ref", shape=(), dtype="i4")
+        assert classify_zarr_store(store) == "other"
+
+    @pytest.mark.lazy
     def test_read_file_warns_when_gdal_args_ignored_on_route(
         self, small_dataset, tmp_path
     ):
