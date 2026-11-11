@@ -939,6 +939,12 @@ class Vectorize(_Engine["Dataset"]):
     ) -> tuple[np.typing.NDArray, int, list, list]:
         """Group all the connected values between two bounds.
 
+        This is connected-component **region grouping** — a flood-fill of the cells whose value falls
+        within ``[lower_bound, upper_bound]`` — **not** unsupervised pixel k-means: there are no
+        ``n_clusters`` / ``bands`` / ``seed`` parameters, and the output is a label raster of the
+        contiguous regions, not cluster centroids. For pixel-wise k-means classification, run
+        ``sklearn.cluster.KMeans`` over :meth:`read_array` and wrap the labels with :meth:`dataset_like`.
+
         Args:
             lower_bound (Number):
                 Lower bound of the cluster.
