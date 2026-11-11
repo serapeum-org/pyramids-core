@@ -322,5 +322,8 @@ def add_netcdf_commands(sub: argparse._SubParsersAction) -> None:
     add_nc_cftime_commands(
         add_group(ncsub, "calc", "CF/time/calendar and calculus"), nc_advanced
     )
-    add_nc_io_commands(add_group(ncsub, "io", "format I/O and conversion"))
+    add_nc_io_commands(
+        add_group(ncsub, "export", "write a NetCDF to a file or format"),
+        add_group(ncsub, "import", "read / combine NetCDF sources"),
+    )
     add_nc_plot_commands(add_group(ncsub, "plot", "headless plotting"))

@@ -235,4 +235,9 @@ def add_vector_commands(sub: argparse._SubParsersAction) -> None:
         add_group(vsub, "tess", "tessellation, binning, sampling, measures"),
         vec_advanced,
     )
-    add_vector_io_commands(add_group(vsub, "io", "format I/O and remote readers"))
+    add_vector_io_commands(
+        add_group(vsub, "export", "write a vector to a file or format"),
+        add_group(
+            vsub, "import", "read / construct a vector from a source or remote service"
+        ),
+    )

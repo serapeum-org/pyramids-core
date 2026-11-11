@@ -278,3 +278,86 @@ class TestGroupedCliStructure:
         assert isinstance(subgroup, SuggestingArgumentParser), (
             f"{domain} {subsystem} parser must suggest near-matches for its verbs"
         )
+
+    def test_nc_io_split_into_export_import(self, root):
+        """`nc io` is gone, replaced by `nc export` (writers) / `nc import` (readers)."""
+        nc = self._group(root, "nc")
+        assert "io" not in nc.choices, "the combined `nc io` subgroup must be removed"
+        exp = set(_subparsers(nc.choices["export"]).choices)
+        imp = set(_subparsers(nc.choices["import"]).choices)
+        assert {
+            "dataframe",
+            "zarr",
+            "kerchunk",
+            "convert",
+            "combine-kerchunk",
+        } <= exp, f"nc export writers missing: {exp}"
+        assert {"dataframe", "open-mf", "concat", "merge"} <= imp, (
+            f"nc import readers missing: {imp}"
+        )
+        assert not ({"open-mf", "concat", "merge"} & exp), (
+            f"a reader leaked into nc export: {exp}"
+        )
+        assert not ({"convert", "zarr", "kerchunk", "combine-kerchunk"} & imp), (
+            f"a writer leaked into nc import: {imp}"
+        )
+
+    def test_vector_io_split_into_export_import(self, root):
+        """`vector io` is gone, replaced by `vector export` (writers) / `vector import` (readers)."""
+        vector = self._group(root, "vector")
+        assert "io" not in vector.choices, (
+            "the combined `vector io` subgroup must be removed"
+        )
+        exp = set(_subparsers(vector.choices["export"]).choices)
+        imp = set(_subparsers(vector.choices["import"]).choices)
+        assert {"parquet", "feather", "json", "wkt", "wkb", "mvt", "pmtiles"} <= exp, (
+            f"vector export writers missing: {exp}"
+        )
+        assert {"bbox", "xyz", "features", "featureserver", "parquet", "gpx"} <= imp, (
+            f"vector import readers missing: {imp}"
+        )
+        assert not ({"bbox", "xyz", "features", "gpx"} & exp), (
+            f"a reader leaked into vector export: {exp}"
+        )
+        assert not ({"feather", "wkt", "mvt", "pmtiles"} & imp), (
+            f"a writer leaked into vector import: {imp}"
+        )
+
+    @pytest.mark.parametrize("subsystem", ["export", "read"])
+    def test_mesh_io_verbs_have_no_prefix(self, root, subsystem):
+        """`mesh export`/`mesh read` verbs carry no leftover `to-`/`from-` prefix.
+
+        Args:
+            root: The top-level subparsers action.
+            subsystem: The mesh I/O subsystem under test.
+
+        Test scenario:
+            Every verb under the subsystem is a plain name (``zarr``, not ``to-zarr``), matching
+            the prefix-free `raster export`/`import` surface.
+        """
+        verbs = _subparsers(self._group(root, "mesh").choices[subsystem]).choices
+        leaked = [v for v in verbs if v.startswith(("to-", "from-"))]
+        assert not leaked, f"mesh {subsystem} still has prefixed verbs: {leaked}"
+
+    @pytest.mark.parametrize(
+        "domain, subsystem, old, new",
+        [("nc", "plot", "plot", "render"), ("vector", "overlay", "overlay", "apply")],
+    )
+    def test_doubled_verbs_renamed(self, root, domain, subsystem, old, new):
+        """The verbs that doubled their subsystem's name were renamed.
+
+        Args:
+            root: The top-level subparsers action.
+            domain: The domain group.
+            subsystem: The subsystem whose doubled verb was renamed.
+            old: The removed doubled verb name (equal to the subsystem).
+            new: The replacement verb name.
+
+        Test scenario:
+            ``<domain> <subsystem> <subsystem>`` no longer resolves; the renamed verb does.
+        """
+        verbs = _subparsers(self._group(root, domain).choices[subsystem]).choices
+        assert new in verbs, f"{domain} {subsystem} {new} must exist"
+        assert old not in verbs, (
+            f"the doubled `{domain} {subsystem} {old}` must be gone"
+        )

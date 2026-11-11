@@ -22,7 +22,7 @@ class TestNcPlot:
     def test_writes_png(self, tmp_path):
         """plot saves a non-empty PNG for a variable."""
         out = tmp_path / "map.png"
-        assert main(["nc", "plot", "plot", str(_NC), str(out), "--var", "tas"]) == 0
+        assert main(["nc", "plot", "render", str(_NC), str(out), "--var", "tas"]) == 0
         assert out.exists()
         assert out.stat().st_size > 0
 
@@ -34,7 +34,7 @@ class TestNcPlot:
                 [
                     "nc",
                     "plot",
-                    "plot",
+                    "render",
                     str(_NC),
                     str(out),
                     "--var",
@@ -50,13 +50,13 @@ class TestNcPlot:
     def test_refuses_existing(self, tmp_path):
         """A second plot without --overwrite is refused."""
         out = str(tmp_path / "map.png")
-        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 0
-        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 1
+        assert main(["nc", "plot", "render", str(_NC), out, "--var", "tas"]) == 0
+        assert main(["nc", "plot", "render", str(_NC), out, "--var", "tas"]) == 1
 
     def test_unknown_variable_errors_cleanly(self, tmp_path, capsys):
         """An unknown --var exits 1 with a clean error, not the catch-all."""
         rc = main(
-            ["nc", "plot", "plot", str(_NC), str(tmp_path / "o.png"), "--var", "nope"]
+            ["nc", "plot", "render", str(_NC), str(tmp_path / "o.png"), "--var", "nope"]
         )
         err = capsys.readouterr().err
         assert rc == 1
@@ -67,7 +67,7 @@ class TestNcPlot:
         """A pre-set interactive backend is overridden to Agg and the PNG still renders."""
         monkeypatch.setenv("MPLBACKEND", "TkAgg")
         out = str(tmp_path / "forced.png")
-        assert main(["nc", "plot", "plot", str(_NC), out, "--var", "tas"]) == 0
+        assert main(["nc", "plot", "render", str(_NC), out, "--var", "tas"]) == 0
         assert os.environ["MPLBACKEND"] == "Agg"
         assert os.path.exists(out)
         assert os.path.getsize(out) > 0

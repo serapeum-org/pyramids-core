@@ -36,6 +36,15 @@ suggestion.
   - `snap` — snap geometries to another layer's vertices
   - `with-centroid` — attach per-feature centroid columns
   - `with-coordinates` — attach per-vertex x/y coordinate columns
+- `export` …
+  - `feather` — write a GeoFeather file
+  - `geo-dict` — print the GeoJSON mapping
+  - `json` — emit the GeoJSON string (stdout or --out)
+  - `mvt` — write a Mapbox Vector Tiles archive
+  - `parquet` — write a GeoParquet file
+  - `pmtiles` — write a PMTiles archive
+  - `wkb` — write a WKB table to CSV
+  - `wkt` — write a WKT table to CSV
 - `geom` …
   - `buffer` — buffer each geometry by a distance
   - `concave-hull` — the concave hull of each geometry
@@ -45,6 +54,16 @@ suggestion.
   - `scale` — scale geometries about their center
   - `simplify` — Douglas-Peucker simplification
   - `translate` — shift geometries by an offset
+- `import` …
+  - `bbox` — write a one-feature bbox polygon
+  - `features` — build an FC from a GeoJSON features file
+  - `featureserver` — read an Esri FeatureServer layer
+  - `gpx` — write every non-empty GPX sub-layer to a multi-layer output
+  - `ogc-features` — read an OGC API Features service
+  - `parquet` — convert a GeoParquet to a vector file
+  - `records` — build an FC from a CSV with a WKT geometry column
+  - `vectortileserver` — read a vector-tile service
+  - `xyz` — build a point layer from CSV x/y/z columns
 - `inspect` …
   - `count-coordinates` — per-feature coordinate count
   - `count-geometries` — per-feature geometry count
@@ -56,25 +75,8 @@ suggestion.
   - `is-valid-coverage` — whether polygons form a valid coverage
   - `is-valid-reason` — per-feature geometry-validity reason
   - `list-layers` — list the vector-layer names
-- `io` …
-  - `from-bbox` — write a one-feature bbox polygon
-  - `from-features` — build an FC from a GeoJSON features file
-  - `from-featureserver` — read an Esri FeatureServer layer
-  - `from-ogc-features` — read an OGC API Features service
-  - `from-records` — build an FC from a CSV with a WKT geometry column
-  - `from-vectortileserver` — read a vector-tile service
-  - `from-xyz` — build a point layer from CSV x/y/z columns
-  - `read-gpx` — write every non-empty GPX sub-layer to a multi-layer output
-  - `read-parquet` — convert a GeoParquet to a vector file
-  - `to-feather` — write a GeoFeather file
-  - `to-geo-dict` — print the GeoJSON mapping
-  - `to-json` — emit the GeoJSON string (stdout or --out)
-  - `to-mvt` — write a Mapbox Vector Tiles archive
-  - `to-parquet` — write a GeoParquet file
-  - `to-pmtiles` — write a PMTiles archive
-  - `to-wkb` — write a WKB table to CSV
-  - `to-wkt` — write a WKT table to CSV
 - `overlay` …
+  - `apply` — spatial overlay of two layers (--how)
   - `clip-by-rect` — clip to an axis-aligned window
   - `difference` — difference with --other
   - `dissolve` — merge features, optionally grouped
@@ -82,7 +84,6 @@ suggestion.
   - `filter` — keep features matching a mask predicate
   - `intersection` — intersection with --other
   - `intersection-all` — intersection of all features
-  - `overlay` — spatial overlay of two layers
   - `sjoin` — predicate-based spatial join
   - `sjoin-nearest` — nearest-neighbour spatial join
   - `symmetric-difference` — symmetric difference with --other
@@ -652,6 +653,158 @@ pyramids vector advanced with-coordinates [-h] [--layer LAYER] [--overwrite] [--
 | `--overwrite` | optional | replace the output if it already exists |
 | `--driver` | optional | OGR driver (default: inferred from extension) |
 
+## Subsystem `vector export`
+
+Write the data out to a file or format.
+
+#### `pyramids vector export feather`
+
+write a GeoFeather file
+
+```text
+pyramids vector export feather [-h] [--layer LAYER] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .feather path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export geo-dict`
+
+print the GeoJSON mapping
+
+```text
+pyramids vector export geo-dict [-h] [--layer LAYER] [--json] src
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--json` | optional | emit JSON |
+
+#### `pyramids vector export json`
+
+emit the GeoJSON string (stdout or --out)
+
+```text
+pyramids vector export json [-h] [--layer LAYER] [--out OUT] [--overwrite] src
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--out` | optional | write to this path instead of stdout |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export mvt`
+
+write a Mapbox Vector Tiles archive
+
+```text
+pyramids vector export mvt [-h] [--layer LAYER] [--min-zoom MIN_ZOOM] [--max-zoom MAX_ZOOM] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .mvt path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--min-zoom` | optional | minimum zoom level |
+| `--max-zoom` | optional | maximum zoom level |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export parquet`
+
+write a GeoParquet file
+
+```text
+pyramids vector export parquet [-h] [--layer LAYER] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .parquet path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export pmtiles`
+
+write a PMTiles archive
+
+```text
+pyramids vector export pmtiles [-h] [--layer LAYER] [--min-zoom MIN_ZOOM] [--max-zoom MAX_ZOOM] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .pmtiles path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--min-zoom` | optional | minimum zoom level |
+| `--max-zoom` | optional | maximum zoom level |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export wkb`
+
+write a WKB table to CSV
+
+```text
+pyramids vector export wkb [-h] [--layer LAYER] [--hex] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .csv path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--hex` | optional | encode geometries as hex |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector export wkt`
+
+write a WKT table to CSV
+
+```text
+pyramids vector export wkt [-h] [--layer LAYER] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination .csv path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name or index in a multi-layer source |
+| `--overwrite` | optional | replace the output if it already exists |
+
 ## Subsystem `vector geom`
 
 #### `pyramids vector geom buffer`
@@ -814,6 +967,182 @@ pyramids vector geom translate [-h] [--layer LAYER] [--overwrite] [--xoff XOFF] 
 | `--xoff` | optional | X offset |
 | `--yoff` | optional | Y offset |
 | `--zoff` | optional | Z offset |
+
+## Subsystem `vector import`
+
+Read / construct the data from another source.
+
+#### `pyramids vector import bbox`
+
+write a one-feature bbox polygon
+
+```text
+pyramids vector import bbox [-h] --bbox MINX MINY MAXX MAXY --epsg EPSG [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--bbox` | **required** | bounding box as MINX MINY MAXX MAXY |
+| `--epsg` | **required** | EPSG code of the bbox |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import features`
+
+build an FC from a GeoJSON features file
+
+```text
+pyramids vector import features [-h] [--crs CRS] [--driver DRIVER] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source JSON path (FeatureCollection or feature list) |
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
+| `--driver` | optional | OGR driver (default: inferred from extension) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import featureserver`
+
+read an Esri FeatureServer layer
+
+```text
+pyramids vector import featureserver [-h] --url URL [--where WHERE] [--out-fields OUT_FIELDS] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--url` | **required** | FeatureServer layer URL |
+| `--where` | optional | attribute filter |
+| `--out-fields` | optional | comma-separated fields |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import gpx`
+
+write every non-empty GPX sub-layer to a multi-layer output
+
+```text
+pyramids vector import gpx [-h] [--driver DRIVER] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source .gpx path |
+| `output` | required | destination multi-layer path (e.g. .gpkg) |
+
+| option | | description |
+|---|---|---|
+| `--driver` | optional | OGR driver (default: inferred from extension) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import ogc-features`
+
+read an OGC API Features service
+
+```text
+pyramids vector import ogc-features [-h] --endpoint ENDPOINT --collection COLLECTION [--bbox MINX MINY MAXX MAXY] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--endpoint` | **required** | service base URL |
+| `--collection` | **required** | collection id |
+| `--bbox` | optional | bounding box as MINX MINY MAXX MAXY |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import parquet`
+
+convert a GeoParquet to a vector file
+
+```text
+pyramids vector import parquet [-h] [--overwrite] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source GeoParquet path |
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import records`
+
+build an FC from a CSV with a WKT geometry column
+
+```text
+pyramids vector import records [-h] [--geometry GEOMETRY] [--crs CRS] [--driver DRIVER] [--overwrite] csv output
+```
+
+| argument | | description |
+|---|---|---|
+| `csv` | required | source CSV path |
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--geometry` | optional | name of the WKT geometry column |
+| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
+| `--driver` | optional | OGR driver (default: inferred from extension) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import vectortileserver`
+
+read a vector-tile service
+
+```text
+pyramids vector import vectortileserver [-h] --url URL [--layer LAYER] [--bbox MINX MINY MAXX MAXY] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--url` | **required** | vector-tile service URL |
+| `--layer` | optional | layer name |
+| `--bbox` | optional | bounding box as MINX MINY MAXX MAXY |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids vector import xyz`
+
+build a point layer from CSV x/y/z columns
+
+```text
+pyramids vector import xyz [-h] --x X --y Y [--z Z] [--crs CRS] [--z-column Z_COLUMN] [--driver DRIVER] [--overwrite] csv output
+```
+
+| argument | | description |
+|---|---|---|
+| `csv` | required | source CSV path |
+| `output` | required | destination path |
+
+| option | | description |
+|---|---|---|
+| `--x` | **required** | name of the X-coordinate column |
+| `--y` | **required** | name of the Y-coordinate column |
+| `--z` | optional | name of the optional value column |
+| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
+| `--z-column` | optional | name to store --z under |
+| `--driver` | optional | OGR driver (default: inferred from extension) |
+| `--overwrite` | optional | replace the output if it already exists |
 
 ## Subsystem `vector inspect`
 
@@ -989,329 +1318,27 @@ pyramids vector inspect list-layers [-h] [--json] src
 |---|---|---|
 | `--json` | optional | emit JSON |
 
-## Subsystem `vector io`
-
-#### `pyramids vector io from-bbox`
-
-write a one-feature bbox polygon
-
-```text
-pyramids vector io from-bbox [-h] --bbox MINX MINY MAXX MAXY --epsg EPSG [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--bbox` | **required** | bounding box as MINX MINY MAXX MAXY |
-| `--epsg` | **required** | EPSG code of the bbox |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-features`
-
-build an FC from a GeoJSON features file
-
-```text
-pyramids vector io from-features [-h] [--crs CRS] [--driver DRIVER] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source JSON path (FeatureCollection or feature list) |
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
-| `--driver` | optional | OGR driver (default: inferred from extension) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-featureserver`
-
-read an Esri FeatureServer layer
-
-```text
-pyramids vector io from-featureserver [-h] --url URL [--where WHERE] [--out-fields OUT_FIELDS] [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--url` | **required** | FeatureServer layer URL |
-| `--where` | optional | attribute filter |
-| `--out-fields` | optional | comma-separated fields |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-ogc-features`
-
-read an OGC API Features service
-
-```text
-pyramids vector io from-ogc-features [-h] --endpoint ENDPOINT --collection COLLECTION [--bbox MINX MINY MAXX MAXY] [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--endpoint` | **required** | service base URL |
-| `--collection` | **required** | collection id |
-| `--bbox` | optional | bounding box as MINX MINY MAXX MAXY |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-records`
-
-build an FC from a CSV with a WKT geometry column
-
-```text
-pyramids vector io from-records [-h] [--geometry GEOMETRY] [--crs CRS] [--driver DRIVER] [--overwrite] csv output
-```
-
-| argument | | description |
-|---|---|---|
-| `csv` | required | source CSV path |
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--geometry` | optional | name of the WKT geometry column |
-| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
-| `--driver` | optional | OGR driver (default: inferred from extension) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-vectortileserver`
-
-read a vector-tile service
-
-```text
-pyramids vector io from-vectortileserver [-h] --url URL [--layer LAYER] [--bbox MINX MINY MAXX MAXY] [--overwrite] output
-```
-
-| argument | | description |
-|---|---|---|
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--url` | **required** | vector-tile service URL |
-| `--layer` | optional | layer name |
-| `--bbox` | optional | bounding box as MINX MINY MAXX MAXY |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io from-xyz`
-
-build a point layer from CSV x/y/z columns
-
-```text
-pyramids vector io from-xyz [-h] --x X --y Y [--z Z] [--crs CRS] [--z-column Z_COLUMN] [--driver DRIVER] [--overwrite] csv output
-```
-
-| argument | | description |
-|---|---|---|
-| `csv` | required | source CSV path |
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--x` | **required** | name of the X-coordinate column |
-| `--y` | **required** | name of the Y-coordinate column |
-| `--z` | optional | name of the optional value column |
-| `--crs` | optional | CRS to attach to the result (EPSG int, 'EPSG:4326', WKT, PROJ4) |
-| `--z-column` | optional | name to store --z under |
-| `--driver` | optional | OGR driver (default: inferred from extension) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io read-gpx`
-
-write every non-empty GPX sub-layer to a multi-layer output
-
-```text
-pyramids vector io read-gpx [-h] [--driver DRIVER] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source .gpx path |
-| `output` | required | destination multi-layer path (e.g. .gpkg) |
-
-| option | | description |
-|---|---|---|
-| `--driver` | optional | OGR driver (default: inferred from extension) |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io read-parquet`
-
-convert a GeoParquet to a vector file
-
-```text
-pyramids vector io read-parquet [-h] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source GeoParquet path |
-| `output` | required | destination path |
-
-| option | | description |
-|---|---|---|
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-feather`
-
-write a GeoFeather file
-
-```text
-pyramids vector io to-feather [-h] [--layer LAYER] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .feather path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-geo-dict`
-
-print the GeoJSON mapping
-
-```text
-pyramids vector io to-geo-dict [-h] [--layer LAYER] [--json] src
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--json` | optional | emit JSON |
-
-#### `pyramids vector io to-json`
-
-emit the GeoJSON string (stdout or --out)
-
-```text
-pyramids vector io to-json [-h] [--layer LAYER] [--out OUT] [--overwrite] src
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--out` | optional | write to this path instead of stdout |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-mvt`
-
-write a Mapbox Vector Tiles archive
-
-```text
-pyramids vector io to-mvt [-h] [--layer LAYER] [--min-zoom MIN_ZOOM] [--max-zoom MAX_ZOOM] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .mvt path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--min-zoom` | optional | minimum zoom level |
-| `--max-zoom` | optional | maximum zoom level |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-parquet`
-
-write a GeoParquet file
-
-```text
-pyramids vector io to-parquet [-h] [--layer LAYER] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .parquet path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-pmtiles`
-
-write a PMTiles archive
-
-```text
-pyramids vector io to-pmtiles [-h] [--layer LAYER] [--min-zoom MIN_ZOOM] [--max-zoom MAX_ZOOM] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .pmtiles path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--min-zoom` | optional | minimum zoom level |
-| `--max-zoom` | optional | maximum zoom level |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-wkb`
-
-write a WKB table to CSV
-
-```text
-pyramids vector io to-wkb [-h] [--layer LAYER] [--hex] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .csv path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--hex` | optional | encode geometries as hex |
-| `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector io to-wkt`
-
-write a WKT table to CSV
-
-```text
-pyramids vector io to-wkt [-h] [--layer LAYER] [--overwrite] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination .csv path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name or index in a multi-layer source |
-| `--overwrite` | optional | replace the output if it already exists |
-
 ## Subsystem `vector overlay`
+
+#### `pyramids vector overlay apply`
+
+spatial overlay of two layers (--how)
+
+```text
+pyramids vector overlay apply [-h] [--layer LAYER] [--overwrite] --right RIGHT [--how {intersection,union,identity,symmetric_difference,difference}] src output
+```
+
+| argument | | description |
+|---|---|---|
+| `src` | required | source vector path |
+| `output` | required | destination vector path |
+
+| option | | description |
+|---|---|---|
+| `--layer` | optional | layer name/index for a multi-layer source |
+| `--overwrite` | optional | replace the output if it already exists |
+| `--right` | **required** | right-hand vector path to combine with the source |
+| `--how` | optional | overlay mode (choices: `intersection`, `union`, `identity`, `symmetric_difference`, `difference`) |
 
 #### `pyramids vector overlay clip-by-rect`
 
@@ -1446,26 +1473,6 @@ pyramids vector overlay intersection-all [-h] [--layer LAYER] [--overwrite] src 
 |---|---|---|
 | `--layer` | optional | layer name/index for a multi-layer source |
 | `--overwrite` | optional | replace the output if it already exists |
-
-#### `pyramids vector overlay overlay`
-
-spatial overlay of two layers
-
-```text
-pyramids vector overlay overlay [-h] [--layer LAYER] [--overwrite] --right RIGHT [--how {intersection,union,identity,symmetric_difference,difference}] src output
-```
-
-| argument | | description |
-|---|---|---|
-| `src` | required | source vector path |
-| `output` | required | destination vector path |
-
-| option | | description |
-|---|---|---|
-| `--layer` | optional | layer name/index for a multi-layer source |
-| `--overwrite` | optional | replace the output if it already exists |
-| `--right` | **required** | right-hand vector path to combine with the source |
-| `--how` | optional | overlay mode (choices: `intersection`, `union`, `identity`, `symmetric_difference`, `difference`) |
 
 #### `pyramids vector overlay sjoin`
 
