@@ -67,7 +67,13 @@ _FILE_FILL = -999
 #: CF conventions string stamped on the exported dataset, matching the file writer.
 _CONVENTIONS = UGRID_CONVENTIONS
 
-_XARRAY_HINT = extra_hint("xarray is required for UGRID xarray interop.", "interop")
+# xarray is an optional peer dependency, not a pyramids extra (there is no `[interop]` extra), so point
+# users at xarray itself rather than at a non-existent `pyramids-core[interop]` / `pyramids-interop` (#1512).
+_XARRAY_HINT = (
+    "xarray is required for UGRID xarray interop. Install it with one of:\n"
+    "  - PyPI:        pip install xarray\n"
+    "  - conda-forge: conda install -c conda-forge xarray"
+)
 _ZARR_HINT = extra_hint("Zarr IO requires the optional 'zarr' dependency.", "lazy")
 _DASK_HINT = extra_hint(
     "A chunked mesh read requires the optional 'dask' dependency.", "lazy"
