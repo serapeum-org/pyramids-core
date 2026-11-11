@@ -8693,6 +8693,28 @@ that leaked out of an empty table lookup. Only affects code catching the old typ
 </table>
 <h2 id="dataset"><a class="toclink" href="#dataset">dataset</a><a class="headerlink" href="#dataset" title="Permanent link">#</a></h2>
 <h3 id="unreleased_1"><a class="toclink" href="#unreleased_1">unreleased</a><a class="headerlink" href="#unreleased_1" title="Permanent link">#</a></h3>
+<p><strong><code>Dataset.read_file</code> now opens a single-raster <code>.zarr</code> store through the GeoZarr reader (issue #1457).</strong> A
+<code>.zarr</code> path previously fell through to GDAL's generic Zarr driver, which does <strong>not</strong> round-trip the GeoZarr
+metadata <code>to_zarr</code> writes — <code>read_file("x.zarr")</code> returned a georeferenceless raster (<code>epsg</code> <code>None</code>, an identity
+geotransform). It now routes to <code>Dataset.from_zarr</code>, so CRS, geotransform and band roles are recovered, identical
+to calling <code>from_zarr</code> directly. This is a silent behavior change: code that read a <code>.zarr</code> through <code>read_file</code> and
+relied on the (wrong) missing georeferencing will now see the real CRS and transform.</p>
+<ul>
+<li>A <strong>cube</strong> store written by <code>DatasetCollection.to_zarr</code> is a 4-D <code>(time, band, y, x)</code> stack, not a single
+  raster. <code>read_file</code> now raises <code>ValueError</code> pointing at <code>DatasetCollection.from_zarr</code> instead of mis-reading it
+  through GDAL. Open cubes with <code>DatasetCollection.from_zarr</code>.</li>
+<li><strong>Only pyramids-written GeoZarr stores are claimed.</strong> A <code>.zarr</code> store is routed only when it carries the
+  pyramids layout (a <code>data</code> array beside a <code>spatial_ref</code> node). Any other <code>.zarr</code> — a foreign / xarray-written
+  store, a plain file that merely ends in <code>.zarr</code>, or a remote store needing credentials this call cannot forward
+  — falls through to GDAL and is read exactly as before, so no previously-working read breaks.</li>
+<li>Because a routed GeoZarr store is read by <code>from_zarr</code>, the GDAL-only arguments (<code>read_only</code>, <code>file_i</code>,
+  <code>open_options</code>, <code>gdal_env</code>) do not apply on that path; passing a non-default one emits a <code>UserWarning</code>.</li>
+<li>To bypass the routing and open a <code>.zarr</code> through GDAL directly (the old behavior), pass an explicit <code>driver=</code> or
+  <code>vsi=</code> to <code>read_file</code>.</li>
+<li>Remote <code>.zarr</code> URLs (<code>s3://…/x.zarr</code>, <code>gs://…</code>, …) route the same way when they are reachable without extra
+  credentials; for fsspec credentials call <code>from_zarr(store, storage_options=…)</code> directly, since <code>read_file</code> does
+  not take <code>storage_options</code>.</li>
+</ul>
 <p><strong>Naming cleanup (issue #1462): several members renamed to a single canonical spelling.</strong> Each old name keeps
 working as a <code>DeprecationWarning</code>-emitting alias (so existing code runs unchanged), except
 <code>Cell.array_to_map_coordinates</code>, which is <strong>removed</strong> — it duplicated <code>Dataset.xy</code>, so call <code>xy</code> instead (note the
