@@ -109,52 +109,10 @@ def place_nodes_on_network(
     geom_y = np.asarray(geom_y, dtype=np.float64)
     vertices_per_branch = np.asarray(vertices_per_branch)
 
-    if branch_index.ndim != 1 or offset.ndim != 1:
-        raise ValueError("branch_index and offset must be 1-D arrays")
-    if branch_index.shape != offset.shape:
-        raise ValueError(
-            f"branch_index and offset must have the same shape; got {branch_index.shape} "
-            f"and {offset.shape}"
-        )
-    # Coerce branch_index to int64 here (after the shape checks, so a 2-D array reports the shape
-    # error first). A non-numeric dtype (object/str/bool), a fractional or non-finite value, or a
-    # value outside the int64 range is a data error: casting would truncate (0.5 -> 0) or wrap, and
-    # the exact-equality branch match would then silently drop the node. Reject it as a ValueError.
-    if not np.issubdtype(branch_index.dtype, np.integer):
-        if not np.issubdtype(branch_index.dtype, np.floating):
-            raise ValueError(
-                f"branch_index must be an integer-valued numeric array, got dtype "
-                f"{branch_index.dtype}"
-            )
-        if not np.all(np.isfinite(branch_index)) or not np.all(
-            branch_index == np.floor(branch_index)
-        ):
-            raise ValueError(
-                "branch_index must be integer-valued (no fractional or NaN indices)"
-            )
-        info = np.iinfo(np.int64)
-        if branch_index.size and (
-            branch_index.min() < info.min or branch_index.max() > info.max
-        ):
-            raise ValueError("branch_index values exceed the int64 range")
-        branch_index = branch_index.astype(np.int64)
-
-    if geom_x.ndim != 1 or geom_y.ndim != 1:
-        raise ValueError("geom_x and geom_y must be 1-D arrays")
-    if geom_x.shape != geom_y.shape:
-        raise ValueError(
-            f"geom_x and geom_y must have the same shape; got {geom_x.shape} and "
-            f"{geom_y.shape}"
-        )
-    if vertices_per_branch.ndim != 1:
-        raise ValueError("vertices_per_branch must be a 1-D array")
-    if np.any(vertices_per_branch < 0):
-        raise ValueError("vertices_per_branch must be non-negative")
-    if int(vertices_per_branch.sum()) != geom_x.shape[0]:
-        raise ValueError(
-            f"vertices_per_branch sums to {int(vertices_per_branch.sum())} but the flat "
-            f"vertex list has {geom_x.shape[0]} vertices; the counts must tile it exactly"
-        )
+    _require_matching_1d(branch_index, offset, "branch_index", "offset")
+    branch_index = _coerce_branch_index_to_int64(branch_index)
+    _require_matching_1d(geom_x, geom_y, "geom_x", "geom_y")
+    _validate_vertices_per_branch(vertices_per_branch, geom_x.shape[0])
     # Non-finite data would propagate a silent NaN through np.interp into the returned
     # coordinates; reject it so a bad offset/vertex fails loudly instead.
     if not np.all(np.isfinite(offset)):
@@ -162,27 +120,206 @@ def place_nodes_on_network(
     if not np.all(np.isfinite(geom_x)) or not np.all(np.isfinite(geom_y)):
         raise ValueError("geom_x and geom_y must be finite (no NaN/inf)")
     n_branch = vertices_per_branch.shape[0]
-    if edge_length is not None:
-        edge_length = np.asarray(edge_length, dtype=np.float64)
-        if edge_length.shape != (n_branch,):
-            raise ValueError(
-                f"edge_length must have shape ({n_branch},) to match vertices_per_branch; "
-                f"got {edge_length.shape}"
-            )
-        if not np.all(np.isfinite(edge_length)):
-            raise ValueError("edge_length must be finite (no NaN/inf)")
-        if np.any(edge_length < 0):
-            raise ValueError("edge_length must be non-negative")
+    edge_length = _coerce_edge_length(edge_length, n_branch)
+    _require_branch_in_range(branch_index, n_branch)
+    return _interpolate_nodes(
+        branch_index, offset, geom_x, geom_y, vertices_per_branch, edge_length
+    )
+
+
+def _require_matching_1d(
+    first: np.ndarray, second: np.ndarray, first_name: str, second_name: str
+) -> None:
+    """Require two arrays to be 1-D and share a shape.
+
+    Args:
+        first: The first array.
+        second: The second array.
+        first_name: Name of the first array, for the error message.
+        second_name: Name of the second array, for the error message.
+
+    Raises:
+        ValueError: Either array is not 1-D, or their shapes differ.
+    """
+    if first.ndim != 1 or second.ndim != 1:
+        raise ValueError(f"{first_name} and {second_name} must be 1-D arrays")
+    if first.shape != second.shape:
+        raise ValueError(
+            f"{first_name} and {second_name} must have the same shape; got "
+            f"{first.shape} and {second.shape}"
+        )
+
+
+def _coerce_branch_index_to_int64(branch_index: np.ndarray) -> np.ndarray:
+    """Return ``branch_index`` as ``int64``, rejecting non-integer-valued input.
+
+    A non-numeric dtype (object/str/bool), a fractional or non-finite value, or a value outside
+    the ``int64`` range is a data error: casting would truncate (``0.5 -> 0``) or wrap, and the
+    exact-equality branch match would then silently drop the node.
+
+    Args:
+        branch_index: The per-node branch index array.
+
+    Returns:
+        np.ndarray: ``branch_index`` as ``int64`` (returned unchanged when already integer).
+
+    Raises:
+        ValueError: The dtype is not numeric, a value is fractional/non-finite, or a value is
+            outside the ``int64`` range.
+    """
+    if np.issubdtype(branch_index.dtype, np.integer):
+        return branch_index
+    if not np.issubdtype(branch_index.dtype, np.floating):
+        raise ValueError(
+            f"branch_index must be an integer-valued numeric array, got dtype {branch_index.dtype}"
+        )
+    if not np.all(np.isfinite(branch_index)) or not np.all(
+        branch_index == np.floor(branch_index)
+    ):
+        raise ValueError(
+            "branch_index must be integer-valued (no fractional or NaN indices)"
+        )
+    info = np.iinfo(np.int64)
+    if branch_index.size and (
+        branch_index.min() < info.min or branch_index.max() > info.max
+    ):
+        raise ValueError("branch_index values exceed the int64 range")
+    return branch_index.astype(np.int64)
+
+
+def _validate_vertices_per_branch(
+    vertices_per_branch: np.ndarray, n_vertex: int
+) -> None:
+    """Require the per-branch vertex counts to tile the flat vertex list exactly.
+
+    Args:
+        vertices_per_branch: Vertex count of each branch, in branch order.
+        n_vertex: The length of the flat vertex list the counts must sum to.
+
+    Raises:
+        ValueError: ``vertices_per_branch`` is not 1-D, is negative, or does not sum to
+            ``n_vertex``.
+    """
+    if vertices_per_branch.ndim != 1:
+        raise ValueError("vertices_per_branch must be a 1-D array")
+    if np.any(vertices_per_branch < 0):
+        raise ValueError("vertices_per_branch must be non-negative")
+    total = int(vertices_per_branch.sum())
+    if total != n_vertex:
+        raise ValueError(
+            f"vertices_per_branch sums to {total} but the flat vertex list has {n_vertex} "
+            f"vertices; the counts must tile it exactly"
+        )
+
+
+def _coerce_edge_length(
+    edge_length: np.ndarray | None, n_branch: int
+) -> np.ndarray | None:
+    """Return ``edge_length`` as a validated ``float64`` array of length ``n_branch``, or None.
+
+    Args:
+        edge_length: The per-branch declared length, or ``None``.
+        n_branch: The number of branches the length must match.
+
+    Returns:
+        np.ndarray | None: The validated ``float64`` array, or ``None`` when none was given.
+
+    Raises:
+        ValueError: ``edge_length`` has a length other than ``n_branch``, is not finite, or is
+            negative.
+    """
+    if edge_length is None:
+        return None
+    edge_length = np.asarray(edge_length, dtype=np.float64)
+    if edge_length.shape != (n_branch,):
+        raise ValueError(
+            f"edge_length must have shape ({n_branch},) to match vertices_per_branch; "
+            f"got {edge_length.shape}"
+        )
+    if not np.all(np.isfinite(edge_length)):
+        raise ValueError("edge_length must be finite (no NaN/inf)")
+    if np.any(edge_length < 0):
+        raise ValueError("edge_length must be non-negative")
+    return edge_length
+
+
+def _require_branch_in_range(branch_index: np.ndarray, n_branch: int) -> None:
+    """Require every branch index to fall in ``[0, n_branch)``.
+
+    Args:
+        branch_index: The ``int64`` per-node branch index array.
+        n_branch: The number of branches.
+
+    Raises:
+        ValueError: Any index is negative or ``>= n_branch``.
+    """
     if branch_index.size and (branch_index.min() < 0 or branch_index.max() >= n_branch):
         raise ValueError(
             f"branch_index out of range: values must be in [0, {n_branch}); got "
             f"[{int(branch_index.min())}, {int(branch_index.max())}]"
         )
 
+
+def _branch_distance_axis(
+    vertex_x: np.ndarray,
+    vertex_y: np.ndarray,
+    edge_length: np.ndarray | None,
+    index: int,
+) -> np.ndarray:
+    """Cumulative chord distance along one branch, rescaled to its declared length if given.
+
+    Args:
+        vertex_x: The branch's vertex x coordinates.
+        vertex_y: The branch's vertex y coordinates.
+        edge_length: Per-branch declared lengths, or ``None`` to use raw chord distance.
+        index: The branch's index into ``edge_length``.
+
+    Returns:
+        np.ndarray: The distance axis for :func:`numpy.interp`, cumulative from the branch start.
+    """
+    segment = np.hypot(np.diff(vertex_x), np.diff(vertex_y))
+    distance = np.concatenate(([0.0], np.cumsum(segment)))
+    if edge_length is not None and distance[-1] > 0:
+        length = float(edge_length[index])
+        if length > 0:
+            # Rescale the chord-distance axis to the declared chainage so a node's offset lands at
+            # its fraction along the polyline rather than at the same raw distance.
+            distance = distance * (length / distance[-1])
+    return distance
+
+
+def _interpolate_nodes(
+    branch_index: np.ndarray,
+    offset: np.ndarray,
+    geom_x: np.ndarray,
+    geom_y: np.ndarray,
+    vertices_per_branch: np.ndarray,
+    edge_length: np.ndarray | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Interpolate each node's x/y along its branch polyline.
+
+    Inputs are assumed already validated by :func:`place_nodes_on_network` (shapes match,
+    ``branch_index`` is ``int64`` and in range, data is finite), so every node is visited and
+    filled and no ``nan`` survives.
+
+    Args:
+        branch_index: The ``int64`` per-node branch index array.
+        offset: The per-node along-branch offset.
+        geom_x: Flat branch-vertex x coordinates.
+        geom_y: Flat branch-vertex y coordinates.
+        vertices_per_branch: Vertex count of each branch, in branch order.
+        edge_length: Validated per-branch declared lengths, or ``None``.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: The node ``x`` and ``y`` arrays.
+
+    Raises:
+        ValueError: A node references a branch with no geometry vertices.
+    """
     node_x = np.full(branch_index.shape[0], np.nan, dtype=np.float64)
     node_y = np.full(branch_index.shape[0], np.nan, dtype=np.float64)
     starts = np.concatenate(([0], np.cumsum(vertices_per_branch)))
-    for index in range(n_branch):
+    for index in range(vertices_per_branch.shape[0]):
         on_branch = branch_index == index
         if not on_branch.any():
             continue
@@ -192,12 +329,7 @@ def place_nodes_on_network(
             raise ValueError(
                 f"node(s) reference branch {index}, which has no geometry vertices"
             )
-        segment = np.hypot(np.diff(vertex_x), np.diff(vertex_y))
-        distance = np.concatenate(([0.0], np.cumsum(segment)))
-        if edge_length is not None and distance[-1] > 0:
-            length = float(edge_length[index])
-            if length > 0:
-                distance = distance * (length / distance[-1])
+        distance = _branch_distance_axis(vertex_x, vertex_y, edge_length, index)
         here = offset[on_branch]
         node_x[on_branch] = np.interp(here, distance, vertex_x)
         node_y[on_branch] = np.interp(here, distance, vertex_y)
