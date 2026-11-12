@@ -2,12 +2,13 @@
 
 Thin 1:1 wrappers over the analysis surface of
 :class:`pyramids.netcdf.ugrid.MeshDataset`: terrain derivatives (``slope``,
-``aspect``, ``hillshade``), focal statistics (``focal-mean``, ``focal-std``),
-morphology (``binary-dilation``, ``binary-erosion``), connected-value grouping
-(``cluster``, ``sieve``), topological distance (``proximity``), domain summaries
-(``zonal-stats``, ``histogram``, ``domain-area``, ``count-domain-cells``,
-``footprint``), point / line / random sampling (``sample-point``, ``sample``,
-``sample-line``, ``sample-random``), and iso-value tracing (``contour``). No mesh
+``aspect``, ``hillshade``), focal statistics (``focal-mean``, ``focal-std``,
+``focal-reduce``), morphology (``binary-dilation``, ``binary-erosion``),
+connected-value grouping (``cluster``, ``sieve``), topological distance
+(``proximity``), domain summaries (``zonal-stats``, ``histogram``, ``domain-area``,
+``count-domain-cells``, ``footprint``), point / line / random sampling
+(``sample-point``, ``sample``, ``sample-line``, ``sample-random``), along-time
+fitting (``polyfit``, ``curvefit``), and iso-value tracing (``contour``). No mesh
 logic lives here — each handler maps onto one existing method; the top-level
 parser only wires them together.
 
@@ -16,10 +17,12 @@ The method :meth:`MeshDataset.extract` samples variable values at arbitrary
 that *rasterizes* a mesh variable onto a grid (``cli_ugrid.py``). To avoid the
 clash, the coordinate sampler is exposed here as ``sample-point``.
 
-Deferred:
-    - ``focal_apply`` — takes a Python callable (the per-neighbourhood reducer)
-      that has no file/expression form, so it is not CLI-serialisable. The two
-      built-in reducers are already surfaced as ``focal-mean`` / ``focal-std``.
+``focal_apply`` and ``curvefit`` both take a Python callable (the per-neighbourhood
+reducer / the ``f(x, *params)`` model) that has no command-line form, so they are
+surfaced through named registries instead (issue #1542): ``focal-reduce --reducer``
+selects a :data:`~pyramids.netcdf.ugrid.focal.FOCAL_REDUCERS` entry (``mean`` / ``std``
+keep their own faster verbs), and ``curvefit --model`` selects a
+:data:`~pyramids.netcdf.ugrid.curve_models.CURVE_MODELS` entry.
 """
 
 from __future__ import annotations
@@ -40,6 +43,8 @@ from pyramids._cli_shared import (
 )
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf.ugrid import MeshDataset
+from pyramids.netcdf.ugrid.curve_models import CURVE_MODELS
+from pyramids.netcdf.ugrid.focal import FOCAL_REDUCERS
 
 _HELP_MESH_FILE = "UGRID NetCDF path"
 _HELP_MESH_OUT = "destination mesh (NetCDF) path"
@@ -186,6 +191,32 @@ def _cmd_focal_std(args: argparse.Namespace) -> int:
     mesh.with_variable("focal_std", np.asarray(values), location="face").to_file(
         args.output
     )
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_focal_reduce(args: argparse.Namespace) -> int:
+    """Handle ``mesh focal-reduce`` — aggregate each face's neighbourhood with a named reducer.
+
+    The arbitrary-callable escape hatch of :meth:`MeshDataset.focal_apply`, surfaced for the
+    shell: ``--reducer`` selects one of the named reducers (median, min, max, sum, range, var),
+    since a callable has no command-line form. ``mean`` / ``std`` keep their own faster verbs.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``reducer``, ``rings``, ``var``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    reducer = FOCAL_REDUCERS[args.reducer]
+    mesh = MeshDataset.read_file(args.file)
+    with map_lookup_errors():
+        values = mesh.focal_apply(reducer, rings=args.rings, variable_name=args.var)
+    mesh.with_variable(
+        f"focal_{args.reducer}", np.asarray(values), location="face"
+    ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -653,6 +684,27 @@ def _register_terrain(msub: argparse._SubParsersAction) -> None:
     _add_overwrite(fstd)
     fstd.set_defaults(func=_cmd_focal_std)
 
+    freduce = msub.add_parser(
+        "focal-reduce", help="k-ring neighbourhood aggregated with a named reducer"
+    )
+    freduce.add_argument("file", help=_HELP_MESH_FILE)
+    freduce.add_argument("output", help=_HELP_MESH_OUT)
+    freduce.add_argument(
+        "--reducer",
+        required=True,
+        choices=sorted(FOCAL_REDUCERS),
+        help="neighbourhood reducer (mean/std have their own faster verbs)",
+    )
+    freduce.add_argument(
+        "--rings",
+        type=int,
+        default=1,
+        help="neighbourhood radius in rings (default: 1)",
+    )
+    _add_var(freduce)
+    _add_overwrite(freduce)
+    freduce.set_defaults(func=_cmd_focal_reduce)
+
     prox = msub.add_parser("proximity", help="topological hop distance to target faces")
     prox.add_argument("file", help=_HELP_MESH_FILE)
     prox.add_argument("output", help=_HELP_MESH_OUT)
@@ -946,6 +998,44 @@ def _cmd_polyfit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_p0(raw: str | None) -> list[float] | None:
+    """Parse a ``--p0`` string of comma-separated floats into initial guesses.
+
+    Args:
+        raw: The raw ``--p0`` value, or ``None`` when the flag was omitted.
+
+    Returns:
+        list[float] | None: The parsed guesses, or ``None`` for "let curve_fit default them".
+    """
+    if raw is None:
+        return None
+    return [float(piece) for piece in raw.split(",")]
+
+
+def _cmd_curvefit(args: argparse.Namespace) -> int:
+    """Handle ``pyramids mesh curvefit`` — fit a named model per element along time.
+
+    The arbitrary-callable escape hatch of :meth:`MeshDataset.curvefit`, surfaced for the shell:
+    ``--model`` selects one of the named models (:data:`CURVE_MODELS`), since the model callable
+    has no command-line form. The time axis is replaced by a ``parameter`` axis carrying the
+    fitted parameters; an element whose fit does not converge yields ``NaN`` parameters.
+
+    Args:
+        args: Parsed args with ``file``, ``output``, ``model``, ``p0``, ``var``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    model = CURVE_MODELS[args.model]
+    mesh = MeshDataset.read_file(args.file)
+    with map_lookup_errors():
+        result = mesh.curvefit(model, p0=_parse_p0(args.p0), variable_name=args.var)
+    result.to_file(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def _register_fitting(msub: argparse._SubParsersAction) -> None:
     """Register the along-time fitting verbs on the ``mesh`` sub-command action.
 
@@ -963,6 +1053,26 @@ def _register_fitting(msub: argparse._SubParsersAction) -> None:
     _add_var(pf)
     _add_overwrite(pf)
     pf.set_defaults(func=_cmd_polyfit)
+
+    cf = msub.add_parser(
+        "curvefit", help="per-element fit of a named model along time (writes parameters)"
+    )
+    cf.add_argument("file", help=_HELP_MESH_FILE)
+    cf.add_argument("output", help=_HELP_MESH_OUT)
+    cf.add_argument(
+        "--model",
+        required=True,
+        choices=sorted(CURVE_MODELS),
+        help="model to fit (polynomial trends use 'polyfit')",
+    )
+    cf.add_argument(
+        "--p0",
+        default=None,
+        help="optional initial guesses, comma-separated (e.g. 1,0.5); default: curve_fit's",
+    )
+    _add_var(cf)
+    _add_overwrite(cf)
+    cf.set_defaults(func=_cmd_curvefit)
 
 
 def add_ugrid_analysis_commands(msub: argparse._SubParsersAction) -> None:
