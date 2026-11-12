@@ -37,6 +37,7 @@ from pyramids._cli_shared import (
     ProgressReporter,
     info_print,
     json_safe,
+    map_lookup_errors,
     needs_lazy_extra,
     refuse_existing,
     validate_index_pattern,
@@ -498,7 +499,7 @@ def _load_stac_items(path: str) -> Any:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(data, list):
         items: Any = data
-    elif isinstance(data, dict) and "features" in data:
+    elif isinstance(data, dict) and isinstance(data.get("features"), list):
         items = data["features"]
     elif isinstance(data, dict) and data.get("type") == "Feature":
         items = [data]
@@ -525,20 +526,21 @@ def _cmd_collection_from_point(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    coll = DatasetCollection.from_point(
-        args.lat,
-        args.lon,
-        collection=args.collection,
-        bands=_split_assets(args.bands),
-        start_date=args.start,
-        end_date=args.end,
-        edge_size=args.edge_size,
-        resolution=args.resolution,
-        units=args.units,
-        stac=args.stac,
-        query=json.loads(args.query) if args.query else None,
-        align=args.align,
-    )
+    with map_lookup_errors():
+        coll = DatasetCollection.from_point(
+            args.lat,
+            args.lon,
+            collection=args.collection,
+            bands=_split_assets(args.bands),
+            start_date=args.start,
+            end_date=args.end,
+            edge_size=args.edge_size,
+            resolution=args.resolution,
+            units=args.units,
+            stac=args.stac,
+            query=json.loads(args.query) if args.query else None,
+            align=args.align,
+        )
     coll.to_netcdf(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -559,13 +561,14 @@ def _cmd_collection_from_stac(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    coll = DatasetCollection.from_stac(
-        _load_stac_items(args.items),
-        _split_assets(args.asset),
-        bbox=tuple(args.bbox) if args.bbox else None,
-        max_items=args.max_items,
-        groupby=args.groupby,
-    )
+    with map_lookup_errors():
+        coll = DatasetCollection.from_stac(
+            _load_stac_items(args.items),
+            _split_assets(args.asset),
+            bbox=tuple(args.bbox) if args.bbox else None,
+            max_items=args.max_items,
+            groupby=args.groupby,
+        )
     coll.to_netcdf(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
