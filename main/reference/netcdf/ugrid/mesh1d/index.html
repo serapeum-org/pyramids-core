@@ -6223,6 +6223,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        place_nodes_on_network
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pyramids.netcdf.ugrid.mesh1d.Mesh1d" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8145,6 +8156,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        place_nodes_on_network
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pyramids.netcdf.ugrid.mesh1d.Mesh1d" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8454,7 +8476,456 @@ outlet (an odd cycle) has no defensible direction and is refused by name.</p>
 There is no built-in route: the UGRID topology parser builds a <code>Mesh2d</code> whatever
 <code>topology_dimension</code> a file declares, so a network always comes from a plugin. Writing a network is
 still unimplemented, so it does not travel through <code>to_file</code>.</p>
+<p><strong>Branch+offset node geometry.</strong> A D-Flow FM / D-HYDRO 1D network stores its computational nodes as
+a branch index plus an along-branch offset (a chainage), not as explicit x/y. Turning that pair into
+coordinates is a linear-referencing derivation, which belongs here rather than in a driver:
+<code>place_nodes_on_network</code> takes each node's branch index and offset plus the branches' polyline
+geometry and returns the node x/y, honouring a declared per-branch <code>edge_length</code> as the chainage
+basis when it differs from the digitised chord length. A driver reads the raw arrays and feeds them
+in; the math lives in pyramids.</p>
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network" class="doc doc-heading"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network" class="toclink">
+            <code class="highlight language-python"><span class="n">pyramids</span><span class="o">.</span><span class="n">netcdf</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">linear_referencing</span><span class="o">.</span><span class="n">place_nodes_on_network</span><span class="p">(</span><span class="n">branch_index</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">geom_x</span><span class="p">,</span> <span class="n">geom_y</span><span class="p">,</span> <span class="n">vertices_per_branch</span><span class="p">,</span> <span class="n">edge_length</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</a><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network" class="headerlink" title="Permanent link">#</a></h3>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Resolve branch+offset node positions to x/y by linear referencing along the branches.</p>
+<p>Each branch's polyline is sliced from the flat vertex list by the cumulative vertex
+count, the cumulative chord length along its vertices is measured from the branch start,
+and every node on that branch has its x and y linearly interpolated at its offset. A
+single-vertex branch degenerates to that vertex; an offset past a branch's end clamps to
+its last vertex, and a negative offset clamps to its first vertex (:func:<code>numpy.interp</code>
+behaviour at both ends).</p>
+<p>In D-HYDRO an offset is a <strong>chainage</strong> in <code>[0, edge_length]</code>, and a branch's declared
+length need not equal its digitised polyline's chord length. When <code>edge_length</code> is
+given, each branch's distance axis is rescaled from chord length to the declared length,
+so a node's chainage is placed at the same <em>fraction</em> along the polyline rather than at
+the same raw distance. Without it, the raw chord length is used (equivalent when the two
+agree, as they do for well-formed files).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>branch_index</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-node branch index, 0-based, shape <code>(n_node,)</code>. (A file's
+<code>start_index</code> must already have been subtracted by the caller.)</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>offset</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-node distance (chainage) along the branch, shape <code>(n_node,)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>geom_x</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Flat branch-vertex x coordinates, shape <code>(n_vertex,)</code> -- every branch's
+polyline vertices concatenated in branch order.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>geom_y</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Flat branch-vertex y coordinates, shape <code>(n_vertex,)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>vertices_per_branch</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Vertex count of each branch, in branch order, shape
+<code>(n_branch,)</code>. Must sum to <code>n_vertex</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>edge_length</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-branch declared length used to interpret the chainage, shape
+<code>(n_branch,)</code>, or <code>None</code> to measure by chord length alone. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, <span title="numpy.ndarray">ndarray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>tuple[np.ndarray, np.ndarray]: The node <code>x</code> and <code>y</code> arrays, each shape
+<code>(n_node,)</code> and <code>float64</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>branch_index</code> is not a numeric dtype, is not integer-valued (fractional
+or NaN indices), or exceeds the int64 range;
+<code>branch_index</code> and <code>offset</code> differ in shape or are not 1-D; <code>geom_x</code> and
+<code>geom_y</code> differ in shape or are not 1-D; <code>vertices_per_branch</code> is not 1-D, is
+negative, or does not sum to <code>n_vertex</code>; <code>offset</code>, <code>geom_x</code> or <code>geom_y</code> is
+not finite (NaN/inf); <code>edge_length</code> is given with a length other than
+<code>n_branch</code>, is not finite, or is negative; a branch index is out of range; or a
+node sits on a branch with no vertices. Malformed input raises rather than yielding
+a silent <code>nan</code> coordinate.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>Place a node 5 units along a single straight branch running from (0, 0) to (10, 0)::</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import numpy as np
+&gt;&gt;&gt; from pyramids.netcdf.ugrid import place_nodes_on_network
+&gt;&gt;&gt; x, y = place_nodes_on_network(
+...     np.array([0]),
+...     np.array([5.0]),
+...     geom_x=np.array([0.0, 10.0]),
+...     geom_y=np.array([0.0, 0.0]),
+...     vertices_per_branch=np.array([2]),
+... )
+&gt;&gt;&gt; float(x[0]), float(y[0])
+(5.0, 0.0)
+</code></pre></div>
+<p>With a declared <code>edge_length</code> of 20 on a polyline whose chord length is 10, an offset
+of 10 is half the branch -- the polyline midpoint (5, 0), not its end::</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import numpy as np
+&gt;&gt;&gt; from pyramids.netcdf.ugrid import place_nodes_on_network
+&gt;&gt;&gt; x, _ = place_nodes_on_network(
+...     np.array([0]),
+...     np.array([10.0]),
+...     geom_x=np.array([0.0, 10.0]),
+...     geom_y=np.array([0.0, 0.0]),
+...     vertices_per_branch=np.array([2]),
+...     edge_length=np.array([20.0]),
+... )
+&gt;&gt;&gt; float(x[0])
+5.0
+</code></pre></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/pyramids/netcdf/ugrid/linear_referencing.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-24"> 24</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-25"> 25</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-26"> 26</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-27"> 27</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-28"> 28</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-29"> 29</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-30"> 30</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-31"> 31</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-32"> 32</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-33"> 33</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-34"> 34</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-35"> 35</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-36"> 36</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-37"> 37</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-38"> 38</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-39"> 39</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-40"> 40</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-41"> 41</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-42"> 42</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-43"> 43</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-44"> 44</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-45"> 45</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-46"> 46</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-47"> 47</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-48"> 48</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-49"> 49</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-50"> 50</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-51"> 51</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-52"> 52</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-53"> 53</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-54"> 54</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-55"> 55</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-56"> 56</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-57"> 57</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-58"> 58</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-59"> 59</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-60"> 60</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-61"> 61</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-62"> 62</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-63"> 63</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-64"> 64</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-65"> 65</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-66"> 66</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-67"> 67</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-68"> 68</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-69"> 69</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-70"> 70</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-71"> 71</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-72"> 72</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-73"> 73</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-74"> 74</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-75"> 75</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-76"> 76</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-77"> 77</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-78"> 78</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-79"> 79</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-80"> 80</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-81"> 81</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-82"> 82</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-83"> 83</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-84"> 84</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-85"> 85</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-86"> 86</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-87"> 87</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-88"> 88</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-89"> 89</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-90"> 90</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-91"> 91</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-92"> 92</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-93"> 93</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-94"> 94</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-95"> 95</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-96"> 96</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-97"> 97</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-98"> 98</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-99"> 99</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-100">100</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-101">101</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-102">102</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-103">103</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-104">104</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-105">105</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-109">109</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-110">110</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-111">111</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-112">112</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-113">113</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-114">114</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-115">115</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-116">116</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-117">117</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-118">118</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-119">119</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-120">120</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-121">121</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-122">122</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-123">123</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-124">124</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-125">125</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-126">126</a></span>
+<span class="normal"><a href="#pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-127">127</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-24" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-24"></a><span class="k">def</span><span class="w"> </span><span class="nf">place_nodes_on_network</span><span class="p">(</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-25" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-25"></a>    <span class="n">branch_index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-26" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-26"></a>    <span class="n">offset</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-27" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-27"></a>    <span class="n">geom_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-28" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-28"></a>    <span class="n">geom_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-29" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-29"></a>    <span class="n">vertices_per_branch</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-30" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-30"></a>    <span class="n">edge_length</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-31" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-31"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-32" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-32"></a><span class="w">    </span><span class="sd">"""Resolve branch+offset node positions to x/y by linear referencing along the branches.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-33" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-33"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-34" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-34"></a><span class="sd">    Each branch's polyline is sliced from the flat vertex list by the cumulative vertex</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-35" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-35"></a><span class="sd">    count, the cumulative chord length along its vertices is measured from the branch start,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-36" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-36"></a><span class="sd">    and every node on that branch has its x and y linearly interpolated at its offset. A</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-37" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-37"></a><span class="sd">    single-vertex branch degenerates to that vertex; an offset past a branch's end clamps to</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-38" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-38"></a><span class="sd">    its last vertex, and a negative offset clamps to its first vertex (:func:`numpy.interp`</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-39" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-39"></a><span class="sd">    behaviour at both ends).</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-40" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-40"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-41" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-41"></a><span class="sd">    In D-HYDRO an offset is a **chainage** in ``[0, edge_length]``, and a branch's declared</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-42" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-42"></a><span class="sd">    length need not equal its digitised polyline's chord length. When ``edge_length`` is</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-43" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-43"></a><span class="sd">    given, each branch's distance axis is rescaled from chord length to the declared length,</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-44" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-44"></a><span class="sd">    so a node's chainage is placed at the same *fraction* along the polyline rather than at</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-45" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-45"></a><span class="sd">    the same raw distance. Without it, the raw chord length is used (equivalent when the two</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-46" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-46"></a><span class="sd">    agree, as they do for well-formed files).</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-47" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-47"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-48" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-48"></a><span class="sd">    Args:</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-49" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-49"></a><span class="sd">        branch_index: Per-node branch index, 0-based, shape ``(n_node,)``. (A file's</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-50" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-50"></a><span class="sd">            ``start_index`` must already have been subtracted by the caller.)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-51" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-51"></a><span class="sd">        offset: Per-node distance (chainage) along the branch, shape ``(n_node,)``.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-52" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-52"></a><span class="sd">        geom_x: Flat branch-vertex x coordinates, shape ``(n_vertex,)`` -- every branch's</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-53" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-53"></a><span class="sd">            polyline vertices concatenated in branch order.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-54" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-54"></a><span class="sd">        geom_y: Flat branch-vertex y coordinates, shape ``(n_vertex,)``.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-55" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-55"></a><span class="sd">        vertices_per_branch: Vertex count of each branch, in branch order, shape</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-56" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-56"></a><span class="sd">            ``(n_branch,)``. Must sum to ``n_vertex``.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-57" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-57"></a><span class="sd">        edge_length: Per-branch declared length used to interpret the chainage, shape</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-58" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-58"></a><span class="sd">            ``(n_branch,)``, or ``None`` to measure by chord length alone. Defaults to None.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-59" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-59"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-60" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-60"></a><span class="sd">    Returns:</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-61" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-61"></a><span class="sd">        tuple[np.ndarray, np.ndarray]: The node ``x`` and ``y`` arrays, each shape</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-62" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-62"></a><span class="sd">            ``(n_node,)`` and ``float64``.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-63" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-63"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-64" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-64"></a><span class="sd">    Raises:</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-65" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-65"></a><span class="sd">        ValueError: ``branch_index`` is not a numeric dtype, is not integer-valued (fractional</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-66" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-66"></a><span class="sd">            or NaN indices), or exceeds the int64 range;</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-67" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-67"></a><span class="sd">            ``branch_index`` and ``offset`` differ in shape or are not 1-D; ``geom_x`` and</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-68" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-68"></a><span class="sd">            ``geom_y`` differ in shape or are not 1-D; ``vertices_per_branch`` is not 1-D, is</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-69" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-69"></a><span class="sd">            negative, or does not sum to ``n_vertex``; ``offset``, ``geom_x`` or ``geom_y`` is</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-70" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-70"></a><span class="sd">            not finite (NaN/inf); ``edge_length`` is given with a length other than</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-71" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-71"></a><span class="sd">            ``n_branch``, is not finite, or is negative; a branch index is out of range; or a</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-72" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-72"></a><span class="sd">            node sits on a branch with no vertices. Malformed input raises rather than yielding</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-73" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-73"></a><span class="sd">            a silent ``nan`` coordinate.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-74" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-74"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-75" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-75"></a><span class="sd">    Examples:</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-76" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-76"></a><span class="sd">        Place a node 5 units along a single straight branch running from (0, 0) to (10, 0)::</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-77" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-77"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-78" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-78"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-79" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-79"></a><span class="sd">            &gt;&gt;&gt; from pyramids.netcdf.ugrid import place_nodes_on_network</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-80" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-80"></a><span class="sd">            &gt;&gt;&gt; x, y = place_nodes_on_network(</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-81" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-81"></a><span class="sd">            ...     np.array([0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-82" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-82"></a><span class="sd">            ...     np.array([5.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-83" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-83"></a><span class="sd">            ...     geom_x=np.array([0.0, 10.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-84" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-84"></a><span class="sd">            ...     geom_y=np.array([0.0, 0.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-85" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-85"></a><span class="sd">            ...     vertices_per_branch=np.array([2]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-86" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-86"></a><span class="sd">            ... )</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-87" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-87"></a><span class="sd">            &gt;&gt;&gt; float(x[0]), float(y[0])</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-88" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-88"></a><span class="sd">            (5.0, 0.0)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-89" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-89"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-90" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-90"></a><span class="sd">        With a declared ``edge_length`` of 20 on a polyline whose chord length is 10, an offset</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-91" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-91"></a><span class="sd">        of 10 is half the branch -- the polyline midpoint (5, 0), not its end::</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-92" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-92"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-93" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-93"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-94" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-94"></a><span class="sd">            &gt;&gt;&gt; from pyramids.netcdf.ugrid import place_nodes_on_network</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-95" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-95"></a><span class="sd">            &gt;&gt;&gt; x, _ = place_nodes_on_network(</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-96" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-96"></a><span class="sd">            ...     np.array([0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-97" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-97"></a><span class="sd">            ...     np.array([10.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-98" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-98"></a><span class="sd">            ...     geom_x=np.array([0.0, 10.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-99" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-99"></a><span class="sd">            ...     geom_y=np.array([0.0, 0.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-100" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-100"></a><span class="sd">            ...     vertices_per_branch=np.array([2]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-101" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-101"></a><span class="sd">            ...     edge_length=np.array([20.0]),</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-102" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-102"></a><span class="sd">            ... )</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-103" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-103"></a><span class="sd">            &gt;&gt;&gt; float(x[0])</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-104" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-104"></a><span class="sd">            5.0</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-105" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-105"></a><span class="sd">    """</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-106" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-106"></a>    <span class="n">branch_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">branch_index</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-107" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-107"></a>    <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-108" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-108"></a>    <span class="n">geom_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">geom_x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-109" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-109"></a>    <span class="n">geom_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">geom_y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-110" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-110"></a>    <span class="n">vertices_per_branch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">vertices_per_branch</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-111" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-111"></a>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-112" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-112"></a>    <span class="n">_require_matching_1d</span><span class="p">(</span><span class="n">branch_index</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="s2">"branch_index"</span><span class="p">,</span> <span class="s2">"offset"</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-113" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-113"></a>    <span class="n">branch_index</span> <span class="o">=</span> <span class="n">_coerce_branch_index_to_int64</span><span class="p">(</span><span class="n">branch_index</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-114" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-114"></a>    <span class="n">_require_matching_1d</span><span class="p">(</span><span class="n">geom_x</span><span class="p">,</span> <span class="n">geom_y</span><span class="p">,</span> <span class="s2">"geom_x"</span><span class="p">,</span> <span class="s2">"geom_y"</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-115" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-115"></a>    <span class="n">_validate_vertices_per_branch</span><span class="p">(</span><span class="n">vertices_per_branch</span><span class="p">,</span> <span class="n">geom_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-116" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-116"></a>    <span class="c1"># Non-finite data would propagate a silent NaN through np.interp into the returned</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-117" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-117"></a>    <span class="c1"># coordinates; reject it so a bad offset/vertex fails loudly instead.</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-118" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-118"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">offset</span><span class="p">)):</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-119" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-119"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"offset must be finite (no NaN/inf)"</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-120" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-120"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">geom_x</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">geom_y</span><span class="p">)):</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-121" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-121"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"geom_x and geom_y must be finite (no NaN/inf)"</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-122" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-122"></a>    <span class="n">n_branch</span> <span class="o">=</span> <span class="n">vertices_per_branch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-123" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-123"></a>    <span class="n">edge_length</span> <span class="o">=</span> <span class="n">_coerce_edge_length</span><span class="p">(</span><span class="n">edge_length</span><span class="p">,</span> <span class="n">n_branch</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-124" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-124"></a>    <span class="n">_require_branch_in_range</span><span class="p">(</span><span class="n">branch_index</span><span class="p">,</span> <span class="n">n_branch</span><span class="p">)</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-125" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-125"></a>    <span class="k">return</span> <span class="n">_interpolate_nodes</span><span class="p">(</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-126" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-126"></a>        <span class="n">branch_index</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">geom_x</span><span class="p">,</span> <span class="n">geom_y</span><span class="p">,</span> <span class="n">vertices_per_branch</span><span class="p">,</span> <span class="n">edge_length</span>
+<a id="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-127" name="pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network--source--__codelineno-0-127"></a>    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-class">
 
