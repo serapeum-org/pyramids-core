@@ -35,7 +35,8 @@ def place_nodes_on_network(
     count, the cumulative chord length along its vertices is measured from the branch start,
     and every node on that branch has its x and y linearly interpolated at its offset. A
     single-vertex branch degenerates to that vertex; an offset past a branch's end clamps to
-    its last vertex (:func:`numpy.interp` behaviour).
+    its last vertex, and a negative offset clamps to its first vertex (:func:`numpy.interp`
+    behaviour at both ends).
 
     In D-HYDRO an offset is a **chainage** in ``[0, edge_length]``, and a branch's declared
     length need not equal its digitised polyline's chord length. When ``edge_length`` is
