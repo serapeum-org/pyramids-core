@@ -1056,7 +1056,8 @@ def _register_fitting(msub: argparse._SubParsersAction) -> None:
     pf.set_defaults(func=_cmd_polyfit)
 
     cf = msub.add_parser(
-        "curvefit", help="per-element fit of a named model along time (writes parameters)"
+        "curvefit",
+        help="per-element fit of a named model along time (writes parameters)",
     )
     cf.add_argument("file", help=_HELP_MESH_FILE)
     cf.add_argument("output", help=_HELP_MESH_OUT)

@@ -56,7 +56,9 @@ def gaussian(x: Any, amplitude: float, mean: float, sigma: float) -> Any:
     return amplitude * np.exp(-((x - mean) ** 2) / (2.0 * sigma**2))
 
 
-def sine(x: Any, amplitude: float, frequency: float, phase: float, offset: float) -> Any:
+def sine(
+    x: Any, amplitude: float, frequency: float, phase: float, offset: float
+) -> Any:
     """A sinusoid ``a * sin(b * x + c) + d`` for a periodic signal."""
     return amplitude * np.sin(frequency * x + phase) + offset
 
