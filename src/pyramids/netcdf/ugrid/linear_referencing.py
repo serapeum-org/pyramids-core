@@ -66,6 +66,37 @@ def place_nodes_on_network(
             is not 1-D, is negative, or does not sum to ``n_vertex``; ``edge_length`` is
             given with a length other than ``n_branch``; a branch index is out of range; or a
             node sits on a branch with no vertices.
+
+    Examples:
+        Place a node 5 units along a single straight branch running from (0, 0) to (10, 0)::
+
+            >>> import numpy as np
+            >>> from pyramids.netcdf.ugrid import place_nodes_on_network
+            >>> x, y = place_nodes_on_network(
+            ...     np.array([0]),
+            ...     np.array([5.0]),
+            ...     geom_x=np.array([0.0, 10.0]),
+            ...     geom_y=np.array([0.0, 0.0]),
+            ...     vertices_per_branch=np.array([2]),
+            ... )
+            >>> float(x[0]), float(y[0])
+            (5.0, 0.0)
+
+        With a declared ``edge_length`` of 20 on a polyline whose chord length is 10, an offset
+        of 10 is half the branch -- the polyline midpoint (5, 0), not its end::
+
+            >>> import numpy as np
+            >>> from pyramids.netcdf.ugrid import place_nodes_on_network
+            >>> x, _ = place_nodes_on_network(
+            ...     np.array([0]),
+            ...     np.array([10.0]),
+            ...     geom_x=np.array([0.0, 10.0]),
+            ...     geom_y=np.array([0.0, 0.0]),
+            ...     vertices_per_branch=np.array([2]),
+            ...     edge_length=np.array([20.0]),
+            ... )
+            >>> float(x[0])
+            5.0
     """
     branch_index = np.asarray(branch_index)
     offset = np.asarray(offset, dtype=np.float64)
