@@ -54,6 +54,7 @@ _HELP_CSV_OUT = "write x/y/value to this CSV path"
 _HELP_OVERWRITE = "replace the output if it already exists"
 _HELP_JSON = "emit JSON"
 _HELP_DRIVER = "OGR vector driver (default: inferred from the output extension)"
+_HELP_RINGS = "neighbourhood radius in rings (default: 1)"
 
 
 def _print_payload(args: argparse.Namespace, payload: dict) -> None:
@@ -665,7 +666,7 @@ def _register_terrain(msub: argparse._SubParsersAction) -> None:
         "--rings",
         type=int,
         default=1,
-        help="neighbourhood radius in rings (default: 1)",
+        help=_HELP_RINGS,
     )
     _add_var(fmean)
     _add_overwrite(fmean)
@@ -678,7 +679,7 @@ def _register_terrain(msub: argparse._SubParsersAction) -> None:
         "--rings",
         type=int,
         default=1,
-        help="neighbourhood radius in rings (default: 1)",
+        help=_HELP_RINGS,
     )
     _add_var(fstd)
     _add_overwrite(fstd)
@@ -699,7 +700,7 @@ def _register_terrain(msub: argparse._SubParsersAction) -> None:
         "--rings",
         type=int,
         default=1,
-        help="neighbourhood radius in rings (default: 1)",
+        help=_HELP_RINGS,
     )
     _add_var(freduce)
     _add_overwrite(freduce)
