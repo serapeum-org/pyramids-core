@@ -125,6 +125,7 @@ class TestPlaceNodesOnNetwork:
         np.testing.assert_allclose(from_lists[0], from_arrays[0])
         np.testing.assert_allclose(from_lists[1], from_arrays[1])
         np.testing.assert_allclose(from_float_index[0], from_arrays[0])
+        np.testing.assert_allclose(from_float_index[1], from_arrays[1])
 
 
 class TestPlaceNodesOnNetworkValidation:
@@ -252,6 +253,23 @@ class TestPlaceNodesOnNetworkValidation:
         """A negative fractional index does not slip past the int()-truncated range check (M2)."""
         with pytest.raises(ValueError, match="integer|integral|out of range"):
             place_nodes_on_network(np.array([-0.5]), np.array([1.0]), **self._GEOM)
+
+    def test_object_dtype_branch_index_raises_valueerror(self):
+        """A non-numeric (object) branch index raises ValueError, not a numpy TypeError (R2 L1)."""
+        with pytest.raises(ValueError, match="numeric"):
+            place_nodes_on_network(
+                np.array([0], dtype=object), np.array([1.0]), **self._GEOM
+            )
+
+    def test_boolean_branch_index_raises_valueerror(self):
+        """A boolean branch index is rejected rather than silently coerced to 0/1 (R2 N1)."""
+        with pytest.raises(ValueError, match="numeric"):
+            place_nodes_on_network(np.array([True]), np.array([1.0]), **self._GEOM)
+
+    def test_branch_index_exceeding_int64_range_raises(self):
+        """An integer-valued float beyond int64 raises before astype wraps it silently (R2 N3)."""
+        with pytest.raises(ValueError, match="int64 range"):
+            place_nodes_on_network(np.array([1e30]), np.array([1.0]), **self._GEOM)
 
 
 class TestPlaceNodesOnNetworkEdgeLengthEdgeCases:

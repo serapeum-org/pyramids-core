@@ -62,7 +62,8 @@ def place_nodes_on_network(
             ``(n_node,)`` and ``float64``.
 
     Raises:
-        ValueError: ``branch_index`` is not integer-valued (fractional or NaN indices);
+        ValueError: ``branch_index`` is not a numeric dtype, is not integer-valued (fractional
+            or NaN indices), or exceeds the int64 range;
             ``branch_index`` and ``offset`` differ in shape or are not 1-D; ``geom_x`` and
             ``geom_y`` differ in shape or are not 1-D; ``vertices_per_branch`` is not 1-D, is
             negative, or does not sum to ``n_vertex``; ``offset``, ``geom_x`` or ``geom_y`` is
@@ -108,17 +109,6 @@ def place_nodes_on_network(
     geom_y = np.asarray(geom_y, dtype=np.float64)
     vertices_per_branch = np.asarray(vertices_per_branch)
 
-    # A non-integer branch index is a data error: casting it would truncate (0.5 -> 0) and the
-    # exact-equality branch match would then silently drop the node, so reject it up front.
-    if not np.issubdtype(branch_index.dtype, np.integer):
-        if not np.all(np.isfinite(branch_index)) or not np.all(
-            branch_index == np.floor(branch_index)
-        ):
-            raise ValueError(
-                "branch_index must be integer-valued (no fractional or NaN indices)"
-            )
-        branch_index = branch_index.astype(np.int64)
-
     if branch_index.ndim != 1 or offset.ndim != 1:
         raise ValueError("branch_index and offset must be 1-D arrays")
     if branch_index.shape != offset.shape:
@@ -126,6 +116,29 @@ def place_nodes_on_network(
             f"branch_index and offset must have the same shape; got {branch_index.shape} "
             f"and {offset.shape}"
         )
+    # Coerce branch_index to int64 here (after the shape checks, so a 2-D array reports the shape
+    # error first). A non-numeric dtype (object/str/bool), a fractional or non-finite value, or a
+    # value outside the int64 range is a data error: casting would truncate (0.5 -> 0) or wrap, and
+    # the exact-equality branch match would then silently drop the node. Reject it as a ValueError.
+    if not np.issubdtype(branch_index.dtype, np.integer):
+        if not np.issubdtype(branch_index.dtype, np.floating):
+            raise ValueError(
+                f"branch_index must be an integer-valued numeric array, got dtype "
+                f"{branch_index.dtype}"
+            )
+        if not np.all(np.isfinite(branch_index)) or not np.all(
+            branch_index == np.floor(branch_index)
+        ):
+            raise ValueError(
+                "branch_index must be integer-valued (no fractional or NaN indices)"
+            )
+        info = np.iinfo(np.int64)
+        if branch_index.size and (
+            branch_index.min() < info.min or branch_index.max() > info.max
+        ):
+            raise ValueError("branch_index values exceed the int64 range")
+        branch_index = branch_index.astype(np.int64)
+
     if geom_x.ndim != 1 or geom_y.ndim != 1:
         raise ValueError("geom_x and geom_y must be 1-D arrays")
     if geom_x.shape != geom_y.shape:
