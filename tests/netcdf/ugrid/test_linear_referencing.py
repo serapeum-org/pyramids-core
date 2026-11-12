@@ -108,18 +108,23 @@ class TestPlaceNodesOnNetwork:
         )
         assert x.shape == (0,) and y.shape == (0,)
 
-    def test_both_branch_offset_attribute_spellings_are_the_callers_concern(self):
-        """The primitive takes already-parsed arrays, so either file spelling feeds it the same."""
-        # mesh1d_node_branch/_offset and mesh1d_node_branch_id/_branch_offset both arrive here
-        # as a branch-index array and an offset array -- the primitive sees no difference.
+    def test_accepts_lists_and_integer_valued_float_branch_index(self):
+        """Inputs are coerced via np.asarray: plain lists and an integer-valued float branch
+        index give the same result as int ndarrays -- so a driver's choice of array spelling or
+        dtype does not change the output."""
         args = dict(
-            geom_x=np.array([0.0, 2.0]),
-            geom_y=np.array([0.0, 0.0]),
-            vertices_per_branch=np.array([2]),
+            geom_x=[0.0, 2.0],
+            geom_y=[0.0, 0.0],
+            vertices_per_branch=[2],
         )
-        a = place_nodes_on_network(np.array([0]), np.array([1.0]), **args)
-        b = place_nodes_on_network(np.array([0]), np.array([1.0]), **args)
-        np.testing.assert_allclose(a[0], b[0])
+        from_arrays = place_nodes_on_network(np.array([0]), np.array([1.0]), **args)
+        from_lists = place_nodes_on_network([0], [1.0], **args)
+        from_float_index = place_nodes_on_network(
+            np.array([0.0]), np.array([1.0]), **args
+        )
+        np.testing.assert_allclose(from_lists[0], from_arrays[0])
+        np.testing.assert_allclose(from_lists[1], from_arrays[1])
+        np.testing.assert_allclose(from_float_index[0], from_arrays[0])
 
 
 class TestPlaceNodesOnNetworkValidation:
@@ -218,6 +223,36 @@ class TestPlaceNodesOnNetworkValidation:
         with pytest.raises(ValueError, match="out of range"):
             place_nodes_on_network(np.array([-1]), np.array([1.0]), **self._GEOM)
 
+    def test_nan_offset_raises(self):
+        """A non-finite offset (e.g. a _FillValue-coded chainage) raises, not a silent NaN (M1)."""
+        with pytest.raises(ValueError, match="offset.*finite|finite.*offset"):
+            place_nodes_on_network(np.array([0]), np.array([np.nan]), **self._GEOM)
+
+    def test_inf_offset_raises(self):
+        with pytest.raises(ValueError, match="offset.*finite|finite.*offset"):
+            place_nodes_on_network(np.array([0]), np.array([np.inf]), **self._GEOM)
+
+    def test_nan_geometry_raises(self):
+        """A NaN vertex coordinate raises rather than producing a silent NaN node (M1)."""
+        with pytest.raises(ValueError, match="geom_x.*finite|geom_y.*finite|finite"):
+            place_nodes_on_network(
+                np.array([0]),
+                np.array([5.0]),
+                geom_x=np.array([0.0, np.nan]),
+                geom_y=np.array([0.0, 0.0]),
+                vertices_per_branch=np.array([2]),
+            )
+
+    def test_fractional_branch_index_raises(self):
+        """A non-integral branch index raises rather than matching no branch and yielding NaN (M2)."""
+        with pytest.raises(ValueError, match="integer|integral"):
+            place_nodes_on_network(np.array([0.5]), np.array([1.0]), **self._GEOM)
+
+    def test_negative_fractional_branch_index_raises(self):
+        """A negative fractional index does not slip past the int()-truncated range check (M2)."""
+        with pytest.raises(ValueError, match="integer|integral|out of range"):
+            place_nodes_on_network(np.array([-0.5]), np.array([1.0]), **self._GEOM)
+
 
 class TestPlaceNodesOnNetworkEdgeLengthEdgeCases:
     """edge_length branches: a non-positive declared length falls back to raw chord distance."""
@@ -241,3 +276,31 @@ class TestPlaceNodesOnNetworkEdgeLengthEdgeCases:
         )
         np.testing.assert_allclose(x, [4.0, 5.0])
         np.testing.assert_allclose(y, [0.0, 10.0])
+
+    def test_negative_edge_length_raises(self):
+        """A negative declared length is a data error, not a silent raw-chord fallback (L1)."""
+        with pytest.raises(
+            ValueError, match="edge_length.*non-negative|edge_length.*finite"
+        ):
+            place_nodes_on_network(
+                np.array([0]),
+                np.array([1.0]),
+                geom_x=np.array([0.0, 10.0]),
+                geom_y=np.array([0.0, 0.0]),
+                vertices_per_branch=np.array([2]),
+                edge_length=np.array([-20.0]),
+            )
+
+    def test_nan_edge_length_raises(self):
+        """A NaN declared length raises rather than silently using raw chord distance (L1)."""
+        with pytest.raises(
+            ValueError, match="edge_length.*finite|edge_length.*non-negative"
+        ):
+            place_nodes_on_network(
+                np.array([0]),
+                np.array([1.0]),
+                geom_x=np.array([0.0, 10.0]),
+                geom_y=np.array([0.0, 0.0]),
+                vertices_per_branch=np.array([2]),
+                edge_length=np.array([np.nan]),
+            )

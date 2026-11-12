@@ -61,11 +61,14 @@ def place_nodes_on_network(
             ``(n_node,)`` and ``float64``.
 
     Raises:
-        ValueError: ``branch_index`` and ``offset`` differ in shape or are not 1-D;
-            ``geom_x`` and ``geom_y`` differ in shape or are not 1-D; ``vertices_per_branch``
-            is not 1-D, is negative, or does not sum to ``n_vertex``; ``edge_length`` is
-            given with a length other than ``n_branch``; a branch index is out of range; or a
-            node sits on a branch with no vertices.
+        ValueError: ``branch_index`` is not integer-valued (fractional or NaN indices);
+            ``branch_index`` and ``offset`` differ in shape or are not 1-D; ``geom_x`` and
+            ``geom_y`` differ in shape or are not 1-D; ``vertices_per_branch`` is not 1-D, is
+            negative, or does not sum to ``n_vertex``; ``offset``, ``geom_x`` or ``geom_y`` is
+            not finite (NaN/inf); ``edge_length`` is given with a length other than
+            ``n_branch``, is not finite, or is negative; a branch index is out of range; or a
+            node sits on a branch with no vertices. Malformed input raises rather than yielding
+            a silent ``nan`` coordinate.
 
     Examples:
         Place a node 5 units along a single straight branch running from (0, 0) to (10, 0)::
@@ -104,6 +107,17 @@ def place_nodes_on_network(
     geom_y = np.asarray(geom_y, dtype=np.float64)
     vertices_per_branch = np.asarray(vertices_per_branch)
 
+    # A non-integer branch index is a data error: casting it would truncate (0.5 -> 0) and the
+    # exact-equality branch match would then silently drop the node, so reject it up front.
+    if not np.issubdtype(branch_index.dtype, np.integer):
+        if not np.all(np.isfinite(branch_index)) or not np.all(
+            branch_index == np.floor(branch_index)
+        ):
+            raise ValueError(
+                "branch_index must be integer-valued (no fractional or NaN indices)"
+            )
+        branch_index = branch_index.astype(np.int64)
+
     if branch_index.ndim != 1 or offset.ndim != 1:
         raise ValueError("branch_index and offset must be 1-D arrays")
     if branch_index.shape != offset.shape:
@@ -127,6 +141,12 @@ def place_nodes_on_network(
             f"vertices_per_branch sums to {int(vertices_per_branch.sum())} but the flat "
             f"vertex list has {geom_x.shape[0]} vertices; the counts must tile it exactly"
         )
+    # Non-finite data would propagate a silent NaN through np.interp into the returned
+    # coordinates; reject it so a bad offset/vertex fails loudly instead.
+    if not np.all(np.isfinite(offset)):
+        raise ValueError("offset must be finite (no NaN/inf)")
+    if not np.all(np.isfinite(geom_x)) or not np.all(np.isfinite(geom_y)):
+        raise ValueError("geom_x and geom_y must be finite (no NaN/inf)")
     n_branch = vertices_per_branch.shape[0]
     if edge_length is not None:
         edge_length = np.asarray(edge_length, dtype=np.float64)
@@ -135,9 +155,11 @@ def place_nodes_on_network(
                 f"edge_length must have shape ({n_branch},) to match vertices_per_branch; "
                 f"got {edge_length.shape}"
             )
-    if branch_index.size and (
-        int(branch_index.min()) < 0 or int(branch_index.max()) >= n_branch
-    ):
+        if not np.all(np.isfinite(edge_length)):
+            raise ValueError("edge_length must be finite (no NaN/inf)")
+        if np.any(edge_length < 0):
+            raise ValueError("edge_length must be non-negative")
+    if branch_index.size and (branch_index.min() < 0 or branch_index.max() >= n_branch):
         raise ValueError(
             f"branch_index out of range: values must be in [0, {n_branch}); got "
             f"[{int(branch_index.min())}, {int(branch_index.max())}]"
