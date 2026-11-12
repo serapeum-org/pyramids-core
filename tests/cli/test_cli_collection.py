@@ -794,6 +794,47 @@ class TestCollectionImportStac:
         )
         assert rc == 0 and os.path.exists(out)
 
+    def test_bbox_filter_is_forwarded(self, tmp_path):
+        """A `--bbox` covering every item keeps them all and writes a cube."""
+        items = _items_json(tmp_path, _local_items(tmp_path))
+        out = str(tmp_path / "cube.nc")
+        rc = main(
+            [
+                "collection",
+                "import",
+                "stac",
+                items,
+                out,
+                "--asset",
+                "data",
+                "--bbox",
+                "0",
+                "0",
+                "3",
+                "3",
+            ]
+        )
+        assert rc == 0 and os.path.exists(out)
+
+    def test_groupby_collapses_items(self, tmp_path):
+        """`--groupby id` buckets items by id and still writes a cube."""
+        items = _items_json(tmp_path, _local_items(tmp_path))
+        out = str(tmp_path / "cube.nc")
+        rc = main(
+            [
+                "collection",
+                "import",
+                "stac",
+                items,
+                out,
+                "--asset",
+                "data",
+                "--groupby",
+                "id",
+            ]
+        )
+        assert rc == 0 and os.path.exists(out)
+
     def test_requires_an_asset(self, tmp_path):
         """`--asset` is required; argparse rejects the call without it."""
         items = _items_json(tmp_path, _local_items(tmp_path))
