@@ -775,6 +775,35 @@ class TestCollectionImportStac:
         )
         assert os.path.exists(out)
 
+    def test_accepts_a_single_feature(self, tmp_path):
+        """A single GeoJSON ``Feature`` (no ``features`` key) is wrapped and read (L2)."""
+        feature = _local_items(tmp_path)[0]
+        path = str(tmp_path / "one.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(feature, handle)
+        out = str(tmp_path / "cube.nc")
+        assert main(["collection", "import", "stac", path, out, "--asset", "data"]) == 0
+        assert os.path.exists(out)
+
+    def test_rejects_an_unknown_json_shape(self, tmp_path, capsys):
+        """A JSON object that is neither a FeatureCollection, list, nor Feature errors cleanly (L2)."""
+        path = str(tmp_path / "bad.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"not": "stac"}, handle)
+        rc = main(
+            [
+                "collection",
+                "import",
+                "stac",
+                path,
+                str(tmp_path / "x.nc"),
+                "--asset",
+                "data",
+            ]
+        )
+        assert rc == 1
+        assert "not a STAC" in capsys.readouterr().err
+
     def test_max_items_caps_the_cube(self, tmp_path):
         """`--max-items 1` consumes a single item and still writes a cube."""
         items = _items_json(tmp_path, _local_items(tmp_path))
@@ -932,6 +961,17 @@ class TestCollectionImportPoint:
         argv[argv.index("B04,B03")] = "B04"
         assert main(argv) == 0
         assert captured["bands"] == "B04"
+
+    def test_band_whitespace_and_trailing_comma_are_stripped(
+        self, tmp_path, monkeypatch
+    ):
+        """Spaces around keys and a trailing comma are stripped, not forwarded (L1)."""
+        captured: dict = {}
+        self._patch(monkeypatch, captured)
+        argv = self._base_argv(str(tmp_path / "pt.nc"))
+        argv[argv.index("B04,B03")] = "B04, B03,"
+        assert main(argv) == 0
+        assert captured["bands"] == ["B04", "B03"]
 
     def test_no_align_and_query_are_forwarded(self, tmp_path, monkeypatch):
         """`--no-align` sets align False and `--query` is parsed from JSON to a dict."""

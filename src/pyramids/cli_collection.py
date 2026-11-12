@@ -468,26 +468,45 @@ def _split_assets(raw: str) -> str | list[str]:
 
     Returns:
         str | list[str]: A single key for a one-asset stack, or the list for a band axis.
+
+    Raises:
+        ValueError: ``raw`` holds no non-empty key (e.g. ``","`` or whitespace only).
     """
-    parts = raw.split(",")
+    parts = [piece.strip() for piece in raw.split(",") if piece.strip()]
+    if not parts:
+        raise ValueError(f"no asset/band key found in {raw!r}")
     return parts[0] if len(parts) == 1 else parts
 
 
 def _load_stac_items(path: str) -> Any:
     """Load a saved STAC ItemCollection / item-list JSON into items for ``from_stac``.
 
-    Accepts either a STAC ``ItemCollection`` / GeoJSON ``FeatureCollection`` (the items are its
-    ``features``) or a bare JSON list of item objects. ``from_stac`` is duck-typed and reads the
-    raw dicts directly, so pystac is not needed to parse them.
+    Accepts a STAC ``ItemCollection`` / GeoJSON ``FeatureCollection`` (the items are its
+    ``features``), a bare JSON list of item objects, or a single GeoJSON ``Feature`` (wrapped into
+    a one-item list). ``from_stac`` is duck-typed and reads the raw dicts directly, so pystac is
+    not needed to parse them.
 
     Args:
         path: Path to the JSON file.
 
     Returns:
         Any: The list of STAC item dicts.
+
+    Raises:
+        ValueError: The JSON is none of the accepted shapes (ItemCollection, item list, Feature).
     """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    return data["features"] if isinstance(data, dict) and "features" in data else data
+    if isinstance(data, list):
+        items: Any = data
+    elif isinstance(data, dict) and "features" in data:
+        items = data["features"]
+    elif isinstance(data, dict) and data.get("type") == "Feature":
+        items = [data]
+    else:
+        raise ValueError(
+            f"{path!r} is not a STAC ItemCollection, a single Feature, or a list of items."
+        )
+    return items
 
 
 def _cmd_collection_from_point(args: argparse.Namespace) -> int:
@@ -819,16 +838,25 @@ def _add_align(csub: argparse._SubParsersAction) -> None:
 def _add_from_point(csub: argparse._SubParsersAction) -> None:
     """Register the ``import point`` command (point-centred STAC cube)."""
     c = csub.add_parser(
-        "point", help="build a point-centred STAC cube (needs the [stac] extra + a live endpoint)"
+        "point",
+        help="build a point-centred STAC cube (needs the [stac] extra + a live endpoint)",
     )
     c.add_argument("output", help="destination NetCDF cube path")
-    c.add_argument("--lat", type=float, required=True, help="centre latitude (EPSG:4326)")
-    c.add_argument("--lon", type=float, required=True, help="centre longitude (EPSG:4326)")
+    c.add_argument(
+        "--lat", type=float, required=True, help="centre latitude (EPSG:4326)"
+    )
+    c.add_argument(
+        "--lon", type=float, required=True, help="centre longitude (EPSG:4326)"
+    )
     c.add_argument("--collection", required=True, help="STAC collection id to search")
     c.add_argument(
-        "--bands", required=True, help="asset key, or comma-separated keys for a band axis"
+        "--bands",
+        required=True,
+        help="asset key, or comma-separated keys for a band axis",
     )
-    c.add_argument("--start", required=True, help="search start (YYYY-MM-DD / RFC 3339)")
+    c.add_argument(
+        "--start", required=True, help="search start (YYYY-MM-DD / RFC 3339)"
+    )
     c.add_argument("--end", required=True, help="search end (YYYY-MM-DD / RFC 3339)")
     c.add_argument(
         "--edge-size",
@@ -837,7 +865,9 @@ def _add_from_point(csub: argparse._SubParsersAction) -> None:
         required=True,
         help="cube side length, in pixels (--units px) or metres (--units m)",
     )
-    c.add_argument("--resolution", type=float, required=True, help="pixel size in metres")
+    c.add_argument(
+        "--resolution", type=float, required=True, help="pixel size in metres"
+    )
     c.add_argument(
         "--units",
         default="px",
@@ -847,7 +877,9 @@ def _add_from_point(csub: argparse._SubParsersAction) -> None:
     c.add_argument(
         "--stac", default=None, help="STAC API root URL (default: Planetary Computer)"
     )
-    c.add_argument("--query", default=None, help="STAC query-extension filter, as a JSON string")
+    c.add_argument(
+        "--query", default=None, help="STAC query-extension filter, as a JSON string"
+    )
     c.add_argument(
         "--no-align",
         dest="align",
@@ -861,12 +893,15 @@ def _add_from_point(csub: argparse._SubParsersAction) -> None:
 def _add_from_stac(csub: argparse._SubParsersAction) -> None:
     """Register the ``import stac`` command (cube from a saved ItemCollection)."""
     c = csub.add_parser(
-        "stac", help="build a cube from a saved STAC ItemCollection / item-list JSON file"
+        "stac",
+        help="build a cube from a saved STAC ItemCollection / item-list JSON file",
     )
     c.add_argument("items", help="path to a STAC ItemCollection / item-list JSON file")
     c.add_argument("output", help="destination NetCDF cube path")
     c.add_argument(
-        "--asset", required=True, help="asset key, or comma-separated keys for a band axis"
+        "--asset",
+        required=True,
+        help="asset key, or comma-separated keys for a band axis",
     )
     c.add_argument(
         "--bbox",
