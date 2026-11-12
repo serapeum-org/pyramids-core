@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -4377,6 +4377,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#subsystem-collection-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subsystem collection import
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subsystem collection import">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-collection-import-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids collection import point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-collection-import-stac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids collection import stac
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -8237,6 +8276,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#subsystem-collection-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subsystem collection import
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subsystem collection import">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-collection-import-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids collection import point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-collection-import-stac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids collection import stac
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -8289,6 +8367,9 @@ suggestion.</p>
 <li><code>kerchunk</code> — write a kerchunk reference JSON (NetCDF/HDF5 sources)</li>
 <li><code>netcdf</code> — write the (T,B,R,C) cube to a NetCDF file</li>
 <li><code>zarr</code> — write the (T,B,R,C) cube to a Zarr store</li>
+<li><code>import</code> …</li>
+<li><code>point</code> — build a point-centred STAC cube (needs the [stac] extra + a live endpoint)</li>
+<li><code>stac</code> — build a cube from a saved STAC ItemCollection / item-list JSON file</li>
 </ul>
 <h2 id="core-verbs"><a class="toclink" href="#core-verbs">Core verbs</a><a class="headerlink" href="#core-verbs" title="Permanent link">#</a></h2>
 <p>Reached directly as <code>pyramids collection &lt;verb&gt;</code>.</p>
@@ -9093,6 +9174,165 @@ suggestion.</p>
 <td><code>--mode</code></td>
 <td>optional</td>
 <td>Zarr write mode (default: w)</td>
+</tr>
+<tr>
+<td><code>--overwrite</code></td>
+<td>optional</td>
+<td>replace the output if it already exists</td>
+</tr>
+</tbody>
+</table>
+<h2 id="subsystem-collection-import"><a class="toclink" href="#subsystem-collection-import">Subsystem <code>collection import</code></a><a class="headerlink" href="#subsystem-collection-import" title="Permanent link">#</a></h2>
+<p>Read / construct the data from another source.</p>
+<h4 id="pyramids-collection-import-point"><a class="toclink" href="#pyramids-collection-import-point"><code>pyramids collection import point</code></a><a class="headerlink" href="#pyramids-collection-import-point" title="Permanent link">#</a></h4>
+<p>build a point-centred STAC cube (needs the [stac] extra + a live endpoint)</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pyramids collection import point [-h] --lat LAT --lon LON --collection COLLECTION --bands BANDS --start START --end END --edge-size EDGE_SIZE --resolution RESOLUTION [--units {px,m}] [--stac STAC] [--query QUERY] [--no-align] [--overwrite] output
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>argument</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>output</code></td>
+<td>required</td>
+<td>destination NetCDF cube path</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--lat</code></td>
+<td><strong>required</strong></td>
+<td>centre latitude (EPSG:4326)</td>
+</tr>
+<tr>
+<td><code>--lon</code></td>
+<td><strong>required</strong></td>
+<td>centre longitude (EPSG:4326)</td>
+</tr>
+<tr>
+<td><code>--collection</code></td>
+<td><strong>required</strong></td>
+<td>STAC collection id to search</td>
+</tr>
+<tr>
+<td><code>--bands</code></td>
+<td><strong>required</strong></td>
+<td>asset key, or comma-separated keys for a band axis</td>
+</tr>
+<tr>
+<td><code>--start</code></td>
+<td><strong>required</strong></td>
+<td>search start (YYYY-MM-DD / RFC 3339)</td>
+</tr>
+<tr>
+<td><code>--end</code></td>
+<td><strong>required</strong></td>
+<td>search end (YYYY-MM-DD / RFC 3339)</td>
+</tr>
+<tr>
+<td><code>--edge-size</code></td>
+<td><strong>required</strong></td>
+<td>cube side length, in pixels (--units px) or metres (--units m)</td>
+</tr>
+<tr>
+<td><code>--resolution</code></td>
+<td><strong>required</strong></td>
+<td>pixel size in metres</td>
+</tr>
+<tr>
+<td><code>--units</code></td>
+<td>optional</td>
+<td>unit of --edge-size (default: px) (choices: <code>px</code>, <code>m</code>)</td>
+</tr>
+<tr>
+<td><code>--stac</code></td>
+<td>optional</td>
+<td>STAC API root URL. The default (Planetary Computer) needs a request signer, which is Python-only, so point this at an unauthenticated STAC root to use it from the CLI</td>
+</tr>
+<tr>
+<td><code>--query</code></td>
+<td>optional</td>
+<td>STAC query-extension filter, as a JSON string</td>
+</tr>
+<tr>
+<td><code>--no-align</code></td>
+<td>optional</td>
+<td>skip the multi-asset resolution alignment</td>
+</tr>
+<tr>
+<td><code>--overwrite</code></td>
+<td>optional</td>
+<td>replace the output if it already exists</td>
+</tr>
+</tbody>
+</table>
+<h4 id="pyramids-collection-import-stac"><a class="toclink" href="#pyramids-collection-import-stac"><code>pyramids collection import stac</code></a><a class="headerlink" href="#pyramids-collection-import-stac" title="Permanent link">#</a></h4>
+<p>build a cube from a saved STAC ItemCollection / item-list JSON file</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>pyramids collection import stac [-h] --asset ASSET [--bbox MINX MINY MAXX MAXY] [--max-items MAX_ITEMS] [--groupby GROUPBY] [--overwrite] items output
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>argument</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>items</code></td>
+<td>required</td>
+<td>path to a STAC ItemCollection / item-list JSON file</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>required</td>
+<td>destination NetCDF cube path</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--asset</code></td>
+<td><strong>required</strong></td>
+<td>asset key, or comma-separated keys for a band axis</td>
+</tr>
+<tr>
+<td><code>--bbox</code></td>
+<td>optional</td>
+<td>lon/lat (EPSG:4326) item filter: drop items whose footprint misses it</td>
+</tr>
+<tr>
+<td><code>--max-items</code></td>
+<td>optional</td>
+<td>cap the number of items consumed (after --bbox filtering)</td>
+</tr>
+<tr>
+<td><code>--groupby</code></td>
+<td>optional</td>
+<td>collapse items into timesteps: solar_day, id, time, or an item property key</td>
 </tr>
 <tr>
 <td><code>--overwrite</code></td>

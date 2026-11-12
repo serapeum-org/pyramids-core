@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -4682,6 +4682,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#pyramids-mesh-analysis-curvefit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids mesh analysis curvefit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pyramids-mesh-analysis-domain-area" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4697,6 +4708,17 @@
     <span class="md-ellipsis">
       
         pyramids mesh analysis focal-mean
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-mesh-analysis-focal-reduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids mesh analysis focal-reduce
       
     </span>
   </a>
@@ -9745,6 +9767,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#pyramids-mesh-analysis-curvefit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids mesh analysis curvefit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pyramids-mesh-analysis-domain-area" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9760,6 +9793,17 @@
     <span class="md-ellipsis">
       
         pyramids mesh analysis focal-mean
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyramids-mesh-analysis-focal-reduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyramids mesh analysis focal-reduce
       
     </span>
   </a>
@@ -10775,8 +10819,10 @@ listing and <code>pyramids mesh &lt;subsystem&gt; --help</code> for a subsystem.
 <li><code>cluster</code> — label connected faces whose values fall in a range</li>
 <li><code>contour</code> — trace iso-value contour lines to a vector</li>
 <li><code>count-domain-cells</code> — number of active mesh faces</li>
+<li><code>curvefit</code> — per-element fit of a named model along time (writes parameters)</li>
 <li><code>domain-area</code> — total area of the mesh domain</li>
 <li><code>focal-mean</code> — k-ring neighbourhood mean</li>
+<li><code>focal-reduce</code> — k-ring neighbourhood aggregated with a named reducer</li>
 <li><code>focal-std</code> — k-ring neighbourhood standard deviation</li>
 <li><code>footprint</code> — dissolved outline of the valid-value faces</li>
 <li><code>hillshade</code> — per-face shaded relief</li>
@@ -12621,9 +12667,65 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </tr>
 </tbody>
 </table>
+<h4 id="pyramids-mesh-analysis-curvefit"><a class="toclink" href="#pyramids-mesh-analysis-curvefit"><code>pyramids mesh analysis curvefit</code></a><a class="headerlink" href="#pyramids-mesh-analysis-curvefit" title="Permanent link">#</a></h4>
+<p>per-element fit of a named model along time (writes parameters)</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>pyramids mesh analysis curvefit [-h] --model {exponential,gaussian,linear,logistic,sine} [--p0 P0] [--var VAR] [--overwrite] file output
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>argument</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file</code></td>
+<td>required</td>
+<td>UGRID NetCDF path</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>required</td>
+<td>destination mesh (NetCDF) path</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--model</code></td>
+<td><strong>required</strong></td>
+<td>model to fit (polynomial trends use 'polyfit') (choices: <code>exponential</code>, <code>gaussian</code>, <code>linear</code>, <code>logistic</code>, <code>sine</code>)</td>
+</tr>
+<tr>
+<td><code>--p0</code></td>
+<td>optional</td>
+<td>initial guesses, comma-separated (e.g. 1,0.5); the non-linear models usually need a scaled guess on a seconds-based time axis or the fit returns all-NaN</td>
+</tr>
+<tr>
+<td><code>--var</code></td>
+<td>optional</td>
+<td>mesh variable to act on; defaults to the only data variable</td>
+</tr>
+<tr>
+<td><code>--overwrite</code></td>
+<td>optional</td>
+<td>replace the output if it already exists</td>
+</tr>
+</tbody>
+</table>
 <h4 id="pyramids-mesh-analysis-domain-area"><a class="toclink" href="#pyramids-mesh-analysis-domain-area"><code>pyramids mesh analysis domain-area</code></a><a class="headerlink" href="#pyramids-mesh-analysis-domain-area" title="Permanent link">#</a></h4>
 <p>total area of the mesh domain</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>pyramids mesh analysis domain-area [-h] [--json] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>pyramids mesh analysis domain-area [-h] [--json] file
 </code></pre></div>
 <table>
 <thead>
@@ -12659,7 +12761,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-focal-mean"><a class="toclink" href="#pyramids-mesh-analysis-focal-mean"><code>pyramids mesh analysis focal-mean</code></a><a class="headerlink" href="#pyramids-mesh-analysis-focal-mean" title="Permanent link">#</a></h4>
 <p>k-ring neighbourhood mean</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>pyramids mesh analysis focal-mean [-h] [--rings RINGS] [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>pyramids mesh analysis focal-mean [-h] [--rings RINGS] [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -12708,9 +12810,65 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </tr>
 </tbody>
 </table>
+<h4 id="pyramids-mesh-analysis-focal-reduce"><a class="toclink" href="#pyramids-mesh-analysis-focal-reduce"><code>pyramids mesh analysis focal-reduce</code></a><a class="headerlink" href="#pyramids-mesh-analysis-focal-reduce" title="Permanent link">#</a></h4>
+<p>k-ring neighbourhood aggregated with a named reducer</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>pyramids mesh analysis focal-reduce [-h] --reducer {max,median,min,range,sum,var} [--rings RINGS] [--var VAR] [--overwrite] file output
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>argument</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file</code></td>
+<td>required</td>
+<td>UGRID NetCDF path</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>required</td>
+<td>destination mesh (NetCDF) path</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th></th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--reducer</code></td>
+<td><strong>required</strong></td>
+<td>neighbourhood reducer (mean/std have their own faster verbs) (choices: <code>max</code>, <code>median</code>, <code>min</code>, <code>range</code>, <code>sum</code>, <code>var</code>)</td>
+</tr>
+<tr>
+<td><code>--rings</code></td>
+<td>optional</td>
+<td>neighbourhood radius in rings (default: 1)</td>
+</tr>
+<tr>
+<td><code>--var</code></td>
+<td>optional</td>
+<td>mesh variable to act on; defaults to the only data variable</td>
+</tr>
+<tr>
+<td><code>--overwrite</code></td>
+<td>optional</td>
+<td>replace the output if it already exists</td>
+</tr>
+</tbody>
+</table>
 <h4 id="pyramids-mesh-analysis-focal-std"><a class="toclink" href="#pyramids-mesh-analysis-focal-std"><code>pyramids mesh analysis focal-std</code></a><a class="headerlink" href="#pyramids-mesh-analysis-focal-std" title="Permanent link">#</a></h4>
 <p>k-ring neighbourhood standard deviation</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>pyramids mesh analysis focal-std [-h] [--rings RINGS] [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>pyramids mesh analysis focal-std [-h] [--rings RINGS] [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -12761,7 +12919,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-footprint"><a class="toclink" href="#pyramids-mesh-analysis-footprint"><code>pyramids mesh analysis footprint</code></a><a class="headerlink" href="#pyramids-mesh-analysis-footprint" title="Permanent link">#</a></h4>
 <p>dissolved outline of the valid-value faces</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>pyramids mesh analysis footprint [-h] [--var VAR] [--output OUTPUT] [--driver DRIVER] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>pyramids mesh analysis footprint [-h] [--var VAR] [--output OUTPUT] [--driver DRIVER] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -12817,7 +12975,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-hillshade"><a class="toclink" href="#pyramids-mesh-analysis-hillshade"><code>pyramids mesh analysis hillshade</code></a><a class="headerlink" href="#pyramids-mesh-analysis-hillshade" title="Permanent link">#</a></h4>
 <p>per-face shaded relief</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>pyramids mesh analysis hillshade [-h] [--azimuth AZIMUTH] [--altitude ALTITUDE] [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>pyramids mesh analysis hillshade [-h] [--azimuth AZIMUTH] [--altitude ALTITUDE] [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -12873,7 +13031,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-histogram"><a class="toclink" href="#pyramids-mesh-analysis-histogram"><code>pyramids mesh analysis histogram</code></a><a class="headerlink" href="#pyramids-mesh-analysis-histogram" title="Permanent link">#</a></h4>
 <p>the variable's value distribution as data</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>pyramids mesh analysis histogram [-h] [--bins BINS] [--range LOW HIGH] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>pyramids mesh analysis histogram [-h] [--bins BINS] [--range LOW HIGH] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -12934,7 +13092,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-polyfit"><a class="toclink" href="#pyramids-mesh-analysis-polyfit"><code>pyramids mesh analysis polyfit</code></a><a class="headerlink" href="#pyramids-mesh-analysis-polyfit" title="Permanent link">#</a></h4>
 <p>per-element polynomial trend along time (writes coefficients)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>pyramids mesh analysis polyfit [-h] --degree DEGREE [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>pyramids mesh analysis polyfit [-h] --degree DEGREE [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -12985,7 +13143,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-proximity"><a class="toclink" href="#pyramids-mesh-analysis-proximity"><code>pyramids mesh analysis proximity</code></a><a class="headerlink" href="#pyramids-mesh-analysis-proximity" title="Permanent link">#</a></h4>
 <p>topological hop distance to target faces</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>pyramids mesh analysis proximity [-h] --target-faces TARGET_FACES [TARGET_FACES ...] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>pyramids mesh analysis proximity [-h] --target-faces TARGET_FACES [TARGET_FACES ...] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13031,7 +13189,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-sample"><a class="toclink" href="#pyramids-mesh-analysis-sample"><code>pyramids mesh analysis sample</code></a><a class="headerlink" href="#pyramids-mesh-analysis-sample" title="Permanent link">#</a></h4>
 <p>element-resolved values at point locations</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>pyramids mesh analysis sample [-h] --var VAR --x X [X ...] --y Y [Y ...] [--method {contains,nearest}] [--time-index TIME_INDEX] [--output OUTPUT] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>pyramids mesh analysis sample [-h] --var VAR --x X [X ...] --y Y [Y ...] [--method {contains,nearest}] [--time-index TIME_INDEX] [--output OUTPUT] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -13102,7 +13260,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-sample-line"><a class="toclink" href="#pyramids-mesh-analysis-sample-line"><code>pyramids mesh analysis sample-line</code></a><a class="headerlink" href="#pyramids-mesh-analysis-sample-line" title="Permanent link">#</a></h4>
 <p>one sample per face crossing along a line</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>pyramids mesh analysis sample-line [-h] --coords COORDS [COORDS ...] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>pyramids mesh analysis sample-line [-h] --coords COORDS [COORDS ...] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -13158,7 +13316,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-sample-point"><a class="toclink" href="#pyramids-mesh-analysis-sample-point"><code>pyramids mesh analysis sample-point</code></a><a class="headerlink" href="#pyramids-mesh-analysis-sample-point" title="Permanent link">#</a></h4>
 <p>variable values at arbitrary x/y coordinates</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>pyramids mesh analysis sample-point [-h] --x X [X ...] --y Y [Y ...] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>pyramids mesh analysis sample-point [-h] --x X [X ...] --y Y [Y ...] [--var VAR] [--output OUTPUT] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -13219,7 +13377,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-sample-random"><a class="toclink" href="#pyramids-mesh-analysis-sample-random"><code>pyramids mesh analysis sample-random</code></a><a class="headerlink" href="#pyramids-mesh-analysis-sample-random" title="Permanent link">#</a></h4>
 <p>draw spatially random samples from the domain</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>pyramids mesh analysis sample-random [-h] -n N [--var VAR] [--seed SEED] [--output OUTPUT] [--json] [--overwrite] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a>pyramids mesh analysis sample-random [-h] -n N [--var VAR] [--seed SEED] [--output OUTPUT] [--json] [--overwrite] file
 </code></pre></div>
 <table>
 <thead>
@@ -13280,7 +13438,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-sieve"><a class="toclink" href="#pyramids-mesh-analysis-sieve"><code>pyramids mesh analysis sieve</code></a><a class="headerlink" href="#pyramids-mesh-analysis-sieve" title="Permanent link">#</a></h4>
 <p>drop value-connected groups below a size</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>pyramids mesh analysis sieve [-h] --threshold THRESHOLD [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a>pyramids mesh analysis sieve [-h] --threshold THRESHOLD [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13331,7 +13489,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-slope"><a class="toclink" href="#pyramids-mesh-analysis-slope"><code>pyramids mesh analysis slope</code></a><a class="headerlink" href="#pyramids-mesh-analysis-slope" title="Permanent link">#</a></h4>
 <p>per-face slope magnitude</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a>pyramids mesh analysis slope [-h] [--units {degrees,radians}] [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>pyramids mesh analysis slope [-h] [--units {degrees,radians}] [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13382,7 +13540,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-analysis-zonal-stats"><a class="toclink" href="#pyramids-mesh-analysis-zonal-stats"><code>pyramids mesh analysis zonal-stats</code></a><a class="headerlink" href="#pyramids-mesh-analysis-zonal-stats" title="Permanent link">#</a></h4>
 <p>per-zone statistics of a mesh variable</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a>pyramids mesh analysis zonal-stats [-h] --var VAR [--stats STATS [STATS ...]] [--unweighted] [--time-index TIME_INDEX] [--output OUTPUT] [--json] [--overwrite] file zones
+<div class="highlight"><pre><span></span><code><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a>pyramids mesh analysis zonal-stats [-h] --var VAR [--stats STATS [STATS ...]] [--unweighted] [--time-index TIME_INDEX] [--output OUTPUT] [--json] [--overwrite] file zones
 </code></pre></div>
 <table>
 <thead>
@@ -13454,7 +13612,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-attrs"><a class="toclink" href="#subsystem-mesh-attrs">Subsystem <code>mesh attrs</code></a><a class="headerlink" href="#subsystem-mesh-attrs" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-attrs-del-attr"><a class="toclink" href="#pyramids-mesh-attrs-del-attr"><code>pyramids mesh attrs del-attr</code></a><a class="headerlink" href="#pyramids-mesh-attrs-del-attr" title="Permanent link">#</a></h4>
 <p>delete a global attribute into a new mesh file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>pyramids mesh attrs del-attr [-h] --name NAME [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a>pyramids mesh attrs del-attr [-h] --name NAME [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13500,7 +13658,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-attrs-set-attr"><a class="toclink" href="#pyramids-mesh-attrs-set-attr"><code>pyramids mesh attrs set-attr</code></a><a class="headerlink" href="#pyramids-mesh-attrs-set-attr" title="Permanent link">#</a></h4>
 <p>set a global attribute into a new mesh file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a>pyramids mesh attrs set-attr [-h] --name NAME --value VALUE [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a>pyramids mesh attrs set-attr [-h] --name NAME --value VALUE [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13553,7 +13711,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <p>Write the data out to a file or format.</p>
 <h4 id="pyramids-mesh-export-attach-data"><a class="toclink" href="#pyramids-mesh-export-attach-data"><code>pyramids mesh export attach-data</code></a><a class="headerlink" href="#pyramids-mesh-export-attach-data" title="Permanent link">#</a></h4>
 <p>attach a results-only file's variables to the mesh</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a>pyramids mesh export attach-data [-h] --data DATA [--driver DRIVER] [--no-lazy] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a>pyramids mesh export attach-data [-h] --data DATA [--driver DRIVER] [--no-lazy] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13609,7 +13767,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-burn"><a class="toclink" href="#pyramids-mesh-export-burn"><code>pyramids mesh export burn</code></a><a class="headerlink" href="#pyramids-mesh-export-burn" title="Permanent link">#</a></h4>
 <p>burn a vector layer onto the mesh faces</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a>pyramids mesh export burn [-h] --geometry GEOMETRY --value VALUE [--name NAME] [--fill FILL] [--no-all-touched] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>pyramids mesh export burn [-h] --geometry GEOMETRY --value VALUE [--name NAME] [--fill FILL] [--no-all-touched] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13675,7 +13833,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-bytes"><a class="toclink" href="#pyramids-mesh-export-bytes"><code>pyramids mesh export bytes</code></a><a class="headerlink" href="#pyramids-mesh-export-bytes" title="Permanent link">#</a></h4>
 <p>serialise the mesh to a UGRID NetCDF byte buffer</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a>pyramids mesh export bytes [-h] [--overwrite] file [output]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a>pyramids mesh export bytes [-h] [--overwrite] file [output]
 </code></pre></div>
 <table>
 <thead>
@@ -13716,7 +13874,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-crs"><a class="toclink" href="#pyramids-mesh-export-crs"><code>pyramids mesh export crs</code></a><a class="headerlink" href="#pyramids-mesh-export-crs" title="Permanent link">#</a></h4>
 <p>reproject the mesh to a target CRS</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>pyramids mesh export crs [-h] --epsg EPSG [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>pyramids mesh export crs [-h] --epsg EPSG [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13762,7 +13920,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-dataframe"><a class="toclink" href="#pyramids-mesh-export-dataframe"><code>pyramids mesh export dataframe</code></a><a class="headerlink" href="#pyramids-mesh-export-dataframe" title="Permanent link">#</a></h4>
 <p>write a tidy value table (CSV, or Parquet by extension)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a>pyramids mesh export dataframe [-h] [--variables VARIABLES [VARIABLES ...]] [--dropna] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>pyramids mesh export dataframe [-h] [--variables VARIABLES [VARIABLES ...]] [--dropna] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13813,7 +13971,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-dataset"><a class="toclink" href="#pyramids-mesh-export-dataset"><code>pyramids mesh export dataset</code></a><a class="headerlink" href="#pyramids-mesh-export-dataset" title="Permanent link">#</a></h4>
 <p>rasterize a mesh variable to a regular-grid GeoTIFF</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>pyramids mesh export dataset [-h] --var VAR --cell-size CELL_SIZE [--method METHOD] [--bounds XMIN YMIN XMAX YMAX] [--epsg EPSG] [--nodata NODATA] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a>pyramids mesh export dataset [-h] --var VAR --cell-size CELL_SIZE [--method METHOD] [--bounds XMIN YMIN XMAX YMAX] [--epsg EPSG] [--nodata NODATA] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13884,7 +14042,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-file"><a class="toclink" href="#pyramids-mesh-export-file"><code>pyramids mesh export file</code></a><a class="headerlink" href="#pyramids-mesh-export-file" title="Permanent link">#</a></h4>
 <p>re-write a mesh (UGRID NetCDF or a driver)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>pyramids mesh export file [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a>pyramids mesh export file [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13930,7 +14088,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-geodataframe"><a class="toclink" href="#pyramids-mesh-export-geodataframe"><code>pyramids mesh export geodataframe</code></a><a class="headerlink" href="#pyramids-mesh-export-geodataframe" title="Permanent link">#</a></h4>
 <p>write the mesh elements as a vector file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a>pyramids mesh export geodataframe [-h] [--var VAR] [--location LOCATION] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>pyramids mesh export geodataframe [-h] [--var VAR] [--location LOCATION] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -13986,7 +14144,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-image"><a class="toclink" href="#pyramids-mesh-export-image"><code>pyramids mesh export image</code></a><a class="headerlink" href="#pyramids-mesh-export-image" title="Permanent link">#</a></h4>
 <p>write a colour-mapped image of a mesh variable (PNG/JPEG)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a>pyramids mesh export image [-h] [--var VAR] [--cell-size CELL_SIZE] [--cmap CMAP] [--method METHOD] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>pyramids mesh export image [-h] [--var VAR] [--cell-size CELL_SIZE] [--cmap CMAP] [--method METHOD] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14047,7 +14205,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-location"><a class="toclink" href="#pyramids-mesh-export-location"><code>pyramids mesh export location</code></a><a class="headerlink" href="#pyramids-mesh-export-location" title="Permanent link">#</a></h4>
 <p>remap a variable onto another mesh facet (node/edge/face)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>pyramids mesh export location [-h] --location LOCATION [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a>pyramids mesh export location [-h] --location LOCATION [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14098,7 +14256,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-polygonize"><a class="toclink" href="#pyramids-mesh-export-polygonize"><code>pyramids mesh export polygonize</code></a><a class="headerlink" href="#pyramids-mesh-export-polygonize" title="Permanent link">#</a></h4>
 <p>dissolve equal-valued faces into polygons (vector file)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>pyramids mesh export polygonize [-h] [--var VAR] [--decimals DECIMALS] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a>pyramids mesh export polygonize [-h] [--var VAR] [--decimals DECIMALS] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14154,7 +14312,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-regrid"><a class="toclink" href="#pyramids-mesh-export-regrid"><code>pyramids mesh export regrid</code></a><a class="headerlink" href="#pyramids-mesh-export-regrid" title="Permanent link">#</a></h4>
 <p>regrid a variable onto another mesh</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a>pyramids mesh export regrid [-h] --target TARGET [--method METHOD] [--var VAR] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a>pyramids mesh export regrid [-h] --target TARGET [--method METHOD] [--var VAR] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14210,7 +14368,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-voronoi-polygons"><a class="toclink" href="#pyramids-mesh-export-voronoi-polygons"><code>pyramids mesh export voronoi-polygons</code></a><a class="headerlink" href="#pyramids-mesh-export-voronoi-polygons" title="Permanent link">#</a></h4>
 <p>Voronoi (Thiessen) cells of the mesh nodes, as a vector file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a>pyramids mesh export voronoi-polygons [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>pyramids mesh export voronoi-polygons [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14256,7 +14414,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-export-zarr"><a class="toclink" href="#pyramids-mesh-export-zarr"><code>pyramids mesh export zarr</code></a><a class="headerlink" href="#pyramids-mesh-export-zarr" title="Permanent link">#</a></h4>
 <p>write the mesh to a Zarr store</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a>pyramids mesh export zarr [-h] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a>pyramids mesh export zarr [-h] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14298,7 +14456,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-inspect"><a class="toclink" href="#subsystem-mesh-inspect">Subsystem <code>mesh inspect</code></a><a class="headerlink" href="#subsystem-mesh-inspect" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-inspect-bounding-polygon"><a class="toclink" href="#pyramids-mesh-inspect-bounding-polygon"><code>pyramids mesh inspect bounding-polygon</code></a><a class="headerlink" href="#pyramids-mesh-inspect-bounding-polygon" title="Permanent link">#</a></h4>
 <p>write the mesh outline polygon</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>pyramids mesh inspect bounding-polygon [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a>pyramids mesh inspect bounding-polygon [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14344,7 +14502,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-inspect-circumcenters"><a class="toclink" href="#pyramids-mesh-inspect-circumcenters"><code>pyramids mesh inspect circumcenters</code></a><a class="headerlink" href="#pyramids-mesh-inspect-circumcenters" title="Permanent link">#</a></h4>
 <p>write triangle circumcenters as points</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a>pyramids mesh inspect circumcenters [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a>pyramids mesh inspect circumcenters [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14390,7 +14548,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-inspect-exterior-edges"><a class="toclink" href="#pyramids-mesh-inspect-exterior-edges"><code>pyramids mesh inspect exterior-edges</code></a><a class="headerlink" href="#pyramids-mesh-inspect-exterior-edges" title="Permanent link">#</a></h4>
 <p>write the boundary edges as a vector</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a>pyramids mesh inspect exterior-edges [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a>pyramids mesh inspect exterior-edges [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14436,7 +14594,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-inspect-exterior-faces"><a class="toclink" href="#pyramids-mesh-inspect-exterior-faces"><code>pyramids mesh inspect exterior-faces</code></a><a class="headerlink" href="#pyramids-mesh-inspect-exterior-faces" title="Permanent link">#</a></h4>
 <p>write the boundary faces as a vector</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a>pyramids mesh inspect exterior-faces [-h] [--driver DRIVER] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a>pyramids mesh inspect exterior-faces [-h] [--driver DRIVER] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14482,7 +14640,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-inspect-mesh-names"><a class="toclink" href="#pyramids-mesh-inspect-mesh-names"><code>pyramids mesh inspect mesh-names</code></a><a class="headerlink" href="#pyramids-mesh-inspect-mesh-names" title="Permanent link">#</a></h4>
 <p>list the topology names in a file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a>pyramids mesh inspect mesh-names [-h] [--driver DRIVER] [--json] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-73-1" name="__codelineno-73-1" href="#__codelineno-73-1"></a>pyramids mesh inspect mesh-names [-h] [--driver DRIVER] [--json] file
 </code></pre></div>
 <table>
 <thead>
@@ -14523,7 +14681,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-inspect-summary"><a class="toclink" href="#pyramids-mesh-inspect-summary"><code>pyramids mesh inspect summary</code></a><a class="headerlink" href="#pyramids-mesh-inspect-summary" title="Permanent link">#</a></h4>
 <p>per-variable summary statistics</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a>pyramids mesh inspect summary [-h] [--variables VARIABLES [VARIABLES ...]] [--metrics METRICS [METRICS ...]] [--no-skipna] [--ddof DDOF] [--json] file
+<div class="highlight"><pre><span></span><code><a id="__codelineno-74-1" name="__codelineno-74-1" href="#__codelineno-74-1"></a>pyramids mesh inspect summary [-h] [--variables VARIABLES [VARIABLES ...]] [--metrics METRICS [METRICS ...]] [--no-skipna] [--ddof DDOF] [--json] file
 </code></pre></div>
 <table>
 <thead>
@@ -14580,7 +14738,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-interp"><a class="toclink" href="#subsystem-mesh-interp">Subsystem <code>mesh interp</code></a><a class="headerlink" href="#subsystem-mesh-interp" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-interp-convert-calendar"><a class="toclink" href="#pyramids-mesh-interp-convert-calendar"><code>pyramids mesh interp convert-calendar</code></a><a class="headerlink" href="#pyramids-mesh-interp-convert-calendar" title="Permanent link">#</a></h4>
 <p>recast the time axis to a calendar</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-73-1" name="__codelineno-73-1" href="#__codelineno-73-1"></a>pyramids mesh interp convert-calendar [-h] [--overwrite] --calendar CALENDAR [--align-on ALIGN_ON] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-75-1" name="__codelineno-75-1" href="#__codelineno-75-1"></a>pyramids mesh interp convert-calendar [-h] [--overwrite] --calendar CALENDAR [--align-on ALIGN_ON] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14631,7 +14789,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-convert-units"><a class="toclink" href="#pyramids-mesh-interp-convert-units"><code>pyramids mesh interp convert-units</code></a><a class="headerlink" href="#pyramids-mesh-interp-convert-units" title="Permanent link">#</a></h4>
 <p>convert a variable to target units</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-74-1" name="__codelineno-74-1" href="#__codelineno-74-1"></a>pyramids mesh interp convert-units [-h] [--overwrite] --to TARGET [--var VAR] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-76-1" name="__codelineno-76-1" href="#__codelineno-76-1"></a>pyramids mesh interp convert-units [-h] [--overwrite] --to TARGET [--var VAR] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14682,7 +14840,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-fill-na-spatial"><a class="toclink" href="#pyramids-mesh-interp-fill-na-spatial"><code>pyramids mesh interp fill-na-spatial</code></a><a class="headerlink" href="#pyramids-mesh-interp-fill-na-spatial" title="Permanent link">#</a></h4>
 <p>fill gaps from nearby cells in space</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-75-1" name="__codelineno-75-1" href="#__codelineno-75-1"></a>pyramids mesh interp fill-na-spatial [-h] [--overwrite] [--var VAR] [--max-distance MAX_DISTANCE] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-77-1" name="__codelineno-77-1" href="#__codelineno-77-1"></a>pyramids mesh interp fill-na-spatial [-h] [--overwrite] [--var VAR] [--max-distance MAX_DISTANCE] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14733,7 +14891,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-fillna"><a class="toclink" href="#pyramids-mesh-interp-fillna"><code>pyramids mesh interp fillna</code></a><a class="headerlink" href="#pyramids-mesh-interp-fillna" title="Permanent link">#</a></h4>
 <p>replace missing values with a constant</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-76-1" name="__codelineno-76-1" href="#__codelineno-76-1"></a>pyramids mesh interp fillna [-h] [--overwrite] --value VALUE [--var VAR] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-78-1" name="__codelineno-78-1" href="#__codelineno-78-1"></a>pyramids mesh interp fillna [-h] [--overwrite] --value VALUE [--var VAR] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14784,7 +14942,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-interp-calendar"><a class="toclink" href="#pyramids-mesh-interp-interp-calendar"><code>pyramids mesh interp interp-calendar</code></a><a class="headerlink" href="#pyramids-mesh-interp-interp-calendar" title="Permanent link">#</a></h4>
 <p>interpolate onto a target's time axis</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-77-1" name="__codelineno-77-1" href="#__codelineno-77-1"></a>pyramids mesh interp interp-calendar [-h] [--overwrite] --target TARGET file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-79-1" name="__codelineno-79-1" href="#__codelineno-79-1"></a>pyramids mesh interp interp-calendar [-h] [--overwrite] --target TARGET file output
 </code></pre></div>
 <table>
 <thead>
@@ -14830,7 +14988,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-interp-like"><a class="toclink" href="#pyramids-mesh-interp-interp-like"><code>pyramids mesh interp interp-like</code></a><a class="headerlink" href="#pyramids-mesh-interp-interp-like" title="Permanent link">#</a></h4>
 <p>interpolate onto another mesh's grid</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-78-1" name="__codelineno-78-1" href="#__codelineno-78-1"></a>pyramids mesh interp interp-like [-h] [--overwrite] --other OTHER file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-80-1" name="__codelineno-80-1" href="#__codelineno-80-1"></a>pyramids mesh interp interp-like [-h] [--overwrite] --other OTHER file output
 </code></pre></div>
 <table>
 <thead>
@@ -14876,7 +15034,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-interp-time"><a class="toclink" href="#pyramids-mesh-interp-interp-time"><code>pyramids mesh interp interp-time</code></a><a class="headerlink" href="#pyramids-mesh-interp-interp-time" title="Permanent link">#</a></h4>
 <p>resample variables onto new time coordinates</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-79-1" name="__codelineno-79-1" href="#__codelineno-79-1"></a>pyramids mesh interp interp-time [-h] [--overwrite] --time TIME [TIME ...] [--method {linear,nearest}] [--bounds {nan,clamp}] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-81-1" name="__codelineno-81-1" href="#__codelineno-81-1"></a>pyramids mesh interp interp-time [-h] [--overwrite] --time TIME [TIME ...] [--method {linear,nearest}] [--bounds {nan,clamp}] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14932,7 +15090,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-interpolate-na"><a class="toclink" href="#pyramids-mesh-interp-interpolate-na"><code>pyramids mesh interp interpolate-na</code></a><a class="headerlink" href="#pyramids-mesh-interp-interpolate-na" title="Permanent link">#</a></h4>
 <p>fill gaps by interpolating along a dimension</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-80-1" name="__codelineno-80-1" href="#__codelineno-80-1"></a>pyramids mesh interp interpolate-na [-h] [--overwrite] [--method METHOD] [--limit LIMIT] [--dim DIM] [--no-use-coordinate] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-82-1" name="__codelineno-82-1" href="#__codelineno-82-1"></a>pyramids mesh interp interpolate-na [-h] [--overwrite] [--method METHOD] [--limit LIMIT] [--dim DIM] [--no-use-coordinate] file output
 </code></pre></div>
 <table>
 <thead>
@@ -14993,7 +15151,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-laplace-interpolate"><a class="toclink" href="#pyramids-mesh-interp-laplace-interpolate"><code>pyramids mesh interp laplace-interpolate</code></a><a class="headerlink" href="#pyramids-mesh-interp-laplace-interpolate" title="Permanent link">#</a></h4>
 <p>fill gaps by solving Laplace's equation</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-81-1" name="__codelineno-81-1" href="#__codelineno-81-1"></a>pyramids mesh interp laplace-interpolate [-h] [--overwrite] [--var VAR] [--no-weights] [--direct-solve] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-83-1" name="__codelineno-83-1" href="#__codelineno-83-1"></a>pyramids mesh interp laplace-interpolate [-h] [--overwrite] [--var VAR] [--no-weights] [--direct-solve] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15049,7 +15207,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-interp-resample"><a class="toclink" href="#pyramids-mesh-interp-resample"><code>pyramids mesh interp resample</code></a><a class="headerlink" href="#pyramids-mesh-interp-resample" title="Permanent link">#</a></h4>
 <p>bin the time axis to a frequency and reduce</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-82-1" name="__codelineno-82-1" href="#__codelineno-82-1"></a>pyramids mesh interp resample [-h] [--overwrite] --freq FREQ [--how HOW] [--q Q] [--no-skipna] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-84-1" name="__codelineno-84-1" href="#__codelineno-84-1"></a>pyramids mesh interp resample [-h] [--overwrite] --freq FREQ [--how HOW] [--q Q] [--no-skipna] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15111,7 +15269,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-join"><a class="toclink" href="#subsystem-mesh-join">Subsystem <code>mesh join</code></a><a class="headerlink" href="#subsystem-mesh-join" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-join-concat"><a class="toclink" href="#pyramids-mesh-join-concat"><code>pyramids mesh join concat</code></a><a class="headerlink" href="#pyramids-mesh-join-concat" title="Permanent link">#</a></h4>
 <p>concatenate several same-topology meshes into one</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-83-1" name="__codelineno-83-1" href="#__codelineno-83-1"></a>pyramids mesh join concat [-h] --inputs MESH [MESH ...] [--overwrite] output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-85-1" name="__codelineno-85-1" href="#__codelineno-85-1"></a>pyramids mesh join concat [-h] --inputs MESH [MESH ...] [--overwrite] output
 </code></pre></div>
 <table>
 <thead>
@@ -15152,7 +15310,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-join-merge"><a class="toclink" href="#pyramids-mesh-join-merge"><code>pyramids mesh join merge</code></a><a class="headerlink" href="#pyramids-mesh-join-merge" title="Permanent link">#</a></h4>
 <p>merge the variables of several same-topology meshes into one</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-84-1" name="__codelineno-84-1" href="#__codelineno-84-1"></a>pyramids mesh join merge [-h] --inputs MESH [MESH ...] [--compat COMPAT] [--overwrite] output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-86-1" name="__codelineno-86-1" href="#__codelineno-86-1"></a>pyramids mesh join merge [-h] --inputs MESH [MESH ...] [--compat COMPAT] [--overwrite] output
 </code></pre></div>
 <table>
 <thead>
@@ -15199,7 +15357,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-plot"><a class="toclink" href="#subsystem-mesh-plot">Subsystem <code>mesh plot</code></a><a class="headerlink" href="#subsystem-mesh-plot" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-plot-animate"><a class="toclink" href="#pyramids-mesh-plot-animate"><code>pyramids mesh plot animate</code></a><a class="headerlink" href="#pyramids-mesh-plot-animate" title="Permanent link">#</a></h4>
 <p>save an animation of a temporal mesh variable (GIF/MP4)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-85-1" name="__codelineno-85-1" href="#__codelineno-85-1"></a>pyramids mesh plot animate [-h] [--var VAR] [--interval INTERVAL] [--dpi DPI] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-87-1" name="__codelineno-87-1" href="#__codelineno-87-1"></a>pyramids mesh plot animate [-h] [--var VAR] [--interval INTERVAL] [--dpi DPI] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15255,7 +15413,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-plot-plot"><a class="toclink" href="#pyramids-mesh-plot-plot"><code>pyramids mesh plot plot</code></a><a class="headerlink" href="#pyramids-mesh-plot-plot" title="Permanent link">#</a></h4>
 <p>save a filled plot of a mesh variable (PNG)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-86-1" name="__codelineno-86-1" href="#__codelineno-86-1"></a>pyramids mesh plot plot [-h] --var VAR [--cmap CMAP] [--title TITLE] [--basemap BASEMAP] [--dpi DPI] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-88-1" name="__codelineno-88-1" href="#__codelineno-88-1"></a>pyramids mesh plot plot [-h] --var VAR [--cmap CMAP] [--title TITLE] [--basemap BASEMAP] [--dpi DPI] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15321,7 +15479,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-plot-plot-histogram"><a class="toclink" href="#pyramids-mesh-plot-plot-histogram"><code>pyramids mesh plot plot-histogram</code></a><a class="headerlink" href="#pyramids-mesh-plot-plot-histogram" title="Permanent link">#</a></h4>
 <p>save a variable's value-distribution histogram (PNG)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-87-1" name="__codelineno-87-1" href="#__codelineno-87-1"></a>pyramids mesh plot plot-histogram [-h] [--var VAR] [--bins BINS] [--dpi DPI] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-89-1" name="__codelineno-89-1" href="#__codelineno-89-1"></a>pyramids mesh plot plot-histogram [-h] [--var VAR] [--bins BINS] [--dpi DPI] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15377,7 +15535,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-plot-plot-outline"><a class="toclink" href="#pyramids-mesh-plot-plot-outline"><code>pyramids mesh plot plot-outline</code></a><a class="headerlink" href="#pyramids-mesh-plot-plot-outline" title="Permanent link">#</a></h4>
 <p>save the mesh wireframe/outline (PNG)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-88-1" name="__codelineno-88-1" href="#__codelineno-88-1"></a>pyramids mesh plot plot-outline [-h] [--basemap BASEMAP] [--dpi DPI] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-90-1" name="__codelineno-90-1" href="#__codelineno-90-1"></a>pyramids mesh plot plot-outline [-h] [--basemap BASEMAP] [--dpi DPI] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15428,7 +15586,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-plot-plot-vector-field"><a class="toclink" href="#pyramids-mesh-plot-plot-vector-field"><code>pyramids mesh plot plot-vector-field</code></a><a class="headerlink" href="#pyramids-mesh-plot-plot-vector-field" title="Permanent link">#</a></h4>
 <p>save a two-variable (u, v) vector-field plot (PNG)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-89-1" name="__codelineno-89-1" href="#__codelineno-89-1"></a>pyramids mesh plot plot-vector-field [-h] --u U --v V [--kind {quiver,barbs,streamplot}] [--thin THIN] [--time-index TIME_INDEX] [--dpi DPI] [--overwrite] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-91-1" name="__codelineno-91-1" href="#__codelineno-91-1"></a>pyramids mesh plot plot-vector-field [-h] --u U --v V [--kind {quiver,barbs,streamplot}] [--thin THIN] [--time-index TIME_INDEX] [--dpi DPI] [--overwrite] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15500,7 +15658,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-read"><a class="toclink" href="#subsystem-mesh-read">Subsystem <code>mesh read</code></a><a class="headerlink" href="#subsystem-mesh-read" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-read-arrays"><a class="toclink" href="#pyramids-mesh-read-arrays"><code>pyramids mesh read arrays</code></a><a class="headerlink" href="#pyramids-mesh-read-arrays" title="Permanent link">#</a></h4>
 <p>build a mesh from node/face .npy arrays</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-90-1" name="__codelineno-90-1" href="#__codelineno-90-1"></a>pyramids mesh read arrays [-h] [--data NAME=PATH] [--data-location NAME=LOC] [--epsg EPSG] [--mesh-name MESH_NAME] [--overwrite] node_x node_y faces output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-92-1" name="__codelineno-92-1" href="#__codelineno-92-1"></a>pyramids mesh read arrays [-h] [--data NAME=PATH] [--data-location NAME=LOC] [--epsg EPSG] [--mesh-name MESH_NAME] [--overwrite] node_x node_y faces output
 </code></pre></div>
 <table>
 <thead>
@@ -15571,7 +15729,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-bytes"><a class="toclink" href="#pyramids-mesh-read-bytes"><code>pyramids mesh read bytes</code></a><a class="headerlink" href="#pyramids-mesh-read-bytes" title="Permanent link">#</a></h4>
 <p>open a mesh held as raw bytes</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-91-1" name="__codelineno-91-1" href="#__codelineno-91-1"></a>pyramids mesh read bytes [-h] [--stdin] [--suffix SUFFIX] [--overwrite] [input] output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-93-1" name="__codelineno-93-1" href="#__codelineno-93-1"></a>pyramids mesh read bytes [-h] [--stdin] [--suffix SUFFIX] [--overwrite] [input] output
 </code></pre></div>
 <table>
 <thead>
@@ -15622,7 +15780,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-geodataframe"><a class="toclink" href="#pyramids-mesh-read-geodataframe"><code>pyramids mesh read geodataframe</code></a><a class="headerlink" href="#pyramids-mesh-read-geodataframe" title="Permanent link">#</a></h4>
 <p>build a mesh from a polygon vector layer</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-92-1" name="__codelineno-92-1" href="#__codelineno-92-1"></a>pyramids mesh read geodataframe [-h] [--mesh-name MESH_NAME] [--overwrite] vector output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-94-1" name="__codelineno-94-1" href="#__codelineno-94-1"></a>pyramids mesh read geodataframe [-h] [--mesh-name MESH_NAME] [--overwrite] vector output
 </code></pre></div>
 <table>
 <thead>
@@ -15668,7 +15826,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-open-mf"><a class="toclink" href="#pyramids-mesh-read-open-mf"><code>pyramids mesh read open-mf</code></a><a class="headerlink" href="#pyramids-mesh-read-open-mf" title="Permanent link">#</a></h4>
 <p>concatenate several mesh files into one dataset</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-93-1" name="__codelineno-93-1" href="#__codelineno-93-1"></a>pyramids mesh read open-mf [-h] [--driver DRIVER] [--mesh-name MESH_NAME] [--no-sort] [--overwrite] files [files ...] output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-95-1" name="__codelineno-95-1" href="#__codelineno-95-1"></a>pyramids mesh read open-mf [-h] [--driver DRIVER] [--mesh-name MESH_NAME] [--no-sort] [--overwrite] files [files ...] output
 </code></pre></div>
 <table>
 <thead>
@@ -15724,7 +15882,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-read-all"><a class="toclink" href="#pyramids-mesh-read-read-all"><code>pyramids mesh read read-all</code></a><a class="headerlink" href="#pyramids-mesh-read-read-all" title="Permanent link">#</a></h4>
 <p>write every topology in a file to its own NetCDF</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-94-1" name="__codelineno-94-1" href="#__codelineno-94-1"></a>pyramids mesh read read-all [-h] [--driver DRIVER] [--eager] [--overwrite] file output_dir
+<div class="highlight"><pre><span></span><code><a id="__codelineno-96-1" name="__codelineno-96-1" href="#__codelineno-96-1"></a>pyramids mesh read read-all [-h] [--driver DRIVER] [--eager] [--overwrite] file output_dir
 </code></pre></div>
 <table>
 <thead>
@@ -15775,7 +15933,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-structured"><a class="toclink" href="#pyramids-mesh-read-structured"><code>pyramids mesh read structured</code></a><a class="headerlink" href="#pyramids-mesh-read-structured" title="Permanent link">#</a></h4>
 <p>build a quad mesh from a raster (one quad per cell)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-95-1" name="__codelineno-95-1" href="#__codelineno-95-1"></a>pyramids mesh read structured [-h] [--band-names BAND_NAMES [BAND_NAMES ...]] [--mesh-name MESH_NAME] [--overwrite] raster output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-97-1" name="__codelineno-97-1" href="#__codelineno-97-1"></a>pyramids mesh read structured [-h] [--band-names BAND_NAMES [BAND_NAMES ...]] [--mesh-name MESH_NAME] [--overwrite] raster output
 </code></pre></div>
 <table>
 <thead>
@@ -15826,7 +15984,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-read-zarr"><a class="toclink" href="#pyramids-mesh-read-zarr"><code>pyramids mesh read zarr</code></a><a class="headerlink" href="#pyramids-mesh-read-zarr" title="Permanent link">#</a></h4>
 <p>read a pyramids-written Zarr store (needs the [lazy] extra)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-96-1" name="__codelineno-96-1" href="#__codelineno-96-1"></a>pyramids mesh read zarr [-h] [--overwrite] store output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-98-1" name="__codelineno-98-1" href="#__codelineno-98-1"></a>pyramids mesh read zarr [-h] [--overwrite] store output
 </code></pre></div>
 <table>
 <thead>
@@ -15868,7 +16026,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 <h2 id="subsystem-mesh-select"><a class="toclink" href="#subsystem-mesh-select">Subsystem <code>mesh select</code></a><a class="headerlink" href="#subsystem-mesh-select" title="Permanent link">#</a></h2>
 <h4 id="pyramids-mesh-select-clip"><a class="toclink" href="#pyramids-mesh-select-clip"><code>pyramids mesh select clip</code></a><a class="headerlink" href="#pyramids-mesh-select-clip" title="Permanent link">#</a></h4>
 <p>clip the mesh to a polygon mask</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-97-1" name="__codelineno-97-1" href="#__codelineno-97-1"></a>pyramids mesh select clip [-h] [--overwrite] --mask MASK [--no-touch] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-99-1" name="__codelineno-99-1" href="#__codelineno-99-1"></a>pyramids mesh select clip [-h] [--overwrite] --mask MASK [--no-touch] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15919,7 +16077,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-clip-values"><a class="toclink" href="#pyramids-mesh-select-clip-values"><code>pyramids mesh select clip-values</code></a><a class="headerlink" href="#pyramids-mesh-select-clip-values" title="Permanent link">#</a></h4>
 <p>clamp a variable's values to [lower, upper]</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-98-1" name="__codelineno-98-1" href="#__codelineno-98-1"></a>pyramids mesh select clip-values [-h] [--overwrite] --lower LOWER --upper UPPER [--var VAR] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-100-1" name="__codelineno-100-1" href="#__codelineno-100-1"></a>pyramids mesh select clip-values [-h] [--overwrite] --lower LOWER --upper UPPER [--var VAR] file output
 </code></pre></div>
 <table>
 <thead>
@@ -15975,7 +16133,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-crop"><a class="toclink" href="#pyramids-mesh-select-crop"><code>pyramids mesh select crop</code></a><a class="headerlink" href="#pyramids-mesh-select-crop" title="Permanent link">#</a></h4>
 <p>keep faces inside a polygon mask or a bbox</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-99-1" name="__codelineno-99-1" href="#__codelineno-99-1"></a>pyramids mesh select crop [-h] [--overwrite] (--mask MASK | --bbox MINX MINY MAXX MAXY) [--epsg EPSG] [--no-touch] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-101-1" name="__codelineno-101-1" href="#__codelineno-101-1"></a>pyramids mesh select crop [-h] [--overwrite] (--mask MASK | --bbox MINX MINY MAXX MAXY) [--epsg EPSG] [--no-touch] file output
 </code></pre></div>
 <table>
 <thead>
@@ -16036,7 +16194,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-head"><a class="toclink" href="#pyramids-mesh-select-head"><code>pyramids mesh select head</code></a><a class="headerlink" href="#pyramids-mesh-select-head" title="Permanent link">#</a></h4>
 <p>keep the first N time steps</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-100-1" name="__codelineno-100-1" href="#__codelineno-100-1"></a>pyramids mesh select head [-h] [--overwrite] [--n N] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-102-1" name="__codelineno-102-1" href="#__codelineno-102-1"></a>pyramids mesh select head [-h] [--overwrite] [--n N] file output
 </code></pre></div>
 <table>
 <thead>
@@ -16082,7 +16240,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-isel"><a class="toclink" href="#pyramids-mesh-select-isel"><code>pyramids mesh select isel</code></a><a class="headerlink" href="#pyramids-mesh-select-isel" title="Permanent link">#</a></h4>
 <p>select by time and/or element position</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-101-1" name="__codelineno-101-1" href="#__codelineno-101-1"></a>pyramids mesh select isel [-h] [--overwrite] [--time TIME [TIME ...]] [--element ELEMENT [ELEMENT ...]] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-103-1" name="__codelineno-103-1" href="#__codelineno-103-1"></a>pyramids mesh select isel [-h] [--overwrite] [--time TIME [TIME ...]] [--element ELEMENT [ELEMENT ...]] file output
 </code></pre></div>
 <table>
 <thead>
@@ -16133,7 +16291,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-isel-layer"><a class="toclink" href="#pyramids-mesh-select-isel-layer"><code>pyramids mesh select isel-layer</code></a><a class="headerlink" href="#pyramids-mesh-select-isel-layer" title="Permanent link">#</a></h4>
 <p>select a layer by position</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-102-1" name="__codelineno-102-1" href="#__codelineno-102-1"></a>pyramids mesh select isel-layer [-h] [--overwrite] --index INDEX file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-104-1" name="__codelineno-104-1" href="#__codelineno-104-1"></a>pyramids mesh select isel-layer [-h] [--overwrite] --index INDEX file output
 </code></pre></div>
 <table>
 <thead>
@@ -16179,7 +16337,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-isel-time"><a class="toclink" href="#pyramids-mesh-select-isel-time"><code>pyramids mesh select isel-time</code></a><a class="headerlink" href="#pyramids-mesh-select-isel-time" title="Permanent link">#</a></h4>
 <p>select a single time step by position (collapses the axis)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-103-1" name="__codelineno-103-1" href="#__codelineno-103-1"></a>pyramids mesh select isel-time [-h] [--overwrite] --index INDEX file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-105-1" name="__codelineno-105-1" href="#__codelineno-105-1"></a>pyramids mesh select isel-time [-h] [--overwrite] --index INDEX file output
 </code></pre></div>
 <table>
 <thead>
@@ -16225,7 +16383,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-isel-time-range"><a class="toclink" href="#pyramids-mesh-select-isel-time-range"><code>pyramids mesh select isel-time-range</code></a><a class="headerlink" href="#pyramids-mesh-select-isel-time-range" title="Permanent link">#</a></h4>
 <p>select a half-open range of time steps</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-104-1" name="__codelineno-104-1" href="#__codelineno-104-1"></a>pyramids mesh select isel-time-range [-h] [--overwrite] --start START --stop STOP file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-106-1" name="__codelineno-106-1" href="#__codelineno-106-1"></a>pyramids mesh select isel-time-range [-h] [--overwrite] --start START --stop STOP file output
 </code></pre></div>
 <table>
 <thead>
@@ -16276,7 +16434,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-sel"><a class="toclink" href="#pyramids-mesh-select-sel"><code>pyramids mesh select sel</code></a><a class="headerlink" href="#pyramids-mesh-select-sel" title="Permanent link">#</a></h4>
 <p>select time steps by coordinate value</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-105-1" name="__codelineno-105-1" href="#__codelineno-105-1"></a>pyramids mesh select sel [-h] [--overwrite] --time TIME [TIME ...] [--method {nearest}] [--tolerance TOLERANCE] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-107-1" name="__codelineno-107-1" href="#__codelineno-107-1"></a>pyramids mesh select sel [-h] [--overwrite] --time TIME [TIME ...] [--method {nearest}] [--tolerance TOLERANCE] file output
 </code></pre></div>
 <table>
 <thead>
@@ -16332,7 +16490,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-sel-layer"><a class="toclink" href="#pyramids-mesh-select-sel-layer"><code>pyramids mesh select sel-layer</code></a><a class="headerlink" href="#pyramids-mesh-select-sel-layer" title="Permanent link">#</a></h4>
 <p>select a layer by coordinate value</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-106-1" name="__codelineno-106-1" href="#__codelineno-106-1"></a>pyramids mesh select sel-layer [-h] [--overwrite] --value VALUE file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-108-1" name="__codelineno-108-1" href="#__codelineno-108-1"></a>pyramids mesh select sel-layer [-h] [--overwrite] --value VALUE file output
 </code></pre></div>
 <table>
 <thead>
@@ -16378,7 +16536,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-subset-by-bounds"><a class="toclink" href="#pyramids-mesh-select-subset-by-bounds"><code>pyramids mesh select subset-by-bounds</code></a><a class="headerlink" href="#pyramids-mesh-select-subset-by-bounds" title="Permanent link">#</a></h4>
 <p>keep the faces inside a bounding box</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-107-1" name="__codelineno-107-1" href="#__codelineno-107-1"></a>pyramids mesh select subset-by-bounds [-h] [--overwrite] --bbox MINX MINY MAXX MAXY file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-109-1" name="__codelineno-109-1" href="#__codelineno-109-1"></a>pyramids mesh select subset-by-bounds [-h] [--overwrite] --bbox MINX MINY MAXX MAXY file output
 </code></pre></div>
 <table>
 <thead>
@@ -16424,7 +16582,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-tail"><a class="toclink" href="#pyramids-mesh-select-tail"><code>pyramids mesh select tail</code></a><a class="headerlink" href="#pyramids-mesh-select-tail" title="Permanent link">#</a></h4>
 <p>keep the last N time steps</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-108-1" name="__codelineno-108-1" href="#__codelineno-108-1"></a>pyramids mesh select tail [-h] [--overwrite] [--n N] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-110-1" name="__codelineno-110-1" href="#__codelineno-110-1"></a>pyramids mesh select tail [-h] [--overwrite] [--n N] file output
 </code></pre></div>
 <table>
 <thead>
@@ -16470,7 +16628,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </table>
 <h4 id="pyramids-mesh-select-where"><a class="toclink" href="#pyramids-mesh-select-where"><code>pyramids mesh select where</code></a><a class="headerlink" href="#pyramids-mesh-select-where" title="Permanent link">#</a></h4>
 <p>mask elements a comparison does not select</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-109-1" name="__codelineno-109-1" href="#__codelineno-109-1"></a>pyramids mesh select where [-h] [--overwrite] --cond COND [--other OTHER] [--var VAR] file output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-111-1" name="__codelineno-111-1" href="#__codelineno-111-1"></a>pyramids mesh select where [-h] [--overwrite] --cond COND [--other OTHER] [--var VAR] file output
 </code></pre></div>
 <table>
 <thead>
