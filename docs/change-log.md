@@ -1,5 +1,16 @@
 ﻿# Change log
 
+## 0.78.0 (2026-11-12)
+
+### Feat
+
+- **ugrid**: resolve 1D branch+offset node geometry to coordinates (#1545)
+- **cli**: wrap the two library-blocked verbs (mesh curvefit/focal-reduce, collection import point/stac) (#1543)
+
+### Refactor
+
+- **cli**: drop the to-/from- prefix and split the mixed io subgroups (#1539)
+
 ## 0.77.0 (2026-11-11)
 
 ### BREAKING CHANGE
