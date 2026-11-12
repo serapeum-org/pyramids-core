@@ -804,6 +804,25 @@ class TestCollectionImportStac:
         assert rc == 1
         assert "not a STAC" in capsys.readouterr().err
 
+    def test_rejects_a_non_list_features_value(self, tmp_path, capsys):
+        """A `features` key whose value is not a list falls through to the clean error (R2 N1)."""
+        path = str(tmp_path / "bad.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"type": "FeatureCollection", "features": "oops"}, handle)
+        rc = main(
+            [
+                "collection",
+                "import",
+                "stac",
+                path,
+                str(tmp_path / "x.nc"),
+                "--asset",
+                "data",
+            ]
+        )
+        assert rc == 1
+        assert "not a STAC" in capsys.readouterr().err
+
     def test_max_items_runs_end_to_end(self, tmp_path):
         """`--max-items 1` runs end-to-end and writes a cube (offline integration)."""
         items = _items_json(tmp_path, _local_items(tmp_path))
@@ -857,6 +876,7 @@ class TestCollectionImportStac:
                 captured["out"] = path
 
         def _fake_from_stac(items, asset, **kwargs):
+            captured["items"] = items
             captured["asset"] = asset
             captured.update(kwargs)
             return _FakeCube()
@@ -885,6 +905,7 @@ class TestCollectionImportStac:
             "id",
         ]
         assert main(argv) == 0
+        assert isinstance(captured["items"], list) and len(captured["items"]) == 3
         assert captured["asset"] == ["B04", "B03"]
         assert captured["bbox"] == (1.0, 2.0, 3.0, 4.0)
         assert captured["max_items"] == 2
@@ -1009,6 +1030,7 @@ class TestCollectionImportPoint:
         )
         assert (captured["edge_size"], captured["resolution"]) == (128, 10.0)
         assert captured["units"] == "px" and captured["align"] is True
+        assert captured["stac"] is None, "the default --stac (None) must be forwarded"
         assert captured["out"] == out
 
     def test_single_band_is_passed_as_a_string(self, tmp_path, monkeypatch):
