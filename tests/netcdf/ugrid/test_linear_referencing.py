@@ -187,3 +187,57 @@ class TestPlaceNodesOnNetworkValidation:
                 geom_y=np.array([0.0, 0.0]),
                 vertices_per_branch=np.array([-2, 4]),
             )
+
+    def test_two_dimensional_branch_or_offset(self):
+        with pytest.raises(ValueError, match="1-D"):
+            place_nodes_on_network(
+                np.zeros((2, 2), int), np.zeros((2, 2)), **self._GEOM
+            )
+
+    def test_two_dimensional_geometry(self):
+        with pytest.raises(ValueError, match="geom_x and geom_y must be 1-D"):
+            place_nodes_on_network(
+                np.array([0]),
+                np.array([1.0]),
+                geom_x=np.zeros((2, 2)),
+                geom_y=np.zeros((2, 2)),
+                vertices_per_branch=np.array([4]),
+            )
+
+    def test_two_dimensional_vertex_counts(self):
+        with pytest.raises(ValueError, match="vertices_per_branch must be a 1-D"):
+            place_nodes_on_network(
+                np.array([0]),
+                np.array([1.0]),
+                geom_x=np.array([0.0, 10.0]),
+                geom_y=np.array([0.0, 0.0]),
+                vertices_per_branch=np.array([[2]]),
+            )
+
+    def test_negative_branch_index(self):
+        with pytest.raises(ValueError, match="out of range"):
+            place_nodes_on_network(np.array([-1]), np.array([1.0]), **self._GEOM)
+
+
+class TestPlaceNodesOnNetworkEdgeLengthEdgeCases:
+    """edge_length branches: a non-positive declared length falls back to raw chord distance."""
+
+    def test_zero_declared_length_uses_raw_chord(self):
+        """A branch whose declared edge_length is 0 is not rescaled; raw chord distance applies.
+
+        Test scenario:
+            Two branches, the first declaring length 0: its node is placed by raw chord
+            distance (the ``length > 0`` guard skips the rescale), the second rescales normally.
+        """
+        # branch 0: (0,0)->(10,0) chord 10, declared length 0 -> raw; offset 4 -> (4, 0).
+        # branch 1: (0,0)->(10,0) chord 10, declared length 20 -> half -> offset 10 -> (5, 10).
+        x, y = place_nodes_on_network(
+            branch_index=np.array([0, 1]),
+            offset=np.array([4.0, 10.0]),
+            geom_x=np.array([0.0, 10.0, 0.0, 10.0]),
+            geom_y=np.array([0.0, 0.0, 10.0, 10.0]),
+            vertices_per_branch=np.array([2, 2]),
+            edge_length=np.array([0.0, 20.0]),
+        )
+        np.testing.assert_allclose(x, [4.0, 5.0])
+        np.testing.assert_allclose(y, [0.0, 10.0])
