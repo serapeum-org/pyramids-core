@@ -804,65 +804,123 @@ class TestCollectionImportStac:
         assert rc == 1
         assert "not a STAC" in capsys.readouterr().err
 
-    def test_max_items_caps_the_cube(self, tmp_path):
-        """`--max-items 1` consumes a single item and still writes a cube."""
+    def test_max_items_runs_end_to_end(self, tmp_path):
+        """`--max-items 1` runs end-to-end and writes a cube (offline integration)."""
         items = _items_json(tmp_path, _local_items(tmp_path))
         out = str(tmp_path / "cube.nc")
-        rc = main(
-            [
-                "collection",
-                "import",
-                "stac",
-                items,
-                out,
-                "--asset",
-                "data",
-                "--max-items",
-                "1",
-            ]
-        )
-        assert rc == 0 and os.path.exists(out)
+        argv = [
+            "collection",
+            "import",
+            "stac",
+            items,
+            out,
+            "--asset",
+            "data",
+            "--max-items",
+            "1",
+        ]
+        assert main(argv) == 0 and os.path.exists(out)
 
-    def test_bbox_filter_is_forwarded(self, tmp_path):
-        """A `--bbox` covering every item keeps them all and writes a cube."""
+    def test_bbox_and_groupby_run_end_to_end(self, tmp_path):
+        """`--bbox` (covering all items) and `--groupby id` run end-to-end and write a cube."""
         items = _items_json(tmp_path, _local_items(tmp_path))
         out = str(tmp_path / "cube.nc")
-        rc = main(
-            [
-                "collection",
-                "import",
-                "stac",
-                items,
-                out,
-                "--asset",
-                "data",
-                "--bbox",
-                "0",
-                "0",
-                "3",
-                "3",
-            ]
-        )
-        assert rc == 0 and os.path.exists(out)
+        argv = [
+            "collection",
+            "import",
+            "stac",
+            items,
+            out,
+            "--asset",
+            "data",
+            "--bbox",
+            "0",
+            "0",
+            "3",
+            "3",
+            "--groupby",
+            "id",
+        ]
+        assert main(argv) == 0 and os.path.exists(out)
 
-    def test_groupby_collapses_items(self, tmp_path):
-        """`--groupby id` buckets items by id and still writes a cube."""
+    def test_optional_flags_are_forwarded_to_from_stac(self, tmp_path, monkeypatch):
+        """`--asset`/`--bbox`/`--max-items`/`--groupby` reach `from_stac` as the right types (M1).
+
+        The end-to-end tests above would still pass if a flag were silently dropped, so this
+        stubs `from_stac` and asserts each option is actually forwarded, with `--bbox` becoming a
+        4-tuple, `--max-items` an int, and a multi-key `--asset` a list.
+        """
+        captured: dict = {}
+
+        class _FakeCube:
+            def to_netcdf(self, path):
+                captured["out"] = path
+
+        def _fake_from_stac(items, asset, **kwargs):
+            captured["asset"] = asset
+            captured.update(kwargs)
+            return _FakeCube()
+
+        monkeypatch.setattr(
+            DatasetCollection, "from_stac", staticmethod(_fake_from_stac)
+        )
         items = _items_json(tmp_path, _local_items(tmp_path))
         out = str(tmp_path / "cube.nc")
-        rc = main(
-            [
-                "collection",
-                "import",
-                "stac",
-                items,
-                out,
-                "--asset",
-                "data",
-                "--groupby",
-                "id",
-            ]
+        argv = [
+            "collection",
+            "import",
+            "stac",
+            items,
+            out,
+            "--asset",
+            "B04,B03",
+            "--bbox",
+            "1",
+            "2",
+            "3",
+            "4",
+            "--max-items",
+            "2",
+            "--groupby",
+            "id",
+        ]
+        assert main(argv) == 0
+        assert captured["asset"] == ["B04", "B03"]
+        assert captured["bbox"] == (1.0, 2.0, 3.0, 4.0)
+        assert captured["max_items"] == 2
+        assert captured["groupby"] == "id"
+        assert captured["out"] == out
+
+    def test_bbox_defaults_to_none_when_omitted(self, tmp_path, monkeypatch):
+        """Without `--bbox`/`--max-items`/`--groupby`, `from_stac` receives None for each (M1)."""
+        captured: dict = {}
+
+        def _fake_from_stac(items, asset, **kwargs):
+            captured.update(kwargs)
+
+            class _FakeCube:
+                def to_netcdf(self, path):
+                    captured["out"] = path
+
+            return _FakeCube()
+
+        monkeypatch.setattr(
+            DatasetCollection, "from_stac", staticmethod(_fake_from_stac)
         )
-        assert rc == 0 and os.path.exists(out)
+        items = _items_json(tmp_path, _local_items(tmp_path))
+        argv = [
+            "collection",
+            "import",
+            "stac",
+            items,
+            str(tmp_path / "c.nc"),
+            "--asset",
+            "data",
+        ]
+        assert main(argv) == 0
+        assert captured["bbox"] is None
+        assert captured["max_items"] is None
+        assert captured["groupby"] is None
 
     def test_requires_an_asset(self, tmp_path):
         """`--asset` is required; argparse rejects the call without it."""
