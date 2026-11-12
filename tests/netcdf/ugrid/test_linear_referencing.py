@@ -106,7 +106,8 @@ class TestPlaceNodesOnNetwork:
             geom_y=np.array([0.0, 1.0]),
             vertices_per_branch=np.array([2]),
         )
-        assert x.shape == (0,) and y.shape == (0,)
+        assert x.shape == (0,), f"expected empty node_x, got shape {x.shape}"
+        assert y.shape == (0,), f"expected empty node_y, got shape {y.shape}"
 
     def test_accepts_lists_and_integer_valued_float_branch_index(self):
         """Inputs are coerced via np.asarray: plain lists and an integer-valued float branch
