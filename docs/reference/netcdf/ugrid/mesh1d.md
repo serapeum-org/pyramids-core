@@ -22,6 +22,20 @@ There is no built-in route: the UGRID topology parser builds a `Mesh2d` whatever
 `topology_dimension` a file declares, so a network always comes from a plugin. Writing a network is
 still unimplemented, so it does not travel through `to_file`.
 
+**Branch+offset node geometry.** A D-Flow FM / D-HYDRO 1D network stores its computational nodes as
+a branch index plus an along-branch offset (a chainage), not as explicit x/y. Turning that pair into
+coordinates is a linear-referencing derivation, which belongs here rather than in a driver:
+`place_nodes_on_network` takes each node's branch index and offset plus the branches' polyline
+geometry and returns the node x/y, honouring a declared per-branch `edge_length` as the chainage
+basis when it differs from the digitised chord length. A driver reads the raw arrays and feeds them
+in; the math lives in pyramids.
+
+::: pyramids.netcdf.ugrid.linear_referencing.place_nodes_on_network
+    options:
+        show_root_heading: true
+        show_source: true
+        heading_level: 3
+
 ::: pyramids.netcdf.ugrid.mesh1d.Mesh1d
     options:
         show_root_heading: true
