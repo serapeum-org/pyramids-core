@@ -19,6 +19,9 @@ suggestion.
   - `kerchunk` — write a kerchunk reference JSON (NetCDF/HDF5 sources)
   - `netcdf` — write the (T,B,R,C) cube to a NetCDF file
   - `zarr` — write the (T,B,R,C) cube to a Zarr store
+- `import` …
+  - `point` — build a point-centred STAC cube (needs the [stac] extra + a live endpoint)
+  - `stac` — build a cube from a saved STAC ItemCollection / item-list JSON file
 
 ## Core verbs
 
@@ -293,4 +296,57 @@ pyramids collection export zarr [-h] [--source {files,zarr,archive}] [--member-g
 | `--member-glob` | optional | with --source archive: glob selecting members inside the archive |
 | `--date-format` | optional | with --source files: strptime format to parse each file's timestamp from its name (e.g. %%Y.%%m.%%d), giving the stack a time axis |
 | `--mode` | optional | Zarr write mode (default: w) |
+| `--overwrite` | optional | replace the output if it already exists |
+
+## Subsystem `collection import`
+
+Read / construct the data from another source.
+
+#### `pyramids collection import point`
+
+build a point-centred STAC cube (needs the [stac] extra + a live endpoint)
+
+```text
+pyramids collection import point [-h] --lat LAT --lon LON --collection COLLECTION --bands BANDS --start START --end END --edge-size EDGE_SIZE --resolution RESOLUTION [--units {px,m}] [--stac STAC] [--query QUERY] [--no-align] [--overwrite] output
+```
+
+| argument | | description |
+|---|---|---|
+| `output` | required | destination NetCDF cube path |
+
+| option | | description |
+|---|---|---|
+| `--lat` | **required** | centre latitude (EPSG:4326) |
+| `--lon` | **required** | centre longitude (EPSG:4326) |
+| `--collection` | **required** | STAC collection id to search |
+| `--bands` | **required** | asset key, or comma-separated keys for a band axis |
+| `--start` | **required** | search start (YYYY-MM-DD / RFC 3339) |
+| `--end` | **required** | search end (YYYY-MM-DD / RFC 3339) |
+| `--edge-size` | **required** | cube side length, in pixels (--units px) or metres (--units m) |
+| `--resolution` | **required** | pixel size in metres |
+| `--units` | optional | unit of --edge-size (default: px) (choices: `px`, `m`) |
+| `--stac` | optional | STAC API root URL. The default (Planetary Computer) needs a request signer, which is Python-only, so point this at an unauthenticated STAC root to use it from the CLI |
+| `--query` | optional | STAC query-extension filter, as a JSON string |
+| `--no-align` | optional | skip the multi-asset resolution alignment |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids collection import stac`
+
+build a cube from a saved STAC ItemCollection / item-list JSON file
+
+```text
+pyramids collection import stac [-h] --asset ASSET [--bbox MINX MINY MAXX MAXY] [--max-items MAX_ITEMS] [--groupby GROUPBY] [--overwrite] items output
+```
+
+| argument | | description |
+|---|---|---|
+| `items` | required | path to a STAC ItemCollection / item-list JSON file |
+| `output` | required | destination NetCDF cube path |
+
+| option | | description |
+|---|---|---|
+| `--asset` | **required** | asset key, or comma-separated keys for a band axis |
+| `--bbox` | optional | lon/lat (EPSG:4326) item filter: drop items whose footprint misses it |
+| `--max-items` | optional | cap the number of items consumed (after --bbox filtering) |
+| `--groupby` | optional | collapse items into timesteps: solar_day, id, time, or an item property key |
 | `--overwrite` | optional | replace the output if it already exists |

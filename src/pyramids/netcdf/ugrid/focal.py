@@ -23,6 +23,7 @@ Two conventions, both chosen to mirror the raster family:
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -32,7 +33,13 @@ from pyramids.base._array_ops import nodata_mask
 from pyramids.netcdf.ugrid.graph import sparse_adjacency
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
-__all__ = ["focal_apply", "focal_mean", "focal_std", "neighbourhood"]
+__all__ = [
+    "FOCAL_REDUCERS",
+    "focal_apply",
+    "focal_mean",
+    "focal_std",
+    "neighbourhood",
+]
 
 _DENSE_FRACTION = 0.1
 """Reach fraction of the mesh above which the neighbourhood is no longer usefully sparse."""
@@ -345,3 +352,18 @@ def focal_apply(
                 f"Use a reducing function such as np.median or np.ptp."
             ) from error
     return out
+
+
+FOCAL_REDUCERS: dict[str, Callable[[np.ndarray], Any]] = {
+    "median": np.median,
+    "min": np.min,
+    "max": np.max,
+    "sum": np.sum,
+    "range": np.ptp,
+    "var": np.var,
+}
+"""Named 1-D-array reducers for :func:`focal_apply`, backing the CLI ``--reducer`` selector.
+
+The vectorised ``mean`` / ``std`` already have their own fast paths (:func:`focal_mean` /
+:func:`focal_std`), so they are deliberately not duplicated here (issue #1542).
+"""

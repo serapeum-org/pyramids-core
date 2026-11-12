@@ -43,8 +43,10 @@ listing and `pyramids mesh <subsystem> --help` for a subsystem. An unknown verb 
   - `cluster` — label connected faces whose values fall in a range
   - `contour` — trace iso-value contour lines to a vector
   - `count-domain-cells` — number of active mesh faces
+  - `curvefit` — per-element fit of a named model along time (writes parameters)
   - `domain-area` — total area of the mesh domain
   - `focal-mean` — k-ring neighbourhood mean
+  - `focal-reduce` — k-ring neighbourhood aggregated with a named reducer
   - `focal-std` — k-ring neighbourhood standard deviation
   - `footprint` — dissolved outline of the valid-value faces
   - `hillshade` — per-face shaded relief
@@ -806,6 +808,26 @@ pyramids mesh analysis count-domain-cells [-h] [--var VAR] [--json] file
 | `--var` | optional | mesh variable to act on; defaults to the only data variable |
 | `--json` | optional | emit JSON |
 
+#### `pyramids mesh analysis curvefit`
+
+per-element fit of a named model along time (writes parameters)
+
+```text
+pyramids mesh analysis curvefit [-h] --model {exponential,gaussian,linear,logistic,sine} [--p0 P0] [--var VAR] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | UGRID NetCDF path |
+| `output` | required | destination mesh (NetCDF) path |
+
+| option | | description |
+|---|---|---|
+| `--model` | **required** | model to fit (polynomial trends use 'polyfit') (choices: `exponential`, `gaussian`, `linear`, `logistic`, `sine`) |
+| `--p0` | optional | initial guesses, comma-separated (e.g. 1,0.5); the non-linear models usually need a scaled guess on a seconds-based time axis or the fit returns all-NaN |
+| `--var` | optional | mesh variable to act on; defaults to the only data variable |
+| `--overwrite` | optional | replace the output if it already exists |
+
 #### `pyramids mesh analysis domain-area`
 
 total area of the mesh domain
@@ -837,6 +859,26 @@ pyramids mesh analysis focal-mean [-h] [--rings RINGS] [--var VAR] [--overwrite]
 
 | option | | description |
 |---|---|---|
+| `--rings` | optional | neighbourhood radius in rings (default: 1) |
+| `--var` | optional | mesh variable to act on; defaults to the only data variable |
+| `--overwrite` | optional | replace the output if it already exists |
+
+#### `pyramids mesh analysis focal-reduce`
+
+k-ring neighbourhood aggregated with a named reducer
+
+```text
+pyramids mesh analysis focal-reduce [-h] --reducer {max,median,min,range,sum,var} [--rings RINGS] [--var VAR] [--overwrite] file output
+```
+
+| argument | | description |
+|---|---|---|
+| `file` | required | UGRID NetCDF path |
+| `output` | required | destination mesh (NetCDF) path |
+
+| option | | description |
+|---|---|---|
+| `--reducer` | **required** | neighbourhood reducer (mean/std have their own faster verbs) (choices: `max`, `median`, `min`, `range`, `sum`, `var`) |
 | `--rings` | optional | neighbourhood radius in rings (default: 1) |
 | `--var` | optional | mesh variable to act on; defaults to the only data variable |
 | `--overwrite` | optional | replace the output if it already exists |

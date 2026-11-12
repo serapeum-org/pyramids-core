@@ -729,3 +729,202 @@ class TestPolyfit:
         assert _run(["mesh", "analysis", "polyfit", src, out, "--degree", "1"]) == 0
         with pytest.raises(ValueError, match="already exists"):
             _run(["mesh", "analysis", "polyfit", src, out, "--degree", "1"])
+
+
+class TestFocalReduce:
+    """``mesh focal-reduce`` — neighbourhood aggregated with a named reducer (#1542)."""
+
+    def test_writes_a_reducer_named_variable(self, mesh_file, tmp_path):
+        """The output mesh carries a ``focal_<reducer>`` face variable."""
+        out = str(tmp_path / "fr.nc")
+        assert (
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "focal-reduce",
+                    mesh_file,
+                    out,
+                    "--reducer",
+                    "median",
+                ]
+            )
+            == 0
+        )
+        assert "focal_median" in MeshDataset.read_file(out).data_variable_names
+
+    @pytest.mark.parametrize("reducer", ["median", "min", "max", "sum", "range", "var"])
+    def test_every_named_reducer_runs(self, mesh_file, reducer, tmp_path):
+        """Each registered reducer writes its own named variable.
+
+        Args:
+            mesh_file: A written four-face mesh.
+            reducer: The reducer name under test.
+            tmp_path: pytest temp directory.
+        """
+        out = str(tmp_path / f"{reducer}.nc")
+        assert (
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "focal-reduce",
+                    mesh_file,
+                    out,
+                    "--reducer",
+                    reducer,
+                ]
+            )
+            == 0
+        )
+        assert f"focal_{reducer}" in MeshDataset.read_file(out).data_variable_names
+
+    def test_median_values_match_a_two_ring_neighbourhood(self, mesh_file, tmp_path):
+        """``median`` over two rings on ``[5, 0, 0, 7]`` yields the known per-face medians."""
+        out = str(tmp_path / "fr.nc")
+        _run(
+            [
+                "mesh",
+                "analysis",
+                "focal-reduce",
+                mesh_file,
+                out,
+                "--reducer",
+                "median",
+                "--rings",
+                "2",
+            ]
+        )
+        values = np.asarray(MeshDataset.read_file(out)["focal_median"].data)
+        assert np.allclose(values, [0.0, 2.5, 2.5, 0.0]), f"got {values}"
+
+    def test_requires_a_reducer(self, mesh_file, tmp_path):
+        """``--reducer`` is required; argparse rejects the call without it."""
+        with pytest.raises(SystemExit):
+            _run(
+                ["mesh", "analysis", "focal-reduce", mesh_file, str(tmp_path / "x.nc")]
+            )
+
+    def test_rejects_an_unknown_reducer(self, mesh_file, tmp_path):
+        """An unregistered reducer name is rejected by argparse's ``choices``."""
+        with pytest.raises(SystemExit):
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "focal-reduce",
+                    mesh_file,
+                    str(tmp_path / "x.nc"),
+                    "--reducer",
+                    "nope",
+                ]
+            )
+
+    def test_refuses_an_existing_output(self, mesh_file, tmp_path):
+        """Without ``--overwrite``, writing over an existing file is refused."""
+        out = str(tmp_path / "fr.nc")
+        _run(["mesh", "analysis", "focal-reduce", mesh_file, out, "--reducer", "max"])
+        with pytest.raises(ValueError, match="already exists"):
+            _run(
+                ["mesh", "analysis", "focal-reduce", mesh_file, out, "--reducer", "max"]
+            )
+
+
+class TestCurvefit:
+    """``mesh curvefit`` — per-element fit of a named model along time (#1542)."""
+
+    @staticmethod
+    def _ramp_file(tmp_path):
+        """A written four-face mesh with a 3-step temporal ramp on variable ``v``."""
+        ds = MeshDataset.from_arrays(
+            node_x=_NODE_X,
+            node_y=_NODE_Y,
+            face_node_connectivity=_FACES,
+            data={
+                "v": np.array(
+                    [[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 4.0], [2.0, 4.0, 6.0, 8.0]]
+                )
+            },
+            data_locations={"v": "face"},
+        )
+        ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
+        path = tmp_path / "ramp_t.nc"
+        ds.to_file(str(path))
+        return str(path)
+
+    def test_writes_a_parameter_axis(self, tmp_path):
+        """A fit replaces the time axis with a ``parameter`` axis of the model's arity."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "cf.nc")
+        assert (
+            _run(["mesh", "analysis", "curvefit", src, out, "--model", "linear"]) == 0
+        )
+        back = MeshDataset.read_file(out)
+        assert back["v"].dimensions[0] == "parameter", f"got {back['v'].dimensions}"
+        assert np.asarray(back["v"].data).shape == (2, 4)
+
+    def test_linear_recovers_the_slope(self, tmp_path):
+        """A straight-line fit of the exact ramp recovers each face's slope (param 0)."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "cf.nc")
+        _run(["mesh", "analysis", "curvefit", src, out, "--model", "linear"])
+        slope = np.asarray(MeshDataset.read_file(out)["v"].data)[0]
+        assert np.allclose(slope, [1.0, 2.0, 3.0, 4.0]), f"got {slope}"
+
+    def test_gaussian_has_three_parameters(self, tmp_path):
+        """A three-parameter model yields a length-3 ``parameter`` axis."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "cf.nc")
+        assert (
+            _run(["mesh", "analysis", "curvefit", src, out, "--model", "gaussian"]) == 0
+        )
+        assert np.asarray(MeshDataset.read_file(out)["v"].data).shape[0] == 3
+
+    def test_p0_is_parsed_and_accepted(self, tmp_path):
+        """A comma-separated ``--p0`` seeds the fit without error."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "cf.nc")
+        rc = _run(
+            [
+                "mesh",
+                "analysis",
+                "curvefit",
+                src,
+                out,
+                "--model",
+                "exponential",
+                "--p0",
+                "1,0.1",
+            ]
+        )
+        assert rc == 0
+
+    def test_requires_a_model(self, tmp_path):
+        """``--model`` is required; argparse rejects the call without it."""
+        src = self._ramp_file(tmp_path)
+        with pytest.raises(SystemExit):
+            _run(["mesh", "analysis", "curvefit", src, str(tmp_path / "cf.nc")])
+
+    def test_rejects_an_unknown_model(self, tmp_path):
+        """An unregistered model name is rejected by argparse's ``choices``."""
+        src = self._ramp_file(tmp_path)
+        with pytest.raises(SystemExit):
+            _run(
+                [
+                    "mesh",
+                    "analysis",
+                    "curvefit",
+                    src,
+                    str(tmp_path / "cf.nc"),
+                    "--model",
+                    "nope",
+                ]
+            )
+
+    def test_refuses_an_existing_output(self, tmp_path):
+        """Without ``--overwrite``, writing over an existing file is refused."""
+        src = self._ramp_file(tmp_path)
+        out = str(tmp_path / "cf.nc")
+        _run(["mesh", "analysis", "curvefit", src, out, "--model", "linear"])
+        with pytest.raises(ValueError, match="already exists"):
+            _run(["mesh", "analysis", "curvefit", src, out, "--model", "linear"])
