@@ -824,7 +824,7 @@ pyramids mesh analysis curvefit [-h] --model {exponential,gaussian,linear,logist
 | option | | description |
 |---|---|---|
 | `--model` | **required** | model to fit (polynomial trends use 'polyfit') (choices: `exponential`, `gaussian`, `linear`, `logistic`, `sine`) |
-| `--p0` | optional | optional initial guesses, comma-separated (e.g. 1,0.5); default: curve_fit's |
+| `--p0` | optional | initial guesses, comma-separated (e.g. 1,0.5); the non-linear models usually need a scaled guess on a seconds-based time axis or the fit returns all-NaN |
 | `--var` | optional | mesh variable to act on; defaults to the only data variable |
 | `--overwrite` | optional | replace the output if it already exists |
 

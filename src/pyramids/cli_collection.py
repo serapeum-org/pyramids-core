@@ -875,7 +875,10 @@ def _add_from_point(csub: argparse._SubParsersAction) -> None:
         help="unit of --edge-size (default: px)",
     )
     c.add_argument(
-        "--stac", default=None, help="STAC API root URL (default: Planetary Computer)"
+        "--stac",
+        default=None,
+        help="STAC API root URL. The default (Planetary Computer) needs a request signer, which "
+        "is Python-only, so point this at an unauthenticated STAC root to use it from the CLI",
     )
     c.add_argument(
         "--query", default=None, help="STAC query-extension filter, as a JSON string"

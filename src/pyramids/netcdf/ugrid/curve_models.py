@@ -13,6 +13,13 @@ Polynomial trends, including a straight line, are the closed-form fast path of
 :meth:`~pyramids.netcdf.ugrid.dataset.MeshDataset.polyfit`; ``linear`` is kept here only so the
 registry is self-contained for the CLI selector.
 
+Because ``x`` is in **seconds**, a realistic multi-day or multi-month axis reaches ``1e5``–``1e7``.
+``curve_fit``'s default initial guess is ``1.0`` per parameter, so the non-linear models
+(``exponential`` / ``logistic`` / ``sine``) evaluate e.g. ``exp(1 * x)`` and overflow on the first
+iteration, and a non-converging element yields ``NaN`` parameters — the fit can silently come back
+all-``NaN``. On such an axis pass a scaled initial guess (a small rate for ``exponential``, a
+frequency near ``2 * pi / period`` for ``sine``), or reach for ``polyfit`` / ``linear`` for a trend.
+
 Example:
     >>> from pyramids.netcdf.ugrid.curve_models import CURVE_MODELS
     >>> sorted(CURVE_MODELS)

@@ -325,7 +325,7 @@ pyramids collection import point [-h] --lat LAT --lon LON --collection COLLECTIO
 | `--edge-size` | **required** | cube side length, in pixels (--units px) or metres (--units m) |
 | `--resolution` | **required** | pixel size in metres |
 | `--units` | optional | unit of --edge-size (default: px) (choices: `px`, `m`) |
-| `--stac` | optional | STAC API root URL (default: Planetary Computer) |
+| `--stac` | optional | STAC API root URL. The default (Planetary Computer) needs a request signer, which is Python-only, so point this at an unauthenticated STAC root to use it from the CLI |
 | `--query` | optional | STAC query-extension filter, as a JSON string |
 | `--no-align` | optional | skip the multi-asset resolution alignment |
 | `--overwrite` | optional | replace the output if it already exists |

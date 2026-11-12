@@ -1068,7 +1068,8 @@ def _register_fitting(msub: argparse._SubParsersAction) -> None:
     cf.add_argument(
         "--p0",
         default=None,
-        help="optional initial guesses, comma-separated (e.g. 1,0.5); default: curve_fit's",
+        help="initial guesses, comma-separated (e.g. 1,0.5); the non-linear models usually need "
+        "a scaled guess on a seconds-based time axis or the fit returns all-NaN",
     )
     _add_var(cf)
     _add_overwrite(cf)
