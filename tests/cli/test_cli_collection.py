@@ -764,7 +764,8 @@ class TestCollectionImportStac:
         assert (
             main(["collection", "import", "stac", items, out, "--asset", "data"]) == 0
         )
-        assert os.path.exists(out) and os.path.getsize(out) > 0
+        assert os.path.exists(out)
+        assert os.path.getsize(out) > 0
 
     def test_accepts_a_bare_item_list(self, tmp_path):
         """A bare JSON list of items (no FeatureCollection wrapper) is also accepted."""
@@ -838,7 +839,8 @@ class TestCollectionImportStac:
             "--max-items",
             "1",
         ]
-        assert main(argv) == 0 and os.path.exists(out)
+        assert main(argv) == 0
+        assert os.path.exists(out)
 
     def test_bbox_and_groupby_run_end_to_end(self, tmp_path):
         """`--bbox` (covering all items) and `--groupby id` run end-to-end and write a cube."""
@@ -860,7 +862,8 @@ class TestCollectionImportStac:
             "--groupby",
             "id",
         ]
-        assert main(argv) == 0 and os.path.exists(out)
+        assert main(argv) == 0
+        assert os.path.exists(out)
 
     def test_optional_flags_are_forwarded_to_from_stac(self, tmp_path, monkeypatch):
         """`--asset`/`--bbox`/`--max-items`/`--groupby` reach `from_stac` as the right types (M1).
@@ -905,7 +908,8 @@ class TestCollectionImportStac:
             "id",
         ]
         assert main(argv) == 0
-        assert isinstance(captured["items"], list) and len(captured["items"]) == 3
+        assert isinstance(captured["items"], list)
+        assert len(captured["items"]) == 3
         assert captured["asset"] == ["B04", "B03"]
         assert captured["bbox"] == (1.0, 2.0, 3.0, 4.0)
         assert captured["max_items"] == 2
@@ -1029,7 +1033,8 @@ class TestCollectionImportPoint:
             "2023-03-01",
         )
         assert (captured["edge_size"], captured["resolution"]) == (128, 10.0)
-        assert captured["units"] == "px" and captured["align"] is True
+        assert captured["units"] == "px"
+        assert captured["align"] is True
         assert captured["stac"] is None, "the default --stac (None) must be forwarded"
         assert captured["out"] == out
 
