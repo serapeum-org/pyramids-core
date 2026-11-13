@@ -131,12 +131,25 @@ fi
 if ! command -v pixi >/dev/null 2>&1; then
     PIXI_VERSION="${PIXI_VERSION:?PIXI_VERSION not set}"
     PIXI_INSTALL_URL="https://raw.githubusercontent.com/prefix-dev/pixi/v${PIXI_VERSION}/install/install.sh"
-    echo "--- Installing pixi ${PIXI_VERSION} from ${PIXI_INSTALL_URL} ---"
     export PIXI_HOME="${BUILD_PREFIX}"
     export PIXI_NO_PATH_UPDATE=1
     export PIXI_VERSION
-    curl -fsSL "${PIXI_INSTALL_URL}" | bash
-    export PATH="${BUILD_PREFIX}/bin:${PATH}"
+    # Retry with backoff: install.sh itself downloads the pixi release tarball from
+    # github.com/releases, and that GitHub download flakes intermittently (a single
+    # blip reds the whole wheel build -- see the bundle failures on 2026-11-13).
+    # curl --retry covers the install.sh fetch; the flaky hop is the download
+    # *inside* install.sh, which we cannot hand a retry flag -- so re-run the whole
+    # install each attempt and confirm pixi actually landed.
+    installed=0
+    for attempt in 1 2 3 4 5; do
+        echo "--- Installing pixi ${PIXI_VERSION} (attempt ${attempt}) from ${PIXI_INSTALL_URL} ---"
+        if curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${PIXI_INSTALL_URL}" | bash; then
+            export PATH="${BUILD_PREFIX}/bin:${PATH}"
+            if command -v pixi >/dev/null 2>&1; then installed=1; break; fi
+        fi
+        [ "${attempt}" -lt 5 ] && sleep $(( attempt * 10 ))
+    done
+    [ "${installed}" = 1 ] || { echo "pixi install failed after 5 attempts" >&2; exit 1; }
 fi
 pixi --version
 

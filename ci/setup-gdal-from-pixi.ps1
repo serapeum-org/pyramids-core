@@ -36,12 +36,29 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
         throw "PIXI_VERSION not set"
     }
     $PixiInstallUrl = "https://raw.githubusercontent.com/prefix-dev/pixi/v$($env:PIXI_VERSION)/install/install.ps1"
-    Write-Host "--- Installing pixi $($env:PIXI_VERSION) from $PixiInstallUrl ---"
     $env:PIXI_HOME = $BuildPrefix
     $env:PIXI_NO_PATH_UPDATE = "1"
-    Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1"
-    & "$env:TEMP\install-pixi.ps1"
-    $env:PATH = "$BuildPrefix\bin;$env:PATH"
+    # Retry with backoff: install.ps1 itself downloads the pixi release .zip from
+    # github.com/releases, and that GitHub download flakes intermittently (it reds
+    # the whole wheel build on a single blip — see the macOS/win_amd64 bundle
+    # failures on 2026-11-13). The -MaximumRetryCount on our Invoke-WebRequest only
+    # covers fetching install.ps1; the flaky hop is the .zip download *inside* it,
+    # which we cannot hand a retry flag — so re-run the whole install each attempt.
+    $installed = $false
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        Write-Host "--- Installing pixi $($env:PIXI_VERSION) (attempt $attempt) from $PixiInstallUrl ---"
+        try {
+            Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1" `
+                -MaximumRetryCount 3 -RetryIntervalSec 5
+            & "$env:TEMP\install-pixi.ps1"
+            $env:PATH = "$BuildPrefix\bin;$env:PATH"
+            if (Get-Command pixi -ErrorAction SilentlyContinue) { $installed = $true; break }
+        } catch {
+            Write-Host "pixi install attempt $attempt failed: $($_.Exception.Message)"
+        }
+        if ($attempt -lt 5) { Start-Sleep -Seconds ([math]::Min(60, 5 * [math]::Pow(2, $attempt))) }
+    }
+    if (-not $installed) { throw "pixi install failed after 5 attempts" }
 }
 pixi --version
 
