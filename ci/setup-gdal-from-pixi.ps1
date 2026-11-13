@@ -58,9 +58,13 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     $installed = $false
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         Write-Host "--- Downloading pixi $($env:PIXI_VERSION) ($Asset, attempt $attempt) ---"
-        & gh release download "v$($env:PIXI_VERSION)" --repo prefix-dev/pixi --pattern $Asset --dir $BinDir --clobber
+        # 2>&1 | Write-Host merges gh's stderr into the output stream so a stderr line
+        # cannot surface as a terminating NativeCommandError under ErrorActionPreference
+        # 'Stop' and bypass the retry; success is read from $LASTEXITCODE + Test-Path only.
+        & gh release download "v$($env:PIXI_VERSION)" --repo prefix-dev/pixi `
+            --pattern $Asset --dir $BinDir --clobber 2>&1 | Write-Host
         if (($LASTEXITCODE -eq 0) -and (Test-Path (Join-Path $BinDir $Asset))) { $installed = $true; break }
-        if ($attempt -lt 3) { Start-Sleep -Seconds ([int][math]::Min(30, 5 * [math]::Pow(2, $attempt))) }
+        if ($attempt -lt 3) { Start-Sleep -Seconds ($attempt * 10) }
     }
     if (-not $installed) { throw "pixi download failed after 3 attempts" }
     Move-Item -Path (Join-Path $BinDir $Asset) -Destination (Join-Path $BinDir "pixi.exe") -Force
