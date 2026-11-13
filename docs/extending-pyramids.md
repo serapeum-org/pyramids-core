@@ -25,6 +25,12 @@ kit** you can assert against in your own test suite. Pick the one that matches w
 
 The renderers a plugin registers show up in [Plot backends](reference/plot-backends.md) once it is installed.
 
+A fifth seam, `pyramids.compute_backend`, is different in kind: it is a **single-backend** hook (one engine serves
+the whole lazy/dask layer, not a family of named drivers), contracted by the `ComputeBackend` protocol in
+`pyramids.base`. It is filled by `pyramids-lazy` (see the [Plugins & extensions catalog](plugins.md)); replacing
+it is an advanced, rarely needed task, so it has no author guide of its own — read the protocol and the plugin's
+source if you need to.
+
 ## How registration works
 
 A plugin declares its entry points in its own `pyproject.toml` under the matching group. For example, a package

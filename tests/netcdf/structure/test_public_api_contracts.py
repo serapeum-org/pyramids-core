@@ -12,8 +12,14 @@ import warnings
 import numpy as np
 import pytest
 
+# _normalize_backend moved to the pyramids-lazy backend; only TestNormalizeBackend needs it. Guard the
+# import and skip just that class when the backend is absent, rather than aborting collection.
+try:
+    from pyramids_lazy._kerchunk_facade import _normalize_backend
+except ImportError:  # pragma: no cover - backend absent, or its optional deps are
+    _normalize_backend = None
+
 from pyramids.netcdf import GeoReference, LabeledArray, NetCDF
-from pyramids.netcdf._kerchunk_facade import _normalize_backend
 from pyramids.netcdf.labeled import _is_zarr_store, _LabeledArray
 from pyramids.netcdf.models import CFInfo
 
@@ -109,6 +115,10 @@ class TestDimensionModelRename:
             _ = dims.NoSuchThing
 
 
+@pytest.mark.skipif(
+    _normalize_backend is None,
+    reason="requires the pyramids-lazy backend (_normalize_backend moved there)",
+)
 class TestNormalizeBackend:
     """API-10: kerchunk backend canonical 'legacy', 'kerchunk' deprecated alias."""
 

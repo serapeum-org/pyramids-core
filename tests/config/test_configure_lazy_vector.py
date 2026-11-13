@@ -18,8 +18,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyramids import configure_lazy_vector
-from pyramids.feature import _read as _fc_mod
+# The partition-size knob configure_lazy_vector tunes now lives in the pyramids-lazy backend's
+# vector-read module (the lazy bodies moved there); assert against it. Importing _vector_read pulls
+# dask-geopandas (the [parquet] extra), so importorskip the submodule itself: this skips the whole
+# module both when the backend is absent and when dask-geopandas is (e.g. the lazy-but-not-parquet
+# env), rather than erroring at collection.
+# exc_type=ImportError is required: importorskip only skips on ModuleNotFoundError and
+# re-raises other ImportErrors, and this module's dask-geopandas guard raises a branded
+# ImportError (not ModuleNotFoundError), which aborted collection in every env without the
+# [parquet] extra.
+_fc_mod = pytest.importorskip("pyramids_lazy._vector_read", exc_type=ImportError)
+
+from pyramids import configure_lazy_vector  # noqa: E402
 
 # The whole module exercises dask internals. The ``lazy`` marker gates
 # the tests to the env where dask is installed; we therefore cannot
@@ -153,3 +163,31 @@ class TestWorkerPlugin:
             client=fake_client,
         )
         fake_client.register_worker_plugin.assert_called_once()
+
+
+class TestNoOpIsNotReportedAsApplied:
+    """With no backend to receive the knob, the return must not claim it was applied (review M5)."""
+
+    def test_unapplied_target_bytes_absent_from_return(self, monkeypatch):
+        """When the backend setter cannot apply the value, the key is omitted, not reported.
+
+        Test scenario:
+            On a bare core the partition-size knob cannot take effect, so a prior version that
+            recorded it anyway returned a dict claiming a setting that changed nothing. Simulate the
+            backend-absent path by forcing the setter to report failure, and assert the key is gone.
+        """
+        import pyramids.base._configure as cfg
+
+        monkeypatch.setattr(cfg, "_set_lazy_backend_partition_bytes", lambda _v: False)
+        result = configure_lazy_vector(target_bytes_per_partition=256 * 1024 * 1024)
+        assert "target_bytes_per_partition" not in result, (
+            "a no-op must not be reported as applied"
+        )
+
+    def test_applied_target_bytes_present_when_setter_succeeds(self, monkeypatch):
+        """When the setter reports success, the key is recorded."""
+        import pyramids.base._configure as cfg
+
+        monkeypatch.setattr(cfg, "_set_lazy_backend_partition_bytes", lambda _v: True)
+        result = configure_lazy_vector(target_bytes_per_partition=256 * 1024 * 1024)
+        assert result["target_bytes_per_partition"] == 256 * 1024 * 1024

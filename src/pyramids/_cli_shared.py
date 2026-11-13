@@ -22,6 +22,8 @@ from collections.abc import Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, TextIO
 
+from pyramids.base._errors import OptionalPackageDoesNotExist
+
 OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
 
@@ -44,10 +46,15 @@ def needs_lazy_extra() -> Iterator[None]:
     """
     try:
         yield
+    except OptionalPackageDoesNotExist as exc:
+        # Pass the seam's own message through. It already names the distribution that provides the
+        # backend and how to install it; replacing it with an extras hint hands the user advice
+        # that cannot fix the problem (the extras install the stack, not the backend).
+        raise ValueError(str(exc)) from exc
     except ImportError as exc:
         raise ValueError(
             "this command needs the optional [lazy] extra (zarr/kerchunk); install it "
-            "with `pip install pyramids-gis[lazy]`"
+            "with `pip install pyramids-core[lazy]`"
         ) from exc
 
 
@@ -67,10 +74,15 @@ def needs_parquet_extra() -> Iterator[None]:
     """
     try:
         yield
+    except OptionalPackageDoesNotExist as exc:
+        # Pass the seam's own message through. It already names the distribution that provides the
+        # backend and how to install it; replacing it with an extras hint hands the user advice
+        # that cannot fix the problem (the extras install the stack, not the backend).
+        raise ValueError(str(exc)) from exc
     except ImportError as exc:
         raise ValueError(
             "this command needs the optional [parquet] extra (pyarrow); install it "
-            "with `pip install pyramids-gis[parquet]`"
+            "with `pip install pyramids-core[parquet]`"
         ) from exc
 
 

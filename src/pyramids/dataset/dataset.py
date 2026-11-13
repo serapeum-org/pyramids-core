@@ -112,12 +112,7 @@ from pyramids.dataset.ops._focal import (
     hillshade,
     slope,
 )
-from pyramids.dataset.ops._zarr import (
-    classify_zarr_store,
-    is_zarr_store,
-    read_dataset_from_zarr,
-    write_dataset_to_zarr,
-)
+from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.units import convert_array
@@ -2706,6 +2701,9 @@ class Dataset(RasterBase):
             performs the write when `compute=False`.
 
         Raises:
+            OptionalPackageDoesNotExist: No lazy compute backend is installed. Zarr writing
+                dispatches to pyramids-lazy; install it with `pip install pyramids-lazy`. This
+                check runs first, so it precedes the argument checks below.
             OverviewTargetError: `overview_factors` was given and this dataset cannot
                 hold overviews — a plain VRT whose description is not a path: an empty
                 one, a blank one, or inline VRT XML. The levels are built through
@@ -2744,8 +2742,12 @@ class Dataset(RasterBase):
 
                 ```
         """
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
         resolved_chunks = chunks if chunks is not None else "auto"
-        result: Delayed | None = write_dataset_to_zarr(
+        result: Delayed | None = require_compute_backend().write_dataset_to_zarr(
             self,
             store,
             compute=compute,
@@ -2787,12 +2789,19 @@ class Dataset(RasterBase):
                 from a foreign GeoZarr store whose auto-detect picks the wrong
                 array.
         """
-        return read_dataset_from_zarr(
-            store,
-            chunks=chunks,
-            storage_options=storage_options,
-            level=level,
-            data_name=data_name,
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return cast(
+            "Dataset",
+            require_compute_backend().read_dataset_from_zarr(
+                store,
+                chunks=chunks,
+                storage_options=storage_options,
+                level=level,
+                data_name=data_name,
+            ),
         )
 
     def __str__(self) -> str:

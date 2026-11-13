@@ -35,6 +35,7 @@ import pandas as pd
 
 from pyramids._cli_groups import add_group
 from pyramids._cli_shared import info_print, map_lookup_errors, refuse_existing
+from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.feature import FeatureCollection
@@ -57,10 +58,15 @@ def _needs_zarr_extra() -> Iterator[None]:
     """
     try:
         yield
+    except OptionalPackageDoesNotExist as exc:
+        # Pass the seam's own message through. It already names the distribution that provides the
+        # backend and how to install it; replacing it with an extras hint hands the user advice
+        # that cannot fix the problem (the extras install the stack, not the backend).
+        raise ValueError(str(exc)) from exc
     except ImportError as exc:
         raise ValueError(
-            "this command needs the optional [lazy] extra (zarr); install it with "
-            "`pip install pyramids-gis[lazy]`"
+            "this command needs the pyramids-lazy backend; install it with "
+            "`pip install pyramids-lazy`"
         ) from exc
 
 

@@ -80,6 +80,13 @@ dependencies = [
 # the newest compatible release (0.45.0 today), so CI tests at or above the floor,
 # never below it.
 viz = ["cleopatra[tiles]>=0.44.0"]
+# DEPRECATED (removed next major). These are the libraries the lazy layer builds on, but the lazy
+# implementation now lives in the separate `pyramids-lazy` distribution, so installing this extra
+# alone yields no working lazy operations -- they raise the branded error from
+# `base/_compute_backend.py` pointing at `pip install pyramids-lazy`. Kept for one release so
+# existing installs keep resolving. It cannot simply be re-pointed at `pyramids-lazy` yet: that
+# package is not on PyPI (404), so the alias would turn a working install into a failing one.
+# Flip it to `lazy = ["pyramids-lazy"]` once the backend has its first release.
 lazy = [
     "dask>=2024.1.0",
     "distributed>=2024.1.0",
@@ -90,6 +97,10 @@ lazy = [
     "kerchunk>=0.2.10",
     "h5py>=3.8.0",
 ]
+# pyarrow is core's own: eager GeoParquet (`read_parquet` / `to_parquet`) goes through pyarrow
+# and geopandas and needs no backend, so that part stays here. The `pyramids-core[lazy]` and
+# dask-geopandas entries are DEPRECATED on the same schedule as `[lazy]`: the lazy vector path
+# they serve moved to `pyramids-lazy[parquet]`.
 parquet = ["pyarrow>=10.0.0", "pyramids-core[lazy]", "dask-geopandas>=0.5.0"]
 stac = ["pystac-client>=0.8.4", "stac-asset>=0.4.7"]
 
@@ -184,6 +195,24 @@ docs = [
     "ipykernel",
 ]
 
+
+# The lazy compute backend core dispatches to. Test-only: it must never reach [project] or the
+# published extras, because the dependency runs the other way (pyramids-lazy requires
+# pyramids-core). Its own group rather than `dev`, so the `docs` env can carry it too — docs
+# executes lazy/zarr notebooks and has no `dev` feature.
+#
+# Pinned to a commit, not a branch, so `pixi lock` resolves the same tree every time. This is
+# pyramids-lazy's `main` tip through PR #7 (which added `classify_zarr_store` / `is_cube_store` for
+# core's GeoZarr `read_file` routing), so it stays fetchable permanently and the routing tests run
+# against the real classifier rather than the dormant GDAL fallback — no branch-deletion hazard.
+#
+# It is still a git pin, so a core release stays blocked: the release job refuses to publish while
+# this reads `pyramids-lazy @ git+...`. Once pyramids-lazy cuts a PyPI release this whole entry
+# becomes an ordinary version floor (`pyramids-lazy>=<rel>`). Tracked as the release blocker in
+# planning/dask/lazy-plugin-extraction-plan.md (task 7) and serapeum-org/pyramids-lazy#3.
+lazy-backend = [
+    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@77d13da5ea54bf5a73d57a488b0b6cc2fdb57f8a",
+]
 
 [project.scripts]
 pyramids = "pyramids.cli:main"
@@ -373,13 +402,12 @@ markers = [
     # spelled ``plot`` above; don't register a duplicate.
     "lazy: tests requiring the [lazy] extra (dask, distributed, zarr, fsspec)",
     "interop: tests requiring the optional interop peer dependency",
-    # netcdf_lazy / parquet_lazy are deliberately NOT folded into lazy / parquet: each
-    # gates on EXTRA modules beyond the base extra's headline dep, so a test marked merely
-    # `lazy` would not skip when kerchunk/h5py (or dask-geopandas) are the missing piece.
-    # Kept distinct so the skip is precise; see tests/_marks.py.
+    # netcdf_lazy is deliberately NOT folded into lazy: it gates on EXTRA modules beyond the
+    # base extra's headline dep, so a test marked merely `lazy` would not skip when
+    # kerchunk/h5py are the missing piece. Kept distinct so the skip is precise; see
+    # tests/_marks.py. (parquet_lazy left with the lazy vector tests for pyramids-lazy.)
     "netcdf_lazy: tests needing kerchunk + h5py on top of the [lazy] stack (zarr/dask); stricter than `lazy`",
     "parquet: tests requiring the [parquet] extra (pyarrow)",
-    "parquet_lazy: tests needing dask-geopandas on top of [parquet] (pyarrow) + [lazy]; stricter than `parquet`/`lazy`",
     "stac: tests requiring the [stac] extra (pystac-client)",
     "live: live network test against a real external service (deselect with '-m \"not live\"', run with '-m live')",
 ]
@@ -431,23 +459,27 @@ description = "Run the main suite in parallel (pytest-xdist); no coverage"
 # Every env lists the shared `gdal` feature so the single GDAL pin reaches all of
 # them, incl. no-default-feature wheel-build. tests/test_gdal_pin.py enforces it.
 default = {features = ["gdal", "viz"], solve-group = "default" }
-dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet"], solve-group = "default" }
-lazy = { features = ["gdal", "viz", "dev", "lazy"], solve-group = "default" }
-parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet"], solve-group = "default" }
+# Bare core with a test runner but NO lazy backend and NO dask stack: the environment shape the
+# branded-absent suite (tests/base/test_lazy_backend_absent.py) asserts against, so it runs in CI for
+# real rather than only under a monkeypatched fixture. Deliberately omits `lazy-backend` and `lazy`.
+bare = { features = ["gdal", "dev"], solve-group = "bare" }
+dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "default" }
+lazy = { features = ["gdal", "viz", "dev", "lazy", "lazy-backend"], solve-group = "default" }
+parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet", "lazy-backend"], solve-group = "default" }
 # `docs` also carries the notebook runtime features (viz/cleopatra, interop, lazy, stac,
 # parquet) so the mkdocs-deploy action can execute the example notebooks in CI and render
 # real outputs. See .github/workflows/github-pages-mkdocs.yml (notebooks-path).
-docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet"], solve-group = "docs" }
+docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "docs" }
 # py3XX envs include `lazy` so the `interop-tests` step has the interop data stack
 # (zarr / dask / s3fs / fsspec) its interop tests need, run with real deps. `parquet`
 # (pyarrow) is left out on purpose: it would un-skip the core OGR-Parquet tests, which
 # need GDAL's libgdal-arrow-parquet driver (absent on the runners) — the parquet extras
 # matrix covers those. Bare-core (no-lazy) installs are covered by the `default` env.
-py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy"], solve-group = "py311" }
-py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy"], solve-group = "py312" }
-py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy"], solve-group = "py313" }
-py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy"], solve-group = "py314" }
-py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy"], solve-group = "py315" }
+py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py311" }
+py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py312" }
+py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py313" }
+py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py314" }
+py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py315" }
 # wheel-build: lean env inside the cibuildwheel container.
 # no-default-feature = true keeps pyramids-core (and its pandas/numpy
 # transitive deps) out of the build container so cibuildwheel's pip

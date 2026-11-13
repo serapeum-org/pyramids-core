@@ -239,9 +239,10 @@ def configure_lazy_vector(
        so subsequent `.compute()` calls use the right backend without
        every caller remembering to pass `scheduler=...`.
     2. **Target bytes-per-partition.** Patches the module-level
-       `_LAZY_TARGET_BYTES_PER_PARTITION` constant used by
-       :func:`read_file(backend='dask')` to pick a default
-       `npartitions` from file size. Users running on
+       `_LAZY_TARGET_BYTES_PER_PARTITION` constant the backend's
+       lazy vector reader uses to pick a default `npartitions` from
+       file size. Takes effect only when the backend is installed.
+       Users running on
        machines with more RAM per worker can raise it; users on
        memory-constrained workers should lower it.
 
@@ -255,9 +256,10 @@ def configure_lazy_vector(
             `"synchronous"`, or `"distributed"`. `None` leaves
             the dask default unchanged.
         target_bytes_per_partition: Override the 128 MiB
-            default that :func:`_resolve_lazy_partitioning` uses when
-            the caller supplies neither `npartitions` nor
-            `chunksize`. `None` leaves it unchanged.
+            default the backend's lazy vector reader uses when the
+            caller supplies neither `npartitions` nor `chunksize`.
+            `None` leaves it unchanged. Recorded in the returned dict
+            only when a backend is installed to receive it.
         client: Optional :class:`dask.distributed.Client`. When given,
             both settings propagate to every worker via a
             :class:`WorkerPlugin`.
@@ -288,10 +290,12 @@ def configure_lazy_vector(
         dask.config.set(scheduler=scheduler)
         applied["scheduler"] = scheduler
     if target_bytes_per_partition is not None:
-        from pyramids.feature import _read as _fc_mod
-
-        _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(target_bytes_per_partition)
-        applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
+        # The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. With no
+        # backend installed this cannot take effect, so it is reported as applied only when it
+        # actually was -- otherwise the returned dict would claim a setting that changed nothing
+        # (the dask read itself then raises the branded "install the backend" error).
+        if _set_lazy_backend_partition_bytes(int(target_bytes_per_partition)):
+            applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
     logger.debug(
         "configure_lazy_vector applied %d setting(s)",
         len(applied),
@@ -299,6 +303,29 @@ def configure_lazy_vector(
     if client is not None:
         _register_lazy_vector_worker_plugin(client, applied)
     return applied
+
+
+def _set_lazy_backend_partition_bytes(value: int) -> bool:
+    """Set the backend's lazy-vector partition-size knob; report whether it took effect.
+
+    The live partitioning runs in ``pyramids_lazy._vector_read`` (the lazy vector bodies moved to
+    the backend), so the value is mirrored there. Importing that module needs the backend and its
+    ``[parquet]`` dependency; when either is absent the import raises and nothing is set.
+
+    Args:
+        value: Target bytes per dask partition.
+
+    Returns:
+        ``True`` when the backend was present and the knob was set, ``False`` otherwise. The caller
+        uses this so it never reports an unapplied setting as applied.
+    """
+    try:
+        from pyramids_lazy import _vector_read as _lazy_fc_mod
+    except ImportError:
+        # No backend, or the backend without its [parquet] extra. Either way the knob cannot be set.
+        return False
+    _lazy_fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(value)
+    return True
 
 
 def _register_lazy_vector_worker_plugin(
@@ -322,10 +349,8 @@ def _register_lazy_vector_worker_plugin(
 
                 dask.config.set(scheduler=self._settings["scheduler"])
             if "target_bytes_per_partition" in self._settings:
-                from pyramids.feature import _read as _fc_mod
-
-                _fc_mod._LAZY_TARGET_BYTES_PER_PARTITION = int(
-                    self._settings["target_bytes_per_partition"]
+                _set_lazy_backend_partition_bytes(
+                    int(self._settings["target_bytes_per_partition"])
                 )
 
     _register_plugin(

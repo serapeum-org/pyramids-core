@@ -15,9 +15,8 @@ call back through the `fc_cls` facades (`fc_cls.read_file`,
 `fc_cls._read_featureserver_page`) so existing tests that monkeypatch those class
 methods still intercept.
 
-``_LAZY_TARGET_BYTES_PER_PARTITION`` is the tunable knob behind
-:func:`_resolve_lazy_partitioning`; :func:`pyramids.configure_lazy_vector` patches it
-here (the input engine owns it).
+The lazy (``backend="dask"``) read bodies now live in the ``pyramids-lazy`` compute backend;
+``read_file`` / ``read_parquet`` here dispatch to it through ``require_compute_backend``.
 """
 
 from __future__ import annotations
@@ -62,11 +61,11 @@ from pyramids.base.remote import _ARCHIVE_MARKER_RE, is_remote, to_fsspec_url
 from pyramids.feature._drivers import VectorDriver, select_driver, vector_drivers
 
 if TYPE_CHECKING:
-    from pyramids.feature._lazy_collection import LazyFeatureCollection
+    from pyramids_lazy import LazyFeatureCollection
+
     from pyramids.feature.collection import FeatureCollection
 
 _DEFAULT_ITER_BATCH_SIZE: int = 1000
-_LAZY_TARGET_BYTES_PER_PARTITION: int = 128 * 1024 * 1024
 
 
 @lru_cache(maxsize=128)
@@ -699,30 +698,6 @@ def from_vectortileserver(
     return result
 
 
-def _resolve_lazy_partitioning(
-    path: str, npartitions: int | None, chunksize: int | None
-) -> dict[str, Any]:
-    """Default `npartitions` from file size when neither knob is given (see FeatureCollection.read_file)."""
-    kwargs: dict[str, Any] = {}
-    if npartitions is not None:
-        kwargs["npartitions"] = npartitions
-    elif chunksize is not None:
-        kwargs["chunksize"] = chunksize
-    elif path.startswith(("/vsi", "http://", "https://", "s3://", "gs://", "az://")):
-        # Remote / VFS path — no cheap size probe. Fall back to 1.
-        kwargs["npartitions"] = 1
-    else:
-        try:
-            size = os.path.getsize(path)
-        except OSError:
-            kwargs["npartitions"] = 1
-        else:
-            kwargs["npartitions"] = max(
-                1, math.ceil(size / _LAZY_TARGET_BYTES_PER_PARTITION)
-            )
-    return kwargs
-
-
 def _require_pyarrow() -> None:
     """Raise a pyramids-branded ImportError if pyarrow is absent."""
     import_pyarrow(
@@ -736,64 +711,6 @@ def _require_pyarrow() -> None:
 def _compact(mapping: dict[str, Any]) -> dict[str, Any]:
     """Return a copy of `mapping` with the ``None``-valued entries removed (ARC-72)."""
     return {key: value for key, value in mapping.items() if value is not None}
-
-
-def _import_dask_geopandas():
-    """Import and return ``dask_geopandas`` or raise a pyramids-branded ImportError (ARC-72)."""
-    try:
-        import dask_geopandas
-    except ImportError as exc:
-        raise ImportError(
-            extra_hint(
-                "backend='dask' requires the optional 'dask-geopandas' dependency.",
-                "parquet",
-            )
-        ) from exc
-    return dask_geopandas
-
-
-def read_file_dask(
-    resolved: str,
-    *,
-    layer: str | int | None,
-    bbox: Any,
-    mask: Any,
-    rows: slice | int | None,
-    columns: list[str] | None,
-    where: str | None,
-    npartitions: int | None,
-    chunksize: int | None,
-) -> LazyFeatureCollection:
-    """Dask backend for :func:`read_file`: reject unsupported filters, wrap as LazyFC."""
-    # dask_geopandas.read_file does NOT forward pyogrio filter kwargs
-    # (bbox / mask / rows / columns / where) — silently dropping them was the bug.
-    # Raise a clear ValueError instead so users know to pre-filter or call .compute()
-    # and filter eagerly.
-    unsupported = {
-        "bbox": bbox,
-        "mask": mask,
-        "rows": rows,
-        "columns": columns,
-        "where": where,
-        "layer": layer,
-    }
-    supplied = [k for k, v in unsupported.items() if v is not None]
-    if supplied:
-        raise ValueError(
-            f"backend='dask' does not support filter kwargs "
-            f"{supplied}. dask_geopandas.read_file has no "
-            "pushdown story for these. Either omit them and "
-            "filter post-load via .clip / .loc / .compute, or "
-            "switch to read_parquet(backend='dask', filters=...)"
-        )
-    dask_geopandas = _import_dask_geopandas()
-    partition_kwargs = _resolve_lazy_partitioning(resolved, npartitions, chunksize)
-    # Local import breaks the collection <-> _lazy_collection cycle
-    # (_lazy_collection imports FeatureCollection from collection).
-    from pyramids.feature._lazy_collection import LazyFeatureCollection
-
-    dask_gdf = dask_geopandas.read_file(resolved, **partition_kwargs)
-    return LazyFeatureCollection.from_dask_gdf(dask_gdf)
 
 
 def _read_via_vector_driver(
@@ -890,7 +807,10 @@ def read_file(
         return _read_remote_geojson_staged(fc_cls, path, passthrough)
     resolved = _pyramids_io._parse_path(path)
     if backend == "dask":
-        return read_file_dask(
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded error when absent.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().read_vector_lazy(
             resolved,
             layer=layer,
             bbox=bbox,
@@ -1331,40 +1251,6 @@ def open_arrow(
     return _pyogrio_open_arrow(resolved, **kwargs)
 
 
-def read_parquet_dask(
-    resolved: str,
-    *,
-    columns: list[str] | None,
-    split_row_groups: bool | None,
-    filters: list | None,
-    blocksize: int | str | None,
-    storage_options: dict | None,
-    extra_kwargs: dict[str, Any],
-) -> LazyFeatureCollection:
-    """Dask backend for :func:`read_parquet`: wrap dask_geopandas as a LazyFeatureCollection."""
-    # Check deps in order of specificity — the dask-geopandas hint beats the
-    # generic pyarrow one. When both are missing, this error names the extra.
-    dask_geopandas = _import_dask_geopandas()
-    dask_kwargs = _compact(
-        {
-            "columns": columns,
-            "split_row_groups": split_row_groups,
-            "filters": filters,
-            "blocksize": blocksize,
-            "storage_options": storage_options,
-        }
-    )
-    dask_kwargs.update(extra_kwargs)
-    # dask_geopandas is installed → assert pyarrow too, so the user gets the
-    # pyramids-branded hint (not the upstream message). `[parquet]` pulls both.
-    _require_pyarrow()
-    # Local import breaks the collection <-> _lazy_collection cycle.
-    from pyramids.feature._lazy_collection import LazyFeatureCollection
-
-    dask_gdf = dask_geopandas.read_parquet(resolved, **dask_kwargs)
-    return LazyFeatureCollection.from_dask_gdf(dask_gdf)
-
-
 def read_parquet(
     fc_cls: type[FeatureCollection],
     path: str | Path,
@@ -1391,7 +1277,10 @@ def read_parquet(
         else _pyramids_io._parse_path(path)
     )
     if backend == "dask":
-        return read_parquet_dask(
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded error when absent.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        return require_compute_backend().read_vector_parquet_lazy(
             resolved,
             columns=columns,
             split_row_groups=split_row_groups,

@@ -88,23 +88,18 @@ jobs:
           # the main matrix (whose envs omit these extras). `strict` appends --strict-extra-skips
           # (turn a missing-dependency skip into a failure) on the jobs whose env is verified to
           # carry every dependency the selected tests need. See docs/how-to/testing.md.
+          # Most netcdf_lazy tests moved to pyramids-lazy with the op bodies; five stayed in core
+          # (the three CLI kerchunk cases in tests/cli/test_cli_netcdf_io.py and the two in
+          # tests/netcdf/samples/test_kerchunk.py), so the marker still needs a job. Selected by
+          # marker, not path: the old path-based target broke because the directory it named moved.
+          # The `lazy` env carries kerchunk + h5py, so these five RUN here rather than skip, which is
+          # why --strict-extra-skips is safe — it also turns a future all-skip degradation into a
+          # failure instead of a silently green job.
           - name: netcdf_lazy
             env: lazy
-            paths: tests/netcdf/lazy
-            markexpr: "not live"
-            strict: ""
-          - name: parquet_lazy
-            env: parquet
-            paths: tests/feature/lazy
-            markexpr: "not live"
-            strict: ""
-          # to_dask_dataframe is marked netcdf_lazy but its @requires_dask_dataframe tests need
-          # pyarrow (the parquet extra), so run that one file in the parquet env where they execute.
-          - name: netcdf_parquet
-            env: parquet
-            paths: tests/netcdf/lazy/test_to_dask_dataframe.py
-            markexpr: "not live"
-            strict: ""
+            paths: ""
+            markexpr: "netcdf_lazy and not live"
+            strict: "--strict-extra-skips"
           # parquet-marked tests (feature/test_arrow, feature/test_geoparquet, io/test_sniff,
           # stac/test_geoparquet_spec) ran in NO CI job; select them in the parquet env, which carries
           # pyarrow and every other dep they need, so --strict-extra-skips is safe here.
@@ -119,6 +114,13 @@ jobs:
           # it via pixi.lock as the [stac] extra's PyPI dep, not the pixi `stac` conda feature (which
           # only lists pystac-client). If a lock regen ever drops the [stac] PyPI deps, this job goes
           # red (correctly, but citing "mis-routed test") — the fix then is to restore the extra.
+          # Bare core: a real environment with NO lazy backend and NO dask, so the branded-absent
+          # contract is proven for real, not only under the suite's monkeypatched fixture.
+          - name: bare_core_contract
+            env: bare
+            paths: "tests/base/test_lazy_backend_absent.py"
+            markexpr: "not live"
+            strict: ""
           - name: stac
             env: dev
             paths: "tests/stac tests/dataset/stac"

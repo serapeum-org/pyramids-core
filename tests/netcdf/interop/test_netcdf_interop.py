@@ -893,12 +893,22 @@ class TestToXarrayLazy:
 
         captured = {}
 
-        def _spy(path, variable_name, chunks, orient=True, gdal_env=None):
+        def _spy(path, variable_name, chunks, lock=None, orient=True, gdal_env=None):
             captured["gdal_env"] = gdal_env
             captured["orient"] = orient
             return object()  # stand-in lazy array; _lazy_var_data returns it unchanged
 
-        monkeypatch.setattr(interop_mod, "build_lazy_array", _spy)
+        # Patch at the home module: interop._lazy_var_data defers build_lazy_array via a
+        # function-local import, so it looks the name up on pyramids_lazy._lazy at call time. This
+        # reaches a backend private to assert core forwards orient/lock correctly; importorskip the
+        # attribute so a plugin rename skips this test rather than erroring it (the backend itself is
+        # already gated by the requires_lazy marker on the class).
+        lazy_mod = pytest.importorskip("pyramids_lazy._lazy", exc_type=ImportError)
+        if not hasattr(lazy_mod, "build_lazy_array"):
+            pytest.skip(
+                "pyramids_lazy._lazy.build_lazy_array not present in this backend"
+            )
+        monkeypatch.setattr(lazy_mod, "build_lazy_array", _spy)
         nc = NetCDF.read_file(GEOG_3D_NC)
         try:
             nc.attach_gdal_env({"AWS_REQUEST_PAYER": "requester"})

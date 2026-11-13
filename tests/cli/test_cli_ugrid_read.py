@@ -267,7 +267,7 @@ class TestFromZarr:
     """``pyramids mesh read zarr``."""
 
     def _store(self, tmp_path) -> str:
-        """Write a pyramids Zarr store from the shipped mesh (needs the [lazy] extra)."""
+        """Write a pyramids Zarr store from the shipped mesh (needs the pyramids-lazy backend)."""
         store = str(tmp_path / "store.zarr")
         MeshDataset.read_file(_MESH).to_zarr(store)
         return store

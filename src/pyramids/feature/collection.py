@@ -38,9 +38,9 @@ if TYPE_CHECKING:
     from cleopatra.styling.colorbar import ColorBar
     from cleopatra.styling.params import Classify, Contour
     from cleopatra.styling.scaling import ColorScaling
+    from pyramids_lazy import LazyFeatureCollection
 
     from pyramids.dataset import Dataset
-    from pyramids.feature._lazy_collection import LazyFeatureCollection
 
 import geopandas as gpd
 import numpy as np

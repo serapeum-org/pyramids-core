@@ -186,7 +186,7 @@ nc.plot("t2m", chunks={"time": 1})                          # lazy static plot o
 nc.plot("t2m", animate="time", chunks={"time": 1})          # lazy per-frame streaming
 ```
 
-Requires the `[lazy]` extra (`pip install 'pyramids-core[lazy]'`). See
+Requires the `[lazy]` extra (`pip install 'pyramids-lazy'`). See
 [Lazy NetCDF](lazy/lazy-netcdf.md) for chunk-size guidance.
 
 ## 9. Basemap underlay

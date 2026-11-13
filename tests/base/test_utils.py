@@ -56,9 +56,14 @@ class TestApplyUnpack:
         np.testing.assert_array_equal(out.mask, [False, True, False])
 
     def test_reexported_identity(self):
-        """The NetCDF module re-exports the same object (one shared primitive)."""
-        from pyramids.netcdf._lazy import _apply_unpack
-        from pyramids.netcdf._lazy import apply_unpack as lazy_fn
+        """`_lazy` re-exports the canonical `base._utils` primitive (deprecated alias; one object)."""
+        # This asserts a property of the pyramids-lazy backend, so it can only run where the backend
+        # is installed. importorskip(exc_type=ImportError) skips — rather than errors — in a bare
+        # core and in a backend without its [parquet] extra (whose guard raises a branded
+        # ImportError, which importorskip re-raises unless told it is an "absent" signal).
+        pytest.importorskip("pyramids_lazy._lazy", exc_type=ImportError)
+        from pyramids_lazy._lazy import _apply_unpack
+        from pyramids_lazy._lazy import apply_unpack as lazy_fn
 
         assert apply_unpack is lazy_fn is _apply_unpack, "one shared primitive"
 

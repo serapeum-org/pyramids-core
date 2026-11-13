@@ -30,14 +30,11 @@ from osgeo import gdal, osr
 
 from pyramids.base._errors import TimeDecodingWarning
 from pyramids.base._utils import (
-    import_dask,
     import_xarray,
     numpy_to_gdal_dtype,
-    require_optional,
 )
 from pyramids.base.remote import is_remote
 from pyramids.dataset.engines._base import _Engine
-from pyramids.netcdf._lazy import build_lazy_array
 from pyramids.netcdf._mdim import open_mdarray, strip_netcdf_subdataset_prefix
 from pyramids.netcdf.cf import (
     build_coordinate_attrs,
@@ -577,37 +574,13 @@ class Interop(_Engine["NetCDF"]):
 
               ```
         """
-        import_dask("to_dask_dataframe() needs dask; install the `lazy` extra.")
-        # dask.dataframe (dask-expr) imports pyarrow, which ships in the `parquet` extra rather than
-        # `lazy`; guard it so a lazy-only install gets a clear hint instead of a raw ModuleNotFound.
-        require_optional(
-            "dask.dataframe",
-            "to_dask_dataframe() needs dask.dataframe, which requires pyarrow — install the "
-            "`parquet` extra (e.g. `pip install pyramids-core[parquet]`).",
-        )
-        import dask.array as da
-        import dask.dataframe as dd
+        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
+        # OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
 
-        nc = self._ds
-        names = self._frame_variables(variables)
-        first = nc._require_raster_variable(names[0]) if _is_container(nc) else nc
-        # An in-memory store (no on-disk / VSI path) has nothing to stream, so its values are
-        # wrapped eagerly in a dask array; a file-backed store is read lazily through the MDArray
-        # chunk reader. The shared `_is_in_memory` predicate keeps this in step with `NetCDF.chunk`.
-        in_memory = _is_in_memory(nc)
-        value_arrays = _lazy_value_columns(nc, names, first, in_memory, chunks, da)
-        ref_chunks = next(iter(value_arrays.values())).chunks
-        columns = _lazy_dimension_columns(first, ref_chunks, da)
-        for name, array in value_arrays.items():
-            columns[name] = array.rechunk(ref_chunks)
-        frame = dd.concat(
-            [
-                dd.from_dask_array(col, columns=[label])
-                for label, col in columns.items()
-            ],
-            axis=1,
+        return require_compute_backend().to_dask_dataframe(
+            self._ds, variables=variables, dropna=dropna, chunks=chunks
         )
-        return frame.dropna(subset=list(names), how="all") if dropna else frame
 
     def _frame_variables(self, variables: Any) -> list[str]:
         """The data variables that become columns, in order.
@@ -628,41 +601,63 @@ class Interop(_Engine["NetCDF"]):
             ValueError: There are none, one of those named is not a gridded variable, a
                 name was asked for more than once, or the selection is empty.
         """
-        nc = self._ds
-        if _is_container(nc):
-            subject = "container"
-            available = list(nc._spatial_variable_names(nc._working_group()))
-            if not available:
-                raise ValueError(
-                    "to_dataframe() needs at least one gridded variable, and this "
-                    "container has none."
-                )
-        else:
-            subject = "variable"
-            available = [nc._source_var_name or "variable"]
-        if variables is None:
-            names = available
-        else:
-            names = [variables] if isinstance(variables, str) else list(variables)
-            unknown = [name for name in names if name not in available]
-            if unknown:
-                raise ValueError(
-                    f"to_dataframe() cannot take {unknown!r} as columns: this {subject}'s "
-                    f"gridded variables are {available}."
-                )
-            repeated = sorted({name for name in names if names.count(name) > 1})
-            if repeated:
-                raise ValueError(
-                    f"to_dataframe() was asked for {repeated!r} more than once, and a "
-                    f"name can only become one column. Pass each name at most once."
-                )
-            if not names:
-                raise ValueError(
-                    f"to_dataframe() was given an empty selection, and a frame needs at "
-                    f"least one column. Pass `variables=None` for all of them, or one of "
-                    f"{available}."
-                )
-        return names
+        return _frame_variables(self._ds, variables)
+
+
+def _frame_variables(nc: Any, variables: Any) -> list[str]:
+    """The data variables that become columns, in order (never empty).
+
+    The shared implementation behind both the eager :meth:`NetCDF.to_dataframe` (via
+    :meth:`InteropEngine._frame_variables`) and the lazy ``to_dask_dataframe`` in the pyramids-lazy
+    backend, which reaches it through :mod:`pyramids.lazy_support`. Kept as one function, not copied,
+    so the four selection error messages cannot drift between the eager and lazy paths.
+
+    Args:
+        nc: The NetCDF container or single variable.
+        variables: A name, a sequence of names, or ``None`` for all of them. An empty sequence is a
+            distinct case from ``None``: it asks for no columns at all, which is refused.
+
+    Returns:
+        list[str]: The names, never empty.
+
+    Raises:
+        ValueError: There are none, one named is not a gridded variable, a name was asked for more
+            than once, or the selection is empty.
+    """
+    if _is_container(nc):
+        subject = "container"
+        available = list(nc._spatial_variable_names(nc._working_group()))
+        if not available:
+            raise ValueError(
+                "to_dataframe() needs at least one gridded variable, and this "
+                "container has none."
+            )
+    else:
+        subject = "variable"
+        available = [nc._source_var_name or "variable"]
+    if variables is None:
+        names = available
+    else:
+        names = [variables] if isinstance(variables, str) else list(variables)
+        unknown = [name for name in names if name not in available]
+        if unknown:
+            raise ValueError(
+                f"to_dataframe() cannot take {unknown!r} as columns: this {subject}'s "
+                f"gridded variables are {available}."
+            )
+        repeated = sorted({name for name in names if names.count(name) > 1})
+        if repeated:
+            raise ValueError(
+                f"to_dataframe() was asked for {repeated!r} more than once, and a "
+                f"name can only become one column. Pass each name at most once."
+            )
+        if not names:
+            raise ValueError(
+                f"to_dataframe() was given an empty selection, and a frame needs at "
+                f"least one column. Pass `variables=None` for all of them, or one of "
+                f"{available}."
+            )
+    return names
 
 
 def _is_container(nc: NetCDF) -> bool:
@@ -1543,9 +1538,16 @@ def _lazy_var_data(ds: NetCDF, var_name: str, chunks: Any, md_arr: Any) -> Any:
     path = _reopenable_path(ds)
     if path is None:
         return ds._md_array_to_numpy(md_arr)
+    from pyramids.base._compute_backend import require_compute_backend
+
     try:
-        return build_lazy_array(
-            path, var_name, chunks, orient=False, gdal_env=ds._gdal_env or None
+        return require_compute_backend().read_array_lazy(
+            ds,
+            path=path,
+            variable_name=var_name,
+            chunks=chunks,
+            orient=False,
+            gdal_env=ds._gdal_env or None,
         )
     except ValueError:
         return ds._md_array_to_numpy(md_arr)

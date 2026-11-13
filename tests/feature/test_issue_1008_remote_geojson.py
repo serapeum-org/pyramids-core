@@ -17,6 +17,7 @@ reads the real geoBoundaries source end to end.
 import io
 import urllib.error
 from pathlib import Path
+from types import SimpleNamespace
 
 import geopandas as gpd
 import pytest
@@ -346,7 +347,7 @@ class TestReadFileRemoteGeojsonRouting:
 
         Test scenario:
             With ``backend='dask'`` and a GeoJSON URL, ``read_file`` skips staging and
-            delegates to ``read_file_dask``.
+            delegates to the compute backend's ``read_vector_lazy``.
         """
         sentinel = object()
 
@@ -354,7 +355,14 @@ class TestReadFileRemoteGeojsonRouting:
             raise AssertionError("dask backend should not stage")
 
         monkeypatch.setattr(_read, "_read_remote_geojson_staged", _must_not_stage)
-        monkeypatch.setattr(_read, "read_file_dask", lambda *a, **k: sentinel)
+        # The lazy read now dispatches through the compute-backend seam, so stub the resolver at
+        # its home module (``_read`` imports it inside the branch). Stubbing the resolver rather
+        # than a real backend keeps this routing test independent of whether the plugin is
+        # installed, which the bare-core matrix legs are not.
+        monkeypatch.setattr(
+            "pyramids.base._compute_backend.require_compute_backend",
+            lambda: SimpleNamespace(read_vector_lazy=lambda *a, **k: sentinel),
+        )
 
         result = _read.read_file(
             FeatureCollection, _GEOBOUNDARIES_KEN_ADM1, backend="dask"

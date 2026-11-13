@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import warnings
 
-from pyramids.netcdf._lazy_cube import LazyNetCDF
 from pyramids.netcdf.array_options import (
     CFAttributes,
     Encoding,
@@ -46,7 +45,6 @@ __all__ = [
     "GroupInfo",
     "LabeledArray",
     "LabeledDataset",
-    "LazyNetCDF",
     "NetCDF",
     "NetCDFMetadata",
     "Selectors",
@@ -60,7 +58,11 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    """Resolve the renamed `UgridDataset` name at the `pyramids.netcdf` level, warning once.
+    """Resolve lazily-exposed `pyramids.netcdf` names (`LazyNetCDF`, legacy `UgridDataset`).
+
+    `LazyNetCDF` is resolved here rather than imported at module top so `import pyramids.netcdf`
+    does not eagerly pull the lazy backend; it is provided by `pyramids-lazy` and forwarded
+    through the compute-backend seam.
 
     `UgridDataset` was renamed to :class:`~pyramids.netcdf.ugrid.MeshDataset`; this top-level
     re-export kept the old name importable for one release so `from pyramids.netcdf import
@@ -76,6 +78,14 @@ def __getattr__(name: str):
         AttributeError: Any other unknown name.
     """
 
+    if name == "LazyNetCDF":
+        # The lazy cube lives in the compute backend. Forward the public name to whichever backend
+        # is installed -- resolved through the seam rather than by importing pyramids_lazy, so a
+        # conforming third-party backend is honoured instead of failing on a distribution the user
+        # never installed. Raises the branded OptionalPackageDoesNotExist on a bare core.
+        from pyramids.base._compute_backend import backend_lazy_type
+
+        return backend_lazy_type("lazy_netcdf_type", "pyramids.netcdf.LazyNetCDF")
     if name == "UgridDataset":
         warnings.warn(
             "UgridDataset is renamed to MeshDataset; import MeshDataset instead. "
@@ -85,3 +95,12 @@ def __getattr__(name: str):
         )
         return MeshDataset
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module's names including the PEP-562 lazily-forwarded ones (`LazyNetCDF`).
+
+    `__getattr__`-provided names are invisible to the default `dir()`, so autocomplete and
+    `dir(pyramids.netcdf)` would omit `LazyNetCDF` (and the deprecated `UgridDataset` alias).
+    """
+    return sorted(set(globals()) | {"LazyNetCDF", "UgridDataset"})

@@ -850,8 +850,15 @@ class TestLoadZarrDispatch:
             fake.open_group = lambda store, mode="r": {"var": data}
             monkeypatch.setitem(sys.modules, "zarr", fake)
             monkeypatch.setattr(_loader, "import_zarr", lambda *a, **k: None)
-            monkeypatch.setattr(_loader, "_resolve_store", lambda href, _: href)
-            monkeypatch.setattr(_loader, "detect_data_var", lambda root: "var")
+            # Patch at the HOME modules: `_load_zarr` defers these via function-local
+            # `from ... import ...`, so it resolves them off the home module at call time
+            # (patching `_loader` would no-op now that the names are not module-level there).
+            monkeypatch.setattr(
+                "pyramids.dataset.ops._zarr._resolve_store", lambda href, _: href
+            )
+            monkeypatch.setattr(
+                "pyramids.dataset.ops._geobox_zarr.detect_data_var", lambda root: "var"
+            )
             monkeypatch.setattr(
                 _loader.Dataset,
                 "from_zarr",

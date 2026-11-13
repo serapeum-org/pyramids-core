@@ -227,13 +227,19 @@ class TestAnImplementationImportDoesNotWidenTheFeaturePackage:
             and what mkdocstrings treats as the declared surface -- so the check that keeps
             such an import harmless is that it never reaches the list.
         """
-        borrowed = {
-            name
-            for name in dir(feature_package)
-            if not name.startswith("_")
-            and getattr(getattr(feature_package, name), "__module__", None)
-            == "pyramids.base._utils"
-        }
+        borrowed = set()
+        for name in dir(feature_package):
+            if name.startswith("_"):
+                continue
+            try:
+                obj = getattr(feature_package, name)
+            except Exception:
+                # A backend-gated forward (LazyFeatureCollection) raises its branded
+                # OptionalPackageDoesNotExist when the optional extra is absent; it is not a
+                # base._utils helper, so skip it rather than letting the probe crash.
+                continue
+            if getattr(obj, "__module__", None) == "pyramids.base._utils":
+                borrowed.add(name)
         advertised = sorted(borrowed & set(feature_package.__all__))
 
         assert not advertised, (

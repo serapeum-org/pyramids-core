@@ -7,7 +7,7 @@ Zarr store (`zarr`) and kerchunk reference manifests (`kerchunk`, `combine-kerch
 Readers: construction from a CSV / JSON dump (`dataframe`, `dict`);
 a lazy multi-file stack report (`open-mf`); and multi-cube joins (`concat`, `merge`). No
 xarray is imported here — the underlying methods own that; the CLI only marshals paths
-and scalar options. The kerchunk and `open-mf` verbs need the ``[lazy]`` optional extra,
+and scalar options. The kerchunk and `open-mf` verbs need the pyramids-lazy backend,
 imported lazily by the methods, so ``import pyramids.cli`` stays extra-free.
 """
 
@@ -120,7 +120,7 @@ def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc export kerchunk`` — write a kerchunk reference manifest.
 
     Emits a JSON reference manifest for the file (its chunks addressed in place), written
-    to ``output``. Needs the ``[lazy]`` extra.
+    to ``output``. Needs the pyramids-lazy backend.
 
     Args:
         args: Parsed args with ``file``, ``output``, ``inline_threshold``,
@@ -144,7 +144,7 @@ def _cmd_nc_combine_kerchunk(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc export combine-kerchunk`` — a combined manifest over many files.
 
     Emits one kerchunk manifest spanning ``--inputs``, concatenated along ``--concat-dims``
-    with ``--identical-dims`` shared, written to ``output``. Needs the ``[lazy]`` extra.
+    with ``--identical-dims`` shared, written to ``output``. Needs the pyramids-lazy backend.
 
     Args:
         args: Parsed args with ``output``, ``inputs``, ``concat_dims``,
@@ -170,7 +170,7 @@ def _cmd_nc_open_mf(args: argparse.Namespace) -> int:
     """Handle ``pyramids nc import open-mf`` — report the lazy stack of a variable over files.
 
     Opens ``--paths`` and stacks ``--var`` into one lazy dask array, then reports the
-    stack's shape, dtype and chunk sizes (no data is computed). Needs the ``[lazy]`` extra.
+    stack's shape, dtype and chunk sizes (no data is computed). Needs the pyramids-lazy backend.
 
     Args:
         args: Parsed args with ``paths``, ``var``, ``json``.
