@@ -37,15 +37,6 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     if (-not $env:PIXI_VERSION) {
         throw "PIXI_VERSION not set"
     }
-    # Require gh to be authenticated by EITHER mechanism: CI sets GH_TOKEN, while a
-    # local run is usually logged in via `gh auth login` (keyring, no env var). Gate on
-    # effective auth so a locally-logged-in dev is not spuriously blocked. `2>&1 |
-    # Out-Null` keeps gh's status text (written to stderr) from tripping
-    # $ErrorActionPreference='Stop'; success is read from $LASTEXITCODE only.
-    & gh auth status 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "gh is not authenticated: set GH_TOKEN (CI) or run 'gh auth login' (local)"
-    }
     # Download the pixi binary with an AUTHENTICATED `gh` request. prefix-dev's
     # install.ps1 fetches the release archive anonymously (System.Net.WebClient),
     # which GitHub rate-limits (HTTP 429) on the shared Actions-runner IP pool —
@@ -68,7 +59,11 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
         if (($LASTEXITCODE -eq 0) -and (Test-Path (Join-Path $BinDir $Asset))) { $installed = $true; break }
         if ($attempt -lt 3) { Start-Sleep -Seconds ($attempt * 10) }
     }
-    if (-not $installed) { throw "pixi download failed after 3 attempts" }
+    if (-not $installed) {
+        throw ("pixi download failed after 3 attempts (see gh output above; " +
+            "ensure gh is authenticated via GH_TOKEN or 'gh auth login', and that " +
+            "PIXI_VERSION '$($env:PIXI_VERSION)' ships $Asset)")
+    }
     Move-Item -Path (Join-Path $BinDir $Asset) -Destination (Join-Path $BinDir "pixi.exe") -Force
     $env:PATH = "$BinDir;$env:PATH"
 }

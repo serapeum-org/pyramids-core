@@ -133,13 +133,6 @@ fi
 # pull; integrity-verifying the fetched bytes is tracked in #1553.
 if ! command -v pixi >/dev/null 2>&1; then
     PIXI_VERSION="${PIXI_VERSION:?PIXI_VERSION not set}"
-    # Require gh to be authenticated by EITHER mechanism: CI sets GH_TOKEN, while a
-    # local run is usually logged in via `gh auth login` (keyring, no env var). Gate on
-    # effective auth so a locally-logged-in dev is not spuriously blocked.
-    if ! gh auth status >/dev/null 2>&1; then
-        echo "gh is not authenticated: set GH_TOKEN (CI) or run 'gh auth login' (local)" >&2
-        exit 1
-    fi
     # Download the pixi binary with an AUTHENTICATED gh request. prefix-dev's
     # install.sh fetches the release archive anonymously (curl), which GitHub
     # rate-limits (HTTP 429) on the shared Actions-runner IP pool -- that reddened the
@@ -164,7 +157,11 @@ if ! command -v pixi >/dev/null 2>&1; then
         fi
         [ "${attempt}" -lt 3 ] && sleep $(( attempt * 10 ))
     done
-    [ "${installed}" = 1 ] || { echo "pixi download failed after 3 attempts" >&2; exit 1; }
+    if [ "${installed}" != 1 ]; then
+        echo "pixi download failed after 3 attempts (see gh output above; ensure gh is authenticated" >&2
+        echo "via GH_TOKEN or 'gh auth login', and that PIXI_VERSION '${PIXI_VERSION}' ships ${asset})" >&2
+        exit 1
+    fi
     mv -f "${bindir}/${asset}" "${bindir}/pixi"
     chmod +x "${bindir}/pixi"
     export PATH="${bindir}:${PATH}"
