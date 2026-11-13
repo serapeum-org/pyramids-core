@@ -5,7 +5,7 @@
 #
 # Runs once per cibuildwheel Windows invocation (CIBW_BEFORE_ALL).
 #
-# build-wheels.yml invokes this via `powershell -File ...` which uses
+# bundle-pypi-wheels.yml invokes this via `powershell -File ...` which uses
 # Windows PowerShell 5.1 on the windows-2022 runner — the `#Requires`
 # above documents that minimum so any future move to `pwsh` (PS 7)
 # still passes, but a regression to an older PowerShell would fail
@@ -21,27 +21,51 @@ Write-Host "BUILD_PREFIX=$BuildPrefix"
 
 # 1. Install pixi.
 #
-# Pin the version via the PIXI_VERSION env var (set in build-wheels.yml's
+# Pin the version via the PIXI_VERSION env var (set in bundle-pypi-wheels.yml's
 # env block; on Windows cibuildwheel runs before-all on the host so it
 # inherits it directly). Run locally with
-# `$env:PIXI_VERSION = "X.Y.Z"; .\ci\setup-gdal-from-pixi.ps1`.
+# `$env:PIXI_VERSION = "X.Y.Z"; .\ci\setup-gdal-from-pixi.ps1` -- gh must be
+# authenticated first, via GH_TOKEN or `gh auth login`.
 #
-# Fetch the install script from the **versioned GitHub source** rather
-# than the rolling https://pixi.sh/install.ps1 redirect: the
-# raw.githubusercontent.com URL is content-addressed through the
-# `v<version>` tag, so a compromise of pixi.sh can no longer change
-# which install script we run.
+# Download the pinned bare pixi binary directly from its GitHub release with an
+# AUTHENTICATED `gh release download`, instead of piping prefix-dev's install.ps1:
+# that install script downloads the release archive anonymously, and GitHub
+# throttles anonymous downloads from the shared Actions-runner IP pool (HTTP 429),
+# which was turning the wheel legs red. The `v<version>` tag pins which release we
+# pull; integrity-verifying the fetched bytes is tracked in #1553.
 if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     if (-not $env:PIXI_VERSION) {
         throw "PIXI_VERSION not set"
     }
-    $PixiInstallUrl = "https://raw.githubusercontent.com/prefix-dev/pixi/v$($env:PIXI_VERSION)/install/install.ps1"
-    Write-Host "--- Installing pixi $($env:PIXI_VERSION) from $PixiInstallUrl ---"
-    $env:PIXI_HOME = $BuildPrefix
-    $env:PIXI_NO_PATH_UPDATE = "1"
-    Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1"
-    & "$env:TEMP\install-pixi.ps1"
-    $env:PATH = "$BuildPrefix\bin;$env:PATH"
+    # Download the pixi binary with an AUTHENTICATED `gh` request. prefix-dev's
+    # install.ps1 fetches the release archive anonymously (System.Net.WebClient),
+    # which GitHub rate-limits (HTTP 429) on the shared Actions-runner IP pool —
+    # that reddened the Windows/macOS wheel builds on 2026-11-13 (confirmed 429 on the
+    # same-class vcpkg download). Authenticated downloads use the token's far higher
+    # limit. The release ships a bare .exe, so no install script or unzip is needed;
+    # 3x retry only covers a genuine transient blip now, not a rate-limit wall.
+    $BinDir = Join-Path $BuildPrefix "bin"
+    New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
+    # windows-2022 host is x86_64 (win_arm64 is built via vcpkg, not this script).
+    $Asset = "pixi-x86_64-pc-windows-msvc.exe"
+    $installed = $false
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Write-Host "--- Downloading pixi $($env:PIXI_VERSION) ($Asset, attempt $attempt) ---"
+        # 2>&1 | Write-Host merges gh's stderr into the output stream so a stderr line
+        # cannot surface as a terminating NativeCommandError under ErrorActionPreference
+        # 'Stop' and bypass the retry; success is read from $LASTEXITCODE + Test-Path only.
+        & gh release download "v$($env:PIXI_VERSION)" --repo prefix-dev/pixi `
+            --pattern $Asset --dir $BinDir --clobber 2>&1 | Write-Host
+        if (($LASTEXITCODE -eq 0) -and (Test-Path (Join-Path $BinDir $Asset))) { $installed = $true; break }
+        if ($attempt -lt 3) { Start-Sleep -Seconds ($attempt * 10) }
+    }
+    if (-not $installed) {
+        throw ("pixi download failed after 3 attempts (see gh output above; " +
+            "ensure gh is authenticated via GH_TOKEN or 'gh auth login', and that " +
+            "PIXI_VERSION '$($env:PIXI_VERSION)' ships $Asset)")
+    }
+    Move-Item -Path (Join-Path $BinDir $Asset) -Destination (Join-Path $BinDir "pixi.exe") -Force
+    $env:PATH = "$BinDir;$env:PATH"
 }
 pixi --version
 
@@ -59,7 +83,7 @@ Write-Host "wheel-build env: $PixiEnv"
 # Resolve the concrete GDAL version from the env we just materialized
 # and persist it for install-and-vendor-osgeo.py. Single source of truth
 # = pixi.lock — no more hardcoded duplicates in pyproject.toml or
-# build-wheels.yml. conda-forge's Windows gdal package doesn't ship a
+# bundle-pypi-wheels.yml. conda-forge's Windows gdal package doesn't ship a
 # usable gdal-config, so parse the version from conda-meta\gdal-X.Y.Z-*.json
 # instead (the same file conda/pixi/micromamba all populate).
 $GdalMeta = Get-ChildItem -Path (Join-Path $PixiEnv "conda-meta\gdal-*.json") -ErrorAction SilentlyContinue | Select-Object -First 1

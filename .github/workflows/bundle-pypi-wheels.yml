@@ -360,6 +360,10 @@ jobs:
         uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e # v4.3.5
         env:
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+          # setup-gdal-from-pixi.sh's `gh release download` of pixi (before-all) needs an
+          # authenticated token to beat the anonymous Actions-IP 429 (#1552). Scoped to
+          # this step so it is not exposed to checkout/setup-python/other steps.
+          GH_TOKEN: ${{ github.token }}
 
       # NOTE: the wheel size/leak gate (ci/check-wheel-size.sh) runs only in the
       # Linux build job. Adding it here trips CodeQL's cache-poisoning rule
@@ -399,6 +403,10 @@ jobs:
         uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e # v4.3.5
         env:
           CIBW_ARCHS_WINDOWS: ${{ matrix.arch }}
+          # setup-gdal-from-pixi.ps1's `gh release download` of pixi (before-all) needs an
+          # authenticated token to beat the anonymous Actions-IP 429 (#1552). Scoped to
+          # this step so it is not exposed to checkout/setup-python/other steps.
+          GH_TOKEN: ${{ github.token }}
 
       # See the macOS job: the size/leak gate is Linux-only to avoid CodeQL's
       # cache-poisoning rule; the size-changing trim runs on all platforms.
