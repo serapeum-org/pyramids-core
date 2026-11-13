@@ -48,7 +48,7 @@ case "$(uname -s)/$(uname -m)" in
 esac
 
 # Pin micromamba version via the MICROMAMBA_VERSION env var (set in
-# build-wheels.yml's env block; this script only runs on the macOS
+# bundle-pypi-wheels.yml's env block; this script only runs on the macOS
 # cross-compile path, where cibuildwheel runs before-all on the host
 # and inherits it). The previous `…/latest` endpoint was a rolling
 # target — a new micromamba release with a regressed `--platform osx-64`

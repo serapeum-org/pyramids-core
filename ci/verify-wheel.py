@@ -1,6 +1,6 @@
 """Smoke test for built platform wheels — exercises the vendor bootstrap.
 
-Invoked by `.github/workflows/build-wheels.yml` once per `test-wheels`
+Invoked by `.github/workflows/bundle-pypi-wheels.yml` once per `test-wheels`
 matrix cell after the wheel is pip-installed into a clean Python env. The
 checks mirror what an end user does on first import:
 
