@@ -41,22 +41,22 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     # Retry with backoff: install.ps1 itself downloads the pixi release .zip from
     # github.com/releases, and that GitHub download flakes intermittently (it reds
     # the whole wheel build on a single blip — see the macOS/win_amd64 bundle
-    # failures on 2026-11-13). The -MaximumRetryCount on our Invoke-WebRequest only
-    # covers fetching install.ps1; the flaky hop is the .zip download *inside* it,
+    # failures on 2026-11-13). The flaky hop is the .zip download *inside* install.ps1,
     # which we cannot hand a retry flag — so re-run the whole install each attempt.
+    # cibuildwheel runs this under Windows PowerShell 5.1, so no PS7-only options
+    # (-MaximumRetryCount / -RetryIntervalSec) on Invoke-WebRequest; the loop is the retry.
     $installed = $false
     for ($attempt = 1; $attempt -le 5; $attempt++) {
         Write-Host "--- Installing pixi $($env:PIXI_VERSION) (attempt $attempt) from $PixiInstallUrl ---"
         try {
-            Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1" `
-                -MaximumRetryCount 3 -RetryIntervalSec 5
+            Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1"
             & "$env:TEMP\install-pixi.ps1"
             $env:PATH = "$BuildPrefix\bin;$env:PATH"
             if (Get-Command pixi -ErrorAction SilentlyContinue) { $installed = $true; break }
         } catch {
             Write-Host "pixi install attempt $attempt failed: $($_.Exception.Message)"
         }
-        if ($attempt -lt 5) { Start-Sleep -Seconds ([math]::Min(60, 5 * [math]::Pow(2, $attempt))) }
+        if ($attempt -lt 5) { Start-Sleep -Seconds ([int][math]::Min(60, 5 * [math]::Pow(2, $attempt))) }
     }
     if (-not $installed) { throw "pixi install failed after 5 attempts" }
 }
