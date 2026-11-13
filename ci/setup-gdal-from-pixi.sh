@@ -130,7 +130,13 @@ fi
 # which install script we run.
 if ! command -v pixi >/dev/null 2>&1; then
     PIXI_VERSION="${PIXI_VERSION:?PIXI_VERSION not set}"
-    : "${GH_TOKEN:?GH_TOKEN not set (needed for an authenticated pixi download; set it in the job env)}"
+    # Require gh to be authenticated by EITHER mechanism: CI sets GH_TOKEN, while a
+    # local run is usually logged in via `gh auth login` (keyring, no env var). Gate on
+    # effective auth so a locally-logged-in dev is not spuriously blocked.
+    if ! gh auth status >/dev/null 2>&1; then
+        echo "gh is not authenticated: set GH_TOKEN (CI) or run 'gh auth login' (local)" >&2
+        exit 1
+    fi
     # Download the pixi binary with an AUTHENTICATED gh request. prefix-dev's
     # install.sh fetches the release archive anonymously (curl), which GitHub
     # rate-limits (HTTP 429) on the shared Actions-runner IP pool -- that reded the

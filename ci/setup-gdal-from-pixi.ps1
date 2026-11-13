@@ -35,8 +35,14 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     if (-not $env:PIXI_VERSION) {
         throw "PIXI_VERSION not set"
     }
-    if (-not $env:GH_TOKEN) {
-        throw "GH_TOKEN not set (needed for an authenticated pixi download; set it in the job env)"
+    # Require gh to be authenticated by EITHER mechanism: CI sets GH_TOKEN, while a
+    # local run is usually logged in via `gh auth login` (keyring, no env var). Gate on
+    # effective auth so a locally-logged-in dev is not spuriously blocked. `2>&1 |
+    # Out-Null` keeps gh's status text (written to stderr) from tripping
+    # $ErrorActionPreference='Stop'; success is read from $LASTEXITCODE only.
+    & gh auth status 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "gh is not authenticated: set GH_TOKEN (CI) or run 'gh auth login' (local)"
     }
     # Download the pixi binary with an AUTHENTICATED `gh` request. prefix-dev's
     # install.ps1 fetches the release archive anonymously (System.Net.WebClient),
