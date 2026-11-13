@@ -197,6 +197,19 @@ def install_gdal_python_bindings() -> None:
         env.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", "2")
         env.setdefault("NPY_NUM_BUILD_JOBS", "2")
 
+    # Reserve Mach-O header slack so delocate can rewrite the vendored osgeo
+    # extensions' install names during wheel repair. delocate bundles libc++ and
+    # rewrites e.g. @rpath/libc++.1.dylib -> @loader_path/../../.dylibs/libc++.1.0.dylib
+    # (a longer path); without -headerpad_max_install_names the cross-compiled x86_64
+    # _ogr.cpython-3XX-darwin.so has no room for the longer load command and
+    # install_name_tool aborts ("larger updated load commands do not fit"), failing
+    # delocate-wheel (#1549). macOS-only: Linux repairs with auditwheel/patchelf, which
+    # has no headerpad concept. Benign on arm64 — it only reserves header space.
+    if is_macos:
+        env["LDFLAGS"] = (
+            f"{env.get('LDFLAGS', '')} -Wl,-headerpad_max_install_names".strip()
+        )
+
     # macOS arm64 needs special handling for the build-venv numpy:
     #
     # * We can't use numpy 1.x — wheels compiled against numpy 1.x raise
