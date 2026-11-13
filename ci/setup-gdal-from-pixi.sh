@@ -118,16 +118,19 @@ fi
 
 # 1. Install pixi (static binary, ~50 MB, ~5 seconds).
 #
-# Pin the version via the PIXI_VERSION env var (set in build-wheels.yml's
-# env block, forwarded into the manylinux container via
-# [tool.cibuildwheel.linux].environment-pass). Run locally with
-# `PIXI_VERSION=X.Y.Z bash ci/setup-gdal-from-pixi.sh`.
+# This script is the macOS before-all ([tool.cibuildwheel.macos]); the Linux
+# legs build GDAL from source instead. Pin the version via the PIXI_VERSION env
+# var (set in bundle-pypi-wheels.yml's env block; cibuildwheel runs before-all on
+# the macOS host, so it inherits it directly). Run locally with
+# `PIXI_VERSION=X.Y.Z bash ci/setup-gdal-from-pixi.sh` -- gh must be authenticated
+# first, via GH_TOKEN or `gh auth login`.
 #
-# Fetch the install script from the **versioned GitHub source** rather
-# than the rolling https://pixi.sh/install.sh redirect: the
-# raw.githubusercontent.com URL is content-addressed through the
-# `v<version>` tag, so a compromise of pixi.sh can no longer change
-# which install script we run.
+# Download the pinned bare pixi binary directly from its GitHub release with an
+# AUTHENTICATED `gh release download`, instead of piping prefix-dev's install.sh:
+# that install script downloads the release archive anonymously, and GitHub
+# throttles anonymous downloads from the shared Actions-runner IP pool (HTTP 429),
+# which was turning the wheel legs red. The `v<version>` tag pins which release we
+# pull; integrity-verifying the fetched bytes is tracked in #1553.
 if ! command -v pixi >/dev/null 2>&1; then
     PIXI_VERSION="${PIXI_VERSION:?PIXI_VERSION not set}"
     # Require gh to be authenticated by EITHER mechanism: CI sets GH_TOKEN, while a
@@ -139,7 +142,7 @@ if ! command -v pixi >/dev/null 2>&1; then
     fi
     # Download the pixi binary with an AUTHENTICATED gh request. prefix-dev's
     # install.sh fetches the release archive anonymously (curl), which GitHub
-    # rate-limits (HTTP 429) on the shared Actions-runner IP pool -- that reded the
+    # rate-limits (HTTP 429) on the shared Actions-runner IP pool -- that reddened the
     # macOS/Windows wheel builds on 2026-11-13 (confirmed 429 on the same-class
     # vcpkg download). Authenticated downloads use the token's far higher limit.
     # The release ships a bare binary, so no install script or untar is needed;
@@ -199,7 +202,7 @@ echo "wheel-build env: ${PIXI_ENV}"
 # and persist it for install-and-vendor-osgeo.py (which needs an exact
 # version to pin `pip install GDAL==X.Y.Z`). Single source of truth =
 # pixi.lock / micromamba solver output — no more hardcoded duplicates
-# in pyproject.toml or build-wheels.yml.
+# in pyproject.toml or bundle-pypi-wheels.yml.
 GDAL_CONFIG="${PIXI_ENV}/bin/gdal-config"
 if [[ ! -x "${GDAL_CONFIG}" ]]; then
     echo "ERROR: ${GDAL_CONFIG} missing or not executable" >&2

@@ -649,7 +649,7 @@ build-verbosity = 3
 # minutes per build for no extra signal.
 test-skip = "*"
 
-# PACKAGE_DATA (and PIXI_NO_PATH_UPDATE on macOS/Windows) is repeated in each per-platform
+# PACKAGE_DATA is repeated in each per-platform
 # [tool.cibuildwheel.<platform>.environment] block below: cibuildwheel REPLACES the
 # `environment` table across overrides (not merges, despite docs), so hoisting them
 # to a shared block silently broke every build ("PACKAGE_DATA != 1"; commit 607d3153).
@@ -711,7 +711,6 @@ PROJ_DATA = "/Users/runner/gdal-prefix/share/proj"
 PROJ_LIB = "/Users/runner/gdal-prefix/share/proj"
 PACKAGE_DATA = "1"
 DYLD_LIBRARY_PATH = "/Users/runner/gdal-prefix/lib"
-PIXI_NO_PATH_UPDATE = "1"
 # 11.0 = Big Sur; required floor for the arm64 build, safe for x86_64.
 MACOSX_DEPLOYMENT_TARGET = "11.0"
 
@@ -745,4 +744,3 @@ PROJ_DATA = "C:/gdal-prefix/Library/share/proj"
 PROJ_LIB = "C:/gdal-prefix/Library/share/proj"
 PACKAGE_DATA = "1"
 PATH = "C:/gdal-prefix/Library/bin;$PATH"
-PIXI_NO_PATH_UPDATE = "1"

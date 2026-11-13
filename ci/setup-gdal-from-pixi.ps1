@@ -5,7 +5,7 @@
 #
 # Runs once per cibuildwheel Windows invocation (CIBW_BEFORE_ALL).
 #
-# build-wheels.yml invokes this via `powershell -File ...` which uses
+# bundle-pypi-wheels.yml invokes this via `powershell -File ...` which uses
 # Windows PowerShell 5.1 on the windows-2022 runner — the `#Requires`
 # above documents that minimum so any future move to `pwsh` (PS 7)
 # still passes, but a regression to an older PowerShell would fail
@@ -21,16 +21,18 @@ Write-Host "BUILD_PREFIX=$BuildPrefix"
 
 # 1. Install pixi.
 #
-# Pin the version via the PIXI_VERSION env var (set in build-wheels.yml's
+# Pin the version via the PIXI_VERSION env var (set in bundle-pypi-wheels.yml's
 # env block; on Windows cibuildwheel runs before-all on the host so it
 # inherits it directly). Run locally with
-# `$env:PIXI_VERSION = "X.Y.Z"; .\ci\setup-gdal-from-pixi.ps1`.
+# `$env:PIXI_VERSION = "X.Y.Z"; .\ci\setup-gdal-from-pixi.ps1` -- gh must be
+# authenticated first, via GH_TOKEN or `gh auth login`.
 #
-# Fetch the install script from the **versioned GitHub source** rather
-# than the rolling https://pixi.sh/install.ps1 redirect: the
-# raw.githubusercontent.com URL is content-addressed through the
-# `v<version>` tag, so a compromise of pixi.sh can no longer change
-# which install script we run.
+# Download the pinned bare pixi binary directly from its GitHub release with an
+# AUTHENTICATED `gh release download`, instead of piping prefix-dev's install.ps1:
+# that install script downloads the release archive anonymously, and GitHub
+# throttles anonymous downloads from the shared Actions-runner IP pool (HTTP 429),
+# which was turning the wheel legs red. The `v<version>` tag pins which release we
+# pull; integrity-verifying the fetched bytes is tracked in #1553.
 if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     if (-not $env:PIXI_VERSION) {
         throw "PIXI_VERSION not set"
@@ -47,7 +49,7 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     # Download the pixi binary with an AUTHENTICATED `gh` request. prefix-dev's
     # install.ps1 fetches the release archive anonymously (System.Net.WebClient),
     # which GitHub rate-limits (HTTP 429) on the shared Actions-runner IP pool —
-    # that reded the Windows/macOS wheel builds on 2026-11-13 (confirmed 429 on the
+    # that reddened the Windows/macOS wheel builds on 2026-11-13 (confirmed 429 on the
     # same-class vcpkg download). Authenticated downloads use the token's far higher
     # limit. The release ships a bare .exe, so no install script or unzip is needed;
     # 3x retry only covers a genuine transient blip now, not a rate-limit wall.
@@ -86,7 +88,7 @@ Write-Host "wheel-build env: $PixiEnv"
 # Resolve the concrete GDAL version from the env we just materialized
 # and persist it for install-and-vendor-osgeo.py. Single source of truth
 # = pixi.lock — no more hardcoded duplicates in pyproject.toml or
-# build-wheels.yml. conda-forge's Windows gdal package doesn't ship a
+# bundle-pypi-wheels.yml. conda-forge's Windows gdal package doesn't ship a
 # usable gdal-config, so parse the version from conda-meta\gdal-X.Y.Z-*.json
 # instead (the same file conda/pixi/micromamba all populate).
 $GdalMeta = Get-ChildItem -Path (Join-Path $PixiEnv "conda-meta\gdal-*.json") -ErrorAction SilentlyContinue | Select-Object -First 1
