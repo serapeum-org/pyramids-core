@@ -43,6 +43,7 @@ from pyramids.netcdf.ugrid._drivers import (
 )
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.dataset import MeshDataset
+from pyramids.netcdf.ugrid.linear_referencing import place_nodes_on_network
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 from pyramids.netcdf.ugrid.models import (
@@ -80,6 +81,7 @@ __all__ = [
     "interop_xarray",
     "mesh_drivers",
     "mesh1d",
+    "place_nodes_on_network",
     "regrid",
     "vector_ops",
 ]

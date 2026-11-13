@@ -1,5 +1,43 @@
 ﻿# Change log
 
+## 0.78.0 (2026-11-12)
+
+### Feat
+
+- **ugrid**: resolve 1D branch+offset node geometry to coordinates (#1545)
+- **cli**: wrap the two library-blocked verbs (mesh curvefit/focal-reduce, collection import point/stac) (#1543)
+
+### Refactor
+
+- **cli**: drop the to-/from- prefix and split the mixed io subgroups (#1539)
+
+## 0.77.0 (2026-11-11)
+
+### BREAKING CHANGE
+
+- read_file(".zarr") on a single-raster pyramids GeoZarr store now returns a
+georeferenced Dataset instead of a georeferenceless one, and a pyramids cube .zarr store now
+raises ValueError instead of being mis-read through GDAL. Pass driver= or vsi= for the old
+GDAL path.
+- several public MeshDataset / MeshVariable / MeshSpatialIndex / NetCDF
+members were renamed. Old names keep working as deprecated aliases, except
+Mesh2d.from_gdal_group and Connectivity.from_gdal_array, which are now private.
+
+### Feat
+
+- **dataset**: route single-raster .zarr stores through read_file to the GeoZarr reader (#1525)
+
+### Fix
+
+- **netcdf**: point the xarray-interop hint at xarray, not a phantom extra (#1524)
+- **dataset**: robustify reduce_time whole-window reductions (#1517)
+
+### Refactor
+
+- **cli**: restructure into pyramids <domain> <verb> command groups (#1511)
+- **feature**: rename FeatureCollection.explode param geometry= to geom_type= (#1526)
+- **netcdf**: consistent Mesh/NetCDF member names and a metadata refresh verb (#1516)
+
 ## 0.76.0 (2026-11-09)
 
 ### BREAKING CHANGE

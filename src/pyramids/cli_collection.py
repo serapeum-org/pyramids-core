@@ -2,16 +2,20 @@
 
 Thin 1:1 wrappers over :class:`pyramids.dataset.collection.DatasetCollection`:
 summarise a temporal stack of co-registered rasters, write time reductions, merge
-the stack into one mosaic, reproject / crop / align every timestep, and export the
-cube to files / COGs / NetCDF / Zarr / kerchunk.
+the stack into one mosaic, reproject / crop / align every timestep, export the cube
+to files / COGs / NetCDF / Zarr / kerchunk, and build a cube from a remote STAC
+source (``collection import point`` / ``collection import stac``).
 
-Every verb opens the stack through :func:`_open_collection`, which supports three
-offline sources via ``--source``: ``files`` (default — a glob or directory handed
+Every operating verb opens the stack through :func:`_open_collection`, which supports
+three offline sources via ``--source``: ``files`` (default — a glob or directory handed
 to :meth:`DatasetCollection.from_files`), ``zarr`` (a store opened with
 :meth:`~DatasetCollection.from_zarr`), and ``archive`` (a zip/tar opened with
-:meth:`~DatasetCollection.from_archive`). The network-bound openers
-``from_stac`` / ``from_point`` are deferred — they need live STAC endpoints and a
-much wider option surface than a one-shot verb carries.
+:meth:`~DatasetCollection.from_archive`). The ``import`` subgroup instead *constructs*
+a cube from a remote STAC source and writes it to NetCDF: ``point`` wraps the
+point-centred :meth:`~DatasetCollection.from_point` (needs the ``[stac]`` extra and a
+live endpoint), and ``stac`` wraps :meth:`~DatasetCollection.from_stac` over a saved
+ItemCollection JSON (the shell-expressible subset of its options — callables and the
+alignment/fusion/read option objects stay Python-only).
 
 No business logic lives here: each handler marshals arguments and forwards to an
 existing library call, returns an ``int`` exit code, and reports expected user
@@ -25,6 +29,7 @@ import glob as _glob
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any, cast
 
 from pyramids._cli_groups import SuggestingArgumentParser, add_group
@@ -32,6 +37,7 @@ from pyramids._cli_shared import (
     ProgressReporter,
     info_print,
     json_safe,
+    map_lookup_errors,
     needs_lazy_extra,
     refuse_existing,
     validate_index_pattern,
@@ -455,6 +461,119 @@ def _cmd_collection_align(args: argparse.Namespace) -> int:
     return 0
 
 
+def _split_assets(raw: str) -> str | list[str]:
+    """Parse a comma-separated asset/band spec into one key or a band-axis sequence.
+
+    Args:
+        raw: The raw ``--bands`` / ``--asset`` value.
+
+    Returns:
+        str | list[str]: A single key for a one-asset stack, or the list for a band axis.
+
+    Raises:
+        ValueError: ``raw`` holds no non-empty key (e.g. ``","`` or whitespace only).
+    """
+    parts = [piece.strip() for piece in raw.split(",") if piece.strip()]
+    if not parts:
+        raise ValueError(f"no asset/band key found in {raw!r}")
+    return parts[0] if len(parts) == 1 else parts
+
+
+def _load_stac_items(path: str) -> Any:
+    """Load a saved STAC ItemCollection / item-list JSON into items for ``from_stac``.
+
+    Accepts a STAC ``ItemCollection`` / GeoJSON ``FeatureCollection`` (the items are its
+    ``features``), a bare JSON list of item objects, or a single GeoJSON ``Feature`` (wrapped into
+    a one-item list). ``from_stac`` is duck-typed and reads the raw dicts directly, so pystac is
+    not needed to parse them.
+
+    Args:
+        path: Path to the JSON file.
+
+    Returns:
+        Any: The list of STAC item dicts.
+
+    Raises:
+        ValueError: The JSON is none of the accepted shapes (ItemCollection, item list, Feature).
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(data, list):
+        items: Any = data
+    elif isinstance(data, dict) and isinstance(data.get("features"), list):
+        items = data["features"]
+    elif isinstance(data, dict) and data.get("type") == "Feature":
+        items = [data]
+    else:
+        raise ValueError(
+            f"{path!r} is not a STAC ItemCollection, a single Feature, or a list of items."
+        )
+    return items
+
+
+def _cmd_collection_from_point(args: argparse.Namespace) -> int:
+    """Handle ``pyramids collection import point`` — build a point-centred STAC cube.
+
+    Searches ``--collection`` over a square AOI centred on ``(--lat, --lon)`` and stacks the
+    ``--bands`` onto the point's local-UTM grid (:meth:`DatasetCollection.from_point`), writing
+    the cube to a NetCDF file. Needs the ``[stac]`` extra and a live STAC endpoint.
+
+    Args:
+        args: Parsed args with ``lat``, ``lon``, ``collection``, ``bands``, ``start``, ``end``,
+            ``edge_size``, ``resolution``, ``units``, ``stac``, ``query``, ``align``, ``output``,
+            ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    with map_lookup_errors():
+        coll = DatasetCollection.from_point(
+            args.lat,
+            args.lon,
+            collection=args.collection,
+            bands=_split_assets(args.bands),
+            start_date=args.start,
+            end_date=args.end,
+            edge_size=args.edge_size,
+            resolution=args.resolution,
+            units=args.units,
+            stac=args.stac,
+            query=json.loads(args.query) if args.query else None,
+            align=args.align,
+        )
+    coll.to_netcdf(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
+def _cmd_collection_from_stac(args: argparse.Namespace) -> int:
+    """Handle ``pyramids collection import stac`` — build a cube from saved STAC items.
+
+    Reads a STAC ItemCollection JSON (or a bare item list) from ``items``, stacks the ``--asset``
+    key(s) across its items (:meth:`DatasetCollection.from_stac`), and writes the cube to a
+    NetCDF file. Reading the asset hrefs still needs network access to wherever they point.
+
+    Args:
+        args: Parsed args with ``items``, ``output``, ``asset``, ``bbox``, ``max_items``,
+            ``groupby``, ``overwrite``.
+
+    Returns:
+        int: ``0`` on success.
+    """
+    refuse_existing(args.output, args.overwrite)
+    with map_lookup_errors():
+        coll = DatasetCollection.from_stac(
+            _load_stac_items(args.items),
+            _split_assets(args.asset),
+            bbox=tuple(args.bbox) if args.bbox else None,
+            max_items=args.max_items,
+            groupby=args.groupby,
+        )
+    coll.to_netcdf(args.output)
+    info_print(args, f"wrote {args.output}")
+    return 0
+
+
 def _add_open_args(parser: argparse.ArgumentParser) -> None:
     """Add the shared stack-open arguments (positional source + ``--source``).
 
@@ -719,6 +838,101 @@ def _add_align(csub: argparse._SubParsersAction) -> None:
     c.set_defaults(func=_cmd_collection_align)
 
 
+def _add_from_point(csub: argparse._SubParsersAction) -> None:
+    """Register the ``import point`` command (point-centred STAC cube)."""
+    c = csub.add_parser(
+        "point",
+        help="build a point-centred STAC cube (needs the [stac] extra + a live endpoint)",
+    )
+    c.add_argument("output", help="destination NetCDF cube path")
+    c.add_argument(
+        "--lat", type=float, required=True, help="centre latitude (EPSG:4326)"
+    )
+    c.add_argument(
+        "--lon", type=float, required=True, help="centre longitude (EPSG:4326)"
+    )
+    c.add_argument("--collection", required=True, help="STAC collection id to search")
+    c.add_argument(
+        "--bands",
+        required=True,
+        help="asset key, or comma-separated keys for a band axis",
+    )
+    c.add_argument(
+        "--start", required=True, help="search start (YYYY-MM-DD / RFC 3339)"
+    )
+    c.add_argument("--end", required=True, help="search end (YYYY-MM-DD / RFC 3339)")
+    c.add_argument(
+        "--edge-size",
+        dest="edge_size",
+        type=int,
+        required=True,
+        help="cube side length, in pixels (--units px) or metres (--units m)",
+    )
+    c.add_argument(
+        "--resolution", type=float, required=True, help="pixel size in metres"
+    )
+    c.add_argument(
+        "--units",
+        default="px",
+        choices=("px", "m"),
+        help="unit of --edge-size (default: px)",
+    )
+    c.add_argument(
+        "--stac",
+        default=None,
+        help="STAC API root URL. The default (Planetary Computer) needs a request signer, which "
+        "is Python-only, so point this at an unauthenticated STAC root to use it from the CLI",
+    )
+    c.add_argument(
+        "--query", default=None, help="STAC query-extension filter, as a JSON string"
+    )
+    c.add_argument(
+        "--no-align",
+        dest="align",
+        action="store_false",
+        help="skip the multi-asset resolution alignment",
+    )
+    c.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    c.set_defaults(func=_cmd_collection_from_point)
+
+
+def _add_from_stac(csub: argparse._SubParsersAction) -> None:
+    """Register the ``import stac`` command (cube from a saved ItemCollection)."""
+    c = csub.add_parser(
+        "stac",
+        help="build a cube from a saved STAC ItemCollection / item-list JSON file",
+    )
+    c.add_argument("items", help="path to a STAC ItemCollection / item-list JSON file")
+    c.add_argument("output", help="destination NetCDF cube path")
+    c.add_argument(
+        "--asset",
+        required=True,
+        help="asset key, or comma-separated keys for a band axis",
+    )
+    c.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        metavar=("MINX", "MINY", "MAXX", "MAXY"),
+        default=None,
+        help="lon/lat (EPSG:4326) item filter: drop items whose footprint misses it",
+    )
+    c.add_argument(
+        "--max-items",
+        dest="max_items",
+        type=int,
+        default=None,
+        help="cap the number of items consumed (after --bbox filtering)",
+    )
+    c.add_argument(
+        "--groupby",
+        default=None,
+        help="collapse items into timesteps: solar_day, id, time, or an item property key",
+    )
+    c.add_argument("--overwrite", action="store_true", help=_HELP_OVERWRITE)
+    c.set_defaults(func=_cmd_collection_from_stac)
+
+
 def add_collection_commands(sub: argparse._SubParsersAction) -> None:
     """Register the ``collection`` command group on ``sub``.
 
@@ -743,3 +957,8 @@ def add_collection_commands(sub: argparse._SubParsersAction) -> None:
     _add_reproject(csub)
     _add_crop(csub)
     _add_align(csub)
+    import_sub = add_group(
+        csub, "import", "build a collection from a remote source or saved STAC items"
+    )
+    _add_from_point(import_sub)
+    _add_from_stac(import_sub)
