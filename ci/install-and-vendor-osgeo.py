@@ -206,7 +206,9 @@ def install_gdal_python_bindings() -> None:
     # delocate-wheel (#1549). macOS-only: Linux repairs with auditwheel/patchelf, which
     # has no headerpad concept. Benign on arm64 — it only reserves header space.
     if is_macos:
-        env["LDFLAGS"] = f"{env.get('LDFLAGS', '')} -Wl,-headerpad_max_install_names".strip()
+        env["LDFLAGS"] = (
+            f"{env.get('LDFLAGS', '')} -Wl,-headerpad_max_install_names".strip()
+        )
 
     # macOS arm64 needs special handling for the build-venv numpy:
     #
