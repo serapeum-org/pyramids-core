@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../_images/branding/logo-layers-v2.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -1371,7 +1371,7 @@
   <span class="md-ellipsis">
     
   
-    Using pyramids with Dask
+    Using with Dask
   
 
     
@@ -1399,7 +1399,7 @@
   <span class="md-ellipsis">
     
   
-    Dask quickstart — Dataset
+    Dask quickstart —
   
 
     
@@ -1427,7 +1427,7 @@
   <span class="md-ellipsis">
     
   
-    Dask quickstart — DatasetCollection
+    Dask quickstart —
   
 
     
@@ -1455,7 +1455,7 @@
   <span class="md-ellipsis">
     
   
-    Dask quickstart — FeatureCollection
+    Dask quickstart —
   
 
     
@@ -1483,7 +1483,7 @@
   <span class="md-ellipsis">
     
   
-    Dask quickstart — NetCDF
+    Dask quickstart —
   
 
     
@@ -2159,7 +2159,7 @@
   <span class="md-ellipsis">
     
   
-    Declarative geoprocessing pipelines (pyramids.processing)
+    Declarative geoprocessing pipelines ()
   
 
     
@@ -2385,7 +2385,7 @@
   <span class="md-ellipsis">
     
   
-    Plotting a Dataset
+    Plotting a
   
 
     
@@ -2441,7 +2441,7 @@
   <span class="md-ellipsis">
     
   
-    Converting longitude from 0-360 to -180-180 (wrap_longitude)
+    Converting longitude from 0-360 to -180-180 ()
   
 
     
@@ -2497,7 +2497,7 @@
   <span class="md-ellipsis">
     
   
-    Reading a stack of rasters with DatasetCollection
+    Reading a stack of rasters with
   
 
     
@@ -2525,7 +2525,7 @@
   <span class="md-ellipsis">
     
   
-    RGB true-colour animation with DatasetCollection
+    RGB true-colour animation with
   
 
     
@@ -2553,7 +2553,7 @@
   <span class="md-ellipsis">
     
   
-    from_stac(groupby="solar_day") — group tiled optical imagery by acquisition date
+    — group tiled optical imagery by acquisition date
   
 
     
@@ -2581,7 +2581,7 @@
   <span class="md-ellipsis">
     
   
-    Exploring a single-band raster with Dataset
+    Exploring a single-band raster with
   
 
     
@@ -2609,7 +2609,7 @@
   <span class="md-ellipsis">
     
   
-    WMS / WMTS — read an OGC map layer into a Dataset
+    WMS / WMTS — read an OGC map layer into a
   
 
     
@@ -2749,7 +2749,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy raster reads + parallel writes with Dataset and DatasetCollection
+    Lazy raster reads + parallel writes with and
   
 
     
@@ -2777,7 +2777,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy Dataset — complete cookbook
+    Lazy — complete cookbook
   
 
     
@@ -2805,7 +2805,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy DatasetCollection — complete cookbook
+    Lazy — complete cookbook
   
 
     
@@ -2919,7 +2919,7 @@
   <span class="md-ellipsis">
     
   
-    Zarr cubes — incremental writes with DatasetCollection
+    Zarr cubes — incremental writes with
   
 
     
@@ -3089,7 +3089,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy vector reads with LazyFeatureCollection
+    Lazy vector reads with
   
 
     
@@ -3117,7 +3117,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy FeatureCollection — complete cookbook
+    Lazy — complete cookbook
   
 
     
@@ -3431,7 +3431,7 @@
   <span class="md-ellipsis">
     
   
-    The NetCDF class — anatomy &amp; reference
+    The class — anatomy &amp; reference
   
 
     
@@ -3487,7 +3487,7 @@
   <span class="md-ellipsis">
     
   
-    Plotting a NetCDF
+    Plotting a
   
 
     
@@ -3627,7 +3627,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy NetCDF reads + kerchunk + multi-file stacks with pyramids.netcdf
+    Lazy NetCDF reads + kerchunk + multi-file stacks with
   
 
     
@@ -3655,7 +3655,7 @@
   <span class="md-ellipsis">
     
   
-    Lazy NetCDF — complete cookbook
+    Lazy — complete cookbook
   
 
     
@@ -4043,7 +4043,7 @@
   <span class="md-ellipsis">
     
   
-    Plotting a MeshDataset
+    Plotting a
   
 
     
@@ -8452,23 +8452,29 @@ the macOS and Windows x64 wheels). No <code>gdal-config</code>, no
 <ul>
 <li><code>viz</code>: <code>cleopatra[tiles]</code> (plotting + basemap tiles via mercantile /
   xyzservices / Pillow)</li>
-<li><code>lazy</code>: dask / distributed / zarr / fsspec / kerchunk / h5py
-  (powers <code>Dataset.read_array(chunks=…)</code>, <code>DatasetCollection.data</code>,
-  <code>DatasetCollection.to_zarr</code>, and <code>NetCDF.to_kerchunk</code> /
-  <code>combine_kerchunk</code> HDF5/NetCDF reference manifests)</li>
+<li><code>lazy</code>: <strong>deprecated</strong> — dask / distributed / zarr / fsspec / kerchunk / h5py. These are the
+  libraries the lazy layer builds on, but the lazy <em>implementation</em> now lives in the separate
+  <code>pyramids-lazy</code> distribution, so this extra alone no longer gives you working lazy operations:
+  they raise a branded error telling you to install the backend. Install <code>pyramids-lazy</code> instead
+  (it pulls this stack itself). The extra is kept for one release so existing installs do not break,
+  and is removed in the next major version.</li>
 <li>the optional labeled-array interop (<code>DatasetCollection.to_netcdf</code>,
   <code>NetCDF.from_xarray</code> / <code>to_xarray</code>) is <strong>not</strong> a pyramids extra — pyramids is
   GDAL-backed, so the labeled-array library is a peer. Install it directly
   (<code>pip install xarray</code>) when you want those helpers.</li>
-<li><code>parquet</code>: pyarrow + dask-geopandas + <code>[lazy]</code> (eager GeoParquet I/O
-  and the lazy <code>LazyFeatureCollection</code>)</li>
+<li><code>parquet</code>: pyarrow, for eager GeoParquet I/O (<code>read_parquet</code> / <code>to_parquet</code>, which go through
+  pyarrow and geopandas and need no backend). The <strong>lazy</strong> vector path
+  (<code>LazyFeatureCollection</code>, <code>backend="dask"</code>) additionally needs dask-geopandas, which ships in
+  <code>pyramids-lazy[parquet]</code> — not here. This extra still pulls dask-geopandas for one release;
+  that part is deprecated with <code>[lazy]</code>.</li>
 <li><code>dev</code>: nbval, pre-commit, pytest, coverage, build, twine, etc.</li>
 <li><code>docs</code>: mkdocs, mkdocs-material, mkdocstrings, mike, etc.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="go">pip install "pyramids-core[viz]"                  # plotting</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="go">pip install "pyramids-core[lazy]"                 # dask-backed chunked I/O</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">pip install "pyramids-core[viz,lazy]"             # combine extras with commas</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">pip install xarray                               # optional interop dependency (peer dep, not an extra)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="go">pip install "pyramids-core[viz]"                 # plotting</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="go">pip install pyramids-lazy                       # dask-backed chunked I/O (the lazy backend)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">pip install "pyramids-lazy[parquet]"            # + the lazy vector path (dask-geopandas)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="go">pip install "pyramids-core[viz]" pyramids-lazy  # a core extra plus the backend</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="go">pip install xarray                              # optional interop dependency (peer dep, not an extra)</span>
 </code></pre></div>
 <h3 id="with-conda-forge"><a class="toclink" href="#with-conda-forge">With conda-forge</a><a class="headerlink" href="#with-conda-forge" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="go">conda install -c conda-forge pyramids</span>
@@ -8892,122 +8898,15 @@ stands on GDAL's shoulders — that project deserves the credit.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.footer", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "content.code.copy", "content.code.annotate", "content.action.edit", "content.action.view", "content.tooltips", "search.highlight", "search.suggest", "toc.follow", "announce.dismiss"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.footer", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "content.code.copy", "content.code.annotate", "content.action.edit", "content.action.view", "content.tooltips", "search.highlight", "search.suggest", "toc.follow", "announce.dismiss"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../assets/javascripts/panzoom.min.js"></script>
       
         <script src="../assets/javascripts/zoompan.js"></script>
       
     
-  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
-/* Shared by full pages and Material's instant navigation. */
-(() => {
-  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
-  if (window.mkdocsJupyterMathJax) return;
-
-  let loading;
-  let queue = Promise.resolve();
-  let previous = [];
-
-  const ready = async () => {
-    if (!loading) {
-      loading = (async () => {
-        let math = window.MathJax;
-        if (!math?.typesetPromise) {
-          const url = new URL(config.url, document.baseURI).href;
-          const existing = Array.from(document.scripts).find(script =>
-            script.src && (script.src === url || script.id === 'MathJax-script' ||
-              (/mathjax/i.test(script.src) &&
-               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
-          if (existing) {
-            if (!math?.startup?.promise) {
-              await new Promise((resolve, reject) => {
-                existing.addEventListener('load', resolve, { once: true });
-                existing.addEventListener('error', reject, { once: true });
-              });
-            }
-          } else {
-            // Keep site macros, delimiters and startup hooks when supplied.
-            const options = math || {};
-            window.MathJax = {
-              ...options,
-              loader: {
-                ...options.loader,
-                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
-              },
-              startup: { typeset: false, ...options.startup },
-              tex: {
-                tags: 'ams',
-                useLabelIds: true,
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                processEscapes: true,
-                processEnvironments: true,
-                ...options.tex
-              }
-            };
-            await new Promise((resolve, reject) => {
-              const script = document.createElement('script');
-              script.src = config.url;
-              script.id = 'MathJax-script';
-              script.async = true;
-              script.onload = resolve;
-              script.onerror = reject;
-              document.head.appendChild(script);
-            });
-          }
-        }
-        math = window.MathJax;
-        await math.startup.promise;
-        return math;
-      })();
-    }
-    const math = await loading;
-    // A site owner can extend the v3 queue again on each navigation.
-    await math.startup.promise;
-    return math;
-  };
-
-  const unrendered = node => {
-    if (node.matches('mjx-container')) return [];
-    if (!node.querySelector('mjx-container')) return [node];
-    // In v3, scanning generated assistive MathML again produces nested output.
-    return Array.from(node.children).flatMap(unrendered);
-  };
-
-  const refresh = () => {
-    // A separate chain also serializes v3, without changing v4's startup promise.
-    queue = queue.then(async () => {
-      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
-      if (!notebooks.length && !previous.length) return;
-      if (notebooks.length === previous.length &&
-          notebooks.every((node, index) => node === previous[index])) return;
-      const math = await ready();
-      if (previous.length) {
-        math.typesetClear(previous);
-        math.texReset();
-      }
-      previous = notebooks.filter(node => node.isConnected);
-      const pending = previous.flatMap(unrendered);
-      if (pending.length) await math.typesetPromise(pending);
-    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
-    return queue;
-  };
-
-  window.mkdocsJupyterMathJax = { refresh };
-  const start = () => {
-    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
-    else refresh();
-  };
-  // Theme bundles and user-provided MathJax scripts can follow notebook content.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
-  } else start();
-})();
-
-</script>
-</body>
+  </body>
 </html>
