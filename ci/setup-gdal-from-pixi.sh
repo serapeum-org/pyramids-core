@@ -130,26 +130,35 @@ fi
 # which install script we run.
 if ! command -v pixi >/dev/null 2>&1; then
     PIXI_VERSION="${PIXI_VERSION:?PIXI_VERSION not set}"
-    PIXI_INSTALL_URL="https://raw.githubusercontent.com/prefix-dev/pixi/v${PIXI_VERSION}/install/install.sh"
-    export PIXI_HOME="${BUILD_PREFIX}"
-    export PIXI_NO_PATH_UPDATE=1
-    export PIXI_VERSION
-    # Retry with backoff: install.sh itself downloads the pixi release tarball from
-    # github.com/releases, and that GitHub download flakes intermittently (a single
-    # blip reds the whole wheel build -- see the bundle failures on 2026-11-13).
-    # curl --retry covers the install.sh fetch; the flaky hop is the download
-    # *inside* install.sh, which we cannot hand a retry flag -- so re-run the whole
-    # install each attempt and confirm pixi actually landed.
+    : "${GH_TOKEN:?GH_TOKEN not set (needed for an authenticated pixi download; set it in the job env)}"
+    # Download the pixi binary with an AUTHENTICATED gh request. prefix-dev's
+    # install.sh fetches the release archive anonymously (curl), which GitHub
+    # rate-limits (HTTP 429) on the shared Actions-runner IP pool -- that reded the
+    # macOS/Windows wheel builds on 2026-11-13 (confirmed 429 on the same-class
+    # vcpkg download). Authenticated downloads use the token's far higher limit.
+    # The release ships a bare binary, so no install script or untar is needed;
+    # 3x retry only covers a genuine transient blip now, not a rate-limit wall.
+    bindir="${BUILD_PREFIX}/bin"
+    mkdir -p "${bindir}"
+    case "$(uname -m)" in
+        arm64 | aarch64) asset="pixi-aarch64-apple-darwin" ;;
+        x86_64) asset="pixi-x86_64-apple-darwin" ;;
+        *) echo "unsupported host arch $(uname -m)" >&2; exit 1 ;;
+    esac
     installed=0
-    for attempt in 1 2 3 4 5; do
-        echo "--- Installing pixi ${PIXI_VERSION} (attempt ${attempt}) from ${PIXI_INSTALL_URL} ---"
-        if curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${PIXI_INSTALL_URL}" | bash; then
-            export PATH="${BUILD_PREFIX}/bin:${PATH}"
-            if command -v pixi >/dev/null 2>&1; then installed=1; break; fi
+    for attempt in 1 2 3; do
+        echo "--- Downloading pixi ${PIXI_VERSION} (${asset}, attempt ${attempt}) ---"
+        if gh release download "v${PIXI_VERSION}" --repo prefix-dev/pixi \
+            --pattern "${asset}" --dir "${bindir}" --clobber && [ -f "${bindir}/${asset}" ]; then
+            installed=1
+            break
         fi
-        [ "${attempt}" -lt 5 ] && sleep $(( attempt * 10 ))
+        [ "${attempt}" -lt 3 ] && sleep $(( attempt * 10 ))
     done
-    [ "${installed}" = 1 ] || { echo "pixi install failed after 5 attempts" >&2; exit 1; }
+    [ "${installed}" = 1 ] || { echo "pixi download failed after 3 attempts" >&2; exit 1; }
+    mv -f "${bindir}/${asset}" "${bindir}/pixi"
+    chmod +x "${bindir}/pixi"
+    export PATH="${bindir}:${PATH}"
 fi
 pixi --version
 

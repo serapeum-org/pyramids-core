@@ -35,30 +35,30 @@ if (-not (Get-Command pixi -ErrorAction SilentlyContinue)) {
     if (-not $env:PIXI_VERSION) {
         throw "PIXI_VERSION not set"
     }
-    $PixiInstallUrl = "https://raw.githubusercontent.com/prefix-dev/pixi/v$($env:PIXI_VERSION)/install/install.ps1"
-    $env:PIXI_HOME = $BuildPrefix
-    $env:PIXI_NO_PATH_UPDATE = "1"
-    # Retry with backoff: install.ps1 itself downloads the pixi release .zip from
-    # github.com/releases, and that GitHub download flakes intermittently (it reds
-    # the whole wheel build on a single blip — see the macOS/win_amd64 bundle
-    # failures on 2026-11-13). The flaky hop is the .zip download *inside* install.ps1,
-    # which we cannot hand a retry flag — so re-run the whole install each attempt.
-    # cibuildwheel runs this under Windows PowerShell 5.1, so no PS7-only options
-    # (-MaximumRetryCount / -RetryIntervalSec) on Invoke-WebRequest; the loop is the retry.
-    $installed = $false
-    for ($attempt = 1; $attempt -le 5; $attempt++) {
-        Write-Host "--- Installing pixi $($env:PIXI_VERSION) (attempt $attempt) from $PixiInstallUrl ---"
-        try {
-            Invoke-WebRequest -Uri $PixiInstallUrl -OutFile "$env:TEMP\install-pixi.ps1"
-            & "$env:TEMP\install-pixi.ps1"
-            $env:PATH = "$BuildPrefix\bin;$env:PATH"
-            if (Get-Command pixi -ErrorAction SilentlyContinue) { $installed = $true; break }
-        } catch {
-            Write-Host "pixi install attempt $attempt failed: $($_.Exception.Message)"
-        }
-        if ($attempt -lt 5) { Start-Sleep -Seconds ([int][math]::Min(60, 5 * [math]::Pow(2, $attempt))) }
+    if (-not $env:GH_TOKEN) {
+        throw "GH_TOKEN not set (needed for an authenticated pixi download; set it in the job env)"
     }
-    if (-not $installed) { throw "pixi install failed after 5 attempts" }
+    # Download the pixi binary with an AUTHENTICATED `gh` request. prefix-dev's
+    # install.ps1 fetches the release archive anonymously (System.Net.WebClient),
+    # which GitHub rate-limits (HTTP 429) on the shared Actions-runner IP pool —
+    # that reded the Windows/macOS wheel builds on 2026-11-13 (confirmed 429 on the
+    # same-class vcpkg download). Authenticated downloads use the token's far higher
+    # limit. The release ships a bare .exe, so no install script or unzip is needed;
+    # 3x retry only covers a genuine transient blip now, not a rate-limit wall.
+    $BinDir = Join-Path $BuildPrefix "bin"
+    New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
+    # windows-2022 host is x86_64 (win_arm64 is built via vcpkg, not this script).
+    $Asset = "pixi-x86_64-pc-windows-msvc.exe"
+    $installed = $false
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Write-Host "--- Downloading pixi $($env:PIXI_VERSION) ($Asset, attempt $attempt) ---"
+        & gh release download "v$($env:PIXI_VERSION)" --repo prefix-dev/pixi --pattern $Asset --dir $BinDir --clobber
+        if (($LASTEXITCODE -eq 0) -and (Test-Path (Join-Path $BinDir $Asset))) { $installed = $true; break }
+        if ($attempt -lt 3) { Start-Sleep -Seconds ([int][math]::Min(30, 5 * [math]::Pow(2, $attempt))) }
+    }
+    if (-not $installed) { throw "pixi download failed after 3 attempts" }
+    Move-Item -Path (Join-Path $BinDir $Asset) -Destination (Join-Path $BinDir "pixi.exe") -Force
+    $env:PATH = "$BinDir;$env:PATH"
 }
 pixi --version
 

@@ -339,6 +339,10 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       contents: read
+    env:
+      # Authenticates ci/setup-gdal-from-pixi.sh's `gh release download` of pixi so it
+      # uses the token's rate limit, not the throttled anonymous Actions-IP limit (#1552).
+      GH_TOKEN: ${{ github.token }}
     strategy:
       fail-fast: false
       matrix:
@@ -381,6 +385,10 @@ jobs:
     runs-on: windows-2022
     permissions:
       contents: read
+    env:
+      # Authenticates ci/setup-gdal-from-pixi.ps1's `gh release download` of pixi so it
+      # uses the token's rate limit, not the throttled anonymous Actions-IP limit (#1552).
+      GH_TOKEN: ${{ github.token }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
