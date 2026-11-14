@@ -187,7 +187,10 @@ class TestEpsgCaching:
         original_cached = fc._epsg_cache_value
 
         replacement = pyproj.CRS("EPSG:4326")
-        fc.crs = replacement
+        # The raw setter warns on every override, even a same-value one (geopandas);
+        # that's exactly the real-world path this cache-invalidation case exercises.
+        with pytest.warns(DeprecationWarning, match="Overriding the CRS"):
+            fc.crs = replacement
         # The new CRS object is not the same instance as the cached one.
         assert fc._epsg_cache_crs is not replacement
 
