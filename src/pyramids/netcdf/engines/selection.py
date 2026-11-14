@@ -2531,6 +2531,11 @@ class Selection(_Engine["NetCDF"]):
             skipna: Whether gaps are skipped, as `reduce` documents it.
             q: The quantile, for `how="quantile"`.
 
+        Note:
+            `coarsen` does not offer `reduce`'s `min_count`: its windows are regular
+            position blocks, not gap-driven, so a per-window valid-count gate is left to
+            `reduce(groupby=...)`.
+
         Returns:
             NetCDF: A container for a container, a variable for a variable, with `dim`
             shortened to one step per window and the other dimensions kept. The no-data
@@ -2862,6 +2867,10 @@ class Selection(_Engine["NetCDF"]):
                 xarray accepts a `min_periods` above `window` and answers all NaN; it is
                 refused here, since no window could meet it.
             q: The quantile, for `how="quantile"`.
+
+        Note:
+            `groupby_bins` does not offer `reduce`'s `min_count`: a per-bin valid-count gate
+            is left to `reduce(groupby=...)`.
 
         Returns:
             NetCDF: A container for a container, a variable for a variable, with `dim` and every

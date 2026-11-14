@@ -183,8 +183,6 @@ class _Reduction(_AlongDim):
             grouping is worked out.
         skipna: Whether gaps are skipped.
         q: The quantile, for `how="quantile"`.
-        min_count: Minimum valid cells a collapsed dimension or window needs before a cell
-            carries a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
         caller: `"reduce"` or `"coarsen"`.
         resize: The length to cut or pad the dimension to first, for `coarsen`; `None` leaves
             it alone.
@@ -193,17 +191,22 @@ class _Reduction(_AlongDim):
         group_coords: Explicit coordinate labels for the output groups, one per group in
             group order (`groupby_bins`, which labels each bin with its left edge) instead of
             the first member's coordinate. Mutually exclusive with `window_mean_coords`.
+        min_count: Minimum valid cells a collapsed dimension or window needs before a cell
+            carries a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
+            Set only by `reduce`; `coarsen` / `groupby_bins` leave it `0`.
     """
 
     how: str
     groups: Callable[[], list | None]
     skipna: bool
     q: float | None
-    min_count: int = 0
     caller: str = "reduce"
     resize: int | None = None
     window_mean_coords: bool = False
     group_coords: list | None = None
+    # Appended after the other defaulted fields so positional construction of
+    # caller/resize/window_mean_coords/group_coords keeps binding as before.
+    min_count: int = 0
     _positions: list | None = field(default=None, init=False, repr=False)
 
     @property
