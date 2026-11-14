@@ -522,12 +522,12 @@ h5py = ">=3.8.0,<3.17"
 # libgdal-netcdf (still hdf5 1) and the env silently breaks on Windows.
 hdf5 = "1.14.*"
 
-[tool.pixi.feature.parquet.dependencies]
-pyarrow = ">=10.0.0"
-# dask-geopandas powers the lazy LazyFeatureCollection / GeoParquet path. Kept in the dev/CI env
-# (conda) so the contract tests exercise it, but the published [parquet] extra no longer pulls it
-# -- that lazy vector path lives in `pyramids-lazy[parquet]` now.
-dask-geopandas = ">=0.5.0"
+# No conda deps: pyarrow comes from core's own `[parquet]` extra (the `parquet` pixi feature maps to
+# the same-named optional-dependencies extra). dask-geopandas is not a core dependency -- it belongs
+# to the lazy vector backend -- so the dev/CI env pulls `pyramids-lazy[parquet]` (which carries both
+# pyarrow and dask-geopandas) to run LazyFeatureCollection's forwarding/protocol contract tests.
+[tool.pixi.feature.parquet.pypi-dependencies]
+pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
 
 [tool.pixi.feature.stac.dependencies]
 # 0.8.4 is the first release carrying Client.collection_search and the
