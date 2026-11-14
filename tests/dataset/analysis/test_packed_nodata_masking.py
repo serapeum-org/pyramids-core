@@ -196,3 +196,24 @@ class TestPackedNoDataMasking:
         assert captured_exclude["exclude_value"] == [pytest.approx(-999.9)], (
             f"expected [-999.9] for scale 0.1; got {captured_exclude['exclude_value']}"
         )
+
+    def test_stretch_output_nodata_is_stored_sentinel_not_aliasing_physical(self):
+        """The output's no-data is the stored sentinel, so a valid result can't read as no-data.
+
+        Test scenario:
+            A band packed at scale 0.25 with stored no-data 2 has physical sentinel 0.5, and a
+            valid cell (physical 1.75) stretches to exactly 0.5. The output must declare the
+            *stored* sentinel (2, outside [0, 1]) as its no-data, not the physical 0.5 that would
+            alias that valid cell and silently turn it into a gap.
+        """
+        ds = _packed_row([4, 7, 10, 2], scale=0.25, no_data=2)
+        out = ds.percentile_stretch(0, 100)
+        arr = out.read_array().ravel()
+        nodata = out.no_data_value[0]
+        assert nodata == 2, (
+            f"output no-data must be the stored sentinel 2, got {nodata}"
+        )
+        assert np.isclose(arr[1], 0.5) and not np.isclose(arr[1], nodata), (
+            f"a valid 0.5 result must not collide with the output no-data; arr={arr.tolist()}"
+        )
+        assert np.isclose(arr[3], nodata), "the packed gap stays no-data"

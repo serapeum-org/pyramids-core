@@ -6000,7 +6000,11 @@ class Analysis(_Engine["Dataset"]):
         probability = np.interp(source_values, source_quantiles, probs)
         matched_values = np.interp(probability, probs, ref_quantiles)
 
-        fill = np.nan if source_nodata is None else source_nodata
+        # The output is unpacked, and its declared no-data is the documented "source band's
+        # no-data value" -- the *stored* sentinel, which stays out of the matched/stretched
+        # range. Using the physical sentinel here could alias a valid result that lands on it.
+        stored_nodata = self._ds.no_data_value[band]
+        fill = np.nan if stored_nodata is None else stored_nodata
         out_values = np.full(source.shape, fill, dtype="float64")
         out_values[source_valid] = matched_values
         return self._single_band_float_like(out_values, nodata=fill)
@@ -6081,8 +6085,7 @@ class Analysis(_Engine["Dataset"]):
         )
         # Physical sentinel for a physical read: a stored `no_data_value` never appears in the
         # physical array of a CF-packed band, so masking against it would leak the gap into the
-        # percentiles (and `_single_band_float_like` writes an unpacked output, so the physical
-        # sentinel is also the correct fill/nodata for it).
+        # percentiles.
         source_nodata = self._physical_no_data(band)
         valid = self._finite_value_mask(source, source_nodata)
         if not valid.any():
@@ -6098,7 +6101,11 @@ class Analysis(_Engine["Dataset"]):
             )
 
         stretched = np.clip((source - low_value) / (high_value - low_value), 0.0, 1.0)
-        fill = np.nan if source_nodata is None else source_nodata
+        # The output is unpacked, and its declared no-data is the documented "source band's
+        # no-data value" -- the *stored* sentinel, which stays out of the matched/stretched
+        # range. Using the physical sentinel here could alias a valid result that lands on it.
+        stored_nodata = self._ds.no_data_value[band]
+        fill = np.nan if stored_nodata is None else stored_nodata
         out_values = np.where(valid, stretched, fill)
         return self._single_band_float_like(out_values, nodata=fill)
 
