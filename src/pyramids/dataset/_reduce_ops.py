@@ -280,18 +280,35 @@ def build_group_reduction(
             method=op,
             skipna=skipna,
         )
-    if min_count > 0 and skipna:
-        # Gate a sparse window uniformly across every op: count the valid samples that fed
-        # the reduction and NaN any cell below the threshold. sum/min/max keep the cube's
-        # integer dtype, which cannot hold the NaN fill, so promote an integer result to
-        # float64 first (float results keep their own dtype).
-        fill_dtype = (
-            result.dtype if np.issubdtype(result.dtype, np.floating) else np.float64
-        )
-        valid_count = da.count_nonzero(~da.isnan(group), axis=0)
-        result = da.where(
-            valid_count >= min_count,
-            result.astype(fill_dtype),
-            np.asarray(np.nan, dtype=fill_dtype),
-        )
-    return result
+    return _gate_sparse_window(result, group, min_count, skipna)
+
+
+def _gate_sparse_window(result: Any, group: Any, min_count: int, skipna: bool) -> Any:
+    """NaN any cell whose window holds fewer than ``min_count`` valid (non-NaN) samples.
+
+    The uniform ``min_count`` gate for every :func:`build_group_reduction` op. A no-op
+    unless ``min_count > 0`` and ``skipna`` (a gap already propagates without ``skipna``).
+    ``sum`` / ``min`` / ``max`` keep the cube's integer dtype, which cannot hold the NaN
+    fill, so an integer result is promoted to float64 first (float results keep their dtype).
+    Uses the NumPy API, which dispatches to :mod:`dask.array` on a lazy ``group``.
+
+    Args:
+        result: The reduced ``(band, rows, cols)`` array (numpy or dask).
+        group: The window's ``(n_t, band, rows, cols)`` slice whose valid cells are counted.
+        min_count: The threshold; ``0`` (or below) gates nothing.
+        skipna: When ``False`` the gate is skipped.
+
+    Returns:
+        ``result`` with sub-threshold cells set to ``NaN``, or ``result`` unchanged.
+    """
+    if min_count <= 0 or not skipna:
+        return result
+    fill_dtype = (
+        result.dtype if np.issubdtype(result.dtype, np.floating) else np.float64
+    )
+    valid_count = np.sum(~np.isnan(group), axis=0)
+    return np.where(
+        valid_count >= min_count,
+        result.astype(fill_dtype),
+        np.asarray(np.nan, dtype=fill_dtype),
+    )

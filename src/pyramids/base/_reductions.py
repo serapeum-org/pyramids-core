@@ -817,6 +817,30 @@ def validate_min_count(min_count: int) -> None:
         raise ValueError(f"min_count must be >= 0, got {min_count}.")
 
 
+def _gate_min_count(out: Any, data: Any, axis: int, min_count: int, fill: Any) -> Any:
+    """Set to ``fill`` any cell with fewer than ``min_count`` valid cells along ``axis``.
+
+    The ``min_count`` gate for :func:`reduce_axis`'s ``skipna`` path: ``data`` is the
+    float64 values with the sentinel and NaN already turned to NaN, so a cell fed by fewer
+    than ``min_count`` non-NaN samples is replaced with ``fill`` (``ndv``, or NaN). A no-op
+    when ``min_count <= 0``. NumPy API, so it dispatches to :mod:`dask.array` on a dask input.
+
+    Args:
+        out: The reduced array to gate.
+        data: The float64, gap-masked values the statistic was computed from.
+        axis: The reduced axis.
+        min_count: The threshold; ``0`` (or below) gates nothing.
+        fill: The value a gated cell takes (the sentinel, or NaN).
+
+    Returns:
+        ``out`` with sub-threshold cells set to ``fill``, or ``out`` unchanged.
+    """
+    if min_count <= 0:
+        return out
+    valid_count = np.sum(~np.isnan(data), axis=axis)
+    return np.where(valid_count < min_count, fill, out)
+
+
 def reduce_axis(
     arr: Any,
     axis: int,
@@ -875,12 +899,7 @@ def reduce_axis(
             all_masked = np.all(np.isnan(data), axis=axis)
             fill = ndv if ndv is not None else np.nan
             out = np.where(np.isnan(out) | all_masked, fill, out)
-            if min_count > 0:
-                # Gate a sparse window: a cell fed by fewer than min_count valid samples is
-                # no-data, so a one-sample mean is not mistaken for a confident value.
-                valid_count = np.sum(~np.isnan(data), axis=axis)
-                out = np.where(valid_count < min_count, fill, out)
-            result = out
+            result = _gate_min_count(out, data, axis, min_count, fill)
         else:
             result = plain_func(arr, axis=axis, **extra)
     return result
