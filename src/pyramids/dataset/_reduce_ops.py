@@ -206,7 +206,13 @@ def _trend_block(block: Any, *, x: Any, method: str, skipna: bool) -> Any:
 
 
 def build_group_reduction(
-    group: Any, op: str, *, skipna: bool, q: float | None = None, x: Any = None
+    group: Any,
+    op: str,
+    *,
+    skipna: bool,
+    q: float | None = None,
+    x: Any = None,
+    min_count: int = 0,
 ) -> Any:
     """Build the lazy :mod:`dask.array` reduction of ``group`` over axis 0.
 
@@ -225,6 +231,13 @@ def build_group_reduction(
         q: The level for ``percentile`` (``0 < q <= 100``) / ``quantile``
             (``0 < q <= 1``); ``None`` otherwise.
         x: The window's ``(n_t,)`` numeric day offsets, for the trend ops only.
+        min_count: When above ``0`` and ``skipna`` is ``True``, a cell whose window holds
+            fewer than ``min_count`` valid samples is set to ``NaN`` rather than a statistic
+            derived from too few samples. "Valid" is counted as **non-NaN on the raw group**
+            (``~isnan``): a declared numeric sentinel in the cube is *not* excluded here —
+            the caller's cube treats it as data — so it counts as a valid sample. ``0``
+            (default) gates nothing, and the gate is skipped under ``skipna=False`` (a gap
+            already propagates there).
 
     Returns:
         The lazy ``(band, rows, cols)`` dask reduction for this window.
@@ -267,4 +280,35 @@ def build_group_reduction(
             method=op,
             skipna=skipna,
         )
-    return result
+    return _gate_sparse_window(result, group, min_count, skipna)
+
+
+def _gate_sparse_window(result: Any, group: Any, min_count: int, skipna: bool) -> Any:
+    """NaN any cell whose window holds fewer than ``min_count`` valid (non-NaN) samples.
+
+    The uniform ``min_count`` gate for every :func:`build_group_reduction` op. A no-op
+    unless ``min_count > 0`` and ``skipna`` (a gap already propagates without ``skipna``).
+    ``sum`` / ``min`` / ``max`` keep the cube's integer dtype, which cannot hold the NaN
+    fill, so an integer result is promoted to float64 first (float results keep their dtype).
+    Uses the NumPy API, which dispatches to :mod:`dask.array` on a lazy ``group``.
+
+    Args:
+        result: The reduced ``(band, rows, cols)`` array (numpy or dask).
+        group: The window's ``(n_t, band, rows, cols)`` slice whose valid cells are counted.
+        min_count: The threshold; ``0`` (or below) gates nothing.
+        skipna: When ``False`` the gate is skipped.
+
+    Returns:
+        ``result`` with sub-threshold cells set to ``NaN``, or ``result`` unchanged.
+    """
+    if min_count <= 0 or not skipna:
+        return result
+    fill_dtype = (
+        result.dtype if np.issubdtype(result.dtype, np.floating) else np.float64
+    )
+    valid_count = np.sum(~np.isnan(group), axis=0)
+    return np.where(
+        valid_count >= min_count,
+        result.astype(fill_dtype),
+        np.asarray(np.nan, dtype=fill_dtype),
+    )
