@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -20962,7 +20962,7 @@ its own <a href="../../../tutorials/lazy/lazy-raster/#zonal-statistics-datasetzo
 <a id="__codelineno-0-5447" name="__codelineno-0-5447"></a>        <span class="n">gdf</span> <span class="o">=</span> <span class="n">new_dataset</span><span class="o">.</span><span class="n">to_polygons</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-5448" name="__codelineno-0-5448"></a>        <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">band_names</span>
 <a id="__codelineno-0-5449" name="__codelineno-0-5449"></a>        <span class="n">col_name</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="n">band</span><span class="p">]</span> <span class="k">if</span> <span class="n">band</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"Band_</span><span class="si">{</span><span class="n">band</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-5450" name="__codelineno-0-5450"></a>        <span class="n">gdf</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"Band_1"</span><span class="p">:</span> <span class="n">col_name</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-5450" name="__codelineno-0-5450"></a>        <span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"Band_1"</span><span class="p">:</span> <span class="n">col_name</span><span class="p">})</span>
 <a id="__codelineno-0-5451" name="__codelineno-0-5451"></a>
 <a id="__codelineno-0-5452" name="__codelineno-0-5452"></a>        <span class="k">return</span> <span class="n">gdf</span>
 <a id="__codelineno-0-5453" name="__codelineno-0-5453"></a>
@@ -33534,7 +33534,7 @@ footprint is exact.</p>
 <a id="__codelineno-0-5447" name="__codelineno-0-5447"></a>    <span class="n">gdf</span> <span class="o">=</span> <span class="n">new_dataset</span><span class="o">.</span><span class="n">to_polygons</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-5448" name="__codelineno-0-5448"></a>    <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">band_names</span>
 <a id="__codelineno-0-5449" name="__codelineno-0-5449"></a>    <span class="n">col_name</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="n">band</span><span class="p">]</span> <span class="k">if</span> <span class="n">band</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"Band_</span><span class="si">{</span><span class="n">band</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-5450" name="__codelineno-0-5450"></a>    <span class="n">gdf</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"Band_1"</span><span class="p">:</span> <span class="n">col_name</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-5450" name="__codelineno-0-5450"></a>    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"Band_1"</span><span class="p">:</span> <span class="n">col_name</span><span class="p">})</span>
 <a id="__codelineno-0-5451" name="__codelineno-0-5451"></a>
 <a id="__codelineno-0-5452" name="__codelineno-0-5452"></a>    <span class="k">return</span> <span class="n">gdf</span>
 </code></pre></div></td></tr></table></div>
