@@ -282,9 +282,16 @@ def build_group_reduction(
         )
     if min_count > 0 and skipna:
         # Gate a sparse window uniformly across every op: count the valid samples that fed
-        # the reduction and NaN any cell below the threshold.
+        # the reduction and NaN any cell below the threshold. sum/min/max keep the cube's
+        # integer dtype, which cannot hold the NaN fill, so promote an integer result to
+        # float64 first (float results keep their own dtype).
+        fill_dtype = (
+            result.dtype if np.issubdtype(result.dtype, np.floating) else np.float64
+        )
         valid_count = da.count_nonzero(~da.isnan(group), axis=0)
         result = da.where(
-            valid_count >= min_count, result, np.asarray(np.nan, dtype=result.dtype)
+            valid_count >= min_count,
+            result.astype(fill_dtype),
+            np.asarray(np.nan, dtype=fill_dtype),
         )
     return result

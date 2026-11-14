@@ -1151,6 +1151,37 @@ class TestReduceTimeMinCount:
         assert arr[0, 0] == pytest.approx(15.0), "exactly-at-threshold window kept"
 
     @requires_lazy
+    @pytest.mark.parametrize("op", ["sum", "min", "max"])
+    def test_integer_cube_does_not_crash(self, jan_times, op):
+        """min_count on an integer cube (sum/min/max) promotes to float, not crash.
+
+        Args:
+            op: The dtype-preserving associative op under test.
+
+        Test scenario:
+            An int32 cube [5, 7, 9] reduced with min_count=2 (no gap, so nothing
+            gated) returns the statistic as a float instead of raising
+            'cannot convert float NaN to integer'; min_count=5 (window shorter
+            than the threshold) gates the whole window to NaN.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 1.0), cell_size=1.0, epsg=4326)
+        scenes = [
+            Dataset.from_array(np.array([[v]], dtype="int32"), geo_ref=geo)
+            for v in (5, 7, 9)
+        ]
+        coll = DatasetCollection(scenes[0], time_length=3, datasets=scenes)
+        kept = coll.reduce_time(jan_times, freq="1MS", op=op, min_count=2)[0][
+            1
+        ].read_array()
+        assert not np.isnan(kept[0, 0]), (
+            f"{op} min_count=2 kept (3>=2), got {kept[0, 0]}"
+        )
+        gated = coll.reduce_time(jan_times, freq="1MS", op=op, min_count=5)[0][
+            1
+        ].read_array()
+        assert np.isnan(gated[0, 0]), f"{op} window of 3 < min_count 5 gated to NaN"
+
+    @requires_lazy
     def test_declared_sentinel_counts_as_valid_sample(self, jan_times):
         """On reduce_time a numeric sentinel is data, so min_count does not gate it.
 
