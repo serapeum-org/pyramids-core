@@ -132,5 +132,6 @@ class TestNetCDFReduceMinCount:
         Test scenario:
             -1 raises ValueError; a float and a bool raise TypeError.
         """
+        var = self._sparse()
         with pytest.raises(exc, match="min_count"):
-            self._sparse().reduce("time", "mean", min_count=bad)
+            var.reduce("time", "mean", min_count=bad)
