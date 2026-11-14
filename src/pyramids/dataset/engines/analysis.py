@@ -6745,8 +6745,8 @@ class Analysis(_Engine["Dataset"]):
         # sentinels would need per-frame masking, which cleopatra's animate mode does not take.
         # Use the *physical* sentinel: cleopatra compares `exclude_value` against the physical
         # `read_array` values, so a stored sentinel misses every gap on a CF-packed band.
-        sentinel = self._physical_no_data(selected[0])
-        masked = [sentinel] if sentinel is not None else []
+        no_data_sentinel = self._physical_no_data(selected[0])
+        masked = [no_data_sentinel] if no_data_sentinel is not None else []
         if exclude_value is not None:
             masked.append(exclude_value)
         return render_array(
