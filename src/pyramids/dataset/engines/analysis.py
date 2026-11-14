@@ -6000,9 +6000,11 @@ class Analysis(_Engine["Dataset"]):
         probability = np.interp(source_values, source_quantiles, probs)
         matched_values = np.interp(probability, probs, ref_quantiles)
 
-        # The output is unpacked, and its declared no-data is the documented "source band's
-        # no-data value" -- the *stored* sentinel, which stays out of the matched/stretched
-        # range. Using the physical sentinel here could alias a valid result that lands on it.
+        # The output is unpacked; its declared no-data is the documented "source band's no-data
+        # value" (the *stored* sentinel), matching the pre-fix output -- not the physical sentinel
+        # used for the mask above, which could alias a valid result that lands on it. A stored
+        # sentinel that itself falls inside the output range can still alias, but that is
+        # pre-existing (the fill is unchanged by this fix), not introduced here.
         stored_nodata = self._ds.no_data_value[band]
         fill = np.nan if stored_nodata is None else stored_nodata
         out_values = np.full(source.shape, fill, dtype="float64")
@@ -6101,9 +6103,11 @@ class Analysis(_Engine["Dataset"]):
             )
 
         stretched = np.clip((source - low_value) / (high_value - low_value), 0.0, 1.0)
-        # The output is unpacked, and its declared no-data is the documented "source band's
-        # no-data value" -- the *stored* sentinel, which stays out of the matched/stretched
-        # range. Using the physical sentinel here could alias a valid result that lands on it.
+        # The output is unpacked; its declared no-data is the documented "source band's no-data
+        # value" (the *stored* sentinel), matching the pre-fix output -- not the physical sentinel
+        # used for the mask above, which could alias a valid result that lands on it. A stored
+        # sentinel that itself falls inside the output range can still alias, but that is
+        # pre-existing (the fill is unchanged by this fix), not introduced here.
         stored_nodata = self._ds.no_data_value[band]
         fill = np.nan if stored_nodata is None else stored_nodata
         out_values = np.where(valid, stretched, fill)
