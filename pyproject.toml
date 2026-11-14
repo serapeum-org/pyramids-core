@@ -182,15 +182,9 @@ docs = [
     "ipykernel",
 ]
 
-
-# The lazy compute backend core's tests dispatch to. Test-only: it must never reach [project] or
-# the published extras, because the dependency runs the other way (pyramids-lazy requires
-# pyramids-core). Its own group rather than `dev`, so the `docs` env can carry it too — docs
-# executes lazy/zarr notebooks and has no `dev` feature. Now an ordinary PyPI floor (pyramids-lazy
-# shipped 0.1.0), so core's routing/contract tests run against the real published backend.
-lazy-backend = [
-    "pyramids-lazy>=0.1.0",
-]
+# The lazy compute backend (pyramids-lazy) is not a separate test-only group: the `lazy` pixi
+# feature maps to the published `[lazy]` extra (= `pyramids-lazy>=0.1.0`), so every lazy-bearing
+# env installs the real backend through that. The `bare`/`default` envs omit `lazy` and get none.
 
 [project.scripts]
 pyramids = "pyramids.cli:main"
@@ -439,25 +433,25 @@ description = "Run the main suite in parallel (pytest-xdist); no coverage"
 default = {features = ["gdal", "viz"], solve-group = "default" }
 # Bare core with a test runner but NO lazy backend and NO dask stack: the environment shape the
 # branded-absent suite (tests/base/test_lazy_backend_absent.py) asserts against, so it runs in CI for
-# real rather than only under a monkeypatched fixture. Deliberately omits `lazy-backend` and `lazy`.
+# real rather than only under a monkeypatched fixture. Deliberately omits `lazy` (so no backend).
 bare = { features = ["gdal", "dev"], solve-group = "bare" }
-dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "default" }
-lazy = { features = ["gdal", "viz", "dev", "lazy", "lazy-backend"], solve-group = "default" }
-parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet", "lazy-backend"], solve-group = "default" }
+dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet"], solve-group = "default" }
+lazy = { features = ["gdal", "viz", "dev", "lazy"], solve-group = "default" }
+parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet"], solve-group = "default" }
 # `docs` also carries the notebook runtime features (viz/cleopatra, interop, lazy, stac,
 # parquet) so the mkdocs-deploy action can execute the example notebooks in CI and render
 # real outputs. See .github/workflows/github-pages-mkdocs.yml (notebooks-path).
-docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "docs" }
+docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet"], solve-group = "docs" }
 # py3XX envs include `lazy` so the `interop-tests` step has the interop data stack
 # (zarr / dask / s3fs / fsspec) its interop tests need, run with real deps. `parquet`
 # (pyarrow) is left out on purpose: it would un-skip the core OGR-Parquet tests, which
 # need GDAL's libgdal-arrow-parquet driver (absent on the runners) — the parquet extras
 # matrix covers those. Bare-core (no-lazy) installs are covered by the `default` env.
-py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py311" }
-py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py312" }
-py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py313" }
-py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py314" }
-py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py315" }
+py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy"], solve-group = "py311" }
+py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy"], solve-group = "py312" }
+py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy"], solve-group = "py313" }
+py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy"], solve-group = "py314" }
+py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy"], solve-group = "py315" }
 # wheel-build: lean env inside the cibuildwheel container.
 # no-default-feature = true keeps pyramids-core (and its pandas/numpy
 # transitive deps) out of the build container so cibuildwheel's pip
