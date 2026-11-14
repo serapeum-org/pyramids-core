@@ -84,3 +84,90 @@ class TestResample:
         mesh = _temporal(values, stamps=["not-a-date", "also-not"])
         with pytest.raises(ValueError, match="date-like time coordinates"):
             mesh.resample("1MS")
+
+
+class TestReduceMinCount:
+    """`MeshDataset.reduce(min_count=)` gates a slice with too few valid samples."""
+
+    def test_collapse_gates_sparse_face(self):
+        """A face with one valid step is gated to no-data at min_count=2.
+
+        Test scenario:
+            face 0 is [5, NaN, NaN] (one valid), face 1 is [1, 2, 3]; collapsing
+            with min_count=2 makes face 0 NaN while face 1 keeps its mean.
+        """
+        values = np.array([[5.0, 1.0], [np.nan, 2.0], [np.nan, 3.0]])
+        out = _temporal(values).reduce("mean", min_count=2)["d"].data
+        assert np.isnan(out[0]), f"one-sample face gated to NaN, got {out[0]}"
+        assert out[1] == 2.0, f"three-sample face kept, got {out[1]}"
+
+    def test_collapse_min_count_zero_keeps_sparse_face(self):
+        """min_count=0 (default) leaves a one-sample face untouched.
+
+        Test scenario:
+            The one-valid-sample face reduces to that value, as today.
+        """
+        values = np.array([[5.0, 1.0], [np.nan, 2.0], [np.nan, 3.0]])
+        out = _temporal(values).reduce("mean", min_count=0)["d"].data
+        assert out[0] == 5.0, f"one-sample face kept at min_count=0, got {out[0]}"
+
+    def test_grouped_gates_per_group(self):
+        """Grouped reduction gates each group by its own valid count.
+
+        Test scenario:
+            values grouped ["g", "g", "h"]: face 0 has two valid in group g
+            (kept) and one in group h (gated at min_count=2).
+        """
+        values = np.array([[1.0, 1.0], [3.0, 1.0], [5.0, 1.0]])
+        out = (
+            _temporal(values)
+            .reduce("mean", groupby=["g", "g", "h"], min_count=2)["d"]
+            .data
+        )
+        assert out[0].tolist() == [2.0, 1.0], (
+            f"group g (two samples) kept, got {out[0]}"
+        )
+        assert np.isnan(out[1][0]), f"group h (one sample) gated, got {out[1]}"
+
+    def test_declared_no_data_excluded_and_rendered(self):
+        """A declared sentinel is excluded from the count and rendered in a gated cell.
+
+        Test scenario:
+            With nodata=-9999, face 0 is [5, -9999, -9999] (one valid after the
+            sentinel is masked); collapsing with min_count=2 gates it and the cell
+            holds -9999 (not NaN), matching NetCDF.reduce. Face 1 [1, 2, 3] is kept.
+        """
+        mesh = _temporal(np.array([[5.0, 1.0], [-9999.0, 2.0], [-9999.0, 3.0]]))
+        mesh["d"].nodata = -9999.0
+        out = mesh.reduce("mean", min_count=2)["d"].data
+        assert out[0] == -9999.0, f"gated face holds the declared no-data, got {out[0]}"
+        assert out[1] == 2.0, f"three-sample face kept, got {out[1]}"
+
+    def test_declared_no_data_gates_grouped_path(self):
+        """The grouped mesh path also excludes the sentinel and renders no-data.
+
+        Test scenario:
+            nodata=-9999, grouped ["g", "g", "h"]: group h has only a sentinel for
+            face 0, so it is gated to -9999 at min_count=1.
+        """
+        mesh = _temporal(np.array([[1.0, 1.0], [3.0, 1.0], [-9999.0, 1.0]]))
+        mesh["d"].nodata = -9999.0
+        out = mesh.reduce("mean", groupby=["g", "g", "h"], min_count=1)["d"].data
+        assert out[0].tolist() == [2.0, 1.0], f"group g kept, got {out[0]}"
+        assert out[1][0] == -9999.0, (
+            f"group h sentinel-only face gated, got {out[1][0]}"
+        )
+
+    @pytest.mark.parametrize(
+        "bad, exc", [(-1, ValueError), (2.5, TypeError), (True, TypeError)]
+    )
+    def test_invalid_min_count_raises(self, bad, exc):
+        """A negative or non-integer min_count is rejected up front.
+
+        Args:
+            bad: The invalid min_count.
+            exc: The expected exception type.
+        """
+        mesh = _temporal(np.array([[1.0, 1.0], [2.0, 2.0]]))
+        with pytest.raises(exc, match="min_count"):
+            mesh.reduce("mean", min_count=bad)

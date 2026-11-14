@@ -7994,9 +7994,12 @@ class NetCDF(Dataset):
         groupby: list | tuple | str | None = None,
         skipna: bool = True,
         q: float | None = None,
+        min_count: int = 0,
     ) -> NetCDF:
         """Facade — :meth:`Selection.reduce <pyramids.netcdf.engines.selection.Selection.reduce>`."""
-        return self.selection.reduce(dim, how, groupby=groupby, skipna=skipna, q=q)
+        return self.selection.reduce(
+            dim, how, groupby=groupby, skipna=skipna, q=q, min_count=min_count
+        )
 
     def coarsen(
         self,

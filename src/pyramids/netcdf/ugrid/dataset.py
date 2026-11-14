@@ -59,6 +59,7 @@ from pyramids.base._reductions import (
     reduce_axis,
     reduce_by_label,
     shifted,
+    validate_min_count,
     weighted_statistic,
     window_members,
 )
@@ -3813,6 +3814,7 @@ class MeshDataset(_MeshFacades):
         skipna: bool = True,
         q: float | None = None,
         groupby: Any = None,
+        min_count: int = 0,
     ) -> MeshDataset:
         """Reduce the time dimension of every temporal variable, whole or in groups.
 
@@ -3841,6 +3843,12 @@ class MeshDataset(_MeshFacades):
                 ``"YS"``, …) binned against the dataset's date-like time coordinates. Each
                 group's label becomes the result's ``time_values`` entry, and empty bins are
                 dropped. ``None`` reduces the whole axis. Defaults to ``None``.
+            min_count: Minimum valid (non-gap — NaN and the declared no-data value are both
+                skipped) cells a reduced slice needs for an element to carry a value; a slice
+                with fewer holds the no-data value instead of a statistic from too few
+                samples. ``0`` (default) gates nothing. Only meaningful with ``skipna=True``
+                and the statistics (not ``count`` / ``all`` / ``any``); matches
+                :meth:`pyramids.netcdf.NetCDF.reduce`.
 
         Returns:
             MeshDataset: A new dataset. Without ``groupby`` each temporal variable is
@@ -3849,10 +3857,12 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             ValueError: ``how`` is not a known reduction; ``q`` is given for a non-quantile
-                ``how`` or missing for ``how="quantile"``; no variable has a time dimension;
-                a temporal variable has no loaded data; a ``groupby`` label sequence's length
-                is not the time length; or a ``groupby`` offset alias is asked of time
-                coordinates that are step positions, or that pandas cannot read as dates.
+                ``how`` or missing for ``how="quantile"``; ``min_count`` is negative; no
+                variable has a time dimension; a temporal variable has no loaded data; a
+                ``groupby`` label sequence's length is not the time length; or a ``groupby``
+                offset alias is asked of time coordinates that are step positions, or that
+                pandas cannot read as dates.
+            TypeError: ``min_count`` is not an integer.
 
         Examples:
             - Mean over two time steps of a per-face variable:
@@ -3877,6 +3887,7 @@ class MeshDataset(_MeshFacades):
                 ```
         """
         _check_reduce_how(how, q)
+        validate_min_count(min_count)
         self._require_temporal("reduce")
         # all/any collapse to a uint8 flag band whose all-gap value is FLAG_NO_DATA (255);
         # the collapsed variable must declare that so a consumer does not read 255 as data.
@@ -3898,7 +3909,7 @@ class MeshDataset(_MeshFacades):
             arr = np.asarray(data)
             nodata = result_nodata if result_nodata is not None else var.nodata
             if grouped is None:
-                reduced = reduce_axis(arr, axis, how, skipna, var.nodata, q)
+                reduced = reduce_axis(arr, axis, how, skipna, var.nodata, q, min_count)
                 new_vars[name] = _static_from(
                     var, np.asarray(reduced), axis, nodata=nodata
                 )
@@ -3910,7 +3921,13 @@ class MeshDataset(_MeshFacades):
             parts = [
                 np.asarray(
                     reduce_axis(
-                        np.take(arr, group, axis=axis), axis, how, skipna, var.nodata, q
+                        np.take(arr, group, axis=axis),
+                        axis,
+                        how,
+                        skipna,
+                        var.nodata,
+                        q,
+                        min_count,
                     )
                 )
                 for group in positions

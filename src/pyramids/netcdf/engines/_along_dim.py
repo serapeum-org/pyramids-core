@@ -191,6 +191,9 @@ class _Reduction(_AlongDim):
         group_coords: Explicit coordinate labels for the output groups, one per group in
             group order (`groupby_bins`, which labels each bin with its left edge) instead of
             the first member's coordinate. Mutually exclusive with `window_mean_coords`.
+        min_count: Minimum valid cells a collapsed dimension or window needs before a cell
+            carries a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
+            Set only by `reduce`; `coarsen` / `groupby_bins` leave it `0`.
     """
 
     how: str
@@ -201,6 +204,9 @@ class _Reduction(_AlongDim):
     resize: int | None = None
     window_mean_coords: bool = False
     group_coords: list | None = None
+    # Appended after the other defaulted fields so positional construction of
+    # caller/resize/window_mean_coords/group_coords keeps binding as before.
+    min_count: int = 0
     _positions: list | None = field(default=None, init=False, repr=False)
 
     @property
@@ -232,6 +238,7 @@ class _Reduction(_AlongDim):
                 group_positions=self._positions,
                 skipna=self.skipna,
                 q=self.q,
+                min_count=self.min_count,
                 resize=self.resize,
                 window_mean_coords=self.window_mean_coords,
                 group_coords=self.group_coords,
@@ -1251,6 +1258,7 @@ def _reduced_array(
     group_positions: list | None,
     skipna: bool,
     q: float | None,
+    min_count: int = 0,
     resize: int | None = None,
     window_mean_coords: bool = False,
     group_coords: list | None = None,
@@ -1273,6 +1281,8 @@ def _reduced_array(
         group_positions: The resolved groups, or `None` to collapse.
         skipna: Whether gaps are skipped.
         q: The quantile, for `how="quantile"`.
+        min_count: Minimum valid cells a collapsed dimension or group needs for a cell to
+            carry a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
         resize: The length to cut or pad `dim` to before grouping, for `coarsen`;
             `None` leaves it alone.
         window_mean_coords: Label each group with the mean of its members' coordinates
@@ -1321,6 +1331,7 @@ def _reduced_array(
         None,
         group_positions,
         q,
+        min_count,
     )
     if window_mean_coords and group_positions is not None:
         values_map[dim] = _window_coordinates(coords, group_positions, size)
