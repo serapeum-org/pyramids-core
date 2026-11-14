@@ -206,7 +206,13 @@ def _trend_block(block: Any, *, x: Any, method: str, skipna: bool) -> Any:
 
 
 def build_group_reduction(
-    group: Any, op: str, *, skipna: bool, q: float | None = None, x: Any = None
+    group: Any,
+    op: str,
+    *,
+    skipna: bool,
+    q: float | None = None,
+    x: Any = None,
+    min_count: int = 0,
 ) -> Any:
     """Build the lazy :mod:`dask.array` reduction of ``group`` over axis 0.
 
@@ -225,6 +231,10 @@ def build_group_reduction(
         q: The level for ``percentile`` (``0 < q <= 100``) / ``quantile``
             (``0 < q <= 1``); ``None`` otherwise.
         x: The window's ``(n_t,)`` numeric day offsets, for the trend ops only.
+        min_count: When above ``0`` and ``skipna`` is ``True``, a cell whose window holds
+            fewer than ``min_count`` valid (non-NaN) samples is set to ``NaN`` rather than a
+            statistic derived from too few samples. ``0`` (default) gates nothing, and the
+            gate is skipped under ``skipna=False`` (a gap already propagates there).
 
     Returns:
         The lazy ``(band, rows, cols)`` dask reduction for this window.
@@ -266,5 +276,12 @@ def build_group_reduction(
             x=np.asarray(x, dtype="float64"),
             method=op,
             skipna=skipna,
+        )
+    if min_count > 0 and skipna:
+        # Gate a sparse window uniformly across every op: count the valid samples that fed
+        # the reduction and NaN any cell below the threshold.
+        valid_count = da.count_nonzero(~da.isnan(group), axis=0)
+        result = da.where(
+            valid_count >= min_count, result, np.asarray(np.nan, dtype=result.dtype)
         )
     return result

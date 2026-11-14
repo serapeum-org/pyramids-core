@@ -183,6 +183,8 @@ class _Reduction(_AlongDim):
             grouping is worked out.
         skipna: Whether gaps are skipped.
         q: The quantile, for `how="quantile"`.
+        min_count: Minimum valid cells a collapsed dimension or window needs before a cell
+            carries a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
         caller: `"reduce"` or `"coarsen"`.
         resize: The length to cut or pad the dimension to first, for `coarsen`; `None` leaves
             it alone.
@@ -197,6 +199,7 @@ class _Reduction(_AlongDim):
     groups: Callable[[], list | None]
     skipna: bool
     q: float | None
+    min_count: int = 0
     caller: str = "reduce"
     resize: int | None = None
     window_mean_coords: bool = False
@@ -232,6 +235,7 @@ class _Reduction(_AlongDim):
                 group_positions=self._positions,
                 skipna=self.skipna,
                 q=self.q,
+                min_count=self.min_count,
                 resize=self.resize,
                 window_mean_coords=self.window_mean_coords,
                 group_coords=self.group_coords,
@@ -1251,6 +1255,7 @@ def _reduced_array(
     group_positions: list | None,
     skipna: bool,
     q: float | None,
+    min_count: int = 0,
     resize: int | None = None,
     window_mean_coords: bool = False,
     group_coords: list | None = None,
@@ -1273,6 +1278,8 @@ def _reduced_array(
         group_positions: The resolved groups, or `None` to collapse.
         skipna: Whether gaps are skipped.
         q: The quantile, for `how="quantile"`.
+        min_count: Minimum valid cells a collapsed dimension or group needs for a cell to
+            carry a value; below it the cell is no-data (`skipna` only, `0` gates nothing).
         resize: The length to cut or pad `dim` to before grouping, for `coarsen`;
             `None` leaves it alone.
         window_mean_coords: Label each group with the mean of its members' coordinates
@@ -1321,6 +1328,7 @@ def _reduced_array(
         None,
         group_positions,
         q,
+        min_count,
     )
     if window_mean_coords and group_positions is not None:
         values_map[dim] = _window_coordinates(coords, group_positions, size)

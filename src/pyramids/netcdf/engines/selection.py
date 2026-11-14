@@ -2313,6 +2313,7 @@ class Selection(_Engine["NetCDF"]):
         groupby: list | tuple | str | None = None,
         skipna: bool = True,
         q: float | None = None,
+        min_count: int = 0,
     ) -> NetCDF:
         """Reduce along a named dimension and return a new NetCDF.
 
@@ -2369,6 +2370,13 @@ class Selection(_Engine["NetCDF"]):
             q: The quantile for `how="quantile"`, one number in `[0, 1]`, using numpy's
                 default linear interpolation. Required for `"quantile"` and refused for
                 every other `how`.
+            min_count: Minimum valid (non-gap) cells a reduced slice needs for a cell to
+                carry a value; a slice with fewer holds the variable's no-data value (NaN
+                when it declares none) instead of a statistic from too few samples — so a
+                monthly window built from one of ~30 daily steps is emitted as missing. `0`
+                (default) gates nothing. Only meaningful with `skipna=True` (ignored
+                otherwise) and for the statistics (not `count` / `all` / `any`); mirrors the
+                `min_count` of `pandas`/`xarray` `sum`, generalised here to every statistic.
 
         Returns:
             NetCDF: A container for a container, a variable for a variable, with `dim`
@@ -2381,11 +2389,12 @@ class Selection(_Engine["NetCDF"]):
 
         Raises:
             ValueError: `how` is unknown; `q` is missing, not a single number in `[0, 1]`,
-                or given with a `how` other than `"quantile"`; the container has no data
-                variables; `dim` is not a band dimension of any gridded variable (or of this
-                variable, or this variable has none); a frequency `groupby` is given but
-                `dim` has no decodable time coordinate; or the grouping does not cover `dim`
-                exactly.
+                or given with a `how` other than `"quantile"`; `min_count` is negative; the
+                container has no data variables; `dim` is not a band dimension of any gridded
+                variable (or of this variable, or this variable has none); a frequency
+                `groupby` is given but `dim` has no decodable time coordinate; or the grouping
+                does not cover `dim` exactly.
+            TypeError: `min_count` is not an integer.
 
         Warns:
             UserWarning: A container's auxiliary variable spans `dim` and is dropped.
@@ -2450,16 +2459,22 @@ class Selection(_Engine["NetCDF"]):
         """
         # The reducer registries live in the cycle-free `pyramids.base._reductions`; kept a
         # local import here for consistency with this method's other local imports.
-        from pyramids.base._reductions import COUNTING_REDUCERS, REDUCERS
+        from pyramids.base._reductions import (
+            COUNTING_REDUCERS,
+            REDUCERS,
+            validate_min_count,
+        )
 
         nc = self._ds
         _check_how(how, {*REDUCERS, *COUNTING_REDUCERS})
         q = _check_quantile(how, q)
+        validate_min_count(min_count)
         op = _Reduction(
             how=how,
             groups=lambda: nc._resolve_group_positions(dim, groupby),
             skipna=skipna,
             q=q,
+            min_count=min_count,
         )
         if _reduces_as_a_variable(nc):
             result = _apply_to_variable(nc, dim, op)

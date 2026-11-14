@@ -801,8 +801,30 @@ COUNTING_REDUCERS: frozenset[str] = frozenset({"count", "all", "any"})
 FLAG_NO_DATA = 255
 
 
+def validate_min_count(min_count: int) -> None:
+    """Validate a reduction ``min_count`` — a non-negative integer.
+
+    Args:
+        min_count: The minimum valid (non-NaN) sample count a reduced cell needs.
+
+    Raises:
+        TypeError: ``min_count`` is not an integer (a ``bool`` is rejected too).
+        ValueError: ``min_count`` is negative.
+    """
+    if isinstance(min_count, bool) or not isinstance(min_count, (int, np.integer)):
+        raise TypeError(f"min_count must be an int, got {type(min_count).__name__}.")
+    if min_count < 0:
+        raise ValueError(f"min_count must be >= 0, got {min_count}.")
+
+
 def reduce_axis(
-    arr: Any, axis: int, how: str, skipna: bool, ndv: Any, q: float | None = None
+    arr: Any,
+    axis: int,
+    how: str,
+    skipna: bool,
+    ndv: Any,
+    q: float | None = None,
+    min_count: int = 0,
 ) -> Any:
     """Apply one reduction over ``axis``, masking no-data when ``skipna``.
 
@@ -822,6 +844,10 @@ def reduce_axis(
         q: Forwarded as ``q=`` to the :data:`REDUCERS` function whenever it is not ``None``,
             so it must stay ``None`` for every statistic but ``quantile``. The counting
             reductions ignore it.
+        min_count: When above ``0`` and ``skipna`` is ``True``, a column with fewer than
+            ``min_count`` valid (non-NaN, non-sentinel) cells answers ``ndv`` (NaN when ``ndv``
+            is ``None``) instead of a statistic computed from too few samples. ``0`` (default)
+            gates nothing. Ignored without ``skipna`` and for the counting reductions.
 
     Returns:
         The reduced array, a dask array when ``arr`` is one: float64 for a statistic under
@@ -849,6 +875,11 @@ def reduce_axis(
             all_masked = np.all(np.isnan(data), axis=axis)
             fill = ndv if ndv is not None else np.nan
             out = np.where(np.isnan(out) | all_masked, fill, out)
+            if min_count > 0:
+                # Gate a sparse window: a cell fed by fewer than min_count valid samples is
+                # no-data, so a one-sample mean is not mistaken for a confident value.
+                valid_count = np.sum(~np.isnan(data), axis=axis)
+                out = np.where(valid_count < min_count, fill, out)
             result = out
         else:
             result = plain_func(arr, axis=axis, **extra)
@@ -908,6 +939,7 @@ def reduce_variable_array(
     groupby: Any,
     group_positions: list | None,
     q: float | None = None,
+    min_count: int = 0,
 ) -> tuple[Any, list[str], dict[str, Any]]:
     """Reduce one variable's array along ``axis``; return the new array plus its dims.
 
@@ -927,6 +959,8 @@ def reduce_variable_array(
         groupby: Unused placeholder kept for call-site compatibility.
         group_positions: The groups of positions to reduce, or ``None`` to collapse ``dim``.
         q: The quantile, for ``how="quantile"``.
+        min_count: Forwarded to :func:`reduce_axis` so a collapsed dimension or a per-group
+            window with fewer than ``min_count`` valid cells is no-data (``skipna`` only).
 
     Returns:
         tuple: ``(new_array, new_band_names, new_values_map)``.
@@ -935,7 +969,7 @@ def reduce_variable_array(
         ValueError: The group positions do not cover ``dim``'s length.
     """
     if group_positions is None:
-        new_arr = reduce_axis(arr, axis, how, skipna, ndv, q)
+        new_arr = reduce_axis(arr, axis, how, skipna, ndv, q, min_count)
         new_band_names = [name for name in band_names if name != dim]
         new_values_map = {name: values_map.get(name) for name in new_band_names}
     else:
@@ -946,7 +980,9 @@ def reduce_variable_array(
                 f"has size {arr.shape[axis]}."
             )
         slices = [
-            reduce_axis(np.take(arr, positions, axis=axis), axis, how, skipna, ndv, q)
+            reduce_axis(
+                np.take(arr, positions, axis=axis), axis, how, skipna, ndv, q, min_count
+            )
             for positions in group_positions
         ]
         new_arr = np.stack(slices, axis=axis)

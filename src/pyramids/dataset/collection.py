@@ -35,6 +35,7 @@ from pyramids.base._plot_backends import (
     render_via_backend,
 )
 from pyramids.base._raster_meta import RasterMeta
+from pyramids.base._reductions import validate_min_count
 from pyramids.base._utils import (
     DEFAULT_RESAMPLING,
     _is_identity_packing,
@@ -377,6 +378,7 @@ def _grouped_reduce_time(
     skipna: bool,
     q: float | None,
     index: pd.DatetimeIndex,
+    min_count: int = 0,
 ) -> dict:
     """Single-pass grouped reduction over the time axis for any ``reduce_time`` op.
 
@@ -396,6 +398,8 @@ def _grouped_reduce_time(
         q: Level for ``percentile`` / ``quantile``; ``None`` otherwise.
         index: Per-timestep timestamps, aligned with ``label_array``; supplies
             each window's day offsets for the trend ops.
+        min_count: Forwarded to :func:`build_group_reduction` so a window with fewer than
+            ``min_count`` valid samples is no-data (``skipna`` only); ``0`` gates nothing.
 
     Returns:
         dict: ``{label: ndarray}`` with one reduced ``(B, R, C)`` array per window.
@@ -414,7 +418,12 @@ def _grouped_reduce_time(
             window_x = (stamps - stamps[0]) / np.timedelta64(1, "D")
         reductions.append(
             build_group_reduction(
-                data[positions.tolist()], op, skipna=skipna, q=q, x=window_x
+                data[positions.tolist()],
+                op,
+                skipna=skipna,
+                q=q,
+                x=window_x,
+                min_count=min_count,
             )
         )
     computed = dask.compute(*reductions)
@@ -1418,6 +1427,7 @@ class DatasetCollection:
         skipna: bool = True,
         q: float | None = None,
         origin: str | pd.Timestamp | datetime | None = None,
+        min_count: int = 0,
     ) -> list[tuple[Any, Dataset]]:
         """Reduce the time axis by a calendar frequency, grid-attached.
 
@@ -1491,6 +1501,15 @@ class DatasetCollection:
                 whole-window bucket. A tz-aware ``Timestamp`` is accepted for a
                 tz-aware index: bucketing runs in UTC, and window labels are
                 returned in the index's timezone.
+            min_count: Minimum number of valid (non-``NaN``) samples a window needs
+                for a cell to carry a value; a window with fewer resolves to ``NaN``
+                (the float no-data) instead of a statistic computed from too few
+                samples — so a month built from one of ~30 expected daily inputs is
+                emitted as missing rather than a confident-looking value. ``0``
+                (default) gates nothing and leaves today's behaviour unchanged. Only
+                meaningful with ``skipna=True`` (ignored otherwise); mirrors the
+                ``min_count`` of :meth:`pandas.DataFrame.sum` /
+                :meth:`xarray.DataArray.sum`, generalised here to every op.
 
         Returns:
             list[tuple[Any, Dataset]]: ``(window_label, dataset)`` pairs, one
@@ -1501,8 +1520,10 @@ class DatasetCollection:
         Raises:
             ValueError: ``op`` is not a supported reduction; ``q`` is missing,
                 out of range, or supplied for an op that takes none;
-                ``len(times)`` does not match :attr:`time_length`; or ``times``
-                contains an unparseable / ``NaT`` entry.
+                ``len(times)`` does not match :attr:`time_length`; ``times``
+                contains an unparseable / ``NaT`` entry; or ``min_count`` is
+                negative.
+            TypeError: ``min_count`` is not an integer.
 
         Examples:
             - Two January days collapse to one monthly median window; the
@@ -1548,6 +1569,7 @@ class DatasetCollection:
                 ```
         """
         validate_time_op(op, q)
+        validate_min_count(min_count)
         time_list = list(times)
         if len(time_list) != self._time_length:
             raise ValueError(
@@ -1595,6 +1617,7 @@ class DatasetCollection:
             skipna=skipna,
             q=q,
             index=index,
+            min_count=min_count,
         )
 
         result: list[tuple[Any, Dataset]] = []
