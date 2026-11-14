@@ -5447,7 +5447,7 @@ class Analysis(_Engine["Dataset"]):
         gdf = new_dataset.to_polygons(band=0)
         names = self._ds.band_names
         col_name = names[band] if band < len(names) else f"Band_{band + 1}"
-        gdf.rename(columns={"Band_1": col_name}, inplace=True)
+        gdf = gdf.rename(columns={"Band_1": col_name})
 
         return gdf
 

@@ -44,7 +44,7 @@ def with_coordinates(fc: FeatureCollection) -> FeatureCollection:
     result["y"] = result.apply(
         _geom._get_coords, geom_col="geometry", coord_type="y", axis=1
     )
-    result.reset_index(drop=True, inplace=True)
+    result = result.reset_index(drop=True)
     return result
 
 

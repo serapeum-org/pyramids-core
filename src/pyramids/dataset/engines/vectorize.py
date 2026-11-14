@@ -400,7 +400,7 @@ class Vectorize(_Engine["Dataset"]):
         else:
             df = src_ds.vectorize._extract_values_full(band_names)
 
-        df.drop(columns=["burn_value", "geometry"], errors="ignore", inplace=True)
+        df = df.drop(columns=["burn_value", "geometry"], errors="ignore")
         gdf = self._attach_geometry(src_ds, df, geom, location)
         if crs is not None:
             gdf = self._relabel_crs(gdf, crs)
