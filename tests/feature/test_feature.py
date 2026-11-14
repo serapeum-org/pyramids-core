@@ -433,7 +433,10 @@ class TestConcat:
             ``.crs =`` setter warns on *every* override, even a same-value one;
             ``set_crs(allow_override=True)`` does not. Turn that one warning
             into an error so a regression back to the raw setter fails here
-            instead of only adding log noise.
+            instead of only adding log noise. ``category=Warning`` (not a
+            specific subclass): geopandas changed this warning's category from
+            ``DeprecationWarning`` (<=1.1.x) to ``FutureWarning`` (1.2.0) without
+            changing the message, so pinning either subclass is version-fragile.
         """
         fc_a = FeatureCollection(
             GeoDataFrame({"v": [1]}, geometry=[Point(0, 0)], crs="EPSG:4326")
@@ -442,7 +445,7 @@ class TestConcat:
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "error", message="Overriding the CRS", category=DeprecationWarning
+                "error", message="Overriding the CRS", category=Warning
             )
             result = fc_a.concat(fc_b)
 
@@ -466,7 +469,7 @@ class TestConcat:
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "error", message="Overriding the CRS", category=DeprecationWarning
+                "error", message="Overriding the CRS", category=Warning
             )
             result = fc_a.concat(fc_b)
 
