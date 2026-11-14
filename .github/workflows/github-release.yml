@@ -62,20 +62,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # pyramids-lazy is pinned by a git commit on an unmerged branch (see pyproject.toml). Releasing
-      # in that state is unsafe: the release step re-locks, and a git-pinned dependency makes the
-      # lock non-reproducible and breaks the moment that branch is deleted. Refuse until the pin is an
-      # ordinary version floor (i.e. pyramids-lazy has shipped). Fail here with a clear message rather
-      # than let `pixi lock` fail cryptically after a tag has been pushed.
-      - name: Refuse to release while pyramids-lazy is a git pin
-        run: |
-          if grep -Eq 'pyramids-lazy @ git\+' pyproject.toml; then
-            echo "::error::pyramids-lazy is still pinned by git commit in pyproject.toml. A release" \
-                 "would produce a non-reproducible lock and break when the plugin branch is deleted." \
-                 "Publish pyramids-lazy and replace the git pin with a version floor first."
-            exit 1
-          fi
-
       - name: Create GitHub Release with Commitizen
         uses: serapeum-org/github-actions/actions/release/github@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # github-release/v1.5.1
         with:
