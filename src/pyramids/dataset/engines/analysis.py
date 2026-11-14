@@ -5968,10 +5968,13 @@ class Analysis(_Engine["Dataset"]):
         )
         ref = np.asarray(reference.read_array(band=reference_band), dtype=float)
 
-        source_nodata = self._ds.no_data_value[band]
+        # The arrays are physical (`read_array`), so the sentinel masked against them must be
+        # physical too -- `no_data_value` is stored, and on a CF-packed band it never appears in
+        # the physical read, leaking the gap into the CDF (as `plot`/`extract` already avoid).
+        source_nodata = self._physical_no_data(band)
         source_valid = self._finite_value_mask(source, source_nodata)
         ref_valid = self._finite_value_mask(
-            ref, reference.no_data_value[reference_band]
+            ref, reference.analysis._physical_no_data(reference_band)
         )
         if not source_valid.any() or not ref_valid.any():
             raise ValueError(
@@ -6076,7 +6079,11 @@ class Analysis(_Engine["Dataset"]):
         source = np.asarray(self._ds.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
-        source_nodata = self._ds.no_data_value[band]
+        # Physical sentinel for a physical read: a stored `no_data_value` never appears in the
+        # physical array of a CF-packed band, so masking against it would leak the gap into the
+        # percentiles (and `_single_band_float_like` writes an unpacked output, so the physical
+        # sentinel is also the correct fill/nodata for it).
+        source_nodata = self._physical_no_data(band)
         valid = self._finite_value_mask(source, source_nodata)
         if not valid.any():
             raise ValueError(
@@ -6721,12 +6728,13 @@ class Analysis(_Engine["Dataset"]):
             # check above by repeating that band - so this is reachable, not defensive.
             full = full[np.newaxis, ...]
         stack = full[selected, ...]
-        no_data_value = self._ds.no_data_value
         # One sentinel masks the whole stack — the first selected band's — because the animate
         # path takes a single `exclude_value` for every frame. That is right for the ordinary
         # raster whose bands share a no-data value; a raster whose bands declare *different*
         # sentinels would need per-frame masking, which cleopatra's animate mode does not take.
-        sentinel = no_data_value[selected[0]] if no_data_value else None
+        # Use the *physical* sentinel: cleopatra compares `exclude_value` against the physical
+        # `read_array` values, so a stored sentinel misses every gap on a CF-packed band.
+        sentinel = self._physical_no_data(selected[0])
         masked = [sentinel] if sentinel is not None else []
         if exclude_value is not None:
             masked.append(exclude_value)
