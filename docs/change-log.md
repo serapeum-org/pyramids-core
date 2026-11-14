@@ -1,5 +1,16 @@
 ﻿# Change log
 
+## 0.79.0 (2026-11-14)
+
+### Fix
+
+- **ci**: install pixi via an authenticated gh download to dodge the 429 (#1551)
+- **ci**: reserve headerpad so delocate can repair the macOS wheels (#1550)
+
+### Refactor
+
+- **lazy**: extract the dask layer behind a compute-backend seam (#1461)
+
 ## 0.78.0 (2026-11-12)
 
 ### Feat
