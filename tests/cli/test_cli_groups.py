@@ -160,7 +160,8 @@ class TestGroupedCliStructure:
     """
 
     @pytest.fixture(scope="class")
-    def root(self):
+    @classmethod
+    def root(cls):
         """The top-level `pyramids` subparsers action, built from the real CLI."""
         from pyramids.cli import _build_parser
 

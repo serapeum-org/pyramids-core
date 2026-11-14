@@ -2929,7 +2929,14 @@ class FeatureCollection(GeoDataFrame):
                 )
         combined = gpd.GeoDataFrame(pd.concat([self, other]))
         combined.index = list(range(len(combined)))
-        combined.crs = self.crs if self.crs is not None else other.crs
+        # set_crs (not the `.crs =` setter) -- the CRS agreement check above already
+        # guarantees self.crs == other.crs whenever both are set, so overriding is always
+        # safe here; the raw setter warns on every override regardless, even a same-value
+        # one. Without inplace=True, set_crs returns a new frame rather than mutating
+        # combined, hence the rebind.
+        combined = combined.set_crs(
+            self.crs if self.crs is not None else other.crs, allow_override=True
+        )
         return FeatureCollection(combined)
 
     def with_centroid(self) -> FeatureCollection:

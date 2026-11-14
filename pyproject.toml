@@ -4,13 +4,13 @@ version = "0.79.0"
 description = "GIS utility package"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [{ name = "Mostafa Farrag", email = "moah.farag@gmail.com" }]
-license = {text = "GNU General Public License v3"}
+license = "GPL-3.0-only"
+license-files = ["LICENSE.md"]
 keywords = ["GIS", "gdal"]
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",

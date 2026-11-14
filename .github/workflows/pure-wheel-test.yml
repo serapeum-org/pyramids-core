@@ -134,7 +134,7 @@ jobs:
 
       - name: Install test runner
         shell: bash -el {0}
-        run: "pip install pytest pytest-env pytest-mock --only-binary=:all:"
+        run: "pip install pytest pytest-env pytest-mock pytest-timeout --only-binary=:all:"
 
       - name: Run core tests
         shell: bash -el {0}
@@ -231,7 +231,7 @@ jobs:
 
       - name: Install test runner
         shell: bash -el {0}
-        run: "pip install pytest pytest-env pytest-mock --only-binary=:all:"
+        run: "pip install pytest pytest-env pytest-mock pytest-timeout --only-binary=:all:"
 
       - name: Run tests for the [${{ matrix.extra.name }}] extra
         shell: bash -el {0}

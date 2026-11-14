@@ -13,12 +13,14 @@ Tests that exercised the old OGR-accepting public surface
 longer exist.
 """
 
+import warnings
 from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
 import pytest
 from geopandas.geodataframe import GeoDataFrame
+from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from pyramids.dataset import Dataset
@@ -419,6 +421,58 @@ class TestConcat:
         fc_b = GeoDataFrame({"v": [2]}, geometry=[_Pt(1, 1)], crs="EPSG:4326")
 
         result = fc_a.concat(fc_b)
+        assert result.epsg == 4326
+        assert len(result) == 2
+
+    def test_concat_matching_crs_does_not_warn(self):
+        """concat() re-stamps a matching CRS without geopandas' CRS-override warning.
+
+        Test scenario:
+            Both sides already carry the same CRS, so the CRS-agreement check
+            passes and concat() re-stamps it on the combined frame. The raw
+            ``.crs =`` setter warns on *every* override, even a same-value one;
+            ``set_crs(allow_override=True)`` does not. Turn that one warning
+            into an error so a regression back to the raw setter fails here
+            instead of only adding log noise. ``category=Warning`` (not a
+            specific subclass): geopandas changed this warning's category from
+            ``DeprecationWarning`` (<=1.1.x) to ``FutureWarning`` (1.2.0) without
+            changing the message, so pinning either subclass is version-fragile.
+        """
+        fc_a = FeatureCollection(
+            GeoDataFrame({"v": [1]}, geometry=[Point(0, 0)], crs="EPSG:4326")
+        )
+        fc_b = GeoDataFrame({"v": [2]}, geometry=[Point(1, 1)], crs="EPSG:4326")
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error", message="Overriding the CRS", category=Warning
+            )
+            result = fc_a.concat(fc_b)
+
+        assert result.epsg == 4326
+        assert len(result) == 2
+
+    def test_concat_none_crs_on_self_does_not_warn(self):
+        """concat() adopting other's CRS onto a None-CRS self also stays silent.
+
+        Test scenario:
+            ``self.crs`` is the operand actually checked (``self.crs if self.crs
+            is not None else other.crs``), but ``pd.concat`` already infers
+            ``other``'s non-None CRS onto the combined frame before concat()'s
+            explicit re-stamp runs -- so this is a same-value override too, and
+            the raw ``.crs =`` setter would warn on it exactly as it does when
+            both sides are non-None. Same regression guard as
+            test_concat_matching_crs_does_not_warn, for the other operand.
+        """
+        fc_a = FeatureCollection(GeoDataFrame({"v": [1]}, geometry=[Point(0, 0)]))
+        fc_b = GeoDataFrame({"v": [2]}, geometry=[Point(1, 1)], crs="EPSG:4326")
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error", message="Overriding the CRS", category=Warning
+            )
+            result = fc_a.concat(fc_b)
+
         assert result.epsg == 4326
         assert len(result) == 2
 

@@ -396,7 +396,8 @@ class TestSpatialWithUgridConventionNc:
     """Integration tests using the UGRID convention NC UGRID file."""
 
     @pytest.fixture(scope="class")
-    def ugrid_ds(self, ugrid_convention_nc_path):
+    @classmethod
+    def ugrid_ds(cls, ugrid_convention_nc_path):
         """Load UGRID convention NC dataset once for the class.
 
         Returns:
