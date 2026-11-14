@@ -129,6 +129,35 @@ class TestReduceMinCount:
         )
         assert np.isnan(out[1][0]), f"group h (one sample) gated, got {out[1]}"
 
+    def test_declared_no_data_excluded_and_rendered(self):
+        """A declared sentinel is excluded from the count and rendered in a gated cell.
+
+        Test scenario:
+            With nodata=-9999, face 0 is [5, -9999, -9999] (one valid after the
+            sentinel is masked); collapsing with min_count=2 gates it and the cell
+            holds -9999 (not NaN), matching NetCDF.reduce. Face 1 [1, 2, 3] is kept.
+        """
+        mesh = _temporal(np.array([[5.0, 1.0], [-9999.0, 2.0], [-9999.0, 3.0]]))
+        mesh["d"].nodata = -9999.0
+        out = mesh.reduce("mean", min_count=2)["d"].data
+        assert out[0] == -9999.0, f"gated face holds the declared no-data, got {out[0]}"
+        assert out[1] == 2.0, f"three-sample face kept, got {out[1]}"
+
+    def test_declared_no_data_gates_grouped_path(self):
+        """The grouped mesh path also excludes the sentinel and renders no-data.
+
+        Test scenario:
+            nodata=-9999, grouped ["g", "g", "h"]: group h has only a sentinel for
+            face 0, so it is gated to -9999 at min_count=1.
+        """
+        mesh = _temporal(np.array([[1.0, 1.0], [3.0, 1.0], [-9999.0, 1.0]]))
+        mesh["d"].nodata = -9999.0
+        out = mesh.reduce("mean", groupby=["g", "g", "h"], min_count=1)["d"].data
+        assert out[0].tolist() == [2.0, 1.0], f"group g kept, got {out[0]}"
+        assert out[1][0] == -9999.0, (
+            f"group h sentinel-only face gated, got {out[1][0]}"
+        )
+
     @pytest.mark.parametrize(
         "bad, exc", [(-1, ValueError), (2.5, TypeError), (True, TypeError)]
     )

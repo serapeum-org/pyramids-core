@@ -1501,18 +1501,19 @@ class DatasetCollection:
                 whole-window bucket. A tz-aware ``Timestamp`` is accepted for a
                 tz-aware index: bucketing runs in UTC, and window labels are
                 returned in the index's timezone.
-            min_count: Minimum number of valid (non-``NaN``) samples a window needs
-                for a cell to carry a value; a window with fewer resolves to ``NaN``
-                (the float no-data) instead of a statistic computed from too few
-                samples — so a month built from one of ~30 expected daily inputs is
-                emitted as missing rather than a confident-looking value. ``0``
-                (default) gates nothing and leaves today's behaviour unchanged. Only
-                meaningful with ``skipna=True`` (ignored otherwise). Consistent with
-                this method's gap model, "valid" counts **non-``NaN``** cells only:
-                a declared numeric sentinel is an ordinary value here (:attr:`data`
-                does not mask it), so it counts as a valid sample — NaN-fill such
-                gaps first if they should count as missing. Mirrors the ``min_count``
-                of :meth:`pandas.DataFrame.sum` / :meth:`xarray.DataArray.sum`,
+            min_count: Minimum number of valid samples a window needs for a cell to
+                carry a value; a window with fewer resolves to ``NaN`` (the float
+                no-data) instead of a statistic computed from too few samples. ``0``
+                (default) gates nothing and leaves today's behaviour unchanged, and
+                it is only meaningful with ``skipna=True`` (ignored otherwise).
+                Consistent with this method's gap model, "valid" counts
+                **non-``NaN``** cells only: a declared numeric sentinel is an
+                ordinary value here (:attr:`data` does not mask it), so it counts as
+                a valid sample — encode gaps as ``NaN`` (NaN-fill a sentinel first)
+                for them to count as missing. Given NaN gaps, this emits a window
+                built from one of ~30 expected daily inputs as missing rather than a
+                confident-looking value. Mirrors the ``min_count`` of
+                :meth:`pandas.DataFrame.sum` / :meth:`xarray.DataArray.sum`,
                 generalised here to every op.
 
         Returns:
