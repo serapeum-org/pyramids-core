@@ -75,11 +75,8 @@ class TestPackedNoDataMasking:
         arr = out.read_array().ravel()
         valid = arr[[0, 1, 2, 4, 5]]
         assert np.isclose(arr[3], out.no_data_value[0]), "the gap must stay no-data"
-        assert valid.min() == pytest.approx(0.0) and valid.max() == pytest.approx(
-            1.0
-        ), (
-            f"valid cells must span [0, 1] from the real values only; got {valid.tolist()}"
-        )
+        assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
+        assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
     def test_match_histogram_excludes_packed_gap(self):
         """Histogram matching drops the packed gap from both distributions.
@@ -124,9 +121,8 @@ class TestPackedNoDataMasking:
         arr = ds.percentile_stretch(0, 100).read_array().ravel()
         valid = arr[[0, 1, 2, 4]]
         assert np.isclose(arr[3], -9999.0), "unpacked gap must stay no-data"
-        assert valid.min() == pytest.approx(0.0) and valid.max() == pytest.approx(
-            1.0
-        ), f"valid cells must span [0, 1]; got {valid.tolist()}"
+        assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
+        assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
     def test_percentile_stretch_nan_cells_excluded(self):
         """NaN cells are dropped via ``isfinite`` and do not enter the percentiles.
@@ -145,9 +141,8 @@ class TestPackedNoDataMasking:
         assert np.isclose(arr[2], out.no_data_value[0]), (
             "the NaN cell must become no-data"
         )
-        assert valid.min() == pytest.approx(0.0) and valid.max() == pytest.approx(
-            1.0
-        ), f"finite cells must span [0, 1]; got {valid.tolist()}"
+        assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
+        assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
     def test_match_histogram_excludes_unpacked_reference_gap(self):
         """The reference band's physical sentinel is used, for any packing of the reference.
@@ -213,7 +208,10 @@ class TestPackedNoDataMasking:
         assert nodata == 2, (
             f"output no-data must be the stored sentinel 2, got {nodata}"
         )
-        assert np.isclose(arr[1], 0.5) and not np.isclose(arr[1], nodata), (
-            f"a valid 0.5 result must not collide with the output no-data; arr={arr.tolist()}"
+        assert np.isclose(arr[1], 0.5), (
+            f"expected a valid 0.5 result; arr={arr.tolist()}"
+        )
+        assert not np.isclose(arr[1], nodata), (
+            f"the valid 0.5 result must not collide with output no-data {nodata}"
         )
         assert np.isclose(arr[3], nodata), "the packed gap stays no-data"
