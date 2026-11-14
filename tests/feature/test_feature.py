@@ -13,6 +13,7 @@ Tests that exercised the old OGR-accepting public surface
 longer exist.
 """
 
+import warnings
 from pathlib import Path
 from typing import List, Tuple
 
@@ -419,6 +420,33 @@ class TestConcat:
         fc_b = GeoDataFrame({"v": [2]}, geometry=[_Pt(1, 1)], crs="EPSG:4326")
 
         result = fc_a.concat(fc_b)
+        assert result.epsg == 4326
+        assert len(result) == 2
+
+    def test_concat_matching_crs_does_not_warn(self):
+        """concat() re-stamps a matching CRS without geopandas' CRS-override warning.
+
+        Test scenario:
+            Both sides already carry the same CRS, so the CRS-agreement check
+            passes and concat() re-stamps it on the combined frame. The raw
+            ``.crs =`` setter warns on *every* override, even a same-value one;
+            ``set_crs(allow_override=True)`` does not. Turn that one warning
+            into an error so a regression back to the raw setter fails here
+            instead of only adding log noise.
+        """
+        from shapely.geometry import Point as _Pt
+
+        fc_a = FeatureCollection(
+            GeoDataFrame({"v": [1]}, geometry=[_Pt(0, 0)], crs="EPSG:4326")
+        )
+        fc_b = GeoDataFrame({"v": [2]}, geometry=[_Pt(1, 1)], crs="EPSG:4326")
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error", message="Overriding the CRS", category=DeprecationWarning
+            )
+            result = fc_a.concat(fc_b)
+
         assert result.epsg == 4326
         assert len(result) == 2
 
