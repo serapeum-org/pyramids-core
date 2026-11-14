@@ -37,7 +37,7 @@ def with_coordinates(fc: FeatureCollection) -> FeatureCollection:
         gpd.GeoDataFrame(fc, copy=True), geom_type="multipolygon"
     )
     gdf = _geom._explode_multipart(gdf, geom_type="geometrycollection")
-    result = type(fc)(gdf)
+    result: FeatureCollection = type(fc)(gdf)
     result["x"] = result.apply(
         _geom._get_coords, geom_col="geometry", coord_type="x", axis=1
     )
