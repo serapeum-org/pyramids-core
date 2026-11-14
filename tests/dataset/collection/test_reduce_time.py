@@ -1044,3 +1044,125 @@ class TestReduceTimeInMemory:
         )
         with pytest.raises(AlignmentError, match="shape"):
             _ = col.data
+
+
+class TestReduceTimeMinCount:
+    """`reduce_time(min_count=)` gates a window with too few valid samples."""
+
+    @pytest.fixture
+    def sparse_scenes(self):
+        """3 daily 2x2 scenes: pixel (0,0) has one valid cell, (1,1) has three.
+
+        Pixel (0,0) is `[5, NaN, NaN]` (one valid sample); pixel (1,1) is
+        `[1, 2, 3]` (three). All three days fall in one January month, so a
+        `freq="1MS"` reduction yields a single window.
+
+        Returns:
+            DatasetCollection: an in-memory 3-timestep collection.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        stacks = [np.full((2, 2), np.nan, dtype="float32") for _ in range(3)]
+        stacks[0][0, 0] = 5.0
+        for i in range(3):
+            stacks[i][1, 1] = float(i + 1)
+        scenes = [
+            Dataset.from_array(stacks[i], no_data_value=np.nan, geo_ref=geo)
+            for i in range(3)
+        ]
+        return DatasetCollection(scenes[0], time_length=3, datasets=scenes)
+
+    @pytest.fixture
+    def jan_times(self):
+        """Three consecutive January days."""
+        return pd.date_range("2022-01-01", periods=3, freq="1D")
+
+    @requires_lazy
+    def test_min_count_zero_keeps_sparse_pixel(self, sparse_scenes, jan_times):
+        """min_count=0 (default behaviour) leaves a one-sample window untouched.
+
+        Test scenario:
+            The one-valid-sample pixel reduces to that value, as it does today.
+        """
+        arr = sparse_scenes.reduce_time(jan_times, freq="1MS", op="mean", min_count=0)[
+            0
+        ][1].read_array()
+        assert arr[0, 0] == pytest.approx(5.0), "one-sample pixel kept at min_count=0"
+        assert arr[1, 1] == pytest.approx(2.0), "three-sample pixel is mean(1,2,3)"
+
+    @requires_lazy
+    def test_min_count_gates_sparse_pixel(self, sparse_scenes, jan_times):
+        """min_count above the sample count sets the sparse pixel to NaN.
+
+        Test scenario:
+            min_count=2 drops the one-sample pixel to NaN while the three-sample
+            pixel keeps its mean.
+        """
+        arr = sparse_scenes.reduce_time(jan_times, freq="1MS", op="mean", min_count=2)[
+            0
+        ][1].read_array()
+        assert np.isnan(arr[0, 0]), "one-sample pixel gated to NaN at min_count=2"
+        assert arr[1, 1] == pytest.approx(2.0), "three-sample pixel unaffected"
+
+    @requires_lazy
+    def test_min_count_gates_holistic_op(self, sparse_scenes, jan_times):
+        """min_count applies uniformly to a holistic op (median), not just the mean.
+
+        Test scenario:
+            op='median', min_count=2 gates the one-sample pixel to NaN.
+        """
+        arr = sparse_scenes.reduce_time(
+            jan_times, freq="1MS", op="median", min_count=2
+        )[0][1].read_array()
+        assert np.isnan(arr[0, 0]), "median one-sample pixel gated at min_count=2"
+        assert arr[1, 1] == pytest.approx(2.0), "median of 1,2,3 is 2"
+
+    @requires_lazy
+    def test_min_count_ignored_without_skipna(self, sparse_scenes, jan_times):
+        """Under skipna=False the gate is not applied.
+
+        Test scenario:
+            The three-sample pixel keeps its mean with a large min_count when
+            skipna=False (the one-sample pixel is NaN anyway because a gap
+            propagates without skipna).
+        """
+        arr = sparse_scenes.reduce_time(
+            jan_times, freq="1MS", op="mean", skipna=False, min_count=99
+        )[0][1].read_array()
+        assert arr[1, 1] == pytest.approx(2.0), "full pixel kept; min_count ignored"
+
+    @requires_lazy
+    def test_min_count_boundary_keeps_exact(self, jan_times):
+        """A window with exactly min_count valid samples is kept (>=, not >).
+
+        Test scenario:
+            A pixel with two valid samples and min_count=2 keeps its mean.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
+        stacks = [np.full((1, 1), np.nan, dtype="float32") for _ in range(3)]
+        stacks[0][0, 0] = 10.0
+        stacks[1][0, 0] = 20.0
+        scenes = [
+            Dataset.from_array(s, no_data_value=np.nan, geo_ref=geo) for s in stacks
+        ]
+        coll = DatasetCollection(scenes[0], time_length=3, datasets=scenes)
+        arr = coll.reduce_time(jan_times, freq="1MS", op="mean", min_count=2)[0][
+            1
+        ].read_array()
+        assert arr[0, 0] == pytest.approx(15.0), "exactly-at-threshold window kept"
+
+    @requires_lazy
+    @pytest.mark.parametrize(
+        "bad, exc", [(-1, ValueError), (2.5, TypeError), (True, TypeError)]
+    )
+    def test_invalid_min_count_raises(self, sparse_scenes, jan_times, bad, exc):
+        """A negative or non-integer min_count is rejected up front.
+
+        Args:
+            bad: The invalid min_count.
+            exc: The expected exception type.
+
+        Test scenario:
+            -1 raises ValueError; a float and a bool raise TypeError.
+        """
+        with pytest.raises(exc, match="min_count"):
+            sparse_scenes.reduce_time(jan_times, freq="1MS", op="mean", min_count=bad)
