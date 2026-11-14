@@ -170,15 +170,14 @@ jobs:
         extra:
           - { name: viz,          pip_extra: "viz",          marker: "plot",         dir: "tests/" }
           - { name: parquet,      pip_extra: "parquet",      marker: "parquet",      dir: "tests/feature" }
-          # The lazy/dask engine was extracted to the pyramids-lazy plugin (#1455). A pure-wheel
-          # `[lazy]` / `[parquet]` install carries the raw libs but NO compute backend, and
-          # pyramids-lazy is not on PyPI to install here — so the backend-gated suites (lazy,
-          # netcdf_lazy, interop, parquet_lazy) were relocated to the plugin and cannot run in a
-          # bare-core wheel. What such an install must still guarantee is tested instead: every lazy
-          # op raises the branded "install pyramids-lazy" error. This mirrors the pixi
-          # `bare_core_contract` job; the suite runs by path (no marker). Add a backend-installing
-          # lazy row back once pyramids-lazy ships on PyPI.
-          - { name: lazy_absent,  pip_extra: "lazy",         marker: "",             dir: "tests/base/test_lazy_backend_absent.py" }
+          # The lazy/dask engine was extracted to the pyramids-lazy plugin (#1455); the backend-gated
+          # suites (lazy, netcdf_lazy, interop, parquet_lazy) live in the plugin and run against it
+          # there and in core's pixi `lazy`/`dev` envs. What a bare-core wheel must still guarantee is
+          # tested here: with NO backend installed, every lazy op raises the branded "install
+          # pyramids-lazy" error. The suite forces the absent state via monkeypatch and runs by path
+          # (no marker), so this row installs bare core (empty pip_extra) -- note `[lazy]` now installs
+          # pyramids-lazy itself, which would defeat an "absent" row.
+          - { name: lazy_absent,  pip_extra: "",             marker: "",             dir: "tests/base/test_lazy_backend_absent.py" }
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -219,7 +218,11 @@ jobs:
         shell: bash -el {0}
         run: |
           WHEEL=$(ls dist/*.whl)
-          pip install "${WHEEL}[${{ matrix.extra.pip_extra }}]" --only-binary=:all:
+          if [ -n "${{ matrix.extra.pip_extra }}" ]; then
+            pip install "${WHEEL}[${{ matrix.extra.pip_extra }}]" --only-binary=:all:
+          else
+            pip install "${WHEEL}" --only-binary=:all:
+          fi
           # Peer interop deps that are not pyramids extras, installed by name.
           if [ -n "${{ matrix.extra.extra_pip }}" ]; then
             pip install "${{ matrix.extra.extra_pip }}" --only-binary=:all:
