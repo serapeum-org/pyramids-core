@@ -1151,6 +1151,43 @@ class TestReduceTimeMinCount:
         assert arr[0, 0] == pytest.approx(15.0), "exactly-at-threshold window kept"
 
     @requires_lazy
+    def test_declared_sentinel_counts_as_valid_sample(self, jan_times):
+        """On reduce_time a numeric sentinel is data, so min_count does not gate it.
+
+        Test scenario:
+            A window [10, -9999, -9999] (no-data -9999) keeps three "valid"
+            samples because the collection cube treats the sentinel as an ordinary
+            value, so min_count=2 does not gate it; the same window with NaN gaps
+            ([10, NaN, NaN]) is gated. Documents the per-surface gap model (NetCDF
+            masks the sentinel, reduce_time does not).
+        """
+        geo = GeoReference(top_left_corner=(0.0, 1.0), cell_size=1.0, epsg=4326)
+
+        def _coll(col):
+            scenes = [
+                Dataset.from_array(
+                    np.array([[col[i]]], dtype="float32"),
+                    no_data_value=-9999.0,
+                    geo_ref=geo,
+                )
+                for i in range(3)
+            ]
+            return DatasetCollection(scenes[0], time_length=3, datasets=scenes)
+
+        sentinel = (
+            _coll([10.0, -9999.0, -9999.0])
+            .reduce_time(jan_times, freq="1MS", op="mean", min_count=2)[0][1]
+            .read_array()
+        )
+        assert not np.isnan(sentinel[0, 0]), "sentinel counts as data, so not gated"
+        nan_gaps = (
+            _coll([10.0, np.nan, np.nan])
+            .reduce_time(jan_times, freq="1MS", op="mean", min_count=2)[0][1]
+            .read_array()
+        )
+        assert np.isnan(nan_gaps[0, 0]), "NaN gaps leave one sample, so gated"
+
+    @requires_lazy
     @pytest.mark.parametrize(
         "bad, exc", [(-1, ValueError), (2.5, TypeError), (True, TypeError)]
     )

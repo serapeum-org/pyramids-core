@@ -232,9 +232,12 @@ def build_group_reduction(
             (``0 < q <= 1``); ``None`` otherwise.
         x: The window's ``(n_t,)`` numeric day offsets, for the trend ops only.
         min_count: When above ``0`` and ``skipna`` is ``True``, a cell whose window holds
-            fewer than ``min_count`` valid (non-NaN) samples is set to ``NaN`` rather than a
-            statistic derived from too few samples. ``0`` (default) gates nothing, and the
-            gate is skipped under ``skipna=False`` (a gap already propagates there).
+            fewer than ``min_count`` valid samples is set to ``NaN`` rather than a statistic
+            derived from too few samples. "Valid" is counted as **non-NaN on the raw group**
+            (``~isnan``): a declared numeric sentinel in the cube is *not* excluded here —
+            the caller's cube treats it as data — so it counts as a valid sample. ``0``
+            (default) gates nothing, and the gate is skipped under ``skipna=False`` (a gap
+            already propagates there).
 
     Returns:
         The lazy ``(band, rows, cols)`` dask reduction for this window.

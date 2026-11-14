@@ -1507,9 +1507,13 @@ class DatasetCollection:
                 samples — so a month built from one of ~30 expected daily inputs is
                 emitted as missing rather than a confident-looking value. ``0``
                 (default) gates nothing and leaves today's behaviour unchanged. Only
-                meaningful with ``skipna=True`` (ignored otherwise); mirrors the
-                ``min_count`` of :meth:`pandas.DataFrame.sum` /
-                :meth:`xarray.DataArray.sum`, generalised here to every op.
+                meaningful with ``skipna=True`` (ignored otherwise). Consistent with
+                this method's gap model, "valid" counts **non-``NaN``** cells only:
+                a declared numeric sentinel is an ordinary value here (:attr:`data`
+                does not mask it), so it counts as a valid sample — NaN-fill such
+                gaps first if they should count as missing. Mirrors the ``min_count``
+                of :meth:`pandas.DataFrame.sum` / :meth:`xarray.DataArray.sum`,
+                generalised here to every op.
 
         Returns:
             list[tuple[Any, Dataset]]: ``(window_label, dataset)`` pairs, one
