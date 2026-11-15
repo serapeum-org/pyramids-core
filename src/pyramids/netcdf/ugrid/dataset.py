@@ -5980,17 +5980,22 @@ class MeshDataset(_MeshFacades):
         topology carries none, so the dataset is the only CRS source. Setting
         ``glyph.crs`` lets a downstream ``glyph.add_tiles()`` / ``add_features()`` /
         ``add_relief()`` default to the data CRS instead of cleopatra's EPSG:3857
-        fallback. An already-set ``glyph.crs`` is left untouched.
+        fallback. The EPSG code is used when the CRS has one; a projected CRS with no
+        EPSG authority code (ESRI / custom projections) falls back to the CRS WKT,
+        which cleopatra's ``crs`` setter also accepts. An already-set ``glyph.crs`` is
+        left untouched.
 
         Args:
             glyph: The ``MeshGlyph`` returned by a cleopatra render call.
 
         Returns:
-            The same glyph, with ``crs`` set to ``self.epsg`` when the dataset has a
-            CRS and the glyph did not already carry one.
+            The same glyph, with ``crs`` set to the dataset CRS (``self.epsg`` when it
+            has an EPSG code, else ``self.crs_wkt``) when the dataset has a CRS and the
+            glyph did not already carry one.
         """
-        if self.epsg is not None and hasattr(glyph, "crs") and glyph.crs is None:
-            glyph.crs = self.epsg
+        crs_source = self.epsg if self.epsg is not None else self.crs_wkt
+        if crs_source is not None and hasattr(glyph, "crs") and glyph.crs is None:
+            glyph.crs = crs_source
         return glyph
 
     def plot(
@@ -6067,10 +6072,10 @@ class MeshDataset(_MeshFacades):
 
         Returns:
             cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph instance with the plot
-                rendered, carrying the dataset CRS (``glyph.crs == self.epsg``)
-                so a downstream ``glyph.add_tiles()`` projects correctly. Use
-                the returned object to access the matplotlib handles and the
-                mappable:
+                rendered, carrying the dataset CRS (the EPSG code, or the CRS
+                WKT when there is no EPSG) so a downstream ``glyph.add_tiles()``
+                projects correctly. Use the returned object to access the
+                matplotlib handles and the mappable:
 
                 - ``glyph.fig`` / ``glyph.ax`` — Figure and Axes.
                 - ``glyph.im`` — the mesh mappable (the
@@ -6467,8 +6472,8 @@ class MeshDataset(_MeshFacades):
                 rendered. ``glyph.fig`` / ``glyph.ax`` are the matplotlib
                 handles; ``glyph.im`` is ``None`` (an outline carries no
                 scalar mapping, so no mappable is produced). The glyph carries
-                the dataset CRS (``glyph.crs == self.epsg``) so a downstream
-                ``glyph.add_tiles()`` projects correctly.
+                the dataset CRS (the EPSG code, or the CRS WKT when there is no
+                EPSG) so a downstream ``glyph.add_tiles()`` projects correctly.
         """
         # `basemap_epsg` is a documented parameter of `plot_mesh_outline`, so passing it
         # here used to collide with the dataset's own CRS ("got multiple values for keyword

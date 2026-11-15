@@ -7,9 +7,14 @@ explicit ``crs=`` gets cleopatra's EPSG:3857 default and a misplaced backdrop.
 """
 
 import numpy as np
+import pyproj
 import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
+
+_CUSTOM_WKT = pyproj.CRS.from_proj4(
+    "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+).to_wkt()
 
 matplotlib.use("Agg")
 
@@ -47,6 +52,21 @@ class TestGlyphCarriesDatasetCRS:
         glyph = _mesh(28992).plot("d")
         assert glyph.crs == 28992, f"expected glyph.crs==28992, got {glyph.crs!r}"
 
+    def test_projected_crs_without_epsg_uses_wkt(self):
+        """A projected CRS with no EPSG code tags the glyph with the WKT, not ``None``.
+
+        ``MeshDataset.epsg`` is ``None`` for a custom/ESRI projection, but ``crs_wkt`` is
+        populated; the glyph must still carry a CRS so a downstream ``add_tiles()`` does not
+        fall back to EPSG:3857 and misproject.
+        """
+        ds = _mesh(28992)
+        ds.set_crs(crs=_CUSTOM_WKT)
+        assert ds.epsg is None, (
+            "precondition: the custom CRS has no EPSG authority code"
+        )
+        glyph = ds.plot_outline()
+        assert glyph.crs == _CUSTOM_WKT, f"expected the CRS WKT, got {glyph.crs!r}"
+
     def test_no_crs_when_dataset_has_none(self):
         """A dataset without a CRS leaves ``glyph.crs`` as ``None`` (no spurious default).
 
@@ -56,6 +76,7 @@ class TestGlyphCarriesDatasetCRS:
 
         class _NoCrsDataset:
             epsg = None
+            crs_wkt = None
 
         class _Glyph:
             crs = None
