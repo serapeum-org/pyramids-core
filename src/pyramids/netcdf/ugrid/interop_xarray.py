@@ -145,6 +145,12 @@ def _connectivity_from_disk(
         A :class:`Connectivity` with 0-indexed data and ``-1`` fill.
     """
     start_index = int(attrs.get("start_index", 0))
+    # When CF decoding has already consumed `_FillValue` (moving it from `attrs` into
+    # `.encoding`), `attrs.get("_FillValue")` is None and `raw_fill` falls back to this
+    # module's own on-disk sentinel. In that case `raw_fill`'s exact value only matters as a
+    # cast-safe placeholder below -- correctness for those cells comes from `nan_mask`, not
+    # from this comparison -- so this fallback cannot recover a *different* non-default fill
+    # value from a foreign (non-pyramids-written) file once CF decoding has stripped it out.
     raw_fill = attrs.get("_FillValue")
     raw_fill = int(raw_fill) if raw_fill is not None else _FILE_FILL
 
@@ -158,7 +164,8 @@ def _connectivity_from_disk(
         # the sentinel back in before casting -- otherwise the cast is undefined (warns,
         # and produces platform-dependent garbage instead of a sentinel the mask below
         # would recognize).
-        raw_array = np.where(nan_mask, raw_fill, raw_array)
+        raw_array = raw_array.copy()
+        raw_array[nan_mask] = raw_fill
 
     data = raw_array.astype(np.intp)
     mask = data == raw_fill
