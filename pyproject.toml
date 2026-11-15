@@ -282,7 +282,7 @@ markers = [
     # auto-skips when the extra's headline dep isn't importable — see
     # ``tests/_marks.py`` + ``pytest_collection_modifyitems``. ``viz`` is
     # spelled ``plot`` above; don't register a duplicate.
-    "lazy: tests requiring the [lazy] extra (dask, distributed, zarr, fsspec)",
+    "lazy: tests requiring the [lazy] extra (pyramids-lazy — the dask/zarr backend)",
     "interop: tests requiring the optional interop peer dependency",
     # netcdf_lazy is deliberately NOT folded into lazy: it gates on EXTRA modules beyond the
     # base extra's headline dep, so a test marked merely `lazy` would not skip when
@@ -431,20 +431,6 @@ h5py = ">=3.8.0,<3.17"
 # Without this the solver can pair h5py 3.16 (hdf5 2) with
 # libgdal-netcdf (still hdf5 1) and the env silently breaks on Windows.
 hdf5 = "1.14.*"
-
-# No conda deps: pyarrow comes from core's own `[parquet]` extra (the `parquet` pixi feature maps to
-# the same-named optional-dependencies extra). dask-geopandas is not a core dependency -- it belongs
-# to the lazy vector backend -- so the dev/CI env pulls `pyramids-lazy[parquet]` (which carries both
-# pyarrow and dask-geopandas) to run LazyFeatureCollection's forwarding/protocol contract tests.
-[tool.pixi.feature.parquet.pypi-dependencies]
-pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
-
-[tool.pixi.feature.stac.dependencies]
-# 0.8.4 is the first release carrying Client.collection_search and the
-# COLLECTION_SEARCH / COLLECTION_SEARCH_FREE_TEXT conformance classes that
-# stac/collections.py reads; on 0.8.0-0.8.3 those enum members do not exist, so
-# search_collections raises AttributeError rather than its own clear error.
-pystac-client = ">=0.8.4"
 
 # The `interop` feature installs the peer dependency the to_xarray / from_xarray methods
 # need, for the dev / CI environments only. It is intentionally NOT a
