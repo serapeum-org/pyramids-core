@@ -2296,6 +2296,25 @@ class MeshDataset(_MeshFacades):
                 ```python
                 >>> ds = MeshDataset.open_mfdataset("out/*_map.nc")  # doctest: +SKIP
                 >>> ds.time_values[0], ds.time_values[-1]  # doctest: +SKIP
+
+                ```
+            - Read the same run lazily, one dask chunk per file, then materialise a variable:
+                ```python
+                >>> lazy = MeshDataset.open_mfdataset(  # doctest: +SKIP
+                ...     "out/*_map.nc", chunks={"time": 1}
+                ... )
+                >>> lazy["waterlevel"].compute().shape  # doctest: +SKIP
+
+                ```
+            - Paths are validated before the backend is consulted, so bad input fails the same
+              way eagerly or lazily, and needs no backend installed:
+                ```python
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> MeshDataset.open_mfdataset([], chunks="auto")
+                Traceback (most recent call last):
+                    ...
+                ValueError: open_mfdataset() got an empty list of paths; there is nothing to open.
+
                 ```
         """
         if isinstance(paths, (str, Path)):
