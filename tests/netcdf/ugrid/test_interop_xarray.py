@@ -308,6 +308,32 @@ class TestConnectivityFromDiskNanHandling:
             conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
         )
 
+    def test_nan_fill_value_attr_falls_back_instead_of_raising(self):
+        """A foreign file's ``_FillValue: NaN`` attribute decodes safely, not a crash.
+
+        Test scenario:
+            Unlike a missing ``_FillValue`` (handled by the previous test), a foreign,
+            non-pyramids-written UGRID-CF file can legally declare ``_FillValue: NaN`` in
+            ``attrs`` directly for a float-typed variable (e.g. opened with
+            ``mask_and_scale=False``). ``attrs.get("_FillValue")`` then returns ``NaN``, not
+            ``None``, so the fallback must explicitly detect this case too -- plain
+            ``int(NaN)`` raises ``ValueError``. The NaN fill cell must still decode to ``-1``.
+        """
+        raw_data = np.array([[0.0, 1.0, np.nan]])
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            conn = interop_xarray._connectivity_from_disk(
+                raw_data,
+                attrs={"start_index": 0, "_FillValue": np.nan},
+                cf_role="face_node_connectivity",
+            )
+
+        expected = np.array([[0, 1, -1]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+
 
 class TestMissingXarray:
     """Guarded import wiring when xarray is unavailable."""
@@ -396,7 +422,9 @@ class TestZarrRoundTrip:
             mesh2, _ = interop_xarray.from_zarr(store)
 
         np.testing.assert_array_equal(mesh2.face_node_connectivity.data, internal_faces)
-        assert mesh2.edge_node_connectivity is not None, "edge_node_connectivity did not survive the round trip"
+        assert mesh2.edge_node_connectivity is not None, (
+            "edge_node_connectivity did not survive the round trip"
+        )
         np.testing.assert_array_equal(mesh2.edge_node_connectivity.data, internal_edges)
 
 

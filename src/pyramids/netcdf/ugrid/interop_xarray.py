@@ -151,8 +151,15 @@ def _connectivity_from_disk(
     # cast-safe placeholder below -- correctness for those cells comes from `nan_mask`, not
     # from this comparison -- so this fallback cannot recover a *different* non-default fill
     # value from a foreign (non-pyramids-written) file once CF decoding has stripped it out.
+    # A foreign file can also declare `_FillValue: NaN` directly in `attrs` (valid CF for a
+    # float-typed variable, e.g. opened with `mask_and_scale=False`) -- `int(NaN)` raises, so
+    # that case falls back the same way rather than crashing; `nan_mask` still recognizes those
+    # cells regardless of what `raw_fill` resolves to.
     raw_fill = attrs.get("_FillValue")
-    raw_fill = int(raw_fill) if raw_fill is not None else _FILE_FILL
+    if raw_fill is None or (isinstance(raw_fill, float) and np.isnan(raw_fill)):
+        raw_fill = _FILE_FILL
+    else:
+        raw_fill = int(raw_fill)
 
     raw_array = np.asarray(raw_data)
     nan_mask = (
