@@ -84,10 +84,14 @@ def _cftime_columns(frame: pd.DataFrame) -> list[str]:
 
 # The conda half of this hint names `pyramids-parquet`, not `pyarrow` as it once
 # did. That is a real conda-forge output of the pyramids feedstock (alongside
-# `pyramids`, `pyramids-viz`, `pyramids-lazy` and `pyramids-stac`), and it
-# depends on `pyarrow >=10.0.0` + `dask-geopandas >=0.5.0`, so it installs what
-# the `[parquet]` extra installs -- verified against the feedstock recipe and
-# anaconda.org before the message was switched over.
+# `pyramids`, `pyramids-viz`, `pyramids-lazy` and `pyramids-stac`). It is a
+# SUPERSET of the PyPI `[parquet]` extra now, not an equivalent: checked against
+# anaconda.org on 2026-11-15, pyramids-parquet 0.77.0 depends on
+# `dask-geopandas >=0.5.0` + `pyarrow >=10.0.0` + `pyramids-lazy`, while the PyPI
+# extra is pyarrow only since the lazy vector path moved to the plugin. This hint
+# guards pyarrow alone, which both commands supply, so the message stays correct --
+# but the feedstock recipe is now ahead of the extra and needs reconciling at the
+# next release.
 _PARQUET_INSTALL_HINT = extra_hint(
     "Writing Parquet needs the optional 'pyarrow' dependency.",
     "parquet",
