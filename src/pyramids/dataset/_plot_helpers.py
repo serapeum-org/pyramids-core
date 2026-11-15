@@ -651,7 +651,8 @@ class RenderRequest:
         Raises:
             ValueError: If ``mode.mode`` is not one of the accepted values, if a
                 required mode-specific argument is missing, or if ``basemap`` is
-                truthy while ``basemap_epsg`` is ``None``.
+                truthy while neither ``basemap_epsg`` nor ``basemap_crs_wkt`` yields a
+                usable CRS (see :func:`crs_spec`).
 
         Examples:
             - A default plot request validates silently (returns ``None``):
@@ -1153,8 +1154,9 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
     # Resolve the ``basemap`` argument by type — pyramids web-tile vs cleopatra
     # relief/features layer vs none — into a plan the dispatch below consults.
     # (A non-empty ``dict`` was already deprecated + translated to a ``Basemap``
-    # up front; ``basemap and basemap_epsg is None`` was already rejected, so a
-    # truthy basemap always has a CRS here.)
+    # up front; ``basemap`` with no usable CRS — ``crs_spec(basemap_epsg,
+    # basemap_crs_wkt) is None`` — was already rejected, so a truthy basemap always
+    # has a CRS here.)
     basemap_plan = BasemapPlan.resolve(basemap, basemap_epsg, basemap_crs_wkt)
 
     # Run the plot / animate / facet render call and draw any tile basemap.
@@ -1218,8 +1220,8 @@ def mesh_render(
             :func:`pyramids.netcdf.ugrid.plot.plot_mesh_data` returns.
 
     Raises:
-        ValueError: If ``basemap`` is truthy and ``basemap_epsg`` is
-            ``None``.
+        ValueError: If ``basemap`` is truthy and neither ``basemap_epsg`` nor
+            ``basemap_crs_wkt`` yields a usable CRS (see :func:`crs_spec`).
 
     Examples:
         - Render a single-triangle mesh with face-centred data,
