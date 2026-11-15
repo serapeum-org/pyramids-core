@@ -83,9 +83,8 @@ class TestBasemapWktCrs:
         """A CRS-less FeatureCollection with `basemap=True` still raises (part (b) of #1577)."""
         gdf = gpd.GeoDataFrame({"v": [1]}, geometry=[Point(0, 0)], crs=None)
         fc = FeatureCollection(gdf)
-        assert fc.epsg is None and fc.crs is None, (
-            "precondition: the FC has no CRS at all"
-        )
+        assert fc.epsg is None, "precondition: the FC has no EPSG code"
+        assert fc.crs is None, "precondition: the FC has no WKT either"
         with pytest.raises(CRSError, match="to use basemap"):
             fc.plot(basemap=True)
 
