@@ -580,7 +580,7 @@ class IO(_Engine["Dataset"]):
 
                 When `chunks` is non-None and `dask` is not
                 installed, :class:`ImportError` is raised pointing at
-                the `[lazy]` extra. `window` is **not** supported
+                `pyramids-lazy`. `window` is **not** supported
                 together with `chunks`; raise :class:`ValueError`
                 otherwise.
             lock (optional, keyword-only):

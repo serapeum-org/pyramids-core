@@ -6008,7 +6008,7 @@ class NetCDF(Dataset):
                 :class:`pyramids.dataset.engines.IO.read_array`'s
                 `chunks=` + `window=` rule).
             ImportError: If `chunks` is given but `dask` is not
-                installed. Install the `[lazy]` extra.
+                installed. Install the `pyramids-lazy` backend.
 
         Note:
             Two limitations are specific to the lazy (`chunks`) path:
@@ -8443,7 +8443,7 @@ class NetCDF(Dataset):
     def _materialize_variable_array(var: NetCDF, lazy: bool = False) -> Any:
         """Read a variable as `(*band_dim_sizes, rows, cols)` (or `(rows, cols)`).
 
-        With `lazy=True`, dask (the `[lazy]` extra) installed, and a file-backed variable that still
+        With `lazy=True`, dask (via `pyramids-lazy`) installed, and a file-backed variable that still
         reads as its store, returns a chunked `dask.array` in that same layout without ever holding
         the whole variable in RAM: every operation along a band dimension runs its numpy calls over
         the chunks rather than over one resident array (ARC-47). What that saves depends on the
@@ -9753,7 +9753,7 @@ class NetCDF(Dataset):
 
         Thin forwarder to :func:`pyramids.netcdf._kerchunk_facade.to_kerchunk`
         using `self._file_name` as the source path. Requires the
-        `[lazy]` optional extra.
+        `pyramids-lazy` backend.
 
         Args:
             output_path: Path where the manifest JSON is written.
@@ -9787,7 +9787,7 @@ class NetCDF(Dataset):
 
         Thin forwarder to
         :func:`pyramids.netcdf._kerchunk_facade.combine_kerchunk`. Requires
-        the `[lazy]` optional extra.
+        the `pyramids-lazy` backend.
 
         Args:
             paths: Sequence of NetCDF paths to combine.
@@ -9827,7 +9827,7 @@ class NetCDF(Dataset):
         Thin forwarder to
         :func:`pyramids.netcdf._mfdataset.open_mfdataset`; see that
         function for the full argument contract. Requires the
-        `[lazy]` optional extra.
+        `pyramids-lazy` backend.
 
         Args:
             paths: Glob string, explicit path, or sequence of paths.
@@ -14625,7 +14625,7 @@ class NetCDF(Dataset):
 
         Raises:
             pyramids.base._errors.OptionalPackageDoesNotExist: `xarray` is not installed.
-            ImportError: `chunks` was given but the `[lazy]` (dask) extra is not installed.
+            ImportError: `chunks` was given but `pyramids-lazy` (dask) is not installed.
             ValueError: This container is not multidimensional — open the file with
                 `open_as_multi_dimensional=True`.
 

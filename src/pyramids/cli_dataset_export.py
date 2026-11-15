@@ -70,11 +70,11 @@ def _needs_parquet_extra() -> Iterator[None]:
 
 @contextlib.contextmanager
 def _needs_lazy_extra() -> Iterator[None]:
-    """Remap a missing ``[lazy]`` ``ImportError`` (zarr/dask) to a ``ValueError``.
+    """Remap a missing-backend ``ImportError`` (zarr/dask) to a ``ValueError``.
 
-    ``to_zarr`` imports ``zarr``/``dask`` from the optional ``[lazy]`` extra; its
-    absence raises ``ImportError``, which :func:`pyramids.cli.main` does not catch
-    cleanly. Turn it into a user error naming the extra.
+    ``to_zarr`` imports ``zarr``/``dask``, which ship with the ``pyramids-lazy``
+    backend; their absence raises ``ImportError``, which :func:`pyramids.cli.main` does
+    not catch cleanly. Turn it into a user error naming the package.
     """
     try:
         yield

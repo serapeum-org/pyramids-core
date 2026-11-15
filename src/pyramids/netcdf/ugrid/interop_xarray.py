@@ -790,7 +790,7 @@ def chunked_variables(
     array and no source -- has nothing to chunk and is left out of the result, so the mapping can be
     smaller than the input.
 
-    ``dask`` is optional and imported inside this function; a missing dask raises the ``[lazy]``
+    ``dask`` is optional and imported inside this function; a missing dask raises the backend
     install hint rather than failing with a bare import error.
 
     Args:

@@ -41,7 +41,7 @@ def _resolve_store(
     returned unchanged.
 
     Raises:
-        OptionalPackageDoesNotExist: When ``storage_options`` is given but ``zarr`` (the ``[lazy]`` /
+        OptionalPackageDoesNotExist: When ``storage_options`` is given but ``zarr`` (part of the
             ``pyramids-lazy`` stack) is not installed, so the branded install hint is surfaced rather
             than a bare ``ModuleNotFoundError``.
     """

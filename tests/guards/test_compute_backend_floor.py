@@ -1,8 +1,8 @@
-"""Guard the ``[lazy]`` extra's floor against a compute-backend seam bump.
+"""Guard the ``pyramids-lazy`` floor against a compute-backend seam bump.
 
 Core publishes :data:`COMPUTE_BACKEND_API_VERSION` and rejects any backend declaring an
 older ``api_version``, telling the user to upgrade the plugin. But what pip actually
-resolves is the floor in the ``[lazy]`` extra, and that floor is unbounded on both sides:
+resolves is the declared floor, and that floor is unbounded on both sides:
 ``pyramids-lazy>=0.1.0`` here, ``pyramids-core>=0.79.0`` there, with nothing linking
 either to the seam version.
 
@@ -30,7 +30,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 
 # The first pyramids-lazy release implementing each core compute-backend api_version.
 # When COMPUTE_BACKEND_API_VERSION is bumped, add the release that implements the new
-# version here and raise the [lazy] extra's floor to match. Verified for 0.1.0 against the
+# version here and raise the lazy group's floor to match. Verified for 0.1.0 against the
 # installed wheel: require_compute_backend().api_version == 2.
 FIRST_PLUGIN_RELEASE: dict[int, str] = {2: "0.1.0"}
 
@@ -63,7 +63,7 @@ def test_the_current_seam_version_has_a_recorded_plugin_release():
     assert COMPUTE_BACKEND_API_VERSION in FIRST_PLUGIN_RELEASE, (
         f"COMPUTE_BACKEND_API_VERSION is {COMPUTE_BACKEND_API_VERSION}, which has no "
         f"recorded pyramids-lazy release. Add it to FIRST_PLUGIN_RELEASE and raise the "
-        f"[lazy] extra's floor, or pip will resolve a plugin core then rejects."
+        f"lazy group's floor, or the envs will resolve a plugin core then rejects."
     )
 
 

@@ -997,7 +997,7 @@ def _load_zarr(href: str):
         A :class:`DatasetCollection` for a 4-D cube, else a :class:`Dataset`.
 
     Raises:
-        OptionalPackageDoesNotExist: When the `[lazy]` extra (zarr) is missing.
+        OptionalPackageDoesNotExist: When `pyramids-lazy` (zarr) is missing.
         TypeError: The detected data variable is a group rather than an array.
     """
     import_zarr(

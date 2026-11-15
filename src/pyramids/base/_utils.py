@@ -1242,7 +1242,7 @@ def require_optional(module_name: str, message: str, *, return_module: bool = Fa
         module_name: Dotted module path to import, e.g. ``"zarr"`` or
             ``"cleopatra.basemap.tiles"``.
         message: The install hint raised when the import fails. Compose it with
-            :func:`lazy_extra_hint` for the ``[lazy]`` extra.
+            :func:`lazy_backend_hint` for the lazy backend.
         return_module: When `True` the imported module object is returned so the
             caller can use it without a bare inline import of its own. The
             guard-only callers leave it `False` and get `None`.
@@ -1408,6 +1408,11 @@ def lazy_backend_hint(lead: str) -> str:
             False
 
             ```
+
+    See Also:
+        extra_hint: The two-line composer for one of core's own extras.
+        lazy_extra_hint: The superseded lazy form, kept only for
+            pyramids-lazy <= 0.1.0.
     """
     return f"{lead} Install it with:\n  - PyPI:        pip install pyramids-lazy"
 
@@ -1542,8 +1547,10 @@ def extra_hint(lead: str, extra: str) -> str:
             ```
 
     See Also:
-        lazy_extra_hint: The named case of this composer for the `[lazy]`
-            extra, kept because a dozen call sites read better with it.
+        lazy_backend_hint: The hint for the lazy backend, which is a plugin rather
+            than one of core's extras, so it names `pyramids-lazy` instead.
+        lazy_extra_hint: The superseded lazy form, kept only for pyramids-lazy
+            <= 0.1.0.
     """
     return (
         f"{lead} Install with one of:\n"
@@ -1578,7 +1585,7 @@ def import_stac_asset(message: str):
 
 
 def import_dask(message: str):
-    """Import and return the ``dask`` module, or raise the ``[lazy]`` extra hint.
+    """Import and return the ``dask`` module, or raise the backend install hint.
 
     Returned so callers can use ``dask`` without a bare inline ``import`` of
     their own (dask is optional, so it cannot be a top-level import). Callers

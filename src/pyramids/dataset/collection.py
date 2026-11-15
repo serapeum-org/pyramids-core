@@ -2871,7 +2871,7 @@ class DatasetCollection:
             cube lazily from the store and whose ``time_length`` matches it.
 
         Raises:
-            OptionalPackageDoesNotExist: When the ``[lazy]`` extra is missing.
+            OptionalPackageDoesNotExist: When the ``pyramids-lazy`` backend is missing.
         """
         # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
         # OptionalPackageDoesNotExist when no backend is installed.
@@ -4212,7 +4212,7 @@ class DatasetCollection:
                 applies it immediately. `False` returns a dask `Delayed`
                 that produces the result when computed, so several
                 operations can be chained and run once; it needs the
-                optional `[lazy]` extra.
+                `pyramids-lazy` backend.
 
         Returns:
             DatasetCollection | None | Delayed: A new collection when
@@ -4640,7 +4640,7 @@ class DatasetCollection:
                 applies it immediately. `False` returns a dask `Delayed`
                 that produces the result when computed, so several
                 operations can be chained and run once; it needs the
-                optional `[lazy]` extra.
+                `pyramids-lazy` backend.
 
         Returns:
             DatasetCollection | None | Delayed: A new collection when

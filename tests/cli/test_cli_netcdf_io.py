@@ -353,7 +353,9 @@ class TestLazyExtraContract:
         err = capsys.readouterr().err
         assert rc == 1, "a missing extra must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
-        assert "[lazy]" in err, f"error should name the [lazy] extra, got: {err!r}"
+        assert "pip install pyramids-lazy" in err, (
+            f"error should name the backend install command, got: {err!r}"
+        )
 
     def test_to_kerchunk_missing_extra_is_clean(self, monkeypatch, tmp_path, capsys):
         """A raw ImportError from to_kerchunk becomes a clean one-line error."""
@@ -362,4 +364,6 @@ class TestLazyExtraContract:
         err = capsys.readouterr().err
         assert rc == 1, "a missing extra must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
-        assert "[lazy]" in err, f"error should name the [lazy] extra, got: {err!r}"
+        assert "pip install pyramids-lazy" in err, (
+            f"error should name the backend install command, got: {err!r}"
+        )
