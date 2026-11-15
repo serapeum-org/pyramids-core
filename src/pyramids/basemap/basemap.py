@@ -198,9 +198,9 @@ def add_basemap(
     # method (the module-level `tiles.add_tiles` is now private `_add_tiles`).
     # `add_basemap` works from a bare Axes, so drive the method through a
     # lightweight GeoMixin, passing the axes explicitly. A bare GeoMixin is
-    # safe: `crs` is a class-level property defaulting to None, so the method's
-    # `self.crs` read is a harmless pass-through, and the explicit `crs` below
-    # (the data CRS) always wins.
+    # safe: `crs` reads the backing `_crs` class attribute, which defaults to
+    # None on a bare instance, so the method's `self.crs` read is a harmless
+    # pass-through, and the explicit `crs` below (the data CRS) always wins.
     result = GeoMixin().add_tiles(
         ax=ax,
         source=source,
