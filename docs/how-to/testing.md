@@ -35,8 +35,8 @@ pyramids ships a minimal core plus five opt-in extras declared in
 | Extra | Headline dep(s) | Turns on |
 | --- | --- | --- |
 | `viz` | `cleopatra` | Plotting helpers, basemaps |
-| `lazy` | `dask`, `distributed`, `zarr`, `fsspec`, `kerchunk`, `h5py` | Dask-backed lazy array paths + kerchunk NetCDF manifests |
-| `parquet` | `pyarrow`, `dask-geopandas` (+ `[lazy]`) | Eager GeoParquet I/O **and** the lazy `LazyFeatureCollection` |
+| `lazy` | `pyramids-lazy` | Dask-backed lazy array paths + kerchunk NetCDF manifests (via the backend) |
+| `parquet` | `pyarrow` | Eager GeoParquet I/O. Lazy `LazyFeatureCollection` needs `pyramids-lazy[parquet]` |
 
 The labeled-array interop is **not** an extra: pyramids is GDAL-backed, so that library is a
 peer for the `to_xarray` / `from_xarray` methods only — `pip install xarray`
@@ -61,7 +61,7 @@ so incremental solves stay cheap (~8–15 s when adding one extra on top of `dev
 | --- | --- |
 | `dev` | Core + `viz` + `interop` + `lazy`. The "everything except heavy natives" env. |
 | `lazy` | `dev` + the Dask/Zarr lazy stack and the HDF5-linking bits from conda-forge (kerchunk, h5py — pinned to hdf5 1.14). |
-| `parquet` | `dev` + `pyarrow` + `dask-geopandas` (conda-forge) + `[lazy]`. Runs both eager and lazy GeoParquet tests. |
+| `parquet` | `dev` + `[parquet]` + `pyramids-lazy[parquet]` (PyPI wheels). Runs eager and lazy GeoParquet tests. |
 | `py311` / `py312` / `py313` / `py314` | Same as `dev`, pinned Python. What `main-package` CI uses. |
 | `docs` | Everything needed to build the MkDocs site. |
 | `notebook` | Jupyter + viz only. Used to validate the example notebooks. |
