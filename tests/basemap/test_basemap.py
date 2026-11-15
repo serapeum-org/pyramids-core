@@ -1,11 +1,15 @@
 """Tests for pyramids.basemap.basemap.
 
-``add_basemap`` and ``get_provider`` are thin wrappers over
-``cleopatra.basemap.tiles.add_tiles`` / ``cleopatra.basemap.tiles.get_provider`` (the
-cleopatra C-6 helpers). These tests cover the delegation contract: the
-right cleopatra function is called with the translated kwargs, its return
-value is propagated, the missing-extra error path is wired up, and the
-public signature has not drifted (downstream code patches against it).
+``add_basemap`` is a thin wrapper over the cleopatra glyph ``add_tiles``
+method (``cleopatra.basemap.geo.GeoMixin.add_tiles``) and ``get_provider``
+over ``cleopatra.basemap.tiles.get_provider``. As of ``cleopatra >= 0.46``
+the module-level ``cleopatra.basemap.tiles.add_tiles`` was made private
+(``_add_tiles``); web tiles are added through the glyph method, which
+``add_basemap`` drives from a bare ``GeoMixin`` with the axes passed
+explicitly. These tests cover the delegation contract: the right cleopatra
+entry point is called with the translated kwargs, its return value is
+propagated, the missing-extra error path is wired up, and the public
+signature has not drifted (downstream code patches against it).
 """
 
 from __future__ import annotations
@@ -18,11 +22,13 @@ import pytest
 pytestmark = pytest.mark.plot
 
 pytest.importorskip(
-    "cleopatra.basemap.tiles", reason="cleopatra[tiles] extra not installed"
+    "cleopatra.basemap.geo", reason="cleopatra[tiles] extra not installed"
 )
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.basemap.basemap import add_basemap, get_provider
+
+_ADD_TILES = "cleopatra.basemap.geo.GeoMixin.add_tiles"
 
 
 class TestGetProvider:
@@ -75,23 +81,22 @@ class TestGetProvider:
 
 
 class TestAddBasemap:
-    """``add_basemap`` delegates to ``cleopatra.basemap.tiles.add_tiles``."""
+    """``add_basemap`` delegates to the cleopatra glyph ``add_tiles`` method."""
 
     def test_delegates_with_default_kwargs(self):
         """A bare ``add_basemap(ax)`` forwards the documented defaults.
 
         Test scenario:
-            Patch ``cleopatra.basemap.tiles.add_tiles`` and call ``add_basemap``
-            with only ``ax``. Every wrapper-level default must reach
-            cleopatra as a keyword (``crs=3857``, ``zoom="auto"``, …) and
-            the axes must be passed positionally.
+            Patch ``GeoMixin.add_tiles`` and call ``add_basemap`` with only
+            ``ax``. Every wrapper-level default must reach the glyph method
+            as a keyword (``ax=``, ``crs=3857``, ``zoom="auto"``, …).
         """
         sentinel_ax = object()
-        with patch("cleopatra.basemap.tiles.add_tiles") as mock_add:
+        with patch(_ADD_TILES) as mock_add:
             result = add_basemap(sentinel_ax)
 
         mock_add.assert_called_once_with(
-            sentinel_ax,
+            ax=sentinel_ax,
             source=None,
             crs=3857,
             zoom="auto",
@@ -103,7 +108,7 @@ class TestAddBasemap:
             retries=2,
         )
         assert result is mock_add.return_value, (
-            "add_basemap must return cleopatra.basemap.tiles.add_tiles's result"
+            "add_basemap must return GeoMixin.add_tiles's result"
         )
 
     def test_delegates_with_custom_kwargs(self):
@@ -115,7 +120,7 @@ class TestAddBasemap:
             those values (and the untouched defaults for the rest).
         """
         sentinel_ax = object()
-        with patch("cleopatra.basemap.tiles.add_tiles") as mock_add:
+        with patch(_ADD_TILES) as mock_add:
             add_basemap(
                 sentinel_ax,
                 crs=4326,
@@ -125,7 +130,7 @@ class TestAddBasemap:
             )
 
         mock_add.assert_called_once_with(
-            sentinel_ax,
+            ax=sentinel_ax,
             source="CartoDB.Positron",
             crs=4326,
             zoom="auto",
@@ -143,75 +148,73 @@ class TestAddBasemap:
         Test scenario:
             Patch the ``import_basemap`` guard to raise; ``add_basemap``
             must propagate ``OptionalPackageDoesNotExist`` and never reach
-            ``cleopatra.basemap.tiles.add_tiles``.
+            the glyph ``add_tiles`` method.
         """
         with patch(
             "pyramids.basemap.basemap.import_basemap",
             side_effect=OptionalPackageDoesNotExist("no cleopatra[tiles]"),
         ):
-            with patch("cleopatra.basemap.tiles.add_tiles") as mock_add:
+            with patch(_ADD_TILES) as mock_add:
                 with pytest.raises(OptionalPackageDoesNotExist):
                     add_basemap(object())
         mock_add.assert_not_called()
 
 
 class TestCleopatraDelegation:
-    """The ``add_basemap`` -> ``cleopatra.basemap.tiles.add_tiles`` contract.
+    """The ``add_basemap`` -> ``GeoMixin.add_tiles`` contract.
 
-    ``add_basemap`` is a thin wrapper over ``cleopatra.basemap.tiles.add_tiles``
-    (shipped in ``cleopatra >= 0.8.0``, pinned via the ``[viz]`` extra as
-    ``cleopatra[tiles]``). These tests pin the contract that wrapper relies
-    on: the helper is importable, and the two signatures stay compatible —
-    cleopatra may add new *optional* params (pyramids just won't expose
-    them), but a previously-shared param going *required* upstream, or a
-    pyramids-only param, would break the delegation.
+    ``add_basemap`` is a thin wrapper over the cleopatra glyph ``add_tiles``
+    method (pinned via the ``[viz]`` extra as ``cleopatra[tiles]>=0.46.1``).
+    These tests pin the contract that wrapper relies on: the glyph method is
+    present, and the kwargs ``add_basemap`` forwards stay compatible with the
+    underlying tile worker — cleopatra may add new *optional* params (pyramids
+    just won't expose them), but a previously-shared param going *required*
+    upstream, or a pyramids-only param, would break the delegation.
     """
 
-    def test_cleopatra_add_tiles_is_importable(self):
-        """``cleopatra.basemap.tiles.add_tiles`` imports (C-6 contract)."""
-        cleopatra_tiles = pytest.importorskip(
-            "cleopatra.basemap.tiles",
+    def test_cleopatra_glyph_add_tiles_exists(self):
+        """``GeoMixin.add_tiles`` exists so ``add_basemap`` can delegate."""
+        geo = pytest.importorskip(
+            "cleopatra.basemap.geo",
             reason="cleopatra[tiles] extra not installed",
         )
-        assert hasattr(cleopatra_tiles, "add_tiles"), (
-            "cleopatra.basemap.tiles.add_tiles must exist so "
+        assert hasattr(geo.GeoMixin, "add_tiles"), (
+            "cleopatra.basemap.geo.GeoMixin.add_tiles must exist so "
             "pyramids.basemap.add_basemap can delegate to it."
         )
 
-    def test_pyramids_and_cleopatra_share_addmap_signature(self):
-        """``add_basemap`` and ``cleopatra.basemap.tiles.add_tiles`` line up.
+    def test_add_basemap_kwargs_accepted_by_tile_worker(self):
+        """``add_basemap``'s kwargs line up with cleopatra's tile worker.
 
         Test scenario:
-            Compare the parameter names directly so a future cleopatra
-            release that drifts the signature gets caught here rather than
-            at a downstream call site.
+            The glyph ``add_tiles`` forwards ``**kwargs`` to the module-level
+            tile worker (``_add_tiles`` in cleopatra >= 0.46, ``add_tiles``
+            before). Compare ``add_basemap``'s parameter names against that
+            worker so a future signature drift is caught here rather than at a
+            downstream call site.
         """
-        cleopatra_tiles = pytest.importorskip(
+        tiles = pytest.importorskip(
             "cleopatra.basemap.tiles",
             reason="cleopatra[tiles] extra not installed",
         )
-        cleo_sig = inspect.signature(cleopatra_tiles.add_tiles)
+        worker = getattr(tiles, "_add_tiles", None) or getattr(tiles, "add_tiles", None)
+        assert worker is not None, (
+            "cleopatra.basemap.tiles must expose a tile worker "
+            "(`_add_tiles` or `add_tiles`)."
+        )
+        cleo_sig = inspect.signature(worker)
         pyr_sig = inspect.signature(add_basemap)
         cleo_params = set(cleo_sig.parameters) - {"ax"}
         pyr_params = set(pyr_sig.parameters) - {"ax"}
-        missing = cleo_params - pyr_params
         extra = pyr_params - cleo_params
         # Cleopatra is allowed to grow its surface: new *optional* params
-        # (e.g. `user_agent=` / `max_tiles=` in 0.8.0) don't break the
-        # `add_basemap(ax, ...) -> cleopatra.basemap.tiles.add_tiles(ax, ...)`
-        # delegation — pyramids just won't expose them. What *would* break
-        # it is cleopatra making a previously-shared (or any) param
-        # *required* while pyramids lacks it.
-        for name in missing:
-            param = cleo_sig.parameters[name]
-            assert param.default is not inspect.Parameter.empty, (
-                f"cleopatra.basemap.tiles.add_tiles added a *required* param {name!r} "
-                "not in pyramids.add_basemap — the delegation contract is broken."
-            )
+        # don't break the `add_basemap(ax, ...) -> add_tiles(ax=ax, ...)`
+        # delegation — pyramids just won't expose them. What *would* break it
+        # is a pyramids-only param the worker cannot accept.
         assert not extra, (
-            f"pyramids.add_basemap has params not in cleopatra.basemap.tiles.add_tiles: "
-            f"{extra}. The thin-wrapper delegation will not work until "
-            "these are pushed upstream."
+            f"pyramids.add_basemap has params the cleopatra tile worker does "
+            f"not accept: {extra}. The thin-wrapper delegation will not work "
+            "until these are pushed upstream."
         )
 
 

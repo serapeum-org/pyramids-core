@@ -80,7 +80,7 @@ arrays, `mesh_render` for meshes); `pyramids.netcdf._plot.NetCDFPlot` does the N
 variable/selector/curvilinear/facet/animate resolution and feeds `render_array`; `Selectors` /
 `CoordinateSpec` / `FacetSpec` (in `pyramids.netcdf.plot_options`, re-exported from
 `pyramids.netcdf`) are the grouped option dataclasses; `pyramids.basemap.add_basemap` is a thin
-wrapper over `cleopatra.tiles.add_tiles`.
+wrapper over the cleopatra glyph `add_tiles` method (`cleopatra.basemap.geo.GeoMixin.add_tiles`).
 
 ```mermaid
 classDiagram
@@ -472,7 +472,7 @@ classDiagram
         +ArrayGlyph.plot(kind) · ArrayGlyph.facet() · ArrayGlyph.animate(data_getter)
         +MeshGlyph
         +styles.ColorScale
-        +tiles.add_tiles() · tiles.get_provider()
+        +GeoMixin.add_tiles() · tiles.get_provider()
     }
 
     %% Engines (Dataset collaborators)

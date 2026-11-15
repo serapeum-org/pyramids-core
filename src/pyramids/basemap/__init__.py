@@ -2,9 +2,13 @@
 
 Adds web-tile basemaps (OpenStreetMap, CartoDB, Esri, etc.) underneath
 data plotted on matplotlib axes. :func:`~pyramids.basemap.add_basemap`
-and :func:`~pyramids.basemap.get_provider` are thin wrappers over
-:mod:`cleopatra.basemap.tiles` (the cleopatra C-6 helpers) — cleopatra does the
-tile fetching, stitching, GDAL CRS warping, and rendering.
+wraps the cleopatra glyph ``add_tiles`` method
+(:meth:`cleopatra.basemap.geo.GeoMixin.add_tiles`) and
+:func:`~pyramids.basemap.get_provider` wraps
+:func:`cleopatra.basemap.tiles.get_provider` — cleopatra does the tile
+fetching, stitching, GDAL CRS warping, and rendering. (As of
+``cleopatra >= 0.46`` web tiles are added through the glyph ``add_tiles``
+method, not the now-private ``cleopatra.basemap.tiles`` module function.)
 
 The tile functions require the cleopatra ``[tiles]`` extra (which pins
 ``cleopatra[tiles]``). Install with one of:
