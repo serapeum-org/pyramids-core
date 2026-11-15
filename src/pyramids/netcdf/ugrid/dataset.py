@@ -5973,6 +5973,26 @@ class MeshDataset(_MeshFacades):
                 new_vars[name] = var
         return self._rebuild(new_vars)
 
+    def _glyph_with_crs(self, glyph: Any) -> Any:
+        """Tag a returned cleopatra ``MeshGlyph`` with the dataset CRS.
+
+        cleopatra's ``MeshGlyph`` takes no ``crs`` in ``__init__`` and the ``Mesh2d``
+        topology carries none, so the dataset is the only CRS source. Setting
+        ``glyph.crs`` lets a downstream ``glyph.add_tiles()`` / ``add_features()`` /
+        ``add_relief()`` default to the data CRS instead of cleopatra's EPSG:3857
+        fallback. An already-set ``glyph.crs`` is left untouched.
+
+        Args:
+            glyph: The ``MeshGlyph`` returned by a cleopatra render call.
+
+        Returns:
+            The same glyph, with ``crs`` set to ``self.epsg`` when the dataset has a
+            CRS and the glyph did not already carry one.
+        """
+        if self.epsg is not None and hasattr(glyph, "crs") and glyph.crs is None:
+            glyph.crs = self.epsg
+        return glyph
+
     def plot(
         self,
         variable_name: str,
@@ -6047,8 +6067,10 @@ class MeshDataset(_MeshFacades):
 
         Returns:
             cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph instance with the plot
-                rendered. Use the returned object to access the matplotlib
-                handles and the mappable:
+                rendered, carrying the dataset CRS (``glyph.crs == self.epsg``)
+                so a downstream ``glyph.add_tiles()`` projects correctly. Use
+                the returned object to access the matplotlib handles and the
+                mappable:
 
                 - ``glyph.fig`` / ``glyph.ax`` — Figure and Axes.
                 - ``glyph.im`` — the mesh mappable (the
@@ -6116,7 +6138,7 @@ class MeshDataset(_MeshFacades):
             basemap_epsg=self.epsg,
             **kwargs,
         )
-        return result
+        return self._glyph_with_crs(result)
 
     def plot_vector_field(
         self,
@@ -6444,7 +6466,9 @@ class MeshDataset(_MeshFacades):
             cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph instance with the wireframe
                 rendered. ``glyph.fig`` / ``glyph.ax`` are the matplotlib
                 handles; ``glyph.im`` is ``None`` (an outline carries no
-                scalar mapping, so no mappable is produced).
+                scalar mapping, so no mappable is produced). The glyph carries
+                the dataset CRS (``glyph.crs == self.epsg``) so a downstream
+                ``glyph.add_tiles()`` projects correctly.
         """
         # `basemap_epsg` is a documented parameter of `plot_mesh_outline`, so passing it
         # here used to collide with the dataset's own CRS ("got multiple values for keyword
@@ -6456,7 +6480,7 @@ class MeshDataset(_MeshFacades):
             basemap=basemap,
             **kwargs,
         )
-        return result
+        return self._glyph_with_crs(result)
 
     def __str__(self) -> str:
         """Human-readable summary of the dataset."""
