@@ -74,7 +74,7 @@ class TestPackedNoDataMasking:
         out = ds.percentile_stretch(0, 100)
         arr = out.read_array().ravel()
         valid = arr[[0, 1, 2, 4, 5]]
-        assert np.isclose(arr[3], out.no_data_value[0]), "the gap must stay no-data"
+        assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
         assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
@@ -89,7 +89,7 @@ class TestPackedNoDataMasking:
         ref = _packed_row([40, 60, 80, -9999, 100, 120])
         out = ds.match_histogram(ref)
         arr = out.read_array().ravel()
-        assert np.isclose(arr[3], out.no_data_value[0]), "the gap must stay no-data"
+        assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert np.isfinite(arr[[0, 1, 2, 4, 5]]).all(), "every real cell must be finite"
 
     def test_animate_forwards_physical_sentinel(self, captured_exclude):
@@ -120,7 +120,7 @@ class TestPackedNoDataMasking:
         )
         arr = ds.percentile_stretch(0, 100).read_array().ravel()
         valid = arr[[0, 1, 2, 4]]
-        assert np.isclose(arr[3], -9999.0), "unpacked gap must stay no-data"
+        assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
         assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
@@ -129,8 +129,8 @@ class TestPackedNoDataMasking:
 
         Test scenario:
             A float band with a NaN gap: the NaN is excluded from the stretch (via ``isfinite``),
-            the valid cells span [0, 1] from the finite values, and the NaN cell becomes the
-            output's no-data fill.
+            the valid cells span [0, 1] from the finite values, and the NaN cell stays NaN (the
+            output's no-data).
         """
         ds = Dataset.from_array(
             np.array([[1.0, 2.0, np.nan, 3.0, 4.0]], dtype="float32"), geo_ref=GEO
@@ -138,9 +138,7 @@ class TestPackedNoDataMasking:
         out = ds.percentile_stretch(0, 100)
         arr = out.read_array().ravel()
         valid = arr[[0, 1, 3, 4]]
-        assert np.isclose(arr[2], out.no_data_value[0]), (
-            "the NaN cell must become no-data"
-        )
+        assert np.isnan(arr[2]), "the NaN cell must stay no-data (NaN)"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
         assert valid.max() == pytest.approx(1.0), f"max must be 1; got {valid.tolist()}"
 
@@ -150,7 +148,7 @@ class TestPackedNoDataMasking:
         Test scenario:
             A packed source matched against an *unpacked* reference that has its own -9999 gap:
             the reference gap must be dropped from its distribution (via the reference's physical
-            sentinel), and the output keeps the source gap as no-data.
+            sentinel), and the output keeps the source gap as no-data (NaN).
         """
         ds = _packed_row([100, 120, 140, -9999, 160, 180])
         ref = Dataset.from_array(
@@ -160,9 +158,7 @@ class TestPackedNoDataMasking:
         )
         out = ds.match_histogram(ref)
         arr = out.read_array().ravel()
-        assert np.isclose(arr[3], out.no_data_value[0]), (
-            f"the source gap must stay no-data ({out.no_data_value[0]})"
-        )
+        assert np.isnan(arr[3]), "the source gap must be no-data (NaN)"
         assert np.isfinite(arr[[0, 1, 2, 4, 5]]).all(), (
             "every real source cell must be finite"
         )
@@ -192,26 +188,54 @@ class TestPackedNoDataMasking:
             f"expected [-999.9] for scale 0.1; got {captured_exclude['exclude_value']}"
         )
 
-    def test_stretch_output_nodata_is_stored_sentinel_not_aliasing_physical(self):
-        """The output's no-data is the stored sentinel, so a valid result can't read as no-data.
+    def test_stretch_output_nodata_is_nan_so_a_valid_result_cannot_alias(self):
+        """A stored sentinel inside [0, 1] no longer aliases a valid stretched cell (#1564).
 
         Test scenario:
-            A band packed at scale 0.25 with stored no-data 2 has physical sentinel 0.5, and a
-            valid cell (physical 1.75) stretches to exactly 0.5. The output must declare the
-            *stored* sentinel (2, outside [0, 1]) as its no-data, not the physical 0.5 that would
-            alias that valid cell and silently turn it into a gap.
+            A band whose stored no-data 0.5 sits inside the stretch output range, with a valid
+            cell (value 1.0) that stretches to exactly 0.5. Before the fix the output declared 0.5
+            as its no-data, so that valid cell read as a gap; now the output no-data is NaN, so the
+            0.5 cell stays a real value and only the gap is no-data.
         """
-        ds = _packed_row([4, 7, 10, 2], scale=0.25, no_data=2)
+        ds = Dataset.from_array(
+            np.array([[0.0, 1.0, 2.0, 0.5]], dtype="float32"),
+            geo_ref=GEO,
+            no_data_value=0.5,
+        )
         out = ds.percentile_stretch(0, 100)
         arr = out.read_array().ravel()
-        nodata = out.no_data_value[0]
-        assert nodata == 2, (
-            f"output no-data must be the stored sentinel 2, got {nodata}"
+        assert np.isnan(out.no_data_value[0]), (
+            "output no-data must be NaN, not the stored 0.5"
         )
         assert np.isclose(arr[1], 0.5), (
-            f"expected a valid 0.5 result; arr={arr.tolist()}"
+            f"the valid cell must stretch to 0.5; arr={arr.tolist()}"
         )
-        assert not np.isclose(arr[1], nodata), (
-            f"the valid 0.5 result must not collide with output no-data {nodata}"
+        assert int(np.isnan(arr).sum()) == 1, (
+            f"only the gap may be no-data; the valid 0.5 cell must not alias it; arr={arr.tolist()}"
         )
-        assert np.isclose(arr[3], nodata), "the packed gap stays no-data"
+        assert np.isnan(arr[3]), "the single no-data cell is the gap"
+
+    def test_match_output_nodata_is_nan_so_reference_range_cannot_alias(self):
+        """match_histogram output no-data is NaN, so a reference range straddling the sentinel
+        cannot alias a valid remapped cell (#1564).
+
+        Test scenario:
+            A source with a -9999 gap matched against a reference whose values straddle -9999.
+            Before the fix the output no-data was -9999 and a valid cell remapped onto it; now the
+            output no-data is NaN, so every remapped cell stays finite and only the gap is no-data.
+        """
+        src = Dataset.from_array(
+            np.array([[1.0, 2.0, 3.0, -9999.0]], dtype="float32"),
+            geo_ref=GEO,
+            no_data_value=-9999.0,
+        )
+        ref = Dataset.from_array(
+            np.array([[-10000.0, -9999.0, -9998.0]], dtype="float32"), geo_ref=GEO
+        )
+        out = src.match_histogram(ref)
+        arr = out.read_array().ravel()
+        assert np.isnan(out.no_data_value[0]), "output no-data must be NaN"
+        assert np.isfinite(arr[[0, 1, 2]]).all(), (
+            f"every remapped cell must stay finite; arr={arr.tolist()}"
+        )
+        assert np.isnan(arr[3]), "the source gap must be no-data (NaN)"

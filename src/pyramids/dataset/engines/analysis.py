@@ -5880,8 +5880,8 @@ class Analysis(_Engine["Dataset"]):
         cumulative probability. The usual tool for making two acquisitions of
         one scene radiometrically comparable. No-data and non-finite pixels are
         excluded from **both** distributions rather than treated as values, and
-        are written back as the source band's no-data value (a source that
-        declares no no-data yields a ``NaN``-no-data output).
+        are written back as ``NaN``, the output's declared no-data, so the result's no-data can
+        never collide with a valid remapped value.
 
         The output spans the reference's full range for a continuous (tie-free)
         source. A discrete source with repeated values (e.g. integer imagery)
@@ -5910,8 +5910,9 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             Dataset:
                 A new single-band ``float64`` dataset of remapped values, sharing
-                this dataset's geotransform and CRS. No-data cells keep the
-                source band's no-data value.
+                this dataset's geotransform and CRS. No-data cells are ``NaN``,
+                the output's declared no-data; casting the result to an integer
+                type discards that ``NaN`` no-data.
 
         Raises:
             ValueError: ``bins < 1``, ``band`` / ``reference_band`` is out of
@@ -5940,7 +5941,7 @@ class Analysis(_Engine["Dataset"]):
                 True
 
                 ```
-            - No-data cells are excluded from the match and preserved in the output:
+            - No-data cells are excluded from the match and preserved as ``NaN`` in the output:
                 ```python
                 >>> import numpy as np
                 >>> from pyramids.dataset import Dataset, GeoReference
@@ -5952,8 +5953,8 @@ class Analysis(_Engine["Dataset"]):
                 ...     arr=np.linspace(5, 6, 64, dtype="float32").reshape(8, 8), geo_ref=geo
                 ... )
                 >>> out = target.match_histogram(reference).read_array()
-                >>> float(out[0, 0])
-                -9999.0
+                >>> bool(np.isnan(out[0, 0]))
+                True
 
                 ```
         """
@@ -6000,13 +6001,11 @@ class Analysis(_Engine["Dataset"]):
         probability = np.interp(source_values, source_quantiles, probs)
         matched_values = np.interp(probability, probs, ref_quantiles)
 
-        # The output is unpacked; its declared no-data is the documented "source band's no-data
-        # value" (the *stored* sentinel), matching the pre-fix output -- not the physical sentinel
-        # used for the mask above, which could alias a valid result that lands on it. A stored
-        # sentinel that itself falls inside the output range can still alias, but that is
-        # pre-existing (the fill is unchanged by this fix), not introduced here.
-        stored_nodata = self._ds.no_data_value[band]
-        fill = np.nan if stored_nodata is None else stored_nodata
+        # NaN-fill the unpacked float output and declare NaN its no-data, so the output's no-data
+        # can never collide with a valid remapped value. The stored sentinel could land inside the
+        # matched/stretched output range (e.g. a reference range straddling it) and alias a valid
+        # cell as a gap (#1564); NaN is a float raster's natural no-data, caught by `isfinite`.
+        fill = np.nan
         out_values = np.full(source.shape, fill, dtype="float64")
         out_values[source_valid] = matched_values
         return self._single_band_float_like(out_values, nodata=fill)
@@ -6021,8 +6020,8 @@ class Analysis(_Engine["Dataset"]):
         clips everything outside. The single-raster cousin of
         :meth:`match_histogram`, and the programmatic equivalent of picking
         ``vmin`` / ``vmax`` for :meth:`plot`. No-data and non-finite cells are
-        excluded from the percentiles and written back as the source band's
-        no-data value.
+        excluded from the percentiles and written back as ``NaN``, the output's declared
+        no-data.
 
         Args:
             lower (float):
@@ -6037,8 +6036,9 @@ class Analysis(_Engine["Dataset"]):
         Returns:
             Dataset:
                 A new single-band ``float64`` dataset in ``[0, 1]``, sharing this
-                dataset's geotransform and CRS. No-data cells keep the source
-                band's no-data value.
+                dataset's geotransform and CRS. No-data cells are ``NaN``, the
+                output's declared no-data; casting the result to an integer type
+                discards that ``NaN`` no-data.
 
         Raises:
             ValueError: the percentiles do not satisfy
@@ -6103,13 +6103,11 @@ class Analysis(_Engine["Dataset"]):
             )
 
         stretched = np.clip((source - low_value) / (high_value - low_value), 0.0, 1.0)
-        # The output is unpacked; its declared no-data is the documented "source band's no-data
-        # value" (the *stored* sentinel), matching the pre-fix output -- not the physical sentinel
-        # used for the mask above, which could alias a valid result that lands on it. A stored
-        # sentinel that itself falls inside the output range can still alias, but that is
-        # pre-existing (the fill is unchanged by this fix), not introduced here.
-        stored_nodata = self._ds.no_data_value[band]
-        fill = np.nan if stored_nodata is None else stored_nodata
+        # NaN-fill the unpacked float output and declare NaN its no-data, so the output's no-data
+        # can never collide with a valid stretched value. The stored sentinel could land inside the
+        # [0, 1] stretch range and alias a valid cell as a gap (#1564); NaN is a float raster's
+        # natural no-data, caught by `isfinite`.
+        fill = np.nan
         out_values = np.where(valid, stretched, fill)
         return self._single_band_float_like(out_values, nodata=fill)
 

@@ -95,10 +95,10 @@ def test_match_histogram_excludes_and_preserves_nodata():
     )
     matched = target.match_histogram(reference)
     out = matched.read_array()
-    assert matched.no_data_value[0] == -9999.0
-    assert out[0, 0] == -9999.0
+    assert np.isnan(matched.no_data_value[0]), "output no-data is NaN"
+    assert np.isnan(out[0, 0]), "the no-data corner is NaN in the output"
     # Every other cell was remapped into the reference's 5..6 range.
-    assert float(np.nanmin(out[out != -9999.0])) >= 5.0
+    assert float(np.nanmin(out)) >= 5.0
 
 
 def test_match_histogram_preserves_nan_nodata():
@@ -236,8 +236,8 @@ def test_percentile_stretch_preserves_nodata():
     arr[0, 0] = -9999.0
     ds = Dataset.from_array(arr=arr, geo_ref=GEO, no_data_value=-9999.0)
     out = ds.percentile_stretch(0, 100).read_array()
-    assert out[0, 0] == -9999.0, "the no-data corner must be preserved"
-    rest = out[out != -9999.0]
+    assert np.isnan(out[0, 0]), "the no-data corner is NaN in the output"
+    rest = out[np.isfinite(out)]
     assert float(rest.min()) >= 0.0, "stretched values must be >= 0"
     assert float(rest.max()) <= 1.0, "stretched values must be <= 1"
 
