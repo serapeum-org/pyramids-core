@@ -1103,6 +1103,54 @@ class TestPlotStampsGlyphCRS:
             f"{request.basemap_crs_wkt!r}"
         )
 
+    def test_analysis_animate_threads_dataset_wkt_into_render_array(self):
+        """`Dataset.animate` threads `basemap_crs_wkt=self._ds.crs` into render_array (#1572)."""
+        ds = Dataset.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        with patch("pyramids.dataset.engines.analysis.render_array") as mock_render:
+            ds.animate()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == ds.crs, (
+            f"Dataset.animate must thread crs as basemap_crs_wkt, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_collection_animate_threads_base_wkt_into_render_array(self):
+        """`DatasetCollection.animate` threads `basemap_crs_wkt=self.base.crs` (#1572)."""
+        base = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        collection = DatasetCollection(base, time_length=2, datasets=[base, base])
+        with patch("pyramids.dataset.collection.render_array") as mock_render:
+            collection.animate(band=0)
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == base.crs, (
+            f"DatasetCollection.animate must thread base.crs, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_netcdf_animate_threads_dataset_wkt_into_render_array(self):
+        """`NetCDF.animate` threads `basemap_crs_wkt=nc.crs` into `_render_array` (#1572).
+
+        This is the NetCDF-unique animate line (`netcdf/_plot.py`), distinct from the
+        non-animate path that delegates to `Analysis.plot`.
+        """
+        nc = NetCDF.from_array(
+            arr=np.random.default_rng(0).random((2, 5, 6)).astype("float32"),
+            geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5)),
+            variable_name="t2m",
+            path=None,
+            dims=ExtraDimensions(name="time", values=[0, 1]),
+        )
+        subset = nc.get_variable("t2m")
+        with patch("pyramids.netcdf._plot._render_array") as mock_render:
+            subset.animate()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == subset.crs, (
+            f"NetCDF.animate must thread nc.crs, got {request.basemap_crs_wkt!r}"
+        )
+
     def test_render_array_wkt_fallback_when_no_epsg(self):
         """`render_array` stamps `basemap_crs_wkt` when `basemap_epsg` is `None` (#1572)."""
         wkt = pyproj.CRS.from_proj4(
