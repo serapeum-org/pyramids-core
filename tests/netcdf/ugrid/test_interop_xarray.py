@@ -346,7 +346,7 @@ class TestZarrRoundTrip:
         assert data_vars2["level"].has_time is True
 
     def test_mixed_element_fill_survives_the_round_trip(self, tmp_path):
-        """A padded (mixed-element) face row keeps its fill cell as ``-1``, not cast garbage.
+        """A padded (mixed-element) face *and* edge row keep their fill cells as ``-1``.
 
         xarray's default CF decoding (``mask_and_scale=True``) consumes the on-disk
         ``_FillValue`` on read, upcasting the connectivity array to float and replacing the
@@ -355,19 +355,32 @@ class TestZarrRoundTrip:
         encode/decode machinery. Casting that ``NaN`` straight to ``np.intp`` is undefined: it
         both warns (``RuntimeWarning: invalid value encountered in cast``) and produces a huge
         negative "index" instead of the ``-1`` sentinel the rest of the mesh expects.
+
+        ``_connectivity_from_disk`` has two call sites in ``_build_mesh_from_dataset`` --
+        ``face_node_connectivity`` and ``edge_node_connectivity`` -- so the fixture gives both
+        a fill cell to prove the fix through both, not just the face one.
         """
         pytest.importorskip("zarr")
         node_x = np.array([0.0, 1.0, 0.5, 1.5])
         node_y = np.array([0.0, 0.0, 1.0, 1.0])
         # A triangle (padded with -1) and a quad -- mixed element counts force a fill cell.
-        internal = np.array([[0, 1, 2, -1], [0, 1, 3, 2]], dtype=np.intp)
+        internal_faces = np.array([[0, 1, 2, -1], [0, 1, 3, 2]], dtype=np.intp)
+        # A synthetic padded edge row (real UGRID edges are always 2 nodes; the 3rd, -1-filled
+        # column here exists purely to drive a fill cell through this call site too).
+        internal_edges = np.array([[0, 1, -1], [1, 2, 3]], dtype=np.intp)
         mesh = Mesh2d(
             node_x=node_x,
             node_y=node_y,
             face_node_connectivity=Connectivity(
-                data=internal,
+                data=internal_faces,
                 fill_value=-1,
                 cf_role="face_node_connectivity",
+                original_start_index=0,
+            ),
+            edge_node_connectivity=Connectivity(
+                data=internal_edges,
+                fill_value=-1,
+                cf_role="edge_node_connectivity",
                 original_start_index=0,
             ),
         )
@@ -382,7 +395,9 @@ class TestZarrRoundTrip:
             )
             mesh2, _ = interop_xarray.from_zarr(store)
 
-        np.testing.assert_array_equal(mesh2.face_node_connectivity.data, internal)
+        np.testing.assert_array_equal(mesh2.face_node_connectivity.data, internal_faces)
+        assert mesh2.edge_node_connectivity is not None, "edge_node_connectivity did not survive the round trip"
+        np.testing.assert_array_equal(mesh2.edge_node_connectivity.data, internal_edges)
 
 
 @pytest.mark.lazy
