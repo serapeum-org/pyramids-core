@@ -2196,6 +2196,7 @@ class MeshDataset(_MeshFacades):
         chunks: dict | str | None,
         driver: str | None,
         mesh_name: str | None,
+        sort: bool,
     ) -> Any:
         """Hand already-resolved paths to the backend's lazy mesh reader.
 
@@ -2211,6 +2212,9 @@ class MeshDataset(_MeshFacades):
             chunks: The backend's chunking argument; never ``None`` here.
             driver: Mesh driver name, or ``None`` to detect.
             mesh_name: Topology to take from each file, or ``None`` for the first.
+            sort: Forwarded for the backend to apply. Core cannot pre-sort without opening
+                every file, which would defeat the lazy read, but the backend opens them all
+                regardless -- so it is the layer that can order them for free.
 
         Returns:
             The backend's lazily-backed mesh object.
@@ -2229,7 +2233,9 @@ class MeshDataset(_MeshFacades):
                 "`open_mesh_mfdataset`, so chunks= cannot be served (for the first-party one: "
                 "`pip install -U pyramids-lazy`). Omit chunks= to read eagerly."
             )
-        return forwarder(resolved, chunks=chunks, driver=driver, mesh_name=mesh_name)
+        return forwarder(
+            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
+        )
 
     @overload
     @classmethod
@@ -2298,10 +2304,9 @@ class MeshDataset(_MeshFacades):
                 the dated files are ordered among themselves and placed back into the slots
                 they occupied, so the undated ones do not move.
                 ``False`` always keeps the given order.
-                **Eager path only.** The ordering above is computed from each file's time
-                metadata using core-private machinery a backend cannot reach, so it is not
-                forwarded with ``chunks=``: on the lazy path the backend decides the order.
-                Pass an explicitly ordered sequence when reading lazily.
+                Forwarded unchanged with ``chunks=``, so the same three clauses apply on the
+                lazy path -- the backend opens every file to build its graph either way, and
+                applies this ordering to those already-open handles.
 
         Returns:
             With ``chunks=None``, a :class:`MeshDataset`: one dataset on the shared topology,
@@ -2389,7 +2394,7 @@ class MeshDataset(_MeshFacades):
             )
         if chunks is not None:
             return cls._open_mfdataset_lazy(
-                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
+                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
             )
         datasets = [
             cls.read_file(path, driver=driver, mesh_name=mesh_name) for path in resolved

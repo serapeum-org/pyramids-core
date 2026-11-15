@@ -353,11 +353,8 @@ class TestOpenMfdataset:
             "chunks": "auto",
             "driver": None,
             "mesh_name": "mesh2d",
+            "sort": True,
         }, f"options were not forwarded verbatim: {captured['kwargs']!r}"
-        assert "sort" not in captured["kwargs"], (
-            "sort must not be forwarded: its contract is computed with core-private "
-            "machinery a backend cannot reproduce (review M2)"
-        )
 
     def test_a_lazy_read_without_a_backend_is_branded(self, tmp_path, monkeypatch):
         """No backend installed surfaces the seam's own branded error, not an AttributeError."""
@@ -530,3 +527,36 @@ class TestOpenMfdataset:
 
         with pytest.raises(ValueError, match="chunks"):
             MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=bad)
+
+    @pytest.mark.parametrize("sort", [True, False], ids=["sort-true", "sort-false"])
+    def test_sort_reaches_the_backend_so_it_can_honour_it(
+        self, tmp_path, monkeypatch, sort
+    ):
+        """`sort` is forwarded, because the backend is the layer that can apply it.
+
+        Args:
+            sort: The value the caller passes.
+
+        Test scenario:
+            Core used to drop `sort` on the lazy path, on the premise that a backend could
+            not reproduce its ordering. pyramids-lazy#26 disproves that premise: it opens
+            every file and joins `time_values` whether or not it sorts, so reordering those
+            already-open handles costs no extra read. Dropping the flag made
+            `sort=False` a silent no-op -- the backend's own default re-sorted the files
+            anyway -- so a caller asking for file order got chronological order.
+        """
+        self._write_run(tmp_path, dated=True)
+        captured: dict = {}
+
+        class _Backend:
+            def open_mesh_mfdataset(self, paths, **kwargs):
+                captured.update(kwargs)
+                return "LAZY"
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto", sort=sort)
+
+        assert captured.get("sort") is sort, (
+            f"sort={sort} must reach the backend; got {captured.get('sort', '<dropped>')!r}"
+        )

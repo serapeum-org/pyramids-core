@@ -68,8 +68,8 @@ grouped by category.
 `open_mfdataset(..., chunks=...)` forwards to the compute backend instead of reading eagerly.
 It needs a `pyramids-lazy` that provides `open_mesh_mfdataset`; no released version does yet,
 so until one ships it raises a branded error naming the upgrade. `chunks=None` (the default) is
-the eager read and needs no backend. `sort=` applies to the eager path only -- pass an already
-ordered sequence when reading lazily.
+the eager read and needs no backend. `sort=` is forwarded to the backend and means the same on
+both paths.
 
 ---
 

@@ -117,10 +117,12 @@ class ComputeBackend(Protocol):
       set, checked that each file exists, and validated ``driver`` against its own mesh-driver
       registry, so a backend need not repeat any of that. ``chunks`` is whatever the caller
       passed and is never ``None``. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
-      ``None``. ``sort`` is deliberately **not** forwarded — its contract is computed from every
-      file's time metadata with core-private machinery, so ordering on this path is the backend's
-      and core documents it as such. The return value is the backend's own lazy mesh type; core
-      does not constrain it.
+      ``None``. ``sort`` **is** forwarded and its semantics are required: order the dated files by
+      their first time stamp, leave undated files in the slots they were given, and with
+      ``sort=False`` preserve the caller's order exactly. A backend applies it to the handles it
+      already opened to build its graph, so honouring it costs no extra read; core cannot
+      pre-sort, because doing so would mean opening every file eagerly. The return value is the
+      backend's own lazy mesh type; core does not constrain it.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
