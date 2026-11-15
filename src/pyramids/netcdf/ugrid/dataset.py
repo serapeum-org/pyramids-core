@@ -6275,6 +6275,11 @@ class MeshDataset(_MeshFacades):
             colorbar=colorbar,
             **kwargs,
         )
+        # plot_vector_field_data returns the (fig, ax, im) tuple from
+        # MeshGlyph.plot_vector_field; no glyph is exposed and no basemap is drawn, so
+        # there is no CRS to tag (unlike plot / plot_outline, see _glyph_with_crs). If
+        # this ever hands back a glyph or composes a basemap, route it through
+        # _glyph_with_crs or issue #1560 reopens on this surface.
         return result
 
     def _vector_component(
@@ -6441,6 +6446,10 @@ class MeshDataset(_MeshFacades):
         # cleopatra ("time length (3) does not match frame count (6)"). Every other along-time
         # member moved onto this helper in 2c8a308; `animate` was missed.
         labels = _variable_time_coord(var)
+        # animate_mesh_data returns a matplotlib FuncAnimation; no glyph is exposed and
+        # no basemap is drawn, so there is no CRS to tag (unlike plot / plot_outline, see
+        # _glyph_with_crs). If this ever hands back a glyph or composes a basemap, route
+        # it through _glyph_with_crs or issue #1560 reopens on this surface.
         return _ugrid_plot.animate_mesh_data(
             self._mesh,
             frames,
