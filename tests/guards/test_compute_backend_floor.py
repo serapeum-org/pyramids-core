@@ -38,7 +38,9 @@ def _lazy_extra_floor() -> str:
     manifest = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     extras = manifest["project"]["optional-dependencies"]
     requirements = [
-        req for req in extras["lazy"] if req.replace("_", "-").startswith("pyramids-lazy")
+        req
+        for req in extras["lazy"]
+        if req.replace("_", "-").startswith("pyramids-lazy")
     ]
     assert len(requirements) == 1, (
         f"expected exactly one pyramids-lazy requirement in the [lazy] extra, "
