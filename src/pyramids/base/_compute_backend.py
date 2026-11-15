@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import inspect
 import threading
+import typing
 import warnings
 from importlib import import_module
 from importlib.metadata import EntryPoint, entry_points
@@ -258,6 +259,40 @@ def _load(entry_point: EntryPoint) -> ComputeBackend | None:
     return backend
 
 
+def protocol_members(protocol: type | None = None) -> frozenset[str]:
+    """The member names a ``runtime_checkable`` Protocol's ``isinstance`` actually enforces.
+
+    Derived from typing itself rather than re-implemented, because anything weaker diverges from
+    the check it describes: a member contributed by a Protocol *base class*, or declared as a
+    ``property`` or ``classmethod``, is enforced by ``isinstance`` but invisible to an
+    annotations-plus-``vars`` scan. That divergence matters because the member set is pinned by a
+    guard test — a scan that misses a member would let exactly the breakage the guard exists to
+    catch slip through.
+
+    Args:
+        protocol: The Protocol to inspect. Defaults to :class:`ComputeBackend`.
+
+    Returns:
+        The enforced member names.
+    """
+    target = ComputeBackend if protocol is None else protocol
+    get_members = getattr(typing, "get_protocol_members", None)
+    if get_members is not None:
+        members = set(get_members(target))
+    elif getattr(target, "__protocol_attrs__", None):
+        members = set(getattr(target, "__protocol_attrs__"))  # noqa: B009
+    else:
+        # Pre-3.12 fallback: own annotations plus declared methods. Weaker, as described above,
+        # but only reached on interpreters where typing exposes nothing better.
+        members = set(getattr(target, "__annotations__", {}))
+        members.update(
+            name
+            for name, value in vars(target).items()
+            if callable(value) and not name.startswith("__")
+        )
+    return frozenset(members)
+
+
 def _missing_protocol_members(candidate: object) -> list[str]:
     """Return the :class:`ComputeBackend` members ``candidate`` does not expose, for diagnostics.
 
@@ -270,15 +305,7 @@ def _missing_protocol_members(candidate: object) -> list[str]:
     Returns:
         The Protocol member names missing from ``candidate``, in declaration order.
     """
-    # Derive the Protocol's member names without a version-specific typing internal
-    # (``get_protocol_members`` is 3.13+, ``__protocol_attrs__`` is unpopulated on 3.11): the
-    # members are exactly this class's own annotations plus the methods it declares. Guarded so a
-    # diagnostic can never raise over the real rejection.
-    members = set(getattr(ComputeBackend, "__annotations__", {}))
-    for name, value in vars(ComputeBackend).items():
-        if callable(value) and not name.startswith("__"):
-            members.add(name)
-    return sorted(name for name in members if not hasattr(candidate, name))
+    return sorted(name for name in protocol_members() if not hasattr(candidate, name))
 
 
 def _fill(resolved: dict[str, ComputeBackend]) -> None:

@@ -105,28 +105,18 @@ class TestContract:
             New backend capabilities must therefore be probed with ``getattr`` at the call site
             (see ``MeshDataset.open_mfdataset``'s ``chunks`` branch, issue #1458), never added
             here. This pins the member set so that choice cannot be undone by accident.
-        """
-        members = set(getattr(cb.ComputeBackend, "__annotations__", {}))
-        for name, value in vars(cb.ComputeBackend).items():
-            if callable(value) and not name.startswith("__"):
-                members.add(name)
 
-        assert members == {
+            The set is read with ``cb.protocol_members()``, which asks typing what ``isinstance``
+            enforces, and compared against what this file already builds its fake from -- so a new
+            member breaks the guard *and* the fake together, rather than being described in a
+            fourth independent copy of the list.
+        """
+        members = cb.protocol_members()
+
+        assert members == frozenset(_METHODS) | {
             "api_version",
             "lazy_netcdf_type",
             "lazy_feature_collection_type",
-            "read_array_lazy",
-            "build_lazy_cube",
-            "to_dask_dataframe",
-            "to_kerchunk",
-            "combine_kerchunk",
-            "open_mfdataset",
-            "write_dataset_to_zarr",
-            "read_dataset_from_zarr",
-            "write_collection_to_zarr",
-            "read_collection_from_zarr",
-            "read_vector_lazy",
-            "read_vector_parquet_lazy",
         }, (
             "the ComputeBackend protocol gained or lost a member. Adding one drops every "
             "released plugin at isinstance; probe new capabilities with getattr instead. "
