@@ -72,7 +72,7 @@ from pyproj.exceptions import CRSError
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base._utils import require_cleopatra
-from pyramids.base.crs import crs_from_user_input
+from pyramids.base.crs import crs_from_user_input, crs_spec
 
 # `add_basemap` is imported at top-level so existing test patches that
 # target `pyramids.basemap.basemap.add_basemap` keep working. The
@@ -1127,22 +1127,19 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
 
     # Stamp the data CRS onto the glyph so its reference-layer helpers
     # (``glyph.add_features`` / ``glyph.add_tiles``) default to it without the
-    # caller restating ``crs=`` on every call — see issue #630. ``basemap_epsg``
-    # is the dataset's EPSG; the raster / NetCDF / collection plot callers all
-    # pass it (``Analysis.plot``, ``NetCDF.plot``, ``DatasetCollection.plot``).
-    # A projected CRS with no EPSG authority code has ``basemap_epsg is None`` but a
-    # populated WKT, so fall back to ``basemap_crs_wkt`` (cleopatra's ``crs`` setter
-    # accepts a WKT string) — see issue #1572. ``None`` leaves cleopatra's own
-    # default. Relies on the ``GeoMixin.crs`` default added in cleopatra >= 0.20.0.
-    crs_source = basemap_epsg if basemap_epsg is not None else (basemap_crs_wkt or None)
+    # caller restating ``crs=`` on every call — see issue #630. The raster / NetCDF /
+    # collection plot callers pass the dataset EPSG (``basemap_epsg``) and WKT
+    # (``basemap_crs_wkt``); ``crs_spec`` picks the EPSG when pyproj can resolve it and
+    # otherwise the WKT — a projected CRS with no EPSG code, or an EPSG newer than
+    # pyproj's PROJ catalogue, still stamps correctly (issues #1572 / #943). ``None``
+    # leaves cleopatra's own default. The ``try`` guards a genuinely unparseable WKT:
+    # cleopatra's setter validates via pyproj, and a GDAL-valid WKT it cannot parse must
+    # degrade to no stamp rather than break a plain ``plot()``.
+    crs_source = crs_spec(basemap_epsg, basemap_crs_wkt)
     if crs_source is not None:
         try:
             cleo.crs = crs_source
         except ValueError:
-            # cleopatra's ``crs`` setter validates (via pyproj), so a GDAL-valid WKT it
-            # cannot parse must not break a plain ``plot()`` — leave cleopatra's default,
-            # the pre-#1572 behaviour, rather than raise. The int-EPSG path never reaches
-            # the ``except`` (a resolved EPSG always validates).
             pass
 
     # Resolve the ``basemap`` argument by type — pyramids web-tile vs cleopatra

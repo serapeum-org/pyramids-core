@@ -1125,6 +1125,25 @@ class TestPlotStampsGlyphCRS:
         glyph = render_array(RenderRequest(arr=np.zeros((4, 4))))
         assert glyph.crs is None, f"expected glyph.crs None, got {glyph.crs!r}"
 
+    def test_render_array_unresolvable_epsg_falls_back_to_wkt(self):
+        """A pyproj-unresolvable EPSG with a valid WKT stamps the WKT, not nothing (#943/#1572).
+
+        Test scenario:
+            A GDAL EPSG newer than pyproj's PROJ catalogue cannot be looked up, but the
+            dataset's WKT describes the same CRS. The stamp must prefer the WKT (via
+            `crs_spec`) so the glyph is stamped, not left to cleopatra's EPSG:3857 default
+            by a swallowed "crs not found" error.
+        """
+        wkt = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        glyph = render_array(
+            RenderRequest(arr=np.zeros((4, 4)), basemap_epsg=99999, basemap_crs_wkt=wkt)
+        )
+        assert glyph.crs == wkt, (
+            f"expected the WKT fallback for an unresolvable EPSG, got {glyph.crs!r}"
+        )
+
     def test_render_array_unparseable_wkt_degrades_to_no_stamp(self):
         """A WKT cleopatra cannot parse degrades to no stamp, not a ValueError (#1572).
 
