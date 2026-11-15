@@ -95,8 +95,17 @@ class ComputeBackend(Protocol):
 
     ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
     ``from_zarr``) is **intentionally out of v1** — mesh lazy parity is deferred to FR-B (issue
-    #1458); its methods are added (additively, no api_version bump) when the mesh lazy bodies move
-    to the backend.
+    #1458).
+
+    Those methods are **not** added to this Protocol when they land. This class is
+    ``runtime_checkable`` and :func:`_load` drops any backend failing its ``isinstance`` check, so
+    a new member here makes every *already-released* plugin fail structurally — losing the whole
+    lazy surface, not just the new call, with only a ``RuntimeWarning``. Core cannot require a
+    newer plugin either: there is no ``[lazy]`` extra any more, so users install ``pyramids-lazy``
+    themselves. A new capability is therefore **probed at the call site** with ``getattr`` and
+    raises a branded upgrade error when absent. ``MeshDataset.open_mfdataset``'s ``chunks=`` branch
+    is the first instance; ``tests/base/test_compute_backend.py`` pins this Protocol's member set
+    so the rule cannot be undone by accident.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
