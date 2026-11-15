@@ -62,23 +62,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# These extras are the PUBLISHED dependency contract (wheel/sdist metadata + the conda-forge
-# recipe) — what `pip install pyramids-gis[<extra>]` installs. The dev/CI conda env does NOT
-# install them as pip wheels; it re-declares the same capabilities as conda packages under
-# [tool.pixi.feature.*.dependencies] so they share GDAL's native stack. See the rationale at
-# [tool.pixi.pypi-dependencies]; keep the two sets of version floors in sync.
-# The floor is the oldest cleopatra pyramids' plotting can actually use, not the
-# version CI happens to resolve: an unbounded / too-loose floor is what let an
-# untested cleopatra resolve and break pyramids' plotting in the first place.
-# 0.44.0 is that version because `MeshGlyph.plot_vector_field` lands there and
-# `MeshDataset.plot_vector_field` forwards straight to it; the parameter-object
-# API it also needs arrived earlier: RgbBands in 0.31, Animation / FacetLayout in 0.38.
-# Each capability is branded where it is used rather than by the floor alone --
-# `dataset/_plot_helpers.py` guards the parameter-object names and
-# `netcdf/ugrid/plot.py` guards `plot_vector_field` -- because a floor in metadata
-# does not stop an older cleopatra being present at run time. pixi.lock resolves
-# the newest compatible release (0.45.0 today), so CI tests at or above the floor,
-# never below it.
 viz = ["cleopatra[tiles]>=0.44.0"]
 # DEPRECATED alias (removed next major). The lazy implementation now lives in the separate
 # `pyramids-lazy` distribution, which brings the dask/zarr/kerchunk/h5py stack as its own deps and
@@ -96,10 +79,6 @@ dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",
     "pre-commit-hooks >=6.0.0",
-    # The same linter/formatter the pre-commit hook runs (ruff-pre-commit v0.15.22),
-    # so `pixi run -e dev ruff {check,format}` is available locally to pre-empt the CI
-    # lint/format gate. Floored, not pinned; bump the hook rev in lockstep if exact
-    # formatter parity ever matters.
     "ruff>=0.15.22",
     "pytest >=8.2.2",
     "pytest-cov >= 5.0.0",
@@ -108,56 +87,18 @@ dev = [
     "build>=1.0.0",
     "twine>=5.0.0",
     "pip",
-    # Floored for PYSEC-2026-4055/4056/4057 (JupyterLab < 4.6.4): a PyPI-extension-manager
-    # `uninstall` argument-injection, a language-pack `Plural-Forms` header RCE, and a
-    # trusted-output cell-paste XSS. Relax only when a higher floor is otherwise needed.
     "jupyterlab>=4.6.4",
-    # Floored for PYSEC-2026-4112 (Notebook >= 7.5, < 7.6.3): the same trusted-output paste
-    # XSS, carried via the JupyterLab that Notebook 7 bundles. (The `docs` feature's
-    # `notebook<7.0` is a different, unaffected line — the advisory is Notebook 7.5+.)
     "notebook>=7.6.3",
     "jupyter",
-    # Floored for CVE-2026-86049: before 2.21.0 a 500 response logged the request's
-    # `Referer` header verbatim, so a token carried in that URL — which the normal
-    # token login and launch flows put there — landed in the server log in plain text.
-    # Reached only as a transitive dependency of jupyterlab/notebook, so the floor has
-    # to be stated here; drop it once those pull 2.21.0 or later on their own.
     "jupyter-server>=2.21.0",
     "commitizen>=4.8.4",
     "mypy>=1.10.0",
     "types-PyYAML>=6.0.0",
     "pytest-mock>=3.12.0",
     "pytest-timeout>=2.3.0",
-    # Micro-benchmark harness for the (non-CI) performance suite under benchmarks/.
-    # Provides the `benchmark` fixture + marker; only ever run via the `benchmark`
-    # pixi task, never by the main test tasks (benchmarks/ is outside testpaths).
     "pytest-benchmark>=5.1.0",
-    # Parallel test execution. The suite is ~10k tests and runs for about
-    # twelve minutes serially; `-n auto` brings that down to a couple of
-    # minutes on a multi-core machine. Opt-in -- only the `test-fast` task
-    # passes `-n`, so `main`, `plot` and a plain `pytest` run are unchanged and
-    # stay deterministic for debugging.
-    #
-    # The floor is not about `-n` or `--dist loadfile`, both of which long
-    # predate it. 3.6.0 is the first release that requires `pytest>=7.0.0` and
-    # `execnet>=2.1.0` and that runs a worker's tests on its *main* thread
-    # (xdist #620/#1027) -- before that a test could land on a non-main thread,
-    # which matters here because GDAL and matplotlib both keep thread-affine
-    # state. 3.6.0 itself was yanked from PyPI for an execnet/pytest-cov
-    # deadlock (xdist #1071), and the three tasks that would run xdist beside
-    # coverage -- `main`, `plot` and `test-all` -- all pass `--cov`. (`notebooks`
-    # does not, and `test-fast` deliberately does not either; neither is what the
-    # floor is protecting.) So 3.6.1 is the first release this repo can actually
-    # use, and the floor names it rather than the yanked one.
     "pytest-xdist>=3.6.1",
-    # Security floor on a transitive dependency, not a capability we use directly.
-    # pytest-xdist pulls in filelock, and CVE-2026-112913 affects filelock 3.20.4
-    # through 4.2.0: on Windows its SQLite-backed `ReadWriteLock` derives its
-    # `-wal` / `-journal` side files from the database path, so another local
-    # account that can create (but not delete) files in that directory can wedge
-    # every acquire with `disk I/O error`, or have SQLite replay a planted journal.
-    # Fixed in 4.2.1. The resolved environment was on 3.32.4 and the lock also
-    # carried 4.2.0, so both were vulnerable and `pip-audit` failed the PR.
+    # Security floor (transitive via pytest-xdist): CVE-2026-112913 affects filelock <4.2.1.
     "filelock>=4.2.1"
 ]
 docs = [
@@ -174,17 +115,12 @@ docs = [
     "jupyter-contrib-nbextensions  >=0.7.0",
     "mkdocs-panzoom-plugin",
     "notebook<7.0",
-    # Required by the mkdocs-deploy action's notebook-execution preflight
-    # (`import jupyter, nbconvert, ipykernel`) and to register the python3 kernel
-    # that `jupyter nbconvert --execute` uses in CI.
+    # For the mkdocs-deploy notebook-execution step (imports them + registers the python3 kernel).
     "jupyter",
     "nbconvert",
     "ipykernel",
 ]
 
-# The lazy compute backend (pyramids-lazy) is not a separate test-only group: the `lazy` pixi
-# feature maps to the published `[lazy]` extra (= `pyramids-lazy>=0.1.0`), so every lazy-bearing
-# env installs the real backend through that. The `bare`/`default` envs omit `lazy` and get none.
 
 [project.scripts]
 pyramids = "pyramids.cli:main"
@@ -235,12 +171,6 @@ pyramids = [
     "_licenses/**/*",
 ]
 
-# Ruff replaces black + isort + flake8 + pyupgrade (and their nbqa notebook
-# wrappers) with one tool. Because a single engine formats and sorts imports
-# against one line-length, the formatter and the import sorter cannot disagree the
-# way black and isort did — a long trailing comment on an import made black wrap the
-# line while isort collapsed it, an endless loop. Ruff lints and formats both .py
-# and .ipynb natively, so the nbqa wrappers are gone too.
 [tool.ruff]
 line-length = 88
 target-version = "py311"  # requires-python floors at 3.11
@@ -250,29 +180,18 @@ target-version = "py311"  # requires-python floors at 3.11
 quote-style = "preserve"
 
 [tool.ruff.lint]
-# The *effective* flake8 rule set today is E/F/W: the old config's B and T4 selectors
-# were inert (flake8-bugbear / flake8-print were never installed). Add I (isort) and
-# UP (pyupgrade) to fold in those two standalone hooks.
 select = ["E", "F", "W", "I", "UP"]
-# Mirror the old [tool.flake8].extend-ignore. E704 and W503 are dropped — ruff does not
-# implement either (both are formatter-owned pycodestyle codes black conflicts with), so
-# there is nothing to ignore. E121/E123/E126 likewise need no entry: the ruff formatter
-# owns continuation-line indentation.
 ignore = ["E203", "E226", "E266", "E501", "E701", "E722", "C901", "E741", "E731"]
 
 [tool.ruff.lint.per-file-ignores]
-# flake8 excluded examples/ and tests/ from linting, and the old bare pyupgrade never
-# modernized their typing — so drop E/F/W and UP there, keeping only import-sorting (I),
-# which isort did run everywhere. This keeps the migration's lint churn on shipped src/.
+# tests/examples: keep only import-sort (I), skip E/F/W/UP lint churn.
 "tests/**" = ["E", "F", "W", "UP"]
 "examples/**" = ["E", "F", "W", "UP"]
-# Tutorial notebooks import next to first use and run setup (e.g. `%matplotlib inline`)
-# before imports — both legitimately trip E402, which stays enforced for real modules.
+# Notebooks import at first use / run setup before imports, so E402 is expected.
 "*.ipynb" = ["E402"]
 
 [tool.bandit]
-# ci/ holds non-shipped build tooling (like scripts/) — its subprocess/urllib
-# calls run trusted, fixed commands in CI, so it is excluded from the scan.
+# ci/ etc. are non-shipped build tooling run with trusted fixed commands.
 exclude_dirs = ["ci", "tests", "examples", "scripts", "planning", "docs"]
 skips = ["B101"]
 
@@ -285,11 +204,6 @@ show_missing = true
 fail_under = 90
 
 [tool.mypy]
-# Checker target is 3.12 even though `requires-python` floors at 3.11: numpy 2.5
-# ships PEP 695 `type` statements in its stubs, which mypy only parses when the
-# target is >= 3.12 (at 3.11 it aborts with a syntax error before checking any
-# source). This only widens the *typing* target; actual 3.11 runtime
-# compatibility is covered by the py311 leg of the test matrix, not by mypy.
 python_version = "3.12"
 mypy_path = "src"
 packages = ["pyramids"]
@@ -355,10 +269,6 @@ style = [
 env = ["MPLBACKEND=Agg"]
 pythonpath = ["src"]
 testpaths = ["tests"]
-# Fail (don't hang) on a stuck test: pytest-timeout aborts any single test that runs
-# longer than `timeout` and prints its stack; `faulthandler_timeout` (stdlib) dumps an
-# earlier all-thread traceback for diagnosis. A flaky kerchunk/fsspec read in the
-# interop suite hung CI for ~35 min; no legitimate test in this suite is this slow.
 timeout = 300
 faulthandler_timeout = 120
 markers = [
