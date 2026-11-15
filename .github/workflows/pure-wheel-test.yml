@@ -170,15 +170,15 @@ jobs:
         extra:
           - { name: viz,          pip_extra: "viz",          marker: "plot",         dir: "tests/" }
           - { name: parquet,      pip_extra: "parquet",      marker: "parquet",      dir: "tests/feature" }
-          # The lazy/dask engine was extracted to the pyramids-lazy plugin (#1455). A pure-wheel
-          # `[lazy]` / `[parquet]` install carries the raw libs but NO compute backend, and
-          # pyramids-lazy is not on PyPI to install here — so the backend-gated suites (lazy,
-          # netcdf_lazy, interop, parquet_lazy) were relocated to the plugin and cannot run in a
-          # bare-core wheel. What such an install must still guarantee is tested instead: every lazy
-          # op raises the branded "install pyramids-lazy" error. This mirrors the pixi
-          # `bare_core_contract` job; the suite runs by path (no marker). Add a backend-installing
-          # lazy row back once pyramids-lazy ships on PyPI.
-          - { name: lazy_absent,  pip_extra: "lazy",         marker: "",             dir: "tests/base/test_lazy_backend_absent.py" }
+          # [lazy] now resolves to the published pyramids-lazy, so this row is the only place pip
+          # exercises the core -> plugin -> core extra cycle end to end: the extra must resolve from a
+          # real wheel and core must then discover the backend through the entry-point seam.
+          - { name: lazy, pip_extra: "lazy", marker: "lazy", dir: "tests/" }
+          # The complement: with NO backend installed, every lazy op must raise the branded "install
+          # pyramids-lazy" error. The suite forces the absent state via monkeypatch and runs by path
+          # (no marker), so this row installs bare core (empty pip_extra) -- `[lazy]` would install the
+          # very backend the row asserts is missing.
+          - { name: lazy_absent, pip_extra: "", marker: "", dir: "tests/base/test_lazy_backend_absent.py" }
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -215,11 +215,15 @@ jobs:
             "libgdal-hdf4${spec}" \
             "libgdal-grib${spec}"
 
-      - name: Install wheel with only [${{ matrix.extra.name }}] extra
+      - name: Install wheel for the ${{ matrix.extra.name }} row
         shell: bash -el {0}
         run: |
           WHEEL=$(ls dist/*.whl)
-          pip install "${WHEEL}[${{ matrix.extra.pip_extra }}]" --only-binary=:all:
+          if [ -n "${{ matrix.extra.pip_extra }}" ]; then
+            pip install "${WHEEL}[${{ matrix.extra.pip_extra }}]" --only-binary=:all:
+          else
+            pip install "${WHEEL}" --only-binary=:all:
+          fi
           # Peer interop deps that are not pyramids extras, installed by name.
           if [ -n "${{ matrix.extra.extra_pip }}" ]; then
             pip install "${{ matrix.extra.extra_pip }}" --only-binary=:all:
@@ -233,7 +237,7 @@ jobs:
         shell: bash -el {0}
         run: "pip install pytest pytest-env pytest-mock pytest-timeout --only-binary=:all:"
 
-      - name: Run tests for the [${{ matrix.extra.name }}] extra
+      - name: Run tests for the ${{ matrix.extra.name }} row
         shell: bash -el {0}
         # Most rows select by marker; the lazy_absent row leaves `marker` empty and runs its
         # branded-error suite by path, so only add `-m` when a marker is given.

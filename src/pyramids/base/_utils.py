@@ -1409,6 +1409,52 @@ def lazy_extra_hint(prefix: str) -> str:
     return extra_hint(prefix, "lazy")
 
 
+def lazy_vector_extra_hint(lead: str) -> str:
+    """Compose an install hint for the lazy-vector path, which ships in `pyramids-lazy[parquet]`.
+
+    `extra_hint` composes hints for *core's* own extras, so it names
+    `pyramids-core[<extra>]`. The lazy vector path (dask-geopandas) is not in any
+    core extra -- it lives in the `pyramids-lazy` distribution's `[parquet]` extra --
+    so pointing a user at `pyramids-core[parquet]` would not clear the error. This
+    composer names the command that does, matching the wording the plugin's own
+    guards use.
+
+    Args:
+        lead: The domain-specific lead sentence, ending in a period. Placed
+            verbatim at the start.
+
+    Returns:
+        str: `lead`, then "Install with one of:", then the PyPI and conda-forge
+            commands for the lazy-vector dependencies.
+
+    Examples:
+        - The lead is preserved and the plugin's extra is named:
+            ```python
+            >>> from pyramids.base._utils import lazy_vector_extra_hint
+            >>> hint = lazy_vector_extra_hint("LazyFC needs 'dask-geopandas'.")
+            >>> hint.splitlines()[0]
+            "LazyFC needs 'dask-geopandas'. Install with one of:"
+            >>> "pip install 'pyramids-lazy[parquet]'" in hint
+            True
+
+            ```
+        - It never names a core extra, which could not satisfy it:
+            ```python
+            >>> from pyramids.base._utils import lazy_vector_extra_hint
+            >>> "pyramids-core" in lazy_vector_extra_hint("X needs Y.")
+            False
+
+            ```
+    """
+    return (
+        f"{lead} Install with one of:\n"
+        "  - PyPI:        pip install 'pyramids-lazy[parquet]'\n"
+        # pyramids-lazy is not on conda-forge yet, so name the two conda packages its [parquet]
+        # extra pulls rather than a `conda install pyramids-lazy` that would not resolve.
+        "  - conda-forge: conda install -c conda-forge dask-geopandas pyarrow"
+    )
+
+
 def extra_hint(lead: str, extra: str) -> str:
     """Compose an install hint for one of the package's optional extras.
 

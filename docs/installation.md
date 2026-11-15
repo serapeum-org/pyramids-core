@@ -35,12 +35,12 @@ the macOS and Windows x64 wheels). No `gdal-config`, no
 
 - `viz`: `cleopatra[tiles]` (plotting + basemap tiles via mercantile /
   xyzservices / Pillow)
-- `lazy`: **deprecated** — dask / distributed / zarr / fsspec / kerchunk / h5py. These are the
-  libraries the lazy layer builds on, but the lazy *implementation* now lives in the separate
-  `pyramids-lazy` distribution, so this extra alone no longer gives you working lazy operations:
-  they raise a branded error telling you to install the backend. Install `pyramids-lazy` instead
-  (it pulls this stack itself). The extra is kept for one release so existing installs do not break,
-  and is removed in the next major version.
+- `lazy`: **deprecated alias** — now resolves to `pyramids-lazy`, the separate distribution the
+  lazy *implementation* moved to. That package brings the dask / distributed / zarr / fsspec /
+  kerchunk / h5py stack as its own dependencies and registers the `pyramids.compute_backend`
+  entry point, so lazy operations do work through this extra. Prefer installing `pyramids-lazy`
+  directly; the alias is kept for one release so existing installs do not break, and is removed
+  in the next major version.
 - the optional labeled-array interop (`DatasetCollection.to_netcdf`,
   `NetCDF.from_xarray` / `to_xarray`) is **not** a pyramids extra — pyramids is
   GDAL-backed, so the labeled-array library is a peer. Install it directly
@@ -48,8 +48,7 @@ the macOS and Windows x64 wheels). No `gdal-config`, no
 - `parquet`: pyarrow, for eager GeoParquet I/O (`read_parquet` / `to_parquet`, which go through
   pyarrow and geopandas and need no backend). The **lazy** vector path
   (`LazyFeatureCollection`, `backend="dask"`) additionally needs dask-geopandas, which ships in
-  `pyramids-lazy[parquet]` — not here. This extra still pulls dask-geopandas for one release;
-  that part is deprecated with `[lazy]`.
+  `pyramids-lazy[parquet]` — not here.
 - `dev`: nbval, pre-commit, pytest, coverage, build, twine, etc.
 - `docs`: mkdocs, mkdocs-material, mkdocstrings, mike, etc.
 

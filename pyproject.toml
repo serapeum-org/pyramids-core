@@ -62,57 +62,26 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# These extras are the PUBLISHED dependency contract (wheel/sdist metadata + the conda-forge
-# recipe) — what `pip install pyramids-gis[<extra>]` installs. The dev/CI conda env does NOT
-# install them as pip wheels; it re-declares the same capabilities as conda packages under
-# [tool.pixi.feature.*.dependencies] so they share GDAL's native stack. See the rationale at
-# [tool.pixi.pypi-dependencies]; keep the two sets of version floors in sync.
-# The floor is the oldest cleopatra pyramids' plotting can actually use, not the
-# version CI happens to resolve: an unbounded / too-loose floor is what let an
-# untested cleopatra resolve and break pyramids' plotting in the first place.
-# 0.44.0 is that version because `MeshGlyph.plot_vector_field` lands there and
-# `MeshDataset.plot_vector_field` forwards straight to it; the parameter-object
-# API it also needs arrived earlier: RgbBands in 0.31, Animation / FacetLayout in 0.38.
-# Each capability is branded where it is used rather than by the floor alone --
-# `dataset/_plot_helpers.py` guards the parameter-object names and
-# `netcdf/ugrid/plot.py` guards `plot_vector_field` -- because a floor in metadata
-# does not stop an older cleopatra being present at run time. pixi.lock resolves
-# the newest compatible release (0.45.0 today), so CI tests at or above the floor,
-# never below it.
 viz = ["cleopatra[tiles]>=0.44.0"]
-# DEPRECATED (removed next major). These are the libraries the lazy layer builds on, but the lazy
-# implementation now lives in the separate `pyramids-lazy` distribution, so installing this extra
-# alone yields no working lazy operations -- they raise the branded error from
-# `base/_compute_backend.py` pointing at `pip install pyramids-lazy`. Kept for one release so
-# existing installs keep resolving. It cannot simply be re-pointed at `pyramids-lazy` yet: that
-# package is not on PyPI (404), so the alias would turn a working install into a failing one.
-# Flip it to `lazy = ["pyramids-lazy"]` once the backend has its first release.
-lazy = [
-    "dask>=2024.1.0",
-    "distributed>=2024.1.0",
-    "zarr>=3",
-    "fsspec>=2024.1.0",
-    "s3fs>=2024.1.0",
-    # kerchunk + h5py for the NetCDF/HDF5 lazy (Zarr-reference) path.
-    "kerchunk>=0.2.10",
-    "h5py>=3.8.0",
-]
-# pyarrow is core's own: eager GeoParquet (`read_parquet` / `to_parquet`) goes through pyarrow
-# and geopandas and needs no backend, so that part stays here. The `pyramids-core[lazy]` and
-# dask-geopandas entries are DEPRECATED on the same schedule as `[lazy]`: the lazy vector path
-# they serve moved to `pyramids-lazy[parquet]`.
-parquet = ["pyarrow>=10.0.0", "pyramids-core[lazy]", "dask-geopandas>=0.5.0"]
+# DEPRECATED alias (removed next major). The lazy implementation now lives in the separate
+# `pyramids-lazy` distribution, which brings the dask/zarr/kerchunk/h5py stack as its own deps and
+# registers the `pyramids.compute_backend` entry point. `pip install pyramids-core[lazy]` keeps
+# working as a transition convenience; install `pyramids-lazy` directly going forward.
+lazy = ["pyramids-lazy>=0.1.0"]
+# Core's own eager GeoParquet (`read_parquet` / `to_parquet`) via pyarrow + geopandas; needs no
+# backend. The lazy vector path (dask-geopandas) moved to `pyramids-lazy[parquet]` and is no
+# longer pulled here -- LazyFeatureCollection raises the branded hint without it.
+parquet = ["pyarrow>=10.0.0"]
 stac = ["pystac-client>=0.8.4", "stac-asset>=0.4.7"]
 
 [dependency-groups]
+# Test-only peer dep for the to_xarray / from_xarray methods; deliberately not a published
+# extra. The same-named `interop` pixi feature maps to this group.
+interop = ["xarray>=2023.1.0"]
 dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",
     "pre-commit-hooks >=6.0.0",
-    # The same linter/formatter the pre-commit hook runs (ruff-pre-commit v0.15.22),
-    # so `pixi run -e dev ruff {check,format}` is available locally to pre-empt the CI
-    # lint/format gate. Floored, not pinned; bump the hook rev in lockstep if exact
-    # formatter parity ever matters.
     "ruff>=0.15.22",
     "pytest >=8.2.2",
     "pytest-cov >= 5.0.0",
@@ -121,57 +90,28 @@ dev = [
     "build>=1.0.0",
     "twine>=5.0.0",
     "pip",
-    # Floored for PYSEC-2026-4055/4056/4057 (JupyterLab < 4.6.4): a PyPI-extension-manager
-    # `uninstall` argument-injection, a language-pack `Plural-Forms` header RCE, and a
-    # trusted-output cell-paste XSS. Relax only when a higher floor is otherwise needed.
+    # Security floor: PYSEC-2026-4055/4056/4057 (extension-manager argument injection,
+    # language-pack Plural-Forms RCE, trusted-output paste XSS).
     "jupyterlab>=4.6.4",
-    # Floored for PYSEC-2026-4112 (Notebook >= 7.5, < 7.6.3): the same trusted-output paste
-    # XSS, carried via the JupyterLab that Notebook 7 bundles. (The `docs` feature's
-    # `notebook<7.0` is a different, unaffected line — the advisory is Notebook 7.5+.)
+    # Security floor: PYSEC-2026-4112. The `docs` feature's `notebook<7.0` below is a
+    # different, unaffected line, not a contradiction of this floor.
     "notebook>=7.6.3",
     "jupyter",
-    # Floored for CVE-2026-86049: before 2.21.0 a 500 response logged the request's
-    # `Referer` header verbatim, so a token carried in that URL — which the normal
-    # token login and launch flows put there — landed in the server log in plain text.
-    # Reached only as a transitive dependency of jupyterlab/notebook, so the floor has
-    # to be stated here; drop it once those pull 2.21.0 or later on their own.
+    # Security floor: CVE-2026-86049. Reached only transitively -- drop this pin once
+    # jupyterlab/notebook pull 2.21.0 or later on their own.
     "jupyter-server>=2.21.0",
     "commitizen>=4.8.4",
     "mypy>=1.10.0",
     "types-PyYAML>=6.0.0",
     "pytest-mock>=3.12.0",
     "pytest-timeout>=2.3.0",
-    # Micro-benchmark harness for the (non-CI) performance suite under benchmarks/.
-    # Provides the `benchmark` fixture + marker; only ever run via the `benchmark`
-    # pixi task, never by the main test tasks (benchmarks/ is outside testpaths).
     "pytest-benchmark>=5.1.0",
-    # Parallel test execution. The suite is ~10k tests and runs for about
-    # twelve minutes serially; `-n auto` brings that down to a couple of
-    # minutes on a multi-core machine. Opt-in -- only the `test-fast` task
-    # passes `-n`, so `main`, `plot` and a plain `pytest` run are unchanged and
-    # stay deterministic for debugging.
-    #
-    # The floor is not about `-n` or `--dist loadfile`, both of which long
-    # predate it. 3.6.0 is the first release that requires `pytest>=7.0.0` and
-    # `execnet>=2.1.0` and that runs a worker's tests on its *main* thread
-    # (xdist #620/#1027) -- before that a test could land on a non-main thread,
-    # which matters here because GDAL and matplotlib both keep thread-affine
-    # state. 3.6.0 itself was yanked from PyPI for an execnet/pytest-cov
-    # deadlock (xdist #1071), and the three tasks that would run xdist beside
-    # coverage -- `main`, `plot` and `test-all` -- all pass `--cov`. (`notebooks`
-    # does not, and `test-fast` deliberately does not either; neither is what the
-    # floor is protecting.) So 3.6.1 is the first release this repo can actually
-    # use, and the floor names it rather than the yanked one.
     "pytest-xdist>=3.6.1",
-    # Security floor on a transitive dependency, not a capability we use directly.
-    # pytest-xdist pulls in filelock, and CVE-2026-112913 affects filelock 3.20.4
-    # through 4.2.0: on Windows its SQLite-backed `ReadWriteLock` derives its
-    # `-wal` / `-journal` side files from the database path, so another local
-    # account that can create (but not delete) files in that directory can wedge
-    # every acquire with `disk I/O error`, or have SQLite replay a planted journal.
-    # Fixed in 4.2.1. The resolved environment was on 3.32.4 and the lock also
-    # carried 4.2.0, so both were vulnerable and `pip-audit` failed the PR.
-    "filelock>=4.2.1"
+    # Security floor (transitive via pytest-xdist): CVE-2026-112913 affects filelock <4.2.1.
+    "filelock>=4.2.1",
+    # Dev/CI only: keeps scipy 2.0 from floating in on a lock regen. The published
+    # [project.dependencies] floor stays uncapped so users are not held back.
+    "scipy>=1.17.1,<2"
 ]
 docs = [
     "mkdocs >=1.5.3",
@@ -187,32 +127,12 @@ docs = [
     "jupyter-contrib-nbextensions  >=0.7.0",
     "mkdocs-panzoom-plugin",
     "notebook<7.0",
-    # Required by the mkdocs-deploy action's notebook-execution preflight
-    # (`import jupyter, nbconvert, ipykernel`) and to register the python3 kernel
-    # that `jupyter nbconvert --execute` uses in CI.
+    # For the mkdocs-deploy notebook-execution step (imports them + registers the python3 kernel).
     "jupyter",
     "nbconvert",
     "ipykernel",
 ]
 
-
-# The lazy compute backend core dispatches to. Test-only: it must never reach [project] or the
-# published extras, because the dependency runs the other way (pyramids-lazy requires
-# pyramids-core). Its own group rather than `dev`, so the `docs` env can carry it too — docs
-# executes lazy/zarr notebooks and has no `dev` feature.
-#
-# Pinned to a commit, not a branch, so `pixi lock` resolves the same tree every time. This is
-# pyramids-lazy's `main` tip through PR #7 (which added `classify_zarr_store` / `is_cube_store` for
-# core's GeoZarr `read_file` routing), so it stays fetchable permanently and the routing tests run
-# against the real classifier rather than the dormant GDAL fallback — no branch-deletion hazard.
-#
-# It is still a git pin, so a core release stays blocked: the release job refuses to publish while
-# this reads `pyramids-lazy @ git+...`. Once pyramids-lazy cuts a PyPI release this whole entry
-# becomes an ordinary version floor (`pyramids-lazy>=<rel>`). Tracked as the release blocker in
-# planning/dask/lazy-plugin-extraction-plan.md (task 7) and serapeum-org/pyramids-lazy#3.
-lazy-backend = [
-    "pyramids-lazy @ git+https://github.com/serapeum-org/pyramids-lazy.git@77d13da5ea54bf5a73d57a488b0b6cc2fdb57f8a",
-]
 
 [project.scripts]
 pyramids = "pyramids.cli:main"
@@ -263,12 +183,6 @@ pyramids = [
     "_licenses/**/*",
 ]
 
-# Ruff replaces black + isort + flake8 + pyupgrade (and their nbqa notebook
-# wrappers) with one tool. Because a single engine formats and sorts imports
-# against one line-length, the formatter and the import sorter cannot disagree the
-# way black and isort did — a long trailing comment on an import made black wrap the
-# line while isort collapsed it, an endless loop. Ruff lints and formats both .py
-# and .ipynb natively, so the nbqa wrappers are gone too.
 [tool.ruff]
 line-length = 88
 target-version = "py311"  # requires-python floors at 3.11
@@ -278,29 +192,18 @@ target-version = "py311"  # requires-python floors at 3.11
 quote-style = "preserve"
 
 [tool.ruff.lint]
-# The *effective* flake8 rule set today is E/F/W: the old config's B and T4 selectors
-# were inert (flake8-bugbear / flake8-print were never installed). Add I (isort) and
-# UP (pyupgrade) to fold in those two standalone hooks.
 select = ["E", "F", "W", "I", "UP"]
-# Mirror the old [tool.flake8].extend-ignore. E704 and W503 are dropped — ruff does not
-# implement either (both are formatter-owned pycodestyle codes black conflicts with), so
-# there is nothing to ignore. E121/E123/E126 likewise need no entry: the ruff formatter
-# owns continuation-line indentation.
 ignore = ["E203", "E226", "E266", "E501", "E701", "E722", "C901", "E741", "E731"]
 
 [tool.ruff.lint.per-file-ignores]
-# flake8 excluded examples/ and tests/ from linting, and the old bare pyupgrade never
-# modernized their typing — so drop E/F/W and UP there, keeping only import-sorting (I),
-# which isort did run everywhere. This keeps the migration's lint churn on shipped src/.
+# tests/examples: keep only import-sort (I), skip E/F/W/UP lint churn.
 "tests/**" = ["E", "F", "W", "UP"]
 "examples/**" = ["E", "F", "W", "UP"]
-# Tutorial notebooks import next to first use and run setup (e.g. `%matplotlib inline`)
-# before imports — both legitimately trip E402, which stays enforced for real modules.
+# Notebooks import at first use / run setup before imports, so E402 is expected.
 "*.ipynb" = ["E402"]
 
 [tool.bandit]
-# ci/ holds non-shipped build tooling (like scripts/) — its subprocess/urllib
-# calls run trusted, fixed commands in CI, so it is excluded from the scan.
+# ci/ etc. are non-shipped build tooling run with trusted fixed commands.
 exclude_dirs = ["ci", "tests", "examples", "scripts", "planning", "docs"]
 skips = ["B101"]
 
@@ -313,11 +216,9 @@ show_missing = true
 fail_under = 90
 
 [tool.mypy]
-# Checker target is 3.12 even though `requires-python` floors at 3.11: numpy 2.5
-# ships PEP 695 `type` statements in its stubs, which mypy only parses when the
-# target is >= 3.12 (at 3.11 it aborts with a syntax error before checking any
-# source). This only widens the *typing* target; actual 3.11 runtime
-# compatibility is covered by the py311 leg of the test matrix, not by mypy.
+# Not `requires-python`'s 3.11: numpy 2.5's stubs use PEP 695 `type` statements that mypy only
+# parses at target >= 3.12, and at 3.11 it aborts before checking any source. 3.11 runtime
+# compatibility is covered by the py311 test leg instead.
 python_version = "3.12"
 mypy_path = "src"
 packages = ["pyramids"]
@@ -383,10 +284,6 @@ style = [
 env = ["MPLBACKEND=Agg"]
 pythonpath = ["src"]
 testpaths = ["tests"]
-# Fail (don't hang) on a stuck test: pytest-timeout aborts any single test that runs
-# longer than `timeout` and prints its stack; `faulthandler_timeout` (stdlib) dumps an
-# earlier all-thread traceback for diagnosis. A flaky kerchunk/fsspec read in the
-# interop suite hung CI for ~35 min; no legitimate test in this suite is this slow.
 timeout = 300
 faulthandler_timeout = 120
 markers = [
@@ -400,7 +297,7 @@ markers = [
     # auto-skips when the extra's headline dep isn't importable — see
     # ``tests/_marks.py`` + ``pytest_collection_modifyitems``. ``viz`` is
     # spelled ``plot`` above; don't register a duplicate.
-    "lazy: tests requiring the [lazy] extra (dask, distributed, zarr, fsspec)",
+    "lazy: tests requiring the [lazy] extra (pyramids-lazy — the dask/zarr backend)",
     "interop: tests requiring the optional interop peer dependency",
     # netcdf_lazy is deliberately NOT folded into lazy: it gates on EXTRA modules beyond the
     # base extra's headline dep, so a test marked merely `lazy` would not skip when
@@ -410,6 +307,9 @@ markers = [
     "parquet: tests requiring the [parquet] extra (pyarrow)",
     "stac: tests requiring the [stac] extra (pystac-client)",
     "live: live network test against a real external service (deselect with '-m \"not live\"', run with '-m live')",
+    # Not an extras gate: `@pytest.mark.samples(*flags)` narrows a NetCDF sample-file test to the
+    # sample files carrying those capability flags (see tests/netcdf/samples/conftest.py).
+    "samples: narrow a NetCDF sample-file test to the files carrying the given capability flags",
 ]
 
 
@@ -418,18 +318,11 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
-# pyramids-core is installed WITHOUT its extras (no `extras = [...]`) on purpose. The
-# optional-dependency extras above ([lazy], [viz], [stac], ...) are the *published* contract:
-# they go into the wheel/sdist metadata and drive the conda-forge feedstock recipe, so
-# `pip install pyramids-gis[lazy]` and conda-forge users get those deps. This dev/CI/docs env
-# instead gets the same capabilities as *conda* packages, declared under
-# [tool.pixi.feature.*.dependencies] (e.g. conda `dask-core`, not pip `dask`; plus `hdf5`,
-# `libgdal-netcdf`, `h5py`, ...). The duplication is deliberate, not an oversight: GDAL only
-# works from conda-forge, and every HDF5-linking lib must come from that one channel so they
-# share a single native stack. Pulling the extras in as pip wheels instead would shadow
-# conda's GDAL/HDF5 binaries — the exact DLL-shadow failure the hdf5 pin further down guards
-# against. The cost is that each extra's version floor must be kept in sync by hand with its
-# conda twin in the pixi feature below.
+# Just the editable install of core itself. The extras above are the *published* contract (wheel
+# metadata + the conda-forge recipe), and pixi maps each one to a same-named feature, so the
+# dev/CI/docs envs install them as pip wheels -- closest to what a user actually gets. Only what
+# PyPI cannot safely supply stays conda: GDAL, and anything linking the same native HDF5 (see the
+# `gdal` and `lazy` features below).
 pyramids-core = { path = ".", editable = true }
 
 [tool.pixi.tasks]
@@ -459,27 +352,28 @@ description = "Run the main suite in parallel (pytest-xdist); no coverage"
 # Every env lists the shared `gdal` feature so the single GDAL pin reaches all of
 # them, incl. no-default-feature wheel-build. tests/test_gdal_pin.py enforces it.
 default = {features = ["gdal", "viz"], solve-group = "default" }
-# Bare core with a test runner but NO lazy backend and NO dask stack: the environment shape the
-# branded-absent suite (tests/base/test_lazy_backend_absent.py) asserts against, so it runs in CI for
-# real rather than only under a monkeypatched fixture. Deliberately omits `lazy-backend` and `lazy`.
+# Bare core with a test runner but NO lazy backend and NO dask stack -- the environment shape the
+# branded-absent suite (tests/base/test_lazy_backend_absent.py) describes. That suite forces the
+# absent state via monkeypatch, so this env proves the install/import shape, not the contract on its
+# own. Deliberately omits `lazy` (so no backend).
 bare = { features = ["gdal", "dev"], solve-group = "bare" }
-dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "default" }
-lazy = { features = ["gdal", "viz", "dev", "lazy", "lazy-backend"], solve-group = "default" }
-parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet", "lazy-backend"], solve-group = "default" }
+dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet"], solve-group = "default" }
+lazy = { features = ["gdal", "viz", "dev", "lazy"], solve-group = "default" }
+parquet = { features = ["gdal", "viz", "dev", "interop", "lazy", "parquet"], solve-group = "default" }
 # `docs` also carries the notebook runtime features (viz/cleopatra, interop, lazy, stac,
 # parquet) so the mkdocs-deploy action can execute the example notebooks in CI and render
 # real outputs. See .github/workflows/github-pages-mkdocs.yml (notebooks-path).
-docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet", "lazy-backend"], solve-group = "docs" }
+docs = { features = ["gdal", "docs", "viz", "interop", "lazy", "stac", "parquet"], solve-group = "docs" }
 # py3XX envs include `lazy` so the `interop-tests` step has the interop data stack
 # (zarr / dask / s3fs / fsspec) its interop tests need, run with real deps. `parquet`
 # (pyarrow) is left out on purpose: it would un-skip the core OGR-Parquet tests, which
 # need GDAL's libgdal-arrow-parquet driver (absent on the runners) — the parquet extras
 # matrix covers those. Bare-core (no-lazy) installs are covered by the `default` env.
-py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py311" }
-py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py312" }
-py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py313" }
-py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py314" }
-py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy", "lazy-backend"], solve-group = "py315" }
+py311 = { features = ["gdal", "py311", "viz", "dev", "interop", "lazy"], solve-group = "py311" }
+py312 = { features = ["gdal", "py312", "viz", "dev", "interop", "lazy"], solve-group = "py312" }
+py313 = { features = ["gdal", "py313", "viz", "dev", "interop", "lazy"], solve-group = "py313" }
+py314 = { features = ["gdal", "py314", "viz", "dev", "interop", "lazy"], solve-group = "py314" }
+py315 = { features = ["gdal", "py315", "viz", "dev", "interop", "lazy"], solve-group = "py315" }
 # wheel-build: lean env inside the cibuildwheel container.
 # no-default-feature = true keeps pyramids-core (and its pandas/numpy
 # transitive deps) out of the build container so cibuildwheel's pip
@@ -518,58 +412,31 @@ python = { version = "3.15.*", build = "*_cp315" }
 [tool.pixi.feature.docs.dependencies]
 python = { version = "3.14.*", build = "*_cp314" }
 
-[tool.pixi.feature.dev.dependencies]
-scipy = ">=1.17.1,<2"
+[tool.pixi.feature.parquet.pypi-dependencies]
+# Test envs only -- NOT a published dependency. The lazy VECTOR stack (dask-geopandas) sits behind
+# pyramids-lazy's own [parquet] extra, which core's [lazy] extra deliberately does not pull, so
+# nothing would otherwise install it. Core still needs it to exercise its own lazy-vector seam:
+# tests/config/test_configure_lazy_vector.py (module-level importorskip) and the only tests that
+# resolve LazyFeatureCollection through the real entry point rather than a monkeypatch
+# (tests/base/test_spatial_object_protocol.py). Scoped to the `parquet` feature so it reaches
+# dev/parquet/docs but never the py3XX legs, which must stay pyarrow-free.
+pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
 
-# dask / distributed / fsspec routed through conda so they share the same numpy
-# ABI as libgdal-netcdf / h5py (below). zarr bumped to v3 (was pinned <3 while
-# the lazy stack targeted the v2 API — under evaluation).
 [tool.pixi.feature.lazy.dependencies]
-"dask-core" = ">=2024.1.0"
-distributed = ">=2024.1.0"
+# Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
+# which DLL-shadows the one conda's libgdal-netcdf links against, so the hdf5 pin forces h5py onto
+# that same binary. h5py 3.16 added hdf5 2.x builds while still shipping 1.14.6-linked ones, which
+# is why the pin selects 1.14 and `<3.17` holds the line until a 3.17 is vetted (an hdf5 2.x
+# migration is already blocked here). zarr: it drags numcodecs, which ships no cp315 Windows wheel,
+# so PyPI falls back to a source build that fails on the py315 leg. The rest comes from the [lazy]
+# extra via pyramids-lazy: dask/distributed/s3fs resolve from PyPI, while fsspec arrives as a conda
+# transitive of zarr/kerchunk (checked in the lock: 46 conda entries, 0 PyPI). s3fs pins fsspec in
+# lockstep, so that cross-channel pairing needs a look on the next regen.
 zarr = ">=3"
-fsspec = ">=2024.1.0"
-s3fs = ">=2024.1.0"
-# kerchunk (+ h5py) for the NetCDF/HDF5 lazy Zarr-reference path. HDF5-linking
-# libs must come from conda-forge to share the one HDF5 binary libgdal-netcdf
-# links against; PyPI h5py wheels bundle their own copy, which DLL-shadows on
-# Windows ("DLL load failed while importing defs") once two HDF5 backends load
-# in-process. Only kerchunk needs h5py here (to walk HDF5 chunk metadata) — the
-# lazy NetCDF path itself is pure GDAL MDArray, no netCDF4/h5netcdf.
 kerchunk = ">=0.2.10"
-# h5py 3.16 added hdf5 2.x builds but still ships hdf5 1.14.6-linked builds too
-# (conda-forge). The hdf5 = "1.14.*" pin below is the real ABI guard: it forces
-# the 1.14.6 h5py build so the whole env — including libgdal-netcdf, which links
-# hdf5 1.14.x — shares one HDF5 binary. The <3.17 cap just vets a future 3.17
-# before it floats in. (This is what unblocked the py315 leg: h5py 3.16.0 has a
-# cp315 build on hdf5 1.14.6, so no hdf5 2.x migration was needed after all.)
 h5py = ">=3.8.0,<3.17"
-# Pin the hdf5 major.minor line explicitly so any future h5py rebuild
-# that would drag hdf5 2.x is blocked until libgdal-netcdf follows.
-# Without this the solver can pair h5py 3.16 (hdf5 2) with
-# libgdal-netcdf (still hdf5 1) and the env silently breaks on Windows.
 hdf5 = "1.14.*"
 
-[tool.pixi.feature.parquet.dependencies]
-pyarrow = ">=10.0.0"
-# dask-geopandas powers the lazy LazyFeatureCollection / GeoParquet path; it ships
-# in the [parquet] extra alongside pyarrow (the lazy dask/zarr stack comes via [lazy]).
-dask-geopandas = ">=0.5.0"
-
-[tool.pixi.feature.stac.dependencies]
-# 0.8.4 is the first release carrying Client.collection_search and the
-# COLLECTION_SEARCH / COLLECTION_SEARCH_FREE_TEXT conformance classes that
-# stac/collections.py reads; on 0.8.0-0.8.3 those enum members do not exist, so
-# search_collections raises AttributeError rather than its own clear error.
-pystac-client = ">=0.8.4"
-
-# The `interop` feature installs the peer dependency the to_xarray / from_xarray methods
-# need, for the dev / CI environments only. It is intentionally NOT a
-# [project.optional-dependencies] extra: pyramids is GDAL-backed, so this is a peer dep for
-# those two methods alone — install it directly to use them. This feature just lets CI
-# exercise those code paths; it surfaces no user-facing extra or conda subpackage.
-[tool.pixi.feature.interop.pypi-dependencies]
-xarray = ">=2023.1.0"
 
 # Single source of truth for the conda GDAL pin (SWIG osgeo bindings are ABI-locked to
 # libgdal). Listed by every environment; ci/gdal-pin.py and ci/setup-gdal-micromamba.sh

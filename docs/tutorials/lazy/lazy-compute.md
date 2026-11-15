@@ -61,10 +61,10 @@ All three materialise via `.compute()` (return eager twin) or
 Lazy support lives behind optional extras so the eager install stays
 minimal:
 
-| Extra            | Pulls                                            | Enables                                      |
-|------------------|--------------------------------------------------|----------------------------------------------|
-| `[lazy]`         | `dask`, `zarr`, `fsspec`, `kerchunk`, `h5py` | Raster + NetCDF lazy reads, Zarr, groupby, `to_kerchunk`/`combine_kerchunk` manifests |
-| `[parquet]`      | `pyarrow`, `dask-geopandas` + `[lazy]`           | Eager GeoParquet I/O + lazy `LazyFeatureCollection` |
+| Extra | Pulls | Enables |
+|---|---|---|
+| `[lazy]` | `pyramids-lazy` (the backend) | Raster + NetCDF lazy reads, Zarr, groupby, kerchunk manifests |
+| `[parquet]` | `pyarrow` | Eager GeoParquet I/O. Lazy vector needs `pyramids-lazy[parquet]` |
 
 The labeled-array interop (`NetCDF.to_xarray()` / `.from_xarray()`,
 `DatasetCollection.to_netcdf`) is **not** a pyramids extra — pyramids is
