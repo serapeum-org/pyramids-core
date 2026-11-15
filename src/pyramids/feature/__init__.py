@@ -12,7 +12,7 @@ CRS / EPSG / reprojection helpers live in :mod:`pyramids.base.crs`.
 """
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
-from pyramids.base._utils import extra_hint, import_dask_geopandas
+from pyramids.base._utils import import_dask_geopandas, lazy_vector_extra_hint
 from pyramids.feature._read import VectorInfo
 from pyramids.feature.collection import FeatureCollection
 from pyramids.feature.geometry import (
@@ -24,13 +24,13 @@ from pyramids.feature.geometry import (
     polygon_wkt,
 )
 
-_LAZY_FC_INSTALL_HINT = extra_hint(
+_LAZY_FC_INSTALL_HINT = lazy_vector_extra_hint(
     "LazyFeatureCollection requires the optional 'dask-geopandas' dependency.",
-    "parquet",
 )
 
-# LazyFeatureCollection is only available when the [parquet] extra
-# is installed. Two design goals:
+# LazyFeatureCollection is only available when the backend's lazy-vector support
+# (`pyramids-lazy[parquet]`, which brings dask-geopandas) is installed -- core's own
+# [parquet] extra carries only pyarrow and cannot satisfy it. Two design goals:
 #
 # 1. Eager import on `from pyramids.feature import LazyFeatureCollection`
 # should give the user the real class (when available) or a clear
@@ -88,7 +88,10 @@ def __dir__() -> list[str]:
 
 
 def has_lazy_backend() -> bool:
-    """Return True when the `[parquet]` extra is installed.
+    """Return True when the backend's lazy-vector support is installed.
+
+    That is `pyramids-lazy[parquet]` (which brings dask-geopandas) -- NOT core's
+    own `[parquet]` extra, which carries only pyarrow.
 
     public feature-detection helper that avoids the
     `try/except ImportError` dance for consumers that only need to

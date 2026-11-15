@@ -98,10 +98,6 @@ class TestTheCollapsedMessagesAreUnchanged:
                 "GeoParquet support requires the optional 'pyarrow' dependency.",
                 "parquet",
             ),
-            (
-                "backend='dask' requires the optional 'dask-geopandas' dependency.",
-                "parquet",
-            ),
             ("search requires the optional 'pystac-client' dependency.", "stac"),
         ],
     )
@@ -112,6 +108,20 @@ class TestTheCollapsedMessagesAreUnchanged:
         assert hint.startswith(lead)
         assert f"pip install 'pyramids-core[{extra}]'" in hint
         assert f"conda install -c conda-forge pyramids-{extra}" in hint
+
+    def test_the_lazy_vector_guard_names_the_plugin_not_a_core_extra(self):
+        """The lazy vector path ships in pyramids-lazy; no core extra can satisfy it."""
+        from pyramids.feature import _LAZY_FC_INSTALL_HINT
+
+        assert _LAZY_FC_INSTALL_HINT == (
+            "LazyFeatureCollection requires the optional 'dask-geopandas' "
+            "dependency. Install with one of:\n"
+            "  - PyPI:        pip install 'pyramids-lazy[parquet]'\n"
+            "  - conda-forge: conda install -c conda-forge dask-geopandas pyarrow"
+        )
+        # The regression this pins: core's [parquet] extra is pyarrow only, so a user
+        # following that command would retry and get the identical error.
+        assert "pyramids-core[parquet]" not in _LAZY_FC_INSTALL_HINT
 
     def test_the_reprojection_guard_message_is_verbatim(self):
         """Pinned in full: this is the string users read on a missing dask."""
