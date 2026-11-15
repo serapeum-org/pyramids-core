@@ -259,7 +259,8 @@ def configure_lazy_vector(
             default the backend's lazy vector reader uses when the
             caller supplies neither `npartitions` nor `chunksize`.
             `None` leaves it unchanged. Recorded in the returned dict
-            only when a backend is installed to receive it.
+            only when the backend's lazy-vector support
+            (`pyramids-lazy[parquet]`) is installed to receive it.
         client: Optional :class:`dask.distributed.Client`. When given,
             both settings propagate to every worker via a
             :class:`WorkerPlugin`.
@@ -278,7 +279,7 @@ def configure_lazy_vector(
             ... )
             >>> applied["scheduler"]
             'processes'
-            >>> applied["target_bytes_per_partition"]  # doctest: +SKIP
+            >>> applied["target_bytes_per_partition"]
             268435456
 
             ```
@@ -290,10 +291,11 @@ def configure_lazy_vector(
         dask.config.set(scheduler=scheduler)
         applied["scheduler"] = scheduler
     if target_bytes_per_partition is not None:
-        # The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. With no
-        # backend installed this cannot take effect, so it is reported as applied only when it
-        # actually was -- otherwise the returned dict would claim a setting that changed nothing
-        # (the dask read itself then raises the branded "install the backend" error).
+        # The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. It needs
+        # the backend's lazy-vector support (pyramids-lazy[parquet], i.e. dask-geopandas): a BARE
+        # backend install cannot receive it. So it is reported as applied only when it actually was,
+        # rather than claiming a setting that changed nothing (the dask read then raises the
+        # branded "install ..." error).
         if _set_lazy_backend_partition_bytes(int(target_bytes_per_partition)):
             applied["target_bytes_per_partition"] = int(target_bytes_per_partition)
     logger.debug(
