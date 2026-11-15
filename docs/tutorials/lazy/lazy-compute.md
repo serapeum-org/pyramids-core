@@ -2,7 +2,9 @@
 
 Pyramids ships a Dask-backed path for every subsystem that routinely
 handles data too large to load eagerly: rasters, NetCDFs, time-series
-collections, and vector tables. This page is the entry point. It
+collections, and vector tables. Unstructured meshes have one entry
+point so far -- see `MeshDataset.open_mfdataset(chunks=...)`, which
+needs a lazy-capable `pyramids-lazy`. This page is the entry point. It
 explains **when to go lazy**, **what the common building blocks look
 like**, and **how to wire a cluster**. The per-subsystem how-tos drill
 into the specifics:
@@ -38,8 +40,9 @@ cost.
 
 ## The three building blocks
 
-Every lazy entry point in pyramids produces one of these three
-objects:
+Nearly every lazy entry point in pyramids produces one of these three
+objects (the exception is `MeshDataset.open_mfdataset(chunks=...)`,
+whose return type is defined by the backend rather than by core):
 
 1. `dask.array.Array` — returned by `Dataset.read_array(chunks=…)`,
    `NetCDF.read_array(chunks=…)`, and `open_mfdataset(...)`. The

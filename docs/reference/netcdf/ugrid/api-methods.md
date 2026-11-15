@@ -42,7 +42,7 @@ grouped by category.
 
 | Method | Source | Description |
 |--------|--------|-------------|
-| `open_mfdataset(paths, chunks, driver, mesh_name, sort)` | **(D)** | Open many files on one topology, stacked along time; `chunks=` reads lazily via `pyramids-lazy` |
+| `open_mfdataset(paths, chunks, driver, mesh_name, sort)` | **(D)** | Many files on one topology, stacked on time |
 | `to_dask_dataframe(variables, dropna, npartitions)` | **(D)** | The lazy sibling of `to_dataframe` |
 | `read_file(path, mesh_name, driver, lazy)` | **(D)** cls | Open a UGRID/2DM/Selafin/DFSU/XMDF file |
 | `from_arrays(node_x, node_y, fnc, ...)` | **(D)** cls | Create from numpy arrays |
@@ -64,6 +64,12 @@ grouped by category.
 | `attach_data(path, driver, lazy)` | **(D)** | Attach variables from a results file |
 | `copy()` | **(D)** | Deep copy the dataset |
 | `info(buf, drivers)` | **(D)** | Print human-readable summary |
+
+`open_mfdataset(..., chunks=...)` forwards to the compute backend instead of reading eagerly.
+It needs a `pyramids-lazy` that provides `open_mesh_mfdataset`; no released version does yet,
+so until one ships it raises a branded error naming the upgrade. `chunks=None` (the default) is
+the eager read and needs no backend. `sort=` applies to the eager path only -- pass an already
+ordered sequence when reading lazily.
 
 ---
 
