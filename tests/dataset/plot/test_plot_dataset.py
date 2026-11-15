@@ -4,6 +4,7 @@ import warnings
 from unittest.mock import patch
 
 import numpy as np
+import pyproj
 import pytest
 from osgeo import gdal
 
@@ -1038,3 +1039,24 @@ class TestPlotStampsGlyphCRS:
         )
         glyph = ds.plot()
         assert glyph.crs == 4326, f"expected glyph.crs == 4326, got {glyph.crs!r}"
+
+    def test_dataset_plot_glyph_carries_wkt_when_no_epsg(self):
+        """A projected CRS with no EPSG code stamps the glyph with the WKT (issue #1572).
+
+        Test scenario:
+            A raster whose CRS is a custom LAEA projection has `epsg is None`; the
+            returned glyph still carries the CRS as the dataset WKT, so a reference
+            layer does not fall back to EPSG:3857.
+        """
+        ds = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        ds.crs = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        assert ds.epsg is None, "precondition: the custom CRS has no EPSG code"
+        glyph = ds.plot()
+        assert glyph.crs is not None and glyph.crs == ds.crs, (
+            f"expected glyph.crs to equal the dataset WKT, got {glyph.crs!r}"
+        )

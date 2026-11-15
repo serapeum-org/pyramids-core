@@ -6655,6 +6655,7 @@ class Analysis(_Engine["Dataset"]):
                 fig=fig,
                 basemap=basemap,
                 basemap_epsg=self._ds.epsg,
+                basemap_crs_wkt=self._ds.crs,
             ),
             **kwargs,
         )
@@ -6757,6 +6758,7 @@ class Analysis(_Engine["Dataset"]):
                 fig=fig,
                 basemap=basemap,
                 basemap_epsg=self._ds.epsg,
+                basemap_crs_wkt=self._ds.crs,
             ),
             interval=interval,
             **kwargs,

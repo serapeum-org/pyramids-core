@@ -606,8 +606,11 @@ class RenderRequest:
             :class:`cleopatra.basemap.geo.Basemap` is forwarded to the glyph's
             own ``basemap=``; a ``dict`` is the deprecated alias for ``Basemap``;
             an empty string / dict means none.
-        basemap_epsg: CRS code for the tile fetch and stamped on the glyph.
+        basemap_epsg: EPSG code for the tile fetch and stamped on the glyph.
             Required (raises) when ``basemap`` is truthy.
+        basemap_crs_wkt: The dataset CRS as a WKT string, stamped on the glyph as a
+            fallback when ``basemap_epsg`` is ``None`` (a projected CRS with no EPSG
+            authority code). Not used for the tile fetch.
 
     Examples:
         - A minimal single-band plot request:
@@ -632,6 +635,7 @@ class RenderRequest:
     fig: Any = None
     basemap: bool | str | dict[str, Any] | Basemap | None = None
     basemap_epsg: int | None = None
+    basemap_crs_wkt: str | None = None
 
     def validate(self) -> None:
         """Reject an invalid mode, a missing mode-specific arg, or basemap-without-CRS.
@@ -1035,6 +1039,7 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
     fig = request.fig
     basemap = request.basemap
     basemap_epsg = request.basemap_epsg
+    basemap_crs_wkt = request.basemap_crs_wkt
 
     # The loose styling kwargs are no longer translated here: they moved onto the typed
     # render groups (color=ColorScaling / contour=Contour / cells=CellValues /
@@ -1124,11 +1129,14 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
     # (``glyph.add_features`` / ``glyph.add_tiles``) default to it without the
     # caller restating ``crs=`` on every call — see issue #630. ``basemap_epsg``
     # is the dataset's EPSG; the raster / NetCDF / collection plot callers all
-    # pass it (``Analysis.plot``, ``NetCDF.plot``, ``DatasetCollection.plot``);
-    # ``None`` leaves cleopatra's own default.
-    # Relies on the ``GeoMixin.crs`` default added in cleopatra >= 0.20.0.
-    if basemap_epsg is not None:
-        cleo.crs = basemap_epsg
+    # pass it (``Analysis.plot``, ``NetCDF.plot``, ``DatasetCollection.plot``).
+    # A projected CRS with no EPSG authority code has ``basemap_epsg is None`` but a
+    # populated WKT, so fall back to ``basemap_crs_wkt`` (cleopatra's ``crs`` setter
+    # accepts a WKT string) — see issue #1572. ``None`` leaves cleopatra's own
+    # default. Relies on the ``GeoMixin.crs`` default added in cleopatra >= 0.20.0.
+    crs_source = basemap_epsg if basemap_epsg is not None else (basemap_crs_wkt or None)
+    if crs_source is not None:
+        cleo.crs = crs_source
 
     # Resolve the ``basemap`` argument by type — pyramids web-tile vs cleopatra
     # relief/features layer vs none — into a plan the dispatch below consults.
