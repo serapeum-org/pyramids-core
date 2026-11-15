@@ -6,11 +6,13 @@ resolves is the floor in the ``[lazy]`` extra, and that floor is unbounded on bo
 ``pyramids-lazy>=0.1.0`` here, ``pyramids-core>=0.79.0`` there, with nothing linking
 either to the seam version.
 
-So if the seam is bumped without the floor moving, ``pip install pyramids-core[lazy]``
-still happily resolves the oldest plugin, core rejects it at import, and the user is told
-no backend is installed -- having just installed the extra whose only job is to provide
-one. These tests make that pairing explicit, so the floor bump cannot be forgotten
-alongside a seam bump.
+So if the seam is bumped without the floor moving, the dev/CI environments still resolve
+the oldest plugin and core rejects it at import. These tests make that pairing explicit,
+so the floor bump cannot be forgotten alongside a seam bump.
+
+The floor lives in the ``lazy`` dependency-group, not in a published extra: the backend is
+a plugin installed as ``pip install pyramids-lazy``, exactly like pyramids-eo and
+pyramids-mesh. The group is dev/CI-only and the same-named pixi feature maps to it.
 """
 
 import re
@@ -33,17 +35,17 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 FIRST_PLUGIN_RELEASE: dict[int, str] = {2: "0.1.0"}
 
 
-def _lazy_extra_floor() -> str:
-    """The `>=` floor of the `pyramids-lazy` requirement in the `[lazy]` extra."""
+def _lazy_group_floor() -> str:
+    """The `>=` floor of the `pyramids-lazy` requirement in the `lazy` group."""
     manifest = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
-    extras = manifest["project"]["optional-dependencies"]
+    groups = manifest["dependency-groups"]
     requirements = [
         req
-        for req in extras["lazy"]
+        for req in groups["lazy"]
         if req.replace("_", "-").startswith("pyramids-lazy")
     ]
     assert len(requirements) == 1, (
-        f"expected exactly one pyramids-lazy requirement in the [lazy] extra, "
+        f"expected exactly one pyramids-lazy requirement in the lazy group, "
         f"got {requirements!r}"
     )
     match = re.search(r">=\s*([0-9][0-9.]*)", requirements[0])
@@ -65,12 +67,31 @@ def test_the_current_seam_version_has_a_recorded_plugin_release():
     )
 
 
-def test_the_lazy_extra_floor_covers_the_current_seam_version():
-    """The published floor must exclude plugins too old for the current seam."""
+def test_the_lazy_group_floor_covers_the_current_seam_version():
+    """The declared floor must exclude plugins too old for the current seam."""
     required = FIRST_PLUGIN_RELEASE[COMPUTE_BACKEND_API_VERSION]
-    floor = _lazy_extra_floor()
+    floor = _lazy_group_floor()
 
     assert _as_tuple(floor) >= _as_tuple(required), (
-        f"the [lazy] extra floors pyramids-lazy at {floor}, but api_version "
+        f"the lazy group floors pyramids-lazy at {floor}, but api_version "
         f"{COMPUTE_BACKEND_API_VERSION} needs >= {required}"
+    )
+
+
+def test_the_backend_is_not_published_as_an_extra():
+    """The backend is a plugin, so no core extra may claim to install it.
+
+    Reintroducing a `[lazy]` extra would put core back to advertising an install path for
+    something it does not own, and would make every hint that names the plugin wrong again.
+    """
+    manifest = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    extras = manifest["project"]["optional-dependencies"]
+
+    assert "lazy" not in extras, (
+        "a `lazy` extra is back in [project.optional-dependencies]; the backend is a plugin "
+        "installed as `pip install pyramids-lazy`, declared in the `lazy` dependency-group"
+    )
+    assert "lazy" in manifest["dependency-groups"], (
+        "the `lazy` dependency-group is gone; the pixi `lazy` feature maps to it, so the "
+        "dev/CI environments would stop installing the backend"
     )

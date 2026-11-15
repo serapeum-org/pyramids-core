@@ -1373,8 +1373,58 @@ def require_cleopatra(msg: str | None = None) -> None:
     import_cleopatra(effective)
 
 
+def lazy_backend_hint(lead: str) -> str:
+    """Compose an install hint for the lazy backend, which ships as `pyramids-lazy`.
+
+    `extra_hint` composes hints for *core's own* extras. The lazy backend is not one: it is a
+    separate distribution discovered through the `pyramids.compute_backend` entry point, exactly
+    like `pyramids-eo` or `pyramids-mesh`. So the remedy names the package, not an extra.
+
+    No conda-forge line is offered on purpose. The backend is PyPI-only -- conda-forge's
+    `pyramids-lazy` output is core's *old* lazy extra (the raw dask/zarr/kerchunk/h5py libraries
+    with no backend in them), so naming it would send the user somewhere that cannot fix the error.
+
+    Args:
+        lead: The domain-specific lead sentence, ending in a period. Placed verbatim at the start.
+
+    Returns:
+        str: `lead`, then the single install command that resolves it.
+
+    Examples:
+        - The lead is preserved and the package is named:
+            ```python
+            >>> from pyramids.base._utils import lazy_backend_hint
+            >>> hint = lazy_backend_hint("Lazy reads need the compute backend.")
+            >>> hint.splitlines()[0]
+            'Lazy reads need the compute backend. Install it with:'
+            >>> "pip install pyramids-lazy" in hint
+            True
+
+            ```
+        - It never names a core extra, which cannot satisfy it:
+            ```python
+            >>> from pyramids.base._utils import lazy_backend_hint
+            >>> "pyramids-core[" in lazy_backend_hint("X needs Y.")
+            False
+
+            ```
+    """
+    return f"{lead} Install it with:\n  - PyPI:        pip install pyramids-lazy"
+
+
+# DEPRECATED, kept only for pyramids-lazy <= 0.1.0, which imports this through
+# `pyramids.lazy_support` and asserts its exact text. Core no longer calls it -- its own guards use
+# `lazy_backend_hint` above. Remove this (and the `lazy_support` export) once a pyramids-lazy
+# release composes its own hints; tracked in serapeum-org/pyramids-lazy#19.
 def lazy_extra_hint(prefix: str) -> str:
-    """Compose an install hint for the optional ``[lazy]`` extra.
+    """Compose an install hint naming the removed ``[lazy]`` extra.
+
+    .. deprecated::
+        Core no longer publishes a ``[lazy]`` extra and no longer calls this; its own guards use
+        :func:`lazy_backend_hint`. This is kept only so pyramids-lazy <= 0.1.0, which imports it
+        through :mod:`pyramids.lazy_support`, keeps working. The command it renders will not
+        resolve anything. Removed once a pyramids-lazy release composes its own hints
+        (serapeum-org/pyramids-lazy#19).
 
     The shared PyPI / conda-forge install commands for the ``[lazy]`` extra
     (dask / zarr / fsspec) are defined once here so the zarr / dask call
@@ -1476,10 +1526,10 @@ def extra_hint(lead: str, extra: str) -> str:
         - The lead is preserved and the extra names both commands:
             ```python
             >>> from pyramids.base._utils import extra_hint
-            >>> hint = extra_hint("Zarr IO needs the 'zarr' dependency.", "lazy")
+            >>> hint = extra_hint("GeoParquet needs the 'pyarrow' dependency.", "parquet")
             >>> hint.splitlines()[0]
-            "Zarr IO needs the 'zarr' dependency. Install with one of:"
-            >>> "pyramids-core[lazy]" in hint
+            "GeoParquet needs the 'pyarrow' dependency. Install with one of:"
+            >>> "pyramids-core[parquet]" in hint
             True
 
             ```

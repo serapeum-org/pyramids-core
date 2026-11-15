@@ -57,8 +57,8 @@ HAS_PYSTAC_CLIENT = _has("pystac_client")
 
 # Per-extra installed? flag. Values are True when EVERY underlying
 # module of that extra is importable — so `netcdf_lazy` requires
-# kerchunk AND h5py AND the lazy stack. `pip install pyramids-core[lazy]` still brings all three,
-# but transitively now: the extra resolves to pyramids-lazy, which declares them as its own deps.
+# kerchunk AND h5py AND the lazy stack. `pip install pyramids-lazy` brings all three: they are
+# the backend plugin's own dependencies, not anything core declares.
 #
 # Why `netcdf_lazy` is kept distinct from `lazy` rather than collapsed into it: it gates on
 # EXTRA modules on top of the base extra's headline dependency (kerchunk + h5py). Those arrive
@@ -78,13 +78,13 @@ requires_plot = pytest.mark.skipif(
     not _HAS_VIZ, reason="pyramids-core[viz] not installed"
 )
 requires_lazy = pytest.mark.skipif(
-    not _HAS_LAZY, reason="pyramids-core[lazy] not installed"
+    not _HAS_LAZY, reason="pyramids-lazy not installed"
 )
 requires_interop = pytest.mark.skipif(
     not _HAS_INTEROP, reason="the optional interop dependency is not installed"
 )
 requires_netcdf_lazy = pytest.mark.skipif(
-    not _HAS_NETCDF_LAZY, reason="kerchunk + h5py (pyramids-core[lazy]) not installed"
+    not _HAS_NETCDF_LAZY, reason="kerchunk + h5py (pyramids-lazy) not installed"
 )
 requires_parquet = pytest.mark.skipif(
     not _HAS_PARQUET, reason="pyramids-core[parquet] not installed"

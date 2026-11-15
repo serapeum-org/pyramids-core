@@ -35,8 +35,11 @@ pyramids ships a minimal core plus five opt-in extras declared in
 | Extra | Headline dep(s) | Turns on |
 | --- | --- | --- |
 | `viz` | `cleopatra` | Plotting helpers, basemaps |
-| `lazy` | `pyramids-lazy` | Dask-backed lazy array paths + kerchunk NetCDF manifests (via the backend) |
 | `parquet` | `pyarrow` | Eager GeoParquet I/O. Lazy `LazyFeatureCollection` needs `pyramids-lazy[parquet]` |
+
+The lazy backend is **not** an extra either: `pyramids-lazy` is a plugin, installed by name. It is
+declared in the dev-only `lazy` dependency-group so the `dev` / CI environments install it for
+core's backend-gated tests, which the same-named pixi feature maps to.
 
 The labeled-array interop is **not** an extra: pyramids is GDAL-backed, so that library is a
 peer for the `to_xarray` / `from_xarray` methods only — `pip install xarray`

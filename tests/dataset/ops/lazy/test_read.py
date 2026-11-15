@@ -246,7 +246,7 @@ class TestImportErrorBranch:
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
         ds = Dataset.read_file(str(tiled_tif_path))
-        with pytest.raises(ImportError, match=r"pyramids-core\[lazy\]"):
+        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
             ds.read_array(chunks="auto")
 
 

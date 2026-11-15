@@ -40325,7 +40325,6 @@ packages:
   - shapely>=2.1.0 ; platform_machine != 'ARM64' or sys_platform != 'win32'
   - scipy>=1.10.0
   - cleopatra[tiles]>=0.44.0 ; extra == 'viz'
-  - pyramids-lazy>=0.1.0 ; extra == 'lazy'
   - pyarrow>=10.0.0 ; extra == 'parquet'
   - pystac-client>=0.8.4 ; extra == 'stac'
   - stac-asset>=0.4.7 ; extra == 'stac'

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from pyramids.base._compute_backend import require_compute_backend
-from pyramids.base._utils import lazy_extra_hint, require_optional
+from pyramids.base._utils import lazy_backend_hint, require_optional
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def _resolve_store(
         if storage_options:
             zarr_storage = require_optional(
                 "zarr.storage",
-                lazy_extra_hint(
+                lazy_backend_hint(
                     "reading a cloud Zarr store with `storage_options` requires the "
                     "optional 'zarr' dependency."
                 ),

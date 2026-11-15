@@ -43,7 +43,7 @@ import numpy as np
 from scipy import ndimage
 
 from pyramids.base._domain import is_no_data
-from pyramids.base._utils import extra_hint
+from pyramids.base._utils import lazy_backend_hint
 from pyramids.base.protocols import is_lazy
 
 if TYPE_CHECKING:
@@ -52,10 +52,8 @@ if TYPE_CHECKING:
     from pyramids.dataset import Dataset
 
 
-_LAZY_IMPORT_ERROR = extra_hint(
-    "chunks= requires the optional 'dask' dependency.",
-    "lazy",
-)
+_LAZY_IMPORT_ERROR = lazy_backend_hint(
+    "chunks= requires the optional 'dask' dependency.")
 
 
 def _valid_fraction(arr: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:

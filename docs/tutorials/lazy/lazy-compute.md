@@ -63,7 +63,7 @@ minimal:
 
 | Extra | Pulls | Enables |
 |---|---|---|
-| `[lazy]` | `pyramids-lazy` (the backend) | Raster + NetCDF lazy reads, Zarr, groupby, kerchunk manifests |
+| `pyramids-lazy` (a plugin, not an extra) | the dask/zarr stack | Raster + NetCDF lazy reads, Zarr, groupby, kerchunk |
 | `[parquet]` | `pyarrow` | Eager GeoParquet I/O. Lazy vector needs `pyramids-lazy[parquet]` |
 
 The labeled-array interop (`NetCDF.to_xarray()` / `.from_xarray()`,

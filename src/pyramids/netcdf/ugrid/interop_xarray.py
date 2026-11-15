@@ -29,7 +29,7 @@ from pyproj import CRS as PyProjCRS
 
 from pyramids.base._compute_backend import require_compute_backend
 from pyramids.base._utils import (
-    extra_hint,
+    lazy_backend_hint,
     import_dask,
     import_xarray,
     require_optional,
@@ -74,10 +74,9 @@ _XARRAY_HINT = (
     "  - PyPI:        pip install xarray\n"
     "  - conda-forge: conda install -c conda-forge xarray"
 )
-_ZARR_HINT = extra_hint("Zarr IO requires the optional 'zarr' dependency.", "lazy")
-_DASK_HINT = extra_hint(
-    "A chunked mesh read requires the optional 'dask' dependency.", "lazy"
-)
+_ZARR_HINT = lazy_backend_hint("Zarr IO requires the optional 'zarr' dependency.")
+_DASK_HINT = lazy_backend_hint(
+    "A chunked mesh read requires the optional 'dask' dependency.")
 
 
 def _location_dim(mesh_name: str, location: str) -> str:

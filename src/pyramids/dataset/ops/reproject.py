@@ -22,16 +22,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from pyramids.base._utils import DEFAULT_RESAMPLING, extra_hint
+from pyramids.base._utils import DEFAULT_RESAMPLING, lazy_backend_hint
 
 if TYPE_CHECKING:
     from pyramids.dataset import Dataset
 
 
-_LAZY_IMPORT_ERROR = extra_hint(
-    "Lazy reprojection (compute=False) requires the optional 'dask' dependency.",
-    "lazy",
-)
+_LAZY_IMPORT_ERROR = lazy_backend_hint(
+    "Lazy reprojection (compute=False) requires the optional 'dask' dependency.")
 
 
 @dataclass(frozen=True)

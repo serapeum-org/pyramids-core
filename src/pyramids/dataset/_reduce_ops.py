@@ -23,7 +23,7 @@ from typing import Any, cast
 import numpy as np
 
 from pyramids.base._reductions import reduce_axis
-from pyramids.base._utils import extra_hint
+from pyramids.base._utils import lazy_backend_hint
 
 _SUPPORTED_OPS = ("mean", "sum", "min", "max", "std", "var")
 _NAN_TABLE = {op: f"nan{op}" for op in _SUPPORTED_OPS}
@@ -70,10 +70,8 @@ def resolve_dask_op(op_name: str, *, skipna: bool) -> Callable[..., Any]:
         import dask.array as da
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            extra_hint(
-                "DatasetCollection reductions require the optional 'dask' dependency.",
-                "lazy",
-            )
+            lazy_backend_hint(
+                "DatasetCollection reductions require the optional 'dask' dependency.")
         ) from exc
     name = _NAN_TABLE[op_name] if skipna else op_name
     # getattr on a module is untyped; every name in _NAN_TABLE / _SUPPORTED_OPS
@@ -249,10 +247,8 @@ def build_group_reduction(
         import dask.array as da
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            extra_hint(
-                "DatasetCollection reductions require the optional 'dask' dependency.",
-                "lazy",
-            )
+            lazy_backend_hint(
+                "DatasetCollection reductions require the optional 'dask' dependency.")
         ) from exc
 
     if op in _SUPPORTED_OPS:
