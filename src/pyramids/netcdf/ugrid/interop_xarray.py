@@ -134,7 +134,10 @@ def _connectivity_from_disk(
     ``start_index`` from the valid entries and remap the file ``_FillValue`` to ``-1``.
 
     Args:
-        raw_data: The connectivity array as stored (original start index + file fill).
+        raw_data: The connectivity array as stored (original start index + file fill), or
+            as xarray/zarr's default CF decoding (``mask_and_scale=True``) hands it back:
+            upcast to float with fill cells replaced by ``NaN`` and the ``_FillValue``
+            attribute moved out of ``attrs`` into the variable's ``encoding``.
         attrs: The variable's attributes, read for ``start_index`` / ``_FillValue``.
         cf_role: The UGRID ``cf_role`` to tag the connectivity with.
 
@@ -145,8 +148,22 @@ def _connectivity_from_disk(
     raw_fill = attrs.get("_FillValue")
     raw_fill = int(raw_fill) if raw_fill is not None else _FILE_FILL
 
-    data = np.asarray(raw_data).astype(np.intp)
+    raw_array = np.asarray(raw_data)
+    nan_mask = (
+        np.isnan(raw_array) if np.issubdtype(raw_array.dtype, np.floating) else None
+    )
+    if nan_mask is not None and nan_mask.any():
+        # CF decoding already consumed the on-disk fill sentinel and replaced those cells
+        # with NaN, so there is no longer an integer value to compare against. Substitute
+        # the sentinel back in before casting -- otherwise the cast is undefined (warns,
+        # and produces platform-dependent garbage instead of a sentinel the mask below
+        # would recognize).
+        raw_array = np.where(nan_mask, raw_fill, raw_array)
+
+    data = raw_array.astype(np.intp)
     mask = data == raw_fill
+    if nan_mask is not None:
+        mask = mask | nan_mask
     if start_index != 0:
         data[~mask] -= start_index
     data[mask] = -1
