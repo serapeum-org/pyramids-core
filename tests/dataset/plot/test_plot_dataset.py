@@ -1062,6 +1062,47 @@ class TestPlotStampsGlyphCRS:
             f"expected glyph.crs to equal the dataset WKT, got {glyph.crs!r}"
         )
 
+    def test_netcdf_plot_threads_dataset_wkt_into_render_array(self):
+        """`NetCDF.plot` passes `basemap_crs_wkt=nc.crs` into `render_array` (#1572 wiring).
+
+        Test scenario:
+            The end-to-end WKT stamp is proven via `Dataset.plot` (same `render_array`
+            chokepoint); this pins the `NetCDF.plot` caller wiring the DoD names, by
+            asserting the `RenderRequest` carries the dataset WKT. A `MeshGlyph`-free
+            mock keeps it a wiring assertion, independent of NetCDF-subset CRS mutation.
+        """
+        nc = NetCDF.from_array(
+            arr=np.random.default_rng(0).random((2, 5, 6)).astype("float32"),
+            geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5)),
+            variable_name="t2m",
+            path=None,
+            dims=ExtraDimensions(name="time", values=[0, 1]),
+        )
+        subset = nc.get_variable("t2m")
+        # NetCDF.plot (non-animate) delegates to Analysis.plot, which calls render_array;
+        # patch it there (NetCDF.animate uses netcdf._plot._render_array instead).
+        with patch("pyramids.dataset.engines.analysis.render_array") as mock_render:
+            subset.plot()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == subset.crs, (
+            f"NetCDF.plot must thread nc.crs as basemap_crs_wkt, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_collection_plot_threads_base_wkt_into_render_array(self):
+        """`DatasetCollection.plot` passes `basemap_crs_wkt=self.base.crs` (#1572 wiring)."""
+        base = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        collection = DatasetCollection(base, time_length=2, datasets=[base, base])
+        with patch("pyramids.dataset.collection.render_array") as mock_render:
+            collection.plot(band=0)
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == base.crs, (
+            f"DatasetCollection.plot must thread base.crs as basemap_crs_wkt, got "
+            f"{request.basemap_crs_wkt!r}"
+        )
+
     def test_render_array_wkt_fallback_when_no_epsg(self):
         """`render_array` stamps `basemap_crs_wkt` when `basemap_epsg` is `None` (#1572)."""
         wkt = pyproj.CRS.from_proj4(
