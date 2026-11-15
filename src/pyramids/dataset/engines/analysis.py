@@ -5911,7 +5911,8 @@ class Analysis(_Engine["Dataset"]):
             Dataset:
                 A new single-band ``float64`` dataset of remapped values, sharing
                 this dataset's geotransform and CRS. No-data cells are ``NaN``,
-                the output's declared no-data.
+                the output's declared no-data; casting the result to an integer
+                type discards that ``NaN`` no-data.
 
         Raises:
             ValueError: ``bins < 1``, ``band`` / ``reference_band`` is out of
@@ -6036,7 +6037,8 @@ class Analysis(_Engine["Dataset"]):
             Dataset:
                 A new single-band ``float64`` dataset in ``[0, 1]``, sharing this
                 dataset's geotransform and CRS. No-data cells are ``NaN``, the
-                output's declared no-data.
+                output's declared no-data; casting the result to an integer type
+                discards that ``NaN`` no-data.
 
         Raises:
             ValueError: the percentiles do not satisfy
@@ -6102,9 +6104,9 @@ class Analysis(_Engine["Dataset"]):
 
         stretched = np.clip((source - low_value) / (high_value - low_value), 0.0, 1.0)
         # NaN-fill the unpacked float output and declare NaN its no-data, so the output's no-data
-        # can never collide with a valid remapped value. The stored sentinel could land inside the
-        # matched/stretched output range (e.g. a reference range straddling it) and alias a valid
-        # cell as a gap (#1564); NaN is a float raster's natural no-data, caught by `isfinite`.
+        # can never collide with a valid stretched value. The stored sentinel could land inside the
+        # [0, 1] stretch range and alias a valid cell as a gap (#1564); NaN is a float raster's
+        # natural no-data, caught by `isfinite`.
         fill = np.nan
         out_values = np.where(valid, stretched, fill)
         return self._single_band_float_like(out_values, nodata=fill)
