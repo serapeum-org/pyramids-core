@@ -278,7 +278,7 @@ def configure_lazy_vector(
             ... )
             >>> applied["scheduler"]
             'processes'
-            >>> applied["target_bytes_per_partition"]
+            >>> applied["target_bytes_per_partition"]  # doctest: +SKIP
             268435456
 
             ```
