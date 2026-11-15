@@ -407,29 +407,10 @@ scipy = ">=1.17.1,<2"
 # ABI as libgdal-netcdf / h5py (below). zarr bumped to v3 (was pinned <3 while
 # the lazy stack targeted the v2 API — under evaluation).
 [tool.pixi.feature.lazy.dependencies]
-"dask-core" = ">=2024.1.0"
-distributed = ">=2024.1.0"
-zarr = ">=3"
-fsspec = ">=2024.1.0"
-s3fs = ">=2024.1.0"
-# kerchunk (+ h5py) for the NetCDF/HDF5 lazy Zarr-reference path. HDF5-linking
-# libs must come from conda-forge to share the one HDF5 binary libgdal-netcdf
-# links against; PyPI h5py wheels bundle their own copy, which DLL-shadows on
-# Windows ("DLL load failed while importing defs") once two HDF5 backends load
-# in-process. Only kerchunk needs h5py here (to walk HDF5 chunk metadata) — the
-# lazy NetCDF path itself is pure GDAL MDArray, no netCDF4/h5netcdf.
-kerchunk = ">=0.2.10"
-# h5py 3.16 added hdf5 2.x builds but still ships hdf5 1.14.6-linked builds too
-# (conda-forge). The hdf5 = "1.14.*" pin below is the real ABI guard: it forces
-# the 1.14.6 h5py build so the whole env — including libgdal-netcdf, which links
-# hdf5 1.14.x — shares one HDF5 binary. The <3.17 cap just vets a future 3.17
-# before it floats in. (This is what unblocked the py315 leg: h5py 3.16.0 has a
-# cp315 build on hdf5 1.14.6, so no hdf5 2.x migration was needed after all.)
+# Only the HDF5-linking pair stays conda: a PyPI h5py bundles its own HDF5, which DLL-shadows the
+# one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that same binary. The
+# pure-Python lazy stack (dask/distributed/zarr/fsspec/s3fs/kerchunk) comes from the [lazy] extra.
 h5py = ">=3.8.0,<3.17"
-# Pin the hdf5 major.minor line explicitly so any future h5py rebuild
-# that would drag hdf5 2.x is blocked until libgdal-netcdf follows.
-# Without this the solver can pair h5py 3.16 (hdf5 2) with
-# libgdal-netcdf (still hdf5 1) and the env silently breaks on Windows.
 hdf5 = "1.14.*"
 
 # The `interop` feature installs the peer dependency the to_xarray / from_xarray methods
