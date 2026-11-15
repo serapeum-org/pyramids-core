@@ -71,7 +71,8 @@ def resolve_dask_op(op_name: str, *, skipna: bool) -> Callable[..., Any]:
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
             lazy_backend_hint(
-                "DatasetCollection reductions require the optional 'dask' dependency.")
+                "DatasetCollection reductions require the optional 'dask' dependency."
+            )
         ) from exc
     name = _NAN_TABLE[op_name] if skipna else op_name
     # getattr on a module is untyped; every name in _NAN_TABLE / _SUPPORTED_OPS
@@ -248,7 +249,8 @@ def build_group_reduction(
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
             lazy_backend_hint(
-                "DatasetCollection reductions require the optional 'dask' dependency.")
+                "DatasetCollection reductions require the optional 'dask' dependency."
+            )
         ) from exc
 
     if op in _SUPPORTED_OPS:

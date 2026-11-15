@@ -77,9 +77,7 @@ _HAS_STAC = HAS_PYSTAC_CLIENT
 requires_plot = pytest.mark.skipif(
     not _HAS_VIZ, reason="pyramids-core[viz] not installed"
 )
-requires_lazy = pytest.mark.skipif(
-    not _HAS_LAZY, reason="pyramids-lazy not installed"
-)
+requires_lazy = pytest.mark.skipif(not _HAS_LAZY, reason="pyramids-lazy not installed")
 requires_interop = pytest.mark.skipif(
     not _HAS_INTEROP, reason="the optional interop dependency is not installed"
 )

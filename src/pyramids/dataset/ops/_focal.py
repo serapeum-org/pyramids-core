@@ -53,7 +53,8 @@ if TYPE_CHECKING:
 
 
 _LAZY_IMPORT_ERROR = lazy_backend_hint(
-    "chunks= requires the optional 'dask' dependency.")
+    "chunks= requires the optional 'dask' dependency."
+)
 
 
 def _valid_fraction(arr: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:

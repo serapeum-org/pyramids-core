@@ -29,7 +29,8 @@ if TYPE_CHECKING:
 
 
 _LAZY_IMPORT_ERROR = lazy_backend_hint(
-    "Lazy reprojection (compute=False) requires the optional 'dask' dependency.")
+    "Lazy reprojection (compute=False) requires the optional 'dask' dependency."
+)
 
 
 @dataclass(frozen=True)

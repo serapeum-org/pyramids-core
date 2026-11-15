@@ -76,7 +76,8 @@ _XARRAY_HINT = (
 )
 _ZARR_HINT = lazy_backend_hint("Zarr IO requires the optional 'zarr' dependency.")
 _DASK_HINT = lazy_backend_hint(
-    "A chunked mesh read requires the optional 'dask' dependency.")
+    "A chunked mesh read requires the optional 'dask' dependency."
+)
 
 
 def _location_dim(mesh_name: str, location: str) -> str:

@@ -73,7 +73,8 @@ def _caller_stacklevel(default: int = 2) -> int:
 _PROBE_LOCK = threading.Lock()
 
 _LAZY_IMPORT_ERROR = lazy_backend_hint(
-    "Lazy reads require the optional 'dask' dependency.")
+    "Lazy reads require the optional 'dask' dependency."
+)
 
 
 def _read_chunk(
