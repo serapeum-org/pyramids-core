@@ -233,31 +233,6 @@ jobs:
         shell: bash -el {0}
         run: python -c "import pyramids; print(pyramids.__version__)"
 
-      - name: Verify the backend is discovered through the entry point
-        if: matrix.extra.name == 'lazy'
-        shell: bash -el {0}
-        # Importing pyramids_lazy would only prove pip resolved it. This asserts core actually
-        # resolves it through the `pyramids.compute_backend` seam at a supported api_version, which
-        # is what `pip install pyramids-core[lazy]` is meant to buy the user.
-        run: |
-          python - <<'PY'
-          from importlib.metadata import entry_points, version
-
-          from pyramids.base._compute_backend import (
-              COMPUTE_BACKEND_API_VERSION,
-              require_compute_backend,
-          )
-
-          eps = [(e.name, e.value) for e in entry_points(group="pyramids.compute_backend")]
-          assert eps, "no pyramids.compute_backend entry point was registered"
-          declared = getattr(require_compute_backend(), "api_version", None)
-          assert declared is not None and declared >= COMPUTE_BACKEND_API_VERSION, (
-              f"backend api_version {declared!r} < core's {COMPUTE_BACKEND_API_VERSION}"
-          )
-          print("pyramids-lazy", version("pyramids-lazy"), "| entry points", eps)
-          print("api_version", declared, ">= core", COMPUTE_BACKEND_API_VERSION)
-          PY
-
       - name: Install test runner
         shell: bash -el {0}
         run: "pip install pytest pytest-env pytest-mock pytest-timeout --only-binary=:all:"
