@@ -108,6 +108,20 @@ class ComputeBackend(Protocol):
     is the first instance; ``tests/base/test_compute_backend.py`` pins this Protocol's member set
     so the rule cannot be undone by accident.
 
+    **Probed optional capabilities.** A backend may implement these in addition to the members
+    above. They are not part of the Protocol, so omitting one costs nothing but that feature:
+
+    - ``open_mesh_mfdataset(paths, *, chunks, driver, mesh_name)`` — the lazy multi-file mesh read
+      behind :meth:`pyramids.netcdf.ugrid.MeshDataset.open_mfdataset`'s ``chunks=`` (issue #1458).
+      ``paths`` is a list of concrete paths: core has already expanded any glob, rejected an empty
+      set, checked that each file exists, and validated ``driver`` against its own mesh-driver
+      registry, so a backend need not repeat any of that. ``chunks`` is whatever the caller
+      passed and is never ``None``. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
+      ``None``. ``sort`` is deliberately **not** forwarded — its contract is computed from every
+      file's time metadata with core-private machinery, so ordering on this path is the backend's
+      and core documents it as such. The return value is the backend's own lazy mesh type; core
+      does not constrain it.
+
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
             :data:`COMPUTE_BACKEND_API_VERSION` for core to use it.

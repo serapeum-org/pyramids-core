@@ -2217,15 +2217,17 @@ class MeshDataset(_MeshFacades):
 
         Raises:
             OptionalPackageDoesNotExist: No backend is installed, or the installed one does not
-                provide ``open_mesh_mfdataset``.
+                provide ``open_mesh_mfdataset``. The message names the backend that was resolved,
+                because a third party may register one, and offers the first-party upgrade as a
+                parenthesised hint rather than as the diagnosis.
         """
         backend = require_compute_backend()
         forwarder = getattr(backend, "open_mesh_mfdataset", None)
         if forwarder is None:
             raise OptionalPackageDoesNotExist(
-                "Lazy mesh reads (chunks=...) need a pyramids-lazy that provides "
-                "`open_mesh_mfdataset`; the installed backend does not. Upgrade with "
-                "`pip install -U pyramids-lazy`, or omit chunks= to read eagerly."
+                f"The installed lazy backend ({type(backend).__module__}) does not provide "
+                "`open_mesh_mfdataset`, so chunks= cannot be served (for the first-party one: "
+                "`pip install -U pyramids-lazy`). Omit chunks= to read eagerly."
             )
         return forwarder(resolved, chunks=chunks, driver=driver, mesh_name=mesh_name)
 
