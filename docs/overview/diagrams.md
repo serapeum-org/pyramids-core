@@ -80,7 +80,7 @@ arrays, `mesh_render` for meshes); `pyramids.netcdf._plot.NetCDFPlot` does the N
 variable/selector/curvilinear/facet/animate resolution and feeds `render_array`; `Selectors` /
 `CoordinateSpec` / `FacetSpec` (in `pyramids.netcdf.plot_options`, re-exported from
 `pyramids.netcdf`) are the grouped option dataclasses; `pyramids.basemap.add_basemap` is a thin
-wrapper over `cleopatra.tiles.add_tiles`.
+wrapper over the cleopatra glyph `add_tiles` method (`cleopatra.basemap.geo.GeoMixin.add_tiles`).
 
 ```mermaid
 classDiagram
@@ -150,10 +150,10 @@ classDiagram
   class MeshGlyph {
     <<cleopatra>>
   }
-  class cleopatra_tiles {
-    <<cleopatra.tiles>>
-    +add_tiles(ax, source, crs, ...)
-    +get_provider(name)
+  class cleopatra_basemap {
+    <<cleopatra.basemap>>
+    +GeoMixin.add_tiles(ax, source, crs, ...)
+    +tiles.get_provider(name)
   }
 
   Dataset ..> Analysis : ds.analysis.plot
@@ -168,7 +168,7 @@ classDiagram
   plot_helpers ..> ArrayGlyph : builds
   plot_helpers ..> MeshGlyph : builds (mesh_render)
   plot_helpers ..> add_basemap : basemap overlay
-  add_basemap ..> cleopatra_tiles : delegates
+  add_basemap ..> cleopatra_basemap : delegates
 ```
 
 ## UML Class: Vector Core
@@ -472,7 +472,7 @@ classDiagram
         +ArrayGlyph.plot(kind) · ArrayGlyph.facet() · ArrayGlyph.animate(data_getter)
         +MeshGlyph
         +styles.ColorScale
-        +tiles.add_tiles() · tiles.get_provider()
+        +GeoMixin.add_tiles() · tiles.get_provider()
     }
 
     %% Engines (Dataset collaborators)
@@ -567,5 +567,5 @@ classDiagram
     feature_FeatureCollection ..> basemap_module : add_basemap
     plot_helpers_module ..> basemap_module : basemap overlay
     plot_helpers_module ..> cleopatra_pkg : ArrayGlyph / MeshGlyph
-    basemap_module ..> cleopatra_pkg : cleopatra.tiles
+    basemap_module ..> cleopatra_pkg : cleopatra.basemap
 ```

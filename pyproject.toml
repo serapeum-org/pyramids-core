@@ -62,7 +62,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-viz = ["cleopatra[tiles]>=0.44.0"]
+viz = ["cleopatra[tiles]>=0.46.1"]
 # Core's own eager GeoParquet (`read_parquet` / `to_parquet`) via pyarrow + geopandas; needs no
 # backend. The lazy vector path (dask-geopandas) moved to `pyramids-lazy[parquet]` and is no
 # longer pulled here -- LazyFeatureCollection raises the branded hint without it.

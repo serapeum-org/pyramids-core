@@ -157,7 +157,7 @@ metadata.
 
 ### `basemap/` — web-tile basemaps
 
-- **In scope:** `add_basemap` / `get_provider` — thin wrappers over `cleopatra.tiles` (the viz layer
+- **In scope:** `add_basemap` / `get_provider` — thin wrappers over `cleopatra.basemap` (the viz layer
   does the tile fetch/stitch/warp/render). pyramids only forwards.
 - **Out of scope / removed:** **reference map data** — `natural_earth` (Natural Earth vector layers)
   and `relief` (hypsometric raster). This is plotting reference-data acquisition (the `contextily` /
