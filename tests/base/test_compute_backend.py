@@ -95,6 +95,26 @@ class _DerivedProtocol(_BaseProtocol, Protocol):
 
 
 _DERIVED_MEMBERS = frozenset({"annotated", "built", "inherited", "plain", "read_only"})
+# What the last-resort scan can see: the class's own annotation and its one plain method. The
+# inherited member, the property and the classmethod are invisible to it -- the documented gap that
+# makes the helper prefer typing.
+_SCANNABLE_MEMBERS = frozenset({"annotated", "plain"})
+
+
+def _typing_reports_members(protocol: type) -> bool:
+    """Whether this interpreter can report `protocol`'s full enforced member set.
+
+    Args:
+        protocol: The Protocol to ask about.
+
+    Returns:
+        True when `typing.get_protocol_members` exists (3.13+) or the Protocol carries a populated
+        `__protocol_attrs__` (3.12+); False on 3.11, where neither is available and the helper
+        falls back to the weaker scan.
+    """
+    return hasattr(typing, "get_protocol_members") or bool(
+        getattr(protocol, "__protocol_attrs__", None)
+    )
 
 
 def _make_derived():
@@ -179,13 +199,20 @@ class TestContract:
         Test scenario:
             The parameter exists so the helper can be pointed at any Protocol -- including the
             inheritance/property/classmethod shapes that motivated deriving the set from typing.
-            Passing `_DerivedProtocol` must report all five of its members, while the default
-            still answers for `ComputeBackend`.
+            Passing `_DerivedProtocol` must report its members, while the default still answers
+            for `ComputeBackend`. Which members those are is interpreter-dependent: 3.12+ reports
+            all five, while 3.11 has neither typing hook and reaches the weaker scan, so the
+            expectation follows the interpreter rather than assuming the richest one. The branch
+            was previously asserted unconditionally and failed every 3.11 job in the CI matrix.
         """
         members = cb.protocol_members(_DerivedProtocol)
 
-        assert members == _DERIVED_MEMBERS, (
-            f"expected {sorted(_DERIVED_MEMBERS)} for the derived protocol, got "
+        if _typing_reports_members(_DerivedProtocol):
+            expected = _DERIVED_MEMBERS
+        else:
+            expected = _SCANNABLE_MEMBERS
+        assert members == expected, (
+            f"expected {sorted(expected)} for the derived protocol on this interpreter, got "
             f"{sorted(members)}"
         )
         assert members != cb.protocol_members(), (
@@ -217,6 +244,10 @@ class TestContract:
             f"{member!r} is reported as a protocol member but isinstance ignores its absence"
         )
 
+    @pytest.mark.skipif(
+        not getattr(_DerivedProtocol, "__protocol_attrs__", None),
+        reason="no __protocol_attrs__ to fall back to on this interpreter (3.11 and older)",
+    )
     def test_protocol_members_falls_back_to_the_typing_attribute(self, monkeypatch):
         """Without `typing.get_protocol_members`, the Protocol's own attribute set is used.
 
@@ -224,7 +255,8 @@ class TestContract:
             `get_protocol_members` is 3.13+, so on 3.12 the helper reads `__protocol_attrs__`
             instead. That branch is unreachable on this interpreter, so the getter is removed to
             reach it; it must still report the full enforced set, inherited and property members
-            included.
+            included. Skipped on 3.11, where there is no such attribute to fall back *to* -- the
+            test would otherwise land in the last-resort scan and assert the wrong set.
         """
         monkeypatch.delattr(typing, "get_protocol_members", raising=False)
 
@@ -249,11 +281,15 @@ class TestContract:
             silent change to it would alter what the guard test enforces.
         """
         monkeypatch.delattr(typing, "get_protocol_members", raising=False)
-        monkeypatch.setattr(_DerivedProtocol, "__protocol_attrs__", frozenset())
+        # raising=False: on 3.11 the attribute does not exist at all, and setting it with the
+        # default raising=True errored in setup rather than running the test.
+        monkeypatch.setattr(
+            _DerivedProtocol, "__protocol_attrs__", frozenset(), raising=False
+        )
 
         members = cb.protocol_members(_DerivedProtocol)
 
-        assert members == {"annotated", "plain"}, (
+        assert members == _SCANNABLE_MEMBERS, (
             "the last-resort scan should find the own annotation and the declared method, got "
             f"{sorted(members)}"
         )
