@@ -90,9 +90,15 @@ dev = [
     "build>=1.0.0",
     "twine>=5.0.0",
     "pip",
+    # Security floor: PYSEC-2026-4055/4056/4057 (extension-manager argument injection,
+    # language-pack Plural-Forms RCE, trusted-output paste XSS).
     "jupyterlab>=4.6.4",
+    # Security floor: PYSEC-2026-4112. The `docs` feature's `notebook<7.0` below is a
+    # different, unaffected line, not a contradiction of this floor.
     "notebook>=7.6.3",
     "jupyter",
+    # Security floor: CVE-2026-86049. Reached only transitively -- drop this pin once
+    # jupyterlab/notebook pull 2.21.0 or later on their own.
     "jupyter-server>=2.21.0",
     "commitizen>=4.8.4",
     "mypy>=1.10.0",
@@ -102,7 +108,10 @@ dev = [
     "pytest-benchmark>=5.1.0",
     "pytest-xdist>=3.6.1",
     # Security floor (transitive via pytest-xdist): CVE-2026-112913 affects filelock <4.2.1.
-    "filelock>=4.2.1"
+    "filelock>=4.2.1",
+    # Dev/CI only: keeps scipy 2.0 from floating in on a lock regen. The published
+    # [project.dependencies] floor stays uncapped so users are not held back.
+    "scipy>=1.17.1,<2"
 ]
 docs = [
     "mkdocs >=1.5.3",
@@ -207,6 +216,9 @@ show_missing = true
 fail_under = 90
 
 [tool.mypy]
+# Not `requires-python`'s 3.11: numpy 2.5's stubs use PEP 695 `type` statements that mypy only
+# parses at target >= 3.12, and at 3.11 it aborts before checking any source. 3.11 runtime
+# compatibility is covered by the py311 test leg instead.
 python_version = "3.12"
 mypy_path = "src"
 packages = ["pyramids"]
@@ -412,12 +424,14 @@ pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
 
 [tool.pixi.feature.lazy.dependencies]
 # Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
-# which DLL-shadows the one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that
-# same binary. zarr: it drags numcodecs, which ships no cp315 Windows wheel, so PyPI falls back to a
-# source build that fails on the py315 leg. The rest comes from the [lazy] extra via pyramids-lazy:
-# dask/distributed/s3fs resolve from PyPI, while fsspec arrives as a conda transitive of
-# zarr/kerchunk (checked in the lock: 46 conda entries, 0 PyPI). s3fs pins fsspec in lockstep, so
-# that cross-channel pairing needs a look on the next regen.
+# which DLL-shadows the one conda's libgdal-netcdf links against, so the hdf5 pin forces h5py onto
+# that same binary. h5py 3.16 added hdf5 2.x builds while still shipping 1.14.6-linked ones, which
+# is why the pin selects 1.14 and `<3.17` holds the line until a 3.17 is vetted (an hdf5 2.x
+# migration is already blocked here). zarr: it drags numcodecs, which ships no cp315 Windows wheel,
+# so PyPI falls back to a source build that fails on the py315 leg. The rest comes from the [lazy]
+# extra via pyramids-lazy: dask/distributed/s3fs resolve from PyPI, while fsspec arrives as a conda
+# transitive of zarr/kerchunk (checked in the lock: 46 conda entries, 0 PyPI). s3fs pins fsspec in
+# lockstep, so that cross-channel pairing needs a look on the next regen.
 zarr = ">=3"
 kerchunk = ">=0.2.10"
 h5py = ">=3.8.0,<3.17"
