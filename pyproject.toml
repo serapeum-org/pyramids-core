@@ -413,6 +413,7 @@ scipy = ">=1.17.1,<2"
 # source build that fails on the py315 leg. The pure-Python rest (dask/distributed/fsspec/s3fs/
 # kerchunk) comes from the [lazy] extra.
 zarr = ">=3"
+kerchunk = ">=0.2.10"
 h5py = ">=3.8.0,<3.17"
 hdf5 = "1.14.*"
 
