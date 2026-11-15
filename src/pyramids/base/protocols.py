@@ -36,8 +36,8 @@ branch between the eager and lazy paths.
 
 Importing this module does **not** import `dask`; the dask reference
 is string-forwarded via :data:`typing.TYPE_CHECKING`, so this file is
-cheap to import in environments where the `[lazy]` extra is not
-installed.
+cheap to import in environments where the `pyramids-lazy` backend is
+not installed.
 """
 
 from __future__ import annotations

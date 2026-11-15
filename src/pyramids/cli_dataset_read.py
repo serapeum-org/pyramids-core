@@ -51,10 +51,10 @@ _BBOX_METAVAR = ("MINX", "MINY", "MAXX", "MAXY")
 def _needs_zarr_extra() -> Iterator[None]:
     """Remap a missing-``zarr`` ``ImportError`` to a clean ``ValueError``.
 
-    ``from_zarr`` imports ``zarr`` from the optional ``[lazy]`` extra; its absence
-    raises ``ImportError``, which :func:`pyramids.cli.main` does not catch (it would
-    leak the "unexpected failure" branch). Turn it into a clean user error naming
-    the extra.
+    ``from_zarr`` imports ``zarr``, which ships with the ``pyramids-lazy`` backend; its
+    absence raises ``ImportError``, which :func:`pyramids.cli.main` does not catch (it
+    would leak the "unexpected failure" branch). Turn it into a clean user error naming
+    the package.
     """
     try:
         yield

@@ -1242,7 +1242,7 @@ def require_optional(module_name: str, message: str, *, return_module: bool = Fa
         module_name: Dotted module path to import, e.g. ``"zarr"`` or
             ``"cleopatra.basemap.tiles"``.
         message: The install hint raised when the import fails. Compose it with
-            :func:`lazy_extra_hint` for the ``[lazy]`` extra.
+            :func:`lazy_backend_hint` for the lazy backend.
         return_module: When `True` the imported module object is returned so the
             caller can use it without a bare inline import of its own. The
             guard-only callers leave it `False` and get `None`.
@@ -1373,40 +1373,46 @@ def require_cleopatra(msg: str | None = None) -> None:
     import_cleopatra(effective)
 
 
-def lazy_extra_hint(prefix: str) -> str:
-    """Compose an install hint for the optional ``[lazy]`` extra.
+def lazy_backend_hint(lead: str) -> str:
+    """Compose an install hint for the lazy backend, which ships as `pyramids-lazy`.
 
-    The shared PyPI / conda-forge install commands for the ``[lazy]`` extra
-    (dask / zarr / fsspec) are defined once here so the zarr / dask call
-    sites don't each copy them; only the lead sentence varies.
+    `extra_hint` composes hints for *core's own* extras. The lazy backend is not one: it is a
+    separate distribution discovered through the `pyramids.compute_backend` entry point, exactly
+    like `pyramids-eo` or `pyramids-mesh`. So the remedy names the package, not an extra.
+
+    No conda-forge line is offered on purpose. The backend is PyPI-only -- conda-forge's
+    `pyramids-lazy` output is core's *old* lazy extra (the raw dask/zarr/kerchunk/h5py libraries
+    with no backend in them), so naming it would send the user somewhere that cannot fix the error.
 
     Args:
-        prefix: The domain-specific lead sentence, ending in a period (e.g.
-            ``"Zarr IO requires the optional 'zarr' dependency."``). It is
-            placed verbatim at the start of the returned message.
+        lead: The domain-specific lead sentence, ending in a period. Placed verbatim at the start.
 
     Returns:
-        A single string: ``prefix`` followed by ``"Install with one of:"`` and
-        two indented bullet lines giving the PyPI and conda-forge commands.
+        str: `lead`, then the single install command that resolves it.
 
     Examples:
-        - The lead sentence is preserved and a header line follows:
+        - The lead is preserved and the package is named:
             ```python
-            >>> lazy_extra_hint("Op needs the optional 'dask' dependency.").splitlines()[0]
-            "Op needs the optional 'dask' dependency. Install with one of:"
-
-            ```
-        - Both install commands are present in the body:
-            ```python
-            >>> hint = lazy_extra_hint("X requires the optional 'zarr' dependency.")
-            >>> "pip install 'pyramids-core[lazy]'" in hint
-            True
-            >>> "conda install -c conda-forge pyramids-lazy" in hint
+            >>> from pyramids.base._utils import lazy_backend_hint
+            >>> hint = lazy_backend_hint("Lazy reads need the compute backend.")
+            >>> hint.splitlines()[0]
+            'Lazy reads need the compute backend. Install it with:'
+            >>> "pip install pyramids-lazy" in hint
             True
 
             ```
+        - It never names a core extra, which cannot satisfy it:
+            ```python
+            >>> from pyramids.base._utils import lazy_backend_hint
+            >>> "pyramids-core[" in lazy_backend_hint("X needs Y.")
+            False
+
+            ```
+
+    See Also:
+        extra_hint: The two-line composer for one of core's own extras.
     """
-    return extra_hint(prefix, "lazy")
+    return f"{lead} Install it with:\n  - PyPI:        pip install pyramids-lazy"
 
 
 def lazy_vector_extra_hint(lead: str) -> str:
@@ -1476,10 +1482,10 @@ def extra_hint(lead: str, extra: str) -> str:
         - The lead is preserved and the extra names both commands:
             ```python
             >>> from pyramids.base._utils import extra_hint
-            >>> hint = extra_hint("Zarr IO needs the 'zarr' dependency.", "lazy")
+            >>> hint = extra_hint("GeoParquet needs the 'pyarrow' dependency.", "parquet")
             >>> hint.splitlines()[0]
-            "Zarr IO needs the 'zarr' dependency. Install with one of:"
-            >>> "pyramids-core[lazy]" in hint
+            "GeoParquet needs the 'pyarrow' dependency. Install with one of:"
+            >>> "pyramids-core[parquet]" in hint
             True
 
             ```
@@ -1492,8 +1498,8 @@ def extra_hint(lead: str, extra: str) -> str:
             ```
 
     See Also:
-        lazy_extra_hint: The named case of this composer for the `[lazy]`
-            extra, kept because a dozen call sites read better with it.
+        lazy_backend_hint: The hint for the lazy backend, which is a plugin rather
+            than one of core's extras, so it names `pyramids-lazy` instead.
     """
     return (
         f"{lead} Install with one of:\n"
@@ -1528,7 +1534,7 @@ def import_stac_asset(message: str):
 
 
 def import_dask(message: str):
-    """Import and return the ``dask`` module, or raise the ``[lazy]`` extra hint.
+    """Import and return the ``dask`` module, or raise the backend install hint.
 
     Returned so callers can use ``dask`` without a bare inline ``import`` of
     their own (dask is optional, so it cannot be a top-level import). Callers
@@ -1587,7 +1593,7 @@ def import_h5py(message: str):
 
     Args:
         message: The install hint raised when h5py is missing (compose it with
-            :func:`lazy_extra_hint`).
+            :func:`lazy_backend_hint`).
 
     Returns:
         The imported ``h5py`` module.

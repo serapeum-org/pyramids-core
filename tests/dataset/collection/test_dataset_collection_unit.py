@@ -1923,7 +1923,7 @@ class TestToCrsEager:
         """``compute=False`` without dask raises ``OptionalPackageDoesNotExist``.
 
         Test scenario:
-            Simulate a missing dask import — expected: the ``[lazy]`` extra error
+            Simulate a missing dask import — expected: the ``pyramids-lazy`` error
             from ``_apply_operator``'s deferred branch, naming the extra.
         """
         import builtins

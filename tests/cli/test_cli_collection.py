@@ -119,7 +119,7 @@ class TestCollectionStats:
 
     Marked ``lazy``, not ``core``: ``stats --reduce`` calls the DatasetCollection reducers, which
     route through ``pyramids.dataset._reduce_ops.resolve_dask_op`` and require the optional ``dask``
-    dependency (the ``[lazy]`` extra). The core wheel has no dask, so these must not run in the
+    dependency (via ``pyramids-lazy``). The core wheel has no dask, so these must not run in the
     ``-m "core ..."`` wheel jobs — only in the dask-equipped envs (dev / lazy), where the
     Tests - Suite selection ``-m 'not plot ...'`` still picks them up.
     """
@@ -685,7 +685,7 @@ class TestCollectionAlign:
 
 
 class TestLazyExtraContract:
-    """A missing [lazy] extra exits 1 cleanly, never 'unexpected failure' (M1)."""
+    """A missing backend exits 1 cleanly, never 'unexpected failure' (M1)."""
 
     def test_source_zarr_missing_extra_is_clean(self, monkeypatch, capsys):
         """A raw ImportError from from_zarr becomes a clean one-line error."""
@@ -698,7 +698,9 @@ class TestLazyExtraContract:
         err = capsys.readouterr().err
         assert rc == 1, "a missing extra must exit 1"
         assert "unexpected failure" not in err, f"leaked internal-bug branch: {err!r}"
-        assert "[lazy]" in err, f"error should name the [lazy] extra, got: {err!r}"
+        assert "pip install pyramids-lazy" in err, (
+            f"error should name the backend install command, got: {err!r}"
+        )
 
 
 def _local_items(tmp_path) -> list[dict]:

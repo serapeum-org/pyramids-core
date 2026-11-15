@@ -267,7 +267,7 @@ class Interop(_Engine["NetCDF"]):
         `"auto"`) to build each data variable as a lazy dask-backed
         `DataArray` in the file's native axis order, so the dataset is
         assembled without loading every variable into RAM (ARC-48).
-        Lazy reads need the optional `[lazy]` (dask) extra and a
+        Lazy reads need the `pyramids-lazy` backend (dask) and a
         file-backed container; an in-memory container ignores `chunks`
         (its data is already resident).
 
@@ -298,8 +298,8 @@ class Interop(_Engine["NetCDF"]):
         Raises:
             pyramids.base._errors.OptionalPackageDoesNotExist:
                 If `xarray` is not installed.
-            ImportError: If `chunks` is given but the `[lazy]` (dask)
-                extra is not installed.
+            ImportError: If `chunks` is given but `pyramids-lazy`
+                (dask) is not installed.
             ValueError: If the underlying GDAL handle is not a
                 multidimensional container (open the file with
                 `open_as_multi_dimensional=True`).

@@ -287,7 +287,7 @@ class TestFromZarr:
             _run(["mesh", "read", "zarr", store, out])
 
     def test_missing_extra_is_clean_error(self, tmp_path, monkeypatch):
-        """A missing [lazy] extra (ImportError) is remapped to a clean ValueError."""
+        """A missing backend (ImportError) is remapped to a clean ValueError."""
 
         def _boom(*_args, **_kwargs):
             raise ImportError("No module named 'zarr'")
@@ -295,7 +295,7 @@ class TestFromZarr:
         monkeypatch.setattr(
             MeshDataset, "from_zarr", classmethod(lambda cls, *a, **k: _boom())
         )
-        with pytest.raises(ValueError, match=r"\[lazy\] extra"):
+        with pytest.raises(ValueError, match="pip install pyramids-lazy"):
             _run(
                 [
                     "mesh",

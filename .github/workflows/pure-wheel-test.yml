@@ -170,11 +170,9 @@ jobs:
         extra:
           - { name: viz,          pip_extra: "viz",          marker: "plot",         dir: "tests/" }
           - { name: parquet,      pip_extra: "parquet",      marker: "parquet",      dir: "tests/feature" }
-          # [lazy] now resolves to the published pyramids-lazy, so this row is the only place pip
-          # exercises the core -> plugin -> core extra cycle end to end: the extra must resolve from a
-          # real wheel and core must then discover the backend through the entry-point seam.
-          - { name: lazy, pip_extra: "lazy", marker: "lazy", dir: "tests/" }
-          # The complement: with NO backend installed, every lazy op must raise the branded "install
+          # No `lazy` row: the backend is a plugin, not a published extra, so there is nothing for
+          # pip to resolve here. The plugin's own CI covers it; core only guarantees the absent case.
+          # With NO backend installed, every lazy op must raise the branded "install
           # pyramids-lazy" error. The suite forces the absent state via monkeypatch and runs by path
           # (no marker), so this row installs bare core (empty pip_extra) -- `[lazy]` would install the
           # very backend the row asserts is missing.

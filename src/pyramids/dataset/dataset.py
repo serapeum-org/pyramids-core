@@ -2667,7 +2667,7 @@ class Dataset(RasterBase):
         that function for the full argument contract. Zarr is the
         only raster output format where pyramids can write in true
         parallel — each dask chunk becomes an independent Zarr chunk
-        file. Requires the `[lazy]` optional extra, and a dataset backed
+        file. Requires the `pyramids-lazy` backend, and a dataset backed
         by a file the chunk reader can reopen.
 
         The values written are the physical ones `read_array` returns, and

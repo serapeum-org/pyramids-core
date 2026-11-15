@@ -55,7 +55,7 @@ from typing import Any, cast
 
 from pyramids.base._errors import StacError, UnsupportedAssetError
 from pyramids.base._ogc_api import USER_AGENT, http_error_detail, http_get_with_retry
-from pyramids.base._utils import import_zarr, lazy_extra_hint
+from pyramids.base._utils import import_zarr, lazy_backend_hint
 from pyramids.base.remote import CloudConfig, cloud_config_from_env, is_remote
 from pyramids.dataset import Dataset, DatasetCollection
 from pyramids.grib import open_grib
@@ -997,11 +997,11 @@ def _load_zarr(href: str):
         A :class:`DatasetCollection` for a 4-D cube, else a :class:`Dataset`.
 
     Raises:
-        OptionalPackageDoesNotExist: When the `[lazy]` extra (zarr) is missing.
+        OptionalPackageDoesNotExist: When `pyramids-lazy` (zarr) is missing.
         TypeError: The detected data variable is a group rather than an array.
     """
     import_zarr(
-        lazy_extra_hint(
+        lazy_backend_hint(
             "Reading a STAC Zarr asset requires the optional 'zarr' dependency."
         )
     )

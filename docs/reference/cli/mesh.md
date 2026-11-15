@@ -112,7 +112,7 @@ listing and `pyramids mesh <subsystem> --help` for a subsystem. An unknown verb 
   - `open-mf` — concatenate several mesh files into one dataset
   - `read-all` — write every topology in a file to its own NetCDF
   - `structured` — build a quad mesh from a raster (one quad per cell)
-  - `zarr` — read a pyramids-written Zarr store (needs the [lazy] extra)
+  - `zarr` — read a pyramids-written Zarr store (needs the pyramids-lazy backend)
 - `select` …
   - `clip` — clip the mesh to a polygon mask
   - `clip-values` — clamp a variable's values to [lower, upper]
@@ -2033,7 +2033,7 @@ pyramids mesh read structured [-h] [--band-names BAND_NAMES [BAND_NAMES ...]] [-
 
 #### `pyramids mesh read zarr`
 
-read a pyramids-written Zarr store (needs the [lazy] extra)
+read a pyramids-written Zarr store (needs the pyramids-lazy backend)
 
 ```text
 pyramids mesh read zarr [-h] [--overwrite] store output

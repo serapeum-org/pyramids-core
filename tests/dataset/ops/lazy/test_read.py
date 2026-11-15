@@ -27,7 +27,7 @@ These tests cover:
 
 The dask-specific tests are individually gated by
 :func:`pytest.mark.skipif(not HAS_DASK)` so the file still imports —
-and the non-dask tests still run — when the optional ``[lazy]``
+and the non-dask tests still run — when the optional ``pyramids-lazy``
 extra is not installed.
 """
 
@@ -246,7 +246,7 @@ class TestImportErrorBranch:
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
         ds = Dataset.read_file(str(tiled_tif_path))
-        with pytest.raises(ImportError, match=r"pyramids-core\[lazy\]"):
+        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
             ds.read_array(chunks="auto")
 
 

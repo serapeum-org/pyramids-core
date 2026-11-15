@@ -21,7 +21,7 @@ import pandas as pd
 from pyramids._cli_shared import (
     info_print,
     json_sanitize,
-    needs_lazy_extra,
+    needs_lazy_backend,
     refuse_existing,
 )
 from pyramids.netcdf import NetCDF
@@ -130,7 +130,7 @@ def _cmd_nc_to_kerchunk(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         NetCDF.read_file(args.file).to_kerchunk(
             args.output,
             inline_threshold=args.inline_threshold,
@@ -154,7 +154,7 @@ def _cmd_nc_combine_kerchunk(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         NetCDF.combine_kerchunk(
             args.inputs,
             args.output,
@@ -178,7 +178,7 @@ def _cmd_nc_open_mf(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         stack = NetCDF.open_mfdataset(args.paths, args.var)
     payload = {
         "variable": args.var,

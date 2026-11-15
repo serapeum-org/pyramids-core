@@ -13,12 +13,9 @@ from typing import Any
 
 import numpy as np
 
-from pyramids.base._utils import extra_hint, import_dask
+from pyramids.base._utils import import_dask, lazy_backend_hint
 
-_DASK_MISSING_MESSAGE = extra_hint(
-    "dask is required for lazy NetCDF reads.",
-    "lazy",
-)
+_DASK_MISSING_MESSAGE = lazy_backend_hint("dask is required for lazy NetCDF reads.")
 
 
 def mask_no_data(arr: Any, fill: Any) -> Any:

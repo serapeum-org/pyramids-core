@@ -436,9 +436,7 @@ def require_compute_backend() -> ComputeBackend:
     if backend is None:
         raise OptionalPackageDoesNotExist(
             "pyramids' lazy/dask operations require the pyramids-lazy backend, which is not "
-            "installed. Install it with `pip install pyramids-lazy`. The `pyramids-core[lazy]` / "
-            "`[parquet]` extras install the dask/zarr stack the backend builds on, but not the "
-            "backend itself, so they alone do not resolve this error."
+            "installed. Install it with `pip install pyramids-lazy`."
         )
     declared = getattr(backend, "api_version", None)
     # `bool` subclasses `int`, so exclude it explicitly: `api_version = True` must not pass as 1.

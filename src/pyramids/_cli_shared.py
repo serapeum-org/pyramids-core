@@ -28,21 +28,21 @@ OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
 
 @contextlib.contextmanager
-def needs_lazy_extra() -> Iterator[None]:
-    """Remap a missing-``[lazy]`` ``ImportError`` to a clean ``ValueError``.
+def needs_lazy_backend() -> Iterator[None]:
+    """Remap a missing-backend ``ImportError`` to a clean ``ValueError``.
 
-    The kerchunk / multi-file / Zarr readers and writers import ``zarr`` / ``kerchunk``
-    from the optional ``[lazy]`` extra; its absence raises a raw ``ImportError``, which
-    :func:`pyramids.cli.main` does not catch — it would surface as the internal-bug
-    "unexpected failure" branch. Wrapping the call turns that into a clean user error
-    naming the extra to install.
+    The kerchunk / multi-file / Zarr readers and writers import ``zarr`` / ``kerchunk``,
+    which ship with the ``pyramids-lazy`` backend; their absence raises a raw
+    ``ImportError``, which :func:`pyramids.cli.main` does not catch — it would surface as
+    the internal-bug "unexpected failure" branch. Wrapping the call turns that into a clean
+    user error naming the package to install.
 
     Yields:
         None: Control returns to the wrapped block.
 
     Raises:
-        ValueError: A dependency from the ``[lazy]`` extra (``zarr`` / ``kerchunk``) is
-            not installed.
+        ValueError: A ``pyramids-lazy`` dependency (``zarr`` / ``kerchunk``) is not
+            installed.
     """
     try:
         yield
@@ -53,8 +53,8 @@ def needs_lazy_extra() -> Iterator[None]:
         raise ValueError(str(exc)) from exc
     except ImportError as exc:
         raise ValueError(
-            "this command needs the optional [lazy] extra (zarr/kerchunk); install it "
-            "with `pip install pyramids-core[lazy]`"
+            "this command needs the pyramids-lazy backend (zarr/kerchunk); install it "
+            "with `pip install pyramids-lazy`"
         ) from exc
 
 

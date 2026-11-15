@@ -5,7 +5,7 @@ Two invariants that a behaviour test never notices:
 1. ``pyramids.lazy_support`` re-exports the *identical* core objects (never a reimplementation) --
    a copied ``CachingFileManager`` / ``default_lock`` would silently break the process-global
    handle/lock sharing dask-worker reads depend on.
-2. Every lazy submodule still imports cleanly *without* the ``[lazy]`` extra -- the import deferral
+2. Every lazy submodule still imports cleanly *without* the ``pyramids-lazy`` backend -- the deferral
    in core (task #2) must not hide a module that is itself broken at import time.
 """
 
@@ -41,7 +41,6 @@ _ORIGINS = {
     "import_pyarrow": "pyramids.base._utils",
     "import_xarray": "pyramids.base._utils",
     "import_zarr": "pyramids.base._utils",
-    "lazy_extra_hint": "pyramids.base._utils",
     "require_optional": "pyramids.base._utils",
     "crs_from_user_input": "pyramids.base.crs",
     "crs_spec": "pyramids.base.crs",

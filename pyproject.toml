@@ -63,11 +63,6 @@ dependencies = [
 
 [project.optional-dependencies]
 viz = ["cleopatra[tiles]>=0.46.1"]
-# DEPRECATED alias (removed next major). The lazy implementation now lives in the separate
-# `pyramids-lazy` distribution, which brings the dask/zarr/kerchunk/h5py stack as its own deps and
-# registers the `pyramids.compute_backend` entry point. `pip install pyramids-core[lazy]` keeps
-# working as a transition convenience; install `pyramids-lazy` directly going forward.
-lazy = ["pyramids-lazy>=0.1.0"]
 # Core's own eager GeoParquet (`read_parquet` / `to_parquet`) via pyarrow + geopandas; needs no
 # backend. The lazy vector path (dask-geopandas) moved to `pyramids-lazy[parquet]` and is no
 # longer pulled here -- LazyFeatureCollection raises the branded hint without it.
@@ -78,6 +73,12 @@ stac = ["pystac-client>=0.8.4", "stac-asset>=0.4.7"]
 # Test-only peer dep for the to_xarray / from_xarray methods; deliberately not a published
 # extra. The same-named `interop` pixi feature maps to this group.
 interop = ["xarray>=2023.1.0"]
+# The compute backend, for core's own backend-gated tests (96 `lazy` + 5 `netcdf_lazy` markers
+# exercise core's classes in lazy mode). Deliberately NOT a published extra: the backend is a
+# plugin discovered through the `pyramids.compute_backend` entry point, installed as
+# `pip install pyramids-lazy` exactly like pyramids-eo / pyramids-mesh / pyramids-citymodels.
+# The same-named `lazy` pixi feature maps to this group, so the environment list is unchanged.
+lazy = ["pyramids-lazy>=0.1.1"]
 dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",
@@ -297,7 +298,7 @@ markers = [
     # auto-skips when the extra's headline dep isn't importable — see
     # ``tests/_marks.py`` + ``pytest_collection_modifyitems``. ``viz`` is
     # spelled ``plot`` above; don't register a duplicate.
-    "lazy: tests requiring the [lazy] extra (pyramids-lazy — the dask/zarr backend)",
+    "lazy: tests requiring the pyramids-lazy backend (the dask/zarr compute plugin)",
     "interop: tests requiring the optional interop peer dependency",
     # netcdf_lazy is deliberately NOT folded into lazy: it gates on EXTRA modules beyond the
     # base extra's headline dep, so a test marked merely `lazy` would not skip when

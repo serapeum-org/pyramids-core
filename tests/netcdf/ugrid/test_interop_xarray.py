@@ -7,7 +7,7 @@ the dask ``chunked_variables`` lazy path.
 ``xarray`` is pulled at module scope via ``pytest.importorskip`` and the module carries the
 ``interop`` marker, so the whole file skips when the optional interop stack is absent (guard
 :mod:`tests.guards.test_marker_hygiene`). The Zarr / dask tests add ``@pytest.mark.lazy`` and an
-inner ``importorskip`` so they also skip without the ``[lazy]`` extra.
+inner ``importorskip`` so they also skip without ``pyramids-lazy``.
 """
 
 from __future__ import annotations
@@ -199,7 +199,7 @@ class TestMissingXarray:
 
 @pytest.mark.lazy
 class TestZarrRoundTrip:
-    """The Zarr round trip, skipped without the ``[lazy]`` extra."""
+    """The Zarr round trip, skipped without ``pyramids-lazy``."""
 
     def test_to_zarr_from_zarr(self, tmp_path):
         """A mesh and its variables round-trip through a Zarr store on disk."""
@@ -221,7 +221,7 @@ class TestZarrRoundTrip:
 
 @pytest.mark.lazy
 class TestChunkedVariables:
-    """The dask ``chunked_variables`` lazy path, skipped without the ``[lazy]`` extra."""
+    """The dask ``chunked_variables`` lazy path, skipped without ``pyramids-lazy``."""
 
     def test_chunked_read_computes_matching_reduction(self):
         """A chunked read of the sample file yields dask arrays whose reduction matches eager."""

@@ -29,9 +29,9 @@ from pyproj import CRS as PyProjCRS
 
 from pyramids.base._compute_backend import require_compute_backend
 from pyramids.base._utils import (
-    extra_hint,
     import_dask,
     import_xarray,
+    lazy_backend_hint,
     require_optional,
 )
 from pyramids.netcdf.ugrid.connectivity import Connectivity
@@ -74,9 +74,9 @@ _XARRAY_HINT = (
     "  - PyPI:        pip install xarray\n"
     "  - conda-forge: conda install -c conda-forge xarray"
 )
-_ZARR_HINT = extra_hint("Zarr IO requires the optional 'zarr' dependency.", "lazy")
-_DASK_HINT = extra_hint(
-    "A chunked mesh read requires the optional 'dask' dependency.", "lazy"
+_ZARR_HINT = lazy_backend_hint("Zarr IO requires the optional 'zarr' dependency.")
+_DASK_HINT = lazy_backend_hint(
+    "A chunked mesh read requires the optional 'dask' dependency."
 )
 
 
@@ -791,7 +791,7 @@ def chunked_variables(
     array and no source -- has nothing to chunk and is left out of the result, so the mapping can be
     smaller than the input.
 
-    ``dask`` is optional and imported inside this function; a missing dask raises the ``[lazy]``
+    ``dask`` is optional and imported inside this function; a missing dask raises the backend
     install hint rather than failing with a bare import error.
 
     Args:

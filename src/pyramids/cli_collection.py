@@ -38,7 +38,7 @@ from pyramids._cli_shared import (
     info_print,
     json_safe,
     map_lookup_errors,
-    needs_lazy_extra,
+    needs_lazy_backend,
     refuse_existing,
     validate_index_pattern,
 )
@@ -100,7 +100,7 @@ def _open_collection(args: argparse.Namespace) -> DatasetCollection:
     source = getattr(args, "source", "files")
     pattern = args.glob
     if source == "zarr":
-        with needs_lazy_extra():
+        with needs_lazy_backend():
             coll = DatasetCollection.from_zarr(pattern)
     elif source == "archive":
         coll = DatasetCollection.from_archive(
@@ -361,7 +361,7 @@ def _cmd_collection_to_zarr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     coll = _open_collection(args)
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         coll.to_zarr(args.output, mode=args.mode)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -382,7 +382,7 @@ def _cmd_collection_to_kerchunk(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     coll = _open_collection(args)
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         coll.to_kerchunk(args.output, concat_dim=args.concat_dim)
     info_print(args, f"wrote {args.output}")
     return 0

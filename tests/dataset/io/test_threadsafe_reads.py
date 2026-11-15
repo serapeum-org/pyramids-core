@@ -383,7 +383,7 @@ class TestThreadsafeLazyReads:
 
     Tagged ``lazy`` so the conftest hook auto-skips these when the lazy stack
     (dask / zarr) is absent — e.g. the bare-wheel smoke test that installs the
-    wheel without the ``[lazy]`` extra. Without it they error with
+    wheel without ``pyramids-lazy``. Without it they error with
     ``ModuleNotFoundError: No module named 'dask'`` instead of skipping.
     """
 

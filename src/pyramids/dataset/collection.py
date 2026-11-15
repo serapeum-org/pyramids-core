@@ -41,7 +41,7 @@ from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
     import_dask,
-    lazy_extra_hint,
+    lazy_backend_hint,
     resolve_resampling,
 )
 from pyramids.base.crs import crs_spec, epsg_from_user_input
@@ -353,7 +353,7 @@ def _grouped_reduce(
         dict: ``{label: ndarray}`` with one reduced ``(B, R, C)`` array per group.
     """
     dask = import_dask(
-        lazy_extra_hint(
+        lazy_backend_hint(
             "DatasetCollection grouped reductions require the optional 'dask' "
             "dependency."
         )
@@ -405,7 +405,7 @@ def _grouped_reduce_time(
         dict: ``{label: ndarray}`` with one reduced ``(B, R, C)`` array per window.
     """
     dask = import_dask(
-        lazy_extra_hint(
+        lazy_backend_hint(
             "DatasetCollection.reduce_time requires the optional 'dask' dependency."
         )
     )
@@ -600,7 +600,7 @@ def _delayed():
         import dask
     except ImportError as exc:
         raise OptionalPackageDoesNotExist(
-            lazy_extra_hint(
+            lazy_backend_hint(
                 "DatasetCollection deferred operations (compute=False) require "
                 "the optional 'dask' dependency."
             )
@@ -1811,7 +1811,7 @@ class DatasetCollection:
             import dask.array as da
         except ImportError as exc:
             raise OptionalPackageDoesNotExist(
-                lazy_extra_hint(
+                lazy_backend_hint(
                     "DatasetCollection.data requires the optional 'dask' dependency."
                 )
             ) from exc
@@ -2871,7 +2871,7 @@ class DatasetCollection:
             cube lazily from the store and whose ``time_length`` matches it.
 
         Raises:
-            OptionalPackageDoesNotExist: When the ``[lazy]`` extra is missing.
+            OptionalPackageDoesNotExist: When the ``pyramids-lazy`` backend is missing.
         """
         # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
         # OptionalPackageDoesNotExist when no backend is installed.
@@ -4212,7 +4212,7 @@ class DatasetCollection:
                 applies it immediately. `False` returns a dask `Delayed`
                 that produces the result when computed, so several
                 operations can be chained and run once; it needs the
-                optional `[lazy]` extra.
+                `pyramids-lazy` backend.
 
         Returns:
             DatasetCollection | None | Delayed: A new collection when
@@ -4640,7 +4640,7 @@ class DatasetCollection:
                 applies it immediately. `False` returns a dask `Delayed`
                 that produces the result when computed, so several
                 operations can be chained and run once; it needs the
-                optional `[lazy]` extra.
+                `pyramids-lazy` backend.
 
         Returns:
             DatasetCollection | None | Delayed: A new collection when

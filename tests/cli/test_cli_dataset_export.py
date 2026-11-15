@@ -328,7 +328,7 @@ class TestToZarr:
         """A missing zarr/dask is remapped to a one-line error naming the pyramids-lazy backend.
 
         `to-zarr` dispatches to the compute backend, so the actionable install target is
-        `pyramids-lazy`, not the `[lazy]` extra (which pulls the stack but not the backend).
+        `pyramids-lazy` itself, which is a plugin rather than one of core's extras.
         """
 
         def _raise(*_args, **_kwargs):

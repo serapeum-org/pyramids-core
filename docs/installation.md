@@ -35,12 +35,13 @@ the macOS and Windows x64 wheels). No `gdal-config`, no
 
 - `viz`: `cleopatra[tiles]` (plotting + basemap tiles via mercantile /
   xyzservices / Pillow)
-- `lazy`: **deprecated alias** — now resolves to `pyramids-lazy`, the separate distribution the
-  lazy *implementation* moved to. That package brings the dask / distributed / zarr / fsspec /
-  kerchunk / h5py stack as its own dependencies and registers the `pyramids.compute_backend`
-  entry point, so lazy operations do work through this extra. Prefer installing `pyramids-lazy`
-  directly; the alias is kept for one release so existing installs do not break, and is removed
-  in the next major version.
+- there is **no `lazy` extra**. The lazy/dask implementation is a separate distribution,
+  `pyramids-lazy`, discovered through the `pyramids.compute_backend` entry point — the same shape
+  as `pyramids-eo`, `pyramids-mesh` and `pyramids-citymodels`. Install it directly with
+  `pip install pyramids-lazy`; it brings the dask / distributed / zarr / fsspec / kerchunk / h5py
+  stack as its own dependencies. The lazy *vector* path additionally needs
+  `pip install "pyramids-lazy[parquet]"`. Until it is installed, every lazy operation raises a
+  branded error naming that command.
 - the optional labeled-array interop (`DatasetCollection.to_netcdf`,
   `NetCDF.from_xarray` / `to_xarray`) is **not** a pyramids extra — pyramids is
   GDAL-backed, so the labeled-array library is a peer. Install it directly

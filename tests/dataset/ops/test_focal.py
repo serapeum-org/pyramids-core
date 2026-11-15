@@ -126,7 +126,7 @@ class TestImportError:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
-        with pytest.raises(ImportError, match="pyramids-core\\[lazy\\]"):
+        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
             constant_raster.focal_mean(radius=1, chunks="auto")
 
 
@@ -394,7 +394,7 @@ class TestEagerAndLazyAgree:
     """L4/S4: `chunks=` is a memory choice, not a change of result.
 
     Every method exercises the `chunks=` (dask) path, so the class is tagged `@pytest.mark.lazy`
-    like its sibling lazy tests — the conftest hook then auto-skips it when the `[lazy]` extra is
+    like its sibling lazy tests — the conftest hook then auto-skips it when `pyramids-lazy` is
     absent (e.g. the wheels verify jobs), instead of raising an `ImportError`.
     """
 
