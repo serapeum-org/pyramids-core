@@ -359,8 +359,10 @@ class BasemapPlan:
     Attributes:
         tile: Draw a pyramids web-tile basemap under the raster.
         source: Tile provider name, or ``None`` for the default provider.
-        epsg: CRS code for the tile fetch. Set whenever ``tile`` is True — the
-            caller rejects a truthy ``basemap`` with no CRS up front.
+        crs: Resolved CRS for the tile fetch — an EPSG code, or a WKT string when
+            the dataset has no EPSG authority code (:func:`crs_spec`). Set whenever
+            ``tile`` is True — the caller rejects a truthy ``basemap`` with no CRS up
+            front.
         cleo_basemap: A cleopatra ``Basemap`` to forward on the render call, or
             ``None``.
 
@@ -389,11 +391,13 @@ class BasemapPlan:
 
     tile: bool
     source: str | None
-    epsg: int | None
+    crs: int | str | None
     cleo_basemap: Any
 
     @classmethod
-    def resolve(cls, basemap: Any, basemap_epsg: int | None) -> BasemapPlan:
+    def resolve(
+        cls, basemap: Any, basemap_epsg: int | None, basemap_crs_wkt: str | None = None
+    ) -> BasemapPlan:
         """Classify a (already dict-coerced) ``basemap`` argument into a plan.
 
         ``basemap`` must already have had the deprecated ``dict`` alias
@@ -402,6 +406,10 @@ class BasemapPlan:
         here. Truthiness is used throughout, so every falsy input means "no
         basemap": an empty ``dict`` must not be forwarded to cleopatra without a
         CRS any more than an empty string is tiled.
+
+        The tile CRS is resolved with :func:`crs_spec` (EPSG when pyproj can
+        resolve it, else the WKT), so a projected CRS with no EPSG authority code
+        still tiles correctly — ``add_basemap`` accepts either (issue #1577).
         """
         tile = (isinstance(basemap, str) and basemap != "") or basemap is True
         source = basemap if tile and isinstance(basemap, str) else None
@@ -409,7 +417,7 @@ class BasemapPlan:
         return cls(
             tile=tile,
             source=source,
-            epsg=basemap_epsg,
+            crs=crs_spec(basemap_epsg, basemap_crs_wkt),
             cleo_basemap=basemap if forward else None,
         )
 
@@ -432,11 +440,11 @@ class BasemapPlan:
         Resolves ``add_basemap`` via the module attribute at call time so a
         test ``patch("pyramids.basemap.basemap.add_basemap")`` is honoured (the
         patch swaps the module attribute, not any pre-bound reference). Only
-        called when ``tile`` is True, which implies ``epsg`` is set — mypy does
+        called when ``tile`` is True, which implies ``crs`` is set — mypy does
         not track that implication, hence the assert.
         """
-        assert self.epsg is not None
-        _basemap_module.add_basemap(target_ax, crs=self.epsg, source=self.source)
+        assert self.crs is not None
+        _basemap_module.add_basemap(target_ax, crs=self.crs, source=self.source)
 
     def apply_to_facets(self, grid: Any) -> None:
         """Draw the tile basemap under every visible panel of a facet grid.
@@ -693,7 +701,7 @@ class RenderRequest:
             raise ValueError("`animation_axis_values` is required when mode='animate'.")
         if self.mode.mode == "facet" and not self.mode.facet_kwargs:
             raise ValueError("`facet_kwargs` is required when mode='facet'.")
-        if self.basemap and self.basemap_epsg is None:
+        if self.basemap and crs_spec(self.basemap_epsg, self.basemap_crs_wkt) is None:
             raise ValueError("Dataset must have a CRS (epsg) to use basemap.")
 
 
@@ -1147,7 +1155,7 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
     # (A non-empty ``dict`` was already deprecated + translated to a ``Basemap``
     # up front; ``basemap and basemap_epsg is None`` was already rejected, so a
     # truthy basemap always has a CRS here.)
-    basemap_plan = BasemapPlan.resolve(basemap, basemap_epsg)
+    basemap_plan = BasemapPlan.resolve(basemap, basemap_epsg, basemap_crs_wkt)
 
     # Run the plot / animate / facet render call and draw any tile basemap.
     return _dispatch_render(
@@ -1169,6 +1177,7 @@ def mesh_render(
     location: str = "face",
     basemap: bool | str | None = None,
     basemap_epsg: int | None = None,
+    basemap_crs_wkt: str | None = None,
     **kwargs: Any,
 ) -> Any:
     """N-6 — sibling of :func:`render_array` for UGRID mesh data.
@@ -1259,7 +1268,8 @@ def mesh_render(
 
             ```
     """
-    if basemap and basemap_epsg is None:
+    tile_crs = crs_spec(basemap_epsg, basemap_crs_wkt)
+    if basemap and tile_crs is None:
         raise ValueError("Dataset must have a CRS (epsg) to use basemap.")
     require_cleopatra()
     # ``plot_mesh_data`` forwards the typed render groups straight to ``MeshGlyph.plot`` and
@@ -1268,10 +1278,9 @@ def mesh_render(
 
     result = plot_mesh_data(mesh, data, location=location, **kwargs)
     if basemap:
-        # The guard above already proved basemap_epsg is set when basemap is
-        # truthy.
-        assert basemap_epsg is not None
+        # The guard above already proved a usable CRS exists when basemap is truthy.
+        assert tile_crs is not None
         source = basemap if isinstance(basemap, str) else None
         ax = result.ax if hasattr(result, "ax") else result
-        _basemap_module.add_basemap(ax, crs=basemap_epsg, source=source)
+        _basemap_module.add_basemap(ax, crs=tile_crs, source=source)
     return result

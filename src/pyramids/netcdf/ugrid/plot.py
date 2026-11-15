@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base._utils import extra_hint, require_cleopatra
+from pyramids.base.crs import crs_spec
 from pyramids.basemap import basemap as _basemap_module
 from pyramids.dataset._plot_helpers import _reject_replaced_cbar_kwargs
 from pyramids.netcdf.ugrid.mesh import Mesh2d
@@ -330,6 +331,7 @@ def plot_mesh_outline(
     linewidth: float = 0.3,
     basemap: bool | str | None = None,
     basemap_epsg: int | None = None,
+    basemap_crs_wkt: str | None = None,
     **kwargs: Any,
 ) -> Any:
     """Plot mesh edges as a wireframe using cleopatra MeshGlyph.
@@ -369,7 +371,8 @@ def plot_mesh_outline(
         plot_mesh_data: Plot data values on the mesh.
         MeshDataset.plot_outline: Dataset-level convenience method.
     """
-    if basemap and basemap_epsg is None:
+    tile_crs = crs_spec(basemap_epsg, basemap_crs_wkt)
+    if basemap and tile_crs is None:
         # Same guard and message as the data path: tiles need a CRS to be placed against.
         raise ValueError("Dataset must have a CRS (epsg) to use basemap.")
     glyph = _mesh_to_glyph(mesh)
@@ -380,9 +383,10 @@ def plot_mesh_outline(
         **kwargs,
     )
     if basemap:
-        # The guard above already proved basemap_epsg is set when basemap is truthy; the
-        # assert is what tells the type checker, mirroring `mesh_render`.
-        assert basemap_epsg is not None
+        # The guard above already proved a usable CRS exists when basemap is truthy; the
+        # assert is what tells the type checker, mirroring `mesh_render`. `crs_spec` hands
+        # the EPSG when pyproj resolves it, else the WKT (issue #1577).
+        assert tile_crs is not None
         source = basemap if isinstance(basemap, str) else None
-        _basemap_module.add_basemap(glyph.ax, crs=basemap_epsg, source=source)
+        _basemap_module.add_basemap(glyph.ax, crs=tile_crs, source=source)
     return glyph

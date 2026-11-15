@@ -17,6 +17,7 @@ import numpy as np
 
 from pyramids.base._errors import CRSError, GeometryWarning
 from pyramids.base._utils import require_cleopatra
+from pyramids.base.crs import crs_spec
 from pyramids.basemap.basemap import add_basemap
 
 
@@ -72,10 +73,14 @@ def plot(
             f"Unsupported engine {engine!r}; choose 'geopandas' or 'cleopatra'."
         )
     if basemap:
-        if fc.epsg is None:
+        # crs_spec hands the EPSG when pyproj resolves it, else the WKT, so a projected
+        # CRS with no EPSG authority code still tiles (issue #1577); only a genuinely
+        # CRS-less collection raises.
+        tile_crs = crs_spec(fc.epsg, fc.crs.to_wkt() if fc.crs is not None else None)
+        if tile_crs is None:
             raise CRSError("FeatureCollection must have a CRS (epsg) to use basemap.")
         source = basemap if isinstance(basemap, str) else None
-        add_basemap(ax, crs=fc.epsg, source=source)
+        add_basemap(ax, crs=tile_crs, source=source)
     return result
 
 

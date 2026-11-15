@@ -6119,7 +6119,7 @@ class MeshDataset(_MeshFacades):
             data = np.take(np.asarray(data), 0, axis=cast("int", var.time_axis_index))
         if title is None:
             title = variable_name
-        if basemap and self.epsg is None:
+        if basemap and crs_spec(self.epsg, self.crs_wkt) is None:
             raise ValueError("MeshDataset must have a CRS (epsg) to use basemap.")
         # ``points`` / ``kind`` are part of the shared raster-family plot signature
         # but have no meaning for a mesh (no point overlay; the renderer is fixed to
@@ -6141,6 +6141,7 @@ class MeshDataset(_MeshFacades):
             title=title,
             basemap=basemap,
             basemap_epsg=self.epsg,
+            basemap_crs_wkt=self.crs_wkt,
             **kwargs,
         )
         return self._glyph_with_crs(result)
@@ -6488,6 +6489,7 @@ class MeshDataset(_MeshFacades):
         # here used to collide with the dataset's own CRS ("got multiple values for keyword
         # argument"). An explicit one wins; otherwise the dataset's CRS supplies it.
         kwargs.setdefault("basemap_epsg", self.epsg)
+        kwargs.setdefault("basemap_crs_wkt", self.crs_wkt)
         result = _ugrid_plot.plot_mesh_outline(
             self._mesh,
             ax=ax,
