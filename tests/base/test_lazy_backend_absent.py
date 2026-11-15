@@ -87,7 +87,8 @@ def test_public_lazy_fc_without_dask_geopandas_is_branded(monkeypatch):
 
     Test scenario:
         This is the shape of the ``py311``-``py315`` matrix legs: the backend is installed but
-        ``dask-geopandas`` (the ``[parquet]`` extra) is not. ``OptionalPackageDoesNotExist`` is an
+        ``dask-geopandas`` (which ships in ``pyramids-lazy[parquet]``, not in core's ``[parquet]``
+        extra) is not. ``OptionalPackageDoesNotExist`` is an
         ``ImportError`` subclass, so a plain ``ImportError`` here is invisible to every caller that
         matches the branded type.
     """
