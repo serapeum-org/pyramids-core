@@ -407,9 +407,12 @@ scipy = ">=1.17.1,<2"
 # ABI as libgdal-netcdf / h5py (below). zarr bumped to v3 (was pinned <3 while
 # the lazy stack targeted the v2 API — under evaluation).
 [tool.pixi.feature.lazy.dependencies]
-# Only the HDF5-linking pair stays conda: a PyPI h5py bundles its own HDF5, which DLL-shadows the
-# one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that same binary. The
-# pure-Python lazy stack (dask/distributed/zarr/fsspec/s3fs/kerchunk) comes from the [lazy] extra.
+# Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
+# which DLL-shadows the one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that
+# same binary. zarr: it drags numcodecs, which ships no cp315 Windows wheel, so PyPI falls back to a
+# source build that fails on the py315 leg. The pure-Python rest (dask/distributed/fsspec/s3fs/
+# kerchunk) comes from the [lazy] extra.
+zarr = ">=3"
 h5py = ">=3.8.0,<3.17"
 hdf5 = "1.14.*"
 
