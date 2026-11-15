@@ -403,6 +403,16 @@ python = { version = "3.15.*", build = "*_cp315" }
 [tool.pixi.feature.docs.dependencies]
 python = { version = "3.14.*", build = "*_cp314" }
 
+[tool.pixi.feature.parquet.pypi-dependencies]
+# Test envs only -- NOT a published dependency. The lazy VECTOR stack (dask-geopandas) sits behind
+# pyramids-lazy's own [parquet] extra, which core's [lazy] extra deliberately does not pull, so
+# nothing would otherwise install it. Core still needs it to exercise its own lazy-vector seam:
+# tests/config/test_configure_lazy_vector.py (module-level importorskip) and the only tests that
+# resolve LazyFeatureCollection through the real entry point rather than a monkeypatch
+# (tests/base/test_spatial_object_protocol.py). Scoped to the `parquet` feature so it reaches
+# dev/parquet/docs but never the py3XX legs, which must stay pyarrow-free.
+pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
+
 [tool.pixi.feature.lazy.dependencies]
 # Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
 # which DLL-shadows the one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that
