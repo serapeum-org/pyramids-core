@@ -2227,9 +2227,7 @@ class MeshDataset(_MeshFacades):
                 "`open_mesh_mfdataset`; the installed backend does not. Upgrade with "
                 "`pip install -U pyramids-lazy`, or omit chunks= to read eagerly."
             )
-        return forwarder(
-            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
-        )
+        return forwarder(resolved, chunks=chunks, driver=driver, mesh_name=mesh_name)
 
     @overload
     @classmethod
