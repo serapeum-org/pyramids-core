@@ -197,6 +197,10 @@ class TestCleopatraDelegation:
             "cleopatra.basemap.tiles",
             reason="cleopatra[tiles] extra not installed",
         )
+        # The glyph `add_tiles` forwards `**kwargs` to this module-level worker,
+        # which cleopatra made private in >= 0.46 (`_add_tiles`); pin it
+        # intentionally as the drift target, falling back to the pre-0.46 public
+        # `add_tiles` name.
         worker = getattr(tiles, "_add_tiles", None) or getattr(tiles, "add_tiles", None)
         assert worker is not None, (
             "cleopatra.basemap.tiles must expose a tile worker "
@@ -204,18 +208,34 @@ class TestCleopatraDelegation:
         )
         cleo_sig = inspect.signature(worker)
         pyr_sig = inspect.signature(add_basemap)
-        cleo_params = set(cleo_sig.parameters) - {"ax"}
-        pyr_params = set(pyr_sig.parameters) - {"ax"}
+        named = (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+        cleo_params = {n for n, p in cleo_sig.parameters.items() if p.kind in named} - {
+            "ax"
+        }
+        pyr_params = {n for n, p in pyr_sig.parameters.items() if p.kind in named} - {
+            "ax"
+        }
+        # Cleopatra may grow its surface with new *optional* params (pyramids just
+        # won't expose them). Both drift directions that DO break the
+        # `add_basemap(ax, ...) -> add_tiles(ax=ax, ...)` delegation are guarded:
+        # a pyramids-only param the worker cannot accept, and a new *required*
+        # worker param that add_basemap never passes.
         extra = pyr_params - cleo_params
-        # Cleopatra is allowed to grow its surface: new *optional* params
-        # don't break the `add_basemap(ax, ...) -> add_tiles(ax=ax, ...)`
-        # delegation — pyramids just won't expose them. What *would* break it
-        # is a pyramids-only param the worker cannot accept.
         assert not extra, (
             f"pyramids.add_basemap has params the cleopatra tile worker does "
             f"not accept: {extra}. The thin-wrapper delegation will not work "
             "until these are pushed upstream."
         )
+        for name in sorted(cleo_params - pyr_params):
+            param = cleo_sig.parameters[name]
+            assert param.default is not inspect.Parameter.empty, (
+                f"cleopatra's tile worker added a *required* param {name!r} not in "
+                "pyramids.add_basemap — a real add_basemap call would raise TypeError."
+            )
 
 
 class TestAddBasemapSignatureStability:
