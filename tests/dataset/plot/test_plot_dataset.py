@@ -1083,3 +1083,19 @@ class TestPlotStampsGlyphCRS:
         """With neither EPSG nor WKT, the glyph CRS is left unset (no spurious default)."""
         glyph = render_array(RenderRequest(arr=np.zeros((4, 4))))
         assert glyph.crs is None, f"expected glyph.crs None, got {glyph.crs!r}"
+
+    def test_render_array_unparseable_wkt_degrades_to_no_stamp(self):
+        """A WKT cleopatra cannot parse degrades to no stamp, not a ValueError (#1572).
+
+        Test scenario:
+            GDAL may store a WKT that cleopatra/pyproj cannot parse. Before this fix the
+            no-EPSG path skipped the stamp entirely, so a plain `.plot()` worked; the WKT
+            fallback must not turn that into a crash. An unparseable string stands in for
+            such a WKT and must leave `glyph.crs` unset.
+        """
+        glyph = render_array(
+            RenderRequest(arr=np.zeros((4, 4)), basemap_crs_wkt="not-a-crs")
+        )
+        assert glyph.crs is None, (
+            f"expected no stamp on an unparseable WKT, got {glyph.crs!r}"
+        )

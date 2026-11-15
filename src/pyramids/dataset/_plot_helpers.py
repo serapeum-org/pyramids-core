@@ -1136,7 +1136,14 @@ def render_array(request: RenderRequest, **kwargs: Any) -> ArrayGlyph:
     # default. Relies on the ``GeoMixin.crs`` default added in cleopatra >= 0.20.0.
     crs_source = basemap_epsg if basemap_epsg is not None else (basemap_crs_wkt or None)
     if crs_source is not None:
-        cleo.crs = crs_source
+        try:
+            cleo.crs = crs_source
+        except ValueError:
+            # cleopatra's ``crs`` setter validates (via pyproj), so a GDAL-valid WKT it
+            # cannot parse must not break a plain ``plot()`` — leave cleopatra's default,
+            # the pre-#1572 behaviour, rather than raise. The int-EPSG path never reaches
+            # the ``except`` (a resolved EPSG always validates).
+            pass
 
     # Resolve the ``basemap`` argument by type — pyramids web-tile vs cleopatra
     # relief/features layer vs none — into a plan the dispatch below consults.
