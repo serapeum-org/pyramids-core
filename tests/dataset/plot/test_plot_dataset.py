@@ -1058,8 +1058,8 @@ class TestPlotStampsGlyphCRS:
         ).to_wkt()
         assert ds.epsg is None, "precondition: the custom CRS has no EPSG code"
         glyph = ds.plot()
-        assert glyph.crs is not None and glyph.crs == ds.crs, (
-            f"expected glyph.crs to equal the dataset WKT, got {glyph.crs!r}"
+        assert glyph.crs == ds.crs, (
+            f"expected glyph.crs to equal the dataset WKT (a non-empty str), got {glyph.crs!r}"
         )
 
     def test_netcdf_plot_threads_dataset_wkt_into_render_array(self):
