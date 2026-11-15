@@ -197,8 +197,10 @@ def add_basemap(
     # cleopatra >= 0.46 exposes web tiles only through the glyph `add_tiles`
     # method (the module-level `tiles.add_tiles` is now private `_add_tiles`).
     # `add_basemap` works from a bare Axes, so drive the method through a
-    # lightweight GeoMixin with the axes passed explicitly; because `crs` is
-    # always supplied, the mixin never consults its own (absent) `self.crs`.
+    # lightweight GeoMixin, passing the axes explicitly. A bare GeoMixin is
+    # safe: `crs` is a class-level property defaulting to None, so the method's
+    # `self.crs` read is a harmless pass-through, and the explicit `crs` below
+    # (the data CRS) always wins.
     result = GeoMixin().add_tiles(
         ax=ax,
         source=source,
