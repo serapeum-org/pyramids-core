@@ -210,10 +210,10 @@ class TestPackedNoDataMasking:
         assert np.isclose(arr[1], 0.5), (
             f"the valid cell must stretch to 0.5; arr={arr.tolist()}"
         )
-        assert np.isfinite(arr[1]), (
-            "the valid 0.5 result must stay finite, not aliased as no-data"
+        assert int(np.isnan(arr).sum()) == 1, (
+            f"only the gap may be no-data; the valid 0.5 cell must not alias it; arr={arr.tolist()}"
         )
-        assert np.isnan(arr[3]), "the gap must be no-data (NaN)"
+        assert np.isnan(arr[3]), "the single no-data cell is the gap"
 
     def test_match_output_nodata_is_nan_so_reference_range_cannot_alias(self):
         """match_histogram output no-data is NaN, so a reference range straddling the sentinel
