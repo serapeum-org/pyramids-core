@@ -2196,7 +2196,6 @@ class MeshDataset(_MeshFacades):
         chunks: dict | str | None,
         driver: str | None,
         mesh_name: str | None,
-        sort: bool,
     ) -> Any:
         """Hand already-resolved paths to the backend's lazy mesh reader.
 
@@ -2212,7 +2211,6 @@ class MeshDataset(_MeshFacades):
             chunks: The backend's chunking argument; never ``None`` here.
             driver: Mesh driver name, or ``None`` to detect.
             mesh_name: Topology to take from each file, or ``None`` for the first.
-            sort: Whether the backend should order the files by their first time stamp.
 
         Returns:
             The backend's lazily-backed mesh object.
@@ -2230,7 +2228,7 @@ class MeshDataset(_MeshFacades):
                 "`pip install -U pyramids-lazy`, or omit chunks= to read eagerly."
             )
         return forwarder(
-            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
+            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
         )
 
     @classmethod
@@ -2274,6 +2272,10 @@ class MeshDataset(_MeshFacades):
                 the dated files are ordered among themselves and placed back into the slots
                 they occupied, so the undated ones do not move.
                 ``False`` always keeps the given order.
+                **Eager path only.** The ordering above is computed from each file's time
+                metadata using core-private machinery a backend cannot reach, so it is not
+                forwarded with ``chunks=``: on the lazy path the backend decides the order.
+                Pass an explicitly ordered sequence when reading lazily.
 
         Returns:
             With ``chunks=None``, a :class:`MeshDataset`: one dataset on the shared topology,
@@ -2281,11 +2283,15 @@ class MeshDataset(_MeshFacades):
             mesh object, whose type is defined by ``pyramids-lazy`` rather than by core.
 
         Raises:
-            ValueError: ``paths`` is empty, or a glob pattern matches nothing. Raised for both
-                the eager and the lazy path, since the paths are resolved before either runs.
+            ValueError: ``paths`` is empty, or a glob pattern matches nothing.
+            FileNotFoundError: A resolved path does not exist.
+            DriverNotExistError: ``driver`` names a driver that is not installed.
             AlignmentError: A file sits on a different topology than the first (eager path).
             OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
                 installed, or the installed one predates ``open_mesh_mfdataset``.
+
+            The first three are raised before the eager/lazy split, so they report the same
+            problem the same way whichever path was asked for.
 
         See Also:
             read_all: Every topology within one file.
@@ -2335,9 +2341,17 @@ class MeshDataset(_MeshFacades):
             raise ValueError(
                 "open_mfdataset() got an empty list of paths; there is nothing to open."
             )
+        # Validate everything core owns before the eager/lazy split, so the two paths reject
+        # bad input identically. Without this the lazy branch reports a typo'd filename or an
+        # unknown driver as "upgrade pyramids-lazy", which is the confusion
+        # `_require_existing_file` was introduced to stop (review M3/M4).
+        for path in resolved:
+            _require_existing_file(path)
+        if driver is not None:
+            _named_read_driver(driver)
         if chunks is not None:
             return cls._open_mfdataset_lazy(
-                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
+                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
             )
         datasets = [
             cls.read_file(path, driver=driver, mesh_name=mesh_name) for path in resolved

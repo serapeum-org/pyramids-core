@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 import pyramids.netcdf.ugrid.dataset as mesh_module
-from pyramids.base._errors import OptionalPackageDoesNotExist
+from pyramids.base._errors import DriverNotExistError, OptionalPackageDoesNotExist
 from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
 
@@ -342,7 +342,7 @@ class TestOpenMfdataset:
         monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
 
         got = MeshDataset.open_mfdataset(
-            str(tmp_path / "run_*.nc"), chunks="auto", mesh_name="mesh2d", sort=False
+            str(tmp_path / "run_*.nc"), chunks="auto", mesh_name="mesh2d"
         )
 
         assert got is sentinel, "the backend's return value was not passed through"
@@ -353,8 +353,11 @@ class TestOpenMfdataset:
             "chunks": "auto",
             "driver": None,
             "mesh_name": "mesh2d",
-            "sort": False,
         }, f"options were not forwarded verbatim: {captured['kwargs']!r}"
+        assert "sort" not in captured["kwargs"], (
+            "sort must not be forwarded: its contract is computed with core-private "
+            "machinery a backend cannot reproduce (review M2)"
+        )
 
     def test_a_lazy_read_without_a_backend_is_branded(self, tmp_path, monkeypatch):
         """No backend installed surfaces the seam's own branded error, not an AttributeError."""
@@ -432,3 +435,85 @@ class TestOpenMfdataset:
 
         with pytest.raises(ValueError, match="nothing to open"):
             MeshDataset.open_mfdataset([], chunks="auto")
+    def test_a_missing_file_is_refused_before_the_backend_is_consulted(
+        self, tmp_path, monkeypatch
+    ):
+        """A typo'd filename reports the typo, not "upgrade pyramids-lazy" (review M3).
+
+        Test scenario:
+            A plain path is not a glob, so the matched-nothing check never sees it. Without an
+            existence check the name reaches the backend and the user is told to upgrade a
+            plugin over a misspelling -- the very confusion `_require_existing_file` exists to
+            prevent.
+        """
+
+        def _boom():
+            raise AssertionError("the backend was resolved for a path that does not exist")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            MeshDataset.open_mfdataset(str(tmp_path / "absent.nc"), chunks="auto")
+
+    def test_a_missing_file_in_an_explicit_sequence_is_refused(self, tmp_path, monkeypatch):
+        """Every member of an explicit sequence is checked, not just the first (review M3)."""
+        paths = self._write_run(tmp_path, dated=True)
+
+        def _boom():
+            raise AssertionError("the backend was resolved for a sequence with a missing file")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            MeshDataset.open_mfdataset(
+                [str(paths[0]), str(tmp_path / "absent.nc")], chunks="auto"
+            )
+
+    def test_an_unknown_driver_is_refused_before_the_backend_is_consulted(
+        self, tmp_path, monkeypatch
+    ):
+        """A bad driver name gets core's enumerating error on both paths (review M4).
+
+        Test scenario:
+            `driver` names an entry in core's registry, which a backend cannot resolve. Eagerly
+            it raises DriverNotExistError listing what is installed; the lazy path must not
+            forward the typo and report it as a missing plugin instead.
+        """
+        self._write_run(tmp_path, dated=True)
+
+        def _boom():
+            raise AssertionError("the backend was resolved for an unknown driver")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(DriverNotExistError, match="no_such_driver"):
+            MeshDataset.open_mfdataset(
+                str(tmp_path / "run_*.nc"), chunks="auto", driver="no_such_driver"
+            )
+
+    def test_the_builtin_driver_name_is_accepted_on_the_lazy_path(self, tmp_path, monkeypatch):
+        """`ugrid` names the built-in reader, so validating must not reject it (review M4).
+
+        Test scenario:
+            RESERVED_NAMES exists precisely so asking for the built-in reader by name does not
+            raise DriverNotExistError. The pre-branch validation has to honour that, or it
+            breaks a name the eager path accepts.
+        """
+        self._write_run(tmp_path, dated=True)
+        captured = {}
+
+        class _Backend:
+            def open_mesh_mfdataset(self, resolved, **kwargs):
+                captured["driver"] = kwargs.get("driver")
+                return "lazy"
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        got = MeshDataset.open_mfdataset(
+            str(tmp_path / "run_*.nc"), chunks="auto", driver="ugrid"
+        )
+
+        assert got == "lazy", f"the built-in driver name was rejected or not forwarded: {got!r}"
+        assert captured["driver"] == "ugrid", (
+            f"driver was not forwarded verbatim: {captured.get('driver')!r}"
+        )
