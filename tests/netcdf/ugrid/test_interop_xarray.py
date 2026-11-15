@@ -183,6 +183,132 @@ class TestConnectivityEncoding:
         assert mesh2.face_node_connectivity.fill_value == -1
 
 
+class TestConnectivityFromDiskNanHandling:
+    """``_connectivity_from_disk`` against xarray's CF-decoded (float/NaN) and raw-int inputs.
+
+    Exercises the private codec function directly, without a real Zarr round trip, so each
+    edge case of the NaN-before-cast fix is isolated and fast: a decoded float array with a
+    NaN fill cell, one without any NaN, the raw on-disk integer form (unaffected by the fix),
+    and a NaN fill cell combined with a nonzero ``start_index``.
+    """
+
+    def test_nan_fill_cell_becomes_minus_one_without_warning(self):
+        """A float array with a NaN fill cell decodes to ``-1`` there, raising no warning.
+
+        Test scenario:
+            Mirrors what xarray's default CF decoding (``mask_and_scale=True``) hands back
+            for a connectivity variable: upcast to float, fill cell replaced by ``NaN``, and
+            no ``_FillValue`` in ``attrs`` (it moved to ``.encoding``). The fix must detect
+            the ``NaN`` before casting to ``np.intp`` so no ``RuntimeWarning`` fires and the
+            cell still ends up as the internal ``-1`` sentinel.
+        """
+        raw_data = np.array([[0.0, 1.0, 2.0], [0.0, 1.0, np.nan]])
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            conn = interop_xarray._connectivity_from_disk(
+                raw_data, attrs={"start_index": 0}, cf_role="face_node_connectivity"
+            )
+
+        expected = np.array([[0, 1, 2], [0, 1, -1]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+        assert conn.fill_value == -1, f"Expected fill_value -1, got {conn.fill_value}"
+
+    def test_nan_fill_cell_with_nonzero_start_index(self):
+        """A NaN fill cell combined with a nonzero ``start_index`` still decodes correctly.
+
+        Test scenario:
+            The NaN-masked cell must be excluded from the ``start_index`` subtraction
+            (``data[~mask] -= start_index``) the same way the raw-int path already excludes
+            the on-disk sentinel, not shifted along with the valid entries.
+        """
+        raw_data = np.array([[1.0, 2.0, 5.0, 4.0], [2.0, 3.0, 6.0, np.nan]])
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            conn = interop_xarray._connectivity_from_disk(
+                raw_data, attrs={"start_index": 1}, cf_role="face_node_connectivity"
+            )
+
+        expected = np.array([[0, 1, 4, 3], [1, 2, 5, -1]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+        assert conn.original_start_index == 1, (
+            f"Expected original_start_index 1, got {conn.original_start_index}"
+        )
+
+    def test_float_array_without_nan_is_unaffected(self):
+        """A float array with no ``NaN`` cells skips the substitution branch cleanly.
+
+        Test scenario:
+            A connectivity array that happens to be float-dtyped (e.g. a decoded variable
+            whose fill value is absent from this particular slice) but carries no ``NaN``
+            must cast and mask exactly as the raw-int path would, with no warning and no
+            cells mistakenly treated as fill.
+        """
+        raw_data = np.array([[0.0, 1.0, 2.0], [1.0, 2.0, 3.0]])
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            conn = interop_xarray._connectivity_from_disk(
+                raw_data,
+                attrs={"start_index": 0, "_FillValue": -999},
+                cf_role="face_node_connectivity",
+            )
+
+        expected = np.array([[0, 1, 2], [1, 2, 3]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+
+    def test_raw_integer_array_is_unaffected_by_the_nan_guard(self):
+        """The raw on-disk integer form (e.g. the GDAL read path) behaves exactly as before.
+
+        Test scenario:
+            An integer-dtyped array can never contain ``NaN``, so ``nan_mask`` must stay
+            ``None`` and the function must take the original raw-fill-comparison path
+            unchanged -- a regression guard that the new float/NaN branch never affects an
+            integer input.
+        """
+        raw_data = np.array([[0, 1, 2], [0, 1, -999]], dtype=np.int64)
+
+        conn = interop_xarray._connectivity_from_disk(
+            raw_data,
+            attrs={"start_index": 0, "_FillValue": -999},
+            cf_role="face_node_connectivity",
+        )
+
+        expected = np.array([[0, 1, 2], [0, 1, -1]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+
+    def test_missing_fill_value_attr_defaults_to_file_fill_constant(self):
+        """A NaN fill cell decodes correctly even when ``_FillValue`` is absent from ``attrs``.
+
+        Test scenario:
+            xarray moves a decoded variable's ``_FillValue`` out of ``attrs`` into
+            ``.encoding``, so ``attrs`` alone carries no sentinel. ``raw_fill`` must fall
+            back to the module's own ``_FILE_FILL`` constant, and the NaN cell must still be
+            recognized as fill via ``nan_mask`` regardless of what ``raw_fill`` resolves to.
+        """
+        raw_data = np.array([[0.0, 1.0, np.nan]])
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            conn = interop_xarray._connectivity_from_disk(
+                raw_data, attrs={"start_index": 0}, cf_role="face_node_connectivity"
+            )
+
+        expected = np.array([[0, 1, -1]], dtype=np.intp)
+        np.testing.assert_array_equal(
+            conn.data, expected, err_msg=f"Expected {expected!r}, got {conn.data!r}"
+        )
+
+
 class TestMissingXarray:
     """Guarded import wiring when xarray is unavailable."""
 
