@@ -1,14 +1,19 @@
-"""Web-tile basemap helpers — thin wrappers over ``cleopatra.basemap.tiles``.
+"""Web-tile basemap helpers — thin wrappers over ``cleopatra.basemap``.
 
-:func:`add_basemap` and :func:`get_provider` here delegate to
-:func:`cleopatra.basemap.tiles.add_tiles` and :func:`cleopatra.basemap.tiles.get_provider`
-(the cleopatra C-6 helpers, shipped in ``cleopatra >= 0.8.0`` and pinned
-via the ``[viz]`` extra as ``cleopatra[tiles]``). All the real work —
-provider resolution, zoom selection, parallel tile fetching, stitching,
-GDAL CRS warping, ``imshow`` rendering, and attribution — lives in
-cleopatra. These wrappers exist only to keep the ``pyramids.basemap``
-import path and the historical :func:`add_basemap` / :func:`get_provider`
-signatures stable for downstream callers and tests.
+:func:`add_basemap` delegates to the cleopatra glyph ``add_tiles`` method
+(:meth:`cleopatra.basemap.geo.GeoMixin.add_tiles`) and :func:`get_provider`
+to :func:`cleopatra.basemap.tiles.get_provider`. As of ``cleopatra >= 0.46``
+the module-level ``cleopatra.basemap.tiles.add_tiles`` function was made
+private (renamed to ``_add_tiles``); web-tile basemaps are now added through
+the ``add_tiles`` method on every geographic glyph (``GeoMixin``). Because
+:func:`add_basemap` works from a bare matplotlib ``Axes`` rather than a glyph,
+it drives that method through a lightweight ``GeoMixin`` instance, passing the
+axes explicitly (``add_tiles(ax=...)``). All the real work — provider
+resolution, zoom selection, parallel tile fetching, stitching, GDAL CRS
+warping, ``imshow`` rendering, and attribution — lives in cleopatra. These
+wrappers exist only to keep the ``pyramids.basemap`` import path and the
+historical :func:`add_basemap` / :func:`get_provider` signatures stable for
+downstream callers and tests.
 
 Import-direction constraint
 ---------------------------
@@ -106,10 +111,13 @@ def add_basemap(
 ) -> Any:
     """Add a web-tile basemap underneath the data plotted on ``ax``.
 
-    Thin wrapper over :func:`cleopatra.basemap.tiles.add_tiles`: fetches XYZ web
+    Thin wrapper over the cleopatra glyph ``add_tiles`` method
+    (:meth:`cleopatra.basemap.geo.GeoMixin.add_tiles`): fetches XYZ web
     tiles for the axes' geographic extent, stitches them into a single
     image, reprojects to the data's CRS via GDAL when ``crs`` is not Web
-    Mercator, and renders the image beneath the data layer.
+    Mercator, and renders the image beneath the data layer. The method is
+    driven through a bare ``GeoMixin`` with the axes passed explicitly, so
+    no glyph instance is required.
 
     Args:
         ax (matplotlib.axes.Axes):
@@ -146,7 +154,7 @@ def add_basemap(
 
     Returns:
         matplotlib.axes.Axes: The axes with the basemap added (whatever
-            :func:`cleopatra.basemap.tiles.add_tiles` returns).
+            :meth:`cleopatra.basemap.geo.GeoMixin.add_tiles` returns).
 
     Raises:
         OptionalPackageDoesNotExist: If the cleopatra ``[tiles]`` extra is
@@ -181,13 +189,20 @@ def add_basemap(
 
     See Also:
         get_provider: Resolve a tile provider name to a ``TileProvider``.
-        cleopatra.basemap.tiles.add_tiles: The underlying implementation.
+        cleopatra.basemap.geo.GeoMixin.add_tiles: The underlying glyph method.
     """
     import_basemap(_BASEMAP_MSG)
-    from cleopatra.basemap.tiles import add_tiles
+    from cleopatra.basemap.geo import GeoMixin
 
-    result = add_tiles(
-        ax,
+    # cleopatra >= 0.46 exposes web tiles only through the glyph `add_tiles`
+    # method (the module-level `tiles.add_tiles` is now private `_add_tiles`).
+    # `add_basemap` works from a bare Axes, so drive the method through a
+    # lightweight GeoMixin, passing the axes explicitly. A bare GeoMixin is
+    # safe: `crs` reads the backing `_crs` class attribute, which defaults to
+    # None on a bare instance, so the method's `self.crs` read is a harmless
+    # pass-through, and the explicit `crs` below (the data CRS) always wins.
+    result = GeoMixin().add_tiles(
+        ax=ax,
         source=source,
         crs=crs,
         zoom=zoom,

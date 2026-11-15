@@ -130,7 +130,8 @@ dispatches to `plot` / `facet` / `animate`. `NetCDF.plot` adds the NetCDF-specif
 `pyramids.netcdf._plot.NetCDFPlot` (variable / selector / curvilinear-coord / facet / animate
 resolution) and the grouped option dataclasses `Selectors` / `CoordinateSpec` / `FacetSpec`
 (`pyramids.netcdf.plot_options`, re-exported from `pyramids.netcdf`).
-`pyramids.basemap.add_basemap` / `get_provider` are thin wrappers over `cleopatra.tiles`.
+`pyramids.basemap.add_basemap` wraps the cleopatra glyph `add_tiles` method and `get_provider`
+wraps `cleopatra.basemap.tiles.get_provider`.
 
 ```mermaid
 graph LR

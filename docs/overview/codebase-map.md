@@ -82,7 +82,7 @@ flowchart TB
     `AWSRequesterPaysSigner`) for authenticated cloud reads. Requires the
     `[stac]` extra.
 - `pyramids.basemap`
-  - `add_basemap` / `get_provider` — thin wrappers over `cleopatra.tiles`
+  - `add_basemap` / `get_provider` — thin wrappers over `cleopatra.basemap`
     (the `[viz]` extra's `cleopatra[tiles]`) for web-tile plot underlays.
 - `pyramids._io`
   - Compressed-archive (zip/gzip/tar) and remote-URL (`s3://`, `gs://`,

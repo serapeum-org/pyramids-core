@@ -62,7 +62,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-viz = ["cleopatra[tiles]>=0.44.0"]
+viz = ["cleopatra[tiles]>=0.46.1"]
 # DEPRECATED alias (removed next major). The lazy implementation now lives in the separate
 # `pyramids-lazy` distribution, which brings the dask/zarr/kerchunk/h5py stack as its own deps and
 # registers the `pyramids.compute_backend` entry point. `pip install pyramids-core[lazy]` keeps

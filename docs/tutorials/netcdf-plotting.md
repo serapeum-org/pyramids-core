@@ -197,8 +197,9 @@ Overlay a web-tile basemap with `basemap=True` (OpenStreetMap) or `basemap="<pro
 nc.plot("sst", crs=4326, basemap="CartoDB.Positron")
 ```
 
-This routes through cleopatra's tile helpers (`cleopatra.tiles.add_tiles`), so it needs the `[viz]`
-extra. When faceting, one tile layer is fetched per panel.
+This routes through cleopatra's glyph `add_tiles` method
+(`cleopatra.basemap.geo.GeoMixin.add_tiles`), so it needs the `[viz]` extra. When faceting, one
+tile layer is fetched per panel.
 
 ## 10. Escape hatch — raw matplotlib
 

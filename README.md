@@ -101,7 +101,7 @@ Main Features
 - **Plotting** - `Dataset` / `NetCDF` / `DatasetCollection` / `MeshDataset` all expose a `plot` method
   backed by [cleopatra](https://github.com/serapeum-org/cleopatra) (the `[viz]` extra), routed through
   a shared `pyramids.dataset._plot_helpers` core. Optional web-tile basemap underlays via
-  `pyramids.basemap.add_basemap` (a thin wrapper over `cleopatra.tiles.add_tiles`).
+  `pyramids.basemap.add_basemap` (a thin wrapper over the cleopatra glyph `add_tiles` method).
 - **Cloud-Optimized GeoTIFF (COG)** - First-class read/write/validate support via `ds.to_cog`,
   `ds.is_cog`, and `ds.validate_cog`.
 - **Spatial operations** - Align rasters to a reference grid, reproject between coordinate systems,
