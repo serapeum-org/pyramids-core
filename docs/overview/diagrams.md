@@ -150,7 +150,7 @@ classDiagram
   class MeshGlyph {
     <<cleopatra>>
   }
-  class cleopatra_tiles {
+  class cleopatra_basemap {
     <<cleopatra.basemap>>
     +GeoMixin.add_tiles(ax, source, crs, ...)
     +tiles.get_provider(name)
@@ -168,7 +168,7 @@ classDiagram
   plot_helpers ..> ArrayGlyph : builds
   plot_helpers ..> MeshGlyph : builds (mesh_render)
   plot_helpers ..> add_basemap : basemap overlay
-  add_basemap ..> cleopatra_tiles : delegates
+  add_basemap ..> cleopatra_basemap : delegates
 ```
 
 ## UML Class: Vector Core
@@ -567,5 +567,5 @@ classDiagram
     feature_FeatureCollection ..> basemap_module : add_basemap
     plot_helpers_module ..> basemap_module : basemap overlay
     plot_helpers_module ..> cleopatra_pkg : ArrayGlyph / MeshGlyph
-    basemap_module ..> cleopatra_pkg : cleopatra.tiles
+    basemap_module ..> cleopatra_pkg : cleopatra.basemap
 ```
