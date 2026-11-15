@@ -353,8 +353,13 @@ def plot_mesh_outline(
             wireframe exactly as :meth:`MeshDataset.plot` does. ``None`` (default) draws none.
             Before issue #1354 this fell through to the line collection and raised
             ``LineCollection.set() got an unexpected keyword argument 'basemap'``.
-        basemap_epsg: CRS code for the tile fetch. Required whenever ``basemap`` is truthy,
-            since tiles cannot be placed without one.
+        basemap_epsg: Dataset EPSG code for the tile fetch, combined with
+            ``basemap_crs_wkt`` via :func:`crs_spec`. When ``basemap`` is truthy and
+            neither yields a usable CRS, tiles cannot be placed and a ``ValueError`` is
+            raised.
+        basemap_crs_wkt: Dataset CRS as a WKT string, used for the tile fetch when there
+            is no pyproj-resolvable EPSG code (a projected CRS with no EPSG authority
+            code). See :func:`crs_spec` (issue #1577).
         **kwargs: Additional keyword arguments passed to
             `matplotlib.collections.LineCollection`.
 

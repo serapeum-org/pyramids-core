@@ -1201,10 +1201,13 @@ def mesh_render(
         basemap: ``True`` or a web-tile / basemap provider string; overlays a
             web-tile basemap underneath the rendered mesh. ``None``
             (default) skips the basemap.
-        basemap_epsg: CRS code passed to
-            :func:`pyramids.basemap.basemap.add_basemap`. When
-            ``basemap`` is truthy and this is ``None`` the helper
-            raises :class:`ValueError`.
+        basemap_epsg: Dataset EPSG code for the tile fetch. Combined with
+            ``basemap_crs_wkt`` via :func:`crs_spec`; when ``basemap`` is
+            truthy and neither yields a usable CRS the helper raises
+            :class:`ValueError`.
+        basemap_crs_wkt: Dataset CRS as a WKT string, used for the tile fetch
+            when ``basemap_epsg`` has no pyproj-resolvable EPSG (a projected
+            CRS with no EPSG authority code). See :func:`crs_spec` (issue #1577).
         **kwargs: Forwarded to
             :func:`pyramids.netcdf.ugrid.plot.plot_mesh_data`. Common
             options: ``ax``, ``cmap``, ``vmin``, ``vmax``,
