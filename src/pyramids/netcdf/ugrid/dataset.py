@@ -2393,6 +2393,10 @@ class MeshDataset(_MeshFacades):
         # bad input identically. Without this the lazy branch reports a typo'd filename or an
         # unknown driver as "upgrade pyramids-lazy", which is the confusion
         # `_require_existing_file` was introduced to stop (review M3/M4).
+        # One spelling for the backend and for every message below: the glob branch already
+        # yields `str`, while the sequence and single-path branches pass the caller's objects
+        # through, so without this the backend's input type depended on how the call was written.
+        resolved = [str(path) for path in resolved]
         for path in resolved:
             _require_existing_file(path)
         if driver is not None:

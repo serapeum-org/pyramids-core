@@ -7,6 +7,8 @@ frame for ``to_dask_dataframe``, and ``concat`` for ``open_mfdataset`` -- so the
 concentrate on the mesh-specific wiring and the edges.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -660,3 +662,48 @@ class TestOpenMfdataset:
             MeshDataset.open_mfdataset(
                 str(tmp_path / "run_*.nc"), chunks="auto", driver="results_only"
             )
+
+    @pytest.mark.parametrize(
+        "spelling", ["glob", "path-sequence", "single-path", "mixed-sequence"]
+    )
+    def test_the_backend_always_receives_plain_strings(
+        self, tmp_path, monkeypatch, spelling
+    ):
+        """However the caller spelled the paths, the backend gets `str`.
+
+        Args:
+            spelling: How the caller expresses the same two files.
+
+        Test scenario:
+            `resolved` was built three ways -- the glob branch produced `str`, while the
+            sequence and single-path branches passed the caller's objects straight through. So
+            the backend saw `['str', 'str']`, `['WindowsPath', ...]` or even a mixed list
+            depending only on how the call was written, while the contract promised "a list of
+            concrete paths". A backend keying a dict on the value, or calling
+            `.startswith("s3://")`, would behave differently per spelling (Round 2 finding L2).
+        """
+        paths = self._write_run(tmp_path, dated=True)
+        captured: dict = {}
+
+        class _Backend:
+            def open_mesh_mfdataset(self, resolved, **kwargs):
+                captured["resolved"] = list(resolved)
+                return "LAZY"
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        if spelling == "glob":
+            given = str(tmp_path / "run_*.nc")
+        elif spelling == "path-sequence":
+            given = [Path(p) for p in paths]
+        elif spelling == "single-path":
+            given = Path(paths[0])
+        else:
+            given = [str(paths[0]), Path(paths[1])]
+
+        MeshDataset.open_mfdataset(given, chunks="auto")
+
+        kinds = sorted({type(p).__name__ for p in captured["resolved"]})
+        assert kinds == ["str"], (
+            f"the backend should receive only str, got {kinds} for the {spelling} spelling"
+        )
