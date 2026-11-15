@@ -2318,15 +2318,14 @@ class MeshDataset(_MeshFacades):
             would also drop the ``attr-defined`` errors consumers get today.
 
         Raises:
-            ValueError: ``paths`` is empty, or a glob pattern matches nothing.
-            FileNotFoundError: A resolved path does not exist.
-            DriverNotExistError: ``driver`` names a driver that is not installed.
+            ValueError: ``paths`` is empty, or a glob pattern matches nothing. Raised before the
+                eager/lazy split, so it reports the same problem the same way on either path.
+            FileNotFoundError: A resolved path does not exist. Also raised before the split.
+            DriverNotExistError: ``driver`` names a driver that is not installed. Also raised
+                before the split.
             AlignmentError: A file sits on a different topology than the first (eager path).
             OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
                 installed, or the installed one predates ``open_mesh_mfdataset``.
-
-            The first three are raised before the eager/lazy split, so they report the same
-            problem the same way whichever path was asked for.
 
         See Also:
             read_all: Every topology within one file.
