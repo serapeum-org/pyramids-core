@@ -18,7 +18,7 @@ from dataclasses import replace
 from glob import glob
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 from uuid import uuid4
 
 import cftime
@@ -2231,6 +2231,30 @@ class MeshDataset(_MeshFacades):
             resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
         )
 
+    @overload
+    @classmethod
+    def open_mfdataset(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        chunks: None = None,
+        driver: str | None = None,
+        mesh_name: str | None = None,
+        sort: bool = True,
+    ) -> MeshDataset: ...
+
+    @overload
+    @classmethod
+    def open_mfdataset(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        chunks: dict | str,
+        driver: str | None = None,
+        mesh_name: str | None = None,
+        sort: bool = True,
+    ) -> Any: ...
+
     @classmethod
     def open_mfdataset(
         cls,
@@ -2281,6 +2305,10 @@ class MeshDataset(_MeshFacades):
             With ``chunks=None``, a :class:`MeshDataset`: one dataset on the shared topology,
             its time axis spanning every file in order. Otherwise the backend's lazily-backed
             mesh object, whose type is defined by ``pyramids-lazy`` rather than by core.
+
+            These are declared as two overloads rather than one ``Any`` so the eager default --
+            the only shape whose type core owns -- stays checked for callers. A single ``Any``
+            would also drop the ``attr-defined`` errors consumers get today.
 
         Raises:
             ValueError: ``paths`` is empty, or a glob pattern matches nothing.
