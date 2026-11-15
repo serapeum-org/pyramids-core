@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -21467,7 +21467,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2667" name="__codelineno-0-2667"></a><span class="sd">        that function for the full argument contract. Zarr is the</span>
 <a id="__codelineno-0-2668" name="__codelineno-0-2668"></a><span class="sd">        only raster output format where pyramids can write in true</span>
 <a id="__codelineno-0-2669" name="__codelineno-0-2669"></a><span class="sd">        parallel — each dask chunk becomes an independent Zarr chunk</span>
-<a id="__codelineno-0-2670" name="__codelineno-0-2670"></a><span class="sd">        file. Requires the `[lazy]` optional extra, and a dataset backed</span>
+<a id="__codelineno-0-2670" name="__codelineno-0-2670"></a><span class="sd">        file. Requires the `pyramids-lazy` backend, and a dataset backed</span>
 <a id="__codelineno-0-2671" name="__codelineno-0-2671"></a><span class="sd">        by a file the chunk reader can reopen.</span>
 <a id="__codelineno-0-2672" name="__codelineno-0-2672"></a>
 <a id="__codelineno-0-2673" name="__codelineno-0-2673"></a><span class="sd">        The values written are the physical ones `read_array` returns, and</span>
@@ -33236,7 +33236,7 @@ planned.</p>
 that function for the full argument contract. Zarr is the
 only raster output format where pyramids can write in true
 parallel — each dask chunk becomes an independent Zarr chunk
-file. Requires the <code>[lazy]</code> optional extra, and a dataset backed
+file. Requires the <code>pyramids-lazy</code> backend, and a dataset backed
 by a file the chunk reader can reopen.</p>
 <p>The values written are the physical ones <code>read_array</code> returns, and
 pyramids' Zarr metadata has no <code>scale_factor</code> / <code>add_offset</code>, so a
@@ -33643,7 +33643,7 @@ levels are written eagerly.</p>
 <a id="__codelineno-0-2667" name="__codelineno-0-2667"></a><span class="sd">    that function for the full argument contract. Zarr is the</span>
 <a id="__codelineno-0-2668" name="__codelineno-0-2668"></a><span class="sd">    only raster output format where pyramids can write in true</span>
 <a id="__codelineno-0-2669" name="__codelineno-0-2669"></a><span class="sd">    parallel — each dask chunk becomes an independent Zarr chunk</span>
-<a id="__codelineno-0-2670" name="__codelineno-0-2670"></a><span class="sd">    file. Requires the `[lazy]` optional extra, and a dataset backed</span>
+<a id="__codelineno-0-2670" name="__codelineno-0-2670"></a><span class="sd">    file. Requires the `pyramids-lazy` backend, and a dataset backed</span>
 <a id="__codelineno-0-2671" name="__codelineno-0-2671"></a><span class="sd">    by a file the chunk reader can reopen.</span>
 <a id="__codelineno-0-2672" name="__codelineno-0-2672"></a>
 <a id="__codelineno-0-2673" name="__codelineno-0-2673"></a><span class="sd">    The values written are the physical ones `read_array` returns, and</span>

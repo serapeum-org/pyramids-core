@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -10888,7 +10888,7 @@ listing and <code>pyramids mesh &lt;subsystem&gt; --help</code> for a subsystem.
 <li><code>open-mf</code> — concatenate several mesh files into one dataset</li>
 <li><code>read-all</code> — write every topology in a file to its own NetCDF</li>
 <li><code>structured</code> — build a quad mesh from a raster (one quad per cell)</li>
-<li><code>zarr</code> — read a pyramids-written Zarr store (needs the [lazy] extra)</li>
+<li><code>zarr</code> — read a pyramids-written Zarr store (needs the pyramids-lazy backend)</li>
 <li><code>select</code> …</li>
 <li><code>clip</code> — clip the mesh to a polygon mask</li>
 <li><code>clip-values</code> — clamp a variable's values to [lower, upper]</li>
@@ -15983,7 +15983,7 @@ uncluttered; the capability is unchanged, only the path is one level deeper.</p>
 </tbody>
 </table>
 <h4 id="pyramids-mesh-read-zarr"><a class="toclink" href="#pyramids-mesh-read-zarr"><code>pyramids mesh read zarr</code></a><a class="headerlink" href="#pyramids-mesh-read-zarr" title="Permanent link">#</a></h4>
-<p>read a pyramids-written Zarr store (needs the [lazy] extra)</p>
+<p>read a pyramids-written Zarr store (needs the pyramids-lazy backend)</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-98-1" name="__codelineno-98-1" href="#__codelineno-98-1"></a>pyramids mesh read zarr [-h] [--overwrite] store output
 </code></pre></div>
 <table>

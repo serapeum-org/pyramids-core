@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9757,7 +9757,7 @@ the store; an in-memory variable is wrapped with <code>dask.array.from_array</co
 <p>A variable with neither -- a metadata-only variable, carrying a declared shape and dtype but no
 array and no source -- has nothing to chunk and is left out of the result, so the mapping can be
 smaller than the input.</p>
-<p><code>dask</code> is optional and imported inside this function; a missing dask raises the <code>[lazy]</code>
+<p><code>dask</code> is optional and imported inside this function; a missing dask raises the backend
 install hint rather than failing with a bare import error.</p>
 
 
@@ -9927,7 +9927,7 @@ install hint rather than failing with a bare import error.</p>
 <a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">    array and no source -- has nothing to chunk and is left out of the result, so the mapping can be</span>
 <a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">    smaller than the input.</span>
 <a id="__codelineno-0-793" name="__codelineno-0-793"></a>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">    ``dask`` is optional and imported inside this function; a missing dask raises the ``[lazy]``</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">    ``dask`` is optional and imported inside this function; a missing dask raises the backend</span>
 <a id="__codelineno-0-795" name="__codelineno-0-795"></a><span class="sd">    install hint rather than failing with a bare import error.</span>
 <a id="__codelineno-0-796" name="__codelineno-0-796"></a>
 <a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">    Args:</span>

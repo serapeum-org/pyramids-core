@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -14924,7 +14924,7 @@ to construct one.")``.
 <a id="__codelineno-0-1811" name="__codelineno-0-1811"></a>            <span class="kn">import</span><span class="w"> </span><span class="nn">dask.array</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">da</span>
 <a id="__codelineno-0-1812" name="__codelineno-0-1812"></a>        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
 <a id="__codelineno-0-1813" name="__codelineno-0-1813"></a>            <span class="k">raise</span> <span class="n">OptionalPackageDoesNotExist</span><span class="p">(</span>
-<a id="__codelineno-0-1814" name="__codelineno-0-1814"></a>                <span class="n">lazy_extra_hint</span><span class="p">(</span>
+<a id="__codelineno-0-1814" name="__codelineno-0-1814"></a>                <span class="n">lazy_backend_hint</span><span class="p">(</span>
 <a id="__codelineno-0-1815" name="__codelineno-0-1815"></a>                    <span class="s2">"DatasetCollection.data requires the optional 'dask' dependency."</span>
 <a id="__codelineno-0-1816" name="__codelineno-0-1816"></a>                <span class="p">)</span>
 <a id="__codelineno-0-1817" name="__codelineno-0-1817"></a>            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
@@ -15984,7 +15984,7 @@ to construct one.")``.
 <a id="__codelineno-0-2871" name="__codelineno-0-2871"></a><span class="sd">            cube lazily from the store and whose ``time_length`` matches it.</span>
 <a id="__codelineno-0-2872" name="__codelineno-0-2872"></a>
 <a id="__codelineno-0-2873" name="__codelineno-0-2873"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-2874" name="__codelineno-0-2874"></a><span class="sd">            OptionalPackageDoesNotExist: When the ``[lazy]`` extra is missing.</span>
+<a id="__codelineno-0-2874" name="__codelineno-0-2874"></a><span class="sd">            OptionalPackageDoesNotExist: When the ``pyramids-lazy`` backend is missing.</span>
 <a id="__codelineno-0-2875" name="__codelineno-0-2875"></a><span class="sd">        """</span>
 <a id="__codelineno-0-2876" name="__codelineno-0-2876"></a>        <span class="c1"># Dispatch to the lazy compute backend (pyramids-lazy); raises the branded</span>
 <a id="__codelineno-0-2877" name="__codelineno-0-2877"></a>        <span class="c1"># OptionalPackageDoesNotExist when no backend is installed.</span>
@@ -17325,7 +17325,7 @@ to construct one.")``.
 <a id="__codelineno-0-4212" name="__codelineno-0-4212"></a><span class="sd">                applies it immediately. `False` returns a dask `Delayed`</span>
 <a id="__codelineno-0-4213" name="__codelineno-0-4213"></a><span class="sd">                that produces the result when computed, so several</span>
 <a id="__codelineno-0-4214" name="__codelineno-0-4214"></a><span class="sd">                operations can be chained and run once; it needs the</span>
-<a id="__codelineno-0-4215" name="__codelineno-0-4215"></a><span class="sd">                optional `[lazy]` extra.</span>
+<a id="__codelineno-0-4215" name="__codelineno-0-4215"></a><span class="sd">                `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-4216" name="__codelineno-0-4216"></a>
 <a id="__codelineno-0-4217" name="__codelineno-0-4217"></a><span class="sd">        Returns:</span>
 <a id="__codelineno-0-4218" name="__codelineno-0-4218"></a><span class="sd">            DatasetCollection | None | Delayed: A new collection when</span>
@@ -17753,7 +17753,7 @@ to construct one.")``.
 <a id="__codelineno-0-4640" name="__codelineno-0-4640"></a><span class="sd">                applies it immediately. `False` returns a dask `Delayed`</span>
 <a id="__codelineno-0-4641" name="__codelineno-0-4641"></a><span class="sd">                that produces the result when computed, so several</span>
 <a id="__codelineno-0-4642" name="__codelineno-0-4642"></a><span class="sd">                operations can be chained and run once; it needs the</span>
-<a id="__codelineno-0-4643" name="__codelineno-0-4643"></a><span class="sd">                optional `[lazy]` extra.</span>
+<a id="__codelineno-0-4643" name="__codelineno-0-4643"></a><span class="sd">                `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-4644" name="__codelineno-0-4644"></a>
 <a id="__codelineno-0-4645" name="__codelineno-0-4645"></a><span class="sd">        Returns:</span>
 <a id="__codelineno-0-4646" name="__codelineno-0-4646"></a><span class="sd">            DatasetCollection | None | Delayed: A new collection when</span>
@@ -23901,7 +23901,7 @@ with a <code>DeprecationWarning</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>When the <code>[lazy]</code> extra is missing.</p>
+                <p>When the <code>pyramids-lazy</code> backend is missing.</p>
               </div>
             </td>
           </tr>
@@ -23972,7 +23972,7 @@ with a <code>DeprecationWarning</code>.</p>
 <a id="__codelineno-0-2871" name="__codelineno-0-2871"></a><span class="sd">        cube lazily from the store and whose ``time_length`` matches it.</span>
 <a id="__codelineno-0-2872" name="__codelineno-0-2872"></a>
 <a id="__codelineno-0-2873" name="__codelineno-0-2873"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-2874" name="__codelineno-0-2874"></a><span class="sd">        OptionalPackageDoesNotExist: When the ``[lazy]`` extra is missing.</span>
+<a id="__codelineno-0-2874" name="__codelineno-0-2874"></a><span class="sd">        OptionalPackageDoesNotExist: When the ``pyramids-lazy`` backend is missing.</span>
 <a id="__codelineno-0-2875" name="__codelineno-0-2875"></a><span class="sd">    """</span>
 <a id="__codelineno-0-2876" name="__codelineno-0-2876"></a>    <span class="c1"># Dispatch to the lazy compute backend (pyramids-lazy); raises the branded</span>
 <a id="__codelineno-0-2877" name="__codelineno-0-2877"></a>    <span class="c1"># OptionalPackageDoesNotExist when no backend is installed.</span>
@@ -28669,7 +28669,7 @@ the collection's own CRS.</p>
 applies it immediately. <code>False</code> returns a dask <code>Delayed</code>
 that produces the result when computed, so several
 operations can be chained and run once; it needs the
-optional <code>[lazy]</code> extra.</p>
+<code>pyramids-lazy</code> backend.</p>
               </div>
             </td>
             <td>
@@ -28978,7 +28978,7 @@ optional <code>[lazy]</code> extra.</p>
 <a id="__codelineno-0-4212" name="__codelineno-0-4212"></a><span class="sd">            applies it immediately. `False` returns a dask `Delayed`</span>
 <a id="__codelineno-0-4213" name="__codelineno-0-4213"></a><span class="sd">            that produces the result when computed, so several</span>
 <a id="__codelineno-0-4214" name="__codelineno-0-4214"></a><span class="sd">            operations can be chained and run once; it needs the</span>
-<a id="__codelineno-0-4215" name="__codelineno-0-4215"></a><span class="sd">            optional `[lazy]` extra.</span>
+<a id="__codelineno-0-4215" name="__codelineno-0-4215"></a><span class="sd">            `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-4216" name="__codelineno-0-4216"></a>
 <a id="__codelineno-0-4217" name="__codelineno-0-4217"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-4218" name="__codelineno-0-4218"></a><span class="sd">        DatasetCollection | None | Delayed: A new collection when</span>
@@ -30046,7 +30046,7 @@ To create a ufunc from a normal function: https://numpy.org/doc/stable/reference
 applies it immediately. <code>False</code> returns a dask <code>Delayed</code>
 that produces the result when computed, so several
 operations can be chained and run once; it needs the
-optional <code>[lazy]</code> extra.</p>
+<code>pyramids-lazy</code> backend.</p>
               </div>
             </td>
             <td>
@@ -30264,7 +30264,7 @@ optional <code>[lazy]</code> extra.</p>
 <a id="__codelineno-0-4640" name="__codelineno-0-4640"></a><span class="sd">            applies it immediately. `False` returns a dask `Delayed`</span>
 <a id="__codelineno-0-4641" name="__codelineno-0-4641"></a><span class="sd">            that produces the result when computed, so several</span>
 <a id="__codelineno-0-4642" name="__codelineno-0-4642"></a><span class="sd">            operations can be chained and run once; it needs the</span>
-<a id="__codelineno-0-4643" name="__codelineno-0-4643"></a><span class="sd">            optional `[lazy]` extra.</span>
+<a id="__codelineno-0-4643" name="__codelineno-0-4643"></a><span class="sd">            `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-4644" name="__codelineno-0-4644"></a>
 <a id="__codelineno-0-4645" name="__codelineno-0-4645"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-4646" name="__codelineno-0-4646"></a><span class="sd">        DatasetCollection | None | Delayed: A new collection when</span>

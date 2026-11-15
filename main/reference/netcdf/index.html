@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -27968,7 +27968,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-6008" name="__codelineno-0-6008"></a><span class="sd">                :class:`pyramids.dataset.engines.IO.read_array`'s</span>
 <a id="__codelineno-0-6009" name="__codelineno-0-6009"></a><span class="sd">                `chunks=` + `window=` rule).</span>
 <a id="__codelineno-0-6010" name="__codelineno-0-6010"></a><span class="sd">            ImportError: If `chunks` is given but `dask` is not</span>
-<a id="__codelineno-0-6011" name="__codelineno-0-6011"></a><span class="sd">                installed. Install the `[lazy]` extra.</span>
+<a id="__codelineno-0-6011" name="__codelineno-0-6011"></a><span class="sd">                installed. Install the `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-6012" name="__codelineno-0-6012"></a>
 <a id="__codelineno-0-6013" name="__codelineno-0-6013"></a><span class="sd">        Note:</span>
 <a id="__codelineno-0-6014" name="__codelineno-0-6014"></a><span class="sd">            Two limitations are specific to the lazy (`chunks`) path:</span>
@@ -30403,7 +30403,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-8443" name="__codelineno-0-8443"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_materialize_variable_array</span><span class="p">(</span><span class="n">var</span><span class="p">:</span> <span class="n">NetCDF</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-8444" name="__codelineno-0-8444"></a><span class="w">        </span><span class="sd">"""Read a variable as `(*band_dim_sizes, rows, cols)` (or `(rows, cols)`).</span>
 <a id="__codelineno-0-8445" name="__codelineno-0-8445"></a>
-<a id="__codelineno-0-8446" name="__codelineno-0-8446"></a><span class="sd">        With `lazy=True`, dask (the `[lazy]` extra) installed, and a file-backed variable that still</span>
+<a id="__codelineno-0-8446" name="__codelineno-0-8446"></a><span class="sd">        With `lazy=True`, dask (via `pyramids-lazy`) installed, and a file-backed variable that still</span>
 <a id="__codelineno-0-8447" name="__codelineno-0-8447"></a><span class="sd">        reads as its store, returns a chunked `dask.array` in that same layout without ever holding</span>
 <a id="__codelineno-0-8448" name="__codelineno-0-8448"></a><span class="sd">        the whole variable in RAM: every operation along a band dimension runs its numpy calls over</span>
 <a id="__codelineno-0-8449" name="__codelineno-0-8449"></a><span class="sd">        the chunks rather than over one resident array (ARC-47). What that saves depends on the</span>
@@ -30441,7 +30441,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-8481" name="__codelineno-0-8481"></a>            <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-8482" name="__codelineno-0-8482"></a>                <span class="k">return</span> <span class="n">var</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">chunks</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">)</span>
 <a id="__codelineno-0-8483" name="__codelineno-0-8483"></a>            <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-<a id="__codelineno-0-8484" name="__codelineno-0-8484"></a>                <span class="k">pass</span>  <span class="c1"># dask (the [lazy] extra) not installed -&gt; eager fallback below</span>
+<a id="__codelineno-0-8484" name="__codelineno-0-8484"></a>                <span class="k">pass</span>  <span class="c1"># dask (via the pyramids-lazy backend) not installed -&gt; eager fallback</span>
 <a id="__codelineno-0-8485" name="__codelineno-0-8485"></a>        <span class="n">arr</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">squeeze</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <a id="__codelineno-0-8486" name="__codelineno-0-8486"></a>        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="s2">"np.typing.NDArray"</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
 <a id="__codelineno-0-8487" name="__codelineno-0-8487"></a>
@@ -31713,7 +31713,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-9753" name="__codelineno-0-9753"></a>
 <a id="__codelineno-0-9754" name="__codelineno-0-9754"></a><span class="sd">        Thin forwarder to :func:`pyramids.netcdf._kerchunk_facade.to_kerchunk`</span>
 <a id="__codelineno-0-9755" name="__codelineno-0-9755"></a><span class="sd">        using `self._file_name` as the source path. Requires the</span>
-<a id="__codelineno-0-9756" name="__codelineno-0-9756"></a><span class="sd">        `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9756" name="__codelineno-0-9756"></a><span class="sd">        `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9757" name="__codelineno-0-9757"></a>
 <a id="__codelineno-0-9758" name="__codelineno-0-9758"></a><span class="sd">        Args:</span>
 <a id="__codelineno-0-9759" name="__codelineno-0-9759"></a><span class="sd">            output_path: Path where the manifest JSON is written.</span>
@@ -31747,7 +31747,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-9787" name="__codelineno-0-9787"></a>
 <a id="__codelineno-0-9788" name="__codelineno-0-9788"></a><span class="sd">        Thin forwarder to</span>
 <a id="__codelineno-0-9789" name="__codelineno-0-9789"></a><span class="sd">        :func:`pyramids.netcdf._kerchunk_facade.combine_kerchunk`. Requires</span>
-<a id="__codelineno-0-9790" name="__codelineno-0-9790"></a><span class="sd">        the `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9790" name="__codelineno-0-9790"></a><span class="sd">        the `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9791" name="__codelineno-0-9791"></a>
 <a id="__codelineno-0-9792" name="__codelineno-0-9792"></a><span class="sd">        Args:</span>
 <a id="__codelineno-0-9793" name="__codelineno-0-9793"></a><span class="sd">            paths: Sequence of NetCDF paths to combine.</span>
@@ -31787,7 +31787,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-9827" name="__codelineno-0-9827"></a><span class="sd">        Thin forwarder to</span>
 <a id="__codelineno-0-9828" name="__codelineno-0-9828"></a><span class="sd">        :func:`pyramids.netcdf._mfdataset.open_mfdataset`; see that</span>
 <a id="__codelineno-0-9829" name="__codelineno-0-9829"></a><span class="sd">        function for the full argument contract. Requires the</span>
-<a id="__codelineno-0-9830" name="__codelineno-0-9830"></a><span class="sd">        `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9830" name="__codelineno-0-9830"></a><span class="sd">        `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9831" name="__codelineno-0-9831"></a>
 <a id="__codelineno-0-9832" name="__codelineno-0-9832"></a><span class="sd">        Args:</span>
 <a id="__codelineno-0-9833" name="__codelineno-0-9833"></a><span class="sd">            paths: Glob string, explicit path, or sequence of paths.</span>
@@ -36585,7 +36585,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-14625" name="__codelineno-0-14625"></a>
 <a id="__codelineno-0-14626" name="__codelineno-0-14626"></a><span class="sd">        Raises:</span>
 <a id="__codelineno-0-14627" name="__codelineno-0-14627"></a><span class="sd">            pyramids.base._errors.OptionalPackageDoesNotExist: `xarray` is not installed.</span>
-<a id="__codelineno-0-14628" name="__codelineno-0-14628"></a><span class="sd">            ImportError: `chunks` was given but the `[lazy]` (dask) extra is not installed.</span>
+<a id="__codelineno-0-14628" name="__codelineno-0-14628"></a><span class="sd">            ImportError: `chunks` was given but `pyramids-lazy` (dask) is not installed.</span>
 <a id="__codelineno-0-14629" name="__codelineno-0-14629"></a><span class="sd">            ValueError: This container is not multidimensional — open the file with</span>
 <a id="__codelineno-0-14630" name="__codelineno-0-14630"></a><span class="sd">                `open_as_multi_dimensional=True`.</span>
 <a id="__codelineno-0-14631" name="__codelineno-0-14631"></a>
@@ -45781,7 +45781,7 @@ honour bbox windowing — matching
             <td>
               <div class="doc-md-description">
                 <p>If <code>chunks</code> is given but <code>dask</code> is not
-installed. Install the <code>[lazy]</code> extra.</p>
+installed. Install the <code>pyramids-lazy</code> backend.</p>
               </div>
             </td>
           </tr>
@@ -46284,7 +46284,7 @@ installed. Install the <code>[lazy]</code> extra.</p>
 <a id="__codelineno-0-6008" name="__codelineno-0-6008"></a><span class="sd">            :class:`pyramids.dataset.engines.IO.read_array`'s</span>
 <a id="__codelineno-0-6009" name="__codelineno-0-6009"></a><span class="sd">            `chunks=` + `window=` rule).</span>
 <a id="__codelineno-0-6010" name="__codelineno-0-6010"></a><span class="sd">        ImportError: If `chunks` is given but `dask` is not</span>
-<a id="__codelineno-0-6011" name="__codelineno-0-6011"></a><span class="sd">            installed. Install the `[lazy]` extra.</span>
+<a id="__codelineno-0-6011" name="__codelineno-0-6011"></a><span class="sd">            installed. Install the `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-6012" name="__codelineno-0-6012"></a>
 <a id="__codelineno-0-6013" name="__codelineno-0-6013"></a><span class="sd">    Note:</span>
 <a id="__codelineno-0-6014" name="__codelineno-0-6014"></a><span class="sd">        Two limitations are specific to the lazy (`chunks`) path:</span>
@@ -51005,7 +51005,7 @@ dimension / variable hierarchy. Defaults to <code>True</code>.</p>
         <p>Emit a kerchunk JSON reference manifest for this file.</p>
 <p>Thin forwarder to :func:<code>pyramids.netcdf._kerchunk_facade.to_kerchunk</code>
 using <code>self._file_name</code> as the source path. Requires the
-<code>[lazy]</code> optional extra.</p>
+<code>pyramids-lazy</code> backend.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -51137,7 +51137,7 @@ embedded directly. Default 500.</p>
 <a id="__codelineno-0-9753" name="__codelineno-0-9753"></a>
 <a id="__codelineno-0-9754" name="__codelineno-0-9754"></a><span class="sd">    Thin forwarder to :func:`pyramids.netcdf._kerchunk_facade.to_kerchunk`</span>
 <a id="__codelineno-0-9755" name="__codelineno-0-9755"></a><span class="sd">    using `self._file_name` as the source path. Requires the</span>
-<a id="__codelineno-0-9756" name="__codelineno-0-9756"></a><span class="sd">    `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9756" name="__codelineno-0-9756"></a><span class="sd">    `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9757" name="__codelineno-0-9757"></a>
 <a id="__codelineno-0-9758" name="__codelineno-0-9758"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-9759" name="__codelineno-0-9759"></a><span class="sd">        output_path: Path where the manifest JSON is written.</span>
@@ -51180,7 +51180,7 @@ embedded directly. Default 500.</p>
         <p>Emit a combined kerchunk manifest spanning many NetCDFs.</p>
 <p>Thin forwarder to
 :func:<code>pyramids.netcdf._kerchunk_facade.combine_kerchunk</code>. Requires
-the <code>[lazy]</code> optional extra.</p>
+the <code>pyramids-lazy</code> backend.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -51357,7 +51357,7 @@ embedded. Default 500.</p>
 <a id="__codelineno-0-9787" name="__codelineno-0-9787"></a>
 <a id="__codelineno-0-9788" name="__codelineno-0-9788"></a><span class="sd">    Thin forwarder to</span>
 <a id="__codelineno-0-9789" name="__codelineno-0-9789"></a><span class="sd">    :func:`pyramids.netcdf._kerchunk_facade.combine_kerchunk`. Requires</span>
-<a id="__codelineno-0-9790" name="__codelineno-0-9790"></a><span class="sd">    the `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9790" name="__codelineno-0-9790"></a><span class="sd">    the `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9791" name="__codelineno-0-9791"></a>
 <a id="__codelineno-0-9792" name="__codelineno-0-9792"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-9793" name="__codelineno-0-9793"></a><span class="sd">        paths: Sequence of NetCDF paths to combine.</span>
@@ -51406,7 +51406,7 @@ embedded. Default 500.</p>
 <p>Thin forwarder to
 :func:<code>pyramids.netcdf._mfdataset.open_mfdataset</code>; see that
 function for the full argument contract. Requires the
-<code>[lazy]</code> optional extra.</p>
+<code>pyramids-lazy</code> backend.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -51585,7 +51585,7 @@ Passing a truthy value emits a <code>DeprecationWarning</code>.</p>
 <a id="__codelineno-0-9827" name="__codelineno-0-9827"></a><span class="sd">    Thin forwarder to</span>
 <a id="__codelineno-0-9828" name="__codelineno-0-9828"></a><span class="sd">    :func:`pyramids.netcdf._mfdataset.open_mfdataset`; see that</span>
 <a id="__codelineno-0-9829" name="__codelineno-0-9829"></a><span class="sd">    function for the full argument contract. Requires the</span>
-<a id="__codelineno-0-9830" name="__codelineno-0-9830"></a><span class="sd">    `[lazy]` optional extra.</span>
+<a id="__codelineno-0-9830" name="__codelineno-0-9830"></a><span class="sd">    `pyramids-lazy` backend.</span>
 <a id="__codelineno-0-9831" name="__codelineno-0-9831"></a>
 <a id="__codelineno-0-9832" name="__codelineno-0-9832"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-9833" name="__codelineno-0-9833"></a><span class="sd">        paths: Glob string, explicit path, or sequence of paths.</span>
@@ -57506,7 +57506,7 @@ returns the stored offsets.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>chunks</code> was given but the <code>[lazy]</code> (dask) extra is not installed.</p>
+                <p><code>chunks</code> was given but <code>pyramids-lazy</code> (dask) is not installed.</p>
               </div>
             </td>
           </tr>
@@ -57654,7 +57654,7 @@ decoded, so it was exported as its stored offsets.</p>
 <a id="__codelineno-0-14625" name="__codelineno-0-14625"></a>
 <a id="__codelineno-0-14626" name="__codelineno-0-14626"></a><span class="sd">    Raises:</span>
 <a id="__codelineno-0-14627" name="__codelineno-0-14627"></a><span class="sd">        pyramids.base._errors.OptionalPackageDoesNotExist: `xarray` is not installed.</span>
-<a id="__codelineno-0-14628" name="__codelineno-0-14628"></a><span class="sd">        ImportError: `chunks` was given but the `[lazy]` (dask) extra is not installed.</span>
+<a id="__codelineno-0-14628" name="__codelineno-0-14628"></a><span class="sd">        ImportError: `chunks` was given but `pyramids-lazy` (dask) is not installed.</span>
 <a id="__codelineno-0-14629" name="__codelineno-0-14629"></a><span class="sd">        ValueError: This container is not multidimensional — open the file with</span>
 <a id="__codelineno-0-14630" name="__codelineno-0-14630"></a><span class="sd">            `open_as_multi_dimensional=True`.</span>
 <a id="__codelineno-0-14631" name="__codelineno-0-14631"></a>

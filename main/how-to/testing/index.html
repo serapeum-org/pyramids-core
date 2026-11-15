@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8387,17 +8387,15 @@ SHA and shows the combined coverage on the dashboard.</p>
 <td>Plotting helpers, basemaps</td>
 </tr>
 <tr>
-<td><code>lazy</code></td>
-<td><code>pyramids-lazy</code></td>
-<td>Dask-backed lazy array paths + kerchunk NetCDF manifests (via the backend)</td>
-</tr>
-<tr>
 <td><code>parquet</code></td>
 <td><code>pyarrow</code></td>
 <td>Eager GeoParquet I/O. Lazy <code>LazyFeatureCollection</code> needs <code>pyramids-lazy[parquet]</code></td>
 </tr>
 </tbody>
 </table>
+<p>The lazy backend is <strong>not</strong> an extra either: <code>pyramids-lazy</code> is a plugin, installed by name. It is
+declared in the dev-only <code>lazy</code> dependency-group so the <code>dev</code> / CI environments install it for
+core's backend-gated tests, which the same-named pixi feature maps to.</p>
 <p>The labeled-array interop is <strong>not</strong> an extra: pyramids is GDAL-backed, so that library is a
 peer for the <code>to_xarray</code> / <code>from_xarray</code> methods only — <code>pip install xarray</code>
 directly. It is still wired as a pixi <em>feature</em> (<code>[tool.pixi.feature.interop]</code>) so the

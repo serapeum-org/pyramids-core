@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8957,7 +8957,7 @@ nc.variable_names</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7fda6ff91a90&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x72df31971a90&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9180,7 +9180,7 @@ still runs without it.</p>
     <span class="n">refs</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">to_kerchunk</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
     <span class="n">outcome</span> <span class="o">=</span> <span class="s1">'wrote manifest:'</span><span class="p">,</span> <span class="n">manifest</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
 <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-    <span class="n">outcome</span> <span class="o">=</span> <span class="s1">'lazy extra missing:'</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+    <span class="n">outcome</span> <span class="o">=</span> <span class="s1">'pyramids-lazy backend missing:'</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
 <span class="n">outcome</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7">import tempfile
@@ -9190,7 +9190,7 @@ try:
     refs = nc.to_kerchunk(manifest)
     outcome = 'wrote manifest:', manifest.exists()
 except ImportError as exc:
-    outcome = 'lazy extra missing:', str(exc)
+    outcome = 'pyramids-lazy backend missing:', str(exc)
 outcome</div>
 </div>
 </div>
