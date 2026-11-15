@@ -143,6 +143,12 @@ class TestImportXarray:
     it rather than only asserting the import worked.
     """
 
+    # Needs the live module back, which a bare core install lacks. The interop
+    # mark is what `tests/conftest.py` turns into a skip when xarray is absent,
+    # so the pure-wheel core job (no extras) selects it under `-m core` but
+    # skips rather than fails. The sibling `test_a_missing_xarray_raises...`
+    # stays unmarked: it monkeypatches the import away and must run everywhere.
+    @pytest.mark.interop
     def test_it_returns_the_module_itself(self):
         """A guard that returned None would force a second import.
 
@@ -155,6 +161,7 @@ class TestImportXarray:
         assert xr.__name__ == "xarray"
         assert xr.DataArray([1, 2, 3]).shape == (3,)
 
+    @pytest.mark.interop
     def test_calling_it_twice_returns_the_same_module(self):
         """Guards run per call; re-importing must not build a new module.
 
