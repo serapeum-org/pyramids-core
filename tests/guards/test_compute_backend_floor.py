@@ -35,6 +35,18 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 FIRST_PLUGIN_RELEASE: dict[int, str] = {2: "0.1.0"}
 
 
+# The first pyramids-lazy release that composes its install hints locally and no longer imports
+# `lazy_extra_hint` from `pyramids.lazy_support` (serapeum-org/pyramids-lazy#20 -- merged, not yet
+# released; PyPI is still on 0.1.0, whose `_collection_zarr`, `_kerchunk_builder`,
+# `_kerchunk_facade`, `_mfdataset` and `_zarr` all import it).
+#
+# Set this to that version when it ships. The test below then flips from "the shim must still
+# exist" to "the shim must be gone AND the floor raised past the versions that need it", which is
+# the pairing that must not be done by halves: deleting the shim while the environments can still
+# resolve 0.1.0 breaks that plugin at import and takes core's lazy-marked suite red.
+FIRST_HINT_FREE_PLUGIN_RELEASE: str | None = None
+
+
 def _lazy_group_floor() -> str:
     """The `>=` floor of the `pyramids-lazy` requirement in the `lazy` group."""
     manifest = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
@@ -95,3 +107,38 @@ def test_the_backend_is_not_published_as_an_extra():
         "the `lazy` dependency-group is gone; the pixi `lazy` feature maps to it, so the "
         "dev/CI environments would stop installing the backend"
     )
+
+
+def test_the_deprecated_hint_shim_tracks_the_floor():
+    """`lazy_extra_hint` may only be deleted once the floor excludes plugins needing it.
+
+    Test scenario:
+        While FIRST_HINT_FREE_PLUGIN_RELEASE is unset, a released pyramids-lazy still
+        imports the shim through `pyramids.lazy_support`, so core must keep exporting it.
+        Once it is set, the floor must have been raised to that release and the shim must
+        be gone -- doing either half alone is the failure this pins.
+    """
+    from pyramids import lazy_support
+
+    exported = "lazy_extra_hint" in getattr(lazy_support, "__all__", ())
+
+    if FIRST_HINT_FREE_PLUGIN_RELEASE is None:
+        assert exported, (
+            "lazy_extra_hint was removed from pyramids.lazy_support while "
+            "FIRST_HINT_FREE_PLUGIN_RELEASE is still unset. A released pyramids-lazy "
+            "imports it, so removing it breaks that plugin at import. Release the "
+            "hint-free plugin first, record its version here, and raise the lazy "
+            "dependency-group floor in the same change."
+        )
+    else:
+        floor = _lazy_group_floor()
+        assert _as_tuple(floor) >= _as_tuple(FIRST_HINT_FREE_PLUGIN_RELEASE), (
+            f"the lazy group floors pyramids-lazy at {floor}, which still permits a "
+            f"plugin that imports lazy_extra_hint; raise it to "
+            f">= {FIRST_HINT_FREE_PLUGIN_RELEASE}"
+        )
+        assert not exported, (
+            "the floor now excludes every plugin that imports lazy_extra_hint, so the "
+            "deprecated shim should be deleted from pyramids.base._utils and dropped "
+            "from pyramids.lazy_support"
+        )
