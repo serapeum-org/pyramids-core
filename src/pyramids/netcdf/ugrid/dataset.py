@@ -2334,6 +2334,9 @@ class MeshDataset(_MeshFacades):
             FileNotFoundError: A resolved path does not exist. Also raised before the split.
             DriverNotExistError: ``driver`` names a driver that is not installed. Also raised
                 before the split.
+            UnsupportedMeshFormatError: ``driver`` names a results-only (``needs_mesh``) driver,
+                which carries values but no topology and so cannot open a file on its own. Also
+                raised before the split.
             AlignmentError: A file sits on a different topology than the first (eager path).
             OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
                 installed, or the installed one predates ``open_mesh_mfdataset``.
@@ -2393,7 +2396,12 @@ class MeshDataset(_MeshFacades):
         for path in resolved:
             _require_existing_file(path)
         if driver is not None:
-            _named_read_driver(driver)
+            selected, _ = _named_read_driver(driver)
+            if selected is not None and "needs_mesh" in selected.capabilities:
+                # The eager path refuses a results-only driver in `_resolve_read_driver`; doing
+                # it here too keeps both paths symmetric, and it is a capability lookup on the
+                # named driver, so it costs no file read.
+                raise _needs_mesh_error(selected, str(resolved[0]))
         if chunks is not None and not chunks:
             # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
             # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the

@@ -117,7 +117,8 @@ class ComputeBackend(Protocol):
       :meth:`pyramids.netcdf.ugrid.MeshDataset._open_mfdataset_lazy`, ``paths`` positionally and
       the rest by keyword. ``paths`` is a list of concrete paths: core has already expanded any
       glob, rejected an empty set, checked that each file exists, and validated ``driver`` against
-      its own mesh-driver registry, so a backend need not repeat any of that. ``chunks`` is
+      its own mesh-driver registry -- including refusing a results-only (``needs_mesh``) driver,
+      as the eager path does -- so a backend need not repeat any of that. ``chunks`` is
       whatever the caller passed, and is never ``None`` nor a falsy value — core rejects both
       before dispatching. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
       ``None``. ``sort`` **is** forwarded and its semantics are required: order the dated files by

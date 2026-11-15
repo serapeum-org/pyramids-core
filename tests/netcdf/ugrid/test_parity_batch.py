@@ -13,6 +13,7 @@ import pytest
 import pyramids.netcdf.ugrid.dataset as mesh_module
 from pyramids.base._errors import DriverNotExistError, OptionalPackageDoesNotExist
 from pyramids.netcdf.ugrid import MeshDataset
+from pyramids.netcdf.ugrid._drivers import UnsupportedMeshFormatError
 from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
 
 _NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
@@ -621,3 +622,41 @@ class TestOpenMfdataset:
         got = MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto")
 
         assert got == "LAZY", f"a backend accepting sort= must be used, got {got!r}"
+
+    def test_a_results_only_driver_is_refused_on_the_lazy_path_too(
+        self, tmp_path, monkeypatch
+    ):
+        """A `needs_mesh` driver is refused before the split, as the eager path refuses it.
+
+        Test scenario:
+            `_named_read_driver` answers only "reserved, or installed?" -- it does not apply the
+            `needs_mesh` refusal that `_resolve_read_driver` adds on the eager path. So a
+            results-only driver (SMS `.dat`, XMDF: values but no topology) raised
+            UnsupportedMeshFormatError eagerly and was forwarded verbatim to the backend
+            lazily, while the published contract told plugin authors core had validated the
+            driver. The check is a capability lookup on the named driver, so it costs no file
+            read (Round 2 finding L1).
+        """
+        self._write_run(tmp_path, dated=True)
+
+        class _ResultsOnly:
+            name = "results_only"
+            long_name = "Results Only Format"
+            suffixes = (".dat",)
+            capabilities = frozenset({"read", "read_data", "needs_mesh"})
+
+        monkeypatch.setattr(
+            mesh_module, "mesh_drivers", lambda: {"results_only": _ResultsOnly()}
+        )
+
+        def _boom():
+            raise AssertionError("a needs_mesh driver must not reach the backend")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(
+            UnsupportedMeshFormatError, match="carry values but no mesh"
+        ):
+            MeshDataset.open_mfdataset(
+                str(tmp_path / "run_*.nc"), chunks="auto", driver="results_only"
+            )
