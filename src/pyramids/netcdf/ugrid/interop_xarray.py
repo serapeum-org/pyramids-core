@@ -134,7 +134,10 @@ def _connectivity_from_disk(
     ``start_index`` from the valid entries and remap the file ``_FillValue`` to ``-1``.
 
     Args:
-        raw_data: The connectivity array as stored (original start index + file fill).
+        raw_data: The connectivity array as stored (original start index + file fill), or
+            as xarray/zarr's default CF decoding (``mask_and_scale=True``) hands it back:
+            upcast to float with fill cells replaced by ``NaN`` and the ``_FillValue``
+            attribute moved out of ``attrs`` into the variable's ``encoding``.
         attrs: The variable's attributes, read for ``start_index`` / ``_FillValue``.
         cf_role: The UGRID ``cf_role`` to tag the connectivity with.
 
@@ -142,11 +145,39 @@ def _connectivity_from_disk(
         A :class:`Connectivity` with 0-indexed data and ``-1`` fill.
     """
     start_index = int(attrs.get("start_index", 0))
+    # When CF decoding has already consumed `_FillValue` (moving it from `attrs` into
+    # `.encoding`), `attrs.get("_FillValue")` is None and `raw_fill` falls back to this
+    # module's own on-disk sentinel. In that case `raw_fill`'s exact value only matters as a
+    # cast-safe placeholder below -- correctness for those cells comes from `nan_mask`, not
+    # from this comparison -- so this fallback cannot recover a *different* non-default fill
+    # value from a foreign (non-pyramids-written) file once CF decoding has stripped it out.
+    # A foreign file can also declare `_FillValue: NaN` directly in `attrs` (valid CF for a
+    # float-typed variable, e.g. opened with `mask_and_scale=False`) -- `int(NaN)` raises, so
+    # that case falls back the same way rather than crashing; `nan_mask` still recognizes those
+    # cells regardless of what `raw_fill` resolves to.
     raw_fill = attrs.get("_FillValue")
-    raw_fill = int(raw_fill) if raw_fill is not None else _FILE_FILL
+    if raw_fill is None or (isinstance(raw_fill, float) and np.isnan(raw_fill)):
+        raw_fill = _FILE_FILL
+    else:
+        raw_fill = int(raw_fill)
 
-    data = np.asarray(raw_data).astype(np.intp)
+    raw_array = np.asarray(raw_data)
+    nan_mask = (
+        np.isnan(raw_array) if np.issubdtype(raw_array.dtype, np.floating) else None
+    )
+    if nan_mask is not None and nan_mask.any():
+        # CF decoding already consumed the on-disk fill sentinel and replaced those cells
+        # with NaN, so there is no longer an integer value to compare against. Substitute
+        # the sentinel back in before casting -- otherwise the cast is undefined (warns,
+        # and produces platform-dependent garbage instead of a sentinel the mask below
+        # would recognize).
+        raw_array = raw_array.copy()
+        raw_array[nan_mask] = raw_fill
+
+    data = raw_array.astype(np.intp)
     mask = data == raw_fill
+    if nan_mask is not None:
+        mask = mask | nan_mask
     if start_index != 0:
         data[~mask] -= start_index
     data[mask] = -1
