@@ -19,11 +19,13 @@ matplotlib.use("Agg")
 
 from unittest.mock import patch  # noqa: E402
 
+from pyramids.base._errors import CRSError  # noqa: E402
 from pyramids.dataset import Dataset  # noqa: E402
-from pyramids.dataset._plot_helpers import RenderRequest  # noqa: E402
+from pyramids.dataset._plot_helpers import RenderRequest, mesh_render  # noqa: E402
 from pyramids.feature import FeatureCollection  # noqa: E402
 from pyramids.netcdf import GeoReference  # noqa: E402
 from pyramids.netcdf.ugrid import MeshDataset  # noqa: E402
+from pyramids.netcdf.ugrid.plot import plot_mesh_outline  # noqa: E402
 
 pytestmark = pytest.mark.plot
 
@@ -76,6 +78,37 @@ class TestBasemapWktCrs:
         )
         with pytest.raises(ValueError, match="to use basemap"):
             request.validate()
+
+    def test_feature_plot_basemap_no_crs_raises(self):
+        """A CRS-less FeatureCollection with `basemap=True` still raises (part (b) of #1577)."""
+        gdf = gpd.GeoDataFrame({"v": [1]}, geometry=[Point(0, 0)], crs=None)
+        fc = FeatureCollection(gdf)
+        assert fc.epsg is None and fc.crs is None, (
+            "precondition: the FC has no CRS at all"
+        )
+        with pytest.raises(CRSError, match="to use basemap"):
+            fc.plot(basemap=True)
+
+    def test_mesh_render_basemap_no_crs_raises(self):
+        """`mesh_render` with no EPSG and no WKT still raises (the data-path guard holds)."""
+        ds = _wkt_mesh()
+        with pytest.raises(ValueError, match="to use basemap"):
+            mesh_render(
+                mesh=ds._mesh,
+                data=np.array([1.0, 2.0]),
+                location="face",
+                basemap=True,
+                basemap_epsg=None,
+                basemap_crs_wkt=None,
+            )
+
+    def test_plot_mesh_outline_basemap_no_crs_raises(self):
+        """`plot_mesh_outline` with no EPSG and no WKT still raises (the outline guard holds)."""
+        ds = _wkt_mesh()
+        with pytest.raises(ValueError, match="to use basemap"):
+            plot_mesh_outline(
+                ds._mesh, basemap=True, basemap_epsg=None, basemap_crs_wkt=None
+            )
 
     def test_feature_plot_basemap_dispatches_wkt(self):
         """`FeatureCollection.plot(basemap=True)` on a WKT-only FC tiles with the WKT."""
