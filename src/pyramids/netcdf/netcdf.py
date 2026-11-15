@@ -8481,7 +8481,7 @@ class NetCDF(Dataset):
             try:
                 return var.read_array(chunks="auto")
             except ImportError:
-                pass  # dask (the [lazy] extra) not installed -> eager fallback below
+                pass  # dask (via the pyramids-lazy backend) not installed -> eager fallback
         arr = var.read_array(squeeze=False)
         return cast("np.typing.NDArray", arr)
 

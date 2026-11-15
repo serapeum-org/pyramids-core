@@ -48,7 +48,7 @@ nc.plot("t2m", selectors=Selectors(time="2020-01-01 12:00:00", level=850),
 nc.plot("T2", axes=CoordinateSpec(coords=(XLONG, XLAT)), kind="pcolormesh",
         facet=FacetSpec(col="time", col_wrap=4))
 
-# animate over a dimension with lazy, per-frame reads ([lazy] extra)
+# animate over a dimension with lazy, per-frame reads (needs pyramids-lazy)
 nc.plot("t2m", animate="time", chunks={"time": 1})
 ```
 

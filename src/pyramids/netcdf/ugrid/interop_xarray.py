@@ -29,9 +29,9 @@ from pyproj import CRS as PyProjCRS
 
 from pyramids.base._compute_backend import require_compute_backend
 from pyramids.base._utils import (
-    lazy_backend_hint,
     import_dask,
     import_xarray,
+    lazy_backend_hint,
     require_optional,
 )
 from pyramids.netcdf.ugrid.connectivity import Connectivity
