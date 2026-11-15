@@ -2200,7 +2200,7 @@ class MeshDataset(_MeshFacades):
         cls,
         resolved: Sequence[str | Path],
         *,
-        chunks: dict | str | None,
+        chunks: dict | str | int | tuple[int, ...] | None,
         driver: str | None,
         mesh_name: str | None,
         sort: bool,
@@ -2272,7 +2272,7 @@ class MeshDataset(_MeshFacades):
         cls,
         paths: str | Path | Sequence[str | Path],
         *,
-        chunks: dict | str,
+        chunks: dict | str | int | tuple[int, ...],
         driver: str | None = None,
         mesh_name: str | None = None,
         sort: bool = True,
@@ -2283,7 +2283,7 @@ class MeshDataset(_MeshFacades):
         cls,
         paths: str | Path | Sequence[str | Path],
         *,
-        chunks: dict | str | None = None,
+        chunks: dict | str | int | tuple[int, ...] | None = None,
         driver: str | None = None,
         mesh_name: str | None = None,
         sort: bool = True,
@@ -2309,7 +2309,8 @@ class MeshDataset(_MeshFacades):
                 what this method has always done and needs no backend. Anything else hands the
                 resolved paths to the ``pyramids-lazy`` backend and returns a lazily-backed mesh
                 instead, so a long run is not held in memory. Accepts whatever that backend's
-                chunking argument accepts (a mapping, or ``"auto"``). A falsy value other than
+                chunking argument accepts: a mapping, ``"auto"``, an ``int`` block size,
+                ``-1`` for one chunk, or a per-axis tuple. A falsy value other than
                 ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects neither path and raises
                 :class:`ValueError` rather than dispatching lazily.
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
@@ -2419,7 +2420,8 @@ class MeshDataset(_MeshFacades):
             # opposite. Reject them instead of guessing which was meant (review N3).
             raise ValueError(
                 f"open_mfdataset() got chunks={chunks!r}, which selects neither path: pass "
-                "chunks=None to read eagerly, or a chunk mapping / 'auto' to read lazily."
+                "chunks=None to read eagerly, or a chunk mapping, 'auto', an int block "
+                "size, -1, or a per-axis tuple to read lazily."
             )
         if chunks is not None:
             return cls._open_mfdataset_lazy(
