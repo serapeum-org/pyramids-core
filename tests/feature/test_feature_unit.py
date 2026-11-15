@@ -664,7 +664,10 @@ class TestParquetPyarrowGuard:
     def test_to_parquet_branded_error_without_pyarrow(
         self, tmp_path: Path, monkeypatch
     ):
-        self._hide_pyarrow(monkeypatch)
+        # Build the collection BEFORE hiding pyarrow. pandas 3.x backs string
+        # column labels with Arrow and imports pyarrow itself while building the
+        # frame, so patching first makes pandas raise the fake ImportError before
+        # pyramids' own guard is ever reached.
         fc = FeatureCollection(
             gpd.GeoDataFrame(
                 {"v": [1]},
@@ -672,6 +675,7 @@ class TestParquetPyarrowGuard:
                 crs="EPSG:4326",
             )
         )
+        self._hide_pyarrow(monkeypatch)
         with pytest.raises(ImportError, match=r"pyramids-core\[parquet\]"):
             fc.to_parquet(tmp_path / "x.parquet")
 
