@@ -124,8 +124,12 @@ class ComputeBackend(Protocol):
       their first time stamp, leave undated files in the slots they were given, and with
       ``sort=False`` preserve the caller's order exactly. A backend applies it to the handles it
       already opened to build its graph, so honouring it costs no extra read; core cannot
-      pre-sort, because doing so would mean opening every file eagerly. The return value is the
-      backend's own lazy mesh type; core does not constrain it.
+      pre-sort, because doing so would mean opening every file eagerly. Because the probe is by
+      name, core also checks that the method can *accept* ``sort`` before calling it, so a backend
+      predating that argument is refused with a branded
+      :class:`~pyramids.base._errors.OptionalPackageDoesNotExist` instead of a bare ``TypeError``
+      from the argument binder; a ``**kwargs`` catch-all satisfies the check. The return value is
+      the backend's own lazy mesh type; core does not constrain it.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
@@ -346,6 +350,47 @@ def protocol_members(protocol: type | None = None) -> frozenset[str]:
             if callable(value) and not name.startswith("__")
         )
     return frozenset(members)
+
+
+def accepts_keyword(func: Any, name: str) -> bool:
+    """Whether `func` can be called with the keyword argument `name`.
+
+    Used to check a probed optional capability's *signature*, not just its presence: a backend
+    predating an added keyword passes a `getattr` probe and then fails in Python's argument
+    binder, which produces a bare `TypeError` instead of a branded, actionable error.
+
+    A `**kwargs` catch-all counts as accepting, because that is how the first-party backend
+    forwards (`open_mesh_mfdataset(self, paths, **kwargs)`); a check looking only for a declared
+    parameter would reject it.
+
+    Args:
+        func: The callable to inspect.
+        name: The keyword argument's name.
+
+    Returns:
+        True when the keyword can be passed, or when the signature cannot be determined -- in
+        which case the call itself is left to decide, rather than refusing something that may
+        well work.
+    """
+    try:
+        parameters = inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        # Builtins and some C extensions expose no signature; do not refuse on that basis.
+        accepted = True
+    else:
+        declared = parameters.get(name)
+        accepted = any(
+            parameter.kind is inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters.values()
+        ) or (
+            declared is not None
+            and declared.kind
+            in (
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
+            )
+        )
+    return accepted
 
 
 def _missing_protocol_members(candidate: object) -> list[str]:

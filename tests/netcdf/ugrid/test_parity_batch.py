@@ -560,3 +560,64 @@ class TestOpenMfdataset:
         assert captured.get("sort") is sort, (
             f"sort={sort} must reach the backend; got {captured.get('sort', '<dropped>')!r}"
         )
+
+    def test_a_backend_that_cannot_take_sort_is_refused_branded(
+        self, tmp_path, monkeypatch
+    ):
+        """A backend missing the `sort=` argument gets a branded error, not a raw TypeError.
+
+        Test scenario:
+            The probe is presence-only, so a backend written against the four-argument contract
+            this branch published before `sort` was forwarded passes `getattr` and then dies in
+            Python's argument binder: `TypeError: ... unexpected keyword argument 'sort'`. That
+            is the unbranded failure the seam exists to prevent, and it contradicts the helper's
+            documented promise of a branded error (Round 2 finding M2).
+        """
+        self._write_run(tmp_path, dated=True)
+
+        class _FourArgBackend:
+            def open_mesh_mfdataset(self, paths, *, chunks, driver, mesh_name):
+                return "LAZY"
+
+        monkeypatch.setattr(
+            mesh_module, "require_compute_backend", lambda: _FourArgBackend()
+        )
+
+        with pytest.raises(OptionalPackageDoesNotExist, match="sort"):
+            MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto")
+
+    @pytest.mark.parametrize(
+        "signature",
+        ["var_keyword", "explicit_sort"],
+        ids=["accepts-**kwargs", "declares-sort"],
+    )
+    def test_a_backend_that_can_take_sort_is_accepted(
+        self, tmp_path, monkeypatch, signature
+    ):
+        """Both ways of accepting `sort` are allowed through the signature check.
+
+        Args:
+            signature: Which accepting shape the fake backend uses.
+
+        Test scenario:
+            The released pyramids-lazy forwards through `open_mesh_mfdataset(self, paths,
+            **kwargs)`, so a check that merely looked for a parameter named `sort` would reject
+            the real backend. A `**kwargs` catch-all must count as accepting, as must an
+            explicitly declared `sort`.
+        """
+        self._write_run(tmp_path, dated=True)
+
+        class _VarKeyword:
+            def open_mesh_mfdataset(self, paths, **kwargs):
+                return "LAZY"
+
+        class _ExplicitSort:
+            def open_mesh_mfdataset(self, paths, *, chunks, driver, mesh_name, sort):
+                return "LAZY"
+
+        backend = _VarKeyword() if signature == "var_keyword" else _ExplicitSort()
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: backend)
+
+        got = MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto")
+
+        assert got == "LAZY", f"a backend accepting sort= must be used, got {got!r}"

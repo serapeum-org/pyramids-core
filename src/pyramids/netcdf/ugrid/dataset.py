@@ -40,7 +40,7 @@ from shapely.geometry import LineString, box
 
 from pyramids.base import _timeseries
 from pyramids.base._array_ops import array_equals, array_identical
-from pyramids.base._compute_backend import require_compute_backend
+from pyramids.base._compute_backend import accepts_keyword, require_compute_backend
 from pyramids.base._errors import (
     AlignmentError,
     CRSError,
@@ -2220,10 +2220,13 @@ class MeshDataset(_MeshFacades):
             The backend's lazily-backed mesh object.
 
         Raises:
-            OptionalPackageDoesNotExist: No backend is installed, or the installed one does not
-                provide ``open_mesh_mfdataset``. The message names the backend that was resolved,
-                because a third party may register one, and offers the first-party upgrade as a
-                parenthesised hint rather than as the diagnosis.
+            OptionalPackageDoesNotExist: No backend is installed, the installed one does not
+                provide ``open_mesh_mfdataset``, or it provides one that cannot accept ``sort``.
+                The signature is checked as well as the name, so a backend predating the
+                ``sort`` argument is refused with this branded error rather than a bare
+                ``TypeError`` from the argument binder. The message names the backend that was
+                resolved, because a third party may register one, and offers the first-party
+                upgrade as a parenthesised hint rather than as the diagnosis.
         """
         backend = require_compute_backend()
         forwarder = getattr(backend, "open_mesh_mfdataset", None)
@@ -2232,6 +2235,13 @@ class MeshDataset(_MeshFacades):
                 f"The installed lazy backend ({type(backend).__module__}) does not provide "
                 "`open_mesh_mfdataset`, so chunks= cannot be served (for the first-party one: "
                 "`pip install -U pyramids-lazy`). Omit chunks= to read eagerly."
+            )
+        if not accepts_keyword(forwarder, "sort"):
+            raise OptionalPackageDoesNotExist(
+                f"The installed lazy backend ({type(backend).__module__}) provides "
+                "`open_mesh_mfdataset` but not its `sort=` argument, so core cannot tell it how "
+                "to order the files (for the first-party one: `pip install -U pyramids-lazy`). "
+                "Omit chunks= to read eagerly."
             )
         return forwarder(
             resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
