@@ -95,6 +95,9 @@ class TestGlyphCarriesDatasetCRS:
         assert ds._glyph_with_crs(sentinel) is sentinel, (
             "non-glyph result must pass through untouched"
         )
+        assert ds._glyph_with_crs("sentinel") == "sentinel", (
+            "a str render result (the shape test_plot.py patches _mesh_render with) must pass through"
+        )
 
     def test_preexisting_glyph_crs_is_not_overridden(self):
         """An already-set ``glyph.crs`` wins over the dataset epsg (defensive guard)."""
