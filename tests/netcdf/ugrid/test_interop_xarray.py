@@ -372,7 +372,7 @@ class TestZarrRoundTrip:
         assert data_vars2["level"].has_time is True
 
     def test_mixed_element_fill_survives_the_round_trip(self, tmp_path):
-        """A padded (mixed-element) face *and* edge row keep their fill cells as ``-1``.
+        """A padded face row and a padded edge row both keep their fill cells as ``-1``.
 
         xarray's default CF decoding (``mask_and_scale=True``) consumes the on-disk
         ``_FillValue`` on read, upcasting the connectivity array to float and replacing the
@@ -384,16 +384,20 @@ class TestZarrRoundTrip:
 
         ``_connectivity_from_disk`` has two call sites in ``_build_mesh_from_dataset`` --
         ``face_node_connectivity`` and ``edge_node_connectivity`` -- so the fixture gives both
-        a fill cell to prove the fix through both, not just the face one.
+        a fill cell to prove the fix through both, not just the face one. The faces are a
+        genuine mixed-element case (a triangle alongside a quad, which is why the triangle's
+        row needs padding); edges have no such concept -- every edge is always exactly 2
+        nodes -- so the edge row is padded to a uniform width purely to drive a fill cell
+        through that call site too, not to simulate a real variable-length edge.
         """
         pytest.importorskip("zarr")
         node_x = np.array([0.0, 1.0, 0.5, 1.5])
         node_y = np.array([0.0, 0.0, 1.0, 1.0])
         # A triangle (padded with -1) and a quad -- mixed element counts force a fill cell.
         internal_faces = np.array([[0, 1, 2, -1], [0, 1, 3, 2]], dtype=np.intp)
-        # A synthetic padded edge row (real UGRID edges are always 2 nodes; the 3rd, -1-filled
-        # column here exists purely to drive a fill cell through this call site too).
-        internal_edges = np.array([[0, 1, -1], [1, 2, 3]], dtype=np.intp)
+        # Both rows are genuinely 2-node edges; the second row's -1 is a synthetic padding
+        # cell added purely to drive a second fill cell through this call site.
+        internal_edges = np.array([[0, 1, -1], [1, 2, -1]], dtype=np.intp)
         mesh = Mesh2d(
             node_x=node_x,
             node_y=node_y,
@@ -414,11 +418,7 @@ class TestZarrRoundTrip:
         interop_xarray.to_zarr(mesh, {}, store)
 
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "error",
-                message="invalid value encountered in cast",
-                category=RuntimeWarning,
-            )
+            warnings.filterwarnings("error", category=RuntimeWarning)
             mesh2, _ = interop_xarray.from_zarr(store)
 
         np.testing.assert_array_equal(mesh2.face_node_connectivity.data, internal_faces)
