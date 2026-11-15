@@ -506,3 +506,27 @@ class TestOpenMfdataset:
             assert result is not None, (
                 "a backend that serves chunks= must return something"
             )
+
+    @pytest.mark.parametrize(
+        "bad", [False, 0, "", {}], ids=["False", "0", "empty-str", "empty-dict"]
+    )
+    def test_a_meaningless_chunks_value_is_refused(self, tmp_path, monkeypatch, bad):
+        """A falsy `chunks` is rejected rather than silently routed to the backend.
+
+        Args:
+            bad: A falsy value that is not `None`.
+
+        Test scenario:
+            The switch is `chunks is not None`, so every falsy non-None value used to dispatch
+            lazily -- `chunks=False` reads as "do not chunk" and did the opposite, and `0` /
+            `False` are not even in the declared type (review N3).
+        """
+        self._write_run(tmp_path, dated=True)
+
+        def _boom():
+            raise AssertionError("a meaningless chunks value reached the backend")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(ValueError, match="chunks"):
+            MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=bad)

@@ -2282,7 +2282,9 @@ class MeshDataset(_MeshFacades):
                 what this method has always done and needs no backend. Anything else hands the
                 resolved paths to the ``pyramids-lazy`` backend and returns a lazily-backed mesh
                 instead, so a long run is not held in memory. Accepts whatever that backend's
-                chunking argument accepts (a mapping, or ``"auto"``).
+                chunking argument accepts (a mapping, or ``"auto"``). A falsy value other than
+                ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects neither path and raises
+                :class:`ValueError` rather than dispatching lazily.
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
             mesh_name: Which topology to take from each file. ``None`` takes the first.
             sort: Order the files by their first time stamp before stacking, so a run whose
@@ -2377,6 +2379,14 @@ class MeshDataset(_MeshFacades):
             _require_existing_file(path)
         if driver is not None:
             _named_read_driver(driver)
+        if chunks is not None and not chunks:
+            # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
+            # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the
+            # opposite. Reject them instead of guessing which was meant (review N3).
+            raise ValueError(
+                f"open_mfdataset() got chunks={chunks!r}, which selects neither path: pass "
+                "chunks=None to read eagerly, or a chunk mapping / 'auto' to read lazily."
+            )
         if chunks is not None:
             return cls._open_mfdataset_lazy(
                 resolved, chunks=chunks, driver=driver, mesh_name=mesh_name
