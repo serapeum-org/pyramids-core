@@ -63,6 +63,18 @@ class TestGlyphCarriesDatasetCRS:
         tagged = MeshDataset._glyph_with_crs(_NoCrsDataset(), _Glyph())
         assert tagged.crs is None, f"expected glyph.crs is None, got {tagged.crs!r}"
 
+    def test_non_glyph_render_result_is_left_untouched(self):
+        """A render result without a ``crs`` attribute is returned as-is (hasattr guard).
+
+        Existing plot tests patch ``_mesh_render`` with a string sentinel; this pins the
+        branch directly so the helper never tries to set ``crs`` on a non-glyph object.
+        """
+        ds = _mesh(28992)
+        sentinel = object()
+        assert ds._glyph_with_crs(sentinel) is sentinel, (
+            "non-glyph result must pass through untouched"
+        )
+
     def test_preexisting_glyph_crs_is_not_overridden(self):
         """An already-set ``glyph.crs`` wins over the dataset epsg (defensive guard)."""
         ds = _mesh(28992)
