@@ -9,6 +9,7 @@ import pytest
 from osgeo import gdal
 
 from pyramids.dataset import Dataset, DatasetCollection
+from pyramids.dataset._plot_helpers import RenderRequest, render_array
 from pyramids.netcdf import ExtraDimensions, GeoReference
 from pyramids.netcdf.netcdf import NetCDF
 
@@ -1060,3 +1061,25 @@ class TestPlotStampsGlyphCRS:
         assert glyph.crs is not None and glyph.crs == ds.crs, (
             f"expected glyph.crs to equal the dataset WKT, got {glyph.crs!r}"
         )
+
+    def test_render_array_wkt_fallback_when_no_epsg(self):
+        """`render_array` stamps `basemap_crs_wkt` when `basemap_epsg` is `None` (#1572)."""
+        wkt = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        glyph = render_array(RenderRequest(arr=np.zeros((4, 4)), basemap_crs_wkt=wkt))
+        assert glyph.crs == wkt, f"expected the WKT, got {glyph.crs!r}"
+
+    def test_render_array_epsg_wins_over_wkt(self):
+        """`basemap_epsg` takes precedence; `basemap_crs_wkt` is only a fallback."""
+        glyph = render_array(
+            RenderRequest(
+                arr=np.zeros((4, 4)), basemap_epsg=4326, basemap_crs_wkt="ignored"
+            )
+        )
+        assert glyph.crs == 4326, f"expected the EPSG to win, got {glyph.crs!r}"
+
+    def test_render_array_no_crs_leaves_glyph_default(self):
+        """With neither EPSG nor WKT, the glyph CRS is left unset (no spurious default)."""
+        glyph = render_array(RenderRequest(arr=np.zeros((4, 4))))
+        assert glyph.crs is None, f"expected glyph.crs None, got {glyph.crs!r}"
