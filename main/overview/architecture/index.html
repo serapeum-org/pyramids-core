@@ -8192,7 +8192,8 @@ dispatches to <code>plot</code> / <code>facet</code> / <code>animate</code>. <co
 <code>pyramids.netcdf._plot.NetCDFPlot</code> (variable / selector / curvilinear-coord / facet / animate
 resolution) and the grouped option dataclasses <code>Selectors</code> / <code>CoordinateSpec</code> / <code>FacetSpec</code>
 (<code>pyramids.netcdf.plot_options</code>, re-exported from <code>pyramids.netcdf</code>).
-<code>pyramids.basemap.add_basemap</code> / <code>get_provider</code> are thin wrappers over <code>cleopatra.tiles</code>.</p>
+<code>pyramids.basemap.add_basemap</code> wraps the cleopatra glyph <code>add_tiles</code> method and <code>get_provider</code>
+wraps <code>cleopatra.basemap.tiles.get_provider</code>.</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
 Hold "Ctrl" to enable pan &amp; zoom

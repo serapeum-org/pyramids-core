@@ -8321,8 +8321,9 @@ the slice (or animation frame) actually rendered is materialised:</p>
 <p>Overlay a web-tile basemap with <code>basemap=True</code> (OpenStreetMap) or <code>basemap="&lt;provider&gt;"</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"sst"</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span> <span class="n">basemap</span><span class="o">=</span><span class="s2">"CartoDB.Positron"</span><span class="p">)</span>
 </code></pre></div>
-<p>This routes through cleopatra's tile helpers (<code>cleopatra.tiles.add_tiles</code>), so it needs the <code>[viz]</code>
-extra. When faceting, one tile layer is fetched per panel.</p>
+<p>This routes through cleopatra's glyph <code>add_tiles</code> method
+(<code>cleopatra.basemap.geo.GeoMixin.add_tiles</code>), so it needs the <code>[viz]</code> extra. When faceting, one
+tile layer is fetched per panel.</p>
 <h2 id="10-escape-hatch-raw-matplotlib"><a class="toclink" href="#10-escape-hatch-raw-matplotlib">10. Escape hatch — raw matplotlib</a><a class="headerlink" href="#10-escape-hatch-raw-matplotlib" title="Permanent link">#</a></h2>
 <p><code>NetCDF.plot</code> returns the cleopatra glyph; reach the underlying figure/axes for any customisation
 cleopatra doesn't expose:</p>

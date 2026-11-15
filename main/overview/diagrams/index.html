@@ -8254,7 +8254,7 @@ arrays, <code>mesh_render</code> for meshes); <code>pyramids.netcdf._plot.NetCDF
 variable/selector/curvilinear/facet/animate resolution and feeds <code>render_array</code>; <code>Selectors</code> /
 <code>CoordinateSpec</code> / <code>FacetSpec</code> (in <code>pyramids.netcdf.plot_options</code>, re-exported from
 <code>pyramids.netcdf</code>) are the grouped option dataclasses; <code>pyramids.basemap.add_basemap</code> is a thin
-wrapper over <code>cleopatra.tiles.add_tiles</code>.</p>
+wrapper over the cleopatra glyph <code>add_tiles</code> method (<code>cleopatra.basemap.geo.GeoMixin.add_tiles</code>).</p>
 <div class="panzoom-box" data-key="ctrl" id="panzoom0" oncontextmenu="return false;">
     <div class="panzoom-info-box panzoom-info-box-top panzoom-hidden">
 Hold "Ctrl" to enable pan &amp; zoom
@@ -8345,10 +8345,10 @@ Hold "Ctrl" to enable pan &amp; zoom
   class MeshGlyph {
     &lt;&lt;cleopatra&gt;&gt;
   }
-  class cleopatra_tiles {
-    &lt;&lt;cleopatra.tiles&gt;&gt;
-    +add_tiles(ax, source, crs, ...)
-    +get_provider(name)
+  class cleopatra_basemap {
+    &lt;&lt;cleopatra.basemap&gt;&gt;
+    +GeoMixin.add_tiles(ax, source, crs, ...)
+    +tiles.get_provider(name)
   }
 
   Dataset ..&gt; Analysis : ds.analysis.plot
@@ -8363,7 +8363,7 @@ Hold "Ctrl" to enable pan &amp; zoom
   plot_helpers ..&gt; ArrayGlyph : builds
   plot_helpers ..&gt; MeshGlyph : builds (mesh_render)
   plot_helpers ..&gt; add_basemap : basemap overlay
-  add_basemap ..&gt; cleopatra_tiles : delegates</code></pre> 
+  add_basemap ..&gt; cleopatra_basemap : delegates</code></pre> 
     
 </div>
 <h2 id="uml-class-vector-core"><a class="toclink" href="#uml-class-vector-core">UML Class: Vector Core</a><a class="headerlink" href="#uml-class-vector-core" title="Permanent link">#</a></h2>
@@ -8855,7 +8855,7 @@ Hold "Ctrl" to enable pan &amp; zoom
         +ArrayGlyph.plot(kind) · ArrayGlyph.facet() · ArrayGlyph.animate(data_getter)
         +MeshGlyph
         +styles.ColorScale
-        +tiles.add_tiles() · tiles.get_provider()
+        +GeoMixin.add_tiles() · tiles.get_provider()
     }
 
     %% Engines (Dataset collaborators)
@@ -8950,7 +8950,7 @@ Hold "Ctrl" to enable pan &amp; zoom
     feature_FeatureCollection ..&gt; basemap_module : add_basemap
     plot_helpers_module ..&gt; basemap_module : basemap overlay
     plot_helpers_module ..&gt; cleopatra_pkg : ArrayGlyph / MeshGlyph
-    basemap_module ..&gt; cleopatra_pkg : cleopatra.tiles</code></pre> 
+    basemap_module ..&gt; cleopatra_pkg : cleopatra.basemap</code></pre> 
     
 </div>
 
