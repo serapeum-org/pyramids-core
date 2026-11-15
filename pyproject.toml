@@ -303,18 +303,11 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
-# pyramids-core is installed WITHOUT its extras (no `extras = [...]`) on purpose. The
-# optional-dependency extras above ([lazy], [viz], [stac], ...) are the *published* contract:
-# they go into the wheel/sdist metadata and drive the conda-forge feedstock recipe, so
-# `pip install pyramids-gis[lazy]` and conda-forge users get those deps. This dev/CI/docs env
-# instead gets the same capabilities as *conda* packages, declared under
-# [tool.pixi.feature.*.dependencies] (e.g. conda `dask-core`, not pip `dask`; plus `hdf5`,
-# `libgdal-netcdf`, `h5py`, ...). The duplication is deliberate, not an oversight: GDAL only
-# works from conda-forge, and every HDF5-linking lib must come from that one channel so they
-# share a single native stack. Pulling the extras in as pip wheels instead would shadow
-# conda's GDAL/HDF5 binaries — the exact DLL-shadow failure the hdf5 pin further down guards
-# against. The cost is that each extra's version floor must be kept in sync by hand with its
-# conda twin in the pixi feature below.
+# Just the editable install of core itself. The extras above are the *published* contract (wheel
+# metadata + the conda-forge recipe), and pixi maps each one to a same-named feature, so the
+# dev/CI/docs envs install them as pip wheels -- closest to what a user actually gets. Only what
+# PyPI cannot safely supply stays conda: GDAL, and anything linking the same native HDF5 (see the
+# `gdal` and `lazy` features below).
 pyramids-core = { path = ".", editable = true }
 
 [tool.pixi.tasks]
@@ -344,9 +337,10 @@ description = "Run the main suite in parallel (pytest-xdist); no coverage"
 # Every env lists the shared `gdal` feature so the single GDAL pin reaches all of
 # them, incl. no-default-feature wheel-build. tests/test_gdal_pin.py enforces it.
 default = {features = ["gdal", "viz"], solve-group = "default" }
-# Bare core with a test runner but NO lazy backend and NO dask stack: the environment shape the
-# branded-absent suite (tests/base/test_lazy_backend_absent.py) asserts against, so it runs in CI for
-# real rather than only under a monkeypatched fixture. Deliberately omits `lazy` (so no backend).
+# Bare core with a test runner but NO lazy backend and NO dask stack -- the environment shape the
+# branded-absent suite (tests/base/test_lazy_backend_absent.py) describes. That suite forces the
+# absent state via monkeypatch, so this env proves the install/import shape, not the contract on its
+# own. Deliberately omits `lazy` (so no backend).
 bare = { features = ["gdal", "dev"], solve-group = "bare" }
 dev = { features = ["gdal", "viz", "dev", "interop", "lazy", "stac", "parquet"], solve-group = "default" }
 lazy = { features = ["gdal", "viz", "dev", "lazy"], solve-group = "default" }
@@ -417,8 +411,10 @@ pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
 # Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
 # which DLL-shadows the one conda's libgdal-netcdf links against; the hdf5 pin forces h5py onto that
 # same binary. zarr: it drags numcodecs, which ships no cp315 Windows wheel, so PyPI falls back to a
-# source build that fails on the py315 leg. The pure-Python rest (dask/distributed/fsspec/s3fs/
-# kerchunk) comes from the [lazy] extra.
+# source build that fails on the py315 leg. The rest comes from the [lazy] extra via pyramids-lazy:
+# dask/distributed/s3fs resolve from PyPI, while fsspec arrives as a conda transitive of
+# zarr/kerchunk (checked in the lock: 46 conda entries, 0 PyPI). s3fs pins fsspec in lockstep, so
+# that cross-channel pairing needs a look on the next regen.
 zarr = ">=3"
 kerchunk = ">=0.2.10"
 h5py = ">=3.8.0,<3.17"
