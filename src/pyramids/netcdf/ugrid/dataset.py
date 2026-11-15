@@ -40,7 +40,13 @@ from shapely.geometry import LineString, box
 
 from pyramids.base import _timeseries
 from pyramids.base._array_ops import array_equals, array_identical
-from pyramids.base._errors import AlignmentError, CRSError, DriverNotExistError
+from pyramids.base._compute_backend import require_compute_backend
+from pyramids.base._errors import (
+    AlignmentError,
+    CRSError,
+    DriverNotExistError,
+    OptionalPackageDoesNotExist,
+)
 from pyramids.base._plot_backends import (
     forward_kwargs,
     is_colorbar_spec,
@@ -2183,14 +2189,60 @@ class MeshDataset(_MeshFacades):
         return [topo.mesh_name for topo in topologies]
 
     @classmethod
+    def _open_mfdataset_lazy(
+        cls,
+        resolved: Sequence[str | Path],
+        *,
+        chunks: dict | str | None,
+        driver: str | None,
+        mesh_name: str | None,
+        sort: bool,
+    ) -> Any:
+        """Hand already-resolved paths to the backend's lazy mesh reader.
+
+        Deliberately probed with :func:`getattr` rather than declared on the
+        :class:`~pyramids.base._compute_backend.ComputeBackend` protocol. That protocol is
+        ``runtime_checkable`` and :func:`pyramids.base._compute_backend._load` drops any backend
+        failing its ``isinstance`` check, so adding a member there would silently disable *every*
+        already-released plugin -- not just the mesh path (issue #1458).
+
+        Args:
+            resolved: The concrete paths, already globbed and validated by the caller so a bad
+                pattern fails identically whether the read is eager or lazy.
+            chunks: The backend's chunking argument; never ``None`` here.
+            driver: Mesh driver name, or ``None`` to detect.
+            mesh_name: Topology to take from each file, or ``None`` for the first.
+            sort: Whether the backend should order the files by their first time stamp.
+
+        Returns:
+            The backend's lazily-backed mesh object.
+
+        Raises:
+            OptionalPackageDoesNotExist: No backend is installed, or the installed one does not
+                provide ``open_mesh_mfdataset``.
+        """
+        backend = require_compute_backend()
+        forwarder = getattr(backend, "open_mesh_mfdataset", None)
+        if forwarder is None:
+            raise OptionalPackageDoesNotExist(
+                "Lazy mesh reads (chunks=...) need a pyramids-lazy that provides "
+                "`open_mesh_mfdataset`; the installed backend does not. Upgrade with "
+                "`pip install -U pyramids-lazy`, or omit chunks= to read eagerly."
+            )
+        return forwarder(
+            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
+        )
+
+    @classmethod
     def open_mfdataset(
         cls,
         paths: str | Path | Sequence[str | Path],
         *,
+        chunks: dict | str | None = None,
         driver: str | None = None,
         mesh_name: str | None = None,
         sort: bool = True,
-    ) -> MeshDataset:
+    ) -> Any:
         """Open many mesh files sharing one topology and stack them along time (#1378).
 
         The many-**files** entry point. :meth:`read_all` answers every topology in **one**
@@ -2204,6 +2256,11 @@ class MeshDataset(_MeshFacades):
         Args:
             paths: A glob pattern (``"out/*_map.nc"``), a single path, or a sequence of paths.
                 A pattern that matches nothing is an error rather than an empty dataset.
+            chunks: ``None`` (the default) reads every file eagerly and concatenates, which is
+                what this method has always done and needs no backend. Anything else hands the
+                resolved paths to the ``pyramids-lazy`` backend and returns a lazily-backed mesh
+                instead, so a long run is not held in memory. Accepts whatever that backend's
+                chunking argument accepts (a mapping, or ``"auto"``).
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
             mesh_name: Which topology to take from each file. ``None`` takes the first.
             sort: Order the files by their first time stamp before stacking, so a run whose
@@ -2219,12 +2276,16 @@ class MeshDataset(_MeshFacades):
                 ``False`` always keeps the given order.
 
         Returns:
-            MeshDataset: One dataset on the shared topology, its time axis spanning every
-            file in order.
+            With ``chunks=None``, a :class:`MeshDataset`: one dataset on the shared topology,
+            its time axis spanning every file in order. Otherwise the backend's lazily-backed
+            mesh object, whose type is defined by ``pyramids-lazy`` rather than by core.
 
         Raises:
-            ValueError: ``paths`` is empty, or a glob pattern matches nothing.
-            AlignmentError: A file sits on a different topology than the first.
+            ValueError: ``paths`` is empty, or a glob pattern matches nothing. Raised for both
+                the eager and the lazy path, since the paths are resolved before either runs.
+            AlignmentError: A file sits on a different topology than the first (eager path).
+            OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
+                installed, or the installed one predates ``open_mesh_mfdataset``.
 
         See Also:
             read_all: Every topology within one file.
@@ -2254,6 +2315,10 @@ class MeshDataset(_MeshFacades):
         if not resolved:
             raise ValueError(
                 "open_mfdataset() got an empty list of paths; there is nothing to open."
+            )
+        if chunks is not None:
+            return cls._open_mfdataset_lazy(
+                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
             )
         datasets = [
             cls.read_file(path, driver=driver, mesh_name=mesh_name) for path in resolved

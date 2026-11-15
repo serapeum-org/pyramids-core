@@ -42,7 +42,7 @@ grouped by category.
 
 | Method | Source | Description |
 |--------|--------|-------------|
-| `open_mfdataset(paths, driver, mesh_name, sort)` | **(D)** | Open many files on one topology, stacked along time |
+| `open_mfdataset(paths, chunks, driver, mesh_name, sort)` | **(D)** | Open many files on one topology, stacked along time; `chunks=` reads lazily via `pyramids-lazy` |
 | `to_dask_dataframe(variables, dropna, npartitions)` | **(D)** | The lazy sibling of `to_dataframe` |
 | `read_file(path, mesh_name, driver, lazy)` | **(D)** cls | Open a UGRID/2DM/Selafin/DFSU/XMDF file |
 | `from_arrays(node_x, node_y, fnc, ...)` | **(D)** cls | Create from numpy arrays |

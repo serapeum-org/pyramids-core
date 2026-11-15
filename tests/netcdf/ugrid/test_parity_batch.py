@@ -10,6 +10,8 @@ concentrate on the mesh-specific wiring and the edges.
 import numpy as np
 import pytest
 
+import pyramids.netcdf.ugrid.dataset as mesh_module
+from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.netcdf.ugrid import MeshDataset
 from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
 
@@ -297,3 +299,136 @@ class TestOpenMfdataset:
         assert stacked["d"].data[:, 0].tolist() == [2.0, 9.0], (
             "dated files sort by stamp"
         )
+
+    def test_chunks_none_matches_the_default_eager_read(self, tmp_path):
+        """Passing ``chunks=None`` explicitly is the documented eager default.
+
+        Test scenario:
+            The default and the explicit ``None`` must take the same branch, so adding the
+            keyword cannot change what existing callers get.
+        """
+        self._write_run(tmp_path, dated=True)
+        pattern = str(tmp_path / "run_*.nc")
+
+        default = MeshDataset.open_mfdataset(pattern)
+        explicit = MeshDataset.open_mfdataset(pattern, chunks=None)
+
+        assert type(explicit) is type(default), (
+            f"chunks=None changed the return type: {type(explicit)!r} vs {type(default)!r}"
+        )
+        assert explicit["d"].n_time_steps == default["d"].n_time_steps, (
+            "chunks=None returned a different number of time steps than the default"
+        )
+
+    def test_a_lazy_read_forwards_resolved_paths_and_options(
+        self, tmp_path, monkeypatch
+    ):
+        """``chunks`` hands the *resolved* paths and every option to the backend.
+
+        Test scenario:
+            The glob is expanded in core so the backend never re-implements it, and the
+            backend's return value is passed through untouched.
+        """
+        paths = self._write_run(tmp_path, dated=True)
+        captured = {}
+        sentinel = object()
+
+        class _Backend:
+            def open_mesh_mfdataset(self, resolved, **kwargs):
+                captured["resolved"] = list(resolved)
+                captured["kwargs"] = kwargs
+                return sentinel
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        got = MeshDataset.open_mfdataset(
+            str(tmp_path / "run_*.nc"), chunks="auto", mesh_name="mesh2d", sort=False
+        )
+
+        assert got is sentinel, "the backend's return value was not passed through"
+        assert captured["resolved"] == sorted(str(p) for p in paths), (
+            f"the backend got unresolved or unsorted paths: {captured['resolved']!r}"
+        )
+        assert captured["kwargs"] == {
+            "chunks": "auto",
+            "driver": None,
+            "mesh_name": "mesh2d",
+            "sort": False,
+        }, f"options were not forwarded verbatim: {captured['kwargs']!r}"
+
+    def test_a_lazy_read_without_a_backend_is_branded(self, tmp_path, monkeypatch):
+        """No backend installed surfaces the seam's own branded error, not an AttributeError."""
+        self._write_run(tmp_path, dated=True)
+
+        def _absent():
+            raise OptionalPackageDoesNotExist("no backend installed")
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _absent)
+
+        with pytest.raises(OptionalPackageDoesNotExist, match="no backend installed"):
+            MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto")
+
+    def test_a_backend_without_the_method_asks_for_an_upgrade(
+        self, tmp_path, monkeypatch
+    ):
+        """A backend predating ``open_mesh_mfdataset`` is named as such, with the fix.
+
+        Test scenario:
+            Core probes the method with ``getattr`` rather than declaring it on the
+            ``ComputeBackend`` protocol, so an older plugin stays usable for everything else
+            and only this call fails -- with an actionable message.
+        """
+        self._write_run(tmp_path, dated=True)
+
+        class _OldBackend:
+            api_version = 2
+
+        monkeypatch.setattr(
+            mesh_module, "require_compute_backend", lambda: _OldBackend()
+        )
+
+        with pytest.raises(OptionalPackageDoesNotExist) as excinfo:
+            MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks="auto")
+
+        message = str(excinfo.value)
+        assert "open_mesh_mfdataset" in message, (
+            f"the missing member is not named: {message!r}"
+        )
+        assert "pip install -U pyramids-lazy" in message, (
+            f"the upgrade command is missing: {message!r}"
+        )
+
+    def test_a_bad_pattern_is_refused_before_the_backend_is_consulted(
+        self, tmp_path, monkeypatch
+    ):
+        """Path validation is shared, so a bad glob fails the same way lazily and eagerly.
+
+        Test scenario:
+            The backend must not be resolved at all -- a user with no plugin installed should
+            still get "matches no file" rather than "install pyramids-lazy".
+        """
+
+        def _boom():
+            raise AssertionError(
+                "the backend was resolved before the paths were validated"
+            )
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(ValueError, match="matches no file"):
+            MeshDataset.open_mfdataset(str(tmp_path / "absent_*.nc"), chunks="auto")
+
+    def test_an_empty_sequence_is_refused_before_the_backend_is_consulted(
+        self, monkeypatch
+    ):
+        """Same for an empty sequence: the error is about the input, not the backend."""
+
+        def _boom():
+            raise AssertionError(
+                "the backend was resolved before the paths were validated"
+            )
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(ValueError, match="nothing to open"):
+            MeshDataset.open_mfdataset([], chunks="auto")

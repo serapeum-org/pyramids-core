@@ -92,6 +92,47 @@ class TestContract:
         del backend.to_kerchunk
         assert not isinstance(backend, cb.ComputeBackend)
 
+    def test_the_protocol_member_set_is_frozen(self):
+        """Adding a member to the protocol silently disables every released backend.
+
+        Test scenario:
+            The protocol is ``runtime_checkable`` and :func:`_load` drops any backend failing
+            its ``isinstance`` check, so a new member makes every already-published plugin fail
+            structurally -- not just for the new call, but for *every* lazy operation, with only
+            a RuntimeWarning. Core cannot require a newer plugin either: the ``[lazy]`` extra was
+            removed (#1565), so users install ``pyramids-lazy`` themselves.
+
+            New backend capabilities must therefore be probed with ``getattr`` at the call site
+            (see ``MeshDataset.open_mfdataset``'s ``chunks`` branch, issue #1458), never added
+            here. This pins the member set so that choice cannot be undone by accident.
+        """
+        members = set(getattr(cb.ComputeBackend, "__annotations__", {}))
+        for name, value in vars(cb.ComputeBackend).items():
+            if callable(value) and not name.startswith("__"):
+                members.add(name)
+
+        assert members == {
+            "api_version",
+            "lazy_netcdf_type",
+            "lazy_feature_collection_type",
+            "read_array_lazy",
+            "build_lazy_cube",
+            "to_dask_dataframe",
+            "to_kerchunk",
+            "combine_kerchunk",
+            "open_mfdataset",
+            "write_dataset_to_zarr",
+            "read_dataset_from_zarr",
+            "write_collection_to_zarr",
+            "read_collection_from_zarr",
+            "read_vector_lazy",
+            "read_vector_parquet_lazy",
+        }, (
+            "the ComputeBackend protocol gained or lost a member. Adding one drops every "
+            "released plugin at isinstance; probe new capabilities with getattr instead. "
+            f"Current members: {sorted(members)}"
+        )
+
 
 class TestComputeBackends:
     """Discovery via the entry-point group."""
