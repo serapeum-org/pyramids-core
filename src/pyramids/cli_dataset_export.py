@@ -69,7 +69,7 @@ def _needs_parquet_extra() -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def _needs_lazy_extra() -> Iterator[None]:
+def _needs_lazy_backend() -> Iterator[None]:
     """Remap a missing-backend ``ImportError`` (zarr/dask) to a ``ValueError``.
 
     ``to_zarr`` imports ``zarr``/``dask``, which ship with the ``pyramids-lazy``
@@ -298,7 +298,7 @@ def _cmd_to_zarr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    with _needs_lazy_extra():
+    with _needs_lazy_backend():
         ds.to_zarr(args.output, mode=args.mode)
     info_print(args, f"wrote {args.output}")
     return 0

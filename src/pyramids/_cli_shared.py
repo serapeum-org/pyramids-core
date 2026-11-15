@@ -28,7 +28,7 @@ OUTPUT_FORMATS = ("text", "json", "csv", "table")
 
 
 @contextlib.contextmanager
-def needs_lazy_extra() -> Iterator[None]:
+def needs_lazy_backend() -> Iterator[None]:
     """Remap a missing-backend ``ImportError`` to a clean ``ValueError``.
 
     The kerchunk / multi-file / Zarr readers and writers import ``zarr`` / ``kerchunk``,

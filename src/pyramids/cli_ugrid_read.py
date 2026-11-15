@@ -29,7 +29,7 @@ import numpy as np
 from pyramids._cli_shared import (
     info_print,
     map_lookup_errors,
-    needs_lazy_extra,
+    needs_lazy_backend,
     refuse_existing,
 )
 from pyramids.dataset import Dataset
@@ -175,7 +175,7 @@ def _cmd_from_zarr(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     refuse_existing(args.output, args.overwrite)
-    with needs_lazy_extra():
+    with needs_lazy_backend():
         mesh = MeshDataset.from_zarr(args.store)
     mesh.to_file(args.output)
     info_print(args, f"wrote {args.output}")
