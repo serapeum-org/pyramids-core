@@ -82,8 +82,9 @@ class ComputeBackend(Protocol):
     straight delegation. ``@runtime_checkable`` so :func:`require_compute_backend` can verify the
     object structurally.
 
-    Scope: the v1 contract covers the raster-cube (``NetCDF``) and vector (``FeatureCollection``)
-    lazy ops, plus the Zarr/kerchunk writers and readers.
+    Scope: the contract covers the raster-cube (``NetCDF``) and vector (``FeatureCollection``)
+    lazy ops, plus the Zarr/kerchunk writers and readers. :func:`protocol_members` returns the
+    member names it enforces.
 
     What is **not** dispatched yet, despite being lazy: ``Dataset.read_array(chunks=)`` and
     ``DatasetCollection.data`` still construct dask arrays inside core
@@ -91,12 +92,11 @@ class ComputeBackend(Protocol):
     dask.array`` and a plain ``ImportError`` rather than this seam's branded error. So a bare core
     with dask installed still has a working lazy raster path, and :meth:`read_array_lazy` is
     reached only from the ``NetCDF`` read and the xarray/UGRID interop readers. Completing that
-    move is follow-up work; this docstring previously claimed the raster surface was covered, which
-    it is not.
+    move is follow-up work.
 
     ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
-    ``from_zarr``) is **intentionally out of v1** — mesh lazy parity is deferred to FR-B (issue
-    #1458).
+    ``from_zarr``) is **intentionally not part of this Protocol** — mesh lazy parity is deferred to
+    FR-B (issue #1458).
 
     Those methods are **not** added to this Protocol when they land. This class is
     ``runtime_checkable`` and :func:`_load` drops any backend failing its ``isinstance`` check, so
@@ -111,12 +111,15 @@ class ComputeBackend(Protocol):
     **Probed optional capabilities.** A backend may implement these in addition to the members
     above. They are not part of the Protocol, so omitting one costs nothing but that feature:
 
-    - ``open_mesh_mfdataset(paths, *, chunks, driver, mesh_name)`` — the lazy multi-file mesh read
-      behind :meth:`pyramids.netcdf.ugrid.MeshDataset.open_mfdataset`'s ``chunks=`` (issue #1458).
-      ``paths`` is a list of concrete paths: core has already expanded any glob, rejected an empty
-      set, checked that each file exists, and validated ``driver`` against its own mesh-driver
-      registry, so a backend need not repeat any of that. ``chunks`` is whatever the caller
-      passed and is never ``None``. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
+    - ``open_mesh_mfdataset(paths, *, chunks, driver, mesh_name, sort)`` — the lazy multi-file
+      mesh read behind :meth:`pyramids.netcdf.ugrid.MeshDataset.open_mfdataset`'s ``chunks=``
+      (issue #1458). All five arguments are passed by
+      :meth:`pyramids.netcdf.ugrid.MeshDataset._open_mfdataset_lazy`, ``paths`` positionally and
+      the rest by keyword. ``paths`` is a list of concrete paths: core has already expanded any
+      glob, rejected an empty set, checked that each file exists, and validated ``driver`` against
+      its own mesh-driver registry, so a backend need not repeat any of that. ``chunks`` is
+      whatever the caller passed, and is never ``None`` nor a falsy value — core rejects both
+      before dispatching. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
       ``None``. ``sort`` **is** forwarded and its semantics are required: order the dated files by
       their first time stamp, leave undated files in the slots they were given, and with
       ``sort=False`` preserve the caller's order exactly. A backend applies it to the handles it
@@ -290,6 +293,42 @@ def protocol_members(protocol: type | None = None) -> frozenset[str]:
 
     Returns:
         The enforced member names.
+
+    Examples:
+        - The default set is what a backend must expose to pass the structural check: the
+          `api_version` data member alongside every method the Protocol declares.
+            ```python
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> members = protocol_members()
+            >>> "api_version" in members
+            True
+            >>> "read_array_lazy" in members
+            True
+
+            ```
+        - A probed optional capability is deliberately absent from it. That is what lets an
+          already-released backend keep passing the check while core adds the capability.
+            ```python
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> "open_mesh_mfdataset" in protocol_members()
+            False
+
+            ```
+        - Any other Protocol can be inspected by passing it explicitly, data members included.
+            ```python
+            >>> from typing import Protocol
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> class Tiny(Protocol):
+            ...     api_version: int
+            ...     def ping(self) -> None: ...
+            >>> sorted(protocol_members(Tiny))
+            ['api_version', 'ping']
+
+            ```
+
+    See Also:
+        ComputeBackend: The Protocol inspected by default, and the probe policy for capabilities
+            kept out of it.
     """
     target = ComputeBackend if protocol is None else protocol
     get_members = getattr(typing, "get_protocol_members", None)
@@ -313,13 +352,16 @@ def _missing_protocol_members(candidate: object) -> list[str]:
     """Return the :class:`ComputeBackend` members ``candidate`` does not expose, for diagnostics.
 
     ``runtime_checkable`` isinstance only answers yes/no, so this re-derives which names were absent
-    to make the rejection actionable instead of "it was skipped".
+    to make the rejection actionable instead of "it was skipped". The names come from
+    :func:`protocol_members`, so the diagnostic can never list a member the check does not enforce.
+    That set is unordered, so declaration order is not available here and the names are sorted
+    alphabetically instead, which keeps the warning text stable across runs.
 
     Args:
         candidate: The object that failed the structural check.
 
     Returns:
-        The Protocol member names missing from ``candidate``, in declaration order.
+        The :class:`ComputeBackend` member names missing from ``candidate``, sorted alphabetically.
     """
     return sorted(name for name in protocol_members() if not hasattr(candidate, name))
 

@@ -2281,6 +2281,10 @@ class MeshDataset(_MeshFacades):
         variables are concatenated along time by :meth:`concat`, so the rules about what may
         be joined are that method's rules, stated in one place.
 
+        The eager and lazy results are declared as two overloads rather than one ``Any`` so the
+        eager default -- the only shape whose type core owns -- stays checked for callers. A
+        single ``Any`` would also drop the ``attr-defined`` errors consumers get today.
+
         Args:
             paths: A glob pattern (``"out/*_map.nc"``), a single path, or a sequence of paths.
                 A pattern that matches nothing is an error rather than an empty dataset.
@@ -2309,13 +2313,10 @@ class MeshDataset(_MeshFacades):
                 applies this ordering to those already-open handles.
 
         Returns:
-            With ``chunks=None``, a :class:`MeshDataset`: one dataset on the shared topology,
-            its time axis spanning every file in order. Otherwise the backend's lazily-backed
-            mesh object, whose type is defined by ``pyramids-lazy`` rather than by core.
-
-            These are declared as two overloads rather than one ``Any`` so the eager default --
-            the only shape whose type core owns -- stays checked for callers. A single ``Any``
-            would also drop the ``attr-defined`` errors consumers get today.
+            With ``chunks=None`` a ``MeshDataset`` -- one dataset on the shared topology, its
+                time axis spanning every file in order. With ``chunks`` given, the backend's
+                lazily-backed mesh object instead, whose type ``pyramids-lazy`` defines rather
+                than core.
 
         Raises:
             ValueError: ``paths`` is empty, or a glob pattern matches nothing. Raised before the
