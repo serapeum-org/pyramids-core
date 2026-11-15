@@ -226,6 +226,13 @@ class _joins_meshes:  # noqa: N801
         return call
 
 
+# The types whose emptiness the falsy-`chunks` guard can judge. Anything else -- an ndarray, a
+# pandas object, a custom chunk spec -- is forwarded for the backend to accept or reject, because
+# `not value` on such an object raises (numpy: "truth value of an array ... is ambiguous") and
+# would replace a clear refusal with an unrelated error naming neither `chunks` nor this method.
+_JUDGEABLE_CHUNKS = (bool, int, float, str, bytes, dict, list, tuple, set, frozenset)
+
+
 class MeshDataset(_MeshFacades):
     """An unstructured mesh with data variables -- the mesh equivalent of the raster
     :class:`~pyramids.dataset.Dataset` and the vector :class:`~pyramids.feature.FeatureCollection`.
@@ -2406,7 +2413,7 @@ class MeshDataset(_MeshFacades):
                 # it here too keeps both paths symmetric, and it is a capability lookup on the
                 # named driver, so it costs no file read.
                 raise _needs_mesh_error(selected, str(resolved[0]))
-        if chunks is not None and not chunks:
+        if isinstance(chunks, _JUDGEABLE_CHUNKS) and not chunks:
             # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
             # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the
             # opposite. Reject them instead of guessing which was meant (review N3).

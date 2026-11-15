@@ -531,6 +531,46 @@ class TestOpenMfdataset:
         with pytest.raises(ValueError, match="chunks"):
             MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=bad)
 
+    @pytest.mark.parametrize(
+        "awkward",
+        [np.array([1, 2]), np.array([])],
+        ids=["ndarray-many", "ndarray-empty"],
+    )
+    def test_an_argument_whose_truthiness_raises_is_forwarded_not_mangled(
+        self, tmp_path, monkeypatch, awkward
+    ):
+        """A value whose `__bool__` raises reaches the backend instead of a numpy error.
+
+        Args:
+            awkward: A value that raises when its truth value is taken.
+
+        Test scenario:
+            The falsy guard was `if chunks is not None and not chunks`, which evaluates
+            truthiness on whatever the caller passed. An ndarray therefore produced "The truth
+            value of an array with more than one element is ambiguous. Use a.any() or a.all()" --
+            a message naming neither `chunks` nor `open_mfdataset`, advising something the caller
+            cannot act on. Before the guard existed the value was simply forwarded, which is what
+            should still happen for anything the guard cannot judge (Round 2 finding L3).
+        """
+        self._write_run(tmp_path, dated=True)
+        captured: dict = {}
+
+        class _Backend:
+            def open_mesh_mfdataset(self, resolved, **kwargs):
+                captured.update(kwargs)
+                return "LAZY"
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        got = MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=awkward)
+
+        assert got == "LAZY", (
+            f"an unjudgeable chunks value should be forwarded, got {got!r}"
+        )
+        assert captured["chunks"] is awkward, (
+            "the value should reach the backend unchanged for it to accept or reject"
+        )
+
     @pytest.mark.parametrize("sort", [True, False], ids=["sort-true", "sort-false"])
     def test_sort_reaches_the_backend_so_it_can_honour_it(
         self, tmp_path, monkeypatch, sort
