@@ -151,9 +151,9 @@ classDiagram
     <<cleopatra>>
   }
   class cleopatra_tiles {
-    <<cleopatra.tiles>>
-    +add_tiles(ax, source, crs, ...)
-    +get_provider(name)
+    <<cleopatra.basemap>>
+    +GeoMixin.add_tiles(ax, source, crs, ...)
+    +tiles.get_provider(name)
   }
 
   Dataset ..> Analysis : ds.analysis.plot
