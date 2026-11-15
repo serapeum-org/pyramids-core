@@ -41,7 +41,6 @@ _ORIGINS = {
     "import_pyarrow": "pyramids.base._utils",
     "import_xarray": "pyramids.base._utils",
     "import_zarr": "pyramids.base._utils",
-    "lazy_extra_hint": "pyramids.base._utils",
     "require_optional": "pyramids.base._utils",
     "crs_from_user_input": "pyramids.base.crs",
     "crs_spec": "pyramids.base.crs",

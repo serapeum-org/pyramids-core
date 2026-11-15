@@ -1411,57 +1411,8 @@ def lazy_backend_hint(lead: str) -> str:
 
     See Also:
         extra_hint: The two-line composer for one of core's own extras.
-        lazy_extra_hint: The superseded lazy form, kept only for
-            pyramids-lazy <= 0.1.0.
     """
     return f"{lead} Install it with:\n  - PyPI:        pip install pyramids-lazy"
-
-
-# DEPRECATED, kept only for pyramids-lazy <= 0.1.0, which imports this through
-# `pyramids.lazy_support` and asserts its exact text. Core no longer calls it -- its own guards use
-# `lazy_backend_hint` above. Remove this (and the `lazy_support` export) once a pyramids-lazy
-# release composes its own hints; tracked in serapeum-org/pyramids-lazy#19.
-def lazy_extra_hint(prefix: str) -> str:
-    """Compose an install hint naming the removed ``[lazy]`` extra.
-
-    .. deprecated::
-        Core no longer publishes a ``[lazy]`` extra and no longer calls this; its own guards use
-        :func:`lazy_backend_hint`. This is kept only so pyramids-lazy <= 0.1.0, which imports it
-        through :mod:`pyramids.lazy_support`, keeps working. The command it renders will not
-        resolve anything. Removed once a pyramids-lazy release composes its own hints
-        (serapeum-org/pyramids-lazy#19).
-
-    The shared PyPI / conda-forge install commands for the ``[lazy]`` extra
-    (dask / zarr / fsspec) are defined once here so the zarr / dask call
-    sites don't each copy them; only the lead sentence varies.
-
-    Args:
-        prefix: The domain-specific lead sentence, ending in a period (e.g.
-            ``"Zarr IO requires the optional 'zarr' dependency."``). It is
-            placed verbatim at the start of the returned message.
-
-    Returns:
-        A single string: ``prefix`` followed by ``"Install with one of:"`` and
-        two indented bullet lines giving the PyPI and conda-forge commands.
-
-    Examples:
-        - The lead sentence is preserved and a header line follows:
-            ```python
-            >>> lazy_extra_hint("Op needs the optional 'dask' dependency.").splitlines()[0]
-            "Op needs the optional 'dask' dependency. Install with one of:"
-
-            ```
-        - Both install commands are present in the body:
-            ```python
-            >>> hint = lazy_extra_hint("X requires the optional 'zarr' dependency.")
-            >>> "pip install 'pyramids-core[lazy]'" in hint
-            True
-            >>> "conda install -c conda-forge pyramids-lazy" in hint
-            True
-
-            ```
-    """
-    return extra_hint(prefix, "lazy")
 
 
 def lazy_vector_extra_hint(lead: str) -> str:
@@ -1549,8 +1500,6 @@ def extra_hint(lead: str, extra: str) -> str:
     See Also:
         lazy_backend_hint: The hint for the lazy backend, which is a plugin rather
             than one of core's extras, so it names `pyramids-lazy` instead.
-        lazy_extra_hint: The superseded lazy form, kept only for pyramids-lazy
-            <= 0.1.0.
     """
     return (
         f"{lead} Install with one of:\n"
@@ -1644,7 +1593,7 @@ def import_h5py(message: str):
 
     Args:
         message: The install hint raised when h5py is missing (compose it with
-            :func:`lazy_extra_hint`).
+            :func:`lazy_backend_hint`).
 
     Returns:
         The imported ``h5py`` module.

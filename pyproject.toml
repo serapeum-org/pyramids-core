@@ -78,7 +78,7 @@ interop = ["xarray>=2023.1.0"]
 # plugin discovered through the `pyramids.compute_backend` entry point, installed as
 # `pip install pyramids-lazy` exactly like pyramids-eo / pyramids-mesh / pyramids-citymodels.
 # The same-named `lazy` pixi feature maps to this group, so the environment list is unchanged.
-lazy = ["pyramids-lazy>=0.1.0"]
+lazy = ["pyramids-lazy>=0.1.1"]
 dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",

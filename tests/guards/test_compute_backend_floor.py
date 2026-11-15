@@ -36,15 +36,12 @@ FIRST_PLUGIN_RELEASE: dict[int, str] = {2: "0.1.0"}
 
 
 # The first pyramids-lazy release that composes its install hints locally and no longer imports
-# `lazy_extra_hint` from `pyramids.lazy_support` (serapeum-org/pyramids-lazy#20 -- merged, not yet
-# released; PyPI is still on 0.1.0, whose `_collection_zarr`, `_kerchunk_builder`,
-# `_kerchunk_facade`, `_mfdataset` and `_zarr` all import it).
-#
-# Set this to that version when it ships. The test below then flips from "the shim must still
-# exist" to "the shim must be gone AND the floor raised past the versions that need it", which is
-# the pairing that must not be done by halves: deleting the shim while the environments can still
-# resolve 0.1.0 breaks that plugin at import and takes core's lazy-marked suite red.
-FIRST_HINT_FREE_PLUGIN_RELEASE: str | None = None
+# `lazy_extra_hint` from `pyramids.lazy_support` (serapeum-org/pyramids-lazy#20). Verified against
+# the published 0.1.1 wheel: zero references to `lazy_extra_hint`, and it carries its own
+# `_optional.lazy_hint`. 0.1.0 used it in five modules, which is why the floor moved with the
+# deletion -- doing either half alone breaks that plugin at import and takes core's lazy-marked
+# suite red.
+FIRST_HINT_FREE_PLUGIN_RELEASE: str | None = "0.1.1"
 
 
 def _lazy_group_floor() -> str:

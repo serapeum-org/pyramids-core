@@ -6,8 +6,6 @@ composes that block for one of core's own extras.
 
 The lazy backend is not an extra -- it is the separate `pyramids-lazy`
 distribution -- so its guards use `lazy_backend_hint`, which names the package.
-`lazy_extra_hint` is the superseded form, kept only for pyramids-lazy <= 0.1.0,
-which imports it through `pyramids.lazy_support`; core no longer calls it.
 """
 
 from __future__ import annotations
@@ -17,12 +15,7 @@ import builtins
 import pytest
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
-from pyramids.base._utils import (
-    extra_hint,
-    import_xarray,
-    lazy_backend_hint,
-    lazy_extra_hint,
-)
+from pyramids.base._utils import extra_hint, import_xarray, lazy_backend_hint
 
 pytestmark = pytest.mark.core
 
@@ -47,23 +40,6 @@ class TestExtraHint:
     def test_the_header_line_is_stable(self):
         """Call sites and their tests match on this wording."""
         assert extra_hint("X.", "lazy").splitlines()[0] == "X. Install with one of:"
-
-
-class TestLazyExtraHintUnchanged:
-    """The existing helper keeps its exact output."""
-
-    def test_it_is_the_lazy_case_of_extra_hint(self):
-        """Delegating changed nothing for the dozen `[lazy]` call sites."""
-        lead = "Op needs the optional 'dask' dependency."
-
-        assert lazy_extra_hint(lead) == extra_hint(lead, "lazy")
-
-    def test_the_pinned_substrings_survive(self):
-        """Both commands its own tests assert on are still produced."""
-        hint = lazy_extra_hint("X requires the optional 'zarr' dependency.")
-
-        assert "pip install 'pyramids-core[lazy]'" in hint
-        assert "conda install -c conda-forge pyramids-lazy" in hint
 
 
 # Needs the [interop] extra: `to_xarray` / `from_xarray` import xarray, which a
@@ -157,21 +133,6 @@ class TestLazyBackendHint:
         second = lazy_backend_hint("X needs the backend.")
 
         assert first == second, f"not deterministic: {first!r} vs {second!r}"
-
-    def test_it_differs_from_the_superseded_extra_form(self):
-        """The two composers must not have silently converged.
-
-        Test scenario:
-            `lazy_extra_hint` still renders the old `pyramids-core[lazy]` wording
-            for pyramids-lazy <= 0.1.0. If these ever matched, the deprecated
-            shim would have been changed and that plugin's asserts would break.
-        """
-        lead = "X needs the backend."
-
-        assert lazy_backend_hint(lead) != lazy_extra_hint(lead), (
-            "lazy_backend_hint and lazy_extra_hint render the same text; the "
-            "deprecated shim must keep its original wording"
-        )
 
 
 class TestImportXarray:

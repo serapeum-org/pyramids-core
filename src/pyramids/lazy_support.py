@@ -57,7 +57,6 @@ from pyramids.base._utils import (
     import_pyarrow,
     import_xarray,
     import_zarr,
-    lazy_extra_hint,
     require_optional,
 )
 from pyramids.base.crs import (
@@ -214,7 +213,6 @@ __all__ = [
     "import_xarray",
     "import_zarr",
     "is_lazy",
-    "lazy_extra_hint",
     "no_data_value_of",
     "normalize_compressors",
     "open_mdarray",
