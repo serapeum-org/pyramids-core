@@ -8612,7 +8612,8 @@ the dask default unchanged.</p>
 default the backend's lazy vector reader uses when the
 caller supplies neither <code>npartitions</code> nor <code>chunksize</code>.
 <code>None</code> leaves it unchanged. Recorded in the returned dict
-only when a backend is installed to receive it.</p>
+only when the backend's lazy-vector support
+(<code>pyramids-lazy[parquet]</code>) is installed to receive it.</p>
               </div>
             </td>
             <td>
@@ -8773,7 +8774,9 @@ both settings propagate to every worker via a
 <span class="normal"><a href="#__codelineno-0-302">302</a></span>
 <span class="normal"><a href="#__codelineno-0-303">303</a></span>
 <span class="normal"><a href="#__codelineno-0-304">304</a></span>
-<span class="normal"><a href="#__codelineno-0-305">305</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="k">def</span><span class="w"> </span><span class="nf">configure_lazy_vector</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-305">305</a></span>
+<span class="normal"><a href="#__codelineno-0-306">306</a></span>
+<span class="normal"><a href="#__codelineno-0-307">307</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="k">def</span><span class="w"> </span><span class="nf">configure_lazy_vector</span><span class="p">(</span>
 <a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="o">*</span><span class="p">,</span>
 <a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">scheduler</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">target_bytes_per_partition</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -8811,50 +8814,52 @@ both settings propagate to every worker via a
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="sd">            default the backend's lazy vector reader uses when the</span>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="sd">            caller supplies neither `npartitions` nor `chunksize`.</span>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="sd">            `None` leaves it unchanged. Recorded in the returned dict</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">            only when a backend is installed to receive it.</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">        client: Optional :class:`dask.distributed.Client`. When given,</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">            both settings propagate to every worker via a</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">            :class:`WorkerPlugin`.</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">        dict: The settings that were applied (useful for logging and</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">        for round-tripping to workers).</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        - Set a process scheduler + 256 MiB partitions locally:</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">            ```python</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">            &gt;&gt;&gt; from pyramids import configure_lazy_vector</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">            &gt;&gt;&gt; applied = configure_lazy_vector(</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">            ...     scheduler="processes",</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">            ...     target_bytes_per_partition=256 * 1024 * 1024,</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">            ... )</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">            &gt;&gt;&gt; applied["scheduler"]</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">            'processes'</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">            &gt;&gt;&gt; applied["target_bytes_per_partition"]</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">            268435456</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">            ```</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">    """</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="n">applied</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="k">if</span> <span class="n">scheduler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">dask</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="n">dask</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">scheduler</span><span class="o">=</span><span class="n">scheduler</span><span class="p">)</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="n">applied</span><span class="p">[</span><span class="s2">"scheduler"</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduler</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="k">if</span> <span class="n">target_bytes_per_partition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>        <span class="c1"># The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. With no</span>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="c1"># backend installed this cannot take effect, so it is reported as applied only when it</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="c1"># actually was -- otherwise the returned dict would claim a setting that changed nothing</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>        <span class="c1"># (the dask read itself then raises the branded "install the backend" error).</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="k">if</span> <span class="n">_set_lazy_backend_partition_bytes</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">target_bytes_per_partition</span><span class="p">)):</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>            <span class="n">applied</span><span class="p">[</span><span class="s2">"target_bytes_per_partition"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">target_bytes_per_partition</span><span class="p">)</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>        <span class="s2">"configure_lazy_vector applied </span><span class="si">%d</span><span class="s2"> setting(s)"</span><span class="p">,</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>        <span class="nb">len</span><span class="p">(</span><span class="n">applied</span><span class="p">),</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>    <span class="p">)</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="k">if</span> <span class="n">client</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>        <span class="n">_register_lazy_vector_worker_plugin</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">applied</span><span class="p">)</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="k">return</span> <span class="n">applied</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">            only when the backend's lazy-vector support</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">            (`pyramids-lazy[parquet]`) is installed to receive it.</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">        client: Optional :class:`dask.distributed.Client`. When given,</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">            both settings propagate to every worker via a</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">            :class:`WorkerPlugin`.</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">        dict: The settings that were applied (useful for logging and</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">        for round-tripping to workers).</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        - Set a process scheduler + 256 MiB partitions locally:</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">            ```python</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">            &gt;&gt;&gt; from pyramids import configure_lazy_vector</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">            &gt;&gt;&gt; applied = configure_lazy_vector(</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">            ...     scheduler="processes",</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">            ...     target_bytes_per_partition=256 * 1024 * 1024,</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">            ... )</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">            &gt;&gt;&gt; applied["scheduler"]</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">            'processes'</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">            &gt;&gt;&gt; applied["target_bytes_per_partition"]</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">            268435456</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">            ```</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">    """</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="n">applied</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="k">if</span> <span class="n">scheduler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">dask</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="n">dask</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">scheduler</span><span class="o">=</span><span class="n">scheduler</span><span class="p">)</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="n">applied</span><span class="p">[</span><span class="s2">"scheduler"</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduler</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="k">if</span> <span class="n">target_bytes_per_partition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="c1"># The lazy-vector partitioning runs in the pyramids-lazy backend; set its knob. It needs</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="c1"># the backend's lazy-vector support (pyramids-lazy[parquet], i.e. dask-geopandas): a BARE</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>        <span class="c1"># backend install cannot receive it. So it is reported as applied only when it actually was,</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="c1"># rather than claiming a setting that changed nothing (the dask read then raises the</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a>        <span class="c1"># branded "install ..." error).</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>        <span class="k">if</span> <span class="n">_set_lazy_backend_partition_bytes</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">target_bytes_per_partition</span><span class="p">)):</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a>            <span class="n">applied</span><span class="p">[</span><span class="s2">"target_bytes_per_partition"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">target_bytes_per_partition</span><span class="p">)</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>        <span class="s2">"configure_lazy_vector applied </span><span class="si">%d</span><span class="s2"> setting(s)"</span><span class="p">,</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="nb">len</span><span class="p">(</span><span class="n">applied</span><span class="p">),</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>    <span class="p">)</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="k">if</span> <span class="n">client</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="n">_register_lazy_vector_worker_plugin</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">applied</span><span class="p">)</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="k">return</span> <span class="n">applied</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

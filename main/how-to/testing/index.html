@@ -8388,13 +8388,13 @@ SHA and shows the combined coverage on the dashboard.</p>
 </tr>
 <tr>
 <td><code>lazy</code></td>
-<td><code>dask</code>, <code>distributed</code>, <code>zarr</code>, <code>fsspec</code>, <code>kerchunk</code>, <code>h5py</code></td>
-<td>Dask-backed lazy array paths + kerchunk NetCDF manifests</td>
+<td><code>pyramids-lazy</code></td>
+<td>Dask-backed lazy array paths + kerchunk NetCDF manifests (via the backend)</td>
 </tr>
 <tr>
 <td><code>parquet</code></td>
-<td><code>pyarrow</code>, <code>dask-geopandas</code> (+ <code>[lazy]</code>)</td>
-<td>Eager GeoParquet I/O <strong>and</strong> the lazy <code>LazyFeatureCollection</code></td>
+<td><code>pyarrow</code></td>
+<td>Eager GeoParquet I/O. Lazy <code>LazyFeatureCollection</code> needs <code>pyramids-lazy[parquet]</code></td>
 </tr>
 </tbody>
 </table>
@@ -8429,7 +8429,7 @@ so incremental solves stay cheap (~8–15 s when adding one extra on top of <cod
 </tr>
 <tr>
 <td><code>parquet</code></td>
-<td><code>dev</code> + <code>pyarrow</code> + <code>dask-geopandas</code> (conda-forge) + <code>[lazy]</code>. Runs both eager and lazy GeoParquet tests.</td>
+<td><code>dev</code> + <code>[parquet]</code> + <code>pyramids-lazy[parquet]</code> (PyPI wheels). Runs eager and lazy GeoParquet tests.</td>
 </tr>
 <tr>
 <td><code>py311</code> / <code>py312</code> / <code>py313</code> / <code>py314</code></td>

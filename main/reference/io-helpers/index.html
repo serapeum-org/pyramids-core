@@ -8961,77 +8961,77 @@ gain a band axis first, e.g. <code>arr[None]</code>).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyramids/base/_utils.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1902">1902</a></span>
-<span class="normal"><a href="#__codelineno-0-1903">1903</a></span>
-<span class="normal"><a href="#__codelineno-0-1904">1904</a></span>
-<span class="normal"><a href="#__codelineno-0-1905">1905</a></span>
-<span class="normal"><a href="#__codelineno-0-1906">1906</a></span>
-<span class="normal"><a href="#__codelineno-0-1907">1907</a></span>
-<span class="normal"><a href="#__codelineno-0-1908">1908</a></span>
-<span class="normal"><a href="#__codelineno-0-1909">1909</a></span>
-<span class="normal"><a href="#__codelineno-0-1910">1910</a></span>
-<span class="normal"><a href="#__codelineno-0-1911">1911</a></span>
-<span class="normal"><a href="#__codelineno-0-1912">1912</a></span>
-<span class="normal"><a href="#__codelineno-0-1913">1913</a></span>
-<span class="normal"><a href="#__codelineno-0-1914">1914</a></span>
-<span class="normal"><a href="#__codelineno-0-1915">1915</a></span>
-<span class="normal"><a href="#__codelineno-0-1916">1916</a></span>
-<span class="normal"><a href="#__codelineno-0-1917">1917</a></span>
-<span class="normal"><a href="#__codelineno-0-1918">1918</a></span>
-<span class="normal"><a href="#__codelineno-0-1919">1919</a></span>
-<span class="normal"><a href="#__codelineno-0-1920">1920</a></span>
-<span class="normal"><a href="#__codelineno-0-1921">1921</a></span>
-<span class="normal"><a href="#__codelineno-0-1922">1922</a></span>
-<span class="normal"><a href="#__codelineno-0-1923">1923</a></span>
-<span class="normal"><a href="#__codelineno-0-1924">1924</a></span>
-<span class="normal"><a href="#__codelineno-0-1925">1925</a></span>
-<span class="normal"><a href="#__codelineno-0-1926">1926</a></span>
-<span class="normal"><a href="#__codelineno-0-1927">1927</a></span>
-<span class="normal"><a href="#__codelineno-0-1928">1928</a></span>
-<span class="normal"><a href="#__codelineno-0-1929">1929</a></span>
-<span class="normal"><a href="#__codelineno-0-1930">1930</a></span>
-<span class="normal"><a href="#__codelineno-0-1931">1931</a></span>
-<span class="normal"><a href="#__codelineno-0-1932">1932</a></span>
-<span class="normal"><a href="#__codelineno-0-1933">1933</a></span>
-<span class="normal"><a href="#__codelineno-0-1934">1934</a></span>
-<span class="normal"><a href="#__codelineno-0-1935">1935</a></span>
-<span class="normal"><a href="#__codelineno-0-1936">1936</a></span>
-<span class="normal"><a href="#__codelineno-0-1937">1937</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1902" name="__codelineno-0-1902"></a><span class="k">def</span><span class="w"> </span><span class="nf">reshape_as_image</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<a id="__codelineno-0-1903" name="__codelineno-0-1903"></a><span class="w">    </span><span class="sd">"""Reshape a band-first ``(bands, rows, cols)`` array to band-last ``(rows, cols, bands)``.</span>
-<a id="__codelineno-0-1904" name="__codelineno-0-1904"></a>
-<a id="__codelineno-0-1905" name="__codelineno-0-1905"></a><span class="sd">    pyramids and GDAL use the band-first layout (``Dataset.read_array`` returns</span>
-<a id="__codelineno-0-1906" name="__codelineno-0-1906"></a><span class="sd">    ``(bands, rows, cols)``), while matplotlib / PIL and most image tooling expect</span>
-<a id="__codelineno-0-1907" name="__codelineno-0-1907"></a><span class="sd">    the band-last ``(rows, cols, bands)`` layout. This is the inverse of</span>
-<a id="__codelineno-0-1908" name="__codelineno-0-1908"></a><span class="sd">    :func:`reshape_as_raster`. Masked arrays are preserved.</span>
-<a id="__codelineno-0-1909" name="__codelineno-0-1909"></a>
-<a id="__codelineno-0-1910" name="__codelineno-0-1910"></a><span class="sd">    Returns a view with permuted strides (no copy); wrap it in</span>
-<a id="__codelineno-0-1911" name="__codelineno-0-1911"></a><span class="sd">    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.</span>
-<a id="__codelineno-0-1912" name="__codelineno-0-1912"></a>
-<a id="__codelineno-0-1913" name="__codelineno-0-1913"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-1914" name="__codelineno-0-1914"></a><span class="sd">        arr: A 3-D ``(bands, rows, cols)`` array.</span>
-<a id="__codelineno-0-1915" name="__codelineno-0-1915"></a>
-<a id="__codelineno-0-1916" name="__codelineno-0-1916"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-1917" name="__codelineno-0-1917"></a><span class="sd">        np.ndarray: The same data viewed as ``(rows, cols, bands)``.</span>
-<a id="__codelineno-0-1918" name="__codelineno-0-1918"></a>
-<a id="__codelineno-0-1919" name="__codelineno-0-1919"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-1920" name="__codelineno-0-1920"></a><span class="sd">        ValueError: If ``arr`` is not 3-D (a single-band ``(rows, cols)`` array must</span>
-<a id="__codelineno-0-1921" name="__codelineno-0-1921"></a><span class="sd">            gain a band axis first, e.g. ``arr[None]``).</span>
-<a id="__codelineno-0-1922" name="__codelineno-0-1922"></a>
-<a id="__codelineno-0-1923" name="__codelineno-0-1923"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-1924" name="__codelineno-0-1924"></a><span class="sd">        - Move the band axis last for display:</span>
-<a id="__codelineno-0-1925" name="__codelineno-0-1925"></a><span class="sd">            ```python</span>
-<a id="__codelineno-0-1926" name="__codelineno-0-1926"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-1927" name="__codelineno-0-1927"></a><span class="sd">            &gt;&gt;&gt; from pyramids.base._utils import reshape_as_image</span>
-<a id="__codelineno-0-1928" name="__codelineno-0-1928"></a><span class="sd">            &gt;&gt;&gt; reshape_as_image(np.zeros((3, 4, 5))).shape</span>
-<a id="__codelineno-0-1929" name="__codelineno-0-1929"></a><span class="sd">            (4, 5, 3)</span>
-<a id="__codelineno-0-1930" name="__codelineno-0-1930"></a>
-<a id="__codelineno-0-1931" name="__codelineno-0-1931"></a><span class="sd">            ```</span>
-<a id="__codelineno-0-1932" name="__codelineno-0-1932"></a><span class="sd">    """</span>
-<a id="__codelineno-0-1933" name="__codelineno-0-1933"></a>    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-<a id="__codelineno-0-1934" name="__codelineno-0-1934"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-1935" name="__codelineno-0-1935"></a>            <span class="sa">f</span><span class="s2">"expected a 3-D (bands, rows, cols) array, got ndim=</span><span class="si">{</span><span class="n">arr</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-1936" name="__codelineno-0-1936"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1937" name="__codelineno-0-1937"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1948">1948</a></span>
+<span class="normal"><a href="#__codelineno-0-1949">1949</a></span>
+<span class="normal"><a href="#__codelineno-0-1950">1950</a></span>
+<span class="normal"><a href="#__codelineno-0-1951">1951</a></span>
+<span class="normal"><a href="#__codelineno-0-1952">1952</a></span>
+<span class="normal"><a href="#__codelineno-0-1953">1953</a></span>
+<span class="normal"><a href="#__codelineno-0-1954">1954</a></span>
+<span class="normal"><a href="#__codelineno-0-1955">1955</a></span>
+<span class="normal"><a href="#__codelineno-0-1956">1956</a></span>
+<span class="normal"><a href="#__codelineno-0-1957">1957</a></span>
+<span class="normal"><a href="#__codelineno-0-1958">1958</a></span>
+<span class="normal"><a href="#__codelineno-0-1959">1959</a></span>
+<span class="normal"><a href="#__codelineno-0-1960">1960</a></span>
+<span class="normal"><a href="#__codelineno-0-1961">1961</a></span>
+<span class="normal"><a href="#__codelineno-0-1962">1962</a></span>
+<span class="normal"><a href="#__codelineno-0-1963">1963</a></span>
+<span class="normal"><a href="#__codelineno-0-1964">1964</a></span>
+<span class="normal"><a href="#__codelineno-0-1965">1965</a></span>
+<span class="normal"><a href="#__codelineno-0-1966">1966</a></span>
+<span class="normal"><a href="#__codelineno-0-1967">1967</a></span>
+<span class="normal"><a href="#__codelineno-0-1968">1968</a></span>
+<span class="normal"><a href="#__codelineno-0-1969">1969</a></span>
+<span class="normal"><a href="#__codelineno-0-1970">1970</a></span>
+<span class="normal"><a href="#__codelineno-0-1971">1971</a></span>
+<span class="normal"><a href="#__codelineno-0-1972">1972</a></span>
+<span class="normal"><a href="#__codelineno-0-1973">1973</a></span>
+<span class="normal"><a href="#__codelineno-0-1974">1974</a></span>
+<span class="normal"><a href="#__codelineno-0-1975">1975</a></span>
+<span class="normal"><a href="#__codelineno-0-1976">1976</a></span>
+<span class="normal"><a href="#__codelineno-0-1977">1977</a></span>
+<span class="normal"><a href="#__codelineno-0-1978">1978</a></span>
+<span class="normal"><a href="#__codelineno-0-1979">1979</a></span>
+<span class="normal"><a href="#__codelineno-0-1980">1980</a></span>
+<span class="normal"><a href="#__codelineno-0-1981">1981</a></span>
+<span class="normal"><a href="#__codelineno-0-1982">1982</a></span>
+<span class="normal"><a href="#__codelineno-0-1983">1983</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1948" name="__codelineno-0-1948"></a><span class="k">def</span><span class="w"> </span><span class="nf">reshape_as_image</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<a id="__codelineno-0-1949" name="__codelineno-0-1949"></a><span class="w">    </span><span class="sd">"""Reshape a band-first ``(bands, rows, cols)`` array to band-last ``(rows, cols, bands)``.</span>
+<a id="__codelineno-0-1950" name="__codelineno-0-1950"></a>
+<a id="__codelineno-0-1951" name="__codelineno-0-1951"></a><span class="sd">    pyramids and GDAL use the band-first layout (``Dataset.read_array`` returns</span>
+<a id="__codelineno-0-1952" name="__codelineno-0-1952"></a><span class="sd">    ``(bands, rows, cols)``), while matplotlib / PIL and most image tooling expect</span>
+<a id="__codelineno-0-1953" name="__codelineno-0-1953"></a><span class="sd">    the band-last ``(rows, cols, bands)`` layout. This is the inverse of</span>
+<a id="__codelineno-0-1954" name="__codelineno-0-1954"></a><span class="sd">    :func:`reshape_as_raster`. Masked arrays are preserved.</span>
+<a id="__codelineno-0-1955" name="__codelineno-0-1955"></a>
+<a id="__codelineno-0-1956" name="__codelineno-0-1956"></a><span class="sd">    Returns a view with permuted strides (no copy); wrap it in</span>
+<a id="__codelineno-0-1957" name="__codelineno-0-1957"></a><span class="sd">    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.</span>
+<a id="__codelineno-0-1958" name="__codelineno-0-1958"></a>
+<a id="__codelineno-0-1959" name="__codelineno-0-1959"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-1960" name="__codelineno-0-1960"></a><span class="sd">        arr: A 3-D ``(bands, rows, cols)`` array.</span>
+<a id="__codelineno-0-1961" name="__codelineno-0-1961"></a>
+<a id="__codelineno-0-1962" name="__codelineno-0-1962"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-1963" name="__codelineno-0-1963"></a><span class="sd">        np.ndarray: The same data viewed as ``(rows, cols, bands)``.</span>
+<a id="__codelineno-0-1964" name="__codelineno-0-1964"></a>
+<a id="__codelineno-0-1965" name="__codelineno-0-1965"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-1966" name="__codelineno-0-1966"></a><span class="sd">        ValueError: If ``arr`` is not 3-D (a single-band ``(rows, cols)`` array must</span>
+<a id="__codelineno-0-1967" name="__codelineno-0-1967"></a><span class="sd">            gain a band axis first, e.g. ``arr[None]``).</span>
+<a id="__codelineno-0-1968" name="__codelineno-0-1968"></a>
+<a id="__codelineno-0-1969" name="__codelineno-0-1969"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-1970" name="__codelineno-0-1970"></a><span class="sd">        - Move the band axis last for display:</span>
+<a id="__codelineno-0-1971" name="__codelineno-0-1971"></a><span class="sd">            ```python</span>
+<a id="__codelineno-0-1972" name="__codelineno-0-1972"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
+<a id="__codelineno-0-1973" name="__codelineno-0-1973"></a><span class="sd">            &gt;&gt;&gt; from pyramids.base._utils import reshape_as_image</span>
+<a id="__codelineno-0-1974" name="__codelineno-0-1974"></a><span class="sd">            &gt;&gt;&gt; reshape_as_image(np.zeros((3, 4, 5))).shape</span>
+<a id="__codelineno-0-1975" name="__codelineno-0-1975"></a><span class="sd">            (4, 5, 3)</span>
+<a id="__codelineno-0-1976" name="__codelineno-0-1976"></a>
+<a id="__codelineno-0-1977" name="__codelineno-0-1977"></a><span class="sd">            ```</span>
+<a id="__codelineno-0-1978" name="__codelineno-0-1978"></a><span class="sd">    """</span>
+<a id="__codelineno-0-1979" name="__codelineno-0-1979"></a>    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+<a id="__codelineno-0-1980" name="__codelineno-0-1980"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-1981" name="__codelineno-0-1981"></a>            <span class="sa">f</span><span class="s2">"expected a 3-D (bands, rows, cols) array, got ndim=</span><span class="si">{</span><span class="n">arr</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-1982" name="__codelineno-0-1982"></a>        <span class="p">)</span>
+<a id="__codelineno-0-1983" name="__codelineno-0-1983"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -9147,73 +9147,73 @@ pyramids use. Masked arrays are preserved.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyramids/base/_utils.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1940">1940</a></span>
-<span class="normal"><a href="#__codelineno-0-1941">1941</a></span>
-<span class="normal"><a href="#__codelineno-0-1942">1942</a></span>
-<span class="normal"><a href="#__codelineno-0-1943">1943</a></span>
-<span class="normal"><a href="#__codelineno-0-1944">1944</a></span>
-<span class="normal"><a href="#__codelineno-0-1945">1945</a></span>
-<span class="normal"><a href="#__codelineno-0-1946">1946</a></span>
-<span class="normal"><a href="#__codelineno-0-1947">1947</a></span>
-<span class="normal"><a href="#__codelineno-0-1948">1948</a></span>
-<span class="normal"><a href="#__codelineno-0-1949">1949</a></span>
-<span class="normal"><a href="#__codelineno-0-1950">1950</a></span>
-<span class="normal"><a href="#__codelineno-0-1951">1951</a></span>
-<span class="normal"><a href="#__codelineno-0-1952">1952</a></span>
-<span class="normal"><a href="#__codelineno-0-1953">1953</a></span>
-<span class="normal"><a href="#__codelineno-0-1954">1954</a></span>
-<span class="normal"><a href="#__codelineno-0-1955">1955</a></span>
-<span class="normal"><a href="#__codelineno-0-1956">1956</a></span>
-<span class="normal"><a href="#__codelineno-0-1957">1957</a></span>
-<span class="normal"><a href="#__codelineno-0-1958">1958</a></span>
-<span class="normal"><a href="#__codelineno-0-1959">1959</a></span>
-<span class="normal"><a href="#__codelineno-0-1960">1960</a></span>
-<span class="normal"><a href="#__codelineno-0-1961">1961</a></span>
-<span class="normal"><a href="#__codelineno-0-1962">1962</a></span>
-<span class="normal"><a href="#__codelineno-0-1963">1963</a></span>
-<span class="normal"><a href="#__codelineno-0-1964">1964</a></span>
-<span class="normal"><a href="#__codelineno-0-1965">1965</a></span>
-<span class="normal"><a href="#__codelineno-0-1966">1966</a></span>
-<span class="normal"><a href="#__codelineno-0-1967">1967</a></span>
-<span class="normal"><a href="#__codelineno-0-1968">1968</a></span>
-<span class="normal"><a href="#__codelineno-0-1969">1969</a></span>
-<span class="normal"><a href="#__codelineno-0-1970">1970</a></span>
-<span class="normal"><a href="#__codelineno-0-1971">1971</a></span>
-<span class="normal"><a href="#__codelineno-0-1972">1972</a></span>
-<span class="normal"><a href="#__codelineno-0-1973">1973</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1940" name="__codelineno-0-1940"></a><span class="k">def</span><span class="w"> </span><span class="nf">reshape_as_raster</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<a id="__codelineno-0-1941" name="__codelineno-0-1941"></a><span class="w">    </span><span class="sd">"""Reshape a band-last ``(rows, cols, bands)`` array to band-first ``(bands, rows, cols)``.</span>
-<a id="__codelineno-0-1942" name="__codelineno-0-1942"></a>
-<a id="__codelineno-0-1943" name="__codelineno-0-1943"></a><span class="sd">    The inverse of :func:`reshape_as_image`: converts image-style ``(rows, cols,</span>
-<a id="__codelineno-0-1944" name="__codelineno-0-1944"></a><span class="sd">    bands)`` arrays back to the band-first ``(bands, rows, cols)`` layout GDAL and</span>
-<a id="__codelineno-0-1945" name="__codelineno-0-1945"></a><span class="sd">    pyramids use. Masked arrays are preserved.</span>
-<a id="__codelineno-0-1946" name="__codelineno-0-1946"></a>
-<a id="__codelineno-0-1947" name="__codelineno-0-1947"></a><span class="sd">    Returns a view with permuted strides (no copy); wrap it in</span>
-<a id="__codelineno-0-1948" name="__codelineno-0-1948"></a><span class="sd">    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.</span>
-<a id="__codelineno-0-1949" name="__codelineno-0-1949"></a>
-<a id="__codelineno-0-1950" name="__codelineno-0-1950"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-1951" name="__codelineno-0-1951"></a><span class="sd">        arr: A 3-D ``(rows, cols, bands)`` array.</span>
-<a id="__codelineno-0-1952" name="__codelineno-0-1952"></a>
-<a id="__codelineno-0-1953" name="__codelineno-0-1953"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-1954" name="__codelineno-0-1954"></a><span class="sd">        np.ndarray: The same data viewed as ``(bands, rows, cols)``.</span>
-<a id="__codelineno-0-1955" name="__codelineno-0-1955"></a>
-<a id="__codelineno-0-1956" name="__codelineno-0-1956"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-1957" name="__codelineno-0-1957"></a><span class="sd">        ValueError: If ``arr`` is not 3-D.</span>
-<a id="__codelineno-0-1958" name="__codelineno-0-1958"></a>
-<a id="__codelineno-0-1959" name="__codelineno-0-1959"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-1960" name="__codelineno-0-1960"></a><span class="sd">        - Move the band axis first for writing:</span>
-<a id="__codelineno-0-1961" name="__codelineno-0-1961"></a><span class="sd">            ```python</span>
-<a id="__codelineno-0-1962" name="__codelineno-0-1962"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
-<a id="__codelineno-0-1963" name="__codelineno-0-1963"></a><span class="sd">            &gt;&gt;&gt; from pyramids.base._utils import reshape_as_raster</span>
-<a id="__codelineno-0-1964" name="__codelineno-0-1964"></a><span class="sd">            &gt;&gt;&gt; reshape_as_raster(np.zeros((4, 5, 3))).shape</span>
-<a id="__codelineno-0-1965" name="__codelineno-0-1965"></a><span class="sd">            (3, 4, 5)</span>
-<a id="__codelineno-0-1966" name="__codelineno-0-1966"></a>
-<a id="__codelineno-0-1967" name="__codelineno-0-1967"></a><span class="sd">            ```</span>
-<a id="__codelineno-0-1968" name="__codelineno-0-1968"></a><span class="sd">    """</span>
-<a id="__codelineno-0-1969" name="__codelineno-0-1969"></a>    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-<a id="__codelineno-0-1970" name="__codelineno-0-1970"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-1971" name="__codelineno-0-1971"></a>            <span class="sa">f</span><span class="s2">"expected a 3-D (rows, cols, bands) array, got ndim=</span><span class="si">{</span><span class="n">arr</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-0-1972" name="__codelineno-0-1972"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1973" name="__codelineno-0-1973"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1986">1986</a></span>
+<span class="normal"><a href="#__codelineno-0-1987">1987</a></span>
+<span class="normal"><a href="#__codelineno-0-1988">1988</a></span>
+<span class="normal"><a href="#__codelineno-0-1989">1989</a></span>
+<span class="normal"><a href="#__codelineno-0-1990">1990</a></span>
+<span class="normal"><a href="#__codelineno-0-1991">1991</a></span>
+<span class="normal"><a href="#__codelineno-0-1992">1992</a></span>
+<span class="normal"><a href="#__codelineno-0-1993">1993</a></span>
+<span class="normal"><a href="#__codelineno-0-1994">1994</a></span>
+<span class="normal"><a href="#__codelineno-0-1995">1995</a></span>
+<span class="normal"><a href="#__codelineno-0-1996">1996</a></span>
+<span class="normal"><a href="#__codelineno-0-1997">1997</a></span>
+<span class="normal"><a href="#__codelineno-0-1998">1998</a></span>
+<span class="normal"><a href="#__codelineno-0-1999">1999</a></span>
+<span class="normal"><a href="#__codelineno-0-2000">2000</a></span>
+<span class="normal"><a href="#__codelineno-0-2001">2001</a></span>
+<span class="normal"><a href="#__codelineno-0-2002">2002</a></span>
+<span class="normal"><a href="#__codelineno-0-2003">2003</a></span>
+<span class="normal"><a href="#__codelineno-0-2004">2004</a></span>
+<span class="normal"><a href="#__codelineno-0-2005">2005</a></span>
+<span class="normal"><a href="#__codelineno-0-2006">2006</a></span>
+<span class="normal"><a href="#__codelineno-0-2007">2007</a></span>
+<span class="normal"><a href="#__codelineno-0-2008">2008</a></span>
+<span class="normal"><a href="#__codelineno-0-2009">2009</a></span>
+<span class="normal"><a href="#__codelineno-0-2010">2010</a></span>
+<span class="normal"><a href="#__codelineno-0-2011">2011</a></span>
+<span class="normal"><a href="#__codelineno-0-2012">2012</a></span>
+<span class="normal"><a href="#__codelineno-0-2013">2013</a></span>
+<span class="normal"><a href="#__codelineno-0-2014">2014</a></span>
+<span class="normal"><a href="#__codelineno-0-2015">2015</a></span>
+<span class="normal"><a href="#__codelineno-0-2016">2016</a></span>
+<span class="normal"><a href="#__codelineno-0-2017">2017</a></span>
+<span class="normal"><a href="#__codelineno-0-2018">2018</a></span>
+<span class="normal"><a href="#__codelineno-0-2019">2019</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1986" name="__codelineno-0-1986"></a><span class="k">def</span><span class="w"> </span><span class="nf">reshape_as_raster</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<a id="__codelineno-0-1987" name="__codelineno-0-1987"></a><span class="w">    </span><span class="sd">"""Reshape a band-last ``(rows, cols, bands)`` array to band-first ``(bands, rows, cols)``.</span>
+<a id="__codelineno-0-1988" name="__codelineno-0-1988"></a>
+<a id="__codelineno-0-1989" name="__codelineno-0-1989"></a><span class="sd">    The inverse of :func:`reshape_as_image`: converts image-style ``(rows, cols,</span>
+<a id="__codelineno-0-1990" name="__codelineno-0-1990"></a><span class="sd">    bands)`` arrays back to the band-first ``(bands, rows, cols)`` layout GDAL and</span>
+<a id="__codelineno-0-1991" name="__codelineno-0-1991"></a><span class="sd">    pyramids use. Masked arrays are preserved.</span>
+<a id="__codelineno-0-1992" name="__codelineno-0-1992"></a>
+<a id="__codelineno-0-1993" name="__codelineno-0-1993"></a><span class="sd">    Returns a view with permuted strides (no copy); wrap it in</span>
+<a id="__codelineno-0-1994" name="__codelineno-0-1994"></a><span class="sd">    ``np.ascontiguousarray(...)`` if you need C-contiguous memory.</span>
+<a id="__codelineno-0-1995" name="__codelineno-0-1995"></a>
+<a id="__codelineno-0-1996" name="__codelineno-0-1996"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-1997" name="__codelineno-0-1997"></a><span class="sd">        arr: A 3-D ``(rows, cols, bands)`` array.</span>
+<a id="__codelineno-0-1998" name="__codelineno-0-1998"></a>
+<a id="__codelineno-0-1999" name="__codelineno-0-1999"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-2000" name="__codelineno-0-2000"></a><span class="sd">        np.ndarray: The same data viewed as ``(bands, rows, cols)``.</span>
+<a id="__codelineno-0-2001" name="__codelineno-0-2001"></a>
+<a id="__codelineno-0-2002" name="__codelineno-0-2002"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-2003" name="__codelineno-0-2003"></a><span class="sd">        ValueError: If ``arr`` is not 3-D.</span>
+<a id="__codelineno-0-2004" name="__codelineno-0-2004"></a>
+<a id="__codelineno-0-2005" name="__codelineno-0-2005"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-2006" name="__codelineno-0-2006"></a><span class="sd">        - Move the band axis first for writing:</span>
+<a id="__codelineno-0-2007" name="__codelineno-0-2007"></a><span class="sd">            ```python</span>
+<a id="__codelineno-0-2008" name="__codelineno-0-2008"></a><span class="sd">            &gt;&gt;&gt; import numpy as np</span>
+<a id="__codelineno-0-2009" name="__codelineno-0-2009"></a><span class="sd">            &gt;&gt;&gt; from pyramids.base._utils import reshape_as_raster</span>
+<a id="__codelineno-0-2010" name="__codelineno-0-2010"></a><span class="sd">            &gt;&gt;&gt; reshape_as_raster(np.zeros((4, 5, 3))).shape</span>
+<a id="__codelineno-0-2011" name="__codelineno-0-2011"></a><span class="sd">            (3, 4, 5)</span>
+<a id="__codelineno-0-2012" name="__codelineno-0-2012"></a>
+<a id="__codelineno-0-2013" name="__codelineno-0-2013"></a><span class="sd">            ```</span>
+<a id="__codelineno-0-2014" name="__codelineno-0-2014"></a><span class="sd">    """</span>
+<a id="__codelineno-0-2015" name="__codelineno-0-2015"></a>    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+<a id="__codelineno-0-2016" name="__codelineno-0-2016"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-2017" name="__codelineno-0-2017"></a>            <span class="sa">f</span><span class="s2">"expected a 3-D (rows, cols, bands) array, got ndim=</span><span class="si">{</span><span class="n">arr</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-2018" name="__codelineno-0-2018"></a>        <span class="p">)</span>
+<a id="__codelineno-0-2019" name="__codelineno-0-2019"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

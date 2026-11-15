@@ -8247,13 +8247,13 @@ minimal:</p>
 <tbody>
 <tr>
 <td><code>[lazy]</code></td>
-<td><code>dask</code>, <code>zarr</code>, <code>fsspec</code>, <code>kerchunk</code>, <code>h5py</code></td>
-<td>Raster + NetCDF lazy reads, Zarr, groupby, <code>to_kerchunk</code>/<code>combine_kerchunk</code> manifests</td>
+<td><code>pyramids-lazy</code> (the backend)</td>
+<td>Raster + NetCDF lazy reads, Zarr, groupby, kerchunk manifests</td>
 </tr>
 <tr>
 <td><code>[parquet]</code></td>
-<td><code>pyarrow</code>, <code>dask-geopandas</code> + <code>[lazy]</code></td>
-<td>Eager GeoParquet I/O + lazy <code>LazyFeatureCollection</code></td>
+<td><code>pyarrow</code></td>
+<td>Eager GeoParquet I/O. Lazy vector needs <code>pyramids-lazy[parquet]</code></td>
 </tr>
 </tbody>
 </table>

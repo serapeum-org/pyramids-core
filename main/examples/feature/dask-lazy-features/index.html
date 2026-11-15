@@ -8881,7 +8881,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </ol>
 <h2 id="requirements">Requirements<a class="anchor-link" href="#requirements">¶</a></h2><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'pyramids-lazy[parquet]'</span>
 </pre></div>
-<p>This pulls <code>pyarrow</code>, <code>dask</code>, <code>dask-geopandas</code>, <code>fsspec</code>, <code>s3fs</code>. The <code>[parquet]</code> extra is what unlocks everything below.</p>
+<p>This pulls <code>pyarrow</code>, <code>dask</code>, <code>dask-geopandas</code>, <code>fsspec</code>, <code>s3fs</code>. Note it is <strong>pyramids-lazy</strong>'s <code>[parquet]</code> extra that unlocks everything below -- <code>pyramids-core[parquet]</code> is pyarrow only and does not provide the lazy vector path.</p>
 </div>
 </div>
 </div>

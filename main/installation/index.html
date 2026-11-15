@@ -8452,12 +8452,12 @@ the macOS and Windows x64 wheels). No <code>gdal-config</code>, no
 <ul>
 <li><code>viz</code>: <code>cleopatra[tiles]</code> (plotting + basemap tiles via mercantile /
   xyzservices / Pillow)</li>
-<li><code>lazy</code>: <strong>deprecated</strong> — dask / distributed / zarr / fsspec / kerchunk / h5py. These are the
-  libraries the lazy layer builds on, but the lazy <em>implementation</em> now lives in the separate
-  <code>pyramids-lazy</code> distribution, so this extra alone no longer gives you working lazy operations:
-  they raise a branded error telling you to install the backend. Install <code>pyramids-lazy</code> instead
-  (it pulls this stack itself). The extra is kept for one release so existing installs do not break,
-  and is removed in the next major version.</li>
+<li><code>lazy</code>: <strong>deprecated alias</strong> — now resolves to <code>pyramids-lazy</code>, the separate distribution the
+  lazy <em>implementation</em> moved to. That package brings the dask / distributed / zarr / fsspec /
+  kerchunk / h5py stack as its own dependencies and registers the <code>pyramids.compute_backend</code>
+  entry point, so lazy operations do work through this extra. Prefer installing <code>pyramids-lazy</code>
+  directly; the alias is kept for one release so existing installs do not break, and is removed
+  in the next major version.</li>
 <li>the optional labeled-array interop (<code>DatasetCollection.to_netcdf</code>,
   <code>NetCDF.from_xarray</code> / <code>to_xarray</code>) is <strong>not</strong> a pyramids extra — pyramids is
   GDAL-backed, so the labeled-array library is a peer. Install it directly
@@ -8465,8 +8465,7 @@ the macOS and Windows x64 wheels). No <code>gdal-config</code>, no
 <li><code>parquet</code>: pyarrow, for eager GeoParquet I/O (<code>read_parquet</code> / <code>to_parquet</code>, which go through
   pyarrow and geopandas and need no backend). The <strong>lazy</strong> vector path
   (<code>LazyFeatureCollection</code>, <code>backend="dask"</code>) additionally needs dask-geopandas, which ships in
-  <code>pyramids-lazy[parquet]</code> — not here. This extra still pulls dask-geopandas for one release;
-  that part is deprecated with <code>[lazy]</code>.</li>
+  <code>pyramids-lazy[parquet]</code> — not here.</li>
 <li><code>dev</code>: nbval, pre-commit, pytest, coverage, build, twine, etc.</li>
 <li><code>docs</code>: mkdocs, mkdocs-material, mkdocstrings, mike, etc.</li>
 </ul>

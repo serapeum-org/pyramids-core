@@ -9223,7 +9223,7 @@ ops (<code>to_crs</code>, <code>clip</code>, <code>sjoin</code>, <code>spatial_s
 guide: <code>spatial_shuffle</code> → <code>sjoin</code> pruning workflow, <code>compute</code> vs
 <code>persist</code>, <code>to_parquet</code>, <code>compute_total_bounds</code>, and how to wire a
 distributed scheduler with <code>pyramids.configure_lazy_vector</code>.</p>
-<p>Install: <code>pip install 'pyramids-core[parquet]'</code>.</p>
+<p>Install: <code>pip install 'pyramids-lazy[parquet]'</code>.</p>
 <h2 id="build-a-one-row-fc-from-a-bbox-from_bbox"><a class="toclink" href="#build-a-one-row-fc-from-a-bbox-from_bbox">Build a one-row FC from a bbox — <code>from_bbox</code></a><a class="headerlink" href="#build-a-one-row-fc-from-a-bbox-from_bbox" title="Permanent link">#</a></h2>
 <p><code>FeatureCollection.from_bbox((W, S, E, N), epsg=…)</code> is the shared
 primitive behind <code>Dataset.crop(bbox=…)</code>, <code>Dataset.read_array(bbox=…)</code>,
