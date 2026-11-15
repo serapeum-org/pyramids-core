@@ -4,10 +4,12 @@ import warnings
 from unittest.mock import patch
 
 import numpy as np
+import pyproj
 import pytest
 from osgeo import gdal
 
 from pyramids.dataset import Dataset, DatasetCollection
+from pyramids.dataset._plot_helpers import RenderRequest, render_array
 from pyramids.netcdf import ExtraDimensions, GeoReference
 from pyramids.netcdf.netcdf import NetCDF
 
@@ -1038,3 +1040,170 @@ class TestPlotStampsGlyphCRS:
         )
         glyph = ds.plot()
         assert glyph.crs == 4326, f"expected glyph.crs == 4326, got {glyph.crs!r}"
+
+    def test_dataset_plot_glyph_carries_wkt_when_no_epsg(self):
+        """A projected CRS with no EPSG code stamps the glyph with the WKT (issue #1572).
+
+        Test scenario:
+            A raster whose CRS is a custom LAEA projection has `epsg is None`; the
+            returned glyph still carries the CRS as the dataset WKT, so a reference
+            layer does not fall back to EPSG:3857.
+        """
+        ds = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        ds.crs = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        assert ds.epsg is None, "precondition: the custom CRS has no EPSG code"
+        glyph = ds.plot()
+        assert glyph.crs == ds.crs, (
+            f"expected glyph.crs to equal the dataset WKT (a non-empty str), got {glyph.crs!r}"
+        )
+
+    def test_netcdf_plot_threads_dataset_wkt_into_render_array(self):
+        """`NetCDF.plot` passes `basemap_crs_wkt=nc.crs` into `render_array` (#1572 wiring).
+
+        Test scenario:
+            The end-to-end WKT stamp is proven via `Dataset.plot` (same `render_array`
+            chokepoint); this pins the `NetCDF.plot` caller wiring the DoD names, by
+            asserting the `RenderRequest` carries the dataset WKT. A `MeshGlyph`-free
+            mock keeps it a wiring assertion, independent of NetCDF-subset CRS mutation.
+        """
+        nc = NetCDF.from_array(
+            arr=np.random.default_rng(0).random((2, 5, 6)).astype("float32"),
+            geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5)),
+            variable_name="t2m",
+            path=None,
+            dims=ExtraDimensions(name="time", values=[0, 1]),
+        )
+        subset = nc.get_variable("t2m")
+        # NetCDF.plot (non-animate) delegates to Analysis.plot, which calls render_array;
+        # patch it there (NetCDF.animate uses netcdf._plot._render_array instead).
+        with patch("pyramids.dataset.engines.analysis.render_array") as mock_render:
+            subset.plot()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == subset.crs, (
+            f"NetCDF.plot must thread nc.crs as basemap_crs_wkt, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_collection_plot_threads_base_wkt_into_render_array(self):
+        """`DatasetCollection.plot` passes `basemap_crs_wkt=self.base.crs` (#1572 wiring)."""
+        base = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        collection = DatasetCollection(base, time_length=2, datasets=[base, base])
+        with patch("pyramids.dataset.collection.render_array") as mock_render:
+            collection.plot(band=0)
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == base.crs, (
+            f"DatasetCollection.plot must thread base.crs as basemap_crs_wkt, got "
+            f"{request.basemap_crs_wkt!r}"
+        )
+
+    def test_analysis_animate_threads_dataset_wkt_into_render_array(self):
+        """`Dataset.animate` threads `basemap_crs_wkt=self._ds.crs` into render_array (#1572)."""
+        ds = Dataset.from_array(
+            np.arange(24.0).reshape(2, 3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        with patch("pyramids.dataset.engines.analysis.render_array") as mock_render:
+            ds.animate()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == ds.crs, (
+            f"Dataset.animate must thread crs as basemap_crs_wkt, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_collection_animate_threads_base_wkt_into_render_array(self):
+        """`DatasetCollection.animate` threads `basemap_crs_wkt=self.base.crs` (#1572)."""
+        base = Dataset.from_array(
+            np.arange(12.0).reshape(3, 4),
+            geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+        )
+        collection = DatasetCollection(base, time_length=2, datasets=[base, base])
+        with patch("pyramids.dataset.collection.render_array") as mock_render:
+            collection.animate(band=0)
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == base.crs, (
+            f"DatasetCollection.animate must thread base.crs, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_netcdf_animate_threads_dataset_wkt_into_render_array(self):
+        """`NetCDF.animate` threads `basemap_crs_wkt=nc.crs` into `_render_array` (#1572).
+
+        This is the NetCDF-unique animate line (`netcdf/_plot.py`), distinct from the
+        non-animate path that delegates to `Analysis.plot`.
+        """
+        nc = NetCDF.from_array(
+            arr=np.random.default_rng(0).random((2, 5, 6)).astype("float32"),
+            geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5)),
+            variable_name="t2m",
+            path=None,
+            dims=ExtraDimensions(name="time", values=[0, 1]),
+        )
+        subset = nc.get_variable("t2m")
+        with patch("pyramids.netcdf._plot._render_array") as mock_render:
+            subset.animate()
+        request = mock_render.call_args.args[0]
+        assert request.basemap_crs_wkt == subset.crs, (
+            f"NetCDF.animate must thread nc.crs, got {request.basemap_crs_wkt!r}"
+        )
+
+    def test_render_array_wkt_fallback_when_no_epsg(self):
+        """`render_array` stamps `basemap_crs_wkt` when `basemap_epsg` is `None` (#1572)."""
+        wkt = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        glyph = render_array(RenderRequest(arr=np.zeros((4, 4)), basemap_crs_wkt=wkt))
+        assert glyph.crs == wkt, f"expected the WKT, got {glyph.crs!r}"
+
+    def test_render_array_epsg_wins_over_wkt(self):
+        """`basemap_epsg` takes precedence; `basemap_crs_wkt` is only a fallback."""
+        glyph = render_array(
+            RenderRequest(
+                arr=np.zeros((4, 4)), basemap_epsg=4326, basemap_crs_wkt="ignored"
+            )
+        )
+        assert glyph.crs == 4326, f"expected the EPSG to win, got {glyph.crs!r}"
+
+    def test_render_array_no_crs_leaves_glyph_default(self):
+        """With neither EPSG nor WKT, the glyph CRS is left unset (no spurious default)."""
+        glyph = render_array(RenderRequest(arr=np.zeros((4, 4))))
+        assert glyph.crs is None, f"expected glyph.crs None, got {glyph.crs!r}"
+
+    def test_render_array_unresolvable_epsg_falls_back_to_wkt(self):
+        """A pyproj-unresolvable EPSG with a valid WKT stamps the WKT, not nothing (#943/#1572).
+
+        Test scenario:
+            A GDAL EPSG newer than pyproj's PROJ catalogue cannot be looked up, but the
+            dataset's WKT describes the same CRS. The stamp must prefer the WKT (via
+            `crs_spec`) so the glyph is stamped, not left to cleopatra's EPSG:3857 default
+            by a swallowed "crs not found" error.
+        """
+        wkt = pyproj.CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        ).to_wkt()
+        glyph = render_array(
+            RenderRequest(arr=np.zeros((4, 4)), basemap_epsg=99999, basemap_crs_wkt=wkt)
+        )
+        assert glyph.crs == wkt, (
+            f"expected the WKT fallback for an unresolvable EPSG, got {glyph.crs!r}"
+        )
+
+    def test_render_array_unparseable_wkt_degrades_to_no_stamp(self):
+        """A WKT cleopatra cannot parse degrades to no stamp, not a ValueError (#1572).
+
+        Test scenario:
+            GDAL may store a WKT that cleopatra/pyproj cannot parse. Before this fix the
+            no-EPSG path skipped the stamp entirely, so a plain `.plot()` worked; the WKT
+            fallback must not turn that into a crash. An unparseable string stands in for
+            such a WKT and must leave `glyph.crs` unset.
+        """
+        glyph = render_array(
+            RenderRequest(arr=np.zeros((4, 4)), basemap_crs_wkt="not-a-crs")
+        )
+        assert glyph.crs is None, (
+            f"expected no stamp on an unparseable WKT, got {glyph.crs!r}"
+        )

@@ -1639,6 +1639,7 @@ class NetCDFPlot:
                 fig=fig,
                 basemap=basemap,
                 basemap_epsg=nc.epsg,
+                basemap_crs_wkt=nc.crs,
             ),
             **animate_kwargs,
         )
