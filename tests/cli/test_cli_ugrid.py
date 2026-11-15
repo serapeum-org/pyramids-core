@@ -2,7 +2,7 @@
 
 These are extras-free (core): ``mesh info|extract|convert`` read via the GDAL
 multidimensional path and the ``rasterize_like`` / ``to_feature_collection``
-kernels fall back to NumPy, so no ``[lazy]`` package is required (verified by
+kernels fall back to NumPy, so ``pyramids-lazy`` is not required (verified by
 blocking dask/xarray/zarr/fsspec and running each command — see PR #1442 review).
 """
 

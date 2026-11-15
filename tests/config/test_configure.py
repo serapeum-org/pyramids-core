@@ -104,7 +104,7 @@ class TestWorkerPlugin:
 
     Both client-broadcast tests import :mod:`dask.distributed`
     internally through the ``configure`` code path, so they carry the
-    ``lazy`` marker to route the test into the ``[lazy]`` extras env.
+    ``lazy`` marker to route the test into the ``lazy`` pixi env.
     The module-level ``pytestmark = pytest.mark.core`` still applies to
     every other test in this file because ``configure`` without a
     client is pure GDAL.

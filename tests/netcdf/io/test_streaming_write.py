@@ -25,7 +25,7 @@ from pyramids.netcdf.engines.variables import (
 from pyramids.netcdf.metadata import get_metadata
 from pyramids.netcdf.netcdf import NetCDF
 
-# dask is the headline dep of the [lazy] extra; gate collection on it so the
+# dask is the headline dep of the pyramids-lazy backend; gate collection on it so the
 # bare-wheel core job (which collects every module before -m selection) does not
 # error here, and route the suite to the dask-equipped lazy job via the marker.
 da = pytest.importorskip("dask.array")

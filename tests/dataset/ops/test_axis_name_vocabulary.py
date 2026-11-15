@@ -41,9 +41,9 @@ except ImportError:  # pragma: no cover - exercised only without the extra
     zarr = None
 
 # Imported inside a guard rather than through a module-level `importorskip`, so
-# the file still collects without the `[lazy]` extra; the tests that need a real
+# the file still collects without `pyramids-lazy`; the tests that need a real
 # store carry `@pytest.mark.lazy` and are selected with `-m lazy`.
-needs_zarr = pytest.mark.skipif(zarr is None, reason="requires the [lazy] extra")
+needs_zarr = pytest.mark.skipif(zarr is None, reason="requires pyramids-lazy")
 
 
 class TestTheVocabularyIsOneList:

@@ -339,12 +339,12 @@ class TestNcOpenMf:
 
 
 def _raise_import(*_a, **_k):
-    """Stand in for a method whose [lazy]-extra import is missing."""
+    """Stand in for a method whose backend import is missing."""
     raise ImportError("No module named 'kerchunk'")
 
 
 class TestLazyExtraContract:
-    """Missing-[lazy]-extra verbs exit 1 cleanly, never 'unexpected failure' (M1)."""
+    """Missing-backend verbs exit 1 cleanly, never 'unexpected failure' (M1)."""
 
     def test_open_mf_missing_extra_is_clean(self, monkeypatch, capsys):
         """A raw ImportError from open_mfdataset becomes a clean one-line error."""

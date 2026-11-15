@@ -62,7 +62,7 @@ HAS_PYSTAC_CLIENT = _has("pystac_client")
 #
 # Why `netcdf_lazy` is kept distinct from `lazy` rather than collapsed into it: it gates on
 # EXTRA modules on top of the base extra's headline dependency (kerchunk + h5py). Those arrive
-# with the [lazy] extra (via pyramids-lazy), but an install can still carry the base stack without
+# with pyramids-lazy, but an install can still carry the base stack without
 # them. A test re-marked plain `lazy` would then FAIL to skip when kerchunk/h5py is the
 # missing piece — so the finer-grained marker is retained to keep the skip precise. The
 # matching `parquet_lazy` marker went to pyramids-lazy with the lazy vector tests.

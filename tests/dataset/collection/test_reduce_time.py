@@ -2,7 +2,7 @@
 
 Buckets a COG time-stack by a pandas frequency, reduces each window through the
 existing ``groupby`` reducer, and returns grid-attached ``Dataset`` objects.
-Requires the ``[lazy]`` extra (the reduction runs through ``DatasetCollection.data``
+Requires ``pyramids-lazy`` (the reduction runs through ``DatasetCollection.data``
 → dask), so the module is marked ``lazy`` and each test skips without dask.
 """
 
