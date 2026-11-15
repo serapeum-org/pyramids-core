@@ -384,7 +384,7 @@ class TestOpenMfdataset:
         self._write_run(tmp_path, dated=True)
 
         class _OldBackend:
-            api_version = 2
+            pass
 
         monkeypatch.setattr(
             mesh_module, "require_compute_backend", lambda: _OldBackend()
@@ -401,97 +401,9 @@ class TestOpenMfdataset:
             f"the upgrade command is missing: {message!r}"
         )
 
-    def test_a_bad_pattern_is_refused_before_the_backend_is_consulted(
+    def test_the_builtin_driver_name_is_accepted_on_the_lazy_path(
         self, tmp_path, monkeypatch
     ):
-        """Path validation is shared, so a bad glob fails the same way lazily and eagerly.
-
-        Test scenario:
-            The backend must not be resolved at all -- a user with no plugin installed should
-            still get "matches no file" rather than "install pyramids-lazy".
-        """
-
-        def _boom():
-            raise AssertionError(
-                "the backend was resolved before the paths were validated"
-            )
-
-        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
-
-        with pytest.raises(ValueError, match="matches no file"):
-            MeshDataset.open_mfdataset(str(tmp_path / "absent_*.nc"), chunks="auto")
-
-    def test_an_empty_sequence_is_refused_before_the_backend_is_consulted(
-        self, monkeypatch
-    ):
-        """Same for an empty sequence: the error is about the input, not the backend."""
-
-        def _boom():
-            raise AssertionError(
-                "the backend was resolved before the paths were validated"
-            )
-
-        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
-
-        with pytest.raises(ValueError, match="nothing to open"):
-            MeshDataset.open_mfdataset([], chunks="auto")
-    def test_a_missing_file_is_refused_before_the_backend_is_consulted(
-        self, tmp_path, monkeypatch
-    ):
-        """A typo'd filename reports the typo, not "upgrade pyramids-lazy" (review M3).
-
-        Test scenario:
-            A plain path is not a glob, so the matched-nothing check never sees it. Without an
-            existence check the name reaches the backend and the user is told to upgrade a
-            plugin over a misspelling -- the very confusion `_require_existing_file` exists to
-            prevent.
-        """
-
-        def _boom():
-            raise AssertionError("the backend was resolved for a path that does not exist")
-
-        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
-
-        with pytest.raises(FileNotFoundError, match="File not found"):
-            MeshDataset.open_mfdataset(str(tmp_path / "absent.nc"), chunks="auto")
-
-    def test_a_missing_file_in_an_explicit_sequence_is_refused(self, tmp_path, monkeypatch):
-        """Every member of an explicit sequence is checked, not just the first (review M3)."""
-        paths = self._write_run(tmp_path, dated=True)
-
-        def _boom():
-            raise AssertionError("the backend was resolved for a sequence with a missing file")
-
-        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
-
-        with pytest.raises(FileNotFoundError, match="File not found"):
-            MeshDataset.open_mfdataset(
-                [str(paths[0]), str(tmp_path / "absent.nc")], chunks="auto"
-            )
-
-    def test_an_unknown_driver_is_refused_before_the_backend_is_consulted(
-        self, tmp_path, monkeypatch
-    ):
-        """A bad driver name gets core's enumerating error on both paths (review M4).
-
-        Test scenario:
-            `driver` names an entry in core's registry, which a backend cannot resolve. Eagerly
-            it raises DriverNotExistError listing what is installed; the lazy path must not
-            forward the typo and report it as a missing plugin instead.
-        """
-        self._write_run(tmp_path, dated=True)
-
-        def _boom():
-            raise AssertionError("the backend was resolved for an unknown driver")
-
-        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
-
-        with pytest.raises(DriverNotExistError, match="no_such_driver"):
-            MeshDataset.open_mfdataset(
-                str(tmp_path / "run_*.nc"), chunks="auto", driver="no_such_driver"
-            )
-
-    def test_the_builtin_driver_name_is_accepted_on_the_lazy_path(self, tmp_path, monkeypatch):
         """`ugrid` names the built-in reader, so validating must not reject it (review M4).
 
         Test scenario:
@@ -513,7 +425,84 @@ class TestOpenMfdataset:
             str(tmp_path / "run_*.nc"), chunks="auto", driver="ugrid"
         )
 
-        assert got == "lazy", f"the built-in driver name was rejected or not forwarded: {got!r}"
+        assert got == "lazy", (
+            f"the built-in driver name was rejected or not forwarded: {got!r}"
+        )
         assert captured["driver"] == "ugrid", (
             f"driver was not forwarded verbatim: {captured.get('driver')!r}"
         )
+
+    @pytest.mark.parametrize(
+        ("bad_input", "error", "match"),
+        [
+            ({"paths": "absent_*.nc"}, ValueError, "matches no file"),
+            ({"paths": []}, ValueError, "nothing to open"),
+            ({"paths": "absent.nc"}, FileNotFoundError, "File not found"),
+            (
+                {"paths": "RUN_GLOB", "driver": "no_such"},
+                DriverNotExistError,
+                "no_such",
+            ),
+        ],
+        ids=["bad-glob", "empty-sequence", "missing-file", "unknown-driver"],
+    )
+    def test_invalid_input_is_refused_without_consulting_the_backend(
+        self, tmp_path, monkeypatch, bad_input, error, match
+    ):
+        """Every input core can judge is rejected before any backend is resolved.
+
+        Args:
+            bad_input: Keyword arguments naming one invalid-input shape.
+            error: The exception the eager path already raises for that shape.
+            match: A fragment of that exception's message.
+
+        Test scenario:
+            The resolver is replaced with one that fails loudly, so consulting it is an error
+            rather than a different error. Two of these shapes (a glob matching nothing, an
+            empty sequence) cannot reach the branch however it is written -- they are here to
+            document the shape, not to discriminate. The other two can: before the paths and
+            the driver were validated in the shared block, both reported "upgrade
+            pyramids-lazy" for what is really a typo (review M3/M4).
+        """
+        self._write_run(tmp_path, dated=True)
+        kwargs = dict(bad_input)
+        if kwargs.get("paths") == "RUN_GLOB":
+            kwargs["paths"] = str(tmp_path / "run_*.nc")
+        elif isinstance(kwargs["paths"], str):
+            kwargs["paths"] = str(tmp_path / kwargs["paths"])
+
+        def _boom():
+            raise AssertionError(
+                "the backend was resolved for input core could already reject"
+            )
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", _boom)
+
+        with pytest.raises(error, match=match):
+            MeshDataset.open_mfdataset(chunks="auto", **kwargs)
+
+    @pytest.mark.lazy
+    def test_the_real_resolver_never_leaks_a_raw_attribute_error(self, tmp_path):
+        """Through the real seam, the probe yields a mesh or a branded error -- never AttributeError.
+
+        Test scenario:
+            Every other lazy test replaces `require_compute_backend`, so none covers the
+            integration with entry-point discovery and the api_version gate. Asserting
+            "raises OptionalPackageDoesNotExist" would invert the day the plugin ships
+            `open_mesh_mfdataset`, so this asserts the invariant that holds either way
+            (review L4).
+        """
+        self._write_run(tmp_path, dated=True)
+
+        try:
+            result = MeshDataset.open_mfdataset(
+                str(tmp_path / "run_*.nc"), chunks="auto"
+            )
+        except OptionalPackageDoesNotExist as exc:
+            assert "open_mesh_mfdataset" in str(exc), (
+                f"the branded error should name the missing member, got: {exc}"
+            )
+        else:
+            assert result is not None, (
+                "a backend that serves chunks= must return something"
+            )
