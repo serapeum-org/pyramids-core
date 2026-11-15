@@ -7,6 +7,9 @@ protocol check, and the branded errors directly, with in-memory fakes.
 
 from __future__ import annotations
 
+import typing
+from typing import Protocol, runtime_checkable
+
 import pytest
 
 from pyramids.base import _compute_backend as cb
@@ -61,6 +64,53 @@ class _FakeEP:
         if isinstance(self._target, Exception):
             raise self._target
         return self._target
+
+
+@runtime_checkable
+class _BaseProtocol(Protocol):
+    """A Protocol that contributes a member to its subclasses by inheritance."""
+
+    inherited: int
+
+
+@runtime_checkable
+class _DerivedProtocol(_BaseProtocol, Protocol):
+    """A Protocol declaring one member of every shape `isinstance` enforces.
+
+    Each member is a shape the old annotations-plus-`vars` scan handled differently: `annotated`
+    is in the class's own annotations, `plain` is in its `vars` as a function, `read_only` is a
+    property (present but not callable), `built` is a classmethod (also not callable), and
+    `inherited` lives on the base class only.
+    """
+
+    annotated: str
+
+    @property
+    def read_only(self) -> int: ...
+
+    @classmethod
+    def built(cls) -> None: ...
+
+    def plain(self) -> None: ...
+
+
+_DERIVED_MEMBERS = frozenset({"annotated", "built", "inherited", "plain", "read_only"})
+
+
+def _make_derived():
+    """Build an object that structurally satisfies `_DerivedProtocol`.
+
+    Returns:
+        An instance exposing every member of `_DERIVED_MEMBERS`.
+    """
+
+    class _Candidate:
+        pass
+
+    candidate = _Candidate()
+    for name in _DERIVED_MEMBERS:
+        setattr(candidate, name, lambda *a, **k: None)
+    return candidate
 
 
 @pytest.fixture(autouse=True)
@@ -121,6 +171,113 @@ class TestContract:
             "the ComputeBackend protocol gained or lost a member. Adding one drops every "
             "released plugin at isinstance; probe new capabilities with getattr instead. "
             f"Current members: {sorted(members)}"
+        )
+
+    def test_protocol_members_accepts_an_explicit_protocol(self):
+        """`protocol_members` inspects whichever Protocol it is handed, not only ComputeBackend.
+
+        Test scenario:
+            The parameter exists so the helper can be pointed at any Protocol -- including the
+            inheritance/property/classmethod shapes that motivated deriving the set from typing.
+            Passing `_DerivedProtocol` must report all five of its members, while the default
+            still answers for `ComputeBackend`.
+        """
+        members = cb.protocol_members(_DerivedProtocol)
+
+        assert members == _DERIVED_MEMBERS, (
+            f"expected {sorted(_DERIVED_MEMBERS)} for the derived protocol, got "
+            f"{sorted(members)}"
+        )
+        assert members != cb.protocol_members(), (
+            "an explicit protocol must not be ignored in favour of ComputeBackend"
+        )
+
+    @pytest.mark.parametrize("member", sorted(_DERIVED_MEMBERS))
+    def test_every_reported_member_is_one_isinstance_enforces(self, member):
+        """Each name the helper reports is a name whose absence fails the structural check.
+
+        Args:
+            member: One member name reported for `_DerivedProtocol`.
+
+        Test scenario:
+            The member set is pinned by a guard test, so a name the helper invents would make
+            that guard assert on something `isinstance` does not care about. Removing each
+            reported name from a conforming object must therefore break the check -- which also
+            proves the inherited, property and classmethod members are genuinely enforced and
+            not merely listed.
+        """
+        candidate = _make_derived()
+        assert isinstance(candidate, _DerivedProtocol), (
+            "the fixture object should satisfy the protocol before anything is removed"
+        )
+
+        delattr(candidate, member)
+
+        assert not isinstance(candidate, _DerivedProtocol), (
+            f"{member!r} is reported as a protocol member but isinstance ignores its absence"
+        )
+
+    def test_protocol_members_falls_back_to_the_typing_attribute(self, monkeypatch):
+        """Without `typing.get_protocol_members`, the Protocol's own attribute set is used.
+
+        Test scenario:
+            `get_protocol_members` is 3.13+, so on 3.12 the helper reads `__protocol_attrs__`
+            instead. That branch is unreachable on this interpreter, so the getter is removed to
+            reach it; it must still report the full enforced set, inherited and property members
+            included.
+        """
+        monkeypatch.delattr(typing, "get_protocol_members", raising=False)
+
+        members = cb.protocol_members(_DerivedProtocol)
+
+        assert members == _DERIVED_MEMBERS, (
+            "the __protocol_attrs__ fallback must report the same members as typing's getter, "
+            f"got {sorted(members)}"
+        )
+
+    def test_protocol_members_last_resort_scans_annotations_and_methods(
+        self, monkeypatch
+    ):
+        """With neither typing hook available, the helper scans annotations plus methods.
+
+        Test scenario:
+            On 3.11 and older `get_protocol_members` is absent *and* `__protocol_attrs__` is
+            unpopulated, which is simulated by removing both. The last-resort scan must still
+            return a usable set, and it is knowably weaker: it sees the own annotation and the
+            plain method but cannot see the inherited member, the property or the classmethod.
+            Pinning that gap is the point -- it is the reason the helper prefers typing, and a
+            silent change to it would alter what the guard test enforces.
+        """
+        monkeypatch.delattr(typing, "get_protocol_members", raising=False)
+        monkeypatch.setattr(_DerivedProtocol, "__protocol_attrs__", frozenset())
+
+        members = cb.protocol_members(_DerivedProtocol)
+
+        assert members == {"annotated", "plain"}, (
+            "the last-resort scan should find the own annotation and the declared method, got "
+            f"{sorted(members)}"
+        )
+        assert members < _DERIVED_MEMBERS, (
+            "the scan is documented as weaker than what isinstance enforces; it must not be "
+            f"reported as complete: {sorted(members)}"
+        )
+
+    def test_a_missing_member_is_named_in_the_diagnostic(self):
+        """The rejection diagnostic lists exactly the protocol members a candidate lacks.
+
+        Test scenario:
+            `isinstance` only answers yes/no, so `_missing_protocol_members` re-derives the
+            absent names -- now through `protocol_members`. A backend missing two methods should
+            have both named, sorted, and nothing else.
+        """
+        backend = _make_backend()
+        del backend.to_kerchunk
+        del backend.read_array_lazy
+
+        missing = cb._missing_protocol_members(backend)
+
+        assert missing == ["read_array_lazy", "to_kerchunk"], (
+            f"expected both absent members named in sorted order, got {missing}"
         )
 
 
