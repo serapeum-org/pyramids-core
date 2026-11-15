@@ -66,5 +66,3 @@ class TestApplyUnpack:
         from pyramids_lazy._lazy import apply_unpack as lazy_fn
 
         assert apply_unpack is lazy_fn is _apply_unpack, "one shared primitive"
-
-
