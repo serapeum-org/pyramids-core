@@ -189,22 +189,31 @@ class TestPackedNoDataMasking:
         )
 
     def test_stretch_output_nodata_is_nan_so_a_valid_result_cannot_alias(self):
-        """The stretch output's no-data is NaN, so a valid result can never read as no-data (#1564).
+        """A stored sentinel inside [0, 1] no longer aliases a valid stretched cell (#1564).
 
         Test scenario:
-            A band packed at scale 0.25 with stored no-data 2 has a valid cell (physical 1.75) that
-            stretches to exactly 0.5. The output declares NaN (not a finite sentinel) as its
-            no-data, so the 0.5 cell stays a real value and only the gap is no-data.
+            A band whose stored no-data 0.5 sits inside the stretch output range, with a valid
+            cell (value 1.0) that stretches to exactly 0.5. Before the fix the output declared 0.5
+            as its no-data, so that valid cell read as a gap; now the output no-data is NaN, so the
+            0.5 cell stays a real value and only the gap is no-data.
         """
-        ds = _packed_row([4, 7, 10, 2], scale=0.25, no_data=2)
+        ds = Dataset.from_array(
+            np.array([[0.0, 1.0, 2.0, 0.5]], dtype="float32"),
+            geo_ref=GEO,
+            no_data_value=0.5,
+        )
         out = ds.percentile_stretch(0, 100)
         arr = out.read_array().ravel()
-        assert np.isnan(out.no_data_value[0]), "output no-data must be NaN"
+        assert np.isnan(out.no_data_value[0]), (
+            "output no-data must be NaN, not the stored 0.5"
+        )
         assert np.isclose(arr[1], 0.5), (
             f"the valid cell must stretch to 0.5; arr={arr.tolist()}"
         )
-        assert np.isfinite(arr[1]), "the valid 0.5 result must stay finite, not no-data"
-        assert np.isnan(arr[3]), "the packed gap must be no-data (NaN)"
+        assert np.isfinite(arr[1]), (
+            "the valid 0.5 result must stay finite, not aliased as no-data"
+        )
+        assert np.isnan(arr[3]), "the gap must be no-data (NaN)"
 
     def test_match_output_nodata_is_nan_so_reference_range_cannot_alias(self):
         """match_histogram output no-data is NaN, so a reference range straddling the sentinel
