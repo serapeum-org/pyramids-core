@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base._utils import extra_hint, require_cleopatra
+from pyramids.base.crs import crs_spec
 from pyramids.basemap import basemap as _basemap_module
 from pyramids.dataset._plot_helpers import _reject_replaced_cbar_kwargs
 from pyramids.netcdf.ugrid.mesh import Mesh2d
@@ -330,6 +331,7 @@ def plot_mesh_outline(
     linewidth: float = 0.3,
     basemap: bool | str | None = None,
     basemap_epsg: int | None = None,
+    basemap_crs_wkt: str | None = None,
     **kwargs: Any,
 ) -> Any:
     """Plot mesh edges as a wireframe using cleopatra MeshGlyph.
@@ -351,8 +353,13 @@ def plot_mesh_outline(
             wireframe exactly as :meth:`MeshDataset.plot` does. ``None`` (default) draws none.
             Before issue #1354 this fell through to the line collection and raised
             ``LineCollection.set() got an unexpected keyword argument 'basemap'``.
-        basemap_epsg: CRS code for the tile fetch. Required whenever ``basemap`` is truthy,
-            since tiles cannot be placed without one.
+        basemap_epsg: Dataset EPSG code for the tile fetch, combined with
+            ``basemap_crs_wkt`` via :func:`crs_spec`. When ``basemap`` is truthy and
+            neither yields a usable CRS, tiles cannot be placed and a ``ValueError`` is
+            raised.
+        basemap_crs_wkt: Dataset CRS as a WKT string, used for the tile fetch when there
+            is no pyproj-resolvable EPSG code (a projected CRS with no EPSG authority
+            code). See :func:`crs_spec` (issue #1577).
         **kwargs: Additional keyword arguments passed to
             `matplotlib.collections.LineCollection`.
 
@@ -369,7 +376,8 @@ def plot_mesh_outline(
         plot_mesh_data: Plot data values on the mesh.
         MeshDataset.plot_outline: Dataset-level convenience method.
     """
-    if basemap and basemap_epsg is None:
+    tile_crs = crs_spec(basemap_epsg, basemap_crs_wkt)
+    if basemap and tile_crs is None:
         # Same guard and message as the data path: tiles need a CRS to be placed against.
         raise ValueError("Dataset must have a CRS (epsg) to use basemap.")
     glyph = _mesh_to_glyph(mesh)
@@ -380,9 +388,10 @@ def plot_mesh_outline(
         **kwargs,
     )
     if basemap:
-        # The guard above already proved basemap_epsg is set when basemap is truthy; the
-        # assert is what tells the type checker, mirroring `mesh_render`.
-        assert basemap_epsg is not None
+        # The guard above already proved a usable CRS exists when basemap is truthy; the
+        # assert is what tells the type checker, mirroring `mesh_render`. `crs_spec` hands
+        # the EPSG when pyproj resolves it, else the WKT (issue #1577).
+        assert tile_crs is not None
         source = basemap if isinstance(basemap, str) else None
-        _basemap_module.add_basemap(glyph.ax, crs=basemap_epsg, source=source)
+        _basemap_module.add_basemap(glyph.ax, crs=tile_crs, source=source)
     return glyph

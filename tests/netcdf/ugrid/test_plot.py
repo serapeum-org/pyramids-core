@@ -217,15 +217,19 @@ class TestUgridDatasetPlotMethods:
             "mesh argument must be the dataset's Mesh2d instance"
         )
 
-    def test_dataset_plot_basemap_without_epsg_raises(self):
-        """``basemap=True`` on a CRS-less dataset raises before dispatch.
+    def test_dataset_plot_basemap_without_any_crs_raises(self):
+        """``basemap=True`` on a genuinely CRS-less dataset raises before dispatch.
 
         Test scenario:
             ``MeshDataset.plot`` short-circuits the basemap path when
-            ``self.epsg is None`` to surface the missing CRS error with
-            a UGRID-specific message. ``_mesh_render`` must not be
-            entered at all. Patch the ``epsg`` property to ``None`` to
-            simulate a dataset without a registered CRS.
+            ``crs_spec(self.epsg, self.crs_wkt)`` yields ``None`` — i.e.
+            neither an EPSG code nor a WKT is available — to surface the
+            missing CRS error with a UGRID-specific message, without
+            entering ``_mesh_render``. ``from_arrays`` defaults to
+            EPSG:4326 and so leaves a WGS-84 ``crs_wkt`` even when ``epsg``
+            is patched out; a mesh that still carries that WKT now tiles
+            (issue #1577), so BOTH ``epsg`` and ``crs_wkt`` must be
+            patched to ``None`` to simulate a dataset with no CRS at all.
         """
         from unittest.mock import patch
 
@@ -236,8 +240,13 @@ class TestUgridDatasetPlotMethods:
             data={"depth": np.array([5.0])},
             data_locations={"depth": "face"},
         )
-        with patch.object(
-            MeshDataset, "epsg", new_callable=lambda: property(lambda s: None)
+        with (
+            patch.object(
+                MeshDataset, "epsg", new_callable=lambda: property(lambda s: None)
+            ),
+            patch.object(
+                MeshDataset, "crs_wkt", new_callable=lambda: property(lambda s: None)
+            ),
         ):
             with patch(
                 "pyramids.netcdf.ugrid.dataset._mesh_render",
