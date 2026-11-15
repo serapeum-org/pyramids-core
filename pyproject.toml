@@ -75,6 +75,9 @@ parquet = ["pyarrow>=10.0.0"]
 stac = ["pystac-client>=0.8.4", "stac-asset>=0.4.7"]
 
 [dependency-groups]
+# Test-only peer dep for the to_xarray / from_xarray methods; deliberately not a published
+# extra. The same-named `interop` pixi feature maps to this group.
+interop = ["xarray>=2023.1.0"]
 dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",
@@ -411,13 +414,6 @@ kerchunk = ">=0.2.10"
 h5py = ">=3.8.0,<3.17"
 hdf5 = "1.14.*"
 
-# The `interop` feature installs the peer dependency the to_xarray / from_xarray methods
-# need, for the dev / CI environments only. It is intentionally NOT a
-# [project.optional-dependencies] extra: pyramids is GDAL-backed, so this is a peer dep for
-# those two methods alone — install it directly to use them. This feature just lets CI
-# exercise those code paths; it surfaces no user-facing extra or conda subpackage.
-[tool.pixi.feature.interop.pypi-dependencies]
-xarray = ">=2023.1.0"
 
 # Single source of truth for the conda GDAL pin (SWIG osgeo bindings are ABI-locked to
 # libgdal). Listed by every environment; ci/gdal-pin.py and ci/setup-gdal-micromamba.sh
