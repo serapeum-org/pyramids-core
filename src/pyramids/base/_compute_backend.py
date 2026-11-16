@@ -372,9 +372,13 @@ def accepts_keyword(func: Any, name: str) -> bool:
     predating an added keyword passes a `getattr` probe and then fails in Python's argument
     binder, which produces a bare `TypeError` instead of a branded, actionable error.
 
-    A `**kwargs` catch-all counts as accepting, because that is how the first-party backend
-    forwards (`open_mesh_mfdataset(self, paths, **kwargs)`); a check looking only for a declared
-    parameter would reject it.
+    The question is whether the keyword is *reachable by name*, not whether a parameter of that
+    name exists. A `**kwargs` catch-all accepts it without declaring it at all, because that is
+    how the first-party backend forwards (`open_mesh_mfdataset(self, paths, **kwargs)`), and a
+    check looking only for a declared parameter would reject it. A keyword-only or a
+    positional-or-keyword parameter accepts it. A positional-only parameter does **not**: its name
+    is in the signature and still cannot be passed by name, so counting it would promise a call
+    the argument binder refuses.
 
     Args:
         func: The callable to inspect.
@@ -382,8 +386,54 @@ def accepts_keyword(func: Any, name: str) -> bool:
 
     Returns:
         True when the keyword can be passed, or when the signature cannot be determined -- in
-        which case the call itself is left to decide, rather than refusing something that may
-        well work.
+            which case the call itself is left to decide, rather than refusing something that may
+            well work. `inspect.signature` reports a callable it cannot describe as either
+            `TypeError` or `ValueError`, and a member that is not callable at all raises on every
+            interpreter; refusing on that basis would report "cannot accept this keyword" about
+            something that may well accept it.
+
+    Examples:
+        - A `**kwargs` catch-all accepts the keyword without declaring it, which is the shape the
+          first-party backend's forwarder uses:
+            ```python
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> def forwarder(paths, **kwargs):
+            ...     return kwargs
+            >>> accepts_keyword(forwarder, "sort")
+            True
+
+            ```
+        - Presence is not acceptance. A keyword-only parameter is reachable by name; a
+          positional-only one appears in the signature and is not:
+            ```python
+            >>> import inspect
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> def keyword_only(paths, *, sort=True):
+            ...     return sort
+            >>> def positional_only(paths, sort=True, /):
+            ...     return sort
+            >>> accepts_keyword(keyword_only, "sort")
+            True
+            >>> "sort" in inspect.signature(positional_only).parameters
+            True
+            >>> accepts_keyword(positional_only, "sort")
+            False
+
+            ```
+        - A member whose signature cannot be read is permitted, leaving the verdict to the call
+          itself -- the shape a backend exposing the capability as data rather than a method gives:
+            ```python
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> accepts_keyword(object(), "sort")
+            True
+
+            ```
+
+    See Also:
+        ComputeBackend: The probe-at-the-call-site policy this serves, and the
+            `open_mesh_mfdataset` contract whose `sort` argument it guards.
+        protocol_members: The complementary check, for the members `isinstance` enforces rather
+            than the signature of a probed one.
     """
     try:
         parameters = inspect.signature(func).parameters

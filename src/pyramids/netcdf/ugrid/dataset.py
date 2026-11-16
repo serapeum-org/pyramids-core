@@ -2313,9 +2313,9 @@ class MeshDataset(_MeshFacades):
                 chunk, a per-axis tuple, or a mapping. A mapping's keys are the backend's to
                 define -- ``pyramids-lazy`` keys them by axis index, not by dimension name, so
                 ``{0: 1}`` rather than ``{"time": 1}`` -- and core forwards the value without
-                interpreting it, so consult the installed backend for the exact spelling. A falsy value other than
-                ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects neither path and raises
-                :class:`ValueError` rather than dispatching lazily.
+                interpreting it, so consult the installed backend for the exact spelling. A
+                falsy value other than ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects
+                neither path and raises :class:`ValueError` rather than dispatching lazily.
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
             mesh_name: Which topology to take from each file. ``None`` takes the first.
             sort: Order the files by their first time stamp before stacking, so a run whose
@@ -2350,7 +2350,10 @@ class MeshDataset(_MeshFacades):
                 raised before the split.
             AlignmentError: A file sits on a different topology than the first (eager path).
             OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
-                installed, or the installed one predates ``open_mesh_mfdataset``.
+                installed, the installed one does not provide ``open_mesh_mfdataset``, or it
+                provides one whose signature cannot accept ``sort``. Both the name and the
+                signature are checked before the call, so an older backend is refused with this
+                branded error rather than a bare ``TypeError`` from the argument binder.
 
         See Also:
             read_all: Every topology within one file.
