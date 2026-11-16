@@ -179,8 +179,8 @@ here (see below).
 
 ## 8. Lazy / dask reads
 
-For multi-GB reanalysis files, pass `chunks=` to switch the read to a dask-backed lazy path; only
-the slice (or animation frame) actually rendered is materialised:
+For multi-GB reanalysis files, pass `chunks=` to switch the static read to a dask-backed lazy path;
+only the slice actually rendered is materialised:
 
 ```python
 nc.plot("t2m", chunks={0: 1})                          # lazy static plot of the leading slice

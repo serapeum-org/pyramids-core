@@ -65,7 +65,7 @@ animate=None, chunks=None, basemap=None, exclude_value=None, title=None, **kwarg
 | `axes`      | `CoordinateSpec`, optional          | Curvilinear coords / dimension names — `coords=(x_2d, y_2d)` (-> `pcolormesh`), `x_dim=`, `y_dim=`. Auto-detected from CF / WRF / ROMS / NEMO when omitted. |
 | `kind`      | `str`, optional                     | `"auto"`, `"imshow"`, `"pcolormesh"`, `"contour"`, `"contourf"`. |
 | `animate`   | `bool` or `str`, optional           | Animate over a dimension (its name, or `True` for the leading non-spatial dimension). |
-| `chunks`    | `dict`, optional                    | Dask chunking — switches to a lazy read; only the rendered slice / frame is materialised. Requires the `[lazy]` extra. |
+| `chunks`    | `dict`, optional                    | Dask chunking — switches to a lazy read; only the rendered slice is materialised. Static-plot path only; ignored on `animate=`. Requires the `[lazy]` extra. |
 | `basemap`   | `bool` or `str`, optional           | Overlay a web-tile basemap (provider name as a string, e.g. `"CartoDB.Positron"`). Requires the `[viz]` extra. |
 | `**kwargs`  |                                     | Colour, exactly as `Dataset.plot`: loose kwargs (`cmap`, `vmin`, `vmax`, `robust`, `center`, `extend`, `levels`, `norm`) + cleopatra bags `colorbar=` (`ColorBar(...)` / `False`), `color=`, `contour=`, `cells=`, `data_style=`; plus `ax`, `figsize`. |
 

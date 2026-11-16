@@ -58,13 +58,15 @@ raise rather than falling back:
 - A negative index is rejected, so `rows` / `cols` are *not*
   interchangeable with `{-2: …}` / `{-1: …}`.
 - `bands` needs exactly one non-spatial axis: it is "not meaningful"
-  on a 2-D variable and "ambiguous" on a 4-D one, which the
-  surrounding ERA5 examples make a live case. Chunk those by integer
-  axis index.
+  on a 2-D variable, and "ambiguous" on a variable carrying two or
+  more non-spatial axes — a 4-D `(time, level, lat, lon)` cube, say.
+  Every example on this page is 3-D, where `bands` is unambiguous;
+  chunk a 4-D variable by integer axis index instead.
 - `rows` / `cols` need at least 2-D.
-- The aliases match on the name alone, not on a dimension's role, so
-  a variable whose dimension is literally called `rows` still gets
-  `ndim - 2` — which may not be that dimension's axis.
+- The aliases are fixed positions. They are never looked up against
+  the variable's dimension names, so a variable that happens to have
+  a dimension called `rows` still gets `ndim - 2` — which may not be
+  that dimension's axis.
 
 Note the asymmetry: `NetCDF.chunk(...).chunks` *reports* sizes keyed
 by dimension name, but that mapping cannot be fed back into
@@ -117,24 +119,42 @@ from pyramids.netcdf import NetCDF
 stack = NetCDF.open_mfdataset(
     "/data/noah_*.nc",           # glob string
     variable="precipitation",
-    chunks={0: 256, 1: 256},     # per FILE: each daily file is 2-D (lat, lon)
+    chunks={0: 1, 1: 256, 2: 256},   # per FILE: (time, lat, lon), 24 hourly steps
 )
 
-stack.shape          # (n_files, H, W)
-stack.mean(axis=0).compute()   # climatological mean
+stack.shape          # (n_files, 24, H, W)
+stack.mean(axis=(0, 1)).compute()   # climatological mean
 ```
 
-Two arguments worth knowing:
+Three arguments worth knowing:
 
-- `chunks=` forwards to every per-file `read_array` call, so it
-  describes **one file's** variable — not the stacked result. Each
-  daily `noah_*.nc` here holds a 2-D `(lat, lon)` grid, so the spec
-  has two axes; `{0: 1, 1: 256, 2: 256}` would raise
-  `ValueError: chunks dict axis 2 out of range for ndim=2`. The file
-  axis the stack adds at axis 0 is created by the stacking itself and
-  cannot be addressed through `chunks=` at all. Pick the rest
-  carefully: a spec that doesn't align with the per-file layout forces
-  re-chunking on every read.
+- **`chunks=` describes one file's variable, not the stacked result.**
+  It is forwarded to every per-file `read_array` call, so count its
+  axes against a *single* file. The example above assumes each daily
+  `noah_*.nc` holds a 3-D `(time, lat, lon)` variable with hourly
+  steps, which is the usual LDAS/NLDAS layout — hence three axes and
+  a `(n_files, 24, H, W)` stack.
+
+  **Check your own files first**, because getting this wrong fails in
+  two different ways. Too many axes raises, which is the harmless
+  case: against files holding a bare 2-D `(lat, lon)` grid the spec
+  above gives
+  `ValueError: chunks dict axis 2 out of range for ndim=2`. Too few
+  is the dangerous one — it is silent. Passing `{0: 256, 1: 256}` for
+  the 3-D variable here lands the two entries on *time and lat*
+  instead of lat and lon, leaving lon unchunked entirely; the stack
+  shape is unchanged and nothing warns.
+  `nc.get_variable("precipitation").read_array().ndim` on one file
+  settles it.
+
+  The file axis the stack adds at axis 0 is created by the stacking
+  itself and cannot be addressed through `chunks=` at all. Beyond
+  that, pick sizes that align with the per-file layout or every read
+  pays for re-chunking.
+- `parallel=` is deprecated and inert. It is still accepted, but
+  passing a truthy value only emits a `DeprecationWarning` — the
+  per-file lazy read already parallelises chunk reads at compute
+  time. Drop it from existing calls.
 - `preprocess=` applies a user callable to each `NetCDF` subset
   before its array is extracted. Useful for unpacking, cropping, or
   dropping auxiliary variables.
