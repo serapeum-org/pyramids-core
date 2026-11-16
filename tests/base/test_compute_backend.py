@@ -133,6 +133,62 @@ def _make_derived():
     return candidate
 
 
+class _SignatureShapes:
+    """One `open_mesh_mfdataset` spelling per parameter kind `accepts_keyword` has to judge.
+
+    Each is probed as a *bound* method, which is how core reaches it -- `getattr(backend,
+    "open_mesh_mfdataset")` -- so `self` is already gone from the signature the helper reads.
+    Every parameter carries a default so that calling one with `sort=` fails for exactly one
+    reason, the keyword, and the verdict can be cross-checked against Python's own binder.
+    """
+
+    def var_keyword(self, paths=(), **kwargs):
+        """The catch-all forwarder the released pyramids-lazy uses."""
+
+    def keyword_only(self, paths=(), *, sort=True):
+        """`sort` declared keyword-only, the way the Protocol documents it."""
+
+    def positional_or_keyword(self, paths=(), sort=True):
+        """`sort` passable either positionally or by name."""
+
+    def positional_only(self, paths=(), sort=True, /):
+        """`sort` present but unreachable by name, so passing it as a keyword fails."""
+
+    def positional_only_with_catch_all(self, paths=(), sort=True, /, **kwargs):
+        """A positional-only `sort` beside a catch-all, which collects the keyword instead."""
+
+    def without_the_keyword(
+        self, paths=(), *, chunks=None, driver=None, mesh_name=None
+    ):
+        """The four-argument contract that predates `sort`."""
+
+
+#: Each shape of `_SignatureShapes` with the verdict `accepts_keyword` must return for `"sort"`.
+_SIGNATURE_VERDICTS = (
+    ("var_keyword", True),
+    ("keyword_only", True),
+    ("positional_or_keyword", True),
+    ("positional_only_with_catch_all", True),
+    ("positional_only", False),
+    ("without_the_keyword", False),
+)
+
+
+class _NotAProtocol:
+    """A plain class that merely looks like an interface; `isinstance` enforces nothing on it."""
+
+    api_version: int = 1
+
+    def plain(self) -> None:
+        """A declared method, which the last-resort scan would happily report as enforced."""
+
+
+class _ProtocolImplementation(_BaseProtocol):
+    """A concrete subclass of a Protocol -- an implementation, and itself not a Protocol."""
+
+    inherited = 1
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache():
     """Reset the discovery cache around every test so entry-point fakes don't leak between cases."""
@@ -316,6 +372,133 @@ class TestContract:
 
         assert missing == ["read_array_lazy", "to_kerchunk"], (
             f"expected both absent members named in sorted order, got {missing}"
+        )
+
+    @pytest.mark.parametrize(
+        ("shape", "expected"),
+        _SIGNATURE_VERDICTS,
+        ids=[name.replace("_", "-") for name, _ in _SIGNATURE_VERDICTS],
+    )
+    def test_accepts_keyword_judges_by_parameter_kind(self, shape, expected):
+        """Only a parameter the caller can actually *name* counts as accepted.
+
+        Args:
+            shape: The `_SignatureShapes` method to probe.
+            expected: Whether `sort` can be passed to it by keyword.
+
+        Test scenario:
+            The helper decides whether a probed backend capability may be called with a keyword,
+            so a wrong verdict costs either a usable backend (refused for a keyword it accepts)
+            or the branded error (a bare `TypeError` from the argument binder instead). Every
+            parameter kind therefore has to be judged on whether it is *keyword-reachable*, not
+            merely present: a positional-only `sort` exists in the signature and still cannot be
+            passed by name, while a `**kwargs` catch-all accepts it without declaring it at all.
+
+            Each verdict is cross-checked against Python's own binder in the same test, so these
+            cases pin the behaviour the helper exists to predict rather than restating its
+            implementation -- a verdict that drifted from the binder would fail here even if the
+            table were updated to match the new code.
+        """
+        probed = getattr(_SignatureShapes(), shape)
+
+        verdict = cb.accepts_keyword(probed, "sort")
+
+        assert verdict is expected, (
+            f"accepts_keyword said {verdict!r} for the {shape!r} signature, expected {expected!r}"
+        )
+        try:
+            probed(["run.nc"], sort=True)
+        except TypeError:
+            binds = False
+        else:
+            binds = True
+        assert binds is expected, (
+            f"the {shape!r} signature {'accepts' if binds else 'rejects'} sort= at call time, so "
+            f"accepts_keyword returning {expected!r} is the wrong promise"
+        )
+
+    @pytest.mark.parametrize(
+        "failure", [TypeError, ValueError], ids=["type-error", "value-error"]
+    )
+    def test_an_unreadable_signature_is_permitted_not_refused(
+        self, monkeypatch, failure
+    ):
+        """When the signature cannot be read at all, the call is left to decide.
+
+        Args:
+            failure: The exception `inspect.signature` raises for an undescribable callable.
+
+        Test scenario:
+            Builtins and some C-extension callables expose no signature, and `inspect.signature`
+            reports that as either `TypeError` or `ValueError` depending on the object. The
+            documented choice is to be permissive there: refusing would hand the user "the backend
+            cannot accept sort=" about a backend that may well accept it, which is a wrong
+            diagnosis rather than a missing one. Both exception types must be treated alike, and
+            no real object raises `ValueError` portably across interpreters, so the raise is
+            stubbed and undone before the assertion.
+
+            The subject is the one shape that *would* be refused if its signature could be read,
+            so a pass proves the permissive branch ran rather than coinciding with a normal
+            accept.
+        """
+
+        def _unreadable(_func):
+            raise failure("no signature available for this callable")
+
+        monkeypatch.setattr(cb.inspect, "signature", _unreadable)
+        accepted = cb.accepts_keyword(_SignatureShapes().without_the_keyword, "sort")
+        monkeypatch.undo()
+
+        assert accepted is True, (
+            f"an {failure.__name__} from inspect.signature must not be read as a refusal, got "
+            f"{accepted!r}"
+        )
+
+    def test_a_member_with_no_signature_at_all_is_permitted(self):
+        """The permissive branch is reachable without stubbing anything.
+
+        Test scenario:
+            Core probes the capability with `getattr`, so a backend exposing
+            `open_mesh_mfdataset` as a data attribute rather than a method hands this helper an
+            object `inspect.signature` refuses to describe. Unlike the stubbed case above, this is
+            a real interpreter refusal on every version, which is what makes the branch live code
+            rather than defensive padding.
+        """
+        assert cb.accepts_keyword(object(), "sort") is True, (
+            "a non-callable member has no signature to read, so the helper must defer to the "
+            "call instead of reporting the keyword as unaccepted"
+        )
+
+    @pytest.mark.parametrize(
+        "subject",
+        [_NotAProtocol, _NotAProtocol(), _ProtocolImplementation, int],
+        ids=["plain-class", "instance", "protocol-implementation", "builtin-type"],
+    )
+    def test_a_non_protocol_is_refused(self, subject):
+        """Anything that is not a Protocol is refused uniformly, on every interpreter.
+
+        Args:
+            subject: Something that enforces no Protocol members.
+
+        Test scenario:
+            The member set this helper reports is what a guard test pins, so answering for a
+            non-Protocol would pin the wrong thing. Left to typing, the outcome splits by
+            interpreter: `get_protocol_members` raises for a non-Protocol on 3.13+, but on 3.11
+            that call does not exist and the last-resort scan would quietly return the class's own
+            annotations and methods as though `isinstance` enforced them -- loud on one
+            interpreter, silently wrong on another. `_NotAProtocol` is exactly that trap: it
+            declares both an annotation and a method, so the scan would answer `{'api_version',
+            'plain'}` instead of refusing.
+
+            `_ProtocolImplementation` is the likelier mistake in practice -- passing the class
+            that implements a Protocol rather than the Protocol itself -- and it inherits from one,
+            so only the `_is_protocol` flag distinguishes it.
+        """
+        with pytest.raises(TypeError, match="not a Protocol") as excinfo:
+            cb.protocol_members(subject)
+
+        assert "enforces no members" in str(excinfo.value), (
+            f"the refusal should say why it is refused, got {str(excinfo.value)!r}"
         )
 
 

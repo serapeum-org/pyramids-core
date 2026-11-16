@@ -503,20 +503,32 @@ class TestOpenMfdataset:
             )
 
     @pytest.mark.parametrize(
-        "bad", [False, 0, "", {}], ids=["False", "0", "empty-str", "empty-dict"]
+        "judgeable",
+        mesh_module._JUDGEABLE_CHUNKS,
+        ids=[cls.__name__ for cls in mesh_module._JUDGEABLE_CHUNKS],
     )
-    def test_a_meaningless_chunks_value_is_refused(self, tmp_path, monkeypatch, bad):
+    def test_a_meaningless_chunks_value_is_refused(
+        self, tmp_path, monkeypatch, judgeable
+    ):
         """A falsy `chunks` is rejected rather than silently routed to the backend.
 
         Args:
-            bad: A falsy value that is not `None`.
+            judgeable: One type from `_JUDGEABLE_CHUNKS`, instantiated empty to get that type's
+                falsy value -- `bool()` is `False`, `int()` is `0`, `str()` is `''`, `dict()` is
+                `{}`, and so on for the rest.
 
         Test scenario:
             The switch is `chunks is not None`, so every falsy non-None value used to dispatch
             lazily -- `chunks=False` reads as "do not chunk" and did the opposite, and `0` /
             `False` are not even in the declared type (review N3).
+
+            The cases are derived from `_JUDGEABLE_CHUNKS` rather than listed, because that tuple
+            is the guard's own definition of which values it claims to judge: a type added to it
+            whose empty value is *not* refused would otherwise be an unproven claim, and a type
+            dropped from it would leave a case here asserting a refusal the code no longer makes.
         """
         self._write_run(tmp_path, dated=True)
+        bad = judgeable()
 
         def _boom():
             raise AssertionError("a meaningless chunks value reached the backend")
@@ -525,6 +537,48 @@ class TestOpenMfdataset:
 
         with pytest.raises(ValueError, match="chunks"):
             MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=bad)
+
+    @pytest.mark.parametrize(
+        "spelling",
+        [2, -1, (1, 4), {0: 1}],
+        ids=["int-block", "minus-one", "per-axis-tuple", "axis-mapping"],
+    )
+    def test_a_judgeable_but_truthy_chunks_value_is_forwarded(
+        self, tmp_path, monkeypatch, spelling
+    ):
+        """Every chunk spelling the docstring advertises survives the falsy guard.
+
+        Args:
+            spelling: A `chunks` value of a type the guard judges, but which is not falsy.
+
+        Test scenario:
+            The guard inspects the type first and only then its emptiness, so each judgeable type
+            has two outcomes and the accepting one is the whole point of the keyword. `-1` is the
+            case worth naming: it is the dask spelling for "one chunk for the whole axis", it is
+            an `int` like the rejected `0`, and it is truthy -- so a guard written as "reject any
+            int" or "reject anything not a mapping or 'auto'" would refuse a documented value.
+            The `str` spelling (`'auto'`) is already covered by the forwarding test above, so it
+            is not repeated here.
+        """
+        self._write_run(tmp_path, dated=True)
+        captured: dict = {}
+
+        class _Backend:
+            def open_mesh_mfdataset(self, resolved, **kwargs):
+                captured.update(kwargs)
+                return "LAZY"
+
+        monkeypatch.setattr(mesh_module, "require_compute_backend", lambda: _Backend())
+
+        got = MeshDataset.open_mfdataset(str(tmp_path / "run_*.nc"), chunks=spelling)
+
+        assert got == "LAZY", (
+            f"chunks={spelling!r} should have reached the backend, got {got!r}"
+        )
+        assert captured["chunks"] is spelling, (
+            f"chunks={spelling!r} must be forwarded verbatim for the backend to interpret, got "
+            f"{captured.get('chunks')!r}"
+        )
 
     @pytest.mark.parametrize(
         "awkward",
