@@ -18,7 +18,7 @@ from dataclasses import replace
 from glob import glob
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 from uuid import uuid4
 
 import cftime
@@ -40,7 +40,13 @@ from shapely.geometry import LineString, box
 
 from pyramids.base import _timeseries
 from pyramids.base._array_ops import array_equals, array_identical
-from pyramids.base._errors import AlignmentError, CRSError, DriverNotExistError
+from pyramids.base._compute_backend import accepts_keyword, require_compute_backend
+from pyramids.base._errors import (
+    AlignmentError,
+    CRSError,
+    DriverNotExistError,
+    OptionalPackageDoesNotExist,
+)
 from pyramids.base._plot_backends import (
     forward_kwargs,
     is_colorbar_spec,
@@ -218,6 +224,13 @@ class _joins_meshes:  # noqa: N801
             )
         self._class_calls[target] = call
         return call
+
+
+# The types whose emptiness the falsy-`chunks` guard can judge. Anything else -- an ndarray, a
+# pandas object, a custom chunk spec -- is forwarded for the backend to accept or reject, because
+# `not value` on such an object raises (numpy: "truth value of an array ... is ambiguous") and
+# would replace a clear refusal with an unrelated error naming neither `chunks` nor this method.
+_JUDGEABLE_CHUNKS = (bool, int, float, str, bytes, dict, list, tuple, set, frozenset)
 
 
 class MeshDataset(_MeshFacades):
@@ -2183,14 +2196,188 @@ class MeshDataset(_MeshFacades):
         return [topo.mesh_name for topo in topologies]
 
     @classmethod
+    def _open_mfdataset_lazy(
+        cls,
+        resolved: Sequence[str | Path],
+        *,
+        chunks: dict | str | int | tuple[int, ...] | None,
+        driver: str | None,
+        mesh_name: str | None,
+        sort: bool,
+    ) -> Any:
+        """Hand already-resolved paths to the backend's lazy mesh reader.
+
+        Deliberately probed with :func:`getattr` rather than declared on the
+        :class:`~pyramids.base._compute_backend.ComputeBackend` protocol. That protocol is
+        ``runtime_checkable`` and :func:`pyramids.base._compute_backend._load` drops any backend
+        failing its ``isinstance`` check, so adding a member there would silently disable *every*
+        already-released plugin -- not just the mesh path (issue #1458).
+
+        Args:
+            resolved: The concrete paths, already globbed and validated by the caller so a bad
+                pattern fails identically whether the read is eager or lazy.
+            chunks: The backend's chunking argument; never ``None`` here.
+            driver: Mesh driver name, or ``None`` to detect.
+            mesh_name: Topology to take from each file, or ``None`` for the first.
+            sort: Forwarded for the backend to apply. Core cannot pre-sort without opening
+                every file, which would defeat the lazy read, but the backend opens them all
+                regardless -- so it is the layer that can order them for free.
+
+        Returns:
+            The backend's lazily-backed mesh object.
+
+        Raises:
+            OptionalPackageDoesNotExist: No backend is installed, the installed one does not
+                provide ``open_mesh_mfdataset``, or it provides one that cannot accept ``sort``.
+                The signature is checked as well as the name, so a backend predating the
+                ``sort`` argument is refused with this branded error rather than a bare
+                ``TypeError`` from the argument binder. The message names the backend that was
+                resolved, because a third party may register one, and offers the first-party
+                upgrade as a parenthesised hint rather than as the diagnosis.
+        """
+        backend = require_compute_backend()
+        forwarder = getattr(backend, "open_mesh_mfdataset", None)
+        if forwarder is None:
+            raise OptionalPackageDoesNotExist(
+                f"The installed lazy backend ({type(backend).__module__}) does not provide "
+                "`open_mesh_mfdataset`, so chunks= cannot be served (for the first-party one: "
+                "`pip install -U pyramids-lazy`). Omit chunks= to read eagerly."
+            )
+        if not accepts_keyword(forwarder, "sort"):
+            raise OptionalPackageDoesNotExist(
+                f"The installed lazy backend ({type(backend).__module__}) provides "
+                "`open_mesh_mfdataset` but not its `sort=` argument, so core cannot tell it how "
+                "to order the files (for the first-party one: `pip install -U pyramids-lazy`). "
+                "Omit chunks= to read eagerly."
+            )
+        return forwarder(
+            resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
+        )
+
+    @classmethod
+    def _resolved_mfdataset_inputs(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        driver: str | None,
+        chunks: dict | str | int | tuple[int, ...] | None,
+    ) -> list[str]:
+        """Expand `paths` and refuse every input core can judge, before the eager/lazy split.
+
+        Everything core owns about the inputs lives here so the eager and lazy paths reject bad
+        input identically. Without it the lazy branch reported a typo'd filename or an unknown
+        driver as "upgrade pyramids-lazy" -- the confusion `_require_existing_file` exists to
+        stop (review M3/M4) -- and a results-only driver was refused eagerly but forwarded
+        lazily (review L1).
+
+        Args:
+            paths: A glob pattern, one path, or a sequence of paths.
+            driver: Mesh driver name, or `None` to detect per file.
+            chunks: The caller's chunking argument, judged only for the values whose emptiness
+                is meaningful.
+
+        Returns:
+            The resolved paths as `str`, in the order to open them. One spelling, because the
+                glob branch yields `str` while the sequence and single-path branches would
+                otherwise pass the caller's own objects through to the backend (review L2).
+
+        Raises:
+            ValueError: `paths` is empty, a glob pattern matches nothing, or `chunks` is a falsy
+                value other than `None` and so selects neither path.
+            FileNotFoundError: A resolved path does not exist.
+            DriverNotExistError: `driver` names a driver that is not installed.
+            UnsupportedMeshFormatError: `driver` names a results-only (`needs_mesh`) driver,
+                which carries values but no topology and cannot open a file on its own.
+        """
+        if isinstance(paths, (str, Path)):
+            pattern = str(paths)
+            is_pattern = any(character in pattern for character in "*?[")
+            matched = sorted(glob(pattern)) if is_pattern else []
+            if matched:
+                resolved: list[str] = list(matched)
+            elif is_pattern:
+                raise ValueError(
+                    f"open_mfdataset() got the pattern {pattern!r}, which matches no file."
+                )
+            else:
+                resolved = [str(paths)]
+        else:
+            resolved = [str(path) for path in paths]
+        if not resolved:
+            raise ValueError(
+                "open_mfdataset() got an empty list of paths; there is nothing to open."
+            )
+        for path in resolved:
+            _require_existing_file(path)
+        cls._refuse_unusable_driver(driver, resolved[0])
+        if isinstance(chunks, _JUDGEABLE_CHUNKS) and not chunks:
+            # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
+            # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the
+            # opposite. Reject them instead of guessing which was meant (review N3).
+            raise ValueError(
+                f"open_mfdataset() got chunks={chunks!r}, which selects neither path: pass "
+                "chunks=None to read eagerly, or a chunk mapping, 'auto', an int block "
+                "size, -1, or a per-axis tuple to read lazily."
+            )
+        return resolved
+
+    @classmethod
+    def _refuse_unusable_driver(cls, driver: str | None, target: str) -> None:
+        """Refuse a named driver that cannot open a file on its own.
+
+        The eager path refuses a results-only (`needs_mesh`) driver inside
+        `_resolve_read_driver`; doing it here keeps both paths symmetric. It is a capability
+        lookup on the already-resolved driver, so it costs no file read.
+
+        Args:
+            driver: Mesh driver name, or `None` to detect per file.
+            target: The first resolved path, shown in the message's suggested `attach_data`
+                call. The driver name would render a nonsense suggestion there.
+
+        Raises:
+            DriverNotExistError: The name is neither reserved nor installed.
+            UnsupportedMeshFormatError: The driver carries values but no topology.
+        """
+        if driver is None:
+            return
+        selected, _ = _named_read_driver(driver)
+        if selected is not None and "needs_mesh" in selected.capabilities:
+            raise _needs_mesh_error(selected, target)
+
+    @overload
+    @classmethod
     def open_mfdataset(
         cls,
         paths: str | Path | Sequence[str | Path],
         *,
+        chunks: None = None,
         driver: str | None = None,
         mesh_name: str | None = None,
         sort: bool = True,
-    ) -> MeshDataset:
+    ) -> MeshDataset: ...
+
+    @overload
+    @classmethod
+    def open_mfdataset(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        chunks: dict | str | int | tuple[int, ...],
+        driver: str | None = None,
+        mesh_name: str | None = None,
+        sort: bool = True,
+    ) -> Any: ...
+
+    @classmethod
+    def open_mfdataset(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        chunks: dict | str | int | tuple[int, ...] | None = None,
+        driver: str | None = None,
+        mesh_name: str | None = None,
+        sort: bool = True,
+    ) -> Any:
         """Open many mesh files sharing one topology and stack them along time (#1378).
 
         The many-**files** entry point. :meth:`read_all` answers every topology in **one**
@@ -2201,9 +2388,24 @@ class MeshDataset(_MeshFacades):
         variables are concatenated along time by :meth:`concat`, so the rules about what may
         be joined are that method's rules, stated in one place.
 
+        The eager and lazy results are declared as two overloads rather than one ``Any`` so the
+        eager default -- the only shape whose type core owns -- stays checked for callers. A
+        single ``Any`` would also drop the ``attr-defined`` errors consumers get today.
+
         Args:
             paths: A glob pattern (``"out/*_map.nc"``), a single path, or a sequence of paths.
                 A pattern that matches nothing is an error rather than an empty dataset.
+            chunks: ``None`` (the default) reads every file eagerly and concatenates, which is
+                what this method has always done and needs no backend. Anything else hands the
+                resolved paths to the ``pyramids-lazy`` backend and returns a lazily-backed mesh
+                instead, so a long run is not held in memory. Accepts whatever that backend's
+                chunking argument accepts: ``"auto"``, an ``int`` block size, ``-1`` for one
+                chunk, a per-axis tuple, or a mapping. A mapping's keys are the backend's to
+                define -- ``pyramids-lazy`` keys them by axis index, not by dimension name, so
+                ``{0: 1}`` rather than ``{"time": 1}`` -- and core forwards the value without
+                interpreting it, so consult the installed backend for the exact spelling. A
+                falsy value other than ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects
+                neither path and raises :class:`ValueError` rather than dispatching lazily.
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
             mesh_name: Which topology to take from each file. ``None`` takes the first.
             sort: Order the files by their first time stamp before stacking, so a run whose
@@ -2217,14 +2419,31 @@ class MeshDataset(_MeshFacades):
                 the dated files are ordered among themselves and placed back into the slots
                 they occupied, so the undated ones do not move.
                 ``False`` always keeps the given order.
+                Forwarded unchanged with ``chunks=``, so the same three clauses apply on the
+                lazy path -- the backend opens every file to build its graph either way, and
+                applies this ordering to those already-open handles.
 
         Returns:
-            MeshDataset: One dataset on the shared topology, its time axis spanning every
-            file in order.
+            With ``chunks=None`` a ``MeshDataset`` -- one dataset on the shared topology, its
+                time axis spanning every file in order. With ``chunks`` given, the backend's
+                lazily-backed mesh object instead, whose type ``pyramids-lazy`` defines rather
+                than core.
 
         Raises:
-            ValueError: ``paths`` is empty, or a glob pattern matches nothing.
-            AlignmentError: A file sits on a different topology than the first.
+            ValueError: ``paths`` is empty, or a glob pattern matches nothing. Raised before the
+                eager/lazy split, so it reports the same problem the same way on either path.
+            FileNotFoundError: A resolved path does not exist. Also raised before the split.
+            DriverNotExistError: ``driver`` names a driver that is not installed. Also raised
+                before the split.
+            UnsupportedMeshFormatError: ``driver`` names a results-only (``needs_mesh``) driver,
+                which carries values but no topology and so cannot open a file on its own. Also
+                raised before the split.
+            AlignmentError: A file sits on a different topology than the first (eager path).
+            OptionalPackageDoesNotExist: ``chunks`` was given but no compute backend is
+                installed, the installed one does not provide ``open_mesh_mfdataset``, or it
+                provides one whose signature cannot accept ``sort``. Both the name and the
+                signature are checked before the call, so an older backend is refused with this
+                branded error rather than a bare ``TypeError`` from the argument binder.
 
         See Also:
             read_all: Every topology within one file.
@@ -2235,25 +2454,31 @@ class MeshDataset(_MeshFacades):
                 ```python
                 >>> ds = MeshDataset.open_mfdataset("out/*_map.nc")  # doctest: +SKIP
                 >>> ds.time_values[0], ds.time_values[-1]  # doctest: +SKIP
+
+                ```
+            - Read the same run lazily, then materialise a variable:
+                ```python
+                >>> lazy = MeshDataset.open_mfdataset(  # doctest: +SKIP
+                ...     "out/*_map.nc", chunks="auto"
+                ... )
+                >>> lazy["waterlevel"].compute().shape  # doctest: +SKIP
+
+                ```
+            - Paths are validated before the backend is consulted, so bad input fails the same
+              way eagerly or lazily, and needs no backend installed:
+                ```python
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> MeshDataset.open_mfdataset([], chunks="auto")
+                Traceback (most recent call last):
+                    ...
+                ValueError: open_mfdataset() got an empty list of paths; there is nothing to open.
+
                 ```
         """
-        if isinstance(paths, (str, Path)):
-            pattern = str(paths)
-            is_pattern = any(character in pattern for character in "*?[")
-            matched = sorted(glob(pattern)) if is_pattern else []
-            if matched:
-                resolved: list[str | Path] = list(matched)
-            elif is_pattern:
-                raise ValueError(
-                    f"open_mfdataset() got the pattern {pattern!r}, which matches no file."
-                )
-            else:
-                resolved = [paths]
-        else:
-            resolved = list(paths)
-        if not resolved:
-            raise ValueError(
-                "open_mfdataset() got an empty list of paths; there is nothing to open."
+        resolved = cls._resolved_mfdataset_inputs(paths, driver=driver, chunks=chunks)
+        if chunks is not None:
+            return cls._open_mfdataset_lazy(
+                resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
             )
         datasets = [
             cls.read_file(path, driver=driver, mesh_name=mesh_name) for path in resolved

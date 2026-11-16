@@ -7,6 +7,9 @@ protocol check, and the branded errors directly, with in-memory fakes.
 
 from __future__ import annotations
 
+import typing
+from typing import Protocol, runtime_checkable
+
 import pytest
 
 from pyramids.base import _compute_backend as cb
@@ -63,6 +66,129 @@ class _FakeEP:
         return self._target
 
 
+@runtime_checkable
+class _BaseProtocol(Protocol):
+    """A Protocol that contributes a member to its subclasses by inheritance."""
+
+    inherited: int
+
+
+@runtime_checkable
+class _DerivedProtocol(_BaseProtocol, Protocol):
+    """A Protocol declaring one member of every shape `isinstance` enforces.
+
+    Each member is a shape the old annotations-plus-`vars` scan handled differently: `annotated`
+    is in the class's own annotations, `plain` is in its `vars` as a function, `read_only` is a
+    property (present but not callable), `built` is a classmethod (also not callable), and
+    `inherited` lives on the base class only.
+    """
+
+    annotated: str
+
+    @property
+    def read_only(self) -> int: ...
+
+    @classmethod
+    def built(cls) -> None: ...
+
+    def plain(self) -> None: ...
+
+
+_DERIVED_MEMBERS = frozenset({"annotated", "built", "inherited", "plain", "read_only"})
+# What the last-resort scan can see: the class's own annotation and its one plain method. The
+# inherited member, the property and the classmethod are invisible to it -- the documented gap that
+# makes the helper prefer typing.
+_SCANNABLE_MEMBERS = frozenset({"annotated", "plain"})
+
+
+def _typing_reports_members(protocol: type) -> bool:
+    """Whether this interpreter can report `protocol`'s full enforced member set.
+
+    Args:
+        protocol: The Protocol to ask about.
+
+    Returns:
+        True when `typing.get_protocol_members` exists (3.13+) or the Protocol carries a populated
+        `__protocol_attrs__` (3.12+); False on 3.11, where neither is available and the helper
+        falls back to the weaker scan.
+    """
+    return hasattr(typing, "get_protocol_members") or bool(
+        getattr(protocol, "__protocol_attrs__", None)
+    )
+
+
+def _make_derived():
+    """Build an object that structurally satisfies `_DerivedProtocol`.
+
+    Returns:
+        An instance exposing every member of `_DERIVED_MEMBERS`.
+    """
+
+    class _Candidate:
+        pass
+
+    candidate = _Candidate()
+    for name in _DERIVED_MEMBERS:
+        setattr(candidate, name, lambda *a, **k: None)
+    return candidate
+
+
+class _SignatureShapes:
+    """One `open_mesh_mfdataset` spelling per parameter kind `accepts_keyword` has to judge.
+
+    Each is probed as a *bound* method, which is how core reaches it -- `getattr(backend,
+    "open_mesh_mfdataset")` -- so `self` is already gone from the signature the helper reads.
+    Every parameter carries a default so that calling one with `sort=` fails for exactly one
+    reason, the keyword, and the verdict can be cross-checked against Python's own binder.
+    """
+
+    def var_keyword(self, paths=(), **kwargs):
+        """The catch-all forwarder the released pyramids-lazy uses."""
+
+    def keyword_only(self, paths=(), *, sort=True):
+        """`sort` declared keyword-only, the way the Protocol documents it."""
+
+    def positional_or_keyword(self, paths=(), sort=True):
+        """`sort` passable either positionally or by name."""
+
+    def positional_only(self, paths=(), sort=True, /):
+        """`sort` present but unreachable by name, so passing it as a keyword fails."""
+
+    def positional_only_with_catch_all(self, paths=(), sort=True, /, **kwargs):
+        """A positional-only `sort` beside a catch-all, which collects the keyword instead."""
+
+    def without_the_keyword(
+        self, paths=(), *, chunks=None, driver=None, mesh_name=None
+    ):
+        """The four-argument contract that predates `sort`."""
+
+
+#: Each shape of `_SignatureShapes` with the verdict `accepts_keyword` must return for `"sort"`.
+_SIGNATURE_VERDICTS = (
+    ("var_keyword", True),
+    ("keyword_only", True),
+    ("positional_or_keyword", True),
+    ("positional_only_with_catch_all", True),
+    ("positional_only", False),
+    ("without_the_keyword", False),
+)
+
+
+class _NotAProtocol:
+    """A plain class that merely looks like an interface; `isinstance` enforces nothing on it."""
+
+    api_version: int = 1
+
+    def plain(self) -> None:
+        """A declared method, which the last-resort scan would happily report as enforced."""
+
+
+class _ProtocolImplementation(_BaseProtocol):
+    """A concrete subclass of a Protocol -- an implementation, and itself not a Protocol."""
+
+    inherited = 1
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache():
     """Reset the discovery cache around every test so entry-point fakes don't leak between cases."""
@@ -91,6 +217,289 @@ class TestContract:
         backend = _make_backend()
         del backend.to_kerchunk
         assert not isinstance(backend, cb.ComputeBackend)
+
+    def test_the_protocol_member_set_is_frozen(self):
+        """Adding a member to the protocol silently disables every released backend.
+
+        Test scenario:
+            The protocol is ``runtime_checkable`` and :func:`_load` drops any backend failing
+            its ``isinstance`` check, so a new member makes every already-published plugin fail
+            structurally -- not just for the new call, but for *every* lazy operation, with only
+            a RuntimeWarning. Core cannot require a newer plugin either: the ``[lazy]`` extra was
+            removed (#1565), so users install ``pyramids-lazy`` themselves.
+
+            New backend capabilities must therefore be probed with ``getattr`` at the call site
+            (see ``MeshDataset.open_mfdataset``'s ``chunks`` branch, issue #1458), never added
+            here. This pins the member set so that choice cannot be undone by accident.
+
+            The set is read with ``cb.protocol_members()``, which asks typing what ``isinstance``
+            enforces, and compared against ``_METHODS`` -- the list this file already builds its
+            fake from -- so a new *method* breaks the guard and the fake together instead of being
+            described in a third copy. The three data members are the exception: they are spelled
+            here and again in ``_make_backend``, so adding a fourth would break this guard but not
+            the fake.
+        """
+        members = cb.protocol_members()
+
+        assert members == frozenset(_METHODS) | {
+            "api_version",
+            "lazy_netcdf_type",
+            "lazy_feature_collection_type",
+        }, (
+            "the ComputeBackend protocol gained or lost a member. Adding one drops every "
+            "released plugin at isinstance; probe new capabilities with getattr instead. "
+            f"Current members: {sorted(members)}"
+        )
+
+    def test_protocol_members_accepts_an_explicit_protocol(self):
+        """`protocol_members` inspects whichever Protocol it is handed, not only ComputeBackend.
+
+        Test scenario:
+            The parameter exists so the helper can be pointed at any Protocol -- including the
+            inheritance/property/classmethod shapes that motivated deriving the set from typing.
+            Passing `_DerivedProtocol` must report its members, while the default still answers
+            for `ComputeBackend`. Which members those are is interpreter-dependent: 3.12+ reports
+            all five, while 3.11 has neither typing hook and reaches the weaker scan, so the
+            expectation follows the interpreter rather than assuming the richest one. The branch
+            was previously asserted unconditionally and failed every 3.11 job in the CI matrix.
+        """
+        members = cb.protocol_members(_DerivedProtocol)
+
+        if _typing_reports_members(_DerivedProtocol):
+            expected = _DERIVED_MEMBERS
+        else:
+            expected = _SCANNABLE_MEMBERS
+        assert members == expected, (
+            f"expected {sorted(expected)} for the derived protocol on this interpreter, got "
+            f"{sorted(members)}"
+        )
+        assert members != cb.protocol_members(), (
+            "an explicit protocol must not be ignored in favour of ComputeBackend"
+        )
+
+    @pytest.mark.parametrize("member", sorted(_DERIVED_MEMBERS))
+    def test_every_reported_member_is_one_isinstance_enforces(self, member):
+        """Each name the helper reports is a name whose absence fails the structural check.
+
+        Args:
+            member: One member name reported for `_DerivedProtocol`.
+
+        Test scenario:
+            The member set is pinned by a guard test, so a name the helper invents would make
+            that guard assert on something `isinstance` does not care about. Removing each
+            reported name from a conforming object must therefore break the check -- which also
+            proves the inherited, property and classmethod members are genuinely enforced and
+            not merely listed.
+        """
+        candidate = _make_derived()
+        assert isinstance(candidate, _DerivedProtocol), (
+            "the fixture object should satisfy the protocol before anything is removed"
+        )
+
+        delattr(candidate, member)
+
+        assert not isinstance(candidate, _DerivedProtocol), (
+            f"{member!r} is reported as a protocol member but isinstance ignores its absence"
+        )
+
+    @pytest.mark.skipif(
+        not getattr(_DerivedProtocol, "__protocol_attrs__", None),
+        reason="no __protocol_attrs__ to fall back to on this interpreter (3.11 and older)",
+    )
+    def test_protocol_members_falls_back_to_the_typing_attribute(self, monkeypatch):
+        """Without `typing.get_protocol_members`, the Protocol's own attribute set is used.
+
+        Test scenario:
+            `get_protocol_members` is 3.13+, so on 3.12 the helper reads `__protocol_attrs__`
+            instead. That branch is unreachable on this interpreter, so the getter is removed to
+            reach it; it must still report the full enforced set, inherited and property members
+            included. Skipped on 3.11, where there is no such attribute to fall back *to* -- the
+            test would otherwise land in the last-resort scan and assert the wrong set.
+        """
+        monkeypatch.delattr(typing, "get_protocol_members", raising=False)
+
+        members = cb.protocol_members(_DerivedProtocol)
+
+        assert members == _DERIVED_MEMBERS, (
+            "the __protocol_attrs__ fallback must report the same members as typing's getter, "
+            f"got {sorted(members)}"
+        )
+
+    def test_protocol_members_last_resort_scans_annotations_and_methods(
+        self, monkeypatch
+    ):
+        """With neither typing hook available, the helper scans annotations plus methods.
+
+        Test scenario:
+            On 3.11 and older `get_protocol_members` is absent *and* `__protocol_attrs__` is
+            unpopulated, which is simulated by removing both. The last-resort scan must still
+            return a usable set, and it is knowably weaker: it sees the own annotation and the
+            plain method but cannot see the inherited member, the property or the classmethod.
+            Pinning that gap is the point -- it is the reason the helper prefers typing, and a
+            silent change to it would alter what the guard test enforces.
+        """
+        monkeypatch.delattr(typing, "get_protocol_members", raising=False)
+        # raising=False: on 3.11 the attribute does not exist at all, and setting it with the
+        # default raising=True errored in setup rather than running the test.
+        monkeypatch.setattr(
+            _DerivedProtocol, "__protocol_attrs__", frozenset(), raising=False
+        )
+
+        members = cb.protocol_members(_DerivedProtocol)
+
+        assert members == _SCANNABLE_MEMBERS, (
+            "the last-resort scan should find the own annotation and the declared method, got "
+            f"{sorted(members)}"
+        )
+        assert members < _DERIVED_MEMBERS, (
+            "the scan is documented as weaker than what isinstance enforces; it must not be "
+            f"reported as complete: {sorted(members)}"
+        )
+
+    def test_a_missing_member_is_named_in_the_diagnostic(self):
+        """The rejection diagnostic lists exactly the protocol members a candidate lacks.
+
+        Test scenario:
+            `isinstance` only answers yes/no, so `_missing_protocol_members` re-derives the
+            absent names -- now through `protocol_members`. A backend missing two methods should
+            have both named, sorted, and nothing else.
+        """
+        backend = _make_backend()
+        del backend.to_kerchunk
+        del backend.read_array_lazy
+
+        missing = cb._missing_protocol_members(backend)
+
+        assert missing == ["read_array_lazy", "to_kerchunk"], (
+            f"expected both absent members named in sorted order, got {missing}"
+        )
+
+    @pytest.mark.parametrize(
+        ("shape", "expected"),
+        _SIGNATURE_VERDICTS,
+        ids=[name.replace("_", "-") for name, _ in _SIGNATURE_VERDICTS],
+    )
+    def test_accepts_keyword_judges_by_parameter_kind(self, shape, expected):
+        """Only a parameter the caller can actually *name* counts as accepted.
+
+        Args:
+            shape: The `_SignatureShapes` method to probe.
+            expected: Whether `sort` can be passed to it by keyword.
+
+        Test scenario:
+            The helper decides whether a probed backend capability may be called with a keyword,
+            so a wrong verdict costs either a usable backend (refused for a keyword it accepts)
+            or the branded error (a bare `TypeError` from the argument binder instead). Every
+            parameter kind therefore has to be judged on whether it is *keyword-reachable*, not
+            merely present: a positional-only `sort` exists in the signature and still cannot be
+            passed by name, while a `**kwargs` catch-all accepts it without declaring it at all.
+
+            Each verdict is cross-checked against Python's own binder in the same test, so these
+            cases pin the behaviour the helper exists to predict rather than restating its
+            implementation -- a verdict that drifted from the binder would fail here even if the
+            table were updated to match the new code.
+        """
+        probed = getattr(_SignatureShapes(), shape)
+
+        verdict = cb.accepts_keyword(probed, "sort")
+
+        assert verdict is expected, (
+            f"accepts_keyword said {verdict!r} for the {shape!r} signature, expected {expected!r}"
+        )
+        try:
+            probed(["run.nc"], sort=True)
+        except TypeError:
+            binds = False
+        else:
+            binds = True
+        assert binds is expected, (
+            f"the {shape!r} signature {'accepts' if binds else 'rejects'} sort= at call time, so "
+            f"accepts_keyword returning {expected!r} is the wrong promise"
+        )
+
+    @pytest.mark.parametrize(
+        "failure", [TypeError, ValueError], ids=["type-error", "value-error"]
+    )
+    def test_an_unreadable_signature_is_permitted_not_refused(
+        self, monkeypatch, failure
+    ):
+        """When the signature cannot be read at all, the call is left to decide.
+
+        Args:
+            failure: The exception `inspect.signature` raises for an undescribable callable.
+
+        Test scenario:
+            Builtins and some C-extension callables expose no signature, and `inspect.signature`
+            reports that as either `TypeError` or `ValueError` depending on the object. The
+            documented choice is to be permissive there: refusing would hand the user "the backend
+            cannot accept sort=" about a backend that may well accept it, which is a wrong
+            diagnosis rather than a missing one. Both exception types must be treated alike, and
+            no real object raises `ValueError` portably across interpreters, so the raise is
+            stubbed and undone before the assertion.
+
+            The subject is the one shape that *would* be refused if its signature could be read,
+            so a pass proves the permissive branch ran rather than coinciding with a normal
+            accept.
+        """
+
+        def _unreadable(_func):
+            raise failure("no signature available for this callable")
+
+        monkeypatch.setattr(cb.inspect, "signature", _unreadable)
+        accepted = cb.accepts_keyword(_SignatureShapes().without_the_keyword, "sort")
+        monkeypatch.undo()
+
+        assert accepted is True, (
+            f"an {failure.__name__} from inspect.signature must not be read as a refusal, got "
+            f"{accepted!r}"
+        )
+
+    def test_a_member_with_no_signature_at_all_is_permitted(self):
+        """The permissive branch is reachable without stubbing anything.
+
+        Test scenario:
+            Core probes the capability with `getattr`, so a backend exposing
+            `open_mesh_mfdataset` as a data attribute rather than a method hands this helper an
+            object `inspect.signature` refuses to describe. Unlike the stubbed case above, this is
+            a real interpreter refusal on every version, which is what makes the branch live code
+            rather than defensive padding.
+        """
+        assert cb.accepts_keyword(object(), "sort") is True, (
+            "a non-callable member has no signature to read, so the helper must defer to the "
+            "call instead of reporting the keyword as unaccepted"
+        )
+
+    @pytest.mark.parametrize(
+        "subject",
+        [_NotAProtocol, _NotAProtocol(), _ProtocolImplementation, int],
+        ids=["plain-class", "instance", "protocol-implementation", "builtin-type"],
+    )
+    def test_a_non_protocol_is_refused(self, subject):
+        """Anything that is not a Protocol is refused uniformly, on every interpreter.
+
+        Args:
+            subject: Something that enforces no Protocol members.
+
+        Test scenario:
+            The member set this helper reports is what a guard test pins, so answering for a
+            non-Protocol would pin the wrong thing. Left to typing, the outcome splits by
+            interpreter: `get_protocol_members` raises for a non-Protocol on 3.13+, but on 3.11
+            that call does not exist and the last-resort scan would quietly return the class's own
+            annotations and methods as though `isinstance` enforced them -- loud on one
+            interpreter, silently wrong on another. `_NotAProtocol` is exactly that trap: it
+            declares both an annotation and a method, so the scan would answer `{'api_version',
+            'plain'}` instead of refusing.
+
+            `_ProtocolImplementation` is the likelier mistake in practice -- passing the class
+            that implements a Protocol rather than the Protocol itself -- and it inherits from one,
+            so only the `_is_protocol` flag distinguishes it.
+        """
+        with pytest.raises(TypeError, match="not a Protocol") as excinfo:
+            cb.protocol_members(subject)
+
+        assert "enforces no members" in str(excinfo.value), (
+            f"the refusal should say why it is refused, got {str(excinfo.value)!r}"
+        )
 
 
 class TestComputeBackends:

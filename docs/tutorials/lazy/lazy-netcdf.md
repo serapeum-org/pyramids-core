@@ -262,9 +262,13 @@ not touch dask / the labeled-array stack / kerchunk.
 
 ## UGRID unstructured grids
 
-`MeshDataset` (FVCOM, SCHISM, ADCIRC, Delft3D) is not yet wired to
-pyramids' lazy stack — it currently uses eager reads throughout.
-Lazy UGRID is tracked as a follow-on. The
+`MeshDataset` (FVCOM, SCHISM, ADCIRC, Delft3D) has one lazy entry
+point in core: `open_mfdataset(..., chunks=...)` forwards to the
+compute backend. It needs a `pyramids-lazy` providing
+`open_mesh_mfdataset`, and raises a branded error naming the upgrade
+when the installed one does not; every other `MeshDataset` read is
+eager. The rest of lazy UGRID is tracked as a
+follow-on. The
 `docs/examples/netcdf/ugrid/dask-lazy-ugrid.ipynb` notebook shows how
 to layer dask on top of the eager `MeshDataset` manually using
 `dask.delayed` for FVCOM NECOFS OPeNDAP endpoints; that path works

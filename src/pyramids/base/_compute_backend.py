@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import inspect
 import threading
+import typing
 import warnings
 from importlib import import_module
 from importlib.metadata import EntryPoint, entry_points
@@ -46,8 +47,10 @@ __all__ = [
     "COMPUTE_BACKEND_API_VERSION",
     "ENTRY_POINT_GROUP",
     "ComputeBackend",
+    "accepts_keyword",
     "clear_compute_backend_cache",
     "compute_backends",
+    "protocol_members",
     "require_compute_backend",
 ]
 
@@ -81,8 +84,9 @@ class ComputeBackend(Protocol):
     straight delegation. ``@runtime_checkable`` so :func:`require_compute_backend` can verify the
     object structurally.
 
-    Scope: the v1 contract covers the raster-cube (``NetCDF``) and vector (``FeatureCollection``)
-    lazy ops, plus the Zarr/kerchunk writers and readers.
+    Scope: the contract covers the raster-cube (``NetCDF``) and vector (``FeatureCollection``)
+    lazy ops, plus the Zarr/kerchunk writers and readers. :func:`protocol_members` returns the
+    member names it enforces.
 
     What is **not** dispatched yet, despite being lazy: ``Dataset.read_array(chunks=)`` and
     ``DatasetCollection.data`` still construct dask arrays inside core
@@ -90,13 +94,45 @@ class ComputeBackend(Protocol):
     dask.array`` and a plain ``ImportError`` rather than this seam's branded error. So a bare core
     with dask installed still has a working lazy raster path, and :meth:`read_array_lazy` is
     reached only from the ``NetCDF`` read and the xarray/UGRID interop readers. Completing that
-    move is follow-up work; this docstring previously claimed the raster surface was covered, which
-    it is not.
+    move is follow-up work.
 
     ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
-    ``from_zarr``) is **intentionally out of v1** — mesh lazy parity is deferred to FR-B (issue
-    #1458); its methods are added (additively, no api_version bump) when the mesh lazy bodies move
-    to the backend.
+    ``from_zarr``) is **intentionally not part of this Protocol** — mesh lazy parity is deferred to
+    FR-B (issue #1458).
+
+    Those methods are **not** added to this Protocol when they land. This class is
+    ``runtime_checkable`` and :func:`_load` drops any backend failing its ``isinstance`` check, so
+    a new member here makes every *already-released* plugin fail structurally — losing the whole
+    lazy surface, not just the new call, with only a ``RuntimeWarning``. Core cannot require a
+    newer plugin either: there is no ``[lazy]`` extra any more, so users install ``pyramids-lazy``
+    themselves. A new capability is therefore **probed at the call site** with ``getattr`` and
+    raises a branded upgrade error when absent. ``MeshDataset.open_mfdataset``'s ``chunks=`` branch
+    is the first instance; ``tests/base/test_compute_backend.py`` pins this Protocol's member set
+    so the rule cannot be undone by accident.
+
+    **Probed optional capabilities.** A backend may implement these in addition to the members
+    above. They are not part of the Protocol, so omitting one costs nothing but that feature:
+
+    - ``open_mesh_mfdataset(paths, *, chunks, driver, mesh_name, sort)`` — the lazy multi-file
+      mesh read behind :meth:`pyramids.netcdf.ugrid.MeshDataset.open_mfdataset`'s ``chunks=``
+      (issue #1458). All five arguments are passed by
+      :meth:`pyramids.netcdf.ugrid.MeshDataset._open_mfdataset_lazy`, ``paths`` positionally and
+      the rest by keyword. ``paths`` is a list of concrete paths: core has already expanded any
+      glob, rejected an empty set, checked that each file exists, and validated ``driver`` against
+      its own mesh-driver registry -- including refusing a results-only (``needs_mesh``) driver,
+      as the eager path does -- so a backend need not repeat any of that. ``chunks`` is
+      whatever the caller passed, and is never ``None`` nor a falsy value — core rejects both
+      before dispatching. ``driver`` and ``mesh_name`` are forwarded verbatim and may be
+      ``None``. ``sort`` **is** forwarded and its semantics are required: order the dated files by
+      their first time stamp, leave undated files in the slots they were given, and with
+      ``sort=False`` preserve the caller's order exactly. A backend applies it to the handles it
+      already opened to build its graph, so honouring it costs no extra read; core cannot
+      pre-sort, because doing so would mean opening every file eagerly. Because the probe is by
+      name, core also checks that the method can *accept* ``sort`` before calling it, so a backend
+      predating that argument is refused with a branded
+      :class:`~pyramids.base._errors.OptionalPackageDoesNotExist` instead of a bare ``TypeError``
+      from the argument binder; a ``**kwargs`` catch-all satisfies the check. The return value is
+      the backend's own lazy mesh type; core does not constrain it.
 
     Attributes:
         api_version: The contract version this backend implements; must be ``>=``
@@ -249,27 +285,193 @@ def _load(entry_point: EntryPoint) -> ComputeBackend | None:
     return backend
 
 
+def protocol_members(protocol: type | None = None) -> frozenset[str]:
+    """The member names a ``runtime_checkable`` Protocol's ``isinstance`` actually enforces.
+
+    Derived from typing itself rather than re-implemented, because anything weaker diverges from
+    the check it describes: a member contributed by a Protocol *base class*, or declared as a
+    ``property`` or ``classmethod``, is enforced by ``isinstance`` but invisible to an
+    annotations-plus-``vars`` scan. That divergence matters because the member set is pinned by a
+    guard test — a scan that misses a member would let exactly the breakage the guard exists to
+    catch slip through.
+
+    Args:
+        protocol: The Protocol to inspect. Defaults to :class:`ComputeBackend`.
+
+    Returns:
+        The enforced member names.
+
+    Raises:
+        TypeError: `protocol` is not a Protocol. Refused here rather than left to typing, which
+            raises for this on 3.13+ but on 3.11 would fall through to the scan and return the
+            class's own annotations and methods as though they were enforced.
+
+    Examples:
+        - The default set is what a backend must expose to pass the structural check: the
+          `api_version` data member alongside every method the Protocol declares.
+            ```python
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> members = protocol_members()
+            >>> "api_version" in members
+            True
+            >>> "read_array_lazy" in members
+            True
+
+            ```
+        - A probed optional capability is deliberately absent from it. That is what lets an
+          already-released backend keep passing the check while core adds the capability.
+            ```python
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> "open_mesh_mfdataset" in protocol_members()
+            False
+
+            ```
+        - Any other Protocol can be inspected by passing it explicitly, data members included.
+            ```python
+            >>> from typing import Protocol
+            >>> from pyramids.base._compute_backend import protocol_members
+            >>> class Tiny(Protocol):
+            ...     api_version: int
+            ...     def ping(self) -> None: ...
+            >>> sorted(protocol_members(Tiny))
+            ['api_version', 'ping']
+
+            ```
+
+    See Also:
+        ComputeBackend: The Protocol inspected by default, and the probe policy for capabilities
+            kept out of it.
+    """
+    target = ComputeBackend if protocol is None else protocol
+    if not getattr(target, "_is_protocol", False):
+        # Refuse uniformly. `get_protocol_members` raises for a non-Protocol on 3.13+, but on
+        # 3.11 the call cannot be reached and the scan would quietly return the class's own
+        # annotations and methods -- loud on one interpreter, silently wrong on another.
+        raise TypeError(f"{target!r} is not a Protocol, so it enforces no members.")
+    get_members = getattr(typing, "get_protocol_members", None)
+    if get_members is not None:
+        members = set(get_members(target))
+    elif getattr(target, "__protocol_attrs__", None):
+        members = set(getattr(target, "__protocol_attrs__"))  # noqa: B009
+    else:
+        # Pre-3.12 fallback: own annotations plus declared methods. Weaker, as described above,
+        # but only reached on interpreters where typing exposes nothing better.
+        members = set(getattr(target, "__annotations__", {}))
+        members.update(
+            name
+            for name, value in vars(target).items()
+            if callable(value) and not name.startswith("__")
+        )
+    return frozenset(members)
+
+
+def accepts_keyword(func: Any, name: str) -> bool:
+    """Whether `func` can be called with the keyword argument `name`.
+
+    Used to check a probed optional capability's *signature*, not just its presence: a backend
+    predating an added keyword passes a `getattr` probe and then fails in Python's argument
+    binder, which produces a bare `TypeError` instead of a branded, actionable error.
+
+    The question is whether the keyword is *reachable by name*, not whether a parameter of that
+    name exists. A `**kwargs` catch-all accepts it without declaring it at all, because that is
+    how the first-party backend forwards (`open_mesh_mfdataset(self, paths, **kwargs)`), and a
+    check looking only for a declared parameter would reject it. A keyword-only or a
+    positional-or-keyword parameter accepts it. A positional-only parameter does **not**: its name
+    is in the signature and still cannot be passed by name, so counting it would promise a call
+    the argument binder refuses.
+
+    Args:
+        func: The callable to inspect.
+        name: The keyword argument's name.
+
+    Returns:
+        True when the keyword can be passed, or when the signature cannot be determined -- in
+            which case the call itself is left to decide, rather than refusing something that may
+            well work. `inspect.signature` reports a callable it cannot describe as either
+            `TypeError` or `ValueError`, and a member that is not callable at all raises on every
+            interpreter; refusing on that basis would report "cannot accept this keyword" about
+            something that may well accept it.
+
+    Examples:
+        - A `**kwargs` catch-all accepts the keyword without declaring it, which is the shape the
+          first-party backend's forwarder uses:
+            ```python
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> def forwarder(paths, **kwargs):
+            ...     return kwargs
+            >>> accepts_keyword(forwarder, "sort")
+            True
+
+            ```
+        - Presence is not acceptance. A keyword-only parameter is reachable by name; a
+          positional-only one appears in the signature and is not:
+            ```python
+            >>> import inspect
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> def keyword_only(paths, *, sort=True):
+            ...     return sort
+            >>> def positional_only(paths, sort=True, /):
+            ...     return sort
+            >>> accepts_keyword(keyword_only, "sort")
+            True
+            >>> "sort" in inspect.signature(positional_only).parameters
+            True
+            >>> accepts_keyword(positional_only, "sort")
+            False
+
+            ```
+        - A member whose signature cannot be read is permitted, leaving the verdict to the call
+          itself -- the shape a backend exposing the capability as data rather than a method gives:
+            ```python
+            >>> from pyramids.base._compute_backend import accepts_keyword
+            >>> accepts_keyword(object(), "sort")
+            True
+
+            ```
+
+    See Also:
+        ComputeBackend: The probe-at-the-call-site policy this serves, and the
+            `open_mesh_mfdataset` contract whose `sort` argument it guards.
+        protocol_members: The complementary check, for the members `isinstance` enforces rather
+            than the signature of a probed one.
+    """
+    try:
+        parameters = inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        # Builtins and some C extensions expose no signature; do not refuse on that basis.
+        accepted = True
+    else:
+        declared = parameters.get(name)
+        accepted = any(
+            parameter.kind is inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters.values()
+        ) or (
+            declared is not None
+            and declared.kind
+            in (
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
+            )
+        )
+    return accepted
+
+
 def _missing_protocol_members(candidate: object) -> list[str]:
     """Return the :class:`ComputeBackend` members ``candidate`` does not expose, for diagnostics.
 
     ``runtime_checkable`` isinstance only answers yes/no, so this re-derives which names were absent
-    to make the rejection actionable instead of "it was skipped".
+    to make the rejection actionable instead of "it was skipped". The names come from
+    :func:`protocol_members`, so the diagnostic can never list a member the check does not enforce.
+    That set is unordered, so declaration order is not available here and the names are sorted
+    alphabetically instead, which keeps the warning text stable across runs.
 
     Args:
         candidate: The object that failed the structural check.
 
     Returns:
-        The Protocol member names missing from ``candidate``, in declaration order.
+        The :class:`ComputeBackend` member names missing from ``candidate``, sorted alphabetically.
     """
-    # Derive the Protocol's member names without a version-specific typing internal
-    # (``get_protocol_members`` is 3.13+, ``__protocol_attrs__`` is unpopulated on 3.11): the
-    # members are exactly this class's own annotations plus the methods it declares. Guarded so a
-    # diagnostic can never raise over the real rejection.
-    members = set(getattr(ComputeBackend, "__annotations__", {}))
-    for name, value in vars(ComputeBackend).items():
-        if callable(value) and not name.startswith("__"):
-            members.add(name)
-    return sorted(name for name in members if not hasattr(candidate, name))
+    return sorted(name for name in protocol_members() if not hasattr(candidate, name))
 
 
 def _fill(resolved: dict[str, ComputeBackend]) -> None:
