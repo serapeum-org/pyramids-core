@@ -30,7 +30,7 @@ NC_PACKED = "tests/data/netcdf/coards__4v__1d2-2d2__scaleoffset__y-asc.nc"
 UNKNOWN_KEY = r"Unknown chunks dict key"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def var_3d():
     """Yield the 3-D ``values`` variable, whose eager read is ``(3, 13, 14)``.
 
@@ -44,7 +44,7 @@ def var_3d():
         nc.close()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def var_2d():
     """Yield the 2-D ``Band1`` variable, whose eager read has no band axis.
 
@@ -58,7 +58,7 @@ def var_2d():
         nc.close()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def var_packed_2d():
     """Yield the CF-packed ``z`` variable, stored 2-D but reported as ``(1, 21, 21)``.
 
@@ -72,7 +72,7 @@ def var_packed_2d():
         nc.close()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def var_4d():
     """Yield the 4-D ``temperature`` variable, which has two non-spatial axes.
 
@@ -593,9 +593,13 @@ class TestToXarrayFallsBackOneVariableAtATime:
         eager = sorted(
             name for name, var in result.data_vars.items() if var.chunks is None
         )
-        assert chunked and eager, (
-            f"a mixed-rank store must split under an axis-3 spec; chunked={chunked}, "
+        assert chunked, (
+            f"a mixed-rank store must chunk at least one variable under an axis-3 spec; "
             f"eager={eager}"
+        )
+        assert eager, (
+            f"a mixed-rank store must leave at least one variable eager under an axis-3 "
+            f"spec; chunked={chunked}"
         )
         assert all(len(result[name].dims) < 4 for name in eager), (
             f"only variables below 4-D may fall back for an axis-3 spec, got eager={eager}"
