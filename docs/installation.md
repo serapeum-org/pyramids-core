@@ -49,7 +49,10 @@ the macOS and Windows x64 wheels). No `gdal-config`, no
 - `parquet`: pyarrow, for eager GeoParquet I/O (`read_parquet` / `to_parquet`, which go through
   pyarrow and geopandas and need no backend). The **lazy** vector path
   (`LazyFeatureCollection`, `backend="dask"`) additionally needs dask-geopandas, which ships in
-  `pyramids-lazy[parquet]` — not here.
+  `pyramids-lazy[parquet]` — not here. Note that `iter_features()` over a `.parquet` is a third,
+  separate thing: it streams through GDAL/OGR and so needs GDAL's **OGR Parquet driver**, which no
+  pyramids wheel bundles. See [GDAL driver plugins](reference/gdal-driver-plugins.md) for what works
+  on which install path.
 - `dev`: nbval, pre-commit, pytest, coverage, build, twine, etc.
 - `docs`: mkdocs, mkdocs-material, mkdocstrings, mike, etc.
 

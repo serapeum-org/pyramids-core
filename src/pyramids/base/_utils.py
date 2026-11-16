@@ -1461,6 +1461,60 @@ def lazy_vector_extra_hint(lead: str) -> str:
     )
 
 
+def ogr_plugin_hint(lead: str, driver: str, conda_package: str) -> str:
+    """Compose a remedy for a missing GDAL **driver plugin** (not a Python package).
+
+    The other `*_hint` composers all name a pip/conda install of a Python distribution. This one
+    is for the different failure where the Python side is fine but the active libgdal carries no
+    driver for the format -- `ogr.GetDriverByName(...)` returns `None`, or the plugin is present
+    but cannot load its own native dependencies. No pip install of a core extra can fix that, so
+    naming one would send the user somewhere that cannot clear the error.
+
+    Two routes are offered instead: the conda-forge package that supplies the driver for a conda
+    GDAL, and `GDAL_DRIVER_PATH` for a plugin directory the user already has. The pyramids wheels
+    deliberately do not bundle every optional driver (see issue #457 for the Arrow/Parquet case
+    and its measured cost), so for a pip install the conda route or a self-built plugin is the
+    honest answer.
+
+    Args:
+        lead: The domain-specific lead sentence, ending in a period. Placed verbatim at the start.
+        driver: The OGR driver's short name as GDAL spells it, e.g. `"Parquet"`.
+        conda_package: The conda-forge package that supplies the driver, e.g.
+            `"libgdal-arrow-parquet"`.
+
+    Returns:
+        str: `lead`, the driver that is missing, and the two routes that can supply it.
+
+    Examples:
+        - The lead is preserved and both routes are named:
+            ```python
+            >>> from pyramids.base._utils import ogr_plugin_hint
+            >>> hint = ogr_plugin_hint("Streaming a Parquet needs OGR.", "Parquet",
+            ...                        "libgdal-arrow-parquet")
+            >>> hint.splitlines()[0]
+            'Streaming a Parquet needs OGR. The active GDAL has no OGR "Parquet" driver.'
+            >>> "libgdal-arrow-parquet" in hint
+            True
+            >>> "GDAL_DRIVER_PATH" in hint
+            True
+
+            ```
+        - It never names a core extra, which could not supply a native driver:
+            ```python
+            >>> from pyramids.base._utils import ogr_plugin_hint
+            >>> "pyramids-core[" in ogr_plugin_hint("X.", "Parquet", "libgdal-arrow-parquet")
+            False
+
+            ```
+    """
+    return (
+        f'{lead} The active GDAL has no OGR "{driver}" driver.\n'
+        f"  - conda-forge: conda install -c conda-forge {conda_package}\n"
+        f"  - or point GDAL_DRIVER_PATH at a directory holding a matching plugin, or register it\n"
+        f"    through the 'pyramids.gdal_plugin_path' entry point"
+    )
+
+
 def extra_hint(lead: str, extra: str) -> str:
     """Compose an install hint for one of the package's optional extras.
 

@@ -44,18 +44,22 @@ import pandas as pd
 import pyogrio
 import pyproj
 from geopandas import GeoDataFrame
-from osgeo import gdal
+from osgeo import gdal, ogr
 from pyproj.exceptions import CRSError as _PyprojCRSError
 from shapely.geometry import box
 
 from pyramids import _io as _pyramids_io
-from pyramids.base._errors import FeatureError, VectorTileServerError
+from pyramids.base._errors import (
+    FeatureError,
+    VectorDriverError,
+    VectorTileServerError,
+)
 from pyramids.base._ogc_api import (
     discovery_request,
     http_error_detail,
     http_get_with_retry,
 )
-from pyramids.base._utils import extra_hint, import_pyarrow
+from pyramids.base._utils import extra_hint, import_pyarrow, ogr_plugin_hint
 from pyramids.base.crs import _pyproj_crs_via_gdal, crs_from_user_input
 from pyramids.base.remote import _ARCHIVE_MARKER_RE, is_remote, to_fsspec_url
 from pyramids.feature._drivers import VectorDriver, select_driver, vector_drivers
@@ -1106,6 +1110,99 @@ def _validate_iter_features_args(
         )
 
 
+# Formats whose OGR driver ships as a separate, optional GDAL plugin rather than being
+# compiled into libgdal. Maps a path suffix to (OGR driver name, conda-forge package that
+# supplies it, a format-specific alternative to suggest). The pyramids wheels bundle none of
+# these: the Arrow runtime the Parquet/Arrow drivers link adds ~10-12 MB to every wheel for a
+# capability only the OGR streaming path needs. Tracked in #457.
+_OGR_PLUGIN_DRIVERS: dict[str, tuple[str, str, str]] = {
+    ".parquet": (
+        "Parquet",
+        "libgdal-arrow-parquet",
+        "For an in-memory read that needs no GDAL driver, use "
+        "FeatureCollection.read_parquet() instead.",
+    ),
+    ".geoparquet": (
+        "Parquet",
+        "libgdal-arrow-parquet",
+        "For an in-memory read that needs no GDAL driver, use "
+        "FeatureCollection.read_parquet() instead.",
+    ),
+    ".arrow": ("Arrow", "libgdal-arrow-parquet", ""),
+    ".feather": ("Arrow", "libgdal-arrow-parquet", ""),
+}
+
+
+def _missing_ogr_plugin(path: str) -> tuple[str, str, str] | None:
+    """Return the plugin-driver entry a path needs, when that OGR driver is not registered.
+
+    Args:
+        path: The resolved path about to be opened through OGR.
+
+    Returns:
+        tuple[str, str, str] | None: The `_OGR_PLUGIN_DRIVERS` entry when the suffix needs an
+            optional plugin driver *and* that driver is absent from the active GDAL; ``None``
+            when the format needs no plugin or the driver is present.
+
+    Examples:
+        - A format with an in-libgdal driver is never reported as missing:
+            ```python
+            >>> from pyramids.feature._read import _missing_ogr_plugin
+            >>> _missing_ogr_plugin("points.geojson") is None
+            True
+
+            ```
+    """
+    needed = _OGR_PLUGIN_DRIVERS.get(Path(path).suffix.lower())
+    missing = None
+    if needed is not None and ogr.GetDriverByName(needed[0]) is None:
+        missing = needed
+    return missing
+
+
+def _read_info_branded(path: str, **kwargs: Any) -> Any:
+    """Call `pyogrio.read_info`, replacing a missing-plugin failure with an actionable error.
+
+    Without this, streaming a `.parquet` on an installation that has no OGR Parquet driver
+    surfaces GDAL's own text -- `not recognized as being in a supported file format`, or on
+    conda-Windows `Can't load requested DLL: duckdb.dll 126` -- neither of which tells the user
+    what to install or that `read_parquet()` would work. Since `ogr.GetDriverByName` returns
+    `None` in both of those cases, the condition is detectable and the remedy can be named.
+
+    Only re-brands when the driver really is absent; any other failure (a corrupt file, a bad
+    layer name, a permissions error) propagates untouched. The original exception is chained,
+    so the GDAL text stays available on `__cause__`.
+
+    Args:
+        path: The resolved path to open.
+        **kwargs: Forwarded verbatim to `pyogrio.read_info`.
+
+    Returns:
+        The `pyogrio.read_info` mapping.
+
+    Raises:
+        VectorDriverError: If the format needs an optional OGR plugin driver that the active
+            GDAL does not have. Subclasses `RuntimeError`, like every other
+            vector-driver-level failure in pyramids.
+    """
+    try:
+        info = pyogrio.read_info(path, **kwargs)
+    except Exception as exc:
+        missing = _missing_ogr_plugin(path)
+        if missing is None:
+            raise
+        driver, conda_package, alternative = missing
+        message = ogr_plugin_hint(
+            f"Streaming {Path(path).name!r} requires reading it through GDAL/OGR.",
+            driver,
+            conda_package,
+        )
+        if alternative:
+            message = "\n".join((message, alternative))
+        raise VectorDriverError(message) from exc
+    return info
+
+
 def iter_features(
     fc_cls: type[FeatureCollection],
     path: str | Path,
@@ -1136,7 +1233,7 @@ def iter_features(
     info_kwargs: dict[str, Any] = {}
     if layer is not None:
         info_kwargs["layer"] = layer
-    info = pyogrio.read_info(resolved, **info_kwargs)
+    info = _read_info_branded(resolved, **info_kwargs)
     total = int(info["features"])
 
     if chunksize is None:

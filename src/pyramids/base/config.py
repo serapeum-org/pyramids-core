@@ -64,6 +64,7 @@ import yaml
 from osgeo import gdal, ogr
 
 from pyramids import __path__ as root_path
+from pyramids.base._gdal_plugins import companion_plugin_dirs, compose_driver_path
 from pyramids.base.remote import redact_credentials
 
 PACKAGE_LOGGER_NAME = "pyramids"
@@ -639,11 +640,45 @@ class Config:
         for key, value in self.settings.get("ogr", {}).items():
             gdal.SetConfigOption(key, value)
 
-        gdal_plugins_path = self.dynamic_env_variables()
+        # Captured BEFORE discovery, because dynamic_env_variables() writes
+        # GDAL_DRIVER_PATH itself as a side effect of exporting a conda/system tree's
+        # GDAL_DATA + PATH. This is the value the process actually inherited (on a
+        # platform wheel, the bundled dir _bootstrap already forced).
+        inherited_driver_path = os.environ.get("GDAL_DRIVER_PATH")
+        discovered_plugins_path = self.dynamic_env_variables()
 
-        if gdal_plugins_path:
-            gdal.SetConfigOption("GDAL_DRIVER_PATH", str(gdal_plugins_path))
+        # One authoritative write of GDAL_DRIVER_PATH, composed from every directory
+        # that may hold plugins. Previously _bootstrap forced the bundled dir and then
+        # dynamic_env_variables() overwrote it with a conda dir whenever CONDA_PREFIX
+        # was set, silently undoing the #465 fix for a wheel installed into an
+        # activated conda env. Both are inputs to the composition now, bundled first.
+        driver_path = compose_driver_path(
+            bundled=self._bundled_plugin_dir(),
+            companions=companion_plugin_dirs(),
+            discovered=discovered_plugins_path,
+            inherited=inherited_driver_path,
+            keep_env=os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1",
+        )
+        if driver_path:
+            os.environ["GDAL_DRIVER_PATH"] = driver_path
+            gdal.SetConfigOption("GDAL_DRIVER_PATH", driver_path)
+            self.logger.debug(f"GDAL_DRIVER_PATH composed as: {driver_path}")
         gdal.AllRegister()
+
+    @staticmethod
+    def _bundled_plugin_dir() -> Path | None:
+        """Return the platform wheel's bundled GDAL plugin directory, if it ships one.
+
+        Present only on the wheels built through the conda-extract and vcpkg models, which
+        ship `gdal_netCDF`/`gdal_HDF5`/… as loadable plugins. The from-source Linux wheels
+        compile the same drivers into libgdal, so the directory does not exist there and
+        there is nothing to put at the front of the path.
+
+        Returns:
+            pathlib.Path | None: ``pyramids/_data/gdalplugins`` when it exists, else ``None``.
+        """
+        plugin_dir = Path(root_path[0]) / "_data" / "gdalplugins"
+        return plugin_dir if plugin_dir.is_dir() else None
 
     def _prepend_to_path(self, library_bin_path: Path) -> None:
         """Prepend ``library_bin_path`` to ``PATH`` (fixes Windows error 126 loading plugins)."""

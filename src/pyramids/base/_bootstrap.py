@@ -63,6 +63,12 @@ def _configure_gdal_data_env(data_dir: Path) -> None:
         # setdefault'd — a foreign (e.g. conda-activated) GDAL_DRIVER_PATH is
         # never safe for the bundled libgdal (issue #465). Power users can set
         # PYRAMIDS_KEEP_GDAL_ENV=1 to restore "inherited value wins".
+        #
+        # This is the EARLY value, covering the window before `from osgeo import …`
+        # runs. It is not the last word: `Config.initialize_gdal` recomposes the
+        # final path from the bundled dir + any companion plugin dirs + a discovered
+        # conda/system dir (see `pyramids.base._gdal_plugins`) and writes it once,
+        # before `gdal.AllRegister()` actually loads the plugins.
         if os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
             os.environ.setdefault("GDAL_DRIVER_PATH", str(gdal_plugins))
         else:
