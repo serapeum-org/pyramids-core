@@ -290,8 +290,8 @@ class Interop(_Engine["NetCDF"]):
                 case-insensitive aliases `rows` / `cols` / `columns` /
                 `bands` — never by dimension name, despite the xarray
                 shape of this entry point. Note that an unusable key
-                does **not** raise here: :func:`_lazy_var_data`'s
-                per-variable fallback catches the
+                does **not** raise here: the per-variable
+                fallback catches the
                 :class:`ValueError` and reads that variable eagerly
                 instead, so `chunks={"time": 1}` — or an
                 out-of-range `{99: 1}` — returns a fully eager

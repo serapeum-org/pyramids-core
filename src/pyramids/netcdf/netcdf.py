@@ -5971,9 +5971,11 @@ class NetCDF(Dataset):
                 keeps its default size, and a value of `None` or `-1`
                 means the full axis. :meth:`chunk`'s own report is
                 **not** round-trippable into this argument: it is
-                keyed by dimension name (`{"bands": …, "y": …,
-                "x": …}`), which this argument refuses — translate
-                those names to axis indices first.
+                keyed by dimension name
+                (`{"time": …, "plev": …, "lat": …, "lon": …}` for a
+                CF cube), and feeding it back raises on the first
+                name that is not one of the four aliases — translate
+                the names to axis indices first.
             lock: Lock passed to the underlying
                 :class:`pyramids.base._file_manager.CachingFileManager`.
                 `None` → :func:`pyramids.base._locks.default_lock`
@@ -6034,9 +6036,16 @@ class NetCDF(Dataset):
                 honour bbox windowing — matching
                 :class:`pyramids.dataset.engines.IO.read_array`'s
                 `chunks=` + `window=` rule), or when a `chunks`
-                dict carries an unusable key (an unknown name, an
-                axis index outside `0 … ndim - 1`, or `bands` on a
-                variable without exactly one non-spatial axis).
+                dict carries an unusable key — an unknown name, a
+                `bool` (rejected outright, since `True` would
+                otherwise resolve as axis 1 through `int`
+                subclassing), an axis index outside
+                `0 … ndim - 1`, `bands` on a variable without
+                exactly one non-spatial axis, or `rows` / `cols` on
+                a variable below 2-D.
+            TypeError: If `chunks` is not `None`, an `int`, a
+                `tuple`, a `dict` or `"auto"` — a `float`, for
+                instance.
             ImportError: If `chunks` is given but `dask` is not
                 installed. Install the `pyramids-lazy` backend.
 
