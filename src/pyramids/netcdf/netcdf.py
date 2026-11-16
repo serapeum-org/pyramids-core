@@ -5969,7 +5969,21 @@ class NetCDF(Dataset):
                 it appears in, so `{"rows": 5, "time": 1}` raises
                 instead of chunking the rows. An axis the dict omits
                 keeps its default size, and a value of `None` or `-1`
-                means the full axis. :meth:`chunk`'s own report is
+                means the full axis.
+
+                Keys resolve against the variable's **stored** rank,
+                which is not always the rank
+                :attr:`pyramids.netcdf.models.VariableInfo.shape`
+                displays: a 2-D stored variable may report
+                `(1, rows, cols)`. For such a variable `{2: 1}`
+                raises `axis 2 out of range for ndim=2` and
+                `{"bands": 1}` raises "not meaningful for a 2-D
+                array", both against a three-entry shape — and
+                `{0: 1}` silently chunks **rows**, not the leading
+                axis the shape shows. Count axes on an eager
+                `read_array().ndim`, not on `shape`.
+
+                :meth:`chunk`'s own report is
                 **not** round-trippable into this argument: it is
                 keyed by dimension name
                 (`{"time": …, "plev": …, "lat": …, "lon": …}` for a
@@ -6044,8 +6058,9 @@ class NetCDF(Dataset):
                 exactly one non-spatial axis, or `rows` / `cols` on
                 a variable below 2-D.
             TypeError: If `chunks` is not `None`, an `int`, a
-                `tuple`, a `dict` or `"auto"` — a `float`, for
-                instance.
+                `tuple`, a `list`, a `dict` or `"auto"` — a `float`,
+                for instance. A `list` is accepted and resolved
+                positionally, exactly like a `tuple`.
             ImportError: If `chunks` is given but `dask` is not
                 installed. Install the `pyramids-lazy` backend.
 
@@ -14661,8 +14676,12 @@ class NetCDF(Dataset):
                 here: the per-variable fallback reads that variable eagerly instead, so
                 `chunks={"time": 1}` — or an out-of-range `{99: 1}` — returns a fully
                 eager dataset with no chunking and no warning, while `{0: 1}` chunks as
-                asked. Check `result.chunksizes` rather than assuming the spec took
-                effect.
+                asked. The fallback is **per variable**, so one call can return a
+                dataset in which some variables are chunked and others are not. Check
+                `result[name].chunks is not None` for each variable you care about:
+                `result.chunksizes` is keyed by *dimension*, so it is non-empty as soon
+                as any single variable chunked, even when every variable sharing those
+                dimensions stayed eager.
             decode_times: Whether to decode a CF time axis to `datetime64[ns]`. `False`
                 returns the stored offsets.
 

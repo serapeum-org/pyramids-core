@@ -296,9 +296,14 @@ class Interop(_Engine["NetCDF"]):
                 instead, so `chunks={"time": 1}` — or an
                 out-of-range `{99: 1}` — returns a fully eager
                 dataset with no chunking and no warning, while
-                `{0: 1}` chunks as asked. Verify with
-                `result.chunksizes` rather than assuming the spec
-                took effect. See
+                `{0: 1}` chunks as asked. The fallback is
+                **per variable**, so one call can return a dataset
+                in which some variables are chunked and others are
+                not. Verify with `result[name].chunks is not None`
+                per variable, not with `result.chunksizes` — that is
+                keyed by *dimension*, so it is non-empty as soon as
+                any one variable chunked, even when every variable
+                sharing those dimensions stayed eager. See
                 :meth:`pyramids.netcdf.NetCDF.read_array`.
             decode_times: When `True` (the default) a dimension whose CF `units`
                 name a time origin is exported as datetimes, so xarray's own
