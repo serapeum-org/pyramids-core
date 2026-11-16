@@ -1,5 +1,29 @@
 ﻿# Change log
 
+## 0.80.0 (2026-11-16)
+
+### Feat
+
+- **ugrid**: add chunks= to MeshDataset.open_mfdataset for lazy reads (#1576)
+- **reduce**: add min_count= to gate sparse reduction windows (#1558)
+
+### Fix
+
+- **ugrid**: keep NaN-decoded connectivity fill cells out of the cast (#1579)
+- **plot**: tile a web-tile basemap on a WKT-only CRS (no EPSG code) (#1578)
+- **plot**: stamp the dataset WKT on the glyph when there is no resolvable EPSG (#1573)
+- **tests**: gate TestImportXarray on the interop extra so the core wheel job skips it (#1574)
+- **dataset**: NaN-fill match_histogram/percentile_stretch output to stop no-data aliasing (#1570)
+- **ugrid**: tag the returned MeshGlyph with the dataset CRS (#1571)
+- **basemap**: drive add_basemap through the cleopatra glyph add_tiles method (#1567)
+- **dataset**: mask no-data in physical units on CF-packed bands (#1563)
+- clear six CI deprecation and config warnings (#1554)
+
+### Refactor
+
+- **packaging**: drop the [lazy] extra and install the backend as a plugin (#1569)
+- **packaging**: depend on published pyramids-lazy and source dev deps from PyPI (#1559)
+
 ## 0.79.0 (2026-11-14)
 
 ### Fix
