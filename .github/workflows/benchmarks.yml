@@ -37,7 +37,9 @@ jobs:
       - name: Run benchmarks and save results
         # The ``benchmark`` task runs ``pytest benchmarks --benchmark-only``; extra args are
         # forwarded to pytest-benchmark, so this also autosaves and writes the machine-readable
-        # JSON consumed by the steps below.
+        # JSON consumed by the steps below. No ``--locked`` here: no core workflow locks the pixi
+        # run (tests.yml included), so this follows repo convention. Caveat for a trend chart — an
+        # unlocked run can re-solve the env, so a dependency bump can surface as a timing shift.
         run: >-
           pixi run -e dev benchmark
           --benchmark-autosave
@@ -47,7 +49,9 @@ jobs:
         # Appends this run to the benchmark history under gh-pages ``bench/`` and publishes the trend
         # chart at https://serapeum-org.github.io/pyramids-core/bench/. ``bench/`` is its own subdir, so
         # mike's versioned MkDocs site (the per-version dirs, versions.json, the root redirect) is
-        # untouched, and mike's ``deploy --push`` likewise leaves ``bench/`` alone. When a benchmark
+        # untouched. The two workflows write disjoint paths but share the ``gh-pages`` branch, so a
+        # benchmark push and a docs deploy that overlap rely on each side's push-retry, not mutual
+        # exclusion, to reconcile the branch tip. When a benchmark
         # regresses past the threshold it posts a commit comment that @-mentions the cc'd users.
         # Deliberately does NOT fail the run — shared-runner noise makes absolute ms unreliable, so the
         # 150% threshold catches only gross (>=1.5x) regressions. The first run on gh-pages seeds the
