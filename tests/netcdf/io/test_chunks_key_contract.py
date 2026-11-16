@@ -314,7 +314,9 @@ class TestToXarrayChunksFailsSilently:
         finally:
             nc.close()
         sizes = dict(result.chunksizes)
-        assert sizes, "an integer axis key must produce a chunked dataset, got an eager one"
+        assert sizes, (
+            "an integer axis key must produce a chunked dataset, got an eager one"
+        )
         assert (1, 1, 1) in sizes.values(), (
             f"the leading axis must be chunked one element per block, got {sizes}"
         )
