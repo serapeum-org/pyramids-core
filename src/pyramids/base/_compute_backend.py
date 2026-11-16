@@ -47,8 +47,10 @@ __all__ = [
     "COMPUTE_BACKEND_API_VERSION",
     "ENTRY_POINT_GROUP",
     "ComputeBackend",
+    "accepts_keyword",
     "clear_compute_backend_cache",
     "compute_backends",
+    "protocol_members",
     "require_compute_backend",
 ]
 
@@ -299,6 +301,11 @@ def protocol_members(protocol: type | None = None) -> frozenset[str]:
     Returns:
         The enforced member names.
 
+    Raises:
+        TypeError: `protocol` is not a Protocol. Refused here rather than left to typing, which
+            raises for this on 3.13+ but on 3.11 would fall through to the scan and return the
+            class's own annotations and methods as though they were enforced.
+
     Examples:
         - The default set is what a backend must expose to pass the structural check: the
           `api_version` data member alongside every method the Protocol declares.
@@ -336,6 +343,11 @@ def protocol_members(protocol: type | None = None) -> frozenset[str]:
             kept out of it.
     """
     target = ComputeBackend if protocol is None else protocol
+    if not getattr(target, "_is_protocol", False):
+        # Refuse uniformly. `get_protocol_members` raises for a non-Protocol on 3.13+, but on
+        # 3.11 the call cannot be reached and the scan would quietly return the class's own
+        # annotations and methods -- loud on one interpreter, silently wrong on another.
+        raise TypeError(f"{target!r} is not a Protocol, so it enforces no members.")
     get_members = getattr(typing, "get_protocol_members", None)
     if get_members is not None:
         members = set(get_members(target))

@@ -435,16 +435,10 @@ class TestOpenMfdataset:
     @pytest.mark.parametrize(
         ("bad_input", "error", "match"),
         [
-            ({"paths": "absent_*.nc"}, ValueError, "matches no file"),
-            ({"paths": []}, ValueError, "nothing to open"),
             ({"paths": "absent.nc"}, FileNotFoundError, "File not found"),
-            (
-                {"paths": "RUN_GLOB", "driver": "no_such"},
-                DriverNotExistError,
-                "no_such",
-            ),
+            ({"driver": "no_such"}, DriverNotExistError, "no_such"),
         ],
-        ids=["bad-glob", "empty-sequence", "missing-file", "unknown-driver"],
+        ids=["missing-file", "unknown-driver"],
     )
     def test_invalid_input_is_refused_without_consulting_the_backend(
         self, tmp_path, monkeypatch, bad_input, error, match
@@ -458,18 +452,19 @@ class TestOpenMfdataset:
 
         Test scenario:
             The resolver is replaced with one that fails loudly, so consulting it is an error
-            rather than a different error. Two of these shapes (a glob matching nothing, an
-            empty sequence) cannot reach the branch however it is written -- they are here to
-            document the shape, not to discriminate. The other two can: before the paths and
-            the driver were validated in the shared block, both reported "upgrade
-            pyramids-lazy" for what is really a typo (review M3/M4).
+            rather than a different error. Both shapes discriminate: before the paths and the
+            driver were validated in the shared block, each reported "upgrade pyramids-lazy" for
+            what is really a typo (review M3/M4). A glob matching nothing and an empty sequence
+            were also listed here, but they cannot reach the branch however it is written and
+            are covered by their own tests, so they only paid for a string sentinel in this
+            table (Round 2 finding N4).
         """
         self._write_run(tmp_path, dated=True)
         kwargs = dict(bad_input)
-        if kwargs.get("paths") == "RUN_GLOB":
-            kwargs["paths"] = str(tmp_path / "run_*.nc")
-        elif isinstance(kwargs["paths"], str):
-            kwargs["paths"] = str(tmp_path / kwargs["paths"])
+        given = kwargs.pop("paths", None)
+        kwargs["paths"] = (
+            str(tmp_path / "run_*.nc") if given is None else str(tmp_path / given)
+        )
 
         def _boom():
             raise AssertionError(

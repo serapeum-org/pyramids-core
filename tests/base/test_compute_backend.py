@@ -177,9 +177,11 @@ class TestContract:
             here. This pins the member set so that choice cannot be undone by accident.
 
             The set is read with ``cb.protocol_members()``, which asks typing what ``isinstance``
-            enforces, and compared against what this file already builds its fake from -- so a new
-            member breaks the guard *and* the fake together, rather than being described in a
-            fourth independent copy of the list.
+            enforces, and compared against ``_METHODS`` -- the list this file already builds its
+            fake from -- so a new *method* breaks the guard and the fake together instead of being
+            described in a third copy. The three data members are the exception: they are spelled
+            here and again in ``_make_backend``, so adding a fourth would break this guard but not
+            the fake.
         """
         members = cb.protocol_members()
 
