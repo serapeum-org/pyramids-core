@@ -5409,8 +5409,16 @@ class NetCDF(Dataset):
                 static-plot path. ``None`` (default) preserves the eager
                 read. Any of ``int`` / ``tuple`` / ``dict`` / ``"auto"``
                 switches to the dask-backed lazy read and only the
-                rendered slice is materialised. Has no effect on the
-                ``animate=`` path. Defaults to None.
+                rendered slice is materialised. A ``dict`` is keyed by
+                integer axis index, or by the case-insensitive aliases
+                ``rows`` / ``cols`` / ``columns`` / ``bands`` — never by
+                dimension name, so ``{0: 1}`` rather than
+                ``{"time": 1}``; an unusable key raises
+                ``ValueError`` here — see :meth:`read_array` for the
+                accepted vocabulary. Has no effect on the ``animate=``
+                path, where it is discarded before the renderer sees
+                it, so neither a valid nor an invalid spec has any
+                effect there and neither one raises. Defaults to None.
             basemap (bool, str, or Basemap, optional):
                 Reference layer, dispatched by type. ``True`` or a named basemap
                 tile provider overlays a pyramids web-tile basemap; a
@@ -5946,7 +5954,42 @@ class NetCDF(Dataset):
                 native `GetBlockSize` (see
                 :attr:`pyramids.netcdf.models.VariableInfo.block_size`);
                 a conservative `(1,..., rows, cols)` fallback is
-                used when the driver doesn't advertise one.
+                used when the driver doesn't advertise one. A
+                `dict`'s keys are the installed backend's to define:
+                `pyramids-lazy` keys them by **integer axis index**
+                in storage order, or by the case-insensitive aliases
+                `rows` (axis `ndim - 2`), `cols` / `columns` (axis
+                `ndim - 1`) and `bands` (the leading non-spatial
+                axis, when there is exactly one) — so `{0: 24}`, not
+                `{"time": 24}`, which raises :class:`ValueError`. An
+                index outside `0 … ndim - 1` is rejected, negative
+                ones included, and `bands` raises on a 2-D variable
+                or on one with several non-spatial axes. One unusable
+                key rejects the whole dict rather than just the entry
+                it appears in, so `{"rows": 5, "time": 1}` raises
+                instead of chunking the rows. An axis the dict omits
+                keeps its default size, and a value of `None` or `-1`
+                means the full axis.
+
+                Keys resolve against the variable's **stored** rank,
+                which is not always the rank
+                :attr:`pyramids.netcdf.models.VariableInfo.shape`
+                displays: a 2-D stored variable may report
+                `(1, rows, cols)`. For such a variable `{2: 1}`
+                raises `axis 2 out of range for ndim=2` and
+                `{"bands": 1}` raises "not meaningful for a 2-D
+                array", both against a three-entry shape — and
+                `{0: 1}` silently chunks **rows**, not the leading
+                axis the shape shows. Count axes on an eager
+                `read_array().ndim`, not on `shape`.
+
+                :meth:`chunk`'s own report is
+                **not** round-trippable into this argument: it is
+                keyed by dimension name
+                (`{"time": …, "plev": …, "lat": …, "lon": …}` for a
+                CF cube), and feeding it back raises on the first
+                name that is not one of the four aliases — translate
+                the names to axis indices first.
             lock: Lock passed to the underlying
                 :class:`pyramids.base._file_manager.CachingFileManager`.
                 `None` → :func:`pyramids.base._locks.default_lock`
@@ -6006,7 +6049,18 @@ class NetCDF(Dataset):
                 `bbox` are supplied (the lazy path doesn't yet
                 honour bbox windowing — matching
                 :class:`pyramids.dataset.engines.IO.read_array`'s
-                `chunks=` + `window=` rule).
+                `chunks=` + `window=` rule), or when a `chunks`
+                dict carries an unusable key — an unknown name, a
+                `bool` (rejected outright, since `True` would
+                otherwise resolve as axis 1 through `int`
+                subclassing), an axis index outside
+                `0 … ndim - 1`, `bands` on a variable without
+                exactly one non-spatial axis, or `rows` / `cols` on
+                a variable below 2-D.
+            TypeError: If `chunks` is not `None`, an `int`, a
+                `tuple`, a `list`, a `dict` or `"auto"` — a `float`,
+                for instance. A `list` is accepted and resolved
+                positionally, exactly like a `tuple`.
             ImportError: If `chunks` is given but `dask` is not
                 installed. Install the `pyramids-lazy` backend.
 
@@ -8223,7 +8277,14 @@ class NetCDF(Dataset):
 
         Args:
             chunks: Chunking spec forwarded to :meth:`read_array`; `"auto"` (default) targets dask's
-                byte budget. Any form `read_array` accepts works.
+                byte budget. Any form `read_array` accepts works, under `read_array`'s key rule: a
+                `dict` is keyed by integer axis index or by the case-insensitive `rows` / `cols` /
+                `columns` / `bands`, never by dimension name.
+
+                The returned view's own `chunks` / `chunksizes` report is keyed by **dimension
+                name**, so it is not round-trippable back into this argument —
+                `nc.chunk(nc.chunk().chunks)` raises :class:`ValueError` on the first name that is
+                not one of those four aliases. Translate the names to axis indices first.
 
         Returns:
             LazyNetCDF: A lazy view over this cube's gridded variables.
@@ -8231,7 +8292,8 @@ class NetCDF(Dataset):
         Raises:
             OptionalPackageDoesNotExist: No lazy compute backend is installed; the dask-dataframe
                 build dispatches to pyramids-lazy (`pip install pyramids-lazy`).
-            ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
+            ValueError: This cube has no on-disk store to read lazily, or `chunks` carries a key
+                `read_array` cannot resolve — a dimension name included (see :meth:`read_array`).
         """
         # Dispatch to the lazy compute backend (pyramids-lazy), which does the per-variable lazy
         # read + builds the LazyNetCDF; raises the branded OptionalPackageDoesNotExist when absent.
@@ -9832,8 +9894,29 @@ class NetCDF(Dataset):
         Args:
             paths: Glob string, explicit path, or sequence of paths.
             variable: Name of the variable to extract from each file.
-            chunks: Chunk spec forwarded to
-                :meth:`NetCDF.read_array`.
+            chunks: Chunk spec forwarded to :meth:`NetCDF.read_array`
+                for the **per-file** read. `None` does **not** read
+                eagerly here, unlike every other `chunks=` in this
+                class: it is replaced by `"auto"`, so the result is a
+                lazy dask array either way. Keys follow
+                `read_array`'s vocabulary — an integer axis index or
+                the case-insensitive `rows` / `cols` / `columns` /
+                `bands`, never a dimension name — and an unusable one
+                raises :class:`ValueError` from the per-file read
+                rather than degrading to an eager one.
+
+                Both a key and a tuple's length resolve against the
+                **per-file** variable's rank, not the stacked
+                result's. For a 2-D per-file variable the stack is
+                3-D, yet `{2: 1}` raises `axis 2 out of range for
+                ndim=2` and a 3-entry tuple raises `chunks tuple
+                length 3 does not match array ndim 2` — size the
+                spec to the variable, not to what comes back.
+
+                The leading file axis cannot be chunked at all:
+                :func:`dask.array.stack` gives it one block per file
+                whatever is passed here, so a 365-file stack always
+                reports `(1,) * 365` on axis 0.
             parallel: Deprecated and inert; kept for backward compatibility.
                 Passing a truthy value emits a `DeprecationWarning`.
             preprocess: Optional callable applied to each
@@ -9841,6 +9924,16 @@ class NetCDF(Dataset):
 
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
+            Always lazy — see `chunks` for why `None` does not make
+            it eager.
+
+        Raises:
+            ValueError: A `chunks` dict carries an unusable key, or a
+                `chunks` tuple's length does not match the per-file
+                variable's rank. Both are raised by the per-file
+                :meth:`read_array`, so they report the per-file rank.
+            TypeError: `chunks` is not `None`, an `int`, a `tuple`, a
+                `list`, a `dict` or `"auto"`.
         """
         from pyramids.base._compute_backend import require_compute_backend
 
@@ -14615,7 +14708,19 @@ class NetCDF(Dataset):
         editor completion all read the facade, not the engine behind it.
 
         Args:
-            chunks: Dask chunking for a lazy read, or `None` to read eagerly.
+            chunks: Dask chunking for a lazy read, or `None` to read eagerly. A `dict` is
+                keyed by **integer axis index**, or by the case-insensitive aliases
+                `rows` / `cols` / `columns` / `bands` — never by dimension name, despite
+                the xarray shape of this entry point. An unusable key does **not** raise
+                here: the per-variable fallback reads that variable eagerly instead, so
+                `chunks={"time": 1}` — or an out-of-range `{99: 1}` — returns a fully
+                eager dataset with no chunking and no warning, while `{0: 1}` chunks as
+                asked. The fallback is **per variable**, so one call can return a
+                dataset in which some variables are chunked and others are not. Check
+                `result[name].chunks is not None` for each variable you care about:
+                `result.chunksizes` is keyed by *dimension*, so it is non-empty as soon
+                as any single variable chunked, even when every variable sharing those
+                dimensions stayed eager.
             decode_times: Whether to decode a CF time axis to `datetime64[ns]`. `False`
                 returns the stored offsets.
 

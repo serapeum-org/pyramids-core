@@ -418,6 +418,9 @@ def test_netcdf_plot_rejects_chunks_on_backend(monkeypatch: pytest.MonkeyPatch) 
     recorder = _Recorder()
     monkeypatch.setattr(_plot_backends, "_CACHE", {"web": recorder})
     netcdf = _netcdf_container()
+    # Deliberately an invalid chunks key: the backend guard must fire ahead of chunk
+    # normalization, so the caller gets the actionable backend message rather than
+    # "Unknown chunks dict key 'time'". With a valid key this ordering is not exercised.
     with pytest.raises(ValueError, match="only apply to backend='matplotlib'"):
         netcdf.plot(variable="t2m", backend="web", chunks={"time": 1})
     assert recorder.backend is None

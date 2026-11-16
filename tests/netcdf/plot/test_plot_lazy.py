@@ -29,7 +29,7 @@ class TestNetCDFPlotLazy:
 
     @pytest.mark.lazy
     def test_chunks_dict_routes_through_dask(self, tmp_path):
-        """``chunks={"x": 5, "y": 5}`` switches the read path to dask.
+        """``chunks={"cols": 2, "rows": 2}`` switches the read path to dask.
 
         Test scenario:
             Requires the optional ``dask`` dep and a real on-disk
@@ -331,6 +331,60 @@ class TestNetCDFPlotLazyEdges:
         assert not msgs, (
             f"Boundary at threshold (size == 100 MB) must not fire hint; got {msgs}"
         )
+
+
+class TestNetCDFPlotChunksKeyContract:
+    """``chunks=`` is validated on the static plot path and discarded on the ``animate=`` one."""
+
+    @pytest.mark.lazy
+    @pytest.mark.parametrize("spec", [{99: 1}, {"banana": 7}])
+    def test_an_invalid_spec_is_inert_on_the_animate_path(self, tmp_path, spec):
+        """``animate=`` discards ``chunks=`` before the renderer sees it, so a bad spec renders.
+
+        Args:
+            tmp_path: Pytest temporary directory fixture.
+            spec: A ``chunks=`` dict the static path rejects.
+
+        Test scenario:
+            Neither an out-of-range axis nor an unknown name raises here — the animation path
+            drops the spec entirely, so the caller gets a glyph and no signal that the chunking
+            they asked for never happened. Pinned because it is the asymmetry that lets an invalid
+            documented snippet survive review: the same spec is loud on the static path (see the
+            companion test below) and silent here.
+        """
+        nc_mem = make_plot_3d_nc(n_times=3, rows=4, cols=4)
+        out = tmp_path / "animate_chunks.nc"
+        nc_mem.to_file(out)
+        nc = NetCDF.read_file(str(out))
+        result = nc.plot(variable="t2m", animate="time", chunks=spec)
+        assert isinstance(result, ArrayGlyph), (
+            f"animate= must ignore chunks={spec}; got {type(result).__name__}"
+        )
+
+    @pytest.mark.lazy
+    @pytest.mark.parametrize(
+        "spec, match",
+        [({99: 1}, r"out of range"), ({"banana": 7}, r"Unknown chunks dict key")],
+    )
+    def test_the_same_spec_raises_on_the_static_path(self, tmp_path, spec, match):
+        """The specs the animate path swallows raise on the static path.
+
+        Args:
+            tmp_path: Pytest temporary directory fixture.
+            spec: The same ``chunks=`` dict the animate test passes.
+            match: Regex the raised message must contain.
+
+        Test scenario:
+            This is what makes the inertness test above non-vacuous: without it, the glyph could
+            mean the specs are simply valid. Rendering a single slice routes the spec through the
+            backend's key resolution, which refuses both.
+        """
+        nc_mem = make_plot_3d_nc(n_times=3, rows=4, cols=4)
+        out = tmp_path / "static_chunks.nc"
+        nc_mem.to_file(out)
+        nc = NetCDF.read_file(str(out))
+        with pytest.raises(ValueError, match=match):
+            nc.plot(variable="t2m", selectors=Selectors(time=0), chunks=spec)
 
 
 class TestNetCDFPlotLazySelectorMethod:

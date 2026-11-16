@@ -35,14 +35,48 @@ from pyramids.netcdf import NetCDF
 
 nc = NetCDF.read_file("era5_t2m_2023.nc")
 
-temp_lazy = nc.read_array("t2m", chunks={"time": 24, "lat": 256, "lon": 256})
+temp_lazy = nc.read_array("t2m", chunks={0: 24, 1: 256, 2: 256})  # (time, lat, lon)
 temp_lazy.shape        # (8760, 721, 1440)
 temp_lazy.chunks       # chunked tuples per axis
 ```
 
-Chunk spec accepts the same forms as `Dataset.read_array`: `None`
-(eager), `"auto"`, `-1` (single chunk), an int, a tuple, or a dict
-keyed by axis index or axis name.
+Chunk spec accepts the same *forms* as `Dataset.read_array`: `None`
+(eager), `"auto"`, `-1` (single chunk), an int, a tuple, or a dict.
+The two differ in how a dict's keys are read — see the end of this
+section.
+
+A dict's keys are **integer axis indices** in the variable's storage
+order, counted from 0: `{0: 24}` chunks the first axis. Four
+case-insensitive aliases are also accepted — `rows` (axis
+`ndim - 2`), `cols` and `columns` (axis `ndim - 1`), and `bands` (the
+leading non-spatial axis). Any other key raises `ValueError`, so a
+**dimension name such as `"time"` or `"lat"` is not a valid key**.
+
+The edges are sharper than that summary suggests, and all of these
+raise rather than falling back:
+
+- A negative index is rejected, so `rows` / `cols` are *not*
+  interchangeable with `{-2: …}` / `{-1: …}`.
+- `bands` needs exactly one non-spatial axis: it is "not meaningful"
+  on a 2-D variable, and "ambiguous" on a variable carrying two or
+  more non-spatial axes — a 4-D `(time, level, lat, lon)` cube, say.
+  Every example on this page is 3-D, where `bands` is unambiguous;
+  chunk a 4-D variable by integer axis index instead.
+- `rows` / `cols` need at least 2-D.
+- The aliases are fixed positions. They are never looked up against
+  the variable's dimension names, so a variable that happens to have
+  a dimension called `rows` still gets `ndim - 2` — which may not be
+  that dimension's axis.
+
+Note the asymmetry: `NetCDF.chunk(...).chunks` *reports* sizes keyed
+by dimension name, but that mapping cannot be fed back into
+`chunks=` unchanged.
+
+**This key handling is the pyramids-lazy NetCDF path only.**
+`Dataset.read_array` forwards its dict to dask's `normalize_chunks`,
+which silently **ignores** any key it does not recognise — including
+all four aliases above — instead of raising. There,
+`chunks={"rows": 2048}` reads unchunked and tells you nothing.
 
 ### Native chunks = best default
 
@@ -60,7 +94,7 @@ NetCDF variables often store packed ints with `scale_factor` /
 in the dask graph — no materialisation:
 
 ```python
-temp_unpacked = nc.read_array("t2m", unpack=True, chunks={"time": 24})
+temp_unpacked = nc.read_array("t2m", unpack=True, chunks={0: 24})  # 24 steps of axis 0
 # temp_unpacked.dtype == float32, still lazy
 ```
 
@@ -85,24 +119,42 @@ from pyramids.netcdf import NetCDF
 stack = NetCDF.open_mfdataset(
     "/data/noah_*.nc",           # glob string
     variable="precipitation",
-    chunks={"time": 1, "lat": 256, "lon": 256},
-    parallel=True,               # fan out file opens over workers
+    chunks={0: 1, 1: 256, 2: 256},   # per FILE: (time, lat, lon), 24 hourly steps
 )
 
-stack.shape          # (n_files, H, W)
-stack.mean(axis=0).compute()   # climatological mean
+stack.shape          # (n_files, 24, H, W)
+stack.mean(axis=(0, 1)).compute()   # climatological mean
 ```
 
 Three arguments worth knowing:
 
-- `parallel=True` wraps each file's metadata read in `dask.delayed`
-  so opening 500 files on a distributed cluster fans out across
-  workers instead of blocking sequentially. The probe of the first
-  file stays eager so the stack shape + dtype are known at
-  graph-construction time.
-- `chunks=` forwards to every per-file `read_array` call. Pick
-  carefully: a chunk spec that doesn't align with per-file layout
-  forces re-chunking on every read.
+- **`chunks=` describes one file's variable, not the stacked result.**
+  It is forwarded to every per-file `read_array` call, so count its
+  axes against a *single* file. The example above assumes each daily
+  `noah_*.nc` holds a 3-D `(time, lat, lon)` variable with hourly
+  steps, which is the usual LDAS/NLDAS layout — hence three axes and
+  a `(n_files, 24, H, W)` stack.
+
+  **Check your own files first**, because getting this wrong fails in
+  two different ways. Too many axes raises, which is the harmless
+  case: against files holding a bare 2-D `(lat, lon)` grid the spec
+  above gives
+  `ValueError: chunks dict axis 2 out of range for ndim=2`. Too few
+  is the dangerous one — it is silent. Passing `{0: 256, 1: 256}` for
+  the 3-D variable here lands the two entries on *time and lat*
+  instead of lat and lon, leaving lon unchunked entirely; the stack
+  shape is unchanged and nothing warns.
+  `nc.get_variable("precipitation").read_array().ndim` on one file
+  settles it.
+
+  The file axis the stack adds at axis 0 is created by the stacking
+  itself and cannot be addressed through `chunks=` at all. Beyond
+  that, pick sizes that align with the per-file layout or every read
+  pays for re-chunking.
+- `parallel=` is deprecated and inert. It is still accepted, but
+  passing a truthy value only emits a `DeprecationWarning` — the
+  per-file lazy read already parallelises chunk reads at compute
+  time. Drop it from existing calls.
 - `preprocess=` applies a user callable to each `NetCDF` subset
   before its array is extracted. Useful for unpacking, cropping, or
   dropping auxiliary variables.
@@ -198,7 +250,7 @@ import xarray as xr
 from pyramids.netcdf import NetCDF
 
 nc = NetCDF.read_file("era5_2023.nc")
-arr = nc.read_array("t2m", chunks={"time": 24, "lat": 256, "lon": 256})
+arr = nc.read_array("t2m", chunks={0: 24, 1: 256, 2: 256})  # (time, lat, lon)
 # arr is a dask.array.Array read via pyramids' CachingFileManager.
 
 da = xr.DataArray(arr, dims=("time", "lat", "lon"), name="t2m")
@@ -231,7 +283,7 @@ nc.variable_names
 # 2. Read one month, 6 hours at a time, 256x256 spatial chunks.
 temp = nc.read_array(
     "air_temperature_at_2_metres",
-    chunks={"time": 6, "lat": 256, "lon": 256},
+    chunks={0: 6, 1: 256, 2: 256},   # (time, lat, lon)
 )
 
 # 3. Monthly mean on time axis — builds dask graph.

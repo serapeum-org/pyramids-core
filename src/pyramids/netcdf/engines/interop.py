@@ -285,7 +285,26 @@ class Interop(_Engine["NetCDF"]):
 
         Args:
             chunks: Chunk spec forwarded to the lazy reader per data
-                variable. `None` (default) reads eagerly.
+                variable. `None` (default) reads eagerly. A `dict` is
+                keyed by **integer axis index**, or by the
+                case-insensitive aliases `rows` / `cols` / `columns` /
+                `bands` — never by dimension name, despite the xarray
+                shape of this entry point. Note that an unusable key
+                does **not** raise here: the per-variable
+                fallback catches the
+                :class:`ValueError` and reads that variable eagerly
+                instead, so `chunks={"time": 1}` — or an
+                out-of-range `{99: 1}` — returns a fully eager
+                dataset with no chunking and no warning, while
+                `{0: 1}` chunks as asked. The fallback is
+                **per variable**, so one call can return a dataset
+                in which some variables are chunked and others are
+                not. Verify with `result[name].chunks is not None`
+                per variable, not with `result.chunksizes` — that is
+                keyed by *dimension*, so it is non-empty as soon as
+                any one variable chunked, even when every variable
+                sharing those dimensions stayed eager. See
+                :meth:`pyramids.netcdf.NetCDF.read_array`.
             decode_times: When `True` (the default) a dimension whose CF `units`
                 name a time origin is exported as datetimes, so xarray's own
                 `resample` / `.dt` / `groupby("time.month")` work on the result.
