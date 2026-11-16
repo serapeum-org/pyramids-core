@@ -5413,10 +5413,12 @@ class NetCDF(Dataset):
                 integer axis index, or by the case-insensitive aliases
                 ``rows`` / ``cols`` / ``columns`` / ``bands`` — never by
                 dimension name, so ``{0: 1}`` rather than
-                ``{"time": 1}``; see :meth:`read_array`. Has no effect
-                on the ``animate=`` path, where it is discarded before
-                the renderer sees it and not even an invalid spec
-                raises. Defaults to None.
+                ``{"time": 1}``; an unusable key raises
+                ``ValueError`` here — see :meth:`read_array` for the
+                accepted vocabulary. Has no effect on the ``animate=``
+                path, where it is discarded before the renderer sees
+                it, so neither a valid nor an invalid spec has any
+                effect there and neither one raises. Defaults to None.
             basemap (bool, str, or Basemap, optional):
                 Reference layer, dispatched by type. ``True`` or a named basemap
                 tile provider overlays a pyramids web-tile basemap; a
@@ -5959,9 +5961,19 @@ class NetCDF(Dataset):
                 `rows` (axis `ndim - 2`), `cols` / `columns` (axis
                 `ndim - 1`) and `bands` (the leading non-spatial
                 axis, when there is exactly one) — so `{0: 24}`, not
-                `{"time": 24}`, which raises :class:`ValueError`. A
-                negative index is rejected, and `bands` raises on a
-                2-D variable or on one with several non-spatial axes.
+                `{"time": 24}`, which raises :class:`ValueError`. An
+                index outside `0 … ndim - 1` is rejected, negative
+                ones included, and `bands` raises on a 2-D variable
+                or on one with several non-spatial axes. One unusable
+                key rejects the whole dict rather than just the entry
+                it appears in, so `{"rows": 5, "time": 1}` raises
+                instead of chunking the rows. An axis the dict omits
+                keeps its default size, and a value of `None` or `-1`
+                means the full axis. :meth:`chunk`'s own report is
+                **not** round-trippable into this argument: it is
+                keyed by dimension name (`{"bands": …, "y": …,
+                "x": …}`), which this argument refuses — translate
+                those names to axis indices first.
             lock: Lock passed to the underlying
                 :class:`pyramids.base._file_manager.CachingFileManager`.
                 `None` → :func:`pyramids.base._locks.default_lock`
@@ -6021,7 +6033,10 @@ class NetCDF(Dataset):
                 `bbox` are supplied (the lazy path doesn't yet
                 honour bbox windowing — matching
                 :class:`pyramids.dataset.engines.IO.read_array`'s
-                `chunks=` + `window=` rule).
+                `chunks=` + `window=` rule), or when a `chunks`
+                dict carries an unusable key (an unknown name, an
+                axis index outside `0 … ndim - 1`, or `bands` on a
+                variable without exactly one non-spatial axis).
             ImportError: If `chunks` is given but `dask` is not
                 installed. Install the `pyramids-lazy` backend.
 
@@ -14635,9 +14650,10 @@ class NetCDF(Dataset):
                 `rows` / `cols` / `columns` / `bands` — never by dimension name, despite
                 the xarray shape of this entry point. An unusable key does **not** raise
                 here: the per-variable fallback reads that variable eagerly instead, so
-                `chunks={"time": 1}` returns a fully eager dataset with no chunking and
-                no warning, while `{0: 1}` chunks as asked. Check `result.chunksizes`
-                rather than assuming the spec took effect.
+                `chunks={"time": 1}` — or an out-of-range `{99: 1}` — returns a fully
+                eager dataset with no chunking and no warning, while `{0: 1}` chunks as
+                asked. Check `result.chunksizes` rather than assuming the spec took
+                effect.
             decode_times: Whether to decode a CF time axis to `datetime64[ns]`. `False`
                 returns the stored offsets.
 

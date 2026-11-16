@@ -293,8 +293,9 @@ class Interop(_Engine["NetCDF"]):
                 does **not** raise here: :func:`_lazy_var_data`'s
                 per-variable fallback catches the
                 :class:`ValueError` and reads that variable eagerly
-                instead, so `chunks={"time": 1}` returns a fully
-                eager dataset with no chunking and no warning, while
+                instead, so `chunks={"time": 1}` — or an
+                out-of-range `{99: 1}` — returns a fully eager
+                dataset with no chunking and no warning, while
                 `{0: 1}` chunks as asked. Verify with
                 `result.chunksizes` rather than assuming the spec
                 took effect. See
