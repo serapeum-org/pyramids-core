@@ -9046,13 +9046,13 @@ time step directly from the cloud file — GDAL fetches only the byte ranges the
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Lazy read — only the block-shape is used to build the dask graph.</span>
 <span class="c1"># Pass an explicit chunk tuple for time-heavy workflows or 'auto' for</span>
 <span class="c1"># dask's own heuristic.</span>
-<span class="n">lazy</span> <span class="o">=</span> <span class="n">tair</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">:</span> <span class="mi">721</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="mi">1440</span><span class="p">})</span>
+<span class="n">lazy</span> <span class="o">=</span> <span class="n">tair</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">721</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">1440</span><span class="p">})</span>  <span class="c1"># (time, lat, lon)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">lazy</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">lazy</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">lazy</span><span class="o">.</span><span class="n">chunksize</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-4"># Lazy read — only the block-shape is used to build the dask graph.
 # Pass an explicit chunk tuple for time-heavy workflows or 'auto' for
 # dask's own heuristic.
-lazy = tair.read_array(chunks={"time": 24, "lat": 721, "lon": 1440})
+lazy = tair.read_array(chunks={0: 24, 1: 721, 2: 1440})  # (time, lat, lon)
 type(lazy).__name__, lazy.shape, lazy.chunksize</div>
 </div>
 </div>
@@ -9313,16 +9313,14 @@ union.sizes, union.air_temperature_at_2_metres.data.chunksize</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stack</span> <span class="o">=</span> <span class="n">NetCDF</span><span class="o">.</span><span class="n">open_mfdataset</span><span class="p">(</span>
     <span class="n">srcs</span><span class="p">,</span>
     <span class="n">variable</span><span class="o">=</span><span class="s2">"air_temperature_at_2_metres"</span><span class="p">,</span>
-    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">24</span><span class="p">},</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">24</span><span class="p">},</span>  <span class="c1"># per file: axis 0 is time</span>
 <span class="p">)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">stack</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10">stack = NetCDF.open_mfdataset(
     srcs,
     variable="air_temperature_at_2_metres",
-    chunks={"time": 24},
-    parallel=True,
+    chunks={0: 24},  # per file: axis 0 is time
 )
 type(stack).__name__, stack.shape</div>
 </div>

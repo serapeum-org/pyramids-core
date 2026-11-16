@@ -8227,13 +8227,44 @@ GDAL's MDArray reader:</p>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">nc</span> <span class="o">=</span> <span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"era5_t2m_2023.nc"</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">temp_lazy</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="mi">256</span><span class="p">})</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">temp_lazy</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">256</span><span class="p">})</span>  <span class="c1"># (time, lat, lon)</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">temp_lazy</span><span class="o">.</span><span class="n">shape</span>        <span class="c1"># (8760, 721, 1440)</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">temp_lazy</span><span class="o">.</span><span class="n">chunks</span>       <span class="c1"># chunked tuples per axis</span>
 </code></pre></div>
-<p>Chunk spec accepts the same forms as <code>Dataset.read_array</code>: <code>None</code>
-(eager), <code>"auto"</code>, <code>-1</code> (single chunk), an int, a tuple, or a dict
-keyed by axis index or axis name.</p>
+<p>Chunk spec accepts the same <em>forms</em> as <code>Dataset.read_array</code>: <code>None</code>
+(eager), <code>"auto"</code>, <code>-1</code> (single chunk), an int, a tuple, or a dict.
+The two differ in how a dict's keys are read — see the end of this
+section.</p>
+<p>A dict's keys are <strong>integer axis indices</strong> in the variable's storage
+order, counted from 0: <code>{0: 24}</code> chunks the first axis. Four
+case-insensitive aliases are also accepted — <code>rows</code> (axis
+<code>ndim - 2</code>), <code>cols</code> and <code>columns</code> (axis <code>ndim - 1</code>), and <code>bands</code> (the
+leading non-spatial axis). Any other key raises <code>ValueError</code>, so a
+<strong>dimension name such as <code>"time"</code> or <code>"lat"</code> is not a valid key</strong>.</p>
+<p>The edges are sharper than that summary suggests, and all of these
+raise rather than falling back:</p>
+<ul>
+<li>A negative index is rejected, so <code>rows</code> / <code>cols</code> are <em>not</em>
+  interchangeable with <code>{-2: …}</code> / <code>{-1: …}</code>.</li>
+<li><code>bands</code> needs exactly one non-spatial axis: it is "not meaningful"
+  on a 2-D variable, and "ambiguous" on a variable carrying two or
+  more non-spatial axes — a 4-D <code>(time, level, lat, lon)</code> cube, say.
+  Every example on this page is 3-D, where <code>bands</code> is unambiguous;
+  chunk a 4-D variable by integer axis index instead.</li>
+<li><code>rows</code> / <code>cols</code> need at least 2-D.</li>
+<li>The aliases are fixed positions. They are never looked up against
+  the variable's dimension names, so a variable that happens to have
+  a dimension called <code>rows</code> still gets <code>ndim - 2</code> — which may not be
+  that dimension's axis.</li>
+</ul>
+<p>Note the asymmetry: <code>NetCDF.chunk(...).chunks</code> <em>reports</em> sizes keyed
+by dimension name, but that mapping cannot be fed back into
+<code>chunks=</code> unchanged.</p>
+<p><strong>This key handling is the pyramids-lazy NetCDF path only.</strong>
+<code>Dataset.read_array</code> forwards its dict to dask's <code>normalize_chunks</code>,
+which silently <strong>ignores</strong> any key it does not recognise — including
+all four aliases above — instead of raising. There,
+<code>chunks={"rows": 2048}</code> reads unchunked and tells you nothing.</p>
 <h3 id="native-chunks-best-default"><a class="toclink" href="#native-chunks-best-default">Native chunks = best default</a><a class="headerlink" href="#native-chunks-best-default" title="Permanent link">#</a></h3>
 <p>Every variable has a preferred on-disk chunk size exposed via
 <code>VariableInfo.block_size</code>. The default <code>chunks="auto"</code> respects it,
@@ -8245,7 +8276,7 @@ time-series for one pixel over a time-chunked file).</p>
 <p>NetCDF variables often store packed ints with <code>scale_factor</code> /
 <code>add_offset</code> CF attributes. <code>unpack=True</code> applies the transformation
 in the dask graph — no materialisation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">temp_unpacked</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">24</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">temp_unpacked</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">24</span><span class="p">})</span>  <span class="c1"># 24 steps of axis 0</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># temp_unpacked.dtype == float32, still lazy</span>
 </code></pre></div>
 <h3 id="locks"><a class="toclink" href="#locks">Locks</a><a class="headerlink" href="#locks" title="Permanent link">#</a></h3>
@@ -8264,27 +8295,43 @@ that narrowness is the whole point.</p>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">stack</span> <span class="o">=</span> <span class="n">NetCDF</span><span class="o">.</span><span class="n">open_mfdataset</span><span class="p">(</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="s2">"/data/noah_*.nc"</span><span class="p">,</span>           <span class="c1"># glob string</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">variable</span><span class="o">=</span><span class="s2">"precipitation"</span><span class="p">,</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="mi">256</span><span class="p">},</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>               <span class="c1"># fan out file opens over workers</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">)</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">stack</span><span class="o">.</span><span class="n">shape</span>          <span class="c1"># (n_files, H, W)</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">stack</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>   <span class="c1"># climatological mean</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">256</span><span class="p">},</span>   <span class="c1"># per FILE: (time, lat, lon), 24 hourly steps</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">stack</span><span class="o">.</span><span class="n">shape</span>          <span class="c1"># (n_files, 24, H, W)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">stack</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>   <span class="c1"># climatological mean</span>
 </code></pre></div>
 <p>Three arguments worth knowing:</p>
 <ul>
-<li><code>parallel=True</code> wraps each file's metadata read in <code>dask.delayed</code>
-  so opening 500 files on a distributed cluster fans out across
-  workers instead of blocking sequentially. The probe of the first
-  file stays eager so the stack shape + dtype are known at
-  graph-construction time.</li>
-<li><code>chunks=</code> forwards to every per-file <code>read_array</code> call. Pick
-  carefully: a chunk spec that doesn't align with per-file layout
-  forces re-chunking on every read.</li>
-<li><code>preprocess=</code> applies a user callable to each <code>NetCDF</code> subset
-  before its array is extracted. Useful for unpacking, cropping, or
-  dropping auxiliary variables.</li>
+<li><strong><code>chunks=</code> describes one file's variable, not the stacked result.</strong>
+  It is forwarded to every per-file <code>read_array</code> call, so count its
+  axes against a <em>single</em> file. The example above assumes each daily
+  <code>noah_*.nc</code> holds a 3-D <code>(time, lat, lon)</code> variable with hourly
+  steps, which is the usual LDAS/NLDAS layout — hence three axes and
+  a <code>(n_files, 24, H, W)</code> stack.</li>
 </ul>
+<p><strong>Check your own files first</strong>, because getting this wrong fails in
+  two different ways. Too many axes raises, which is the harmless
+  case: against files holding a bare 2-D <code>(lat, lon)</code> grid the spec
+  above gives
+  <code>ValueError: chunks dict axis 2 out of range for ndim=2</code>. Too few
+  is the dangerous one — it is silent. Passing <code>{0: 256, 1: 256}</code> for
+  the 3-D variable here lands the two entries on <em>time and lat</em>
+  instead of lat and lon, leaving lon unchunked entirely; the stack
+  shape is unchanged and nothing warns.
+  <code>nc.get_variable("precipitation").read_array().ndim</code> on one file
+  settles it.</p>
+<p>The file axis the stack adds at axis 0 is created by the stacking
+  itself and cannot be addressed through <code>chunks=</code> at all. Beyond
+  that, pick sizes that align with the per-file layout or every read
+  pays for re-chunking.
+- <code>parallel=</code> is deprecated and inert. It is still accepted, but
+  passing a truthy value only emits a <code>DeprecationWarning</code> — the
+  per-file lazy read already parallelises chunk reads at compute
+  time. Drop it from existing calls.
+- <code>preprocess=</code> applies a user callable to each <code>NetCDF</code> subset
+  before its array is extracted. Useful for unpacking, cropping, or
+  dropping auxiliary variables.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">only_europe</span><span class="p">(</span><span class="n">nc</span><span class="p">):</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">return</span> <span class="n">nc</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">35.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">65.0</span><span class="p">))</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
@@ -8376,7 +8423,7 @@ lazy array in a labeled-array <code>DataArray</code> yourself:</p>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetCDF</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">nc</span> <span class="o">=</span> <span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"era5_2023.nc"</span><span class="p">)</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">arr</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="mi">256</span><span class="p">})</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">arr</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">256</span><span class="p">})</span>  <span class="c1"># (time, lat, lon)</span>
 <a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># arr is a dask.array.Array read via pyramids' CachingFileManager.</span>
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
 <a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">da</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">"t2m"</span><span class="p">)</span>
@@ -8404,7 +8451,7 @@ labeled-array <code>DataArray</code> / <code>.to_xarray()</code> / <code>.from_x
 <a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c1"># 2. Read one month, 6 hours at a time, 256x256 spatial chunks.</span>
 <a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">temp</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span>
 <a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="s2">"air_temperature_at_2_metres"</span><span class="p">,</span>
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="mi">256</span><span class="p">},</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">256</span><span class="p">},</span>   <span class="c1"># (time, lat, lon)</span>
 <a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="p">)</span>
 <a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>
 <a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="c1"># 3. Monthly mean on time axis — builds dask graph.</span>

@@ -8142,8 +8142,8 @@ are loose kwargs, and <code>colorbar=False</code> hides the colour bar.</p>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"T2"</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="n">CoordinateSpec</span><span class="p">(</span><span class="n">coords</span><span class="o">=</span><span class="p">(</span><span class="n">XLONG</span><span class="p">,</span> <span class="n">XLAT</span><span class="p">)),</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"pcolormesh"</span><span class="p">,</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="n">facet</span><span class="o">=</span><span class="n">FacetSpec</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">col_wrap</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># animate over a dimension with lazy, per-frame reads (needs pyramids-lazy)</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># animate over a dimension; frames stream one at a time, no chunks= needed</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="s2">"time"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="signature"><a class="toclink" href="#signature">Signature</a><a class="headerlink" href="#signature" title="Permanent link">#</a></h2>
 <p><code>NetCDF.plot(variable=None, *, selectors=None, facet=None, axes=None, kind="auto",
@@ -8190,7 +8190,7 @@ animate=None, chunks=None, basemap=None, exclude_value=None, title=None, **kwarg
 <tr>
 <td><code>chunks</code></td>
 <td><code>dict</code>, optional</td>
-<td>Dask chunking — switches to a lazy read; only the rendered slice / frame is materialised. Requires the <code>[lazy]</code> extra.</td>
+<td>Dask chunking — switches to a lazy read; only the rendered slice is materialised. Static-plot path only; ignored on <code>animate=</code>. Requires the <code>[lazy]</code> extra.</td>
 </tr>
 <tr>
 <td><code>basemap</code></td>
@@ -8212,6 +8212,14 @@ the whole month. <code>get_time_variable()</code> reports date-only labels unles
 <code>method="nearest"</code> snaps each <strong>numeric</strong> selector to the closest coordinate on its axis; label
 selectors on other dims are unaffected and stay exact.
 See <a href="../#dimension-coordinates-and-selection">Dimension coordinates and selection</a>.</p>
+<p>A <code>chunks=</code> dict is keyed by <strong>integer axis index</strong> in storage order, or by one of the
+case-insensitive aliases <code>rows</code> (axis <code>ndim - 2</code>), <code>cols</code> / <code>columns</code> (axis <code>ndim - 1</code>) and <code>bands</code>
+(the leading non-spatial axis, when there is exactly one). A dimension name is not a valid key: pass
+<code>{0: 1}</code>, not <code>{"time": 1}</code>, which raises <code>ValueError</code>. Negative indices are rejected too. See
+<a href="../../../tutorials/lazy/lazy-netcdf/">Lazy NetCDF</a> for the full rule.</p>
+<p><code>chunks=</code> applies to the <strong>static-plot path only</strong>. On the <code>animate=</code> path it is discarded before
+the renderer sees it, so it changes nothing there — not even an invalid spec raises. Animation
+streams frame by frame regardless, through its own <code>data_getter</code> callback.</p>
 <p>The GeoTIFF-only kwargs <code>band</code>, <code>rgb</code>, <code>surface_reflectance</code>, <code>cutoff</code>, <code>percentile</code>, <code>overview</code>,
 and <code>overview_index</code> are <strong>not</strong> accepted on <code>NetCDF.plot</code> — passing any of them raises <code>TypeError</code>
 with a hint pointing at the replacement above (use <code>selectors=</code> to pick a slice, loose colour kwargs

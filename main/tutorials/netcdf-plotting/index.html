@@ -8307,14 +8307,19 @@ leading non-spatial dimension:</p>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># combine with selectors to fix the *other* dims first</span>
 <a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">anim</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="n">selectors</span><span class="o">=</span><span class="n">Selectors</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">500</span><span class="p">),</span> <span class="n">animate</span><span class="o">=</span><span class="s2">"time"</span><span class="p">)</span>
 </code></pre></div>
-<p>Pair it with <code>chunks=</code> (see below) and pyramids streams one frame at a time from disk via a
-<code>data_getter</code> callback — the whole cube is never held in memory.</p>
+<p>Animation streams one frame at a time from disk via a <code>data_getter</code> callback, so the whole cube is
+never held in memory. That is unconditional — it needs no <code>chunks=</code>, and <code>chunks=</code> has no effect
+here (see below).</p>
 <h2 id="8-lazy-dask-reads"><a class="toclink" href="#8-lazy-dask-reads">8. Lazy / dask reads</a><a class="headerlink" href="#8-lazy-dask-reads" title="Permanent link">#</a></h2>
-<p>For multi-GB reanalysis files, pass <code>chunks=</code> to switch the read to a dask-backed lazy path; only
-the slice (or animation frame) actually rendered is materialised:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>                          <span class="c1"># lazy static plot of the leading slice</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>          <span class="c1"># lazy per-frame streaming</span>
+<p>For multi-GB reanalysis files, pass <code>chunks=</code> to switch the static read to a dask-backed lazy path;
+only the slice actually rendered is materialised:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">nc</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">"t2m"</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>                          <span class="c1"># lazy static plot of the leading slice</span>
 </code></pre></div>
+<p>A <code>chunks=</code> dict is keyed by <strong>integer axis index</strong>, or by one of the case-insensitive aliases
+<code>rows</code> / <code>cols</code> / <code>columns</code> / <code>bands</code> — never by dimension name. Pass <code>{0: 1}</code>, not <code>{"time": 1}</code>,
+which raises <code>ValueError</code>. See <a href="../lazy/lazy-netcdf/">Lazy NetCDF</a> for the edge cases.</p>
+<p>It applies to the <strong>static-plot path only</strong>: on the <code>animate=</code> path <code>chunks=</code> is discarded before the
+renderer sees it, so it changes nothing and not even an invalid spec raises.</p>
 <p>Requires the <code>[lazy]</code> extra (<code>pip install 'pyramids-lazy'</code>). See
 <a href="../lazy/lazy-netcdf/">Lazy NetCDF</a> for chunk-size guidance.</p>
 <h2 id="9-basemap-underlay"><a class="toclink" href="#9-basemap-underlay">9. Basemap underlay</a><a class="headerlink" href="#9-basemap-underlay" title="Permanent link">#</a></h2>
