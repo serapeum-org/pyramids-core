@@ -1,13 +1,15 @@
 name: Benchmarks - Nightly
 
 permissions:
-  contents: read
+  # Write is for github-action-benchmark: it pushes the benchmark history to gh-pages (under bench/)
+  # and posts the regression commit comment.
+  contents: write
 
 # Performance benchmarks are not a build gate: shared GitHub runners are too noisy to compare
-# absolute milliseconds commit-to-commit (see benchmarks/README.md). They run on a nightly
-# schedule (and on demand) and store the raw ``--benchmark-json`` as an artifact, so throughput
-# and the eager-vs-lazy / full-vs-decimated gaps can be tracked over time or compared locally with
-# ``pytest-benchmark compare`` — rather than failing a PR on timing.
+# absolute milliseconds commit-to-commit (see benchmarks/README.md). They run on a nightly schedule
+# (and on demand), upload the raw ``--benchmark-json`` as an artifact, and feed github-action-benchmark,
+# which publishes a trend chart under gh-pages ``bench/`` and @-mentions on a regression — without ever
+# failing the run.
 on:
   schedule:
     - cron: "0 4 * * *"
@@ -30,16 +32,43 @@ jobs:
           environments: dev
           activate-environment: dev
           cache: true
-          version: v0.73.0
+          version: v0.84.2
 
       - name: Run benchmarks and save results
-        # The ``benchmark`` task runs ``pytest benchmarks --benchmark-only``; extra args are
+        # The ``benchmark`` task runs ``pytest benchmarks --benchmark-only …``; extra args are
         # forwarded to pytest-benchmark, so this also autosaves and writes the machine-readable
-        # JSON consumed by the artifact below.
+        # JSON consumed by the steps below. No ``--locked`` here: no core workflow locks the pixi
+        # run (tests.yml included), so this follows repo convention. Caveat for a trend chart — an
+        # unlocked run can re-solve the env, so a dependency bump can surface as a timing shift.
         run: >-
           pixi run -e dev benchmark
           --benchmark-autosave
           --benchmark-json=benchmark-results.json
+
+      - name: Track results and alert on regression
+        # Appends this run to the benchmark history under gh-pages ``bench/`` and publishes the trend
+        # chart at https://serapeum-org.github.io/pyramids-core/bench/. ``bench/`` is its own subdir, so
+        # mike's versioned MkDocs site (the per-version dirs, versions.json, the root redirect) is
+        # untouched. The two workflows write disjoint paths but share the ``gh-pages`` branch, so a
+        # benchmark push and a docs deploy that overlap rely on each side's push-retry, not mutual
+        # exclusion, to reconcile the branch tip.
+        # When a benchmark regresses past the threshold it posts a commit comment that @-mentions the
+        # cc'd users.
+        # Deliberately does NOT fail the run — shared-runner noise makes absolute ms unreliable, so the
+        # 150% threshold catches only gross (>=1.5x) regressions. The first run on gh-pages seeds the
+        # baseline with no alert; alerts start from the next run.
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          tool: "pytest"
+          output-file-path: benchmark-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: bench
+          alert-threshold: "150%"
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-comment-cc-users: "@MAfarrag"
 
       - name: Upload benchmark results
         if: always()

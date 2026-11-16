@@ -248,6 +248,10 @@ pixi run -e dev pytest tests/netcdf/test_dimensions.py -v
 pixi run -e dev pytest tests/netcdf/test_dimensions.py::TestStripBraces::test_with_braces -q
 ```
 
+Performance benchmarks run nightly and publish a trend chart — with ≥ 1.5× regression alerts — at
+<https://serapeum-org.github.io/pyramids-core/bench/>. See the
+[Testing in CI](docs/how-to/testing.md#benchmarks) guide for details.
+
 Docker
 ======
 

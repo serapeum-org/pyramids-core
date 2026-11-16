@@ -225,6 +225,26 @@ extras-package matrix — adding a `coverage-combine` job that downloads each
 job's `.coverage` artifact, runs `coverage combine`, and enforces a single
 `--fail-under` against the merged total is the standard pattern.
 
+## Benchmarks
+
+The micro-benchmark suite lives in `benchmarks/` (seven `test_bench_*.py` modules) and runs via the
+`benchmark` pixi task:
+
+```bash
+pixi run -e dev benchmark            # pytest benchmarks --benchmark-only …
+```
+
+Benchmarks are **not** a build gate — shared GitHub runners are too noisy to compare absolute milliseconds
+commit-to-commit. The nightly `benchmarks.yml` workflow (04:00 UTC, plus `workflow_dispatch`) runs the suite,
+uploads the raw `--benchmark-json` as a 90-day artifact, and feeds
+[`github-action-benchmark`](https://github.com/benchmark-action/github-action-benchmark), which appends each run to
+a history on `gh-pages` and publishes a trend chart:
+
+**<https://serapeum-org.github.io/pyramids-core/bench/>**
+
+A run that regresses ≥ 1.5× past the baseline posts a commit comment that @-mentions the maintainer; it never fails
+the run. Compare two local runs with `pytest-benchmark compare`.
+
 ## Troubleshooting
 
 ### "Required test coverage of 88 % not reached"
