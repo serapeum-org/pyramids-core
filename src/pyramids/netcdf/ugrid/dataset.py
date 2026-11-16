@@ -2309,8 +2309,11 @@ class MeshDataset(_MeshFacades):
                 what this method has always done and needs no backend. Anything else hands the
                 resolved paths to the ``pyramids-lazy`` backend and returns a lazily-backed mesh
                 instead, so a long run is not held in memory. Accepts whatever that backend's
-                chunking argument accepts: a mapping, ``"auto"``, an ``int`` block size,
-                ``-1`` for one chunk, or a per-axis tuple. A falsy value other than
+                chunking argument accepts: ``"auto"``, an ``int`` block size, ``-1`` for one
+                chunk, a per-axis tuple, or a mapping. A mapping's keys are the backend's to
+                define -- ``pyramids-lazy`` keys them by axis index, not by dimension name, so
+                ``{0: 1}`` rather than ``{"time": 1}`` -- and core forwards the value without
+                interpreting it, so consult the installed backend for the exact spelling. A falsy value other than
                 ``None`` -- ``{}``, ``""``, ``0``, ``False`` -- selects neither path and raises
                 :class:`ValueError` rather than dispatching lazily.
             driver: Name of a registered mesh driver, bypassing detection. ``None`` detects.
@@ -2360,10 +2363,10 @@ class MeshDataset(_MeshFacades):
                 >>> ds.time_values[0], ds.time_values[-1]  # doctest: +SKIP
 
                 ```
-            - Read the same run lazily, one dask chunk per file, then materialise a variable:
+            - Read the same run lazily, then materialise a variable:
                 ```python
                 >>> lazy = MeshDataset.open_mfdataset(  # doctest: +SKIP
-                ...     "out/*_map.nc", chunks={"time": 1}
+                ...     "out/*_map.nc", chunks="auto"
                 ... )
                 >>> lazy["waterlevel"].compute().shape  # doctest: +SKIP
 
