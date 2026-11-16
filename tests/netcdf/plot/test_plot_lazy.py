@@ -29,7 +29,7 @@ class TestNetCDFPlotLazy:
 
     @pytest.mark.lazy
     def test_chunks_dict_routes_through_dask(self, tmp_path):
-        """``chunks={"x": 5, "y": 5}`` switches the read path to dask.
+        """``chunks={"cols": 2, "rows": 2}`` switches the read path to dask.
 
         Test scenario:
             Requires the optional ``dask`` dep and a real on-disk

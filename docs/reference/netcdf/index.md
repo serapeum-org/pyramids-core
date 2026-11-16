@@ -175,7 +175,7 @@ from pyramids.netcdf import NetCDF
 
 nc = NetCDF.read_file("era5.nc")
 t2m = nc.read_array(
-    "t2m", chunks={"time": 24, "lat": 256, "lon": 256},
+    "t2m", chunks={0: 24, 1: 256, 2: 256},   # axis indices: (time, lat, lon)
 )
 t2m.mean(axis=0).compute()        # monthly mean, parallel
 ```

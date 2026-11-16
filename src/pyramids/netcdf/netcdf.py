@@ -5942,7 +5942,14 @@ class NetCDF(Dataset):
                 preserves the legacy behavior. Any of `int`,
                 `tuple`, `dict`, or the string `"auto"` switches
                 to a :class:`dask.array.Array` backed by MDArray
-                chunk reads. Defaults chunked at the variable's
+                chunk reads. A `dict`'s keys are the installed
+                backend's to define: `pyramids-lazy` keys them by
+                **axis index** in storage order, or by the aliases
+                `"bands"` (the sole non-spatial leading axis),
+                `"rows"` (axis `-2`) and `"cols"` / `"columns"`
+                (axis `-1`) — so `{0: 24}`, not `{"time": 24}`. A
+                dimension name is **not** a valid key and raises
+                :class:`ValueError`. Defaults chunked at the variable's
                 native `GetBlockSize` (see
                 :attr:`pyramids.netcdf.models.VariableInfo.block_size`);
                 a conservative `(1,..., rows, cols)` fallback is

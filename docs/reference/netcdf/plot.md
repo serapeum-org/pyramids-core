@@ -49,7 +49,7 @@ nc.plot("T2", axes=CoordinateSpec(coords=(XLONG, XLAT)), kind="pcolormesh",
         facet=FacetSpec(col="time", col_wrap=4))
 
 # animate over a dimension with lazy, per-frame reads (needs pyramids-lazy)
-nc.plot("t2m", animate="time", chunks={"time": 1})
+nc.plot("t2m", animate="time", chunks={0: 1})
 ```
 
 ## Signature
@@ -77,6 +77,10 @@ the whole month. `get_time_variable()` reports date-only labels unless asked for
 `method="nearest"` snaps each **numeric** selector to the closest coordinate on its axis; label
 selectors on other dims are unaffected and stay exact.
 See [Dimension coordinates and selection](index.md#dimension-coordinates-and-selection).
+
+A `chunks=` dict is keyed by **integer axis index** in storage order, or by one of the aliases
+`bands` (the sole non-spatial leading axis), `rows` (axis `-2`) and `cols` / `columns` (axis `-1`).
+A dimension name is not a valid key: pass `{0: 1}`, not `{"time": 1}`, which raises `ValueError`.
 
 The GeoTIFF-only kwargs `band`, `rgb`, `surface_reflectance`, `cutoff`, `percentile`, `overview`,
 and `overview_index` are **not** accepted on `NetCDF.plot` — passing any of them raises `TypeError`

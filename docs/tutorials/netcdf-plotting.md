@@ -182,9 +182,12 @@ For multi-GB reanalysis files, pass `chunks=` to switch the read to a dask-backe
 the slice (or animation frame) actually rendered is materialised:
 
 ```python
-nc.plot("t2m", chunks={"time": 1})                          # lazy static plot of the leading slice
-nc.plot("t2m", animate="time", chunks={"time": 1})          # lazy per-frame streaming
+nc.plot("t2m", chunks={0: 1})                          # lazy static plot of the leading slice
+nc.plot("t2m", animate="time", chunks={0: 1})          # lazy per-frame streaming
 ```
+
+A `chunks=` dict is keyed by **axis index** (or `bands` / `rows` / `cols`), never by dimension
+name — `{0: 1}`, not `{"time": 1}`.
 
 Requires the `[lazy]` extra (`pip install 'pyramids-lazy'`). See
 [Lazy NetCDF](lazy/lazy-netcdf.md) for chunk-size guidance.

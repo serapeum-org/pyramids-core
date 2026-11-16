@@ -419,7 +419,7 @@ def test_netcdf_plot_rejects_chunks_on_backend(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(_plot_backends, "_CACHE", {"web": recorder})
     netcdf = _netcdf_container()
     with pytest.raises(ValueError, match="only apply to backend='matplotlib'"):
-        netcdf.plot(variable="t2m", backend="web", chunks={"time": 1})
+        netcdf.plot(variable="t2m", backend="web", chunks={0: 1})
     assert recorder.backend is None
 
 

@@ -35,14 +35,21 @@ from pyramids.netcdf import NetCDF
 
 nc = NetCDF.read_file("era5_t2m_2023.nc")
 
-temp_lazy = nc.read_array("t2m", chunks={"time": 24, "lat": 256, "lon": 256})
+temp_lazy = nc.read_array("t2m", chunks={0: 24, 1: 256, 2: 256})  # (time, lat, lon)
 temp_lazy.shape        # (8760, 721, 1440)
 temp_lazy.chunks       # chunked tuples per axis
 ```
 
 Chunk spec accepts the same forms as `Dataset.read_array`: `None`
-(eager), `"auto"`, `-1` (single chunk), an int, a tuple, or a dict
-keyed by axis index or axis name.
+(eager), `"auto"`, `-1` (single chunk), an int, a tuple, or a dict.
+
+A dict's keys are **integer axis indices** in the variable's storage
+order, or one of the aliases `"bands"` (the sole non-spatial leading
+axis), `"rows"` (axis `-2`) and `"cols"` / `"columns"` (axis `-1`).
+**A dimension name is not a valid key** — `{0: 24}` chunks the first
+axis, while `{"time": 24}` raises `ValueError`. Note the asymmetry:
+`NetCDF.chunk(...).chunks` *reports* sizes keyed by dimension name,
+but that mapping cannot be fed back into `chunks=` unchanged.
 
 ### Native chunks = best default
 
@@ -60,7 +67,7 @@ NetCDF variables often store packed ints with `scale_factor` /
 in the dask graph — no materialisation:
 
 ```python
-temp_unpacked = nc.read_array("t2m", unpack=True, chunks={"time": 24})
+temp_unpacked = nc.read_array("t2m", unpack=True, chunks={0: 24})  # 24 steps of axis 0
 # temp_unpacked.dtype == float32, still lazy
 ```
 
@@ -85,7 +92,7 @@ from pyramids.netcdf import NetCDF
 stack = NetCDF.open_mfdataset(
     "/data/noah_*.nc",           # glob string
     variable="precipitation",
-    chunks={"time": 1, "lat": 256, "lon": 256},
+    chunks={0: 1, 1: 256, 2: 256},   # (time, lat, lon)
     parallel=True,               # fan out file opens over workers
 )
 
@@ -198,7 +205,7 @@ import xarray as xr
 from pyramids.netcdf import NetCDF
 
 nc = NetCDF.read_file("era5_2023.nc")
-arr = nc.read_array("t2m", chunks={"time": 24, "lat": 256, "lon": 256})
+arr = nc.read_array("t2m", chunks={0: 24, 1: 256, 2: 256})  # (time, lat, lon)
 # arr is a dask.array.Array read via pyramids' CachingFileManager.
 
 da = xr.DataArray(arr, dims=("time", "lat", "lon"), name="t2m")
@@ -231,7 +238,7 @@ nc.variable_names
 # 2. Read one month, 6 hours at a time, 256x256 spatial chunks.
 temp = nc.read_array(
     "air_temperature_at_2_metres",
-    chunks={"time": 6, "lat": 256, "lon": 256},
+    chunks={0: 6, 1: 256, 2: 256},   # (time, lat, lon)
 )
 
 # 3. Monthly mean on time axis — builds dask graph.
