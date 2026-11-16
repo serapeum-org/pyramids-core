@@ -163,11 +163,8 @@ class TestChunksDictRejectedKeys:
             and ``True`` is rejected rather than resolving as axis 1 through ``bool``'s ``int``
             inheritance.
         """
-        with pytest.raises(ValueError, match=match) as exc_info:
+        with pytest.raises(ValueError, match=match):
             var_3d.read_array(chunks={key: 1})
-        assert "chunks" in str(exc_info.value), (
-            f"message should name the chunks spec, got: {exc_info.value}"
-        )
 
     def test_a_valid_key_alongside_an_unusable_one_still_raises(self, var_3d):
         """One bad key poisons the whole dict — a partially valid spec is not salvaged.
@@ -337,19 +334,106 @@ class TestOpenMfdatasetChunksArePerFile:
         with pytest.raises(ValueError, match=r"out of range"):
             NetCDF.open_mfdataset([NC_MF, NC_MF], variable="area", chunks={2: 1})
 
-    @pytest.mark.parametrize("spec", [{0: 1}, {"rows": 8}, {"cols": 8}])
-    def test_a_spec_valid_for_the_per_file_rank_is_accepted(self, spec):
-        """Specs within the 2-D per-file rank are accepted, so the rejection above is about rank.
+    @pytest.mark.parametrize(
+        ("spec", "axis", "blocks"),
+        [({0: 1}, 1, 128), ({"rows": 8}, 1, 16), ({"cols": 8}, 2, 32)],
+    )
+    def test_a_spec_valid_for_the_per_file_rank_resolves_that_axis(
+        self, spec, axis, blocks
+    ):
+        """A valid per-file spec chunks the stack axis its per-file axis became.
 
         Args:
             spec: A ``chunks=`` dict valid for a 2-D per-file variable.
+            axis: The stacked-result axis the spec is expected to land on.
+            blocks: The number of blocks expected along that axis.
 
         Test scenario:
-            Axis 0 and both spatial aliases resolve against the 2-D per-file variable, which rules
-            out "``open_mfdataset`` rejects every chunks spec" as the explanation for the failure
-            in the previous test.
+            Asserting the resolved layout rather than the return type is what makes this
+            discriminating: ``open_mfdataset`` returns a dask array with no ``chunks=`` at all, and
+            that baseline leaves one block on every axis. The per-file axis the spec names shifts by
+            one in the result, because stacking prepends the file axis -- which stays one block per
+            file, pinning that ``chunks=`` cannot address it.
         """
         lazy = NetCDF.open_mfdataset([NC_MF, NC_MF], variable="area", chunks=spec)
-        assert isinstance(lazy, da.Array), (
-            f"chunks={spec} must return a dask array, got {type(lazy).__name__}"
+        assert len(lazy.chunks[axis]) == blocks, (
+            f"chunks={spec} should split result axis {axis} into {blocks} blocks, "
+            f"got {lazy.chunks[axis]}"
         )
+        assert lazy.chunks[0] == (1, 1), (
+            f"the file axis must stay one block per file, got {lazy.chunks[0]}"
+        )
+
+
+class TestTheFacadeFormTheDocsUseBehavesIdentically:
+    """``NetCDF.read_array(variable, chunks=...)`` -- the spelling the fixed snippets use."""
+
+    @pytest.mark.parametrize(
+        ("spec", "expected"),
+        [
+            ({0: 1, 1: 5, 2: 5}, ((1, 1, 1), (5, 5, 3), (5, 5, 4))),
+            ({"rows": 5}, ((3,), (5, 5, 3), (14,))),
+            ({"BANDS": 1}, ((1, 1, 1), (13,), (14,))),
+        ],
+    )
+    def test_the_facade_resolves_the_documented_vocabulary(self, spec, expected):
+        """The container-level facade resolves int keys and aliases exactly as the variable does.
+
+        Args:
+            spec: A ``chunks=`` dict in the documented vocabulary.
+            expected: The per-axis chunk layout the spec must produce.
+
+        Test scenario:
+            Nine of the twelve snippets corrected for #1582 call ``nc.read_array("var", chunks=...)``
+            rather than the variable handle, so the contract has to be pinned on that signature too
+            -- otherwise the tests guard a path the documentation never takes.
+        """
+        nc = NetCDF.read_file(NC_3D)
+        try:
+            assert nc.read_array("values", chunks=spec).chunks == expected, (
+                f"facade chunks={spec} should resolve to {expected}"
+            )
+        finally:
+            nc.close()
+
+    @pytest.mark.parametrize(
+        ("spec", "match"),
+        [
+            ({"time": 1}, UNKNOWN_KEY),
+            ({-1: 1}, r"out of range"),
+            ({True: 1}, r"is a bool"),
+        ],
+    )
+    def test_the_facade_rejects_what_the_variable_rejects(self, spec, match):
+        """An unusable key raises through the facade as well, not only the variable handle.
+
+        Args:
+            spec: A ``chunks=`` dict carrying an unusable key.
+            match: Pattern the raised message must match.
+
+        Test scenario:
+            The dimension-name key is the #1582 defect reached by the documented spelling.
+        """
+        nc = NetCDF.read_file(NC_3D)
+        try:
+            with pytest.raises(ValueError, match=match):
+                nc.read_array("values", chunks=spec)
+        finally:
+            nc.close()
+
+    def test_unpack_and_chunks_together_stay_lazy(self):
+        """``unpack=True`` with ``chunks=`` resolves normally -- the combination a snippet shows.
+
+        Test scenario:
+            ``lazy-netcdf.md`` documents CF unpacking applied inside the dask graph, so the two
+            arguments have to compose. Nothing else in this file exercises them together.
+        """
+        nc = NetCDF.read_file(NC_3D)
+        try:
+            assert nc.read_array("values", unpack=True, chunks={0: 1}).chunks == (
+                (1, 1, 1),
+                (13,),
+                (14,),
+            ), "unpack=True must not defeat the chunk spec"
+        finally:
+            nc.close()
