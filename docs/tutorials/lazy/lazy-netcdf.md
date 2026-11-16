@@ -265,9 +265,9 @@ not touch dask / the labeled-array stack / kerchunk.
 `MeshDataset` (FVCOM, SCHISM, ADCIRC, Delft3D) has one lazy entry
 point in core: `open_mfdataset(..., chunks=...)` forwards to the
 compute backend. It needs a `pyramids-lazy` providing
-`open_mesh_mfdataset`, which no released version has yet, so today
-it raises a branded error naming the upgrade; every other
-`MeshDataset` read is eager. The rest of lazy UGRID is tracked as a
+`open_mesh_mfdataset`, and raises a branded error naming the upgrade
+when the installed one does not; every other `MeshDataset` read is
+eager. The rest of lazy UGRID is tracked as a
 follow-on. The
 `docs/examples/netcdf/ugrid/dask-lazy-ugrid.ipynb` notebook shows how
 to layer dask on top of the eager `MeshDataset` manually using

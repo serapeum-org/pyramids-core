@@ -66,8 +66,8 @@ grouped by category.
 | `info(buf, drivers)` | **(D)** | Print human-readable summary |
 
 `open_mfdataset(..., chunks=...)` forwards to the compute backend instead of reading eagerly.
-It needs a `pyramids-lazy` that provides `open_mesh_mfdataset`; no released version does yet,
-so until one ships it raises a branded error naming the upgrade. `chunks=None` (the default) is
+It needs a `pyramids-lazy` that provides `open_mesh_mfdataset`, and raises a branded error naming
+the upgrade when the installed one does not. `chunks=None` (the default) is
 the eager read and needs no backend. `sort=` is forwarded to the backend and means the same on
 both paths.
 
