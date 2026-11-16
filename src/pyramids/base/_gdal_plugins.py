@@ -264,7 +264,19 @@ def compose_driver_path(
     if keep_env and inherited:
         ordered: list[Path | str | None] = [*inherited.split(os.pathsep), *companions]
     else:
-        ordered = [bundled, discovered, *companions]
+        authoritative = _existing_dirs([bundled, discovered])
+        if not authoritative and inherited:
+            # Neither a wheel nor discovery supplied a directory, so the value the process
+            # inherited is the only thing that knows where the active GDAL's plugins are.
+            # Dropping it here would hand GDAL a companions-only path and silently unload
+            # the drivers it was working with: on a conda Linux environment the netCDF and
+            # HDF5 drivers are separate .so plugins reachable ONLY through the activation
+            # script's GDAL_DRIVER_PATH, and `set_env_conda` cannot find them because it
+            # probes the Windows `Library/lib/gdalplugins` layout. It is still never allowed
+            # to outrank a bundled or discovered directory -- that is the #465 invariant, and
+            # ci/verify-wheel.py asserts a foreign path cannot reach the final value.
+            authoritative = [*inherited.split(os.pathsep)]
+        ordered = [*authoritative, *companions]
     parts: list[str] = []
     for text in _existing_dirs(ordered):
         if text not in parts:

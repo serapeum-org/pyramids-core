@@ -39,6 +39,23 @@ class _FakeEntryPoint:
         self.value = value
 
 
+@pytest.fixture(autouse=True)
+def isolate_companion_cache():
+    """Never let a faked companion scan survive the test that faked it.
+
+    The cache is a module global, so `monkeypatch` restoring `entry_points` does not undo it.
+    A leaked tuple of still-existing tmp_path directories made every later
+    `Config.initialize_gdal()` in the session compose them into `GDAL_DRIVER_PATH` -- and on
+    Linux, where neither a bundled nor a discovered directory exists, they became the WHOLE
+    path, unloading the conda environment's netCDF/HDF5 plugins. The cross-process tests in
+    tests/netcdf/io/test_pickle.py then failed in their spawned children with
+    "plugin gdal_HDF5.so is not available".
+    """
+    clear_companion_plugin_dir_cache()
+    yield
+    clear_companion_plugin_dir_cache()
+
+
 @pytest.fixture
 def plugin_dirs(tmp_path: Path) -> tuple[Path, Path, Path]:
     """Three distinct, existing directories to stand in for the three kinds of input."""
@@ -117,6 +134,59 @@ class TestComposeHygiene:
         regular.write_text("", encoding="utf-8")
 
         assert compose_driver_path(bundled=regular) is None
+
+
+class TestInheritedIsTheLastResort:
+    """When nothing else knows where the plugins are, the inherited value must survive.
+
+    On a conda Linux environment `set_env_conda` finds nothing — it probes the Windows
+    `Library/lib/gdalplugins` layout — and there is no bundled directory either, so the
+    activation script's `GDAL_DRIVER_PATH` is the only pointer to the netCDF/HDF5 plugins.
+    Dropping it handed GDAL a companions-only path and unloaded those drivers.
+    """
+
+    def test_it_is_kept_when_nothing_else_exists(self, plugin_dirs):
+        """The conda-Linux case with no companion installed."""
+        _, discovered, _ = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=None, discovered=None, inherited=str(discovered)
+        )
+
+        assert composed == str(discovered)
+
+    def test_a_companion_does_not_displace_it(self, plugin_dirs):
+        """The regression: a companion wheel must add to the path, not become it."""
+        _, discovered, companion = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=None,
+            discovered=None,
+            companions=[companion],
+            inherited=str(discovered),
+        )
+
+        assert composed.split(os.pathsep) == [str(discovered), str(companion)]
+
+    def test_a_bundled_directory_still_outranks_it(self, plugin_dirs):
+        """#465 is unchanged: a foreign inherited path never wins over the wheel's own."""
+        bundled, discovered, _ = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=bundled, discovered=None, inherited=str(discovered)
+        )
+
+        assert composed == str(bundled)
+
+    def test_a_discovered_directory_still_outranks_it(self, plugin_dirs):
+        """Same for the conda/system directory that matches the active GDAL."""
+        _, discovered, companion = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=None, discovered=discovered, inherited=str(companion)
+        )
+
+        assert composed == str(discovered)
 
 
 class TestKeepEnvEscapeHatch:

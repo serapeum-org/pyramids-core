@@ -1,6 +1,5 @@
 import io
 import logging
-import os
 import threading
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
@@ -290,12 +289,13 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
         "gdal": {"GDAL_CACHEMAX": "256"},
         "ogr": {"OGR_SRS_PARSER": "strict"},
     }
-    # `initialize_gdal` now really writes os.environ["GDAL_DRIVER_PATH"], so arm monkeypatch's
-    # restore BEFORE calling it. Without this the composed tmp_path leaks into the rest of the
-    # session, and the cross-process tests in tests/netcdf/io/test_pickle.py fail in their dask
-    # workers with "plugin gdal_HDF5.so is not available" -- on Linux, where netCDF/HDF5 are
-    # separate plugins found only through this variable.
-    monkeypatch.setenv("GDAL_DRIVER_PATH", os.environ.get("GDAL_DRIVER_PATH", ""))
+    # Drop the inherited value for the duration: with nothing else to point at, the
+    # composition falls back to it, which would make the "nothing was set" cases below
+    # depend on how the ambient environment was activated. delenv also arms monkeypatch's
+    # restore, which matters because initialize_gdal really does write os.environ now --
+    # a leaked tmp_path here broke the cross-process tests in tests/netcdf/io/test_pickle.py
+    # on Linux, where netCDF/HDF5 are separate plugins found only through this variable.
+    monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
     # No bundled dir and no companion, so `dynamic_env_variables` is the only input and this
     # stays a test of the discovered-path branch alone. See
     # tests/base/test_gdal_plugin_path.py for the composition itself.
@@ -327,6 +327,9 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
     # Case 3: a path that does not exist is dropped rather than handed to GDAL. The real
     # `dynamic_env_variables` already returns only directories it verified, so this guards the
     # composition's own hygiene -- GDAL is never pointed at a directory that is not there.
+    # Case 2 really wrote os.environ, and an inherited value is deliberately kept when
+    # nothing else points anywhere, so clear it again to isolate the discovered path.
+    monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
     mock_dyn.return_value = tmp_path / "vanished"
     cfg.initialize_gdal()
     assert ("GDAL_DRIVER_PATH",) not in [c.args[:1] for c in mock_setopt.call_args_list]
