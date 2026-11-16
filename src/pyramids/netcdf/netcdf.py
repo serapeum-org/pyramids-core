@@ -5409,8 +5409,14 @@ class NetCDF(Dataset):
                 static-plot path. ``None`` (default) preserves the eager
                 read. Any of ``int`` / ``tuple`` / ``dict`` / ``"auto"``
                 switches to the dask-backed lazy read and only the
-                rendered slice is materialised. Has no effect on the
-                ``animate=`` path. Defaults to None.
+                rendered slice is materialised. A ``dict`` is keyed by
+                integer axis index, or by the case-insensitive aliases
+                ``rows`` / ``cols`` / ``columns`` / ``bands`` — never by
+                dimension name, so ``{0: 1}`` rather than
+                ``{"time": 1}``; see :meth:`read_array`. Has no effect
+                on the ``animate=`` path, where it is discarded before
+                the renderer sees it and not even an invalid spec
+                raises. Defaults to None.
             basemap (bool, str, or Basemap, optional):
                 Reference layer, dispatched by type. ``True`` or a named basemap
                 tile provider overlays a pyramids web-tile basemap; a
@@ -5942,18 +5948,20 @@ class NetCDF(Dataset):
                 preserves the legacy behavior. Any of `int`,
                 `tuple`, `dict`, or the string `"auto"` switches
                 to a :class:`dask.array.Array` backed by MDArray
-                chunk reads. A `dict`'s keys are the installed
-                backend's to define: `pyramids-lazy` keys them by
-                **axis index** in storage order, or by the aliases
-                `"bands"` (the sole non-spatial leading axis),
-                `"rows"` (axis `-2`) and `"cols"` / `"columns"`
-                (axis `-1`) — so `{0: 24}`, not `{"time": 24}`. A
-                dimension name is **not** a valid key and raises
-                :class:`ValueError`. Defaults chunked at the variable's
+                chunk reads. Defaults chunked at the variable's
                 native `GetBlockSize` (see
                 :attr:`pyramids.netcdf.models.VariableInfo.block_size`);
                 a conservative `(1,..., rows, cols)` fallback is
-                used when the driver doesn't advertise one.
+                used when the driver doesn't advertise one. A
+                `dict`'s keys are the installed backend's to define:
+                `pyramids-lazy` keys them by **integer axis index**
+                in storage order, or by the case-insensitive aliases
+                `rows` (axis `ndim - 2`), `cols` / `columns` (axis
+                `ndim - 1`) and `bands` (the leading non-spatial
+                axis, when there is exactly one) — so `{0: 24}`, not
+                `{"time": 24}`, which raises :class:`ValueError`. A
+                negative index is rejected, and `bands` raises on a
+                2-D variable or on one with several non-spatial axes.
             lock: Lock passed to the underlying
                 :class:`pyramids.base._file_manager.CachingFileManager`.
                 `None` → :func:`pyramids.base._locks.default_lock`
@@ -14622,7 +14630,14 @@ class NetCDF(Dataset):
         editor completion all read the facade, not the engine behind it.
 
         Args:
-            chunks: Dask chunking for a lazy read, or `None` to read eagerly.
+            chunks: Dask chunking for a lazy read, or `None` to read eagerly. A `dict` is
+                keyed by **integer axis index**, or by the case-insensitive aliases
+                `rows` / `cols` / `columns` / `bands` — never by dimension name, despite
+                the xarray shape of this entry point. An unusable key does **not** raise
+                here: the per-variable fallback reads that variable eagerly instead, so
+                `chunks={"time": 1}` returns a fully eager dataset with no chunking and
+                no warning, while `{0: 1}` chunks as asked. Check `result.chunksizes`
+                rather than assuming the spec took effect.
             decode_times: Whether to decode a CF time axis to `datetime64[ns]`. `False`
                 returns the stored offsets.
 
