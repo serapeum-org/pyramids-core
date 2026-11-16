@@ -180,7 +180,11 @@ t2m = nc.read_array(
 t2m.mean(axis=0).compute()        # monthly mean, parallel
 ```
 
-See [Lazy NetCDF](../../tutorials/lazy/lazy-netcdf.md) for chunk-size rules,
+A `chunks=` dict is keyed by **integer axis index**, or by one of the case-insensitive aliases
+`rows` / `cols` / `columns` / `bands` — never by dimension name, so `{0: 24}` rather than
+`{"time": 24}`, which raises `ValueError`.
+
+See [Lazy NetCDF](../../tutorials/lazy/lazy-netcdf.md) for the full key rule, chunk-size guidance,
 CF scale/offset unpacking, and kerchunk manifest emission.
 
 Install: `pip install 'pyramids-lazy'` for the core path and
