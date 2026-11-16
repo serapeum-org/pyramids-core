@@ -2254,6 +2254,96 @@ class MeshDataset(_MeshFacades):
             resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
         )
 
+    @classmethod
+    def _resolved_mfdataset_inputs(
+        cls,
+        paths: str | Path | Sequence[str | Path],
+        *,
+        driver: str | None,
+        chunks: dict | str | int | tuple[int, ...] | None,
+    ) -> list[str]:
+        """Expand `paths` and refuse every input core can judge, before the eager/lazy split.
+
+        Everything core owns about the inputs lives here so the eager and lazy paths reject bad
+        input identically. Without it the lazy branch reported a typo'd filename or an unknown
+        driver as "upgrade pyramids-lazy" -- the confusion `_require_existing_file` exists to
+        stop (review M3/M4) -- and a results-only driver was refused eagerly but forwarded
+        lazily (review L1).
+
+        Args:
+            paths: A glob pattern, one path, or a sequence of paths.
+            driver: Mesh driver name, or `None` to detect per file.
+            chunks: The caller's chunking argument, judged only for the values whose emptiness
+                is meaningful.
+
+        Returns:
+            The resolved paths as `str`, in the order to open them. One spelling, because the
+                glob branch yields `str` while the sequence and single-path branches would
+                otherwise pass the caller's own objects through to the backend (review L2).
+
+        Raises:
+            ValueError: `paths` is empty, a glob pattern matches nothing, or `chunks` is a falsy
+                value other than `None` and so selects neither path.
+            FileNotFoundError: A resolved path does not exist.
+            DriverNotExistError: `driver` names a driver that is not installed.
+            UnsupportedMeshFormatError: `driver` names a results-only (`needs_mesh`) driver,
+                which carries values but no topology and cannot open a file on its own.
+        """
+        if isinstance(paths, (str, Path)):
+            pattern = str(paths)
+            is_pattern = any(character in pattern for character in "*?[")
+            matched = sorted(glob(pattern)) if is_pattern else []
+            if matched:
+                resolved: list[str] = list(matched)
+            elif is_pattern:
+                raise ValueError(
+                    f"open_mfdataset() got the pattern {pattern!r}, which matches no file."
+                )
+            else:
+                resolved = [str(paths)]
+        else:
+            resolved = [str(path) for path in paths]
+        if not resolved:
+            raise ValueError(
+                "open_mfdataset() got an empty list of paths; there is nothing to open."
+            )
+        for path in resolved:
+            _require_existing_file(path)
+        cls._refuse_unusable_driver(driver, resolved[0])
+        if isinstance(chunks, _JUDGEABLE_CHUNKS) and not chunks:
+            # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
+            # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the
+            # opposite. Reject them instead of guessing which was meant (review N3).
+            raise ValueError(
+                f"open_mfdataset() got chunks={chunks!r}, which selects neither path: pass "
+                "chunks=None to read eagerly, or a chunk mapping, 'auto', an int block "
+                "size, -1, or a per-axis tuple to read lazily."
+            )
+        return resolved
+
+    @classmethod
+    def _refuse_unusable_driver(cls, driver: str | None, target: str) -> None:
+        """Refuse a named driver that cannot open a file on its own.
+
+        The eager path refuses a results-only (`needs_mesh`) driver inside
+        `_resolve_read_driver`; doing it here keeps both paths symmetric. It is a capability
+        lookup on the already-resolved driver, so it costs no file read.
+
+        Args:
+            driver: Mesh driver name, or `None` to detect per file.
+            target: The first resolved path, shown in the message's suggested `attach_data`
+                call. The driver name would render a nonsense suggestion there.
+
+        Raises:
+            DriverNotExistError: The name is neither reserved nor installed.
+            UnsupportedMeshFormatError: The driver carries values but no topology.
+        """
+        if driver is None:
+            return
+        selected, _ = _named_read_driver(driver)
+        if selected is not None and "needs_mesh" in selected.capabilities:
+            raise _needs_mesh_error(selected, target)
+
     @overload
     @classmethod
     def open_mfdataset(
@@ -2385,50 +2475,7 @@ class MeshDataset(_MeshFacades):
 
                 ```
         """
-        if isinstance(paths, (str, Path)):
-            pattern = str(paths)
-            is_pattern = any(character in pattern for character in "*?[")
-            matched = sorted(glob(pattern)) if is_pattern else []
-            if matched:
-                resolved: list[str | Path] = list(matched)
-            elif is_pattern:
-                raise ValueError(
-                    f"open_mfdataset() got the pattern {pattern!r}, which matches no file."
-                )
-            else:
-                resolved = [paths]
-        else:
-            resolved = list(paths)
-        if not resolved:
-            raise ValueError(
-                "open_mfdataset() got an empty list of paths; there is nothing to open."
-            )
-        # Validate everything core owns before the eager/lazy split, so the two paths reject
-        # bad input identically. Without this the lazy branch reports a typo'd filename or an
-        # unknown driver as "upgrade pyramids-lazy", which is the confusion
-        # `_require_existing_file` was introduced to stop (review M3/M4).
-        # One spelling for the backend and for every message below: the glob branch already
-        # yields `str`, while the sequence and single-path branches pass the caller's objects
-        # through, so without this the backend's input type depended on how the call was written.
-        resolved = [str(path) for path in resolved]
-        for path in resolved:
-            _require_existing_file(path)
-        if driver is not None:
-            selected, _ = _named_read_driver(driver)
-            if selected is not None and "needs_mesh" in selected.capabilities:
-                # The eager path refuses a results-only driver in `_resolve_read_driver`; doing
-                # it here too keeps both paths symmetric, and it is a capability lookup on the
-                # named driver, so it costs no file read.
-                raise _needs_mesh_error(selected, str(resolved[0]))
-        if isinstance(chunks, _JUDGEABLE_CHUNKS) and not chunks:
-            # `chunks is not None` is the eager/lazy switch, so every falsy non-None value used
-            # to dispatch lazily -- and `chunks=False` reads as "do not chunk" while doing the
-            # opposite. Reject them instead of guessing which was meant (review N3).
-            raise ValueError(
-                f"open_mfdataset() got chunks={chunks!r}, which selects neither path: pass "
-                "chunks=None to read eagerly, or a chunk mapping, 'auto', an int block "
-                "size, -1, or a per-axis tuple to read lazily."
-            )
+        resolved = cls._resolved_mfdataset_inputs(paths, driver=driver, chunks=chunks)
         if chunks is not None:
             return cls._open_mfdataset_lazy(
                 resolved, chunks=chunks, driver=driver, mesh_name=mesh_name, sort=sort
