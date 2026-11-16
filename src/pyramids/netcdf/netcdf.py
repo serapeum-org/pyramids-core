@@ -8277,7 +8277,14 @@ class NetCDF(Dataset):
 
         Args:
             chunks: Chunking spec forwarded to :meth:`read_array`; `"auto"` (default) targets dask's
-                byte budget. Any form `read_array` accepts works.
+                byte budget. Any form `read_array` accepts works, under `read_array`'s key rule: a
+                `dict` is keyed by integer axis index or by the case-insensitive `rows` / `cols` /
+                `columns` / `bands`, never by dimension name.
+
+                The returned view's own `chunks` / `chunksizes` report is keyed by **dimension
+                name**, so it is not round-trippable back into this argument —
+                `nc.chunk(nc.chunk().chunks)` raises :class:`ValueError` on the first name that is
+                not one of those four aliases. Translate the names to axis indices first.
 
         Returns:
             LazyNetCDF: A lazy view over this cube's gridded variables.
@@ -8285,7 +8292,8 @@ class NetCDF(Dataset):
         Raises:
             OptionalPackageDoesNotExist: No lazy compute backend is installed; the dask-dataframe
                 build dispatches to pyramids-lazy (`pip install pyramids-lazy`).
-            ValueError: This cube has no on-disk store to read lazily (see :meth:`read_array`).
+            ValueError: This cube has no on-disk store to read lazily, or `chunks` carries a key
+                `read_array` cannot resolve — a dimension name included (see :meth:`read_array`).
         """
         # Dispatch to the lazy compute backend (pyramids-lazy), which does the per-variable lazy
         # read + builds the LazyNetCDF; raises the branded OptionalPackageDoesNotExist when absent.
@@ -9886,8 +9894,29 @@ class NetCDF(Dataset):
         Args:
             paths: Glob string, explicit path, or sequence of paths.
             variable: Name of the variable to extract from each file.
-            chunks: Chunk spec forwarded to
-                :meth:`NetCDF.read_array`.
+            chunks: Chunk spec forwarded to :meth:`NetCDF.read_array`
+                for the **per-file** read. `None` does **not** read
+                eagerly here, unlike every other `chunks=` in this
+                class: it is replaced by `"auto"`, so the result is a
+                lazy dask array either way. Keys follow
+                `read_array`'s vocabulary — an integer axis index or
+                the case-insensitive `rows` / `cols` / `columns` /
+                `bands`, never a dimension name — and an unusable one
+                raises :class:`ValueError` from the per-file read
+                rather than degrading to an eager one.
+
+                Both a key and a tuple's length resolve against the
+                **per-file** variable's rank, not the stacked
+                result's. For a 2-D per-file variable the stack is
+                3-D, yet `{2: 1}` raises `axis 2 out of range for
+                ndim=2` and a 3-entry tuple raises `chunks tuple
+                length 3 does not match array ndim 2` — size the
+                spec to the variable, not to what comes back.
+
+                The leading file axis cannot be chunked at all:
+                :func:`dask.array.stack` gives it one block per file
+                whatever is passed here, so a 365-file stack always
+                reports `(1,) * 365` on axis 0.
             parallel: Deprecated and inert; kept for backward compatibility.
                 Passing a truthy value emits a `DeprecationWarning`.
             preprocess: Optional callable applied to each
@@ -9895,6 +9924,16 @@ class NetCDF(Dataset):
 
         Returns:
             dask.array.Array: Stack of shape `(n_files, *var_shape)`.
+            Always lazy — see `chunks` for why `None` does not make
+            it eager.
+
+        Raises:
+            ValueError: A `chunks` dict carries an unusable key, or a
+                `chunks` tuple's length does not match the per-file
+                variable's rank. Both are raised by the per-file
+                :meth:`read_array`, so they report the per-file rank.
+            TypeError: `chunks` is not `None`, an `int`, a `tuple`, a
+                `list`, a `dict` or `"auto"`.
         """
         from pyramids.base._compute_backend import require_compute_backend
 
