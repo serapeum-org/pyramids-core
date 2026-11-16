@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7245,6 +7245,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8242,6 +8253,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8672,6 +8694,19 @@ Codecov's dashboard), see the follow-up notes in the PR that added the
 extras-package matrix — adding a <code>coverage-combine</code> job that downloads each
 job's <code>.coverage</code> artifact, runs <code>coverage combine</code>, and enforces a single
 <code>--fail-under</code> against the merged total is the standard pattern.</p>
+<h2 id="benchmarks"><a class="toclink" href="#benchmarks">Benchmarks</a><a class="headerlink" href="#benchmarks" title="Permanent link">#</a></h2>
+<p>The micro-benchmark suite lives in <code>benchmarks/</code> (seven <code>test_bench_*.py</code> modules) and runs via the
+<code>benchmark</code> pixi task:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>dev<span class="w"> </span>benchmark<span class="w">            </span><span class="c1"># pytest benchmarks --benchmark-only …</span>
+</code></pre></div>
+<p>Benchmarks are <strong>not</strong> a build gate — shared GitHub runners are too noisy to compare absolute milliseconds
+commit-to-commit. The nightly <code>benchmarks.yml</code> workflow (04:00 UTC, plus <code>workflow_dispatch</code>) runs the suite,
+uploads the raw <code>--benchmark-json</code> as a 90-day artifact, and feeds
+<a href="https://github.com/benchmark-action/github-action-benchmark"><code>github-action-benchmark</code></a>, which appends each run to
+a history on <code>gh-pages</code> and publishes a trend chart:</p>
+<p><strong><a href="https://serapeum-org.github.io/pyramids-core/bench/">https://serapeum-org.github.io/pyramids-core/bench/</a></strong></p>
+<p>A run that regresses ≥ 1.5× past the baseline posts a commit comment that @-mentions the maintainer; it never fails
+the run. Compare two local runs with <code>pytest-benchmark compare</code>.</p>
 <h2 id="troubleshooting"><a class="toclink" href="#troubleshooting">Troubleshooting</a><a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h2>
 <h3 id="required-test-coverage-of-88-not-reached"><a class="toclink" href="#required-test-coverage-of-88-not-reached">"Required test coverage of 88 % not reached"</a><a class="headerlink" href="#required-test-coverage-of-88-not-reached" title="Permanent link">#</a></h3>
 <p>Either real regression, or a test suite failure that dropped some lines out of
