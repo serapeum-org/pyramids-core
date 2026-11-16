@@ -40,16 +40,41 @@ temp_lazy.shape        # (8760, 721, 1440)
 temp_lazy.chunks       # chunked tuples per axis
 ```
 
-Chunk spec accepts the same forms as `Dataset.read_array`: `None`
+Chunk spec accepts the same *forms* as `Dataset.read_array`: `None`
 (eager), `"auto"`, `-1` (single chunk), an int, a tuple, or a dict.
+The two differ in how a dict's keys are read — see the end of this
+section.
 
 A dict's keys are **integer axis indices** in the variable's storage
-order, or one of the aliases `"bands"` (the sole non-spatial leading
-axis), `"rows"` (axis `-2`) and `"cols"` / `"columns"` (axis `-1`).
-**A dimension name is not a valid key** — `{0: 24}` chunks the first
-axis, while `{"time": 24}` raises `ValueError`. Note the asymmetry:
-`NetCDF.chunk(...).chunks` *reports* sizes keyed by dimension name,
-but that mapping cannot be fed back into `chunks=` unchanged.
+order, counted from 0: `{0: 24}` chunks the first axis. Four
+case-insensitive aliases are also accepted — `rows` (axis
+`ndim - 2`), `cols` and `columns` (axis `ndim - 1`), and `bands` (the
+leading non-spatial axis). Any other key raises `ValueError`, so a
+**dimension name such as `"time"` or `"lat"` is not a valid key**.
+
+The edges are sharper than that summary suggests, and all of these
+raise rather than falling back:
+
+- A negative index is rejected, so `rows` / `cols` are *not*
+  interchangeable with `{-2: …}` / `{-1: …}`.
+- `bands` needs exactly one non-spatial axis: it is "not meaningful"
+  on a 2-D variable and "ambiguous" on a 4-D one, which the
+  surrounding ERA5 examples make a live case. Chunk those by integer
+  axis index.
+- `rows` / `cols` need at least 2-D.
+- The aliases match on the name alone, not on a dimension's role, so
+  a variable whose dimension is literally called `rows` still gets
+  `ndim - 2` — which may not be that dimension's axis.
+
+Note the asymmetry: `NetCDF.chunk(...).chunks` *reports* sizes keyed
+by dimension name, but that mapping cannot be fed back into
+`chunks=` unchanged.
+
+**This key handling is the pyramids-lazy NetCDF path only.**
+`Dataset.read_array` forwards its dict to dask's `normalize_chunks`,
+which silently **ignores** any key it does not recognise — including
+all four aliases above — instead of raising. There,
+`chunks={"rows": 2048}` reads unchunked and tells you nothing.
 
 ### Native chunks = best default
 

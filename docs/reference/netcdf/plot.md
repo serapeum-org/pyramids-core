@@ -78,9 +78,11 @@ the whole month. `get_time_variable()` reports date-only labels unless asked for
 selectors on other dims are unaffected and stay exact.
 See [Dimension coordinates and selection](index.md#dimension-coordinates-and-selection).
 
-A `chunks=` dict is keyed by **integer axis index** in storage order, or by one of the aliases
-`bands` (the sole non-spatial leading axis), `rows` (axis `-2`) and `cols` / `columns` (axis `-1`).
-A dimension name is not a valid key: pass `{0: 1}`, not `{"time": 1}`, which raises `ValueError`.
+A `chunks=` dict is keyed by **integer axis index** in storage order, or by one of the
+case-insensitive aliases `rows` (axis `ndim - 2`), `cols` / `columns` (axis `ndim - 1`) and `bands`
+(the leading non-spatial axis, when there is exactly one). A dimension name is not a valid key: pass
+`{0: 1}`, not `{"time": 1}`, which raises `ValueError`. Negative indices are rejected too. See
+[Lazy NetCDF](../../tutorials/lazy/lazy-netcdf.md) for the full rule.
 
 The GeoTIFF-only kwargs `band`, `rgb`, `surface_reflectance`, `cutoff`, `percentile`, `overview`,
 and `overview_index` are **not** accepted on `NetCDF.plot` — passing any of them raises `TypeError`
