@@ -92,24 +92,24 @@ from pyramids.netcdf import NetCDF
 stack = NetCDF.open_mfdataset(
     "/data/noah_*.nc",           # glob string
     variable="precipitation",
-    chunks={0: 1, 1: 256, 2: 256},   # (time, lat, lon)
-    parallel=True,               # fan out file opens over workers
+    chunks={0: 256, 1: 256},     # per FILE: each daily file is 2-D (lat, lon)
 )
 
 stack.shape          # (n_files, H, W)
 stack.mean(axis=0).compute()   # climatological mean
 ```
 
-Three arguments worth knowing:
+Two arguments worth knowing:
 
-- `parallel=True` wraps each file's metadata read in `dask.delayed`
-  so opening 500 files on a distributed cluster fans out across
-  workers instead of blocking sequentially. The probe of the first
-  file stays eager so the stack shape + dtype are known at
-  graph-construction time.
-- `chunks=` forwards to every per-file `read_array` call. Pick
-  carefully: a chunk spec that doesn't align with per-file layout
-  forces re-chunking on every read.
+- `chunks=` forwards to every per-file `read_array` call, so it
+  describes **one file's** variable — not the stacked result. Each
+  daily `noah_*.nc` here holds a 2-D `(lat, lon)` grid, so the spec
+  has two axes; `{0: 1, 1: 256, 2: 256}` would raise
+  `ValueError: chunks dict axis 2 out of range for ndim=2`. The file
+  axis the stack adds at axis 0 is created by the stacking itself and
+  cannot be addressed through `chunks=` at all. Pick the rest
+  carefully: a spec that doesn't align with the per-file layout forces
+  re-chunking on every read.
 - `preprocess=` applies a user callable to each `NetCDF` subset
   before its array is extracted. Useful for unpacking, cropping, or
   dropping auxiliary variables.
