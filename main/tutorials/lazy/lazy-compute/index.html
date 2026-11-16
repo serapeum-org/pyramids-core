@@ -8159,7 +8159,9 @@
 <h1 id="lazy-computation-with-dask"><a class="toclink" href="#lazy-computation-with-dask">Lazy computation with Dask</a><a class="headerlink" href="#lazy-computation-with-dask" title="Permanent link">#</a></h1>
 <p>Pyramids ships a Dask-backed path for every subsystem that routinely
 handles data too large to load eagerly: rasters, NetCDFs, time-series
-collections, and vector tables. This page is the entry point. It
+collections, and vector tables. Unstructured meshes have one entry
+point so far -- see <code>MeshDataset.open_mfdataset(chunks=...)</code>, which
+needs a lazy-capable <code>pyramids-lazy</code>. This page is the entry point. It
 explains <strong>when to go lazy</strong>, <strong>what the common building blocks look
 like</strong>, and <strong>how to wire a cluster</strong>. The per-subsystem how-tos drill
 into the specifics:</p>
@@ -8216,8 +8218,9 @@ makes redundant, and <strong>parallelising I/O</strong> across workers. If neith
 applies, the eager path is faster because it skips the graph-building
 cost.</p>
 <h2 id="the-three-building-blocks"><a class="toclink" href="#the-three-building-blocks">The three building blocks</a><a class="headerlink" href="#the-three-building-blocks" title="Permanent link">#</a></h2>
-<p>Every lazy entry point in pyramids produces one of these three
-objects:</p>
+<p>Nearly every lazy entry point in pyramids produces one of these three
+objects (the exception is <code>MeshDataset.open_mfdataset(chunks=...)</code>,
+whose return type is defined by the backend rather than by core):</p>
 <ol>
 <li><code>dask.array.Array</code> — returned by <code>Dataset.read_array(chunks=…)</code>,
    <code>NetCDF.read_array(chunks=…)</code>, and <code>open_mfdataset(...)</code>. The

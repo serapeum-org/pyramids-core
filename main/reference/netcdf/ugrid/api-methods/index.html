@@ -8445,9 +8445,9 @@ grouped by category.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>open_mfdataset(paths, driver, mesh_name, sort)</code></td>
+<td><code>open_mfdataset(paths, chunks, driver, mesh_name, sort)</code></td>
 <td><strong>(D)</strong></td>
-<td>Open many files on one topology, stacked along time</td>
+<td>Many files on one topology, stacked on time</td>
 </tr>
 <tr>
 <td><code>to_dask_dataframe(variables, dropna, npartitions)</code></td>
@@ -8556,6 +8556,11 @@ grouped by category.</p>
 </tr>
 </tbody>
 </table>
+<p><code>open_mfdataset(..., chunks=...)</code> forwards to the compute backend instead of reading eagerly.
+It needs a <code>pyramids-lazy</code> that provides <code>open_mesh_mfdataset</code>, and raises a branded error naming
+the upgrade when the installed one does not. <code>chunks=None</code> (the default) is
+the eager read and needs no backend. <code>sort=</code> is forwarded to the backend and means the same on
+both paths.</p>
 <hr />
 <h2 id="crs-management"><a class="toclink" href="#crs-management">CRS Management</a><a class="headerlink" href="#crs-management" title="Permanent link">#</a></h2>
 <table>
