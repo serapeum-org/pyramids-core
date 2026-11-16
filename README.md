@@ -179,7 +179,7 @@ print(nc.variables)
 nc.plot("t2m", selectors=Selectors(time="2020-07-01", level=850),
         cmap="coolwarm", robust=True)
 nc.plot("t2m", facet=FacetSpec(col="time", col_wrap=4))   # small multiples
-nc.plot("t2m", animate="time", chunks={0: 1})             # lazy per-frame animation
+nc.plot("t2m", animate="time")                            # lazy per-frame animation
 ```
 
 ```python

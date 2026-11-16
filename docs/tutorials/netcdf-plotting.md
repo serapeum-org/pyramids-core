@@ -173,8 +173,9 @@ anim = nc.plot("t2m", animate=True)        # same, when `time` is the leading di
 anim = nc.plot("t", selectors=Selectors(level=500), animate="time")
 ```
 
-Pair it with `chunks=` (see below) and pyramids streams one frame at a time from disk via a
-`data_getter` callback — the whole cube is never held in memory.
+Animation streams one frame at a time from disk via a `data_getter` callback, so the whole cube is
+never held in memory. That is unconditional — it needs no `chunks=`, and `chunks=` has no effect
+here (see below).
 
 ## 8. Lazy / dask reads
 
@@ -183,12 +184,14 @@ the slice (or animation frame) actually rendered is materialised:
 
 ```python
 nc.plot("t2m", chunks={0: 1})                          # lazy static plot of the leading slice
-nc.plot("t2m", animate="time", chunks={0: 1})          # lazy per-frame streaming
 ```
 
 A `chunks=` dict is keyed by **integer axis index**, or by one of the case-insensitive aliases
 `rows` / `cols` / `columns` / `bands` — never by dimension name. Pass `{0: 1}`, not `{"time": 1}`,
 which raises `ValueError`. See [Lazy NetCDF](lazy/lazy-netcdf.md) for the edge cases.
+
+It applies to the **static-plot path only**: on the `animate=` path `chunks=` is discarded before the
+renderer sees it, so it changes nothing and not even an invalid spec raises.
 
 Requires the `[lazy]` extra (`pip install 'pyramids-lazy'`). See
 [Lazy NetCDF](lazy/lazy-netcdf.md) for chunk-size guidance.

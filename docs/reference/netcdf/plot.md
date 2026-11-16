@@ -48,8 +48,8 @@ nc.plot("t2m", selectors=Selectors(time="2020-01-01 12:00:00", level=850),
 nc.plot("T2", axes=CoordinateSpec(coords=(XLONG, XLAT)), kind="pcolormesh",
         facet=FacetSpec(col="time", col_wrap=4))
 
-# animate over a dimension with lazy, per-frame reads (needs pyramids-lazy)
-nc.plot("t2m", animate="time", chunks={0: 1})
+# animate over a dimension; frames stream one at a time, no chunks= needed
+nc.plot("t2m", animate="time")
 ```
 
 ## Signature
@@ -83,6 +83,10 @@ case-insensitive aliases `rows` (axis `ndim - 2`), `cols` / `columns` (axis `ndi
 (the leading non-spatial axis, when there is exactly one). A dimension name is not a valid key: pass
 `{0: 1}`, not `{"time": 1}`, which raises `ValueError`. Negative indices are rejected too. See
 [Lazy NetCDF](../../tutorials/lazy/lazy-netcdf.md) for the full rule.
+
+`chunks=` applies to the **static-plot path only**. On the `animate=` path it is discarded before
+the renderer sees it, so it changes nothing there — not even an invalid spec raises. Animation
+streams frame by frame regardless, through its own `data_getter` callback.
 
 The GeoTIFF-only kwargs `band`, `rgb`, `surface_reflectance`, `cutoff`, `percentile`, `overview`,
 and `overview_index` are **not** accepted on `NetCDF.plot` — passing any of them raises `TypeError`
