@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import threading
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
@@ -289,6 +290,12 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
         "gdal": {"GDAL_CACHEMAX": "256"},
         "ogr": {"OGR_SRS_PARSER": "strict"},
     }
+    # `initialize_gdal` now really writes os.environ["GDAL_DRIVER_PATH"], so arm monkeypatch's
+    # restore BEFORE calling it. Without this the composed tmp_path leaks into the rest of the
+    # session, and the cross-process tests in tests/netcdf/io/test_pickle.py fail in their dask
+    # workers with "plugin gdal_HDF5.so is not available" -- on Linux, where netCDF/HDF5 are
+    # separate plugins found only through this variable.
+    monkeypatch.setenv("GDAL_DRIVER_PATH", os.environ.get("GDAL_DRIVER_PATH", ""))
     # No bundled dir and no companion, so `dynamic_env_variables` is the only input and this
     # stays a test of the discovered-path branch alone. See
     # tests/base/test_gdal_plugin_path.py for the composition itself.
