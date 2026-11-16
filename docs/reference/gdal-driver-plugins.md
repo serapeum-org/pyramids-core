@@ -69,7 +69,8 @@ A GDAL plugin is **not** portable between GDAL builds:
   unmangled name and will fail to resolve it.
 
 In short: a companion plugin wheel has to be produced by the same build that produced the core wheel it targets.
-See `planning/bundle/ogr-parquet-driver-plan-2026-11-16.md` for the full analysis.
+This is why no companion plugin wheel ships today, and it is the main open question in
+[#457](https://github.com/serapeum-org/pyramids-core/issues/457).
 
 ## Parquet and Arrow: what works where
 
