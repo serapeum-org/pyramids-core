@@ -231,7 +231,7 @@ The micro-benchmark suite lives in `benchmarks/` (seven `test_bench_*.py` module
 `benchmark` pixi task:
 
 ```bash
-pixi run -e dev benchmark            # pytest benchmarks --benchmark-only
+pixi run -e dev benchmark            # pytest benchmarks --benchmark-only …
 ```
 
 Benchmarks are **not** a build gate — shared GitHub runners are too noisy to compare absolute milliseconds
