@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794839060672,
+  "lastUpdate": 1794918968934,
   "repoUrl": "https://github.com/serapeum-org/pyramids-core",
   "entries": {
     "Benchmark": [
@@ -274,6 +274,280 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00003595793710909527",
             "extra": "mean: 3.678740647726997 msec\nrounds: 264"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Mostafa Farrag",
+            "username": "MAfarrag",
+            "email": "moah.farag@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "c57dd67928040631f4793e3a0b7206c5c0b4e6a7",
+          "message": "docs(netcdf): replace the chunks= dimension-name keys no backend accepts (#1584)\n\n  Twelve snippets across six files documented `chunks=` as a mapping keyed                                   \n  by dimension name (`{\"time\": 24, \"lat\": 256, \"lon\": 256}`). No installed                                   \n  backend accepts that spelling: a chunks dict is keyed by integer axis                                      \n  index, or by the case-insensitive aliases `rows` / `cols` / `columns` /                                    \n  `bands`. Nine of the twelve raised `ValueError`; the other three sit on                                    \n  the `animate=` path, where the argument is discarded before the renderer                                   \n  sees it, so they silently did nothing at all.                                                              \n                                                                                                             \n  The spelling was not invented. `NetCDF.chunk(...).chunks` reports chunk                                    \n  sizes keyed by dimension name, so the read side cannot consume the write                                   \n  side's output and the pages used the spelling the API itself advertises.                                   \n  Teaching `chunks=` to accept dimension names is a backend decision and                                     \n  is not attempted here.                                                                                     \n                                                                                                             \n  - Rewrite all twelve: five in the lazy tutorial, two in the plotting                                       \n    tutorial, one each in the netcdf reference index and plot pages, one                                     \n    in README, and two code cells in the dask-lazy notebook that a                                           \n    quote-sensitive grep had missed, since .ipynb escapes its quotes.                                        \n  - State the accepted keys, their edges and the round-trip asymmetry at                                     \n    every seam documenting the argument: `read_array`, `plot`, `to_xarray`                                   \n    (facade and engine), `chunk`, `open_mfdataset` and the mesh                                              \n    `open_mfdataset`.                                                                                        \n  - Correct three seam behaviours documented wrongly or not at all:                                          \n    `to_xarray` swallows an unusable key and falls back to an eager read                                     \n    per variable instead of raising; `open_mfdataset` resolves keys                                          \n    against the per-file variable and treats `chunks=None` as `\"auto\"`                                       \n    rather than as the eager path every other seam gives it; and keys                                        \n    resolve against the stored rank, which `VariableInfo.shape` need not                                     \n    show, so `{0: 1}` can silently chunk rows.                                                               \n  - Add `tests/netcdf/io/test_chunks_key_contract.py` and four plot cases                                    \n    — 52 tests pinning the accepted vocabulary by resolved chunk layout                                      \n    rather than by \"did not raise\", every rejection class, `bands` arity                                     \n    across 2-D/3-D/4-D, the non-round-trippable `chunk()` report, the                                        \n    per-variable `to_xarray` fallback, and the animate-inert versus                                          \n    static-raises asymmetry.\n                                                                                                           \n  Nothing in these pages had ever been executed: no markdown-exec,                                           \n  pytest-codeblocks or mktestdocs is configured, and nbval skips the one                                     \n  notebook involved. Every spec written here was run against a variable of                                   \n  the shape its page describes. No executable source line changed — the                                      \n  three touched modules are AST-identical to main once docstrings are                                        \n  stripped.                                                                                                  \n                                                                                                             \n  Closes #1582",
+          "timestamp": "2026-11-16T16:11:41Z",
+          "url": "https://github.com/serapeum-org/pyramids-core/commit/c57dd67928040631f4793e3a0b7206c5c0b4e6a7"
+        },
+        "date": 1794918949799,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_bench_collection.py::test_from_dataset",
+            "value": 5026.0587481725115,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003561879928749374",
+            "extra": "mean: 198.9630543740864 usec\nrounds: 423"
+          },
+          {
+            "name": "benchmarks/test_bench_collection.py::test_mean_reduction",
+            "value": 37.316399768100894,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006067570923932161",
+            "extra": "mean: 26.79786919998719 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_collection.py::test_apply",
+            "value": 39.052644219669276,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013834466378714853",
+            "extra": "mean: 25.60646071428729 msec\nrounds: 35"
+          },
+          {
+            "name": "benchmarks/test_bench_collection.py::test_to_cog_stack",
+            "value": 3.96992252669196,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004989150961447719",
+            "extra": "mean: 251.8940843999985 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_collection.py::test_merge",
+            "value": 6.668647477255602,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00037914210528703187",
+            "extra": "mean: 149.95544500000133 msec\nrounds: 7"
+          },
+          {
+            "name": "benchmarks/test_bench_feature.py::test_fishnet_build",
+            "value": 139.21184849687316,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025917814286865527",
+            "extra": "mean: 7.183296614457792 msec\nrounds: 83"
+          },
+          {
+            "name": "benchmarks/test_bench_feature.py::test_rasterize",
+            "value": 4.262888871358902,
+            "unit": "iter/sec",
+            "range": "stddev: 0.05201104016920388",
+            "extra": "mean: 234.58270439999183 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_feature.py::test_with_centroid",
+            "value": 4.172433160531022,
+            "unit": "iter/sec",
+            "range": "stddev: 0.05375852185481761",
+            "extra": "mean: 239.66830900000105 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_feature.py::test_geodesic_area",
+            "value": 3.066018530135452,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000519701483091169",
+            "extra": "mean: 326.1558891999982 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_memory.py::test_lazy_read_is_memory_bounded",
+            "value": 10.607785899608832,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003003465513183121",
+            "extra": "mean: 94.27037927272605 msec\nrounds: 11"
+          },
+          {
+            "name": "benchmarks/test_bench_netcdf.py::test_read_array_eager",
+            "value": 129.24376213625288,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008499300105991292",
+            "extra": "mean: 7.737317325580232 msec\nrounds: 86"
+          },
+          {
+            "name": "benchmarks/test_bench_netcdf.py::test_read_array_lazy",
+            "value": 52.83213456607938,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011260535071480992",
+            "extra": "mean: 18.92787426086784 msec\nrounds: 23"
+          },
+          {
+            "name": "benchmarks/test_bench_netcdf.py::test_isel",
+            "value": 114.13139366073554,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008492233308966887",
+            "extra": "mean: 8.761831148514474 msec\nrounds: 101"
+          },
+          {
+            "name": "benchmarks/test_bench_netcdf.py::test_sel",
+            "value": 95.21933860344716,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001587459515651797",
+            "extra": "mean: 10.502068326315781 msec\nrounds: 95"
+          },
+          {
+            "name": "benchmarks/test_bench_netcdf.py::test_subset",
+            "value": 380.89259895186217,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004760226231658306",
+            "extra": "mean: 2.625412000001558 msec\nrounds: 317"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_from_array",
+            "value": 243.75417010051828,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016703402904399498",
+            "extra": "mean: 4.102493916668685 msec\nrounds: 108"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_read_array_full",
+            "value": 844.6131887968054,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000011315949554415358",
+            "extra": "mean: 1.1839739341799187 msec\nrounds: 471"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_read_array_bbox",
+            "value": 541.569601039206,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012069019524611471",
+            "extra": "mean: 1.8464847326753977 msec\nrounds: 303"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_read_array_decimated",
+            "value": 4480.302173586463,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001826519077647777",
+            "extra": "mean: 223.19923104639707 usec\nrounds: 1108"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_read_file_from_disk",
+            "value": 18.92381084620482,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012500889597044518",
+            "extra": "mean: 52.843478944440555 msec\nrounds: 18"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_write_geotiff",
+            "value": 5.798074707933415,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006321742235112594",
+            "extra": "mean: 172.4710443333398 msec\nrounds: 6"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_to_cog",
+            "value": 4.151130707148982,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01654987571863747",
+            "extra": "mean: 240.898220400004 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_cog_full_read",
+            "value": 26.501036289162695,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015582558849561024",
+            "extra": "mean: 37.73437344444296 msec\nrounds: 27"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_cog_read_part_decimated",
+            "value": 355.89657524330715,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004320056538483789",
+            "extra": "mean: 2.8098050657451656 msec\nrounds: 289"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_cog_preview",
+            "value": 360.27007517965905,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002970233371633724",
+            "extra": "mean: 2.775695426552764 msec\nrounds: 354"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_cog_point",
+            "value": 388.24484507543946,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002416924217148037",
+            "extra": "mean: 2.5756942112282033 msec\nrounds: 374"
+          },
+          {
+            "name": "benchmarks/test_bench_raster_io.py::test_cog_read_tile",
+            "value": 106.31690265656145,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019960041237306026",
+            "extra": "mean: 9.405842109888479 msec\nrounds: 91"
+          },
+          {
+            "name": "benchmarks/test_bench_spatial.py::test_crop_bbox",
+            "value": 49.58781096343339,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004851813848284136",
+            "extra": "mean: 20.166246111114106 msec\nrounds: 45"
+          },
+          {
+            "name": "benchmarks/test_bench_spatial.py::test_reproject_to_web_mercator",
+            "value": 939.3765069793117,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023752403664208304",
+            "extra": "mean: 1.0645358837167764 msec\nrounds: 215"
+          },
+          {
+            "name": "benchmarks/test_bench_spatial.py::test_resample_coarsen",
+            "value": 19.91542726606348,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009735615812075036",
+            "extra": "mean: 50.212329700002556 msec\nrounds: 20"
+          },
+          {
+            "name": "benchmarks/test_bench_spatial.py::test_align_to_grid",
+            "value": 9.725533747552529,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001215762728577843",
+            "extra": "mean: 102.82212019999974 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_bench_spatial.py::test_warped_view_windowed_read",
+            "value": 105.14747959562338,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007209467414413704",
+            "extra": "mean: 9.51045145205386 msec\nrounds: 73"
+          },
+          {
+            "name": "benchmarks/test_bench_vectorize.py::test_to_polygons",
+            "value": 1.9728592186888854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009433985491211126",
+            "extra": "mean: 506.87853980000455 msec\nrounds: 5"
+          },
+          {
+            "name": "benchmarks/test_bench_vectorize.py::test_contour",
+            "value": 62.54689988073615,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00024078577361970197",
+            "extra": "mean: 15.988002633332599 msec\nrounds: 60"
+          },
+          {
+            "name": "benchmarks/test_bench_vectorize.py::test_sieve",
+            "value": 283.43596605996913,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025093074912068057",
+            "extra": "mean: 3.52813375769122 msec\nrounds: 260"
+          },
+          {
+            "name": "benchmarks/test_bench_vectorize.py::test_proximity",
+            "value": 391.4193877409878,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007206660282798692",
+            "extra": "mean: 2.554804466307442 msec\nrounds: 371"
           }
         ]
       }
