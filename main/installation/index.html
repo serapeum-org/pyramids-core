@@ -5403,6 +5403,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/gdal-driver-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GDAL driver plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/plot-backends/" class="md-nav__link">
         
   
@@ -5470,10 +5498,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_16" >
         
           
-          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_16" id="__nav_4_16_label" tabindex="0">
             
   
   
@@ -5491,8 +5519,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_15">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_16_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_16">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -5612,10 +5640,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_16" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_17" >
         
           
-          <label class="md-nav__link" for="__nav_4_16" id="__nav_4_16_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_17" id="__nav_4_17_label" tabindex="0">
             
   
   
@@ -5633,8 +5661,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_16_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_16">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_17_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_17">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -5754,10 +5782,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_17" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_18" >
         
           
-          <label class="md-nav__link" for="__nav_4_17" id="__nav_4_17_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_18" id="__nav_4_18_label" tabindex="0">
             
   
   
@@ -5775,8 +5803,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_17_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_17">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_18_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_18">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -6056,10 +6084,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_17_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_18_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_17_10" id="__nav_4_17_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_18_10" id="__nav_4_18_10_label" tabindex="0">
             
   
   
@@ -6077,8 +6105,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_17_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_17_10">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_18_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_18_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -8466,7 +8494,10 @@ the macOS and Windows x64 wheels). No <code>gdal-config</code>, no
 <li><code>parquet</code>: pyarrow, for eager GeoParquet I/O (<code>read_parquet</code> / <code>to_parquet</code>, which go through
   pyarrow and geopandas and need no backend). The <strong>lazy</strong> vector path
   (<code>LazyFeatureCollection</code>, <code>backend="dask"</code>) additionally needs dask-geopandas, which ships in
-  <code>pyramids-lazy[parquet]</code> — not here.</li>
+  <code>pyramids-lazy[parquet]</code> — not here. Note that <code>iter_features()</code> over a <code>.parquet</code> is a third,
+  separate thing: it streams through GDAL/OGR and so needs GDAL's <strong>OGR Parquet driver</strong>, which no
+  pyramids wheel bundles. See <a href="../reference/gdal-driver-plugins/">GDAL driver plugins</a> for what works
+  on which install path.</li>
 <li><code>dev</code>: nbval, pre-commit, pytest, coverage, build, twine, etc.</li>
 <li><code>docs</code>: mkdocs, mkdocs-material, mkdocstrings, mike, etc.</li>
 </ul>
