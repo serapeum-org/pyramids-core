@@ -94,10 +94,13 @@ only one code path needs. What that means in practice:
 
 So reading and writing GeoParquet is fully supported everywhere; only the OGR *streaming* path over a `.parquet`
 needs the driver. Attempting it without one raises a `VectorDriverError` naming both remedies — installing
-`libgdal-arrow-parquet` into a conda environment, or using `read_parquet()` instead:
+`libgdal-arrow-parquet` into a conda environment, or using `read_parquet()` instead.
+
+`iter_features` is a generator, so the call itself returns normally and the error surfaces on the first item.
+Wrap the iteration, not the call:
 
 ```python
->>> FeatureCollection.iter_features("reaches.parquet")   # doctest: +SKIP
+>>> list(FeatureCollection.iter_features("reaches.parquet"))   # doctest: +SKIP
 Traceback (most recent call last):
     ...
 pyramids.base._errors.VectorDriverError: Streaming 'reaches.parquet' requires reading it through

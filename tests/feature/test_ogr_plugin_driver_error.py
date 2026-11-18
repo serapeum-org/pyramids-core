@@ -21,6 +21,7 @@ import pytest
 from pyramids.base._errors import VectorDriverError
 from pyramids.feature import _read
 from pyramids.feature._read import _missing_ogr_plugin, _read_info_branded
+from pyramids.feature.collection import FeatureCollection
 
 pytestmark = pytest.mark.core
 
@@ -252,3 +253,60 @@ class TestEverythingElsePropagates:
 
         assert info == {"features": 7}
         assert seen["layer"] == "pts"
+
+
+class TestThroughThePublicApi:
+    """The branding reached through `FeatureCollection.iter_features`, not the private helper.
+
+    Every other test here calls `_read_info_branded` directly, which leaves the wiring at the
+    single call site uncovered — and the public method is a generator, so how the error surfaces
+    is itself part of the contract.
+    """
+
+    @pytest.fixture
+    def parquet_without_a_driver(self, monkeypatch, tmp_path: Path):
+        """A real file with a `.parquet` suffix, and no OGR Parquet driver registered."""
+        monkeypatch.setattr(_read.ogr, "GetDriverByName", lambda name: None)
+        source = tmp_path / "reaches.parquet"
+        source.write_bytes(b"PAR1 not really a parquet file")
+        return source
+
+    def test_iter_features_raises_the_branded_error(self, parquet_without_a_driver):
+        """The remedy reaches a caller of the public API.
+
+        Test scenario:
+            `list()` drives the generator to its first `next()`, which is where the read happens.
+        """
+        with pytest.raises(VectorDriverError) as caught:
+            list(FeatureCollection.iter_features(parquet_without_a_driver))
+
+        message = str(caught.value)
+        assert 'no OGR "Parquet" driver' in message, f"unexpected message: {message}"
+        assert "FeatureCollection.read_parquet()" in message, (
+            "the working alternative must be named"
+        )
+
+    def test_calling_it_does_not_raise_until_iterated(self, parquet_without_a_driver):
+        """`iter_features` is a generator, so the call itself cannot raise.
+
+        Test scenario:
+            Guidance that shows the error at call time is wrong, and a caller wrapping only the
+            call in `try` catches nothing. Binding the generator must be silent.
+        """
+        features = FeatureCollection.iter_features(parquet_without_a_driver)
+
+        with pytest.raises(VectorDriverError):
+            next(iter(features))
+
+    def test_it_is_catchable_as_a_runtime_error_end_to_end(
+        self, parquet_without_a_driver
+    ):
+        """Callers who widen from `DataSourceError` to `RuntimeError` keep working.
+
+        Test scenario:
+            `pyogrio.errors.DataSourceError` is itself a `RuntimeError` subclass, so an
+            `except RuntimeError` handler written against the old behaviour still catches the
+            new exception. This is the migration path the docstring points at.
+        """
+        with pytest.raises(RuntimeError):
+            list(FeatureCollection.iter_features(parquet_without_a_driver))

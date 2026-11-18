@@ -813,6 +813,17 @@ class FeatureCollection(GeoDataFrame):
                 `bbox` with any `tile_strategy` other than `"none"`),
                 since the emitted `id` is the absolute source-file row
                 position and would be wrong under such filtering.
+            pyramids.base._errors.VectorDriverError: If the format needs an
+                optional OGR plugin driver the active GDAL does not have —
+                `.parquet` / `.geoparquet` need `libgdal-arrow-parquet`,
+                which no pyramids wheel bundles. The message names how to
+                get the driver and points at `read_parquet`, which reads
+                the same file through pyarrow and needs no GDAL driver.
+                It subclasses `RuntimeError`; code that caught
+                `pyogrio.errors.DataSourceError` for this case must widen
+                to `RuntimeError` (which catches both) or to this class.
+                Because this method is a generator, the error surfaces on
+                the first `next()`, not when it is called.
 
         Examples:
             - Stream features one at a time as GeoJSON-style dicts:
