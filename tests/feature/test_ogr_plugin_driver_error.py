@@ -405,3 +405,41 @@ class TestALocalArchiveIsStatted:
         assert (
             _local_source_absent("/vsicurl/https://example.com/x.parquet") is False
         ), "a network /vsi path must not be probed"
+
+
+class TestReadFileCarriesTheSameRemedy:
+    """`read_file` is the first thing most users type, so it must brand too.
+
+    The branding was wired into `iter_features` only, which meant the user most likely to meet
+    the problem got GDAL's dead-end text instead of the remedy.
+    """
+
+    @pytest.fixture
+    def parquet_without_a_driver(self, monkeypatch, tmp_path: Path):
+        """A real `.parquet` file with no OGR Parquet driver registered."""
+        monkeypatch.setattr(_read.ogr, "GetDriverByName", lambda name: None)
+        source = tmp_path / "reaches.parquet"
+        source.write_bytes(b"PAR1 not really a parquet file")
+        return source
+
+    def test_read_file_raises_the_branded_error(self, parquet_without_a_driver):
+        """The same remedy, from the eager entry point."""
+        with pytest.raises(VectorDriverError) as caught:
+            FeatureCollection.read_file(parquet_without_a_driver)
+
+        message = str(caught.value)
+        assert 'no OGR "Parquet" driver' in message, f"unexpected message: {message}"
+        assert "FeatureCollection.read_parquet()" in message, (
+            "the working alternative must be named here too"
+        )
+
+    def test_an_unrelated_read_file_failure_is_untouched(self, monkeypatch, tmp_path):
+        """A format with an in-libgdal driver still fails as itself."""
+        monkeypatch.setattr(_read.ogr, "GetDriverByName", lambda name: None)
+
+        with pytest.raises(Exception) as caught:
+            FeatureCollection.read_file(tmp_path / "nope.geojson")
+
+        assert not isinstance(caught.value, VectorDriverError), (
+            f"a missing .geojson was branded as a driver problem: {caught.value}"
+        )

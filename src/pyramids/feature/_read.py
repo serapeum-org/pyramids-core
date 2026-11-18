@@ -825,7 +825,15 @@ def read_file(
             npartitions=npartitions,
             chunksize=chunksize,
         )
-    gdf = _read_file_healing_crs(resolved, passthrough)
+    try:
+        gdf = _read_file_healing_crs(resolved, passthrough)
+    except Exception as exc:
+        # `read_file` is the first thing most users type, so it must carry the same remedy
+        # `iter_features` does when the format's OGR plugin driver is absent or unloadable.
+        branded = _branded_driver_error(resolved, exc)
+        if branded is None:
+            raise
+        raise branded from exc
     return fc_cls(gdf)
 
 
@@ -1250,21 +1258,42 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
     try:
         info = pyogrio.read_info(path, **kwargs)
     except Exception as exc:
-        missing = _missing_ogr_plugin(path, exc)
-        if missing is None or _local_source_absent(path):
+        branded = _branded_driver_error(path, exc)
+        if branded is None:
             raise
-        driver, conda_package, alternative = missing
-        message = ogr_plugin_hint(
-            f"Streaming {Path(path).name!r} requires reading it through GDAL/OGR.",
-            driver,
-            conda_package,
-        )
-        parts = [message]
-        if alternative:
-            parts.append(alternative)
-        parts.append(f"GDAL reported: {str(exc).strip()}")
-        raise VectorDriverError("\n".join(parts)) from exc
+        raise branded from exc
     return info
+
+
+def _branded_driver_error(path: str, error: BaseException) -> VectorDriverError | None:
+    """Build the actionable error for a missing or unloadable OGR plugin driver.
+
+    Shared by every OGR entry point that can hit the condition, so the remedy does not depend
+    on which method the user happened to call: `read_file` is the first thing most people
+    type, and branding only `iter_features` left exactly those users with GDAL's dead-end text.
+
+    Args:
+        path: The resolved path that failed to open.
+        error: The failure raised by GDAL/pyogrio.
+
+    Returns:
+        VectorDriverError | None: The branded error to raise, or ``None`` when this failure is
+            not a plugin-driver problem and the original should propagate untouched.
+    """
+    missing = _missing_ogr_plugin(path, error)
+    if missing is None or _local_source_absent(path):
+        return None
+    driver, conda_package, alternative = missing
+    message = ogr_plugin_hint(
+        f"Reading {Path(path).name!r} goes through GDAL/OGR.",
+        driver,
+        conda_package,
+    )
+    parts = [message]
+    if alternative:
+        parts.append(alternative)
+    parts.append(f"GDAL reported: {str(error).strip()}")
+    return VectorDriverError("\n".join(parts))
 
 
 #: `/vsi` prefixes that address something on the local filesystem rather than the network. The

@@ -90,11 +90,18 @@ only one code path needs. What that means in practice:
 |---|---|---|
 | `FeatureCollection.to_parquet(...)` | No — geopandas → pyarrow | Yes, with the `[parquet]` extra |
 | `FeatureCollection.read_parquet(...)` | No — `geopandas.read_parquet` | Yes, with the `[parquet]` extra |
+| `FeatureCollection.read_file("x.parquet")` | **Yes** — routed through OGR | **No** |
 | `FeatureCollection.iter_features("x.parquet", ...)` | **Yes** | **No** |
 
-So reading and writing GeoParquet is fully supported everywhere; only the OGR *streaming* path over a `.parquet`
-needs the driver. Attempting it without one raises a `VectorDriverError` naming both remedies — installing
-`libgdal-arrow-parquet` into a conda environment, or using `read_parquet()` instead.
+So the pyarrow-backed pair works everywhere, and **both** OGR entry points need the driver — `read_file` as much
+as `iter_features`, since `read_file` hands the path to pyogrio rather than special-casing the suffix. Use
+`read_parquet()` to read a GeoParquet without a GDAL driver.
+
+Either OGR call without the driver raises a `VectorDriverError` naming both remedies — installing
+`libgdal-arrow-parquet` into a conda environment, or using `read_parquet()` instead. The same error appears when
+the plugin *is* installed but cannot load its own dependencies, which is what conda-Windows'
+`Can't load requested DLL: duckdb.dll 126` means: GDAL registers a deferred proxy for it, so the driver looks
+present until it is first used.
 
 `iter_features` is a generator, so the call itself returns normally and the error surfaces on the first item.
 Wrap the iteration, not the call:
