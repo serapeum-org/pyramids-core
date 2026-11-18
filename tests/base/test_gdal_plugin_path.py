@@ -13,6 +13,7 @@ a discovered conda directory can no longer displace the bundled one.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,8 @@ from pyramids.base import config as config_module
 from pyramids.base._gdal_plugins import (
     DEFAULT_PLUGIN_SUBDIR,
     ENTRY_POINT_GROUP,
+    _entry_point_dir,
+    _module_dir,
     clear_companion_plugin_dir_cache,
     companion_plugin_dirs,
     compose_driver_path,
@@ -323,6 +326,43 @@ class TestCompanionEntryPointScan:
 
         assert companion_plugin_dirs(refresh=True) == ()
 
+    def test_the_companion_package_is_never_imported(self, monkeypatch, tmp_path):
+        """The scan resolves a real, importable package without importing it.
+
+        This is the load-bearing contract of the whole group: discovery runs inside
+        `import pyramids`, before GDAL registers drivers, so importing a companion here would
+        drag that distribution's entire dependency tree into every `import pyramids`. The other
+        scan tests stub `_module_dir`, so only this one proves the real resolution path is
+        import-free.
+
+        Test scenario:
+            A genuine package is placed on `sys.path` with a `gdalplugins/` directory and
+            registered under the group. The scan must find the directory, and the package must
+            still be absent from `sys.modules` afterwards.
+        """
+        package = tmp_path / "pyramids_fake_companion_pkg"
+        (package / DEFAULT_PLUGIN_SUBDIR).mkdir(parents=True)
+        (package / "__init__.py").write_text(
+            "raise AssertionError('imported!')", encoding="utf-8"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "pyramids_fake_companion_pkg", raising=False)
+        monkeypatch.setattr(
+            _gdal_plugins,
+            "entry_points",
+            lambda group: [_FakeEntryPoint("fake", "pyramids_fake_companion_pkg")],
+        )
+
+        found = companion_plugin_dirs(refresh=True)
+
+        assert found == (package / DEFAULT_PLUGIN_SUBDIR,), (
+            f"the real resolution path must locate the directory, got {found}"
+        )
+        assert "pyramids_fake_companion_pkg" not in sys.modules, (
+            "the companion package was imported; its __init__ would have raised, so discovery "
+            "is no longer a pure metadata scan"
+        )
+
     def test_the_scan_is_cached_until_cleared(self, monkeypatch):
         """It runs at import time; re-reading the metadata on every call would be waste."""
         calls = []
@@ -385,3 +425,166 @@ class TestConfigIsTheSingleWriter:
         expected = os.pathsep.join([str(bundled), str(discovered), str(companion)])
         assert os.environ["GDAL_DRIVER_PATH"] == expected
         assert recorded["GDAL_DRIVER_PATH"] == expected
+
+
+class TestModuleDir:
+    """Locating a companion's directory without importing it.
+
+    Every test in `TestCompanionEntryPointScan` monkeypatches this helper, so its real body is
+    exercised only here. It is the one place a companion package name is turned into a path, and
+    it must never raise out of `import pyramids` whatever the installed metadata looks like.
+    """
+
+    def test_a_package_resolves_to_its_own_directory(self):
+        """A regular package is located through its submodule search locations.
+
+        Test scenario:
+            `json` is a package, so `submodule_search_locations` is populated and the directory
+            holding its `__init__.py` is returned.
+        """
+        found = _module_dir("json")
+
+        assert found is not None, "a stdlib package must be locatable"
+        assert found.name == "json", (
+            f"expected the 'json' package directory, got {found}"
+        )
+        assert (found / "__init__.py").is_file(), f"not a package directory: {found}"
+
+    def test_a_single_file_module_falls_back_to_its_parent(self):
+        """A module that is not a package has no search locations, only an origin.
+
+        Test scenario:
+            `ast` is a single `ast.py`, so `submodule_search_locations` is empty and the parent of
+            `spec.origin` is used instead. This is the `elif spec.origin` branch.
+        """
+        found = _module_dir("ast")
+
+        assert found is not None, "a stdlib module must be locatable"
+        assert (found / "ast.py").is_file(), (
+            f"expected the directory containing ast.py, got {found}"
+        )
+
+    def test_a_missing_module_is_not_located(self):
+        """A name nothing provides yields None rather than raising.
+
+        Test scenario:
+            `find_spec` returns None for an unknown top-level name, so the helper reports nothing
+            found and the companion is skipped.
+        """
+        assert _module_dir("no_such_companion_xyz") is None, (
+            "an unknown module must not resolve"
+        )
+
+    def test_a_missing_parent_package_is_swallowed(self):
+        """A dotted name whose parent does not exist raises inside `find_spec`.
+
+        Test scenario:
+            `find_spec("no_such_pkg_xyz.sub")` raises `ModuleNotFoundError` (an `ImportError`).
+            That must be caught, because a broken registration cannot be allowed to break
+            `import pyramids`.
+        """
+        assert _module_dir("no_such_pkg_xyz.sub") is None, (
+            "a missing parent package must not raise"
+        )
+
+    def test_a_value_error_from_find_spec_is_swallowed(self):
+        """`find_spec` raises ValueError for a module whose `__spec__` is None.
+
+        Test scenario:
+            The probe is forced to raise `ValueError`; the helper must report nothing found rather
+            than propagate. Patched rather than provoked, because the real trigger depends on
+            interpreter state a test should not rely on.
+        """
+        import pyramids.base._gdal_plugins as module
+
+        def boom(name):
+            raise ValueError("__spec__ is None")
+
+        original = module.find_spec
+        module.find_spec = boom
+        try:
+            found = _module_dir("anything")
+        finally:
+            module.find_spec = original
+
+        assert found is None, "a ValueError from find_spec must be swallowed"
+
+    def test_a_namespace_package_without_a_location_is_not_located(self, monkeypatch):
+        """A spec carrying neither search locations nor an origin yields nothing.
+
+        Test scenario:
+            Namespace packages can present an empty `submodule_search_locations` and a null
+            `origin`. Neither branch can produce a path, so the helper returns None instead of
+            constructing `Path(None)`.
+        """
+
+        class _Spec:
+            submodule_search_locations = []
+            origin = None
+
+        monkeypatch.setattr(_gdal_plugins, "find_spec", lambda name: _Spec())
+
+        assert _module_dir("ghost") is None, "a location-less spec must not resolve"
+
+
+class TestEntryPointDir:
+    """Turning one entry-point value into a plugin directory.
+
+    The scan covers the common shapes; these are the edges it cannot reach.
+    """
+
+    def test_a_value_naming_no_module_resolves_to_nothing(self):
+        """A value that is only a subdir has no package to anchor it.
+
+        Test scenario:
+            `":gdalplugins"` leaves the module name empty, so there is nothing to resolve against
+            and the registration is ignored.
+        """
+        assert _entry_point_dir(":gdalplugins") is None, (
+            "an anchorless value must not resolve"
+        )
+
+    def test_surrounding_whitespace_is_tolerated(self, monkeypatch, tmp_path):
+        """Entry-point values are hand-written in TOML and may carry stray spaces.
+
+        Test scenario:
+            `"  pkg  :  sub  "` resolves exactly as `"pkg:sub"` would.
+        """
+        package = tmp_path / "fake_companion"
+        (package / "sub").mkdir(parents=True)
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+
+        assert _entry_point_dir("  fake_companion  :  sub  ") == package / "sub", (
+            "whitespace around the module name or subdir must be ignored"
+        )
+
+    def test_an_empty_subdir_falls_back_to_the_default(self, monkeypatch, tmp_path):
+        """A trailing colon with nothing after it means "use the default".
+
+        Test scenario:
+            `"pkg:"` is treated as `"pkg"`, resolving to `<pkg>/gdalplugins/`.
+        """
+        package = tmp_path / "fake_companion"
+        (package / DEFAULT_PLUGIN_SUBDIR).mkdir(parents=True)
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+
+        assert _entry_point_dir("fake_companion:") == package / DEFAULT_PLUGIN_SUBDIR, (
+            "an empty subdir must fall back to the default"
+        )
+
+    def test_a_file_where_the_directory_should_be_is_refused(
+        self, monkeypatch, tmp_path
+    ):
+        """The target must be a directory; GDAL cannot scan a regular file.
+
+        Test scenario:
+            The companion ships `gdalplugins` as a file, so the registration is ignored.
+        """
+        package = tmp_path / "fake_companion"
+        package.mkdir()
+        (package / DEFAULT_PLUGIN_SUBDIR).write_text("", encoding="utf-8")
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+
+        assert _entry_point_dir("fake_companion") is None, (
+            "a file is not a plugin directory"
+        )

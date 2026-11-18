@@ -123,6 +123,21 @@ def _entry_point_dir(value: str) -> Path | None:
             True
 
             ```
+        - A subdir that climbs out of its own package is refused, so a registration can never
+          aim GDAL at an arbitrary directory:
+            ```python
+            >>> from pyramids.base._gdal_plugins import _entry_point_dir
+            >>> _entry_point_dir("json:../../etc") is None
+            True
+
+            ```
+        - A real package that simply ships no plugin directory is skipped rather than failing:
+            ```python
+            >>> from pyramids.base._gdal_plugins import _entry_point_dir
+            >>> _entry_point_dir("json") is None
+            True
+
+            ```
     """
     module_name, _, subdir = value.partition(":")
     module_name = module_name.strip()
@@ -155,11 +170,26 @@ def companion_plugin_dirs(*, refresh: bool = False) -> tuple[Path, ...]:
         tuple[pathlib.Path, ...]: Existing directories, in entry-point name order for stability.
 
     Examples:
-        - With no companion installed the scan is empty, and it never raises:
+        - Every directory handed back actually exists -- GDAL is never pointed at a missing path:
             ```python
             >>> from pyramids.base._gdal_plugins import companion_plugin_dirs
-            >>> isinstance(companion_plugin_dirs(refresh=True), tuple)
+            >>> dirs = companion_plugin_dirs(refresh=True)
+            >>> all(path.is_dir() for path in dirs)
             True
+
+            ```
+        - Repeated calls are served from the cache, so the answer is stable within a process:
+            ```python
+            >>> from pyramids.base._gdal_plugins import companion_plugin_dirs
+            >>> companion_plugin_dirs() == companion_plugin_dirs()
+            True
+
+            ```
+        - With no companion distribution installed there is simply nothing to add:
+            ```python
+            >>> from pyramids.base._gdal_plugins import companion_plugin_dirs
+            >>> [path.name for path in companion_plugin_dirs(refresh=True)]
+            []
 
             ```
     """
@@ -190,6 +220,19 @@ def clear_companion_plugin_dir_cache() -> None:
             ```python
             >>> from pyramids.base._gdal_plugins import clear_companion_plugin_dir_cache
             >>> clear_companion_plugin_dir_cache()
+            >>> clear_companion_plugin_dir_cache()
+
+            ```
+        - After clearing, the next scan re-reads the entry points and still agrees with itself:
+            ```python
+            >>> from pyramids.base._gdal_plugins import (
+            ...     clear_companion_plugin_dir_cache,
+            ...     companion_plugin_dirs,
+            ... )
+            >>> before = companion_plugin_dirs()
+            >>> clear_companion_plugin_dir_cache()
+            >>> companion_plugin_dirs() == before
+            True
 
             ```
     """
