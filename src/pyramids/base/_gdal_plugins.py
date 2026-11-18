@@ -246,11 +246,12 @@ def companion_plugin_dirs(*, refresh: bool = False) -> tuple[Path, ...]:
             True
 
             ```
-        - With no companion distribution installed there is simply nothing to add:
+        - The scan never hands back a duplicate, however many distributions register:
             ```python
             >>> from pyramids.base._gdal_plugins import companion_plugin_dirs
-            >>> [path.name for path in companion_plugin_dirs(refresh=True)]
-            []
+            >>> dirs = companion_plugin_dirs(refresh=True)
+            >>> len(set(dirs)) == len(dirs)
+            True
 
             ```
     """
@@ -384,7 +385,16 @@ def compose_driver_path(
             ```
     """
     if keep_env and inherited:
-        ordered: list[Path | str | None] = [*inherited.split(os.pathsep), *companions]
+        # The hatch re-ranks; it does not discard. Excluding `bundled` here removed a wheel's
+        # own ABI-locked plugins outright, so `PYRAMIDS_KEEP_GDAL_ENV=1` inside an activated
+        # conda env reinstated the #465 symptom through the documented escape hatch -- the
+        # user asked for their value to win, not for the wheel's drivers to disappear.
+        ordered: list[Path | str | None] = [
+            *inherited.split(os.pathsep),
+            bundled,
+            discovered,
+            *companions,
+        ]
     else:
         authoritative = _existing_dirs([bundled, discovered])
         if bundled is None and inherited:

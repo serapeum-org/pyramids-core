@@ -246,7 +246,14 @@ class TestKeepEnvEscapeHatch:
     """`PYRAMIDS_KEEP_GDAL_ENV=1` restores "the inherited value wins"."""
 
     def test_inherited_value_leads(self, plugin_dirs):
-        """With the hatch open the user's own path outranks even the bundled dir."""
+        """With the hatch open the user's own path leads — and nothing else is discarded.
+
+        Test scenario:
+            The hatch re-ranks rather than removes. Excluding the bundled directory meant a
+            wheel lost its own ABI-locked drivers whenever the hatch was open inside an
+            activated conda env — the #465 symptom, reached through the documented escape
+            hatch. The user asked for their value to win, not for the wheel's plugins to go.
+        """
         bundled, discovered, _ = plugin_dirs
 
         composed = compose_driver_path(
@@ -256,7 +263,9 @@ class TestKeepEnvEscapeHatch:
             keep_env=True,
         )
 
-        assert composed == str(discovered)
+        assert composed.split(os.pathsep) == [str(discovered), str(bundled)], (
+            f"the hatch must rank the inherited path first, not drop the bundled one: {composed}"
+        )
 
     def test_companions_are_still_appended(self, plugin_dirs):
         """The hatch is about precedence, not about dropping registered plugins."""
@@ -270,7 +279,11 @@ class TestKeepEnvEscapeHatch:
             keep_env=True,
         )
 
-        assert composed.split(os.pathsep) == [str(discovered), str(companion)]
+        assert composed.split(os.pathsep) == [
+            str(discovered),
+            str(bundled),
+            str(companion),
+        ], f"nothing may be lost while the hatch is open: {composed}"
 
     def test_a_multi_entry_inherited_value_is_preserved(self, plugin_dirs):
         """An inherited path list is split on os.pathsep, not treated as one path."""
@@ -281,7 +294,12 @@ class TestKeepEnvEscapeHatch:
             bundled=bundled, inherited=inherited, keep_env=True
         )
 
-        assert composed == inherited
+        assert composed.split(os.pathsep)[:2] == inherited.split(os.pathsep), (
+            f"both inherited entries must survive, in order: {composed}"
+        )
+        assert str(bundled) in composed.split(os.pathsep), (
+            "the bundled directory must still be reachable behind them"
+        )
 
     def test_an_empty_inherited_value_falls_back_to_the_normal_order(self, plugin_dirs):
         """The hatch cannot leave GDAL with nothing when there was nothing to keep."""
