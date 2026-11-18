@@ -26,15 +26,23 @@ Companion directories are always appended **last**. A companion can therefore *a
 but can never shadow the version-locked drivers the active `libgdal` was built with. Non-existent directories and
 duplicates are dropped, so GDAL is never handed a path that is not there.
 
-`pyramids.base.config.Config.initialize_gdal` composes the list and writes it once, immediately before
-`gdal.AllRegister()`. The early value set during the wheel bootstrap only covers the window before
-`from osgeo import …` runs; it is not the final word.
+`pyramids.base.config.Config.initialize_gdal` composes the list and writes it immediately before
+`gdal.AllRegister()`. Earlier steps also set the variable — the wheel bootstrap, and the conda/system discovery
+that runs one line before the composition — but this write happens after all of them, so it is the value GDAL
+reads. When nothing composes, because not one candidate directory exists, the variable is cleared rather than
+left holding a path the composition already rejected.
+
+An inherited value is used when there is **no** bundled directory, where it is the best pointer to the GDAL that
+is actually loaded, and it then leads the discovered directory. It is refused outright alongside a wheel's own
+plugins, which are ABI-locked to that wheel's `libgdal`.
 
 ### Keeping your own value
 
-Set `PYRAMIDS_KEEP_GDAL_ENV=1` and whatever `GDAL_DRIVER_PATH` the process inherited wins, with companion
-directories still appended. This is the escape hatch for a deliberately hand-built GDAL; it is off by default
-because an inherited path is usually a conda environment's, which is not safe for a wheel's bundled `libgdal`.
+Set `PYRAMIDS_KEEP_GDAL_ENV=1` and whatever `GDAL_DRIVER_PATH` the process inherited leads the path, with the
+bundled, discovered and companion directories ranked behind it rather than discarded — the hatch re-ranks, it
+does not remove, so a wheel keeps its own drivers. A value that points nowhere is also left alone under the
+hatch. This is the escape hatch for a deliberately hand-built GDAL; it is off by default because an inherited
+path is usually a conda environment's, which is not safe for a wheel's bundled `libgdal`.
 
 ## Registering a plugin directory
 

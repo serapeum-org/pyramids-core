@@ -645,24 +645,37 @@ class Config:
         # GDAL_DATA + PATH. This is the value the process actually inherited (on a
         # platform wheel, the bundled dir _bootstrap already forced).
         inherited_driver_path = os.environ.get("GDAL_DRIVER_PATH")
+        keep_env = os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1"
         discovered_plugins_path = self.dynamic_env_variables()
 
-        # One authoritative write of GDAL_DRIVER_PATH, composed from every directory
-        # that may hold plugins. Previously _bootstrap forced the bundled dir and then
-        # dynamic_env_variables() overwrote it with a conda dir whenever CONDA_PREFIX
-        # was set, silently undoing the #465 fix for a wheel installed into an
-        # activated conda env. Both are inputs to the composition now, bundled first.
+        # The LAST write of GDAL_DRIVER_PATH, composed from every directory that may hold
+        # plugins. Previously _bootstrap forced the bundled dir and then
+        # dynamic_env_variables() overwrote it with a conda dir whenever CONDA_PREFIX was
+        # set, silently undoing the #465 fix for a wheel installed into an activated conda
+        # env. Both are inputs to the composition now, bundled first.
+        #
+        # It is not the only write: _bootstrap, _export_gdal_library_env and
+        # _probe_posix_plugins each assign the variable too, the last two as a side effect
+        # of the discovery call above. This write runs after all of them and therefore
+        # decides what GDAL reads -- but only if it happens, which is why the empty case
+        # below clears rather than falls through.
         driver_path = compose_driver_path(
             bundled=self._bundled_plugin_dir(),
             companions=companion_plugin_dirs(),
             discovered=discovered_plugins_path,
             inherited=inherited_driver_path,
-            keep_env=os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1",
+            keep_env=keep_env,
         )
         if driver_path:
             os.environ["GDAL_DRIVER_PATH"] = driver_path
             gdal.SetConfigOption("GDAL_DRIVER_PATH", driver_path)
             self.logger.debug(f"GDAL_DRIVER_PATH composed as: {driver_path}")
+        elif not keep_env:
+            # `None` means not one candidate directory exists, so anything discovery left
+            # in the environment points nowhere. Leaving it there handed GDAL a path the
+            # composition had already rejected. PYRAMIDS_KEEP_GDAL_ENV=1 is exempt: the
+            # user asked for their value to stand, even if we cannot make sense of it.
+            os.environ.pop("GDAL_DRIVER_PATH", None)
         gdal.AllRegister()
 
     @staticmethod

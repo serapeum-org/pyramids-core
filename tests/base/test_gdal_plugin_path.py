@@ -551,6 +551,58 @@ class TestConfigIsTheSingleWriter:
         """`_data/gdalplugins` ships only in a wheel, so a dev install must report None."""
         assert Config._bundled_plugin_dir() is None
 
+    def test_an_empty_composition_clears_what_discovery_left_behind(
+        self, monkeypatch, plugin_dirs
+    ):
+        """A path the composition rejected must not survive in the environment (S2).
+
+        Test scenario:
+            `_export_gdal_library_env` and `_probe_posix_plugins` assign GDAL_DRIVER_PATH as a
+            side effect of discovery, one line before the composition runs. When nothing
+            composes — no candidate directory exists — that intermediate value stayed, and GDAL
+            read a path `compose_driver_path` had already thrown out. It is now cleared.
+        """
+        _, discovered, _ = plugin_dirs
+        monkeypatch.setattr(Config, "_bundled_plugin_dir", staticmethod(lambda: None))
+        monkeypatch.setattr(Config, "dynamic_env_variables", lambda self: None)
+        monkeypatch.setattr(_gdal_plugins, "entry_points", lambda group: [])
+        clear_companion_plugin_dir_cache()
+        monkeypatch.setattr(config_module.gdal, "SetConfigOption", lambda *a: None)
+        monkeypatch.setattr(config_module.gdal, "AllRegister", lambda: None)
+        monkeypatch.setenv("GDAL_DRIVER_PATH", str(discovered / "gone"))
+
+        Config().initialize_gdal()
+
+        assert "GDAL_DRIVER_PATH" not in os.environ, (
+            f"a rejected path survived: {os.environ.get('GDAL_DRIVER_PATH')!r}"
+        )
+
+    def test_the_escape_hatch_keeps_even_an_unusable_value(
+        self, monkeypatch, plugin_dirs
+    ):
+        """`PYRAMIDS_KEEP_GDAL_ENV=1` is exempt from the clearing above.
+
+        Test scenario:
+            The user asked for their value to stand. Clearing it because pyramids cannot make
+            sense of it would defeat the one hatch that exists to overrule pyramids.
+        """
+        _, discovered, _ = plugin_dirs
+        stale = str(discovered / "gone")
+        monkeypatch.setattr(Config, "_bundled_plugin_dir", staticmethod(lambda: None))
+        monkeypatch.setattr(Config, "dynamic_env_variables", lambda self: None)
+        monkeypatch.setattr(_gdal_plugins, "entry_points", lambda group: [])
+        clear_companion_plugin_dir_cache()
+        monkeypatch.setattr(config_module.gdal, "SetConfigOption", lambda *a: None)
+        monkeypatch.setattr(config_module.gdal, "AllRegister", lambda: None)
+        monkeypatch.setenv("PYRAMIDS_KEEP_GDAL_ENV", "1")
+        monkeypatch.setenv("GDAL_DRIVER_PATH", stale)
+
+        Config().initialize_gdal()
+
+        assert os.environ.get("GDAL_DRIVER_PATH") == stale, (
+            "the escape hatch must leave the user's value alone"
+        )
+
     def test_a_discovered_conda_dir_no_longer_displaces_the_bundled_one(
         self, monkeypatch, plugin_dirs
     ):
