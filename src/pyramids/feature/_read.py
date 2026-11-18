@@ -1169,9 +1169,11 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
     what to install or that `read_parquet()` would work. Since `ogr.GetDriverByName` returns
     `None` in both of those cases, the condition is detectable and the remedy can be named.
 
-    Only re-brands when the driver really is absent; any other failure (a corrupt file, a bad
-    layer name, a permissions error) propagates untouched. The original exception is chained,
-    so the GDAL text stays available on `__cause__`.
+    Only re-brands when the driver really is absent **and** the source is actually there. Any
+    other failure -- a missing file, a corrupt file, a bad layer name, a permissions error --
+    propagates untouched, because the branding keys on the path's suffix and on the driver being
+    unregistered, neither of which says anything about why *this* read failed. GDAL's own text is
+    included in the branded message as well as chained on `__cause__`.
 
     Args:
         path: The resolved path to open.
@@ -1189,7 +1191,7 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
         info = pyogrio.read_info(path, **kwargs)
     except Exception as exc:
         missing = _missing_ogr_plugin(path)
-        if missing is None:
+        if missing is None or _local_source_absent(path):
             raise
         driver, conda_package, alternative = missing
         message = ogr_plugin_hint(
@@ -1197,10 +1199,53 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
             driver,
             conda_package,
         )
+        parts = [message]
         if alternative:
-            message = "\n".join((message, alternative))
-        raise VectorDriverError(message) from exc
+            parts.append(alternative)
+        parts.append(f"GDAL reported: {str(exc).strip()}")
+        raise VectorDriverError("\n".join(parts)) from exc
     return info
+
+
+def _local_source_absent(path: str) -> bool:
+    """Whether `path` names a local file or directory that is not there.
+
+    The missing-driver branding keys on the path's suffix and on the driver being unregistered,
+    neither of which says anything about *this* read. On any installation without the OGR Parquet
+    driver -- which is every pyramids wheel -- a typo'd `.parquet` path would otherwise be reported
+    as a packaging problem, sending the user to install a conda package that cannot help and to
+    `read_parquet()`, which fails the same way. A source that is not there is a different failure
+    and must surface as itself.
+
+    Remote and `/vsi` paths are reported as present: confirming one costs a network round trip, and
+    a missing remote object already fails with its own message from GDAL.
+
+    Args:
+        path: The resolved path about to be opened.
+
+    Returns:
+        bool: True when the path is local and does not exist.
+
+    Examples:
+        - A local path that is not there is reported absent:
+            ```python
+            >>> from pyramids.feature._read import _local_source_absent
+            >>> _local_source_absent("no_such_directory_xyz/points.parquet")
+            True
+
+            ```
+        - A remote URL is never probed, so it counts as present:
+            ```python
+            >>> from pyramids.feature._read import _local_source_absent
+            >>> _local_source_absent("https://example.com/points.parquet")
+            False
+
+            ```
+    """
+    absent = False
+    if not is_remote(path) and not path.startswith("/vsi"):
+        absent = not Path(path).exists()
+    return absent
 
 
 def iter_features(
