@@ -675,7 +675,14 @@ class Config:
             # in the environment points nowhere. Leaving it there handed GDAL a path the
             # composition had already rejected. PYRAMIDS_KEEP_GDAL_ENV=1 is exempt: the
             # user asked for their value to stand, even if we cannot make sense of it.
+            #
+            # Both stores must be cleared. GDAL resolves the setting through
+            # CPLGetConfigOption, which consults config options set by CPLSetConfigOption
+            # BEFORE the environment, so popping only os.environ leaves a value written by
+            # an earlier Config() in this process still in force -- and the test suite, and
+            # any host calling Config(level=...) after import, construct more than one.
             os.environ.pop("GDAL_DRIVER_PATH", None)
+            gdal.SetConfigOption("GDAL_DRIVER_PATH", None)
         gdal.AllRegister()
 
     @staticmethod

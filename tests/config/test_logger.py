@@ -310,7 +310,13 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
     mock_setopt.assert_any_call("GDAL_CACHEMAX", "256")
     mock_setopt.assert_any_call("OGR_SRS_PARSER", "strict")
     # Ensure GDAL_DRIVER_PATH was not set in this branch
-    assert ("GDAL_DRIVER_PATH",) not in [c.args[:1] for c in mock_setopt.call_args_list]
+    # Clearing it (value None) is expected here and is what mirrors the os.environ pop;
+    # what must never happen is GDAL being pointed AT a path when nothing composed.
+    assert not [
+        c
+        for c in mock_setopt.call_args_list
+        if c.args[:1] == ("GDAL_DRIVER_PATH",) and c.args[1] is not None
+    ], f"a driver path was set when none composes: {mock_setopt.call_args_list}"
 
     mock_setopt.reset_mock()
 
@@ -332,7 +338,13 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
     monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
     mock_dyn.return_value = tmp_path / "vanished"
     cfg.initialize_gdal()
-    assert ("GDAL_DRIVER_PATH",) not in [c.args[:1] for c in mock_setopt.call_args_list]
+    # Clearing it (value None) is expected here and is what mirrors the os.environ pop;
+    # what must never happen is GDAL being pointed AT a path when nothing composed.
+    assert not [
+        c
+        for c in mock_setopt.call_args_list
+        if c.args[:1] == ("GDAL_DRIVER_PATH",) and c.args[1] is not None
+    ], f"a driver path was set when none composes: {mock_setopt.call_args_list}"
 
 
 def test_error_handler_exception_fallback_logs_error(capsys):

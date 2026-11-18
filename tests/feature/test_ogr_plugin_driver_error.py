@@ -20,7 +20,11 @@ import pytest
 
 from pyramids.base._errors import VectorDriverError
 from pyramids.feature import _read
-from pyramids.feature._read import _missing_ogr_plugin, _read_info_branded
+from pyramids.feature._read import (
+    _local_source_absent,
+    _missing_ogr_plugin,
+    _read_info_branded,
+)
 from pyramids.feature.collection import FeatureCollection
 
 pytestmark = pytest.mark.core
@@ -310,3 +314,94 @@ class TestThroughThePublicApi:
         """
         with pytest.raises(RuntimeError):
             list(FeatureCollection.iter_features(parquet_without_a_driver))
+
+
+class TestADeferredPluginProxyStillBrands:
+    """A driver that exists on paper but cannot load is as unusable as an absent one.
+
+    GDAL >= 3.9 registers a *deferred* proxy as soon as it finds a file named
+    `ogr_Parquet.<ext>` on `GDAL_DRIVER_PATH`, and only dlopens it on first use. So
+    `GetDriverByName` returns a driver in exactly the "installed but broken" case this branding
+    exists for -- conda-Windows' `duckdb.dll 126` -- and keying on the lookup alone switched the
+    remedy off there. Every other test here stubs `GetDriverByName` to `None`, so none of them
+    can see it; these drive the predicate directly instead.
+    """
+
+    def test_a_registered_driver_with_a_load_failure_is_branded(self, tmp_path: Path):
+        """The conda-Windows case: proxy registered, shared library unloadable."""
+        source = tmp_path / "points.parquet"
+        source.write_bytes(b"PAR1")
+
+        missing = _missing_ogr_plugin(
+            str(source), RuntimeError("Can't load requested DLL: duckdb.dll 126")
+        )
+
+        assert missing is not None, (
+            "a registered-but-unloadable plugin must still produce the remedy"
+        )
+        assert missing[0] == "Parquet", f"wrong driver reported: {missing}"
+
+    def test_the_gdal_not_available_wording_is_recognised(self, tmp_path: Path):
+        """GDAL's other phrasing for the same condition, seen on Linux/macOS."""
+        missing = _missing_ogr_plugin(
+            str(tmp_path / "points.parquet"),
+            RuntimeError(
+                "It could have been recognized by driver Parquet, but plugin "
+                "ogr_Parquet.so is not available in your installation."
+            ),
+        )
+
+        assert missing is not None, (
+            "the 'not available in your installation' text must brand"
+        )
+
+    def test_a_corrupt_file_is_not_a_plugin_problem(self, monkeypatch, tmp_path: Path):
+        """A working driver failing on bad bytes must not be branded.
+
+        Test scenario:
+            With the driver registered and the failure text carrying no plugin marker, the
+            diagnosis is a data problem, so the original error propagates.
+        """
+        monkeypatch.setattr(_read.ogr, "GetDriverByName", lambda name: object())
+
+        missing = _missing_ogr_plugin(
+            str(tmp_path / "points.parquet"),
+            RuntimeError("Parquet magic bytes not found in footer"),
+        )
+
+        assert missing is None, (
+            f"a corrupt file was branded as a plugin failure: {missing}"
+        )
+
+
+class TestALocalArchiveIsStatted:
+    """`/vsizip` and friends address the local disk, so a typo there is still a typo.
+
+    `_io._parse_path` turns `reaches.zip` into `/vsizip/<abs>/reaches.zip/inner.parquet` before
+    the read helper sees it. Treating every `/vsi` form as present left a mistyped archive
+    reported as a missing OGR driver -- the exact mis-diagnosis the guard was added to kill.
+    """
+
+    def test_a_missing_archive_is_absent(self, tmp_path: Path):
+        """The container does not exist, so this is not a driver problem."""
+        path = f"/vsizip/{tmp_path / 'nope.zip'}/inner.parquet"
+
+        assert _local_source_absent(path) is True, (
+            "a mistyped local archive must be reported absent"
+        )
+
+    def test_a_real_archive_is_present(self, tmp_path: Path):
+        """The container exists, so branding remains available for it."""
+        archive = tmp_path / "ok.zip"
+        archive.write_bytes(b"PK")
+        path = f"/vsizip/{archive}/inner.parquet"
+
+        assert _local_source_absent(path) is False, (
+            "an existing archive must not be reported absent"
+        )
+
+    def test_a_network_vsi_path_is_never_statted(self):
+        """Confirming a remote object costs a round trip, so it counts as present."""
+        assert (
+            _local_source_absent("/vsicurl/https://example.com/x.parquet") is False
+        ), "a network /vsi path must not be probed"

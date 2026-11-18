@@ -550,7 +550,10 @@ class TestConfigIsTheSingleWriter:
         monkeypatch.setattr(Config, "dynamic_env_variables", lambda self: None)
         monkeypatch.setattr(_gdal_plugins, "entry_points", lambda group: [])
         clear_companion_plugin_dir_cache()
-        monkeypatch.setattr(config_module.gdal, "SetConfigOption", lambda *a: None)
+        recorded: list[tuple] = []
+        monkeypatch.setattr(
+            config_module.gdal, "SetConfigOption", lambda *a: recorded.append(a)
+        )
         monkeypatch.setattr(config_module.gdal, "AllRegister", lambda: None)
         monkeypatch.setenv("GDAL_DRIVER_PATH", str(discovered / "gone"))
 
@@ -558,6 +561,12 @@ class TestConfigIsTheSingleWriter:
 
         assert "GDAL_DRIVER_PATH" not in os.environ, (
             f"a rejected path survived: {os.environ.get('GDAL_DRIVER_PATH')!r}"
+        )
+        # GDAL resolves the setting through CPLGetConfigOption, which consults config options
+        # BEFORE the environment, so popping os.environ alone leaves a value written by an
+        # earlier Config() in this process still in force.
+        assert ("GDAL_DRIVER_PATH", None) in recorded, (
+            f"GDAL's own config option was not cleared; calls were {recorded}"
         )
 
     def test_the_escape_hatch_keeps_even_an_unusable_value(
@@ -807,4 +816,52 @@ class TestEntryPointDir:
 
         assert _entry_point_dir("fake_companion") is None, (
             "a file is not a plugin directory"
+        )
+
+
+class TestDeduplicationIsPathAware:
+    """One directory, however it is spelled, appears once.
+
+    The round-1 fix that admits `inherited` alongside `discovered` made this reachable: before
+    it, the inherited value was dropped whenever discovery found anything, so the two spellings
+    of the same directory could never meet. String equality then let both through, and GDAL
+    scanned and `LoadLibrary`'d the same plugin directory twice on every conda/pixi install.
+    """
+
+    def test_separator_spellings_collapse(self, tmp_path: Path):
+        """A conda activation script exports `/`; `pathlib` builds `\`.
+
+        Test scenario:
+            Both name the same directory, and both routinely reach the composition on Windows.
+        """
+        forward = str(tmp_path).replace(os.sep, "/")
+
+        composed = compose_driver_path(
+            bundled=None, discovered=tmp_path, inherited=forward
+        )
+
+        assert len(composed.split(os.pathsep)) == 1, (
+            f"the same directory survived twice: {composed}"
+        )
+
+    def test_a_trailing_separator_collapses(self, tmp_path: Path):
+        """`<dir>` and `<dir>/` are the same directory."""
+        composed = compose_driver_path(
+            bundled=None, discovered=tmp_path, inherited=str(tmp_path) + os.sep
+        )
+
+        assert len(composed.split(os.pathsep)) == 1, (
+            f"a trailing separator defeated de-duplication: {composed}"
+        )
+
+    def test_the_original_spelling_is_what_is_emitted(self, tmp_path: Path):
+        """Normalisation decides equality only; GDAL still gets the path as given.
+
+        Test scenario:
+            Emitting the normalised form would rewrite a user's own value behind their back.
+        """
+        composed = compose_driver_path(bundled=None, discovered=tmp_path)
+
+        assert composed == str(tmp_path), (
+            f"the emitted path was rewritten: {composed!r} != {str(tmp_path)!r}"
         )

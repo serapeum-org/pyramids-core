@@ -412,7 +412,19 @@ def compose_driver_path(
             authoritative = [*inherited.split(os.pathsep), *authoritative]
         ordered = [*authoritative, *companions]
     parts: list[str] = []
+    seen: set[str] = set()
     for text in _existing_dirs(ordered):
-        if text not in parts:
+        # Compare on a normalised form, emit the original spelling. The same directory
+        # routinely arrives twice: a conda/pixi activation script exports it with forward
+        # slashes while `Config.dynamic_env_variables` builds it with `pathlib` back-slashes,
+        # and a case difference or a trailing separator does it too. String equality let all
+        # three through, so GDAL scanned and LoadLibrary'd one directory twice on every
+        # conda install -- and made this function's own "duplicates are dropped" false.
+        try:
+            key = os.path.normcase(os.path.realpath(text))
+        except OSError:  # pragma: no cover - realpath on a dead mount
+            key = os.path.normcase(text)
+        if key not in seen:
+            seen.add(key)
             parts.append(text)
     return os.pathsep.join(parts) if parts else None

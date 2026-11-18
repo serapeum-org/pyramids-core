@@ -1133,16 +1133,74 @@ _OGR_PLUGIN_DRIVERS: dict[str, tuple[str, str, str]] = {
 }
 
 
-def _missing_ogr_plugin(path: str) -> tuple[str, str, str] | None:
-    """Return the plugin-driver entry a path needs, when that OGR driver is not registered.
+#: Markers GDAL uses when a driver exists on paper but its shared library will not load. GDAL
+#: >= 3.9 registers a *deferred* proxy driver as soon as it sees a file named `ogr_Parquet.<ext>`
+#: on `GDAL_DRIVER_PATH`, and only dlopens it on first use -- so `GetDriverByName` returns a
+#: driver in exactly the "installed but broken" case this branding exists for, most notably
+#: conda-Windows' `duckdb.dll 126`. Keying on the lookup alone silently switched the remedy off
+#: there; the failure text is the signal that distinguishes it from a corrupt file.
+_PLUGIN_LOAD_MARKERS = (
+    "can't load requested dll",
+    "cannot load requested dll",
+    "is not available in your installation",
+    "cannot open shared object file",
+    "plugin",
+)
+
+
+def _is_plugin_load_failure(error: BaseException | None) -> bool:
+    """Whether `error` is GDAL complaining that a driver's plugin could not be loaded.
+
+    Args:
+        error: The exception raised by the read, or ``None`` when branding is being decided
+            without one.
+
+    Returns:
+        bool: True when the message carries one of :data:`_PLUGIN_LOAD_MARKERS`.
+
+    Examples:
+        - The conda-Windows failure is recognised:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(RuntimeError("Can't load requested DLL: duckdb.dll 126"))
+            True
+
+            ```
+        - A corrupt file is not a plugin problem:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(RuntimeError("Parquet magic bytes not found in footer"))
+            False
+
+            ```
+        - Nothing to inspect means no evidence either way:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(None)
+            False
+
+            ```
+    """
+    text = str(error).lower() if error is not None else ""
+    return any(marker in text for marker in _PLUGIN_LOAD_MARKERS)
+
+
+def _missing_ogr_plugin(
+    path: str, error: BaseException | None = None
+) -> tuple[str, str, str] | None:
+    """Return the plugin-driver entry a path needs, when that driver is absent or unloadable.
 
     Args:
         path: The resolved path about to be opened through OGR.
+        error: The failure to diagnose, when there is one. A registered driver whose plugin
+            cannot be loaded is as unusable as an absent one, and only the error text tells
+            them apart -- see :data:`_PLUGIN_LOAD_MARKERS`.
 
     Returns:
         tuple[str, str, str] | None: The `_OGR_PLUGIN_DRIVERS` entry when the suffix needs an
-            optional plugin driver *and* that driver is absent from the active GDAL; ``None``
-            when the format needs no plugin or the driver is present.
+            optional plugin driver *and* that driver is either unregistered or registered but
+            unloadable; ``None`` when the format needs no plugin, or the driver is present and
+            the failure was something else.
 
     Examples:
         - A format with an in-libgdal driver is never reported as missing:
@@ -1155,7 +1213,9 @@ def _missing_ogr_plugin(path: str) -> tuple[str, str, str] | None:
     """
     needed = _OGR_PLUGIN_DRIVERS.get(Path(path).suffix.lower())
     missing = None
-    if needed is not None and ogr.GetDriverByName(needed[0]) is None:
+    if needed is not None and (
+        ogr.GetDriverByName(needed[0]) is None or _is_plugin_load_failure(error)
+    ):
         missing = needed
     return missing
 
@@ -1190,7 +1250,7 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
     try:
         info = pyogrio.read_info(path, **kwargs)
     except Exception as exc:
-        missing = _missing_ogr_plugin(path)
+        missing = _missing_ogr_plugin(path, exc)
         if missing is None or _local_source_absent(path):
             raise
         driver, conda_package, alternative = missing
@@ -1207,6 +1267,11 @@ def _read_info_branded(path: str, **kwargs: Any) -> Any:
     return info
 
 
+#: `/vsi` prefixes that address something on the local filesystem rather than the network. The
+#: archive ones matter here because `_io._parse_path` generates them from ordinary user input.
+_LOCAL_VSI_PREFIXES = ("/vsizip/", "/vsitar/", "/vsigzip/", "/vsisubfile/")
+
+
 def _local_source_absent(path: str) -> bool:
     """Whether `path` names a local file or directory that is not there.
 
@@ -1217,8 +1282,11 @@ def _local_source_absent(path: str) -> bool:
     `read_parquet()`, which fails the same way. A source that is not there is a different failure
     and must surface as itself.
 
-    Remote and `/vsi` paths are reported as present: confirming one costs a network round trip, and
-    a missing remote object already fails with its own message from GDAL.
+    Only the *network* `/vsi` prefixes are assumed present -- confirming one costs a round trip,
+    and a missing remote object already fails with its own message from GDAL. The archive
+    prefixes are local: `_io._parse_path` turns `reaches.zip` into
+    `/vsizip/<abs>/reaches.zip/inner.parquet` before this is ever reached, so treating every
+    `/vsi` form as present left a typo'd archive branded as a missing driver.
 
     Args:
         path: The resolved path about to be opened.
@@ -1242,9 +1310,29 @@ def _local_source_absent(path: str) -> bool:
 
             ```
     """
-    absent = False
-    if not is_remote(path) and not path.startswith("/vsi"):
-        absent = not Path(path).exists()
+    probe = path
+    for prefix in _LOCAL_VSI_PREFIXES:
+        if path.startswith(prefix):
+            probe = path[len(prefix) :]
+            break
+    else:
+        if is_remote(path) or path.startswith("/vsi"):
+            return False
+        return not Path(path).exists()
+    # A local archive path carries the member inside it -- `/vsizip/<dir>/a.zip/inner.parquet` --
+    # so the container is the longest prefix that is a FILE. Testing `.exists()` on the whole
+    # string would call a typo'd archive present as soon as its parent directory happened to
+    # exist, which is the case this guard is for.
+    candidate = Path(probe)
+    absent = True
+    while True:
+        if candidate.is_file():
+            absent = False
+            break
+        parent = candidate.parent
+        if parent == candidate:
+            break
+        candidate = parent
     return absent
 
 
