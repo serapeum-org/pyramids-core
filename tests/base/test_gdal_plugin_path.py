@@ -812,7 +812,14 @@ class TestEntryPointDir:
         package.mkdir()
         monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
 
-        assert _entry_point_dir("fake_companion:a" + chr(0) + "b") is None, (
+        def boom(*args, **kwargs):
+            raise ValueError("embedded null byte")
+
+        # Injected rather than provoked: 3.13+ tolerates the values that make 3.11/3.12 raise
+        # here, so a literal bad path would pass this test for the wrong reason.
+        monkeypatch.setattr(_gdal_plugins.os.path, "normpath", boom)
+
+        assert _entry_point_dir("fake_companion:sub") is None, (
             "an unusable subdir must be swallowed, not propagated"
         )
 
@@ -902,4 +909,78 @@ class TestDeduplicationIsPathAware:
 
         assert composed == str(tmp_path), (
             f"the emitted path was rewritten: {composed!r} != {str(tmp_path)!r}"
+        )
+
+
+class TestNothingEscapesDuringImport:
+    """Defensive branches for interpreters and filesystems other than this one.
+
+    `compose_driver_path` and the scan run inside `import pyramids`, so anything that escapes
+    makes the package unimportable. Several of these paths cannot be provoked on 3.13+, which
+    tolerates values that make 3.11/3.12 raise, so the failure is injected: a test that relied
+    on a literal bad path would pass here for the wrong reason while the branch stayed dead.
+    """
+
+    def test_an_unreadable_candidate_is_skipped(self, monkeypatch, tmp_path: Path):
+        """`Path.is_dir()` raising must not propagate out of the composition.
+
+        Test scenario:
+            On 3.11/3.12 `is_dir()` re-raises any OSError outside
+            {ENOENT, ENOTDIR, EBADF, ELOOP}, so a permission-denied or dead-mount entry on an
+            inherited GDAL_DRIVER_PATH raised straight out of `import pyramids`.
+        """
+        good = tmp_path / "good"
+        good.mkdir()
+        real_is_dir = Path.is_dir
+
+        def selective(self, *args, **kwargs):
+            if self.name == "unreadable":
+                raise PermissionError("the mount went away")
+            return real_is_dir(self, *args, **kwargs)
+
+        monkeypatch.setattr(_gdal_plugins.Path, "is_dir", selective)
+
+        composed = compose_driver_path(
+            bundled=None, discovered=good, companions=[tmp_path / "unreadable"]
+        )
+
+        assert composed == str(good), (
+            f"an unreadable entry should be skipped, not fatal; got {composed!r}"
+        )
+
+    def test_an_empty_path_entry_is_ignored(self, tmp_path: Path):
+        """A stray separator yields empty entries, which are not directories.
+
+        Test scenario:
+            `GDAL_DRIVER_PATH=";"` or a trailing separator splits into empty strings. Passing
+            one to `Path` would make it the current directory, quietly putting the CWD on
+            GDAL's plugin path.
+        """
+        composed = compose_driver_path(
+            bundled=None, inherited=os.pathsep.join(["", str(tmp_path), ""])
+        )
+
+        assert composed == str(tmp_path), (
+            f"empty entries must be dropped, not resolved to the CWD: {composed!r}"
+        )
+
+    def test_an_unresolvable_duplicate_key_falls_back(
+        self, monkeypatch, tmp_path: Path
+    ):
+        """`realpath` raising must not stop the composition.
+
+        Test scenario:
+            De-duplication normalises through `realpath`, which touches the filesystem. If it
+            raises, the raw spelling is used as the key instead and the path still reaches GDAL.
+        """
+
+        def boom(*args, **kwargs):
+            raise OSError("realpath on a dead mount")
+
+        monkeypatch.setattr(_gdal_plugins.os.path, "realpath", boom)
+
+        composed = compose_driver_path(bundled=None, discovered=tmp_path)
+
+        assert composed == str(tmp_path), (
+            f"the path must survive a failing realpath; got {composed!r}"
         )
