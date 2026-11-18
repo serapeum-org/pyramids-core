@@ -325,11 +325,18 @@ def compose_driver_path(
 
     Precedence, highest first:
 
-    1. ``inherited`` — only when ``keep_env`` is set, which is the documented
-       ``PYRAMIDS_KEEP_GDAL_ENV=1`` escape hatch for power users who want their own value to win.
+    1. ``inherited`` — when ``keep_env`` is set, the documented ``PYRAMIDS_KEEP_GDAL_ENV=1``
+       escape hatch, whose entries lead. ``bundled`` and ``discovered`` still follow them, so the
+       hatch re-ranks rather than discards.
     2. ``bundled`` — the wheel's own plugin directory, ABI-locked to its vendored libgdal.
-    3. ``discovered`` — a conda / system plugin directory matching the active GDAL.
-    4. ``companions`` — always last, so an extra driver can be added but never shadows the
+    3. ``inherited`` again, **only when there is no** ``bundled`` **directory** — on a source or
+       conda install it is the best pointer to the plugins of the GDAL that is actually loaded,
+       and on conda Linux the only one. It is never admitted alongside a wheel's own plugins,
+       because those are ABI-locked and a foreign path next to them is what #465 forbids.
+    4. ``discovered`` — a conda / system plugin directory. It follows ``inherited`` because
+       ``_probe_posix_plugins`` reports a *system* ``/usr/lib/gdalplugins`` that may belong to a
+       different GDAL build than the one in use.
+    5. ``companions`` — always last, so an extra driver can be added but never shadows the
        version-locked drivers the active libgdal was built with (#465).
 
     Non-existent directories and duplicates are dropped, so the result never points GDAL at a path
@@ -369,17 +376,19 @@ def compose_driver_path(
         ordered: list[Path | str | None] = [*inherited.split(os.pathsep), *companions]
     else:
         authoritative = _existing_dirs([bundled, discovered])
-        if not authoritative and inherited:
-            # Neither a wheel nor discovery supplied a directory, so the value the process
-            # inherited is the only thing that knows where the active GDAL's plugins are.
-            # Dropping it here would hand GDAL a companions-only path and silently unload
-            # the drivers it was working with: on a conda Linux environment the netCDF and
-            # HDF5 drivers are separate .so plugins reachable ONLY through the activation
-            # script's GDAL_DRIVER_PATH, and `set_env_conda` cannot find them because it
-            # probes the Windows `Library/lib/gdalplugins` layout. It is still never allowed
-            # to outrank a bundled or discovered directory -- that is the #465 invariant, and
-            # ci/verify-wheel.py asserts a foreign path cannot reach the final value.
-            authoritative = [*inherited.split(os.pathsep)]
+        if bundled is None and inherited:
+            # No wheel supplied a directory, so the value the process inherited is the best
+            # pointer to the plugins of the GDAL that is actually loaded -- it was exported by
+            # whatever activated this environment. On conda Linux it is the ONLY pointer: the
+            # netCDF and HDF5 drivers are separate .so plugins, and `set_env_conda` cannot find
+            # them because it probes the Windows `Library/lib/gdalplugins` layout. It leads the
+            # discovered directory, because `_probe_posix_plugins` reports a *system*
+            # /usr/lib/gdalplugins that belongs to a different GDAL build entirely.
+            #
+            # It is added only when there is no bundled directory. A platform wheel's plugins are
+            # ABI-locked to its own vendored libgdal, so admitting a foreign path alongside them
+            # is exactly what #465 forbids, and ci/verify-wheel.py asserts it cannot happen.
+            authoritative = [*inherited.split(os.pathsep), *authoritative]
         ordered = [*authoritative, *companions]
     parts: list[str] = []
     for text in _existing_dirs(ordered):

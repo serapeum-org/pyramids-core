@@ -139,13 +139,14 @@ class TestComposeHygiene:
         assert compose_driver_path(bundled=regular) is None
 
 
-class TestInheritedIsTheLastResort:
-    """When nothing else knows where the plugins are, the inherited value must survive.
+class TestInheritedOutsideAWheel:
+    """Off a platform wheel, the inherited value is the best pointer to the loaded GDAL.
 
-    On a conda Linux environment `set_env_conda` finds nothing — it probes the Windows
-    `Library/lib/gdalplugins` layout — and there is no bundled directory either, so the
-    activation script's `GDAL_DRIVER_PATH` is the only pointer to the netCDF/HDF5 plugins.
-    Dropping it handed GDAL a companions-only path and unloaded those drivers.
+    `set_env_conda` probes the Windows `Library/lib/gdalplugins` layout, so on conda Linux it
+    finds nothing and there is no bundled directory either — the activation script's
+    `GDAL_DRIVER_PATH` is then the only pointer to the netCDF/HDF5 plugins. It leads the
+    discovered directory, which `_probe_posix_plugins` may have taken from a *different* GDAL
+    build under `/usr/lib`. On a wheel it is refused outright instead (#465).
     """
 
     def test_it_is_kept_when_nothing_else_exists(self, plugin_dirs):
@@ -171,6 +172,46 @@ class TestInheritedIsTheLastResort:
 
         assert composed.split(os.pathsep) == [str(discovered), str(companion)]
 
+    def test_a_system_directory_does_not_displace_it(self, plugin_dirs):
+        """The regression M2 names: a system GDAL must not evict the conda activation path.
+
+        Test scenario:
+            On conda Linux with a system GDAL installed, `_probe_posix_plugins` returns
+            `/usr/lib/gdalplugins`, so `discovered` is non-None. The inherited value is still the
+            only pointer to the conda environment's own `gdal_netCDF.so` / `gdal_HDF5.so`, and it
+            belongs to the GDAL actually loaded, so it must survive *and* lead.
+        """
+        _, system, conda = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=None, discovered=system, inherited=str(conda)
+        )
+
+        assert composed.split(os.pathsep) == [str(conda), str(system)], (
+            "the inherited conda path must lead the discovered system path, not be dropped"
+        )
+
+    def test_it_is_refused_alongside_a_wheel_s_own_plugins(self, plugin_dirs):
+        """#465: a foreign path is never admitted next to a wheel's ABI-locked plugins.
+
+        Test scenario:
+            With a bundled directory present the inherited value is dropped entirely rather than
+            appended, because the wheel's plugins are built against its own vendored libgdal and
+            `ci/verify-wheel.py` asserts a foreign path cannot reach the final value.
+        """
+        bundled, system, conda = plugin_dirs
+
+        composed = compose_driver_path(
+            bundled=bundled, discovered=system, inherited=str(conda)
+        )
+
+        assert str(conda) not in composed.split(os.pathsep), (
+            f"a foreign inherited path reached a wheel's driver path: {composed}"
+        )
+        assert composed.split(os.pathsep)[0] == str(bundled), (
+            "the wheel's own plugin directory must still lead"
+        )
+
     def test_a_bundled_directory_still_outranks_it(self, plugin_dirs):
         """#465 is unchanged: a foreign inherited path never wins over the wheel's own."""
         bundled, discovered, _ = plugin_dirs
@@ -181,15 +222,24 @@ class TestInheritedIsTheLastResort:
 
         assert composed == str(bundled)
 
-    def test_a_discovered_directory_still_outranks_it(self, plugin_dirs):
-        """Same for the conda/system directory that matches the active GDAL."""
-        _, discovered, companion = plugin_dirs
+    def test_it_outranks_a_discovered_directory(self, plugin_dirs):
+        """The inherited value leads, because discovery may name a different GDAL's plugins.
+
+        Test scenario:
+            `_probe_posix_plugins` reports `/usr/local/lib/gdalplugins` or `/usr/lib/gdalplugins`
+            whenever a system GDAL is installed, which is not necessarily the GDAL this process
+            loaded. The environment that activated the interpreter is the better authority, so
+            its path comes first and the discovered one follows rather than replacing it.
+        """
+        _, discovered, inherited = plugin_dirs
 
         composed = compose_driver_path(
-            bundled=None, discovered=discovered, inherited=str(companion)
+            bundled=None, discovered=discovered, inherited=str(inherited)
         )
 
-        assert composed == str(discovered)
+        assert composed.split(os.pathsep) == [str(inherited), str(discovered)], (
+            f"expected the inherited path to lead, got {composed}"
+        )
 
 
 class TestKeepEnvEscapeHatch:
