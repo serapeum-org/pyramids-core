@@ -284,6 +284,26 @@ class TestKeepEnvEscapeHatch:
             "the bundled directory must still be reachable behind them"
         )
 
+    def test_an_entry_that_does_not_exist_yet_is_kept(self, plugin_dirs):
+        """The hatch must not narrow a partly-valid value (L3).
+
+        Test scenario:
+            `GDAL_DRIVER_PATH=goodDir;dirMadeLater` silently lost its second entry, because the
+            inherited entries were run through the existence filter like everything else. The
+            docs promise the hatch "re-ranks, it does not remove", and a directory created after
+            import is a legitimate thing for a user to point at.
+        """
+        good, _, _ = plugin_dirs
+        later = str(good / "made_later")
+
+        composed = compose_driver_path(
+            bundled=None, inherited=os.pathsep.join([str(good), later]), keep_env=True
+        )
+
+        assert composed.split(os.pathsep) == [str(good), later], (
+            f"the hatch narrowed the user's own value: {composed}"
+        )
+
     def test_an_empty_inherited_value_falls_back_to_the_normal_order(self, plugin_dirs):
         """The hatch cannot leave GDAL with nothing when there was nothing to keep."""
         bundled, _, _ = plugin_dirs
@@ -332,7 +352,7 @@ class TestCompanionEntryPointScan:
         [
             "../elsewhere",
             "/elsewhere",
-            "\elsewhere",
+            chr(92) + "elsewhere",
             "C:/elsewhere",
             "sub/../../elsewhere",
         ],
@@ -346,7 +366,7 @@ class TestCompanionEntryPointScan:
             The previous guard used `Path.is_absolute()`, which on Windows reports False for a
             drive-less rooted path like `/elsewhere`. `base / "/elsewhere"` then discards the
             package directory and keeps only the drive, so a registration could aim GDAL at
-            `C:\elsewhere` and have it `LoadLibrary` every DLL there. Each spelling below must
+            `C:/elsewhere` and have it `LoadLibrary` every DLL there. Each spelling below must
             resolve to nothing, including the ones containing no `..` at all.
         """
         package = tmp_path / "fake_companion"
@@ -777,28 +797,46 @@ class TestEntryPointDir:
             "an empty subdir must fall back to the default"
         )
 
-    def test_an_unresolvable_path_is_refused_rather_than_raised(
+    def test_an_unusable_subdir_is_refused_rather_than_raised(
         self, monkeypatch, tmp_path
     ):
-        """`resolve()` can raise OSError, and that must not escape `import pyramids`.
+        """A value the OS cannot express must not escape `import pyramids`.
 
         Test scenario:
-            Resolution touches the filesystem, so it raises on a dead network mount, a path over
-            the OS length limit, or a permission-denied parent. The registration is dropped
-            instead, because this runs inside `import pyramids`, where anything that escapes
-            makes the package unimportable.
+            An embedded null byte makes the join itself raise ValueError. Discovery runs inside
+            `import pyramids`, where anything that escapes makes the package unimportable, so
+            the registration is dropped instead. Triggered with a real unusable value rather
+            than by patching `pathlib`, which would perturb the whole process.
         """
         package = tmp_path / "fake_companion"
         package.mkdir()
         monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
 
-        def boom(self, *args, **kwargs):
-            raise OSError("the mount went away")
+        assert _entry_point_dir("fake_companion:a" + chr(0) + "b") is None, (
+            "an unusable subdir must be swallowed, not propagated"
+        )
 
-        monkeypatch.setattr(_gdal_plugins.Path, "resolve", boom)
+    def test_a_symlinked_plugin_directory_is_accepted(self, monkeypatch, tmp_path):
+        """Containment is lexical, so a symlinked plugin tree still registers.
 
-        assert _entry_point_dir("fake_companion") is None, (
-            "an OSError from resolve() must be swallowed, not propagated"
+        Test scenario:
+            Distro and conda packaging routinely symlink a shared plugin tree into a package
+            directory. Resolving the join followed the link out of the package and refused it
+            silently, which looked to a companion author like "my plugin is ignored".
+        """
+        package = tmp_path / "fake_companion"
+        package.mkdir()
+        real = tmp_path / "shared_plugins"
+        real.mkdir()
+        link = package / DEFAULT_PLUGIN_SUBDIR
+        try:
+            link.symlink_to(real, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pytest.skip("this platform/user cannot create a directory symlink")
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+
+        assert _entry_point_dir("fake_companion") == link, (
+            "a symlinked plugin directory must be accepted, and emitted as the link"
         )
 
     def test_a_file_where_the_directory_should_be_is_refused(
@@ -829,7 +867,7 @@ class TestDeduplicationIsPathAware:
     """
 
     def test_separator_spellings_collapse(self, tmp_path: Path):
-        """A conda activation script exports `/`; `pathlib` builds `\`.
+        """A conda activation script exports forward slashes; `pathlib` builds back-slashes.
 
         Test scenario:
             Both name the same directory, and both routinely reach the composition on Windows.

@@ -681,8 +681,17 @@ class Config:
             # BEFORE the environment, so popping only os.environ leaves a value written by
             # an earlier Config() in this process still in force -- and the test suite, and
             # any host calling Config(level=...) after import, construct more than one.
-            os.environ.pop("GDAL_DRIVER_PATH", None)
+            #
+            # Logged because os.environ is shared: it is what every subprocess the host
+            # spawns inherits, and fiona/rasterio read it without going through this
+            # composition. Removing a value the user set is a surprising thing for a library
+            # to do silently, so it is at least traceable.
+            removed = os.environ.pop("GDAL_DRIVER_PATH", None)
             gdal.SetConfigOption("GDAL_DRIVER_PATH", None)
+            if removed:
+                self.logger.debug(
+                    "cleared GDAL_DRIVER_PATH=%r: no directory on it exists", removed
+                )
         gdal.AllRegister()
 
     @staticmethod

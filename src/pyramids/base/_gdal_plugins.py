@@ -29,6 +29,7 @@ resolved with :func:`importlib.util.find_spec`, not attributes to be loaded.
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Iterable, Sequence
 from importlib.metadata import entry_points
@@ -56,6 +57,8 @@ ENTRY_POINT_GROUP = "pyramids.gdal_plugin_path"
 
 #: The subdirectory used when an entry-point value names only a module.
 DEFAULT_PLUGIN_SUBDIR = "gdalplugins"
+
+_LOGGER = logging.getLogger(__name__)
 
 _COMPANION_CACHE: tuple[Path, ...] | None = None
 
@@ -187,7 +190,7 @@ def _contained(base: Path, subdir: str) -> Path | None:
             >>> base = pathlib.Path("/pkgs/mypkg")
             >>> _contained(base, "/evil") is None
             True
-            >>> _contained(base, "\evil") is None
+            >>> _contained(base, chr(92) + "evil") is None
             True
 
             ```
@@ -206,13 +209,31 @@ def _contained(base: Path, subdir: str) -> Path | None:
         or PureWindowsPath(subdir).root
         or PureWindowsPath(subdir).drive
     )
-    if not rooted:
+    if rooted:
+        _LOGGER.debug("ignoring rooted companion subdir %r", subdir)
+    else:
         try:
-            resolved = (base / subdir).resolve()
-            if resolved.is_relative_to(base.resolve()):
-                found = resolved
-        except OSError:
-            found = None
+            # Containment is checked LEXICALLY. `resolve()` would follow symlinks, and distro
+            # and conda packaging routinely symlink a shared plugin tree into a package
+            # directory -- resolving turned every such companion into a silent refusal, and
+            # rewrote the emitted path to the link target when the package itself was reached
+            # through a symlink or a Windows junction. `normpath` still collapses `..`, which
+            # with the rooted check above is what the guard is actually for.
+            joined = os.path.normpath(os.path.join(str(base), subdir))
+            root = os.path.normpath(str(base))
+            inside = os.path.normcase(joined) == os.path.normcase(root) or (
+                os.path.normcase(joined).startswith(os.path.normcase(root) + os.sep)
+            )
+            if inside:
+                found = Path(joined)
+            else:
+                _LOGGER.debug(
+                    "ignoring companion subdir %r: it escapes %s", subdir, base
+                )
+        except (OSError, ValueError):
+            # A null byte or an over-long component makes the join itself raise, and this
+            # runs during `import pyramids`.
+            _LOGGER.debug("ignoring unusable companion subdir %r", subdir)
     return found
 
 
@@ -320,7 +341,18 @@ def _existing_dirs(values: Iterable[Path | str | None]) -> list[str]:
         if value is None:
             continue
         text = str(value)
-        if text and Path(text).is_dir():
+        if not text:
+            continue
+        try:
+            # `Path.is_dir()` is only exception-free on 3.13+. On 3.11/3.12 -- both of which
+            # this project builds and tests -- it re-raises any OSError whose errno is not in
+            # {ENOENT, ENOTDIR, EBADF, ELOOP}, so an inherited GDAL_DRIVER_PATH entry on a
+            # permission-denied or dead network mount raised straight out of `import pyramids`.
+            is_dir = Path(text).is_dir()
+        except (OSError, ValueError):
+            _LOGGER.debug("ignoring unreadable GDAL plugin path %r", text)
+            continue
+        if is_dir:
             kept.append(text)
     return kept
 
@@ -389,12 +421,22 @@ def compose_driver_path(
         # own ABI-locked plugins outright, so `PYRAMIDS_KEEP_GDAL_ENV=1` inside an activated
         # conda env reinstated the #465 symptom through the documented escape hatch -- the
         # user asked for their value to win, not for the wheel's drivers to disappear.
-        ordered: list[Path | str | None] = [
-            *inherited.split(os.pathsep),
-            bundled,
-            discovered,
-            *companions,
-        ]
+        #
+        # The user's own entries are also passed through UNFILTERED. Running them through the
+        # existence check narrowed a partially-valid value -- `goodDir;dirMadeLater` silently
+        # lost its second entry -- which contradicts both this function's promise and the docs
+        # page. Under the hatch the value is theirs to get right.
+        kept = inherited.split(os.pathsep)
+        ordered: list[Path | str | None] = [*kept]
+        ordered.extend(_existing_dirs([bundled, discovered, *companions]))
+        parts: list[str] = []
+        seen: set[str] = set()
+        for text in (str(item) for item in ordered if item):
+            key = _dedup_key(text)
+            if key not in seen:
+                seen.add(key)
+                parts.append(text)
+        return os.pathsep.join(parts) if parts else None
     else:
         authoritative = _existing_dirs([bundled, discovered])
         if bundled is None and inherited:
@@ -411,20 +453,53 @@ def compose_driver_path(
             # is exactly what #465 forbids, and ci/verify-wheel.py asserts it cannot happen.
             authoritative = [*inherited.split(os.pathsep), *authoritative]
         ordered = [*authoritative, *companions]
-    parts: list[str] = []
-    seen: set[str] = set()
+    parts = []
+    seen = set()
     for text in _existing_dirs(ordered):
-        # Compare on a normalised form, emit the original spelling. The same directory
-        # routinely arrives twice: a conda/pixi activation script exports it with forward
-        # slashes while `Config.dynamic_env_variables` builds it with `pathlib` back-slashes,
-        # and a case difference or a trailing separator does it too. String equality let all
-        # three through, so GDAL scanned and LoadLibrary'd one directory twice on every
-        # conda install -- and made this function's own "duplicates are dropped" false.
-        try:
-            key = os.path.normcase(os.path.realpath(text))
-        except OSError:  # pragma: no cover - realpath on a dead mount
-            key = os.path.normcase(text)
+        key = _dedup_key(text)
         if key not in seen:
             seen.add(key)
             parts.append(text)
     return os.pathsep.join(parts) if parts else None
+
+
+def _dedup_key(text: str) -> str:
+    """Return the form two spellings of one directory share.
+
+    The same directory routinely arrives twice: a conda/pixi activation script exports it with
+    forward slashes while `Config.dynamic_env_variables` builds it with `pathlib` back-slashes,
+    and a case difference or a trailing separator does it too. Comparing raw strings let all
+    three through, so GDAL scanned and `LoadLibrary`'d one directory twice on every conda
+    install -- and made the "duplicates are dropped" promise observably false.
+
+    Args:
+        text: A path as it will be emitted.
+
+    Returns:
+        str: A normalised key for equality only; the original spelling is what reaches GDAL,
+            so a user's own value is never rewritten.
+
+    Examples:
+        - Separator and case spellings of one path share a key:
+            ```python
+            >>> import os
+            >>> from pyramids.base._gdal_plugins import _dedup_key
+            >>> here = os.getcwd()
+            >>> _dedup_key(here) == _dedup_key(here.replace(os.sep, "/"))
+            True
+
+            ```
+        - Two different directories do not:
+            ```python
+            >>> import os
+            >>> from pyramids.base._gdal_plugins import _dedup_key
+            >>> _dedup_key(os.getcwd()) == _dedup_key(os.path.dirname(os.getcwd()))
+            False
+
+            ```
+    """
+    try:
+        key = os.path.normcase(os.path.realpath(text))
+    except (OSError, ValueError):
+        key = os.path.normcase(text)
+    return key

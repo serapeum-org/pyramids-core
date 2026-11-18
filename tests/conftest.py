@@ -44,8 +44,9 @@ def isolate_gdal_companion_cache():
     restore — it only puts `entry_points` back. Any test that stubs the scan therefore leaves its
     result cached for the rest of the session, and every later `Config.initialize_gdal()` composes
     those stale directories into `GDAL_DRIVER_PATH`. This lives in the root conftest rather than
-    beside the tests that stub the scan, because the leak crosses files: `tests/config` sorts after
-    `tests/base`, so a fixture in the latter cannot clean up after the former.
+    beside the tests that stub the scan, because the leak crosses files: both `tests/base` and
+    `tests/config` stub the scan, and a fixture defined in one of them cannot clean up after a
+    test in the other.
     """
     clear_companion_plugin_dir_cache()
     yield
