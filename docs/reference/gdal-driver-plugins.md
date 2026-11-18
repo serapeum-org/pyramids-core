@@ -61,8 +61,8 @@ containing `..`, is refused.
 Discovery is a **pure metadata scan**. pyramids resolves the module with `importlib.util.find_spec` and never
 imports your package, because the scan runs during `import pyramids`, before GDAL registers drivers; importing a
 companion there would drag its whole dependency tree into every `import pyramids`. The result is cached for the
-process — call `pyramids.base._gdal_plugins.clear_companion_plugin_dir_cache()` if you install a package
-mid-session.
+life of the process, and `GDAL_DRIVER_PATH` is composed once at import, so installing a companion into a running
+interpreter has no effect — **restart it** to pick the plugin up.
 
 ### The ABI contract you are accepting
 
