@@ -1279,6 +1279,39 @@ def _branded_driver_error(path: str, error: BaseException) -> VectorDriverError 
     Returns:
         VectorDriverError | None: The branded error to raise, or ``None`` when this failure is
             not a plugin-driver problem and the original should propagate untouched.
+
+    Examples:
+        - A plugin that is present but cannot load produces the remedy:
+            ```python
+            >>> import pathlib, tempfile
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> source = pathlib.Path(tempfile.mkdtemp()) / "points.parquet"
+            >>> _ = source.write_bytes(b"PAR1")
+            >>> error = _branded_driver_error(
+            ...     str(source), RuntimeError("Can't load requested DLL: duckdb.dll 126")
+            ... )
+            >>> str(error).splitlines()[0].startswith("Reading 'points.parquet'")
+            True
+            >>> 'no OGR "Parquet" driver' in str(error)
+            True
+            >>> "read_parquet()" in str(error)
+            True
+
+            ```
+        - A format whose driver is built into libgdal is never branded, so its own error stands:
+            ```python
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> _branded_driver_error("reaches.geojson", RuntimeError("boom")) is None
+            True
+
+            ```
+        - Neither is a path that is simply not there, whatever its suffix:
+            ```python
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> _branded_driver_error("no_such_dir_xyz/x.parquet", RuntimeError("boom")) is None
+            True
+
+            ```
     """
     missing = _missing_ogr_plugin(path, error)
     if missing is None or _local_source_absent(path):
