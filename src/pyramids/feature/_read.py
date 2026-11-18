@@ -44,18 +44,22 @@ import pandas as pd
 import pyogrio
 import pyproj
 from geopandas import GeoDataFrame
-from osgeo import gdal
+from osgeo import gdal, ogr
 from pyproj.exceptions import CRSError as _PyprojCRSError
 from shapely.geometry import box
 
 from pyramids import _io as _pyramids_io
-from pyramids.base._errors import FeatureError, VectorTileServerError
+from pyramids.base._errors import (
+    FeatureError,
+    VectorDriverError,
+    VectorTileServerError,
+)
 from pyramids.base._ogc_api import (
     discovery_request,
     http_error_detail,
     http_get_with_retry,
 )
-from pyramids.base._utils import extra_hint, import_pyarrow
+from pyramids.base._utils import extra_hint, import_pyarrow, ogr_plugin_hint
 from pyramids.base.crs import _pyproj_crs_via_gdal, crs_from_user_input
 from pyramids.base.remote import _ARCHIVE_MARKER_RE, is_remote, to_fsspec_url
 from pyramids.feature._drivers import VectorDriver, select_driver, vector_drivers
@@ -821,7 +825,15 @@ def read_file(
             npartitions=npartitions,
             chunksize=chunksize,
         )
-    gdf = _read_file_healing_crs(resolved, passthrough)
+    try:
+        gdf = _read_file_healing_crs(resolved, passthrough)
+    except Exception as exc:
+        # `read_file` is the first thing most users type, so it must carry the same remedy
+        # `iter_features` does when the format's OGR plugin driver is absent or unloadable.
+        branded = _branded_driver_error(resolved, exc)
+        if branded is None:
+            raise
+        raise branded from exc
     return fc_cls(gdf)
 
 
@@ -1106,6 +1118,285 @@ def _validate_iter_features_args(
         )
 
 
+# Formats whose OGR driver ships as a separate, optional GDAL plugin rather than being
+# compiled into libgdal. Maps a path suffix to (OGR driver name, conda-forge package that
+# supplies it, a format-specific alternative to suggest). The pyramids wheels bundle none of
+# these: the Arrow runtime the Parquet/Arrow drivers link adds ~10-12 MB to every wheel for a
+# capability only the OGR streaming path needs. Tracked in #457.
+_OGR_PLUGIN_DRIVERS: dict[str, tuple[str, str, str]] = {
+    ".parquet": (
+        "Parquet",
+        "libgdal-arrow-parquet",
+        "For an in-memory read that needs no GDAL driver, use "
+        "FeatureCollection.read_parquet() instead.",
+    ),
+    ".geoparquet": (
+        "Parquet",
+        "libgdal-arrow-parquet",
+        "For an in-memory read that needs no GDAL driver, use "
+        "FeatureCollection.read_parquet() instead.",
+    ),
+    ".arrow": ("Arrow", "libgdal-arrow-parquet", ""),
+    ".feather": ("Arrow", "libgdal-arrow-parquet", ""),
+}
+
+
+#: Markers GDAL uses when a driver exists on paper but its shared library will not load. GDAL
+#: >= 3.9 registers a *deferred* proxy driver as soon as it sees a file named `ogr_Parquet.<ext>`
+#: on `GDAL_DRIVER_PATH`, and only dlopens it on first use -- so `GetDriverByName` returns a
+#: driver in exactly the "installed but broken" case this branding exists for, most notably
+#: conda-Windows' `duckdb.dll 126`. Keying on the lookup alone silently switched the remedy off
+#: there; the failure text is the signal that distinguishes it from a corrupt file.
+_PLUGIN_LOAD_MARKERS = (
+    "can't load requested dll",
+    "cannot load requested dll",
+    "is not available in your installation",
+    "cannot open shared object file",
+    "plugin",
+)
+
+
+def _is_plugin_load_failure(error: BaseException | None) -> bool:
+    """Whether `error` is GDAL complaining that a driver's plugin could not be loaded.
+
+    Args:
+        error: The exception raised by the read, or ``None`` when branding is being decided
+            without one.
+
+    Returns:
+        bool: True when the message carries one of :data:`_PLUGIN_LOAD_MARKERS`.
+
+    Examples:
+        - The conda-Windows failure is recognised:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(RuntimeError("Can't load requested DLL: duckdb.dll 126"))
+            True
+
+            ```
+        - A corrupt file is not a plugin problem:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(RuntimeError("Parquet magic bytes not found in footer"))
+            False
+
+            ```
+        - Nothing to inspect means no evidence either way:
+            ```python
+            >>> from pyramids.feature._read import _is_plugin_load_failure
+            >>> _is_plugin_load_failure(None)
+            False
+
+            ```
+    """
+    text = str(error).lower() if error is not None else ""
+    return any(marker in text for marker in _PLUGIN_LOAD_MARKERS)
+
+
+def _missing_ogr_plugin(
+    path: str, error: BaseException | None = None
+) -> tuple[str, str, str] | None:
+    """Return the plugin-driver entry a path needs, when that driver is absent or unloadable.
+
+    Args:
+        path: The resolved path about to be opened through OGR.
+        error: The failure to diagnose, when there is one. A registered driver whose plugin
+            cannot be loaded is as unusable as an absent one, and only the error text tells
+            them apart -- see :data:`_PLUGIN_LOAD_MARKERS`.
+
+    Returns:
+        tuple[str, str, str] | None: The `_OGR_PLUGIN_DRIVERS` entry when the suffix needs an
+            optional plugin driver *and* that driver is either unregistered or registered but
+            unloadable; ``None`` when the format needs no plugin, or the driver is present and
+            the failure was something else.
+
+    Examples:
+        - A format with an in-libgdal driver is never reported as missing:
+            ```python
+            >>> from pyramids.feature._read import _missing_ogr_plugin
+            >>> _missing_ogr_plugin("points.geojson") is None
+            True
+
+            ```
+    """
+    needed = _OGR_PLUGIN_DRIVERS.get(Path(path).suffix.lower())
+    missing = None
+    if needed is not None and (
+        ogr.GetDriverByName(needed[0]) is None or _is_plugin_load_failure(error)
+    ):
+        missing = needed
+    return missing
+
+
+def _read_info_branded(path: str, **kwargs: Any) -> Any:
+    """Call `pyogrio.read_info`, replacing a missing-plugin failure with an actionable error.
+
+    Without this, streaming a `.parquet` on an installation that has no OGR Parquet driver
+    surfaces GDAL's own text -- `not recognized as being in a supported file format`, or on
+    conda-Windows `Can't load requested DLL: duckdb.dll 126` -- neither of which tells the user
+    what to install or that `read_parquet()` would work. Since `ogr.GetDriverByName` returns
+    `None` in both of those cases, the condition is detectable and the remedy can be named.
+
+    Only re-brands when the driver really is absent **and** the source is actually there. Any
+    other failure -- a missing file, a corrupt file, a bad layer name, a permissions error --
+    propagates untouched, because the branding keys on the path's suffix and on the driver being
+    unregistered, neither of which says anything about why *this* read failed. GDAL's own text is
+    included in the branded message as well as chained on `__cause__`.
+
+    Args:
+        path: The resolved path to open.
+        **kwargs: Forwarded verbatim to `pyogrio.read_info`.
+
+    Returns:
+        The `pyogrio.read_info` mapping.
+
+    Raises:
+        VectorDriverError: If the format needs an optional OGR plugin driver that the active
+            GDAL does not have. Subclasses `RuntimeError`, like every other
+            vector-driver-level failure in pyramids.
+    """
+    try:
+        info = pyogrio.read_info(path, **kwargs)
+    except Exception as exc:
+        branded = _branded_driver_error(path, exc)
+        if branded is None:
+            raise
+        raise branded from exc
+    return info
+
+
+def _branded_driver_error(path: str, error: BaseException) -> VectorDriverError | None:
+    """Build the actionable error for a missing or unloadable OGR plugin driver.
+
+    Shared by every OGR entry point that can hit the condition, so the remedy does not depend
+    on which method the user happened to call: `read_file` is the first thing most people
+    type, and branding only `iter_features` left exactly those users with GDAL's dead-end text.
+
+    Args:
+        path: The resolved path that failed to open.
+        error: The failure raised by GDAL/pyogrio.
+
+    Returns:
+        VectorDriverError | None: The branded error to raise, or ``None`` when this failure is
+            not a plugin-driver problem and the original should propagate untouched.
+
+    Examples:
+        - A plugin that is present but cannot load produces the remedy:
+            ```python
+            >>> import pathlib, tempfile
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> source = pathlib.Path(tempfile.mkdtemp()) / "points.parquet"
+            >>> _ = source.write_bytes(b"PAR1")
+            >>> error = _branded_driver_error(
+            ...     str(source), RuntimeError("Can't load requested DLL: duckdb.dll 126")
+            ... )
+            >>> str(error).splitlines()[0].startswith("Reading 'points.parquet'")
+            True
+            >>> 'no OGR "Parquet" driver' in str(error)
+            True
+            >>> "read_parquet()" in str(error)
+            True
+
+            ```
+        - A format whose driver is built into libgdal is never branded, so its own error stands:
+            ```python
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> _branded_driver_error("reaches.geojson", RuntimeError("boom")) is None
+            True
+
+            ```
+        - Neither is a path that is simply not there, whatever its suffix:
+            ```python
+            >>> from pyramids.feature._read import _branded_driver_error
+            >>> _branded_driver_error("no_such_dir_xyz/x.parquet", RuntimeError("boom")) is None
+            True
+
+            ```
+    """
+    missing = _missing_ogr_plugin(path, error)
+    if missing is None or _local_source_absent(path):
+        return None
+    driver, conda_package, alternative = missing
+    message = ogr_plugin_hint(
+        f"Reading {Path(path).name!r} goes through GDAL/OGR.",
+        driver,
+        conda_package,
+    )
+    parts = [message]
+    if alternative:
+        parts.append(alternative)
+    parts.append(f"GDAL reported: {str(error).strip()}")
+    return VectorDriverError("\n".join(parts))
+
+
+#: `/vsi` prefixes that address something on the local filesystem rather than the network. The
+#: archive ones matter here because `_io._parse_path` generates them from ordinary user input.
+_LOCAL_VSI_PREFIXES = ("/vsizip/", "/vsitar/", "/vsigzip/", "/vsisubfile/")
+
+
+def _local_source_absent(path: str) -> bool:
+    """Whether `path` names a local file or directory that is not there.
+
+    The missing-driver branding keys on the path's suffix and on the driver being unregistered,
+    neither of which says anything about *this* read. On any installation without the OGR Parquet
+    driver -- which is every pyramids wheel -- a typo'd `.parquet` path would otherwise be reported
+    as a packaging problem, sending the user to install a conda package that cannot help and to
+    `read_parquet()`, which fails the same way. A source that is not there is a different failure
+    and must surface as itself.
+
+    Only the *network* `/vsi` prefixes are assumed present -- confirming one costs a round trip,
+    and a missing remote object already fails with its own message from GDAL. The archive
+    prefixes are local: `_io._parse_path` turns `reaches.zip` into
+    `/vsizip/<abs>/reaches.zip/inner.parquet` before this is ever reached, so treating every
+    `/vsi` form as present left a typo'd archive branded as a missing driver.
+
+    Args:
+        path: The resolved path about to be opened.
+
+    Returns:
+        bool: True when the path is local and does not exist.
+
+    Examples:
+        - A local path that is not there is reported absent:
+            ```python
+            >>> from pyramids.feature._read import _local_source_absent
+            >>> _local_source_absent("no_such_directory_xyz/points.parquet")
+            True
+
+            ```
+        - A remote URL is never probed, so it counts as present:
+            ```python
+            >>> from pyramids.feature._read import _local_source_absent
+            >>> _local_source_absent("https://example.com/points.parquet")
+            False
+
+            ```
+    """
+    local_prefix = next(
+        (prefix for prefix in _LOCAL_VSI_PREFIXES if path.startswith(prefix)), None
+    )
+    if local_prefix is None:
+        if is_remote(path) or path.startswith("/vsi"):
+            return False
+        return not Path(path).exists()
+    probe = path[len(local_prefix) :]
+    # A local archive path carries the member inside it -- `/vsizip/<dir>/a.zip/inner.parquet` --
+    # so the container is the longest prefix that is a FILE. Testing `.exists()` on the whole
+    # string would call a typo'd archive present as soon as its parent directory happened to
+    # exist, which is the case this guard is for.
+    candidate = Path(probe)
+    absent = True
+    while True:
+        if candidate.is_file():
+            absent = False
+            break
+        parent = candidate.parent
+        if parent == candidate:
+            break
+        candidate = parent
+    return absent
+
+
 def iter_features(
     fc_cls: type[FeatureCollection],
     path: str | Path,
@@ -1136,7 +1427,7 @@ def iter_features(
     info_kwargs: dict[str, Any] = {}
     if layer is not None:
         info_kwargs["layer"] = layer
-    info = pyogrio.read_info(resolved, **info_kwargs)
+    info = _read_info_branded(resolved, **info_kwargs)
     total = int(info["features"])
 
     if chunksize is None:

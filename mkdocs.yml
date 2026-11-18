@@ -257,6 +257,7 @@ nav:
     - Geodesy helpers: reference/base/geodesy.md
     - UTM helpers: reference/utm.md
     - Basemap: reference/basemap.md
+    - GDAL driver plugins: reference/gdal-driver-plugins.md
     - Plot backends: reference/plot-backends.md
     - Writing a plot backend: reference/writing-a-plot-backend.md
     - STAC:

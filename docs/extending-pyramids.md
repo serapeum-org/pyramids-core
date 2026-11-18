@@ -31,6 +31,14 @@ the whole lazy/dask layer, not a family of named drivers), contracted by the `Co
 it is an advanced, rarely needed task, so it has no author guide of its own — read the protocol and the plugin's
 source if you need to.
 
+A sixth seam, `pyramids.gdal_plugin_path`, is lower-level still: it contributes a directory of **compiled GDAL
+driver plugins** rather than Python code, so its contract is a path, not a protocol. A distribution registers the
+module that holds its `gdalplugins/` directory and pyramids appends it to `GDAL_DRIVER_PATH` before
+`gdal.AllRegister()`. Nothing is imported during discovery, and a companion can only *add* drivers — it can never
+shadow the version-locked ones the active `libgdal` was built with. The binaries must be built against that exact
+`libgdal`, which is a real constraint rather than a formality; see
+[GDAL driver plugins](reference/gdal-driver-plugins.md).
+
 ## How registration works
 
 A plugin declares its entry points in its own `pyproject.toml` under the matching group. For example, a package

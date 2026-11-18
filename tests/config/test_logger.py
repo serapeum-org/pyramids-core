@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from osgeo import gdal
 
+from pyramids.base import _gdal_plugins
 from pyramids.base import config as config_mod
 from pyramids.base.config import (
     PACKAGE_LOGGER_NAME,
@@ -279,7 +280,7 @@ def test_dynamic_env_variables_returns_early_when_conda_provides_path(mock_set_e
 @patch("osgeo.gdal.AllRegister")
 @patch("pyramids.base.config.Config.dynamic_env_variables")
 def test_initialize_gdal_sets_options_and_conditional_driver_path(
-    mock_dyn, mock_register, mock_setopt
+    mock_dyn, mock_register, mock_setopt, tmp_path, monkeypatch
 ):
     # Create instance without running __init__ side-effects
     cfg = object.__new__(Config)
@@ -288,6 +289,19 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
         "gdal": {"GDAL_CACHEMAX": "256"},
         "ogr": {"OGR_SRS_PARSER": "strict"},
     }
+    # Drop the inherited value for the duration: with nothing else to point at, the
+    # composition falls back to it, which would make the "nothing was set" cases below
+    # depend on how the ambient environment was activated. delenv also arms monkeypatch's
+    # restore, which matters because initialize_gdal really does write os.environ now --
+    # a leaked tmp_path here broke the cross-process tests in tests/netcdf/io/test_pickle.py
+    # on Linux, where netCDF/HDF5 are separate plugins found only through this variable.
+    monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
+    # No bundled dir and no companion, so `dynamic_env_variables` is the only input and this
+    # stays a test of the discovered-path branch alone. See
+    # tests/base/test_gdal_plugin_path.py for the composition itself.
+    monkeypatch.setattr(Config, "_bundled_plugin_dir", staticmethod(lambda: None))
+    monkeypatch.setattr(_gdal_plugins, "entry_points", lambda group: [])
+    _gdal_plugins.clear_companion_plugin_dir_cache()
 
     # Case 1: dynamic_env_variables returns None -> no GDAL_DRIVER_PATH set
     mock_dyn.return_value = None
@@ -296,16 +310,41 @@ def test_initialize_gdal_sets_options_and_conditional_driver_path(
     mock_setopt.assert_any_call("GDAL_CACHEMAX", "256")
     mock_setopt.assert_any_call("OGR_SRS_PARSER", "strict")
     # Ensure GDAL_DRIVER_PATH was not set in this branch
-    assert ("GDAL_DRIVER_PATH",) not in [c.args[:1] for c in mock_setopt.call_args_list]
+    # Clearing it (value None) is expected here and is what mirrors the os.environ pop;
+    # what must never happen is GDAL being pointed AT a path when nothing composed.
+    assert not [
+        c
+        for c in mock_setopt.call_args_list
+        if c.args[:1] == ("GDAL_DRIVER_PATH",) and c.args[1] is not None
+    ], f"a driver path was set when none composes: {mock_setopt.call_args_list}"
 
     mock_setopt.reset_mock()
 
-    # Case 2: dynamic_env_variables returns a Path -> GDAL_DRIVER_PATH set
-    path = Path("/some/plugins")
+    # Case 2: dynamic_env_variables returns an existing Path -> GDAL_DRIVER_PATH set
+    path = tmp_path / "plugins"
+    path.mkdir()
     mock_dyn.return_value = path
     cfg.initialize_gdal()
     mock_setopt.assert_any_call("GDAL_DRIVER_PATH", str(path))
     mock_register.assert_called()
+
+    mock_setopt.reset_mock()
+
+    # Case 3: a path that does not exist is dropped rather than handed to GDAL. The real
+    # `dynamic_env_variables` already returns only directories it verified, so this guards the
+    # composition's own hygiene -- GDAL is never pointed at a directory that is not there.
+    # Case 2 really wrote os.environ, and an inherited value is deliberately kept when
+    # nothing else points anywhere, so clear it again to isolate the discovered path.
+    monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
+    mock_dyn.return_value = tmp_path / "vanished"
+    cfg.initialize_gdal()
+    # Clearing it (value None) is expected here and is what mirrors the os.environ pop;
+    # what must never happen is GDAL being pointed AT a path when nothing composed.
+    assert not [
+        c
+        for c in mock_setopt.call_args_list
+        if c.args[:1] == ("GDAL_DRIVER_PATH",) and c.args[1] is not None
+    ], f"a driver path was set when none composes: {mock_setopt.call_args_list}"
 
 
 def test_error_handler_exception_fallback_logs_error(capsys):
