@@ -31,8 +31,26 @@ import geopandas as gpd
 from geopandas import GeoDataFrame
 
 # isort: on
+from pyramids.base._gdal_plugins import clear_companion_plugin_dir_cache
 from tests._marks import EXTRA_MARKERS
 from tests._skip_guard import is_unexpected_dependency_skip, skip_reason
+
+
+@pytest.fixture(autouse=True)
+def isolate_gdal_companion_cache():
+    """Never let a faked companion scan outlive the test that faked it.
+
+    `companion_plugin_dirs` caches its result in a module global, which `monkeypatch` cannot
+    restore — it only puts `entry_points` back. Any test that stubs the scan therefore leaves its
+    result cached for the rest of the session, and every later `Config.initialize_gdal()` composes
+    those stale directories into `GDAL_DRIVER_PATH`. This lives in the root conftest rather than
+    beside the tests that stub the scan, because the leak crosses files: `tests/config` sorts after
+    `tests/base`, so a fixture in the latter cannot clean up after the former.
+    """
+    clear_companion_plugin_dir_cache()
+    yield
+    clear_companion_plugin_dir_cache()
+
 
 # The dataset/ and feature/ conftests auto-provide their fixtures to tests under
 # their own directories. The only cross-directory use is tests/base/test_dtype_conversions.py,

@@ -42,23 +42,6 @@ class _FakeEntryPoint:
         self.value = value
 
 
-@pytest.fixture(autouse=True)
-def isolate_companion_cache():
-    """Never let a faked companion scan survive the test that faked it.
-
-    The cache is a module global, so `monkeypatch` restoring `entry_points` does not undo it.
-    A leaked tuple of still-existing tmp_path directories made every later
-    `Config.initialize_gdal()` in the session compose them into `GDAL_DRIVER_PATH` -- and on
-    Linux, where neither a bundled nor a discovered directory exists, they became the WHOLE
-    path, unloading the conda environment's netCDF/HDF5 plugins. The cross-process tests in
-    tests/netcdf/io/test_pickle.py then failed in their spawned children with
-    "plugin gdal_HDF5.so is not available".
-    """
-    clear_companion_plugin_dir_cache()
-    yield
-    clear_companion_plugin_dir_cache()
-
-
 @pytest.fixture
 def plugin_dirs(tmp_path: Path) -> tuple[Path, Path, Path]:
     """Three distinct, existing directories to stand in for the three kinds of input."""
