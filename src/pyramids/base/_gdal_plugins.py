@@ -417,26 +417,7 @@ def compose_driver_path(
             ```
     """
     if keep_env and inherited:
-        # The hatch re-ranks; it does not discard. Excluding `bundled` here removed a wheel's
-        # own ABI-locked plugins outright, so `PYRAMIDS_KEEP_GDAL_ENV=1` inside an activated
-        # conda env reinstated the #465 symptom through the documented escape hatch -- the
-        # user asked for their value to win, not for the wheel's drivers to disappear.
-        #
-        # The user's own entries are also passed through UNFILTERED. Running them through the
-        # existence check narrowed a partially-valid value -- `goodDir;dirMadeLater` silently
-        # lost its second entry -- which contradicts both this function's promise and the docs
-        # page. Under the hatch the value is theirs to get right.
-        kept = inherited.split(os.pathsep)
-        ordered: list[Path | str | None] = [*kept]
-        ordered.extend(_existing_dirs([bundled, discovered, *companions]))
-        parts: list[str] = []
-        seen: set[str] = set()
-        for text in (str(item) for item in ordered if item):
-            key = _dedup_key(text)
-            if key not in seen:
-                seen.add(key)
-                parts.append(text)
-        return os.pathsep.join(parts) if parts else None
+        candidates = _kept_env_order(inherited, bundled, discovered, companions)
     else:
         authoritative = _existing_dirs([bundled, discovered])
         if bundled is None and inherited:
@@ -452,15 +433,65 @@ def compose_driver_path(
             # ABI-locked to its own vendored libgdal, so admitting a foreign path alongside them
             # is exactly what #465 forbids, and ci/verify-wheel.py asserts it cannot happen.
             authoritative = [*inherited.split(os.pathsep), *authoritative]
-        ordered = [*authoritative, *companions]
-    parts = []
-    seen = set()
-    for text in _existing_dirs(ordered):
+        candidates = _existing_dirs([*authoritative, *companions])
+    parts: list[str] = []
+    seen: set[str] = set()
+    for text in candidates:
         key = _dedup_key(text)
         if key not in seen:
             seen.add(key)
             parts.append(text)
     return os.pathsep.join(parts) if parts else None
+
+
+def _kept_env_order(
+    inherited: str,
+    bundled: Path | None,
+    discovered: Path | None,
+    companions: Sequence[Path],
+) -> list[str]:
+    """Order the candidates when ``PYRAMIDS_KEEP_GDAL_ENV=1`` is in effect.
+
+    The hatch **re-ranks**; it does not discard. Excluding ``bundled`` removed a wheel's own
+    ABI-locked plugins outright, so the hatch inside an activated conda env reinstated the #465
+    symptom it was meant to let users work around.
+
+    The user's own entries are also passed through **unfiltered**. Running them through the
+    existence check narrowed a partially-valid value — ``goodDir<sep>dirMadeLater`` silently lost
+    its second entry — which contradicted both the caller's promise and the documentation. Under
+    the hatch the value is theirs to get right.
+
+    Args:
+        inherited: The ``GDAL_DRIVER_PATH`` the process inherited, as an ``os.pathsep`` list.
+        bundled: The wheel's own plugin directory, if it ships one.
+        discovered: A conda / system plugin directory, if one was found.
+        companions: Directories contributed through :data:`ENTRY_POINT_GROUP`.
+
+    Returns:
+        list[str]: The inherited entries first, in their original order, then whichever of the
+            other directories exist.
+
+    Examples:
+        - The user's entries lead and are kept even when they do not exist yet:
+            ```python
+            >>> import os
+            >>> from pyramids.base._gdal_plugins import _kept_env_order
+            >>> _kept_env_order(os.pathsep.join(["mine", "later"]), None, None, ())
+            ['mine', 'later']
+
+            ```
+        - An existing directory behind them is ranked lower, never dropped:
+            ```python
+            >>> import os, pathlib
+            >>> from pyramids.base._gdal_plugins import _kept_env_order
+            >>> here = pathlib.Path(".").resolve()
+            >>> _kept_env_order("mine", here, None, ()) == ["mine", str(here)]
+            True
+
+            ```
+    """
+    kept = [entry for entry in inherited.split(os.pathsep) if entry]
+    return [*kept, *_existing_dirs([bundled, discovered, *companions])]
 
 
 def _dedup_key(text: str) -> str:

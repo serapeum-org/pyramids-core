@@ -1372,15 +1372,14 @@ def _local_source_absent(path: str) -> bool:
 
             ```
     """
-    probe = path
-    for prefix in _LOCAL_VSI_PREFIXES:
-        if path.startswith(prefix):
-            probe = path[len(prefix) :]
-            break
-    else:
+    local_prefix = next(
+        (prefix for prefix in _LOCAL_VSI_PREFIXES if path.startswith(prefix)), None
+    )
+    if local_prefix is None:
         if is_remote(path) or path.startswith("/vsi"):
             return False
         return not Path(path).exists()
+    probe = path[len(local_prefix) :]
     # A local archive path carries the member inside it -- `/vsizip/<dir>/a.zip/inner.parquet` --
     # so the container is the longest prefix that is a FILE. Testing `.exists()` on the whole
     # string would call a typo'd archive present as soon as its parent directory happened to

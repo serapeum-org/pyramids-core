@@ -90,8 +90,10 @@ class TestBrandedError:
 
     def test_the_remedy_is_named(self, failing_read_info, present):
         """The driver, the conda package, and the no-driver alternative all appear."""
+        source = present("points.parquet")
+
         with pytest.raises(VectorDriverError) as caught:
-            _read_info_branded(present("points.parquet"))
+            _read_info_branded(source)
 
         message = str(caught.value)
         assert 'no OGR "Parquet" driver' in message
@@ -102,30 +104,38 @@ class TestBrandedError:
 
     def test_it_never_points_at_a_core_extra(self, failing_read_info, present):
         """No `pip install pyramids-core[...]` can supply a native GDAL driver."""
+        source = present("points.parquet")
+
         with pytest.raises(VectorDriverError) as caught:
-            _read_info_branded(present("points.parquet"))
+            _read_info_branded(source)
 
         assert "pyramids-core[" not in str(caught.value)
 
     def test_the_original_failure_is_chained(self, failing_read_info, present):
         """GDAL's own text stays reachable on `__cause__` for anyone debugging."""
+        source = present("points.parquet")
+
         with pytest.raises(VectorDriverError) as caught:
-            _read_info_branded(present("points.parquet"))
+            _read_info_branded(source)
 
         assert isinstance(caught.value.__cause__, RuntimeError)
         assert "supported file format" in str(caught.value.__cause__)
 
     def test_it_is_catchable_as_a_runtime_error(self, failing_read_info, present):
         """`VectorDriverError` multi-inherits `RuntimeError`, like every driver failure."""
+        source = present("points.parquet")
+
         with pytest.raises(RuntimeError):
-            _read_info_branded(present("points.parquet"))
+            _read_info_branded(source)
 
     def test_the_arrow_formats_offer_no_read_parquet_alternative(
         self, failing_read_info, present
     ):
         """`.feather` has no in-memory FeatureCollection reader, so none is suggested."""
+        source = present("points.feather")
+
         with pytest.raises(VectorDriverError) as caught:
-            _read_info_branded(present("points.feather"))
+            _read_info_branded(source)
 
         message = str(caught.value)
         assert 'no OGR "Arrow" driver' in message
@@ -297,10 +307,10 @@ class TestThroughThePublicApi:
             Guidance that shows the error at call time is wrong, and a caller wrapping only the
             call in `try` catches nothing. Binding the generator must be silent.
         """
-        features = FeatureCollection.iter_features(parquet_without_a_driver)
+        features = iter(FeatureCollection.iter_features(parquet_without_a_driver))
 
         with pytest.raises(VectorDriverError):
-            next(iter(features))
+            next(features)
 
     def test_it_is_catchable_as_a_runtime_error_end_to_end(
         self, parquet_without_a_driver
