@@ -33,7 +33,7 @@ import os
 from collections.abc import Iterable, Sequence
 from importlib.metadata import entry_points
 from importlib.util import find_spec
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 __all__ = [
     "DEFAULT_PLUGIN_SUBDIR",
@@ -144,15 +144,76 @@ def _entry_point_dir(value: str) -> Path | None:
     subdir = subdir.strip() or DEFAULT_PLUGIN_SUBDIR
     candidate: Path | None = None
     base = _module_dir(module_name) if module_name else None
-    if (
-        base is not None
-        and not Path(subdir).is_absolute()
-        and ".." not in Path(subdir).parts
-    ):
-        plugin_dir = base / subdir
-        if plugin_dir.is_dir():
+    if base is not None:
+        plugin_dir = _contained(base, subdir)
+        if plugin_dir is not None and plugin_dir.is_dir():
             candidate = plugin_dir
     return candidate
+
+
+def _contained(base: Path, subdir: str) -> Path | None:
+    r"""Join ``subdir`` onto ``base``, but only while the result stays inside ``base``.
+
+    `Path.is_absolute()` is not a sufficient guard. On Windows a drive-less rooted path such as
+    ``/evil`` or ``\evil`` is **not** absolute and contains no ``..``, yet ``base / "/evil"``
+    discards ``base`` and keeps only its drive — so the old check let a registration point GDAL at
+    ``C:\evil``, which GDAL would then ``LoadLibrary`` every DLL out of. Both pure-path flavours
+    are consulted, so a rooted path is caught on whichever platform it was written for, and the
+    joined path is resolved and re-checked against ``base`` so that ``..`` segments and symlinks
+    leading out of the package are rejected too.
+
+    Args:
+        base: The companion package's directory.
+        subdir: The relative subdirectory from the entry-point value.
+
+    Returns:
+        pathlib.Path | None: The resolved directory inside ``base``, or ``None`` when ``subdir``
+            is rooted, drive-qualified, or escapes ``base``.
+
+    Examples:
+        - A plain relative subdir is joined as given:
+            ```python
+            >>> import pathlib
+            >>> from pyramids.base._gdal_plugins import _contained
+            >>> base = pathlib.Path("/pkgs/mypkg")
+            >>> _contained(base, "gdalplugins").name
+            'gdalplugins'
+
+            ```
+        - A rooted subdir is refused on every platform, absolute or not:
+            ```python
+            >>> import pathlib
+            >>> from pyramids.base._gdal_plugins import _contained
+            >>> base = pathlib.Path("/pkgs/mypkg")
+            >>> _contained(base, "/evil") is None
+            True
+            >>> _contained(base, "\evil") is None
+            True
+
+            ```
+        - So is one that climbs back out with ``..``:
+            ```python
+            >>> import pathlib
+            >>> from pyramids.base._gdal_plugins import _contained
+            >>> _contained(pathlib.Path("/pkgs/mypkg"), "../elsewhere") is None
+            True
+
+            ```
+    """
+    found: Path | None = None
+    rooted = bool(
+        PurePosixPath(subdir).root
+        or PureWindowsPath(subdir).root
+        or PureWindowsPath(subdir).drive
+    )
+    if not rooted:
+        try:
+            resolved = (base / subdir).resolve()
+            if resolved.is_relative_to(base.resolve()):
+                found = resolved
+        except OSError:
+            found = None
+    return found
 
 
 def companion_plugin_dirs(*, refresh: bool = False) -> tuple[Path, ...]:

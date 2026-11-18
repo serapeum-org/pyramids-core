@@ -276,6 +276,42 @@ class TestCompanionEntryPointScan:
 
         assert companion_plugin_dirs(refresh=True) == (package / "native" / "plugins",)
 
+    @pytest.mark.parametrize(
+        "subdir",
+        [
+            "../elsewhere",
+            "/elsewhere",
+            "\elsewhere",
+            "C:/elsewhere",
+            "sub/../../elsewhere",
+        ],
+    )
+    def test_a_registration_cannot_escape_its_package_by_any_spelling(
+        self, monkeypatch, tmp_path, subdir
+    ):
+        """Every way of writing a path out of the package is refused.
+
+        Test scenario:
+            The previous guard used `Path.is_absolute()`, which on Windows reports False for a
+            drive-less rooted path like `/elsewhere`. `base / "/elsewhere"` then discards the
+            package directory and keeps only the drive, so a registration could aim GDAL at
+            `C:\elsewhere` and have it `LoadLibrary` every DLL there. Each spelling below must
+            resolve to nothing, including the ones containing no `..` at all.
+        """
+        package = tmp_path / "fake_companion"
+        package.mkdir()
+        (tmp_path / "elsewhere").mkdir()
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+        monkeypatch.setattr(
+            _gdal_plugins,
+            "entry_points",
+            lambda group: [_FakeEntryPoint("escape", f"fake_companion:{subdir}")],
+        )
+
+        assert companion_plugin_dirs(refresh=True) == (), (
+            f"subdir {subdir!r} escaped the package instead of being refused"
+        )
+
     def test_a_registration_cannot_escape_its_package(self, monkeypatch, tmp_path):
         """An absolute or `..` subdir is refused, so GDAL is never aimed off-package."""
         package = tmp_path / "fake_companion"
