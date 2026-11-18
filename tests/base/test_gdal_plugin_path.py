@@ -449,6 +449,63 @@ class TestCompanionEntryPointScan:
             "is no longer a pure metadata scan"
         )
 
+    def test_a_resolution_error_costs_only_that_companion(self, monkeypatch, tmp_path):
+        """One hostile registration must not take down `import pyramids`.
+
+        Test scenario:
+            Resolution reaches third-party code: a `sys.meta_path` finder can raise anything from
+            `find_spec`, and `is_dir()` raises OSError on a dead mount. `_module_dir` catches only
+            ImportError/ValueError, so the loop needs its own guard. The good companion alongside
+            the bad one must still be found.
+        """
+        good = tmp_path / "good"
+        (good / DEFAULT_PLUGIN_SUBDIR).mkdir(parents=True)
+
+        def resolve(value):
+            if value == "bad":
+                raise RuntimeError("a meta_path finder exploded")
+            return good / DEFAULT_PLUGIN_SUBDIR
+
+        monkeypatch.setattr(_gdal_plugins, "_entry_point_dir", resolve)
+        monkeypatch.setattr(
+            _gdal_plugins,
+            "entry_points",
+            lambda group: [
+                _FakeEntryPoint("a_bad", "bad"),
+                _FakeEntryPoint("b_good", "good"),
+            ],
+        )
+
+        found = companion_plugin_dirs(refresh=True)
+
+        assert found == (good / DEFAULT_PLUGIN_SUBDIR,), (
+            f"a raising registration should be skipped, not fatal; got {found}"
+        )
+
+    def test_a_cleared_cache_mid_scan_never_yields_none(self, monkeypatch, tmp_path):
+        """The scan returns a tuple even if the cache is dropped while it runs.
+
+        Test scenario:
+            `companion_plugin_dirs` used to assign the module global and then re-read it, so a
+            `clear_companion_plugin_dir_cache()` landing between those statements returned None
+            against the declared `tuple[Path, ...]`, and `compose_driver_path(companions=None)`
+            then raised TypeError inside `import pyramids`. Clearing from within the scan
+            reproduces that window deterministically.
+        """
+
+        def clear_then_return(group):
+            clear_companion_plugin_dir_cache()
+            return []
+
+        monkeypatch.setattr(_gdal_plugins, "entry_points", clear_then_return)
+
+        found = companion_plugin_dirs(refresh=True)
+
+        assert found == (), f"expected an empty tuple, got {found!r}"
+        assert compose_driver_path(bundled=None, companions=found) is None, (
+            "the result must stay usable as `companions`"
+        )
+
     def test_the_scan_is_cached_until_cleared(self, monkeypatch):
         """It runs at import time; re-reading the metadata on every call would be waste."""
         calls = []

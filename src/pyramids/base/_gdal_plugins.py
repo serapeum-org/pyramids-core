@@ -255,22 +255,33 @@ def companion_plugin_dirs(*, refresh: bool = False) -> tuple[Path, ...]:
             ```
     """
     global _COMPANION_CACHE
-    if refresh or _COMPANION_CACHE is None:
+    cached = _COMPANION_CACHE
+    if refresh or cached is None:
         resolved: list[Path] = []
         try:
             points = sorted(
                 entry_points(group=ENTRY_POINT_GROUP), key=lambda point: point.name
             )
-        except (
-            Exception
-        ):  # pragma: no cover - a broken dist-info must not break `import pyramids`
+        except Exception:
+            # A broken dist-info must not break `import pyramids`.
             points = []
         for point in points:
-            plugin_dir = _entry_point_dir(point.value)
+            # Resolution reaches third-party code we do not control: a `sys.meta_path`
+            # finder can raise anything at all from `find_spec`, and `is_dir()` raises
+            # OSError on a dead network mount or a permission-denied path. One bad
+            # registration must cost that companion its directory, not the import.
+            try:
+                plugin_dir = _entry_point_dir(point.value)
+            except Exception:
+                plugin_dir = None
             if plugin_dir is not None and plugin_dir not in resolved:
                 resolved.append(plugin_dir)
-        _COMPANION_CACHE = tuple(resolved)
-    return _COMPANION_CACHE
+        cached = tuple(resolved)
+        # Bind the local first, then publish: `clear_companion_plugin_dir_cache()` landing
+        # between the two would otherwise make this return None against its annotation,
+        # and `compose_driver_path(companions=None)` then raises inside `import pyramids`.
+        _COMPANION_CACHE = cached
+    return cached
 
 
 def clear_companion_plugin_dir_cache() -> None:
