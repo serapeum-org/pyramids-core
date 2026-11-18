@@ -768,6 +768,30 @@ class TestEntryPointDir:
             "an empty subdir must fall back to the default"
         )
 
+    def test_an_unresolvable_path_is_refused_rather_than_raised(
+        self, monkeypatch, tmp_path
+    ):
+        """`resolve()` can raise OSError, and that must not escape `import pyramids`.
+
+        Test scenario:
+            Resolution touches the filesystem, so it raises on a dead network mount, a path over
+            the OS length limit, or a permission-denied parent. The registration is dropped
+            instead, because this runs inside `import pyramids`, where anything that escapes
+            makes the package unimportable.
+        """
+        package = tmp_path / "fake_companion"
+        package.mkdir()
+        monkeypatch.setattr(_gdal_plugins, "_module_dir", lambda name: package)
+
+        def boom(self, *args, **kwargs):
+            raise OSError("the mount went away")
+
+        monkeypatch.setattr(_gdal_plugins.Path, "resolve", boom)
+
+        assert _entry_point_dir("fake_companion") is None, (
+            "an OSError from resolve() must be swallowed, not propagated"
+        )
+
     def test_a_file_where_the_directory_should_be_is_refused(
         self, monkeypatch, tmp_path
     ):
