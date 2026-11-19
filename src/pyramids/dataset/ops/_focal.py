@@ -42,19 +42,13 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 from scipy import ndimage
 
+from pyramids.base._compute_backend import require_backend_method
 from pyramids.base._domain import is_no_data
-from pyramids.base._utils import lazy_backend_hint
-from pyramids.base.protocols import is_lazy
 
 if TYPE_CHECKING:
     import dask.array as da
 
     from pyramids.dataset import Dataset
-
-
-_LAZY_IMPORT_ERROR = lazy_backend_hint(
-    "chunks= requires the optional 'dask' dependency."
-)
 
 
 def _valid_fraction(arr: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:
@@ -196,26 +190,13 @@ def _apply_eager_or_lazy(
         arr = np.asarray(ds.read_array(band=band), dtype=dtype)
         result = _guarded(arr)
     else:
-        try:
-            import dask.array as da
-        except ImportError as exc:
-            raise ImportError(_LAZY_IMPORT_ERROR) from exc
-        lazy = ds.read_array(band=band, chunks=chunks)
-        if not is_lazy(lazy):
-            lazy = da.from_array(np.asarray(lazy), chunks="auto")
-        lazy = lazy.astype(dtype)
-        # `_guarded` runs per block, inside the overlap, so each block sees the
-        # halo it needs to blank neighbouring no-data before filtering.
-        # `boundary="none"`: only interior block edges get a halo. Padding the
-        # raster's own border would hand an edge block a neighbourhood the eager
-        # path never sees -- measured 59/256 cells of `slope` disagreeing on a
-        # 16x16 raster, all of them on the border -- so the kernels apply their
-        # own edge policy here just as they do eagerly.
-        result = lazy.map_overlap(
+        # The lazy arm (dask.array.map_overlap over `_guarded`, which runs per block inside the
+        # overlap so each block blanks neighbouring no-data before filtering) lives in the
+        # pyramids-lazy backend; core builds the kernel + reads the lazy band and delegates.
+        result = require_backend_method("focal_lazy", "focal filters (chunks=)")(
+            ds.read_array(band=band, chunks=chunks),
             _guarded,
             depth=radius if depth is None else depth,
-            boundary="none",
-            trim=True,
             dtype=dtype,
         )
     return cast("np.ndarray | da.Array", result)
