@@ -5185,6 +5185,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#leaving-the-hosts-gdal-alone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaving the host's GDAL alone
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -8010,6 +8021,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#leaving-the-hosts-gdal-alone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaving the host's GDAL alone
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -8131,6 +8153,25 @@ bundled, discovered and companion directories ranked behind it rather than disca
 does not remove, so a wheel keeps its own drivers. A value that points nowhere is also left alone under the
 hatch. This is the escape hatch for a deliberately hand-built GDAL; it is off by default because an inherited
 path is usually a conda environment's, which is not safe for a wheel's bundled <code>libgdal</code>.</p>
+<h3 id="leaving-the-hosts-gdal-alone"><a class="toclink" href="#leaving-the-hosts-gdal-alone">Leaving the host's GDAL alone</a><a class="headerlink" href="#leaving-the-hosts-gdal-alone" title="Permanent link">#</a></h3>
+<p>When pyramids is imported into a process that already owns GDAL — QGIS is the motivating case — set
+<code>PYRAMIDS_MANAGE_GDAL_ENV=0</code> <strong>before</strong> importing pyramids. pyramids then does not touch <code>GDAL_DRIVER_PATH</code>,
+<code>GDAL_DATA</code>, <code>PROJ_LIB</code> or <code>PATH</code> and does not activate its vendored GDAL tree: it binds to the host's GDAL as-is.
+This env var is the <strong>reliable</strong> switch for an embedder — set it rather than relying on detection.</p>
+<p>pyramids also <em>auto-detects</em> this case, but only as best effort: the host must have both imported <code>osgeo</code> before
+pyramids <strong>and</strong> already set <code>GDAL_DRIVER_PATH</code> or <code>GDAL_DATA</code>. A host that configures neither (some Linux GDAL 3.x
+setups resolve their data from the install prefix and set nothing) is not detected, so an embedder should always
+set the env var rather than depend on auto-detection.</p>
+<div class="admonition warning">
+<p class="admonition-title">Host-only</p>
+<p><code>PYRAMIDS_MANAGE_GDAL_ENV=0</code> tells pyramids to use an <code>osgeo</code> the process already provides. Setting it in a
+<em>standalone</em> install with no other GDAL — e.g. a platform wheel on its own — makes <code>import pyramids</code> fail,
+because pyramids then neither activates its vendored <code>osgeo</code> nor finds a host one.</p>
+</div>
+<p>This is distinct from <code>PYRAMIDS_KEEP_GDAL_ENV</code> above: that re-ranks the composed driver path, this makes pyramids
+hands-off entirely. <code>PYRAMIDS_MANAGE_GDAL_ENV=1</code> forces the opposite — always manage, even inside a host — and
+<code>Config(manage_gdal_env=False)</code> is the programmatic equivalent for a single <code>Config</code>, though it governs only the
+four env vars (not <code>gdal.UseExceptions()</code> or the YAML config options, which always apply).</p>
 <h2 id="registering-a-plugin-directory"><a class="toclink" href="#registering-a-plugin-directory">Registering a plugin directory</a><a class="headerlink" href="#registering-a-plugin-directory" title="Permanent link">#</a></h2>
 <p>Declare the entry point in your distribution's <code>pyproject.toml</code>. The <strong>value is a module name</strong>, optionally
 followed by <code>:&lt;relative-subdir&gt;</code>:</p>
