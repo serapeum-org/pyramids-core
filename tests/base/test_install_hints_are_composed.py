@@ -123,18 +123,10 @@ class TestTheCollapsedMessagesAreUnchanged:
         # following that command would retry and get the identical error.
         assert "pyramids-core[parquet]" not in _LAZY_FC_INSTALL_HINT
 
-    def test_the_reprojection_guard_message_is_verbatim(self):
-        """Pinned in full: this is the string users read on a missing dask."""
-        from pyramids.dataset.ops.reproject import _LAZY_IMPORT_ERROR
-
-        assert _LAZY_IMPORT_ERROR == (
-            "Lazy reprojection (compute=False) requires the optional 'dask' "
-            "dependency. Install it with:\n"
-            "  - PyPI:        pip install pyramids-lazy"
-        )
-        # No conda line: the backend is PyPI-only, and conda-forge's `pyramids-lazy` is
-        # core's old lazy extra (raw libs, no backend), so naming it would not help.
-        assert "pyramids-core[" not in _LAZY_IMPORT_ERROR
+    # The reprojection compute=False guard no longer composes a core-side message: #1590 routes the
+    # deferral through the lazy backend (`require_backend_method("delayed", ...)`), so a missing
+    # dask now surfaces the backend's own branded hint (pyramids_lazy._deferred), not a core string.
+    # The former `test_the_reprojection_guard_message_is_verbatim` pinned that removed core message.
 
     def test_the_stac_guard_message_is_verbatim(self):
         """Same, for the extra whose name differs from its import."""
