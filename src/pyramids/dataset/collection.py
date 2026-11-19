@@ -1783,9 +1783,7 @@ class DatasetCollection:
             # Zarr-backed cube (from_zarr): read the 4-D (T, B, R, C) array
             # lazily straight from the store — no per-file stacking. The dask from_zarr read
             # is assembled by the pyramids-lazy backend.
-            return require_backend_method("read_zarr_cube", _DATA_OP)(
-                self._zarr_store
-            )
+            return require_backend_method("read_zarr_cube", _DATA_OP)(self._zarr_store)
         if self._files is None or len(self._files) == 0:
             # In-memory collection (#1349): no store and no file list -- a
             # datasets=-backed collection, or the legacy replicate-base
@@ -1813,9 +1811,7 @@ class DatasetCollection:
             )
             for path in self._files
         ]
-        return require_backend_method("stack_lazy", _DATA_OP)(
-            per_step, axis=0
-        )
+        return require_backend_method("stack_lazy", _DATA_OP)(per_step, axis=0)
 
     def _in_memory_cube(self) -> Any:
         """Stack the resident per-timestep datasets into the `(T, B, R, C)` cube.
@@ -1869,9 +1865,7 @@ class DatasetCollection:
                     arr, chunks=expected
                 )
             )
-        return require_backend_method("stack_lazy", _DATA_OP)(
-            per_step, axis=0
-        )
+        return require_backend_method("stack_lazy", _DATA_OP)(per_step, axis=0)
 
     @property
     def meta(self) -> RasterMeta:
