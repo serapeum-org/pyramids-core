@@ -51,6 +51,7 @@ __all__ = [
     "clear_compute_backend_cache",
     "compute_backends",
     "protocol_members",
+    "require_backend_method",
     "require_compute_backend",
 ]
 
@@ -88,13 +89,16 @@ class ComputeBackend(Protocol):
     lazy ops, plus the Zarr/kerchunk writers and readers. :func:`protocol_members` returns the
     member names it enforces.
 
-    What is **not** dispatched yet, despite being lazy: ``Dataset.read_array(chunks=)`` and
-    ``DatasetCollection.data`` still construct dask arrays inside core
-    (``dataset/engines/io.py``, ``dataset/collection.py``), guarded by a local ``import
-    dask.array`` and a plain ``ImportError`` rather than this seam's branded error. So a bare core
-    with dask installed still has a working lazy raster path, and :meth:`read_array_lazy` is
-    reached only from the ``NetCDF`` read and the xarray/UGRID interop readers. Completing that
-    move is follow-up work.
+    The ``Dataset`` raster lazy surface is dispatched too, as of #1590: ``read_array(chunks=)``,
+    ``map_blocks(chunks=)``, ``DatasetCollection.data`` + its time reductions, the ``compute=False``
+    deferrals and the lazy focal filters all route through the backend now, so a bare core carries
+    no ``dask`` import. Those raster/compute ops are served by **duck-typed** methods
+    (``read_raster_array_lazy``, ``map_blocks_lazy``, ``stack_lazy`` / ``from_array_lazy`` /
+    ``read_zarr_cube``, ``resolve_dask_op`` / ``build_group_reduction`` / ``compute``, ``delayed``,
+    ``focal_lazy``) reached via ``getattr`` (see ``require_backend_method``) rather than Protocol
+    members — the same policy as ``classify_zarr_store``. :meth:`read_array_lazy` itself stays the
+    MDArray *variable* reader, reached from the ``NetCDF`` read and the xarray/UGRID interop readers;
+    the classic-raster read is the separate duck-typed ``read_raster_array_lazy``.
 
     ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
     ``from_zarr``) is **intentionally not part of this Protocol** — mesh lazy parity is deferred to
@@ -162,11 +166,12 @@ class ComputeBackend(Protocol):
     def read_array_lazy(
         self, dataset: Any, *, chunks: Any, lock: Any = None, **kwargs: Any
     ) -> ArrayLike:
-        """Lazy dask-backed read of a cube variable (``NetCDF.read_array(chunks=)``).
+        """Lazy dask-backed read of an MDArray cube *variable* (``NetCDF.read_array(chunks=)``).
 
         Reached from the ``NetCDF`` read path and the xarray/UGRID interop readers.
-        ``Dataset.read_array(chunks=)`` does **not** route here — it still builds its dask array in
-        core (see the class docstring).
+        ``Dataset.read_array(chunks=)`` reads a classic raster band, not an MDArray variable, so it
+        routes through the separate duck-typed ``read_raster_array_lazy`` (see the class docstring),
+        **not** this method.
         """
         ...  # pragma: no cover - protocol
 
@@ -652,6 +657,67 @@ def require_compute_backend() -> ComputeBackend:
             f">= {COMPUTE_BACKEND_API_VERSION}. Upgrade with `pip install -U pyramids-lazy`."
         )
     return backend
+
+
+def require_backend_method(name: str, operation: str) -> Any:
+    """Resolve an additive, duck-typed capability method from the installed compute backend.
+
+    Core's dataset lazy ops (raster ``read_array(chunks=)``, ``map_blocks``, the collection cube and
+    its reductions, the ``compute=False`` deferrals, lazy focal filters) are served by backend
+    methods added as **additive, duck-typed capabilities** — reached by ``getattr`` rather than
+    declared on the ``runtime_checkable`` :class:`ComputeBackend` Protocol — so an already-released
+    backend that predates one still passes core's structural ``isinstance`` check (the same policy as
+    ``classify_zarr_store`` / ``open_mesh_mfdataset``). This resolves one such method and brands the
+    two failure modes: no backend installed (delegated to :func:`require_compute_backend`), or an
+    installed backend too old to provide it.
+
+    Args:
+        name: The backend method name, e.g. ``"delayed"`` or ``"read_raster_array_lazy"``.
+        operation: The user-facing operation needing it, named in the "too old" error.
+
+    Returns:
+        The bound backend method, ready to call.
+
+    Raises:
+        OptionalPackageDoesNotExist: No compute backend is installed, or the installed backend does
+            not provide ``name`` (an upgrade is needed).
+
+    Examples:
+        - A backend exposing the method returns it ready to call:
+            ```python
+            >>> from pyramids.base import _compute_backend
+            >>> class _Fake:
+            ...     api_version = _compute_backend.COMPUTE_BACKEND_API_VERSION
+            ...     def delayed(self, func, *a, **k): return func(*a, **k)
+            >>> _compute_backend._CACHE = {"lazy": _Fake()}
+            >>> _compute_backend.require_backend_method("delayed", "to_file(compute=False)")(len, "ab")
+            2
+            >>> _compute_backend.clear_compute_backend_cache()
+
+            ```
+        - A backend missing the method raises the branded upgrade error naming the operation:
+            ```python
+            >>> from pyramids.base import _compute_backend
+            >>> class _Old:
+            ...     api_version = _compute_backend.COMPUTE_BACKEND_API_VERSION
+            >>> _compute_backend._CACHE = {"lazy": _Old()}
+            >>> try:
+            ...     _compute_backend.require_backend_method("delayed", "to_file(compute=False)")
+            ... except Exception as exc:
+            ...     print(type(exc).__name__, "upgrade" in str(exc).lower())
+            OptionalPackageDoesNotExist True
+            >>> _compute_backend.clear_compute_backend_cache()
+
+            ```
+    """
+    backend = require_compute_backend()
+    method = getattr(backend, name, None)
+    if not callable(method):
+        raise OptionalPackageDoesNotExist(
+            f"{operation} requires a pyramids-lazy backend that provides {name!r}, but the "
+            f"installed backend does not. Upgrade with `pip install -U pyramids-lazy`."
+        )
+    return method
 
 
 def backend_lazy_type(attribute: str, public_name: str) -> type:

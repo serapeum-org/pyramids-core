@@ -164,7 +164,9 @@ class TestImportErrorWithoutDask:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
-        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
+        # The lazy graph is now assembled by the pyramids-lazy backend, so a missing dask surfaces
+        # the backend's branded pyramids-lazy error (install / upgrade / repair) depending on backend state, not core's old message.
+        with pytest.raises(ImportError, match="pyramids-lazy"):
             square_dataset.map_blocks(
                 lambda a: a,
                 chunks="auto",

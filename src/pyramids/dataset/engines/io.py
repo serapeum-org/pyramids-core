@@ -29,6 +29,7 @@ from osgeo_utils import gdal2xyz
 from pandas import DataFrame
 
 from pyramids._io import new_vsimem_path, read_vsi_bytes
+from pyramids.base._compute_backend import require_backend_method
 from pyramids.base._domain import INHERIT_NO_DATA, is_no_data, is_stored_no_data
 from pyramids.base._errors import (
     FailedToSaveError,
@@ -62,7 +63,6 @@ from pyramids.dataset.engines.cog import (
     _xyz_bounds_3857,
 )
 from pyramids.dataset.ops import io as _io_module
-from pyramids.dataset.ops.io import _LAZY_IMPORT_ERROR
 from pyramids.dataset.window import Window
 from pyramids.feature import FeatureCollection
 
@@ -767,8 +767,11 @@ class IO(_Engine["Dataset"]):
                 without `boundless=True` or cannot be represented
                 in the band dtype, or `bbox_rounding` is neither
                 `"cover"` nor `"nearest"`.
-            ImportError: If `chunks` is non-None and `dask` is not
-                installed.
+            OptionalPackageDoesNotExist: If `chunks` is non-None and no
+                pyramids-lazy backend is installed to build the lazy read (or it
+                is too old to provide the raster reader).
+            ImportError: If `chunks` is non-None and the backend is installed but
+                its `dask` dependency is missing.
             NotImplementedError: If `out_shape` is combined with `chunks`
                 (decimate eagerly instead) or with `boundless=True`
                 (decimated boundless reads are not combined yet), or if
@@ -1421,14 +1424,10 @@ class IO(_Engine["Dataset"]):
             dask.array.Array: A lazy array wrapping this dataset.
 
         Raises:
-            ImportError: When `dask` is not installed.
+            OptionalPackageDoesNotExist: When no pyramids-lazy backend is installed to assemble the
+                lazy read (or it is too old to provide the raster reader).
             ValueError: If `band` is out of range.
         """
-        try:
-            import dask.array as da
-            from dask.array.core import normalize_chunks
-        except ImportError as exc:
-            raise ImportError(_LAZY_IMPORT_ERROR) from exc
         validate_band_index(band, self._ds.band_count)
         single_band = band is not None or self._ds.band_count == 1
         dtype = np.dtype(self._ds.numpy_dtype[0])
@@ -1453,12 +1452,6 @@ class IO(_Engine["Dataset"]):
             effective_lock = default_lock()
         else:
             effective_lock = lock
-        normalized = normalize_chunks(
-            chunks,
-            shape=shape,
-            dtype=dtype,
-            previous_chunks=previous_chunks,
-        )
         # The FileManager's own lock must be independent of the IO lock
         # handed to the chunk reader: the reader acquires the IO lock
         # first, then enters manager.acquire_context() which grabs the
@@ -1490,23 +1483,22 @@ class IO(_Engine["Dataset"]):
                 # path fixes, applied to the raster lazy reader.
                 auto_release=True,
             )
-        meta = np.empty((0,) * len(shape), dtype=dtype)
-        arr = da.map_blocks(
+        # normalize_chunks + the map_blocks graph over the pickle-safe _read_chunk are assembled by
+        # the pyramids-lazy backend; core prepares the manager, lock, shape and dtype (none of which
+        # need dask) and delegates. The chunk tasks open the file long after (and possibly in
+        # another process from) this call, so the captured cloud config travels as a plain dict.
+        return require_backend_method("read_raster_array_lazy", "read_array(chunks=)")(
             _io_module._read_chunk,
-            chunks=normalized,
-            dtype=dtype,
-            meta=meta,
             manager=manager,
+            chunks=chunks,
+            shape=shape,
+            previous_chunks=previous_chunks,
+            dtype=dtype,
             lock=effective_lock,
             band=effective_band,
-            out_dtype=dtype,
             single_band=single_band,
-            # Chunks open the file inside the dask task, long after (and
-            # possibly in another process from) this call, so the captured
-            # cloud config travels with the task as a plain dict.
             gdal_env=self._ds._gdal_env or None,
         )
-        return arr
 
     def _decimated_read(
         self,
@@ -2434,11 +2426,8 @@ class IO(_Engine["Dataset"]):
                 "synchronous write — GeoTIFF writes are lock-serialised "
                 "by GDAL. For truly parallel writes use to_zarr."
             )
-            try:
-                import dask
-            except ImportError as exc:
-                raise ImportError(_LAZY_IMPORT_ERROR) from exc
-            result = dask.delayed(_io_module._write_to_file_sync)(
+            result = require_backend_method("delayed", "to_file(compute=False)")(
+                _io_module._write_to_file_sync,
                 self._ds,
                 path,
                 band,
@@ -3487,18 +3476,20 @@ class IO(_Engine["Dataset"]):
               ```
         """
         if chunks is not None:
-            try:
-                import dask.array as da
-            except ImportError as exc:
-                raise ImportError(_LAZY_IMPORT_ERROR) from exc
             lazy_src = self.read_array(band=band, chunks=chunks)
             result_dtype = dtype if dtype is not None else lazy_src.dtype
-            kwargs: dict[str, Any] = {"dtype": result_dtype}
+            # The map_blocks graph is assembled by the pyramids-lazy backend; core reads the lazy
+            # source (itself backend-built) and delegates. ``drop_axis`` / ``new_axis`` are forwarded
+            # only when set, exactly as the pre-refactor in-core call did -- so "not supplied" stays
+            # a core-side decision rather than relying on the backend to treat ``None`` specially.
+            axis_kwargs: dict[str, Any] = {}
             if drop_axis is not None:
-                kwargs["drop_axis"] = drop_axis
+                axis_kwargs["drop_axis"] = drop_axis
             if new_axis is not None:
-                kwargs["new_axis"] = new_axis
-            result: Any = da.map_blocks(func, lazy_src, **kwargs)
+                axis_kwargs["new_axis"] = new_axis
+            result: Any = require_backend_method(
+                "map_blocks_lazy", "map_blocks(chunks=)"
+            )(func, lazy_src, dtype=result_dtype, **axis_kwargs)
         else:
             # The eager tile loop below reads windows from the source; a NetCDF multidim view can't
             # be window-read by GDAL >= 3.13, so materialise it first (no-op for an ordinary raster).

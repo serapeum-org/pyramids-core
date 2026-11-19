@@ -788,3 +788,76 @@ class TestMultipleBackendsWarn:
             resolved = cb.require_compute_backend()
         assert resolved is first, "first-by-discovery-order must win"
         cb.clear_compute_backend_cache()
+
+
+class TestRequireBackendMethod:
+    """The duck-typed capability resolver the dataset lazy ops dispatch through (#1590)."""
+
+    def test_returns_bound_method_when_present(self, monkeypatch):
+        """A backend exposing the named method yields it ready to call.
+
+        Test scenario:
+            A conforming backend with an extra ``delayed`` capability resolves it, and the returned
+            callable runs against its arguments — proving it is the backend's own method.
+        """
+        backend = _make_backend()
+        backend.delayed = lambda func, *a, **k: func(*a, **k)
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
+        )
+        method = cb.require_backend_method("delayed", "to_file(compute=False)")
+        assert method(len, "abcd") == 4, (
+            "resolved method must be the backend's own callable"
+        )
+
+    def test_missing_method_raises_branded_upgrade_error(self, monkeypatch):
+        """A backend lacking the capability is reported as too old, naming method and operation.
+
+        Test scenario:
+            A conforming backend without ``delayed`` makes the resolver raise
+            ``OptionalPackageDoesNotExist`` whose message names the missing method, the operation,
+            and the upgrade command.
+        """
+        backend = _make_backend()
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
+        )
+        with pytest.raises(OptionalPackageDoesNotExist) as exc:
+            cb.require_backend_method("delayed", "to_file(compute=False)")
+        message = str(exc.value)
+        assert "delayed" in message, f"message must name the method: {message}"
+        assert "to_file(compute=False)" in message, (
+            f"message must name the operation: {message}"
+        )
+        assert "pip install -U pyramids-lazy" in message, (
+            f"message must give the fix: {message}"
+        )
+
+    def test_non_callable_attribute_is_rejected(self, monkeypatch):
+        """An attribute of the right name that is not callable is refused, not returned.
+
+        Test scenario:
+            A backend exposing ``delayed`` as a non-callable value is treated as not providing the
+            capability, so the resolver raises the branded upgrade error rather than returning a
+            value that cannot be called.
+        """
+        backend = _make_backend()
+        backend.delayed = "not-callable"
+        monkeypatch.setattr(
+            cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
+        )
+        with pytest.raises(OptionalPackageDoesNotExist, match="delayed"):
+            cb.require_backend_method("delayed", "to_file(compute=False)")
+
+    def test_no_backend_installed_raises_install_error(self, monkeypatch):
+        """With no backend at all, the install error surfaces before any method lookup.
+
+        Test scenario:
+            No entry point and no importable ``pyramids_lazy`` makes the underlying
+            ``require_compute_backend`` raise the branded install hint, so the method name is never
+            reached.
+        """
+        monkeypatch.setattr(cb, "entry_points", lambda group=None: [])
+        monkeypatch.setattr(cb, "extra_missing", lambda name: True)
+        with pytest.raises(OptionalPackageDoesNotExist, match="pyramids-lazy"):
+            cb.require_backend_method("delayed", "to_file(compute=False)")

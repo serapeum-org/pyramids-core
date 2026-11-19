@@ -46,7 +46,7 @@ from pyramids.base._errors import OptionalPackageDoesNotExist, OverviewTargetErr
 from pyramids.base._file_manager import CachingFileManager, gdal_mdarray_open
 from pyramids.base._locks import DummyLock, default_lock
 from pyramids.base._raster_meta import RasterMeta
-from pyramids.base._reductions import COUNTING_REDUCERS, REDUCERS
+from pyramids.base._reductions import COUNTING_REDUCERS, REDUCERS, reduce_axis
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
@@ -69,6 +69,7 @@ from pyramids.base.crs import (
 from pyramids.base.georeference import GeoReference
 from pyramids.base.protocols import ArrayLike, as_numpy, is_lazy
 from pyramids.base.remote import cloud_config_from_env, to_fsspec_url
+from pyramids.dataset._reduce_ops import _NAN_TABLE, _SUPPORTED_OPS
 from pyramids.dataset.ops._geobox_zarr import (
     ZARR_SCHEMA_VERSION,
     detect_data_var,
@@ -159,8 +160,10 @@ __all__ = [
     "_INTERP_MIN_POINTS",
     "_InterpTo",
     "_Interpolate",
+    "_NAN_TABLE",
     "_Pad",
     "_Rank",
+    "_SUPPORTED_OPS",
     "_Shift",
     "_assert_band_dimension",
     "_check_fill_value",
@@ -217,6 +220,7 @@ __all__ = [
     "normalize_compressors",
     "open_mdarray",
     "read_geobox",
+    "reduce_axis",
     "require_optional",
     "sr_from_epsg",
     "sr_from_wkt",

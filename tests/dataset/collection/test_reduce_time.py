@@ -17,7 +17,6 @@ import pytest
 from pyramids.base._errors import AlignmentError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset._reduce_ops import resolve_dask_op
 from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.lazy
@@ -761,20 +760,6 @@ class TestReduceTimeOps:
         coll = DatasetCollection.from_files(varied_files)
         with pytest.raises(ValueError, match="only valid for"):
             coll.reduce_time(daily_times, freq="1MS", op="mean", q=50)
-
-
-class TestResolveDaskOp:
-    """The op-name guard in the shared dask reduction resolver."""
-
-    def test_rejects_unknown_op(self):
-        """resolve_dask_op raises ValueError for an op outside the supported set.
-
-        Test scenario:
-            A reduction name the resolver does not know is rejected before any
-            dask import, naming the supported set.
-        """
-        with pytest.raises(ValueError, match="Unsupported reduction"):
-            resolve_dask_op("bogus", skipna=True)
 
 
 class TestReduceTimeNoData:

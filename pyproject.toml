@@ -78,6 +78,13 @@ interop = ["xarray>=2023.1.0"]
 # plugin discovered through the `pyramids.compute_backend` entry point, installed as
 # `pip install pyramids-lazy` exactly like pyramids-eo / pyramids-mesh / pyramids-citymodels.
 # The same-named `lazy` pixi feature maps to this group, so the environment list is unchanged.
+# RELEASE TODO (#1590): raise this floor to `>=0.2.1` in the SAME core release that merges this
+# routing change and reverts the co-dev git pins below. This release routes the dataset lazy ops
+# through the backend's new duck-typed methods (read_raster_array_lazy / stack_lazy /
+# resolve_dask_op / delayed / ...), which first ship in pyramids-lazy 0.2.1 — an older plugin
+# resolves but raises the branded "upgrade pyramids-lazy" error on every lazy raster op. The floor
+# CANNOT be bumped now: the co-dev pin installs the feat/41 branch (version 0.1.0 < 0.2.1), so
+# `>=0.2.1` would make the lockfile unsatisfiable until 0.2.1 is published.
 lazy = ["pyramids-lazy>=0.1.1"]
 dev = [
     "nbval >=0.11.0",
@@ -421,7 +428,25 @@ python = { version = "3.14.*", build = "*_cp314" }
 # resolve LazyFeatureCollection through the real entry point rather than a monkeypatch
 # (tests/base/test_spatial_object_protocol.py). Scoped to the `parquet` feature so it reaches
 # dev/parquet/docs but never the py3XX legs, which must stay pyarrow-free.
-pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
+# TEMPORARY co-development pin (#1590 — pyramids-lazy PR #42, branch feat/41-dataset-lazy-ops): this
+# PR's lazy ops delegate to backend methods that only exist on that branch, so the test envs install
+# the plugin from it to run green. This block (the `parquet` feature) adds the [parquet] extra for
+# the dev/parquet/docs envs; the `[tool.pixi.feature.lazy.pypi-dependencies]` block below applies the
+# SAME branch pin (without the extra) to every lazy env including the py311–py315 matrix, which has
+# its own solve groups and would otherwise install the released wheel (#1590 round-2 H1). REVERT BOTH
+# to the released version pin (`{ version = ">=0.2.1", extras = ["parquet"] }` here, `">=0.2.1"`
+# below) once pyramids-lazy PR #42 is merged and released. Test-env only — NOT the published
+# `[lazy]` extra.
+pyramids-lazy = { git = "https://github.com/serapeum-org/pyramids-lazy.git", branch = "feat/41-dataset-lazy-ops", extras = ["parquet"] }
+
+[tool.pixi.feature.lazy.pypi-dependencies]
+# TEMPORARY co-development pin (#1590 — pyramids-lazy PR #42, branch feat/41-dataset-lazy-ops), the
+# py3XX counterpart of the parquet-feature pin above. Every lazy env carries this feature, so this
+# routes the whole py311–py315 main-package matrix (separate solve groups) to the feat/41 build that
+# has the new duck-typed backend methods, instead of the released wheel that lacks them (round-2 H1).
+# No [parquet] extra here — the py3XX legs must stay pyarrow-free. REVERT to `">=0.2.1"` once
+# pyramids-lazy PR #42 is released.
+pyramids-lazy = { git = "https://github.com/serapeum-org/pyramids-lazy.git", branch = "feat/41-dataset-lazy-ops" }
 
 [tool.pixi.feature.lazy.dependencies]
 # Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
