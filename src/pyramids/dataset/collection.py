@@ -94,6 +94,11 @@ if TYPE_CHECKING:
 
 _DEFAULT_GLOB = "*.tif"
 _EMPTY_RANGE_MSG = "no files fall within the given start/end range"
+# The operation label passed to ``require_backend_method`` for every ``DatasetCollection.data``
+# lazy-cube op (the per-timestep read, the time-axis stack, the in-memory stack, the Zarr read), so
+# a missing/too-old backend brands the error with the user-facing attribute name. One constant so
+# the five call sites cannot drift (SonarCloud python:S1192).
+_DATA_OP = "DatasetCollection.data"
 # GDAL raster sidecar / companion suffixes, matched case-insensitively. When a
 # folder holds any of these, ``from_files`` keeps GDAL's per-open directory scan on
 # so the companion is still discovered; a folder with none lets it default
@@ -497,7 +502,7 @@ def _lazy_timestep(
     # The normalize_chunks + map_blocks graph over the pickle-safe _read_chunk reader is assembled
     # by the pyramids-lazy backend; this builds one timestep's spatially-tiled (B, Y, X) cube in
     # stored counts, which _unpack_lazy_timestep then puts into physical units.
-    stored = require_backend_method("read_raster_array_lazy", "DatasetCollection.data")(
+    stored = require_backend_method("read_raster_array_lazy", _DATA_OP)(
         _read_chunk,
         manager=manager,
         chunks="auto",
@@ -1778,7 +1783,7 @@ class DatasetCollection:
             # Zarr-backed cube (from_zarr): read the 4-D (T, B, R, C) array
             # lazily straight from the store — no per-file stacking. The dask from_zarr read
             # is assembled by the pyramids-lazy backend.
-            return require_backend_method("read_zarr_cube", "DatasetCollection.data")(
+            return require_backend_method("read_zarr_cube", _DATA_OP)(
                 self._zarr_store
             )
         if self._files is None or len(self._files) == 0:
@@ -1808,7 +1813,7 @@ class DatasetCollection:
             )
             for path in self._files
         ]
-        return require_backend_method("stack_lazy", "DatasetCollection.data")(
+        return require_backend_method("stack_lazy", _DATA_OP)(
             per_step, axis=0
         )
 
@@ -1860,11 +1865,11 @@ class DatasetCollection:
                     f"template; the datasets= scenes must be co-registered."
                 )
             per_step.append(
-                require_backend_method("from_array_lazy", "DatasetCollection.data")(
+                require_backend_method("from_array_lazy", _DATA_OP)(
                     arr, chunks=expected
                 )
             )
-        return require_backend_method("stack_lazy", "DatasetCollection.data")(
+        return require_backend_method("stack_lazy", _DATA_OP)(
             per_step, axis=0
         )
 
