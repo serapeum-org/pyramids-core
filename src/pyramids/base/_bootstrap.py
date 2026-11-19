@@ -30,6 +30,53 @@ import sysconfig
 import warnings
 from pathlib import Path
 
+# Captured at import time, BEFORE pyramids puts its vendored osgeo on sys.path and before
+# any ``from osgeo import ...`` runs downstream: ``pyramids/__init__.py`` imports this module
+# above those imports. If ``osgeo`` is already in ``sys.modules`` here, a host application
+# (QGIS being the motivating case) loaded its own GDAL first, and pyramids must not clobber
+# the host's process-global GDAL environment. See :func:`gdal_env_is_host_managed` and #1588.
+_HOST_GDAL_PRELOADED = "osgeo" in sys.modules
+
+
+def host_gdal_preloaded() -> bool:
+    """Whether a host application's GDAL (``osgeo``) was imported before pyramids.
+
+    Captured once at this module's import, which ``pyramids/__init__.py`` runs before its own
+    ``from osgeo import ...``. ``True`` means pyramids is embedded in a process that already
+    owns GDAL -- QGIS is the motivating case (#1588).
+
+    Returns:
+        bool: ``True`` when ``osgeo`` was already imported before pyramids loaded.
+    """
+    return _HOST_GDAL_PRELOADED
+
+
+def gdal_env_is_host_managed() -> bool:
+    """Whether pyramids must leave the process-global GDAL environment to a host.
+
+    When ``True``, pyramids does not set or overwrite ``GDAL_DRIVER_PATH``, ``GDAL_DATA``,
+    ``PROJ_LIB`` / ``PROJ_DATA`` or ``PATH`` and does not activate its vendored GDAL tree --
+    it uses whatever GDAL the host already provides (#1588). Resolution, highest precedence
+    first:
+
+    - ``PYRAMIDS_MANAGE_GDAL_ENV`` -- ``0`` / ``false`` / ``no`` / ``off`` forces host-managed;
+      any other value forces pyramids-managed, overriding auto-detection either way.
+    - auto-detection -- a host's ``osgeo`` was imported before pyramids
+      (:func:`host_gdal_preloaded`).
+
+    ``PYRAMIDS_KEEP_GDAL_ENV`` is deliberately not consulted here: it only re-ranks the
+    composed ``GDAL_DRIVER_PATH`` so an inherited value leads, which is orthogonal to leaving
+    the whole GDAL environment untouched.
+
+    Returns:
+        bool: ``True`` when pyramids should leave the GDAL environment to the host.
+    """
+    override = os.environ.get("PYRAMIDS_MANAGE_GDAL_ENV")
+    if override is not None:
+        return override.strip().lower() in ("0", "false", "no", "off")
+    return _HOST_GDAL_PRELOADED
+
+
 # Module-level handle from `os.add_dll_directory()` on Windows.
 # add_dll_directory returns a context-manager-style handle; if the
 # handle gets garbage-collected the directory falls off the DLL
@@ -69,7 +116,13 @@ def _configure_gdal_data_env(data_dir: Path) -> None:
         # final path from the bundled dir + any companion plugin dirs + a discovered
         # conda/system dir (see `pyramids.base._gdal_plugins`) and writes it once,
         # before `gdal.AllRegister()` actually loads the plugins.
-        if os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
+        if gdal_env_is_host_managed():
+            # A host application already owns GDAL: its libgdal -- not the vendored one -- is
+            # what is loaded, since osgeo was imported before pyramids. Pointing
+            # GDAL_DRIVER_PATH at the vendored, ABI-locked plugins would feed the host foreign
+            # plugins, so leave its GDAL_DRIVER_PATH exactly as it is (#1588).
+            pass
+        elif os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
             os.environ.setdefault("GDAL_DRIVER_PATH", str(gdal_plugins))
         else:
             os.environ["GDAL_DRIVER_PATH"] = str(gdal_plugins)
@@ -132,6 +185,14 @@ def activate_vendored_osgeo(pkg_dir: Path) -> bool:
     vendored_osgeo = pkg_dir / "_vendor" / "osgeo"
 
     if not vendored_osgeo.is_dir():
+        return False
+
+    if gdal_env_is_host_managed():
+        # A host already owns GDAL (osgeo was imported before pyramids, or the embedder set
+        # PYRAMIDS_MANAGE_GDAL_ENV=0). Use the host's GDAL and leave its process-global env --
+        # GDAL_DRIVER_PATH / GDAL_DATA / PROJ_LIB / PATH -- untouched: skip the vendored tree
+        # entirely rather than activating it (#1588). The host's already-imported osgeo stays
+        # the one `from osgeo import ...` resolves to.
         return False
 
     ext_suffix = sysconfig.get_config_var("EXT_SUFFIX") or ".so"

@@ -64,6 +64,7 @@ import yaml
 from osgeo import gdal, ogr
 
 from pyramids import __path__ as root_path
+from pyramids.base._bootstrap import gdal_env_is_host_managed
 from pyramids.base._gdal_plugins import companion_plugin_dirs, compose_driver_path
 from pyramids.base.remote import redact_credentials
 
@@ -536,6 +537,7 @@ class Config:
         log_file: str | Path | None = None,
         config_file="config.yaml",
         quiet_third_party: bool = False,
+        manage_gdal_env: bool | None = None,
     ):
         """Construct a Config, load YAML, configure logging, and initialize GDAL.
 
@@ -552,6 +554,13 @@ class Config:
                 Pin fiona / rasterio / shapely / matplotlib / urllib3 / osgeo to WARNING.
                 Off by default — those belong to other libraries, and a host that
                 deliberately raised one of them should keep its setting.
+            manage_gdal_env (bool | None, optional):
+                Whether pyramids may export the vendored/conda GDAL tree into the
+                process-global environment (`GDAL_DRIVER_PATH`, `GDAL_DATA`, `PROJ_LIB`,
+                `PATH`). `None` (the default) auto-detects: when a host application already
+                owns GDAL — `osgeo` imported before pyramids, or `PYRAMIDS_MANAGE_GDAL_ENV=0`
+                — pyramids leaves that environment untouched and uses the host's GDAL. `True`
+                forces the export even inside a host; `False` forces hands-off. See #1588.
 
         Raises:
             FileNotFoundError: If the YAML file cannot be found.
@@ -566,12 +575,32 @@ class Config:
 
                 ```
         """
+        self._manage_gdal_env = manage_gdal_env
         self.setup_logging(
             level=level, log_file=log_file, quiet_third_party=quiet_third_party
         )
         self.config_file = config_file
         self.settings = self.load_config()
         self.initialize_gdal()
+
+    def _should_manage_gdal_env(self) -> bool:
+        """Whether this Config should export the GDAL env, rather than defer to a host.
+
+        The explicit ``manage_gdal_env`` constructor argument wins when set; otherwise the
+        decision falls to :func:`pyramids.base._bootstrap.gdal_env_is_host_managed`
+        (the ``PYRAMIDS_MANAGE_GDAL_ENV`` env var, then host auto-detection). See #1588.
+
+        Returns:
+            bool: ``True`` when pyramids should discover and export the GDAL environment;
+            ``False`` when it must leave ``GDAL_DRIVER_PATH`` / ``GDAL_DATA`` / ``PROJ_LIB`` /
+            ``PATH`` to the host.
+        """
+        # getattr default covers instances built via object.__new__ (the tests construct
+        # Config that way to call initialize_gdal without the __init__ side effects).
+        manage = getattr(self, "_manage_gdal_env", None)
+        if manage is not None:
+            return manage
+        return not gdal_env_is_host_managed()
 
     def load_config(self) -> dict[str, Any]:
         """Load configuration from the package YAML file.
@@ -640,58 +669,66 @@ class Config:
         for key, value in self.settings.get("ogr", {}).items():
             gdal.SetConfigOption(key, value)
 
-        # Captured BEFORE discovery, because dynamic_env_variables() writes
-        # GDAL_DRIVER_PATH itself as a side effect of exporting a conda/system tree's
-        # GDAL_DATA + PATH. This is the value the process actually inherited (on a
-        # platform wheel, the bundled dir _bootstrap already forced).
-        inherited_driver_path = os.environ.get("GDAL_DRIVER_PATH")
-        keep_env = os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1"
-        discovered_plugins_path = self.dynamic_env_variables()
+        # When a host application already owns GDAL (see _should_manage_gdal_env / #1588),
+        # skip discovery and export entirely so GDAL_DRIVER_PATH / GDAL_DATA / PROJ_LIB / PATH
+        # stay exactly as the host set them. Standalone installs take the managed branch below.
+        if self._should_manage_gdal_env():
+            # Captured BEFORE discovery, because dynamic_env_variables() writes
+            # GDAL_DRIVER_PATH itself as a side effect of exporting a conda/system tree's
+            # GDAL_DATA + PATH. This is the value the process actually inherited (on a
+            # platform wheel, the bundled dir _bootstrap already forced).
+            inherited_driver_path = os.environ.get("GDAL_DRIVER_PATH")
+            keep_env = os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1"
+            discovered_plugins_path = self.dynamic_env_variables()
 
-        # The LAST write of GDAL_DRIVER_PATH, composed from every directory that may hold
-        # plugins. Previously _bootstrap forced the bundled dir and then
-        # dynamic_env_variables() overwrote it with a conda dir whenever CONDA_PREFIX was
-        # set, silently undoing the #465 fix for a wheel installed into an activated conda
-        # env. Both are inputs to the composition now, bundled first.
-        #
-        # It is not the only write: _bootstrap, _export_gdal_library_env and
-        # _probe_posix_plugins each assign the variable too, the last two as a side effect
-        # of the discovery call above. This write runs after all of them and therefore
-        # decides what GDAL reads -- but only if it happens, which is why the empty case
-        # below clears rather than falls through.
-        driver_path = compose_driver_path(
-            bundled=self._bundled_plugin_dir(),
-            companions=companion_plugin_dirs(),
-            discovered=discovered_plugins_path,
-            inherited=inherited_driver_path,
-            keep_env=keep_env,
-        )
-        if driver_path:
-            os.environ["GDAL_DRIVER_PATH"] = driver_path
-            gdal.SetConfigOption("GDAL_DRIVER_PATH", driver_path)
-            self.logger.debug(f"GDAL_DRIVER_PATH composed as: {driver_path}")
-        elif not keep_env:
-            # `None` means not one candidate directory exists, so anything discovery left
-            # in the environment points nowhere. Leaving it there handed GDAL a path the
-            # composition had already rejected. PYRAMIDS_KEEP_GDAL_ENV=1 is exempt: the
-            # user asked for their value to stand, even if we cannot make sense of it.
+            # The LAST write of GDAL_DRIVER_PATH, composed from every directory that may hold
+            # plugins. Previously _bootstrap forced the bundled dir and then
+            # dynamic_env_variables() overwrote it with a conda dir whenever CONDA_PREFIX was
+            # set, silently undoing the #465 fix for a wheel installed into an activated conda
+            # env. Both are inputs to the composition now, bundled first.
             #
-            # Both stores must be cleared. GDAL resolves the setting through
-            # CPLGetConfigOption, which consults config options set by CPLSetConfigOption
-            # BEFORE the environment, so popping only os.environ leaves a value written by
-            # an earlier Config() in this process still in force -- and the test suite, and
-            # any host calling Config(level=...) after import, construct more than one.
-            #
-            # Logged because os.environ is shared: it is what every subprocess the host
-            # spawns inherits, and fiona/rasterio read it without going through this
-            # composition. Removing a value the user set is a surprising thing for a library
-            # to do silently, so it is at least traceable.
-            removed = os.environ.pop("GDAL_DRIVER_PATH", None)
-            gdal.SetConfigOption("GDAL_DRIVER_PATH", None)
-            if removed:
-                self.logger.debug(
-                    "cleared GDAL_DRIVER_PATH=%r: no directory on it exists", removed
-                )
+            # It is not the only write: _bootstrap, _export_gdal_library_env and
+            # _probe_posix_plugins each assign the variable too, the last two as a side effect
+            # of the discovery call above. This write runs after all of them and therefore
+            # decides what GDAL reads -- but only if it happens, which is why the empty case
+            # below clears rather than falls through.
+            driver_path = compose_driver_path(
+                bundled=self._bundled_plugin_dir(),
+                companions=companion_plugin_dirs(),
+                discovered=discovered_plugins_path,
+                inherited=inherited_driver_path,
+                keep_env=keep_env,
+            )
+            if driver_path:
+                os.environ["GDAL_DRIVER_PATH"] = driver_path
+                gdal.SetConfigOption("GDAL_DRIVER_PATH", driver_path)
+                self.logger.debug(f"GDAL_DRIVER_PATH composed as: {driver_path}")
+            elif not keep_env:
+                # `None` means not one candidate directory exists, so anything discovery left
+                # in the environment points nowhere. Leaving it there handed GDAL a path the
+                # composition had already rejected. PYRAMIDS_KEEP_GDAL_ENV=1 is exempt: the
+                # user asked for their value to stand, even if we cannot make sense of it.
+                #
+                # Both stores must be cleared. GDAL resolves the setting through
+                # CPLGetConfigOption, which consults config options set by CPLSetConfigOption
+                # BEFORE the environment, so popping only os.environ leaves a value written by
+                # an earlier Config() in this process still in force -- and the test suite, and
+                # any host calling Config(level=...) after import, construct more than one.
+                #
+                # Logged because os.environ is shared: it is what every subprocess the host
+                # spawns inherits, and fiona/rasterio read it without going through this
+                # composition. Removing a value the user set is a surprising thing for a
+                # library to do silently, so it is at least traceable.
+                removed = os.environ.pop("GDAL_DRIVER_PATH", None)
+                gdal.SetConfigOption("GDAL_DRIVER_PATH", None)
+                if removed:
+                    self.logger.debug(
+                        "cleared GDAL_DRIVER_PATH=%r: no directory on it exists", removed
+                    )
+        else:
+            self.logger.debug(
+                "host-managed GDAL env: left GDAL_DRIVER_PATH/GDAL_DATA/PROJ_LIB/PATH untouched"
+            )
         gdal.AllRegister()
 
     @staticmethod
