@@ -3477,8 +3477,14 @@ class IO(_Engine["Dataset"]):
             result_dtype = dtype if dtype is not None else lazy_src.dtype
             # The map_blocks graph is assembled by the pyramids-lazy backend; core reads the lazy
             # source (itself backend-built) and delegates.
-            result: Any = require_backend_method("map_blocks_lazy", "map_blocks(chunks=)")(
-                func, lazy_src, dtype=result_dtype, drop_axis=drop_axis, new_axis=new_axis
+            result: Any = require_backend_method(
+                "map_blocks_lazy", "map_blocks(chunks=)"
+            )(
+                func,
+                lazy_src,
+                dtype=result_dtype,
+                drop_axis=drop_axis,
+                new_axis=new_axis,
             )
         else:
             # The eager tile loop below reads windows from the source; a NetCDF multidim view can't

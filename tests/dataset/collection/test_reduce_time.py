@@ -762,7 +762,6 @@ class TestReduceTimeOps:
             coll.reduce_time(daily_times, freq="1MS", op="mean", q=50)
 
 
-
 class TestReduceTimeNoData:
     """reduce_time's no-data contract: NaN is the only gap; the sentinel is live.
 

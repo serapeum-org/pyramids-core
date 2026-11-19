@@ -806,7 +806,9 @@ class TestRequireBackendMethod:
             cb, "entry_points", lambda group=None: [_FakeEP("lazy", "m:b", backend)]
         )
         method = cb.require_backend_method("delayed", "to_file(compute=False)")
-        assert method(len, "abcd") == 4, "resolved method must be the backend's own callable"
+        assert method(len, "abcd") == 4, (
+            "resolved method must be the backend's own callable"
+        )
 
     def test_missing_method_raises_branded_upgrade_error(self, monkeypatch):
         """A backend lacking the capability is reported as too old, naming method and operation.
@@ -824,12 +826,12 @@ class TestRequireBackendMethod:
             cb.require_backend_method("delayed", "to_file(compute=False)")
         message = str(exc.value)
         assert "delayed" in message, f"message must name the method: {message}"
-        assert (
-            "to_file(compute=False)" in message
-        ), f"message must name the operation: {message}"
-        assert (
-            "pip install -U pyramids-lazy" in message
-        ), f"message must give the fix: {message}"
+        assert "to_file(compute=False)" in message, (
+            f"message must name the operation: {message}"
+        )
+        assert "pip install -U pyramids-lazy" in message, (
+            f"message must give the fix: {message}"
+        )
 
     def test_non_callable_attribute_is_rejected(self, monkeypatch):
         """An attribute of the right name that is not callable is refused, not returned.
