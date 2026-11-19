@@ -550,20 +550,22 @@ class TestCompanionEntryPointScan:
 class TestConfigIsTheSingleWriter:
     """`Config.initialize_gdal` composes and writes; nothing downstream overwrites it."""
 
-    def test_a_source_checkout_has_no_bundled_directory(self):
-        """A source / dev checkout ships no `_data/gdalplugins`, so `_bundled_plugin_dir()` is None.
+    def test_bundled_plugin_dir_reflects_the_packaged_data_dir(
+        self, monkeypatch, tmp_path
+    ):
+        """`_bundled_plugin_dir()` returns `<pkg>/_data/gdalplugins` when it exists, else None.
 
-        A platform wheel *does* vendor that directory, so the "source checkout" premise does not
-        hold there and the check is skipped rather than failing — which is why this test (added in
-        #1586) turned every ``test-wheels`` job red while the dev suite stayed green.
+        Driven off a temp package root, so the result is identical whether this run is a source
+        checkout or a platform wheel. The original test asserted `is None` against the *ambient*
+        package dir, which is correct for a dev checkout but false on a wheel (which vendors
+        `_data/gdalplugins`) — that ambient dependency turned every ``test-wheels`` job red after
+        #1586 while the dev suite stayed green.
         """
-        bundled = Config._bundled_plugin_dir()
-        if bundled is not None:
-            pytest.skip(
-                f"platform wheel ships a bundled plugin dir ({bundled}); the source-checkout "
-                "premise does not hold here"
-            )
-        assert bundled is None
+        monkeypatch.setattr(config_module, "root_path", [str(tmp_path)])
+        assert Config._bundled_plugin_dir() is None
+        plugins = tmp_path / "_data" / "gdalplugins"
+        plugins.mkdir(parents=True)
+        assert Config._bundled_plugin_dir() == plugins
 
     def test_an_empty_composition_clears_what_discovery_left_behind(
         self, monkeypatch, plugin_dirs
