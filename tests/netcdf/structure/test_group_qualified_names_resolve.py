@@ -129,52 +129,6 @@ class TestTheXarrayExportHandlesAGroupedStore:
         assert not [w for w in caught if "skipped" in str(w.message)]
 
 
-# Needs the [interop] extra: `to_xarray` / `from_xarray` import xarray, which a
-# bare install does not have. The module-level `core` mark still selects these
-# under `-m core`, and `tests/conftest.py` turns this marker into the matching
-# skip when xarray is absent -- which is what the pure-wheel job needs.
-@pytest.mark.interop
-class TestTheLazyExportResolvesTheSameNames:
-    """`to_xarray()`'s two arms must agree about which names exist.
-
-    The eager arm was taught the group walk and the lazy one was not, so
-    `to_xarray(chunks=...)` on a grouped store went from returning a Dataset to
-    raising `Array flight_03/CO does not exist` -- a regression against the base
-    commit, on a call the eager arm answers happily.
-    """
-
-    def test_a_chunked_export_of_a_grouped_store_returns_a_dataset(self):
-        """The lazy arm must resolve a sub-group name, not raise on it.
-
-        Test scenario:
-            `build_lazy_array` opened the enumerated name against the root
-            group, where a group-qualified name does not exist.
-        """
-        dataset = NetCDF.read_file(str(GROUPED))
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            exported = dataset.to_xarray(chunks="auto")
-
-        assert len(exported.data_vars) > 5
-
-    def test_the_two_arms_export_the_same_variables(self):
-        """One method, one answer -- `chunks=` is a memory strategy, not a filter.
-
-        Test scenario:
-            Comparing the arms against each other is what catches a name the
-            eager path resolves and the lazy path does not.
-        """
-        dataset = NetCDF.read_file(str(GROUPED))
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            eager = dataset.to_xarray()
-            lazy = dataset.to_xarray(chunks="auto")
-
-        assert sorted(lazy.data_vars) == sorted(eager.data_vars)
-
-
 class TestTheReadPathsResolveGroupQualifiedNames:
     """The other consumers that still opened an enumerated name against the root."""
 

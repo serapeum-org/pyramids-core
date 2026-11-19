@@ -80,7 +80,7 @@ interop = ["xarray>=2023.1.0"]
 # test dep the plugin must not carry: the lazy PLOT tests (need cleopatra) and the chunked xarray
 # INTEROP tests (need xarray). Released version only — they exercise netcdf lazy methods already on
 # PyPI, so this never gates on an unreleased plugin. The same-named `e2e` pixi feature maps here.
-e2e = ["pyramids-lazy>=0.2.0"]
+e2e = ["pyramids-lazy[parquet]>=0.2.0"]
 dev = [
     "nbval >=0.11.0",
     "pre-commit >=4.6.2",

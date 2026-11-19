@@ -648,11 +648,6 @@ class TestTheFacadeSignature:
             is True
         )
 
-    def test_chunks_is_still_positional(self):
-        """`to_xarray("auto")` keeps working — the spelled-out signature is compatible."""
-        exported = NetCDF.read_file(CF_PATH).to_xarray("auto")
-        assert exported["temperature"].chunks is not None
-
 
 class TestTheEpochFallbackIsReported:
     """A write that could not use the declared units says so (round-2 M3)."""

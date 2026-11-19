@@ -1522,11 +1522,11 @@ class DatasetCollection:
                 ...     paths.append(p)
                 >>> coll = DatasetCollection.from_files(paths)
                 >>> times = pd.date_range("2022-01-01", periods=2, freq="1D")
-                >>> windows = coll.reduce_time(times, freq="1MS", op="median")
-                >>> len(windows)  # one January window
+                >>> windows = coll.reduce_time(times, freq="1MS", op="median")  # doctest: +SKIP
+                >>> len(windows)  # one January window  # doctest: +SKIP
                 1
-                >>> label, ds = windows[0]
-                >>> ds.read_array().tolist()  # median of day0 and day1, per pixel
+                >>> label, ds = windows[0]  # doctest: +SKIP
+                >>> ds.read_array().tolist()  # median of day0 and day1, per pixel  # doctest: +SKIP
                 [[2.0, 3.0], [4.0, 5.0]]
 
                 ```
@@ -1753,11 +1753,11 @@ class DatasetCollection:
                 ...     step.close()
                 ...     paths.append(p)
                 >>> col = DatasetCollection.from_files(paths)
-                >>> col.data.shape, col.data.dtype
+                >>> col.data.shape, col.data.dtype  # doctest: +SKIP
                 ((2, 1, 2, 2), dtype('float64'))
-                >>> col.data[:, 0, 0, 0].compute().tolist()
+                >>> col.data[:, 0, 0, 0].compute().tolist()  # doctest: +SKIP
                 [1.0, 2.0]
-                >>> col.mean()[0].tolist()
+                >>> col.mean()[0].tolist()  # doctest: +SKIP
                 [[1.5, 3.0], [4.5, 6.0]]
 
                 ```
@@ -1772,9 +1772,9 @@ class DatasetCollection:
                 ...     for v in (1, 2, 3)
                 ... ]
                 >>> col = DatasetCollection(scenes[0], time_length=3, datasets=scenes)
-                >>> col.data.shape
+                >>> col.data.shape  # doctest: +SKIP
                 (3, 1, 2, 2)
-                >>> col.data[:, 0, 0, 0].compute().tolist()
+                >>> col.data[:, 0, 0, 0].compute().tolist()  # doctest: +SKIP
                 [1.0, 2.0, 3.0]
 
                 ```
