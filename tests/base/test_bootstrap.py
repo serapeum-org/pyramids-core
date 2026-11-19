@@ -8,6 +8,7 @@ without clobbering a user/system override (the setdefault contract).
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import sysconfig
 from pathlib import Path
@@ -273,3 +274,37 @@ class TestHostManaged:
             "osgeo was imported before pyramids in the test session; keep the conftest ordering "
             "(import pyramids before `from osgeo import ...`)"
         )
+
+
+class TestHostEnvCapture:
+    """The import-time `_HOST_GDAL_ENV_PRESENT` capture probes only GDAL driver/data vars (#1588 L1-L3)."""
+
+    @pytest.mark.parametrize(
+        "env, expected",
+        [
+            ({}, False),
+            ({"GDAL_DATA": "/x"}, True),
+            ({"GDAL_DRIVER_PATH": "/x"}, True),
+            ({"PROJ_LIB": "/x"}, False),
+            ({"GDAL_DATA": ""}, True),
+        ],
+    )
+    def test_capture_probes_gdal_driver_data_only(self, env, expected):
+        """A fresh interpreter reads host-env presence from GDAL_DRIVER_PATH/GDAL_DATA only, not PROJ_*.
+
+        Spawns a clean child with the three vars stripped then the parametrized ones set, imports
+        `_bootstrap`, and prints the captured flag. Proves PROJ_LIB alone does not qualify (L3) and an
+        explicit empty GDAL_DATA still does (L2, membership not truthiness).
+        """
+        stripped = {
+            k: v
+            for k, v in os.environ.items()
+            if k not in ("GDAL_DRIVER_PATH", "GDAL_DATA", "PROJ_LIB")
+        }
+        stripped.update(env)
+        code = "import pyramids.base._bootstrap as b; print(b._HOST_GDAL_ENV_PRESENT)"
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, env=stripped
+        )
+        got = out.stdout.strip().splitlines()[-1] if out.stdout.strip() else ""
+        assert got == str(expected), f"env={env}: expected {expected}, got {got!r}; stderr={out.stderr[-300:]}"

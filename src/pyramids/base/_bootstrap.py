@@ -38,13 +38,16 @@ from pathlib import Path
 _HOST_GDAL_PRELOADED = "osgeo" in sys.modules
 
 # Captured alongside the preload flag: whether a host or a conda activation had already configured
-# GDAL's process-global environment before pyramids loaded. Auto-detection requires BOTH signals --
+# GDAL's driver/data environment before pyramids loaded. Auto-detection requires BOTH signals --
 # `osgeo` in sys.modules alone is too coarse (a plain standalone `import osgeo` sets it), so it is
-# paired with evidence that a host actually set up the GDAL env. Without this pairing a
-# non-activated-conda user who imports osgeo first would be read as a host, skip discovery, and lose
-# the netCDF / HDF5 / GRIB plugin drivers (which ship as separate plugins) -- see #1588 review H1.
+# paired with evidence that a host configured GDAL itself. Only the GDAL driver/data vars count:
+# PROJ_LIB / PROJ_DATA are orthogonal (a standalone user sets them for pyproj, which must not read as
+# a host), and membership (`in os.environ`, not truthiness) so an explicit empty value still counts
+# as "the host set this". Without this pairing a non-activated-conda or osgeo-first user would be
+# read as a host, skip discovery, and lose the netCDF / HDF5 / GRIB plugins -- see #1588 review
+# H1/L1/L2/L3.
 _HOST_GDAL_ENV_PRESENT = any(
-    os.environ.get(var) for var in ("GDAL_DRIVER_PATH", "GDAL_DATA", "PROJ_LIB")
+    var in os.environ for var in ("GDAL_DRIVER_PATH", "GDAL_DATA")
 )
 
 
@@ -82,9 +85,10 @@ def gdal_env_is_host_managed() -> bool:
       / `yes` / `on` forces pyramids-managed; any other value (empty, whitespace, a typo) is
       ignored and falls through to auto-detection rather than silently clobbering the host.
     - auto-detection -- host-managed only when a host both imported `osgeo` before pyramids
-      (`host_gdal_preloaded`) AND had already configured the GDAL env (`GDAL_DRIVER_PATH`,
-      `GDAL_DATA` or `PROJ_LIB` already set). Requiring the configured env as well as the import
-      avoids misreading a bare standalone `import osgeo` as a host and dropping plugin discovery.
+      (`host_gdal_preloaded`) AND had already configured GDAL's driver/data env (`GDAL_DRIVER_PATH`
+      or `GDAL_DATA` set). Requiring the configured env as well as the import avoids misreading a
+      bare standalone `import osgeo` as a host and dropping plugin discovery. Auto-detection is
+      best-effort; an embedder should set `PYRAMIDS_MANAGE_GDAL_ENV=0` for a guarantee.
 
     `PYRAMIDS_KEEP_GDAL_ENV` is deliberately not consulted here: it only re-ranks the composed
     `GDAL_DRIVER_PATH` so an inherited value leads, which is orthogonal to leaving the whole
