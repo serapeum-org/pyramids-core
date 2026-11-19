@@ -3479,16 +3479,17 @@ class IO(_Engine["Dataset"]):
             lazy_src = self.read_array(band=band, chunks=chunks)
             result_dtype = dtype if dtype is not None else lazy_src.dtype
             # The map_blocks graph is assembled by the pyramids-lazy backend; core reads the lazy
-            # source (itself backend-built) and delegates.
+            # source (itself backend-built) and delegates. ``drop_axis`` / ``new_axis`` are forwarded
+            # only when set, exactly as the pre-refactor in-core call did -- so "not supplied" stays
+            # a core-side decision rather than relying on the backend to treat ``None`` specially.
+            axis_kwargs: dict[str, Any] = {}
+            if drop_axis is not None:
+                axis_kwargs["drop_axis"] = drop_axis
+            if new_axis is not None:
+                axis_kwargs["new_axis"] = new_axis
             result: Any = require_backend_method(
                 "map_blocks_lazy", "map_blocks(chunks=)"
-            )(
-                func,
-                lazy_src,
-                dtype=result_dtype,
-                drop_axis=drop_axis,
-                new_axis=new_axis,
-            )
+            )(func, lazy_src, dtype=result_dtype, **axis_kwargs)
         else:
             # The eager tile loop below reads windows from the source; a NetCDF multidim view can't
             # be window-read by GDAL >= 3.13, so materialise it first (no-op for an ordinary raster).
