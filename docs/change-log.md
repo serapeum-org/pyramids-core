@@ -1,5 +1,26 @@
 ﻿# Change log
 
+## 0.81.0 (2026-11-19)
+
+### BREAKING CHANGE
+
+- the lazy raster surface (read_array(chunks=), map_blocks,
+DatasetCollection.data and its reductions, compute=False, lazy focal filters)
+now requires the pyramids-lazy backend; a bare install with only dask
+installed no longer provides it.
+
+### Feat
+
+- **gdal**: add the gdal_plugin_path seam and brand missing OGR drivers (#1586)
+
+### Fix
+
+- **gdal**: leave the host's GDAL environment untouched when embedded (e.g. QGIS) (#1589)
+
+### Refactor
+
+- **dataset**: route lazy/dask ops through the compute-backend seam (#1592)
+
 ## 0.80.0 (2026-11-16)
 
 ### Feat
