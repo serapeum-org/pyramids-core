@@ -239,6 +239,7 @@ class TestHostManaged:
         """
         monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
         monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", True)
         pkg = vendored_pkg(with_plugins=True, with_ca=True)
         os.environ["GDAL_DRIVER_PATH"] = "/host/gdalplugins"
         assert activate_vendored_osgeo(pkg) is False, "activation must be skipped when host-preloaded"

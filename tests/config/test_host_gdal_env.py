@@ -10,6 +10,8 @@ import logging
 import os
 from unittest import mock
 
+import pytest
+
 from pyramids.base import _bootstrap
 from pyramids.base.config import Config
 
@@ -30,12 +32,34 @@ class TestGdalEnvIsHostManaged:
         monkeypatch.setenv("PYRAMIDS_MANAGE_GDAL_ENV", "1")
         assert _bootstrap.gdal_env_is_host_managed() is False
 
-    def test_auto_detection_follows_preloaded_flag(self, monkeypatch):
-        """With no override, the decision follows whether a host `osgeo` was preloaded."""
+    def test_auto_detection_requires_preload_and_configured_env(self, monkeypatch):
+        """Auto host-managed needs BOTH a preloaded osgeo and an already-configured GDAL env."""
         monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", True)
         monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
         assert _bootstrap.gdal_env_is_host_managed() is True
         monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
+        assert _bootstrap.gdal_env_is_host_managed() is False
+
+    def test_preloaded_without_configured_env_is_managed(self, monkeypatch):
+        """A standalone `import osgeo` with no host GDAL env stays pyramids-managed (review H1).
+
+        Without the configured-env requirement this would wrongly report host-managed and skip
+        the plugin discovery that netCDF/HDF5/GRIB need.
+        """
+        monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", False)
+        assert _bootstrap.gdal_env_is_host_managed() is False
+
+    @pytest.mark.parametrize("value", ["", "   ", "flase", "maybe"])
+    def test_unrecognised_override_falls_through_to_auto(self, monkeypatch, value):
+        """Empty/whitespace/typo override is ignored, not treated as 'manage' (review L3)."""
+        monkeypatch.setenv("PYRAMIDS_MANAGE_GDAL_ENV", value)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", True)
+        assert _bootstrap.gdal_env_is_host_managed() is True
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", False)
         assert _bootstrap.gdal_env_is_host_managed() is False
 
 
@@ -62,6 +86,7 @@ class TestShouldManageGdalEnv:
     def test_defaults_to_autodetection(self, monkeypatch):
         """`manage_gdal_env=None` defers to `gdal_env_is_host_managed`."""
         monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_ENV_PRESENT", True)
         cfg = _bare_config()
         cfg._manage_gdal_env = None
         monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
