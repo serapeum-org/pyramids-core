@@ -14,7 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from pyramids.base._bootstrap import activate_vendored_osgeo
+from pyramids.base import _bootstrap
+from pyramids.base._bootstrap import activate_vendored_osgeo, host_gdal_preloaded
 
 pytestmark = pytest.mark.core
 
@@ -32,6 +33,7 @@ _GDAL_ENV_VARS = (
     "PROJ_DATA",
     "PROJ_LIB",
     "PYRAMIDS_KEEP_GDAL_ENV",
+    "PYRAMIDS_MANAGE_GDAL_ENV",
 )
 
 
@@ -194,4 +196,65 @@ class TestDriverPath:
 
         assert os.environ["GDAL_DATA"] == "/custom/gdal_data"
         assert os.environ["PROJ_DATA"] == str(pkg / "_data" / "proj_data")
+        assert os.environ["GDAL_DRIVER_PATH"] == str(pkg / "_data" / "gdalplugins")
+
+
+class TestHostManaged:
+    """Host-aware opt-out: pyramids leaves a host application's GDAL env alone (#1588)."""
+
+    def test_host_gdal_preloaded_reflects_module_flag(self, monkeypatch):
+        """host_gdal_preloaded() returns the import-time _HOST_GDAL_PRELOADED capture.
+
+        Test scenario:
+            Flipping the module-level flag flips what the accessor reports — the capture is
+            the single source of truth for "a host imported osgeo first".
+        """
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
+        assert host_gdal_preloaded() is True, "should report host-preloaded when flag is True"
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
+        assert host_gdal_preloaded() is False, "should report not-preloaded when flag is False"
+
+    def test_activate_skips_when_env_opt_out(self, monkeypatch, vendored_pkg):
+        """PYRAMIDS_MANAGE_GDAL_ENV=0 makes activation a no-op: driver path + sys.path untouched.
+
+        Test scenario:
+            A full vendored wheel is present, but the embedder opted out via the env var, so
+            activation returns False and leaves the host's GDAL_DRIVER_PATH and sys.path as-is.
+        """
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
+        monkeypatch.setenv("PYRAMIDS_MANAGE_GDAL_ENV", "0")
+        pkg = vendored_pkg(with_plugins=True)
+        os.environ["GDAL_DRIVER_PATH"] = "/host/gdalplugins"
+        before_path = list(sys.path)
+        assert activate_vendored_osgeo(pkg) is False, "activation must be skipped when host-managed"
+        assert os.environ["GDAL_DRIVER_PATH"] == "/host/gdalplugins", "driver path must be untouched"
+        assert sys.path == before_path, "vendor dir must not be inserted when host-managed"
+
+    def test_activate_skips_when_host_preloaded(self, monkeypatch, vendored_pkg):
+        """Auto-detection: a host osgeo preloaded makes activation a no-op (no env writes).
+
+        Test scenario:
+            No env override is set, but osgeo was imported before pyramids. Activation is
+            skipped, so neither GDAL_DRIVER_PATH nor the CA-bundle vars are written.
+        """
+        monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", True)
+        pkg = vendored_pkg(with_plugins=True, with_ca=True)
+        os.environ["GDAL_DRIVER_PATH"] = "/host/gdalplugins"
+        assert activate_vendored_osgeo(pkg) is False, "activation must be skipped when host-preloaded"
+        assert os.environ["GDAL_DRIVER_PATH"] == "/host/gdalplugins", "driver path must be untouched"
+        for var in _CA_ENV_VARS:
+            assert var not in os.environ, f"{var} must stay unset when host-managed"
+
+    def test_managed_activates_when_no_host(self, monkeypatch, vendored_pkg):
+        """No host and no opt-out: activation proceeds and forces the bundled driver path.
+
+        Test scenario:
+            The standalone path — nothing preloaded osgeo and no override — still activates
+            the vendored tree exactly as before, confirming the gate does not regress it.
+        """
+        monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
+        pkg = vendored_pkg(with_plugins=True)
+        assert activate_vendored_osgeo(pkg) is True, "standalone activation must still proceed"
         assert os.environ["GDAL_DRIVER_PATH"] == str(pkg / "_data" / "gdalplugins")
