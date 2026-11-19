@@ -555,12 +555,15 @@ class Config:
                 Off by default — those belong to other libraries, and a host that
                 deliberately raised one of them should keep its setting.
             manage_gdal_env (bool | None, optional):
-                Whether pyramids may export the vendored/conda GDAL tree into the
-                process-global environment (`GDAL_DRIVER_PATH`, `GDAL_DATA`, `PROJ_LIB`,
-                `PATH`). `None` (the default) auto-detects: when a host application already
-                owns GDAL — `osgeo` imported before pyramids, or `PYRAMIDS_MANAGE_GDAL_ENV=0`
-                — pyramids leaves that environment untouched and uses the host's GDAL. `True`
-                forces the export even inside a host; `False` forces hands-off. See #1588.
+                Whether this Config exports the vendored/conda GDAL tree into the
+                process-global environment *variables* (`GDAL_DRIVER_PATH`, `GDAL_DATA`,
+                `PROJ_LIB`, `PATH`). `None` (the default) auto-detects a host via
+                `pyramids.base._bootstrap.gdal_env_is_host_managed`; `True` forces the export;
+                `False` makes this Config skip it. This governs only those four env vars — not
+                `gdal.UseExceptions()` or the YAML `gdal` / `ogr` config options, which always
+                apply. For reliable hands-off in an embedder, set `PYRAMIDS_MANAGE_GDAL_ENV=0`
+                before importing pyramids: the import-time `Config()` runs first, so passing
+                `False` to a later Config cannot undo an export it already performed. See #1588.
 
         Raises:
             FileNotFoundError: If the YAML file cannot be found.
