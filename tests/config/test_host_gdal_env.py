@@ -94,6 +94,40 @@ class TestShouldManageGdalEnv:
         monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
         assert cfg._should_manage_gdal_env() is True
 
+    def test_bare_instance_without_attr_defaults_to_auto(self, monkeypatch):
+        """A bare Config lacking `_manage_gdal_env` falls back to auto-detection (getattr default)."""
+        monkeypatch.delenv("PYRAMIDS_MANAGE_GDAL_ENV", raising=False)
+        monkeypatch.setattr(_bootstrap, "_HOST_GDAL_PRELOADED", False)
+        cfg = object.__new__(Config)
+        cfg.logger = logging.getLogger("tests.config.host_gdal")
+        assert not hasattr(cfg, "_manage_gdal_env"), "fixture must leave the attribute unset"
+        assert cfg._should_manage_gdal_env() is True
+
+
+class TestConfigConstructor:
+    """The real `Config(manage_gdal_env=...)` path through `__init__` (not `object.__new__`)."""
+
+    def test_false_constructs_host_managed_and_skips_export(self, monkeypatch, tmp_path):
+        """`Config(manage_gdal_env=False)` stores the flag and leaves the GDAL env vars untouched."""
+        keys = ("GDAL_DRIVER_PATH", "GDAL_DATA", "PROJ_LIB")
+        for key in keys:
+            monkeypatch.setenv(key, str(tmp_path / key))
+        before = {key: os.environ[key] for key in keys}
+        cfg = Config(manage_gdal_env=False)
+        assert cfg._manage_gdal_env is False
+        assert cfg._should_manage_gdal_env() is False
+        for key, value in before.items():
+            assert os.environ[key] == value, f"{key} must be untouched when host-managed"
+
+    def test_true_constructs_managed(self, monkeypatch):
+        """`Config(manage_gdal_env=True)` stores the flag and reports pyramids-managed."""
+        monkeypatch.setattr(Config, "dynamic_env_variables", mock.Mock(return_value=None))
+        monkeypatch.setattr(Config, "_bundled_plugin_dir", staticmethod(lambda: None))
+        monkeypatch.delenv("GDAL_DRIVER_PATH", raising=False)
+        cfg = Config(manage_gdal_env=True)
+        assert cfg._manage_gdal_env is True
+        assert cfg._should_manage_gdal_env() is True
+
 
 class TestInitializeGdalHostManaged:
     """The `initialize_gdal` gate: host-managed skips discovery and leaves the env alone."""

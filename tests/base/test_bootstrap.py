@@ -259,3 +259,17 @@ class TestHostManaged:
         pkg = vendored_pkg(with_plugins=True)
         assert activate_vendored_osgeo(pkg) is True, "standalone activation must still proceed"
         assert os.environ["GDAL_DRIVER_PATH"] == str(pkg / "_data" / "gdalplugins")
+
+    def test_suite_imports_pyramids_before_osgeo(self):
+        """Guard: the suite must import pyramids before osgeo, or auto-detection flips it host-managed.
+
+        The module-level capture is only `False` because the root `tests/conftest.py` imports
+        pyramids (hence `_bootstrap`) before any `from osgeo import ...`. If a future reflow or a new
+        top-level conftest/plugin imported osgeo first, `_HOST_GDAL_PRELOADED` would flip to True and
+        the whole GDAL-dependent suite could silently run host-managed. This reads the real captured
+        value (not a monkeypatched one) so that regression fails loudly here (#1588 review L4).
+        """
+        assert host_gdal_preloaded() is False, (
+            "osgeo was imported before pyramids in the test session; keep the conftest ordering "
+            "(import pyramids before `from osgeo import ...`)"
+        )

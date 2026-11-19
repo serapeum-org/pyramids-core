@@ -598,8 +598,8 @@ class Config:
             ``False`` when it must leave ``GDAL_DRIVER_PATH`` / ``GDAL_DATA`` / ``PROJ_LIB`` /
             ``PATH`` to the host.
         """
-        # getattr default covers instances built via object.__new__ (the tests construct
-        # Config that way to call initialize_gdal without the __init__ side effects).
+        # getattr default: a bare instance built via object.__new__ (as some tests do, to call
+        # initialize_gdal without the __init__ side effects) may not have _manage_gdal_env set.
         manage = getattr(self, "_manage_gdal_env", None)
         if manage is not None:
             return manage
