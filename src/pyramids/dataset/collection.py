@@ -19,12 +19,12 @@ import pandas as pd
 from pyproj import CRS
 
 from pyramids import _io
+from pyramids.base._compute_backend import require_backend_method
 from pyramids.base._domain import INHERIT_NO_DATA, free_no_data, is_stored_no_data
 from pyramids.base._errors import (
     AlignmentError,
     DriverNotExistError,
     NoDataValueError,
-    OptionalPackageDoesNotExist,
 )
 from pyramids.base._file_manager import CachingFileManager, gdal_raster_open
 from pyramids.base._locks import default_lock
@@ -489,18 +489,9 @@ def _lazy_timestep(
             :func:`_unpack_lazy_timestep` unpacks them with this file's own recipe
             (`float64` when a band is packed, the stored dtype otherwise).
     """
-    import dask.array as da
-    from dask.array.core import normalize_chunks
-
     band_count, rows, cols = meta.shape
     dtype = np.dtype(meta.dtype)
     block_w, block_h = meta.block_size[0] if meta.block_size else (cols, rows)
-    normalized = normalize_chunks(
-        "auto",
-        shape=(band_count, rows, cols),
-        dtype=dtype,
-        previous_chunks=(1, block_h, block_w),
-    )
     manager = CachingFileManager(
         gdal_raster_open,
         str(path),
@@ -509,15 +500,18 @@ def _lazy_timestep(
         lock=False,
         manager_id=str(path),
     )
-    stored = da.map_blocks(
+    # The normalize_chunks + map_blocks graph over the pickle-safe _read_chunk reader is assembled
+    # by the pyramids-lazy backend; this builds one timestep's spatially-tiled (B, Y, X) cube in
+    # stored counts, which _unpack_lazy_timestep then puts into physical units.
+    stored = require_backend_method("read_raster_array_lazy", "DatasetCollection.data")(
         _read_chunk,
-        chunks=normalized,
-        dtype=dtype,
-        meta=np.empty((0, 0, 0), dtype=dtype),
         manager=manager,
+        chunks="auto",
+        shape=(band_count, rows, cols),
+        previous_chunks=(1, block_h, block_w),
+        dtype=dtype,
         lock=lock,
         band=None,
-        out_dtype=dtype,
         single_band=False,
         gdal_env=gdal_env or None,
     )
@@ -583,31 +577,6 @@ def _unpack_lazy_timestep(
     return apply_unpack(stored, scale, offset)
 
 
-def _delayed():
-    """The `dask.delayed` decorator, or a clear error naming the missing extra.
-
-    Every deferred per-timestep path needs it, and each used to import `dask`
-    inline at the point of use, so a missing extra surfaced differently
-    depending on which arm the caller reached.
-
-    Returns:
-        The `dask.delayed` callable.
-
-    Raises:
-        OptionalPackageDoesNotExist: `dask` is not installed.
-    """
-    try:
-        import dask
-    except ImportError as exc:
-        raise OptionalPackageDoesNotExist(
-            lazy_backend_hint(
-                "DatasetCollection deferred operations (compute=False) require "
-                "the optional 'dask' dependency."
-            )
-        ) from exc
-    return dask.delayed
-
-
 def _named_op(method_name: str, *args: Any, **kwargs: Any):
     """A per-timestep callable that dispatches `Dataset.<method_name>`.
 
@@ -629,7 +598,9 @@ def _named_op(method_name: str, *args: Any, **kwargs: Any):
         bound = getattr(dataset, method_name)
         if do_compute:
             return bound(*args, **kwargs)
-        return _delayed()(bound)(*args, **kwargs)
+        return require_backend_method(
+            "delayed", "DatasetCollection operations (compute=False)"
+        )(bound, *args, **kwargs)
 
     return per_step
 
@@ -1807,24 +1778,19 @@ class DatasetCollection:
 
                 ```
         """
-        try:
-            import dask.array as da
-        except ImportError as exc:
-            raise OptionalPackageDoesNotExist(
-                lazy_backend_hint(
-                    "DatasetCollection.data requires the optional 'dask' dependency."
-                )
-            ) from exc
         if self._zarr_store is not None:
             # Zarr-backed cube (from_zarr): read the 4-D (T, B, R, C) array
-            # lazily straight from the store — no per-file stacking.
-            return da.from_zarr(self._zarr_store, component="data")
+            # lazily straight from the store — no per-file stacking. The dask from_zarr read
+            # is assembled by the pyramids-lazy backend.
+            return require_backend_method("read_zarr_cube", "DatasetCollection.data")(
+                self._zarr_store
+            )
         if self._files is None or len(self._files) == 0:
             # In-memory collection (#1349): no store and no file list -- a
             # datasets=-backed collection, or the legacy replicate-base
             # DatasetCollection(src, time_length=N). The per-timestep Datasets
             # are resident, so stack their physical arrays over time.
-            return self._in_memory_cube(da)
+            return self._in_memory_cube()
         meta = self._meta
         # ARC-45: build each timestep as a spatially-tiled dask array (windowed reads
         # via _read_chunk) and stack along time, so a reduction tiles spatially and a
@@ -1846,9 +1812,11 @@ class DatasetCollection:
             )
             for path in self._files
         ]
-        return da.stack(per_step, axis=0)
+        return require_backend_method("stack_lazy", "DatasetCollection.data")(
+            per_step, axis=0
+        )
 
-    def _in_memory_cube(self, da: Any) -> Any:
+    def _in_memory_cube(self) -> Any:
         """Stack the resident per-timestep datasets into the `(T, B, R, C)` cube.
 
         The in-memory path for :attr:`data` (#1349): a collection built with
@@ -1861,9 +1829,6 @@ class DatasetCollection:
         reducers run on the resident stack with no on-disk round-trip for
         genuinely in-memory scenes — a scene that is itself a file-backed
         `Dataset` handle passed via `datasets=` is read from disk here.
-
-        Args:
-            da: The imported `dask.array` module (resolved by :attr:`data`).
 
         Returns:
             dask.array.Array: The lazy `(T, B, R, C)` cube over the resident
@@ -1898,8 +1863,14 @@ class DatasetCollection:
                     f"{arr.shape}, expected {expected} to match the collection "
                     f"template; the datasets= scenes must be co-registered."
                 )
-            per_step.append(da.from_array(arr, chunks=expected))
-        return da.stack(per_step, axis=0)
+            per_step.append(
+                require_backend_method("from_array_lazy", "DatasetCollection.data")(
+                    arr, chunks=expected
+                )
+            )
+        return require_backend_method("stack_lazy", "DatasetCollection.data")(
+            per_step, axis=0
+        )
 
     @property
     def meta(self) -> RasterMeta:
@@ -4484,14 +4455,16 @@ class DatasetCollection:
             return self._finalize_per_timestep_result(new_datasets, inplace=inplace)
         if inplace:
             raise ValueError("compute=False cannot be combined with inplace=True.")
-        # Resolved before the loop, so a missing dask fails once and uniformly
+        # Resolved before the loop, so a missing backend fails once and uniformly
         # rather than from inside whichever per-timestep arm ran first.
-        delayed = _delayed()
+        delayed = require_backend_method(
+            "delayed", "DatasetCollection operations (compute=False)"
+        )
         delayeds = [per_step(ds, False) for ds in self.datasets]
         derived = self._derived_kwargs(len(delayeds))
         return cast(
             "Delayed",
-            delayed(DatasetCollection._wrap_datasets)(delayeds, **derived),
+            delayed(DatasetCollection._wrap_datasets, delayeds, **derived),
         )
 
     def merge(

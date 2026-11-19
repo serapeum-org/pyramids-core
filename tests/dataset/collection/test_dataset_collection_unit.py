@@ -28,7 +28,6 @@ from osgeo import gdal
 from pyramids.base._errors import (
     AlignmentError,
     NoDataValueError,
-    OptionalPackageDoesNotExist,
 )
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
@@ -1920,11 +1919,12 @@ class TestToCrsEager:
         )
 
     def test_compute_false_without_dask_raises(self, tmp_path, monkeypatch):
-        """``compute=False`` without dask raises ``OptionalPackageDoesNotExist``.
+        """``compute=False`` with a backend but no dask raises the branded ``ImportError``.
 
         Test scenario:
-            Simulate a missing dask import — expected: the ``pyramids-lazy`` error
-            from ``_apply_operator``'s deferred branch, naming the extra.
+            Simulate a missing dask import with the pyramids-lazy backend present — expected: the
+            backend's branded install hint (``pip install dask``) from the deferred branch, now that
+            the ``dask.delayed`` wrapping lives in the backend rather than core.
         """
         import builtins
 
@@ -1937,7 +1937,7 @@ class TestToCrsEager:
 
         col, _ = make_int16_collection(tmp_path, count=2)
         monkeypatch.setattr(builtins, "__import__", fake_import)
-        with pytest.raises(OptionalPackageDoesNotExist, match="lazy"):
+        with pytest.raises(ImportError, match="pip install dask"):
             col.to_crs(3857, compute=False)
 
 
