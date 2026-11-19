@@ -550,9 +550,22 @@ class TestCompanionEntryPointScan:
 class TestConfigIsTheSingleWriter:
     """`Config.initialize_gdal` composes and writes; nothing downstream overwrites it."""
 
-    def test_a_source_checkout_has_no_bundled_directory(self):
-        """`_data/gdalplugins` ships only in a wheel, so a dev install must report None."""
+    def test_bundled_plugin_dir_reflects_the_packaged_data_dir(
+        self, monkeypatch, tmp_path
+    ):
+        """`_bundled_plugin_dir()` returns `<pkg>/_data/gdalplugins` when it exists, else None.
+
+        Driven off a temp package root, so the result is identical whether this run is a source
+        checkout or a platform wheel. The original test asserted `is None` against the *ambient*
+        package dir, which is correct for a dev checkout but false on a wheel (which vendors
+        `_data/gdalplugins`) — that ambient dependency turned every ``test-wheels`` job red after
+        #1586 while the dev suite stayed green.
+        """
+        monkeypatch.setattr(config_module, "root_path", [str(tmp_path)])
         assert Config._bundled_plugin_dir() is None
+        plugins = tmp_path / "_data" / "gdalplugins"
+        plugins.mkdir(parents=True)
+        assert Config._bundled_plugin_dir() == plugins
 
     def test_an_empty_composition_clears_what_discovery_left_behind(
         self, monkeypatch, plugin_dirs
