@@ -726,7 +726,8 @@ class Config:
                 gdal.SetConfigOption("GDAL_DRIVER_PATH", None)
                 if removed:
                     self.logger.debug(
-                        "cleared GDAL_DRIVER_PATH=%r: no directory on it exists", removed
+                        "cleared GDAL_DRIVER_PATH=%r: no directory on it exists",
+                        removed,
                     )
         else:
             self.logger.debug(
