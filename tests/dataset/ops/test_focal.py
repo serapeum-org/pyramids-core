@@ -126,7 +126,9 @@ class TestImportError:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
-        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
+        # The lazy focal overlap is assembled by the pyramids-lazy backend, so a missing dask
+        # surfaces the backend's branded hint (``pip install dask``) rather than core's old message.
+        with pytest.raises(ImportError, match="pip install dask"):
             constant_raster.focal_mean(radius=1, chunks="auto")
 
 

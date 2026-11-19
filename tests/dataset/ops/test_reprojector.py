@@ -172,5 +172,7 @@ class TestImportErrorWithoutDask:
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
         op = Reprojector(target_epsg=3857)
-        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
+        # The deferral routes through the pyramids-lazy backend, so a missing dask surfaces the
+        # backend's branded hint (``pip install dask``) rather than core's old message.
+        with pytest.raises(ImportError, match="pip install dask"):
             op(wgs84_dataset, compute=False)
