@@ -551,8 +551,19 @@ class TestConfigIsTheSingleWriter:
     """`Config.initialize_gdal` composes and writes; nothing downstream overwrites it."""
 
     def test_a_source_checkout_has_no_bundled_directory(self):
-        """`_data/gdalplugins` ships only in a wheel, so a dev install must report None."""
-        assert Config._bundled_plugin_dir() is None
+        """A source / dev checkout ships no `_data/gdalplugins`, so `_bundled_plugin_dir()` is None.
+
+        A platform wheel *does* vendor that directory, so the "source checkout" premise does not
+        hold there and the check is skipped rather than failing — which is why this test (added in
+        #1586) turned every ``test-wheels`` job red while the dev suite stayed green.
+        """
+        bundled = Config._bundled_plugin_dir()
+        if bundled is not None:
+            pytest.skip(
+                f"platform wheel ships a bundled plugin dir ({bundled}); the source-checkout "
+                "premise does not hold here"
+            )
+        assert bundled is None
 
     def test_an_empty_composition_clears_what_discovery_left_behind(
         self, monkeypatch, plugin_dirs
