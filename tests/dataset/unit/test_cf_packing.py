@@ -385,7 +385,6 @@ class TestPackedReadsArePhysical:
             store.close()
         assert float(np.nanmax(raw)) == pytest.approx(PACKED_RAW_MAX)
 
-
     def test_unpacking_is_not_applied_twice(self):
         """The value is the packing applied once, not once per layer.
 
@@ -1882,7 +1881,6 @@ class TestEveryBandIsUnpackedWithItsOwnFactor:
         np.testing.assert_allclose(got[:, 0, 0], [5.0, 194.0])
 
 
-
 class TestPythonHeldPackingReachesEveryReader:
     """A `NetCDF` variable whose packing lives only in `_scale` / `_offset`."""
 
@@ -2209,8 +2207,6 @@ class TestEachBandIsJudgedOnItsOwn:
         assert together[1, 0, 1] == pytest.approx(100.0), (
             "the malformed band should be left in stored counts"
         )
-
-
 
 
 class TestTheRendererIsHandedThePhysicalSentinel:

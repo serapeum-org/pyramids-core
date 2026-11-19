@@ -425,7 +425,6 @@ class TestSelectionEngine:
         with pytest.raises(ValueError, match="does not overlap the curvilinear grid"):
             var.crop(mask=fc)
 
-
     def test_crop_chunks_on_root_container_raises(self, curvilinear_container):
         """``crop(chunks=…)`` on a root container is rejected.
 

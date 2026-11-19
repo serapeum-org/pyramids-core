@@ -471,4 +471,3 @@ class TestRollingRefusals:
         container = _container()
         with pytest.raises(TypeError):
             container.rolling("time", 2, "sum")  # type: ignore[misc]
-

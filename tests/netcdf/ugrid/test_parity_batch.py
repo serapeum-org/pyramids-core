@@ -123,8 +123,6 @@ class TestToImage:
             ds.to_image()
 
 
-
-
 class TestOpenMfdataset:
     """Many files, one topology, stacked along time."""
 

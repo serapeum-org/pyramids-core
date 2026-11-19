@@ -460,6 +460,7 @@ class TestDropna:
         assert np.asarray(result.read_array()).dtype == np.int16
         assert result._band_dim_values_map["time"] == [0.0, 12.0, 18.0]
 
+
 class TestTheReceivers:
     """Each dimension-wise member works on a container and on a variable."""
 

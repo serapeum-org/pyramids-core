@@ -105,6 +105,7 @@ class TestFromStac:
             f"files mismatch (normalised): got {left}, expected {right}"
         )
 
+
 class TestPatchUrl:
     """patch_url rewrites every href before it becomes a file path."""
 

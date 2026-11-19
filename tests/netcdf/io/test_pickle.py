@@ -58,8 +58,6 @@ def _read_subset_on_subprocess(payload: bytes) -> tuple[str, int]:
     return (nc._source_var_name or "", int(arr.size))
 
 
-
-
 class TestContainerPickle:
     """Pickle a root MDIM container; expect container on unpickle."""
 
@@ -125,7 +123,6 @@ class TestNetCDFSubsetPickle:
             name, size = pool.apply(_read_subset_on_subprocess, (payload,))
         assert name == var_name
         assert size > 0
-
 
 
 class TestReconstructNetCDF:

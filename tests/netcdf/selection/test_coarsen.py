@@ -744,7 +744,6 @@ class TestWindowHelpers:
         assert labels[1] == 15.0, labels
 
 
-
 class TestCoarsenOnASelection:
     """A cut of a file-backed variable coarsens the steps it holds, not its source's."""
 

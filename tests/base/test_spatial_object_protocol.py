@@ -118,4 +118,3 @@ class TestSpatialObjectNegative:
             crs="EPSG:4326",
         )
         assert not isinstance(plain, SpatialObject)
-

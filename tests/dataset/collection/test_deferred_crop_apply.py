@@ -46,6 +46,7 @@ class TestApplyDeferred:
         assert isinstance(result, DatasetCollection)
         assert len(result.datasets) == 3
 
+
 class TestTimeAxisPropagation:
     """The time axis survives a per-timestep operation, when it still fits."""
 

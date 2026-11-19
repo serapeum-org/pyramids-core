@@ -298,7 +298,6 @@ class TestGeostationaryContainerOps:
         gdf = var.to_polygons()
         assert gdf is not None and "geometry" in gdf.columns
 
-
     def test_set_variable_preserves_geostationary_crs(self, tmp_path):
         """`set_variable` carries the geostationary WKT instead of erasing it."""
         path = str(tmp_path / "geos.nc")

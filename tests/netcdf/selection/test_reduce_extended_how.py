@@ -861,7 +861,6 @@ class TestReduceOnAVariable:
         assert_allclose(doubled.read_array(), np.asarray(plain.read_array()) * 2.0)
 
 
-
 class TestReduceOnASelection:
     """A `sel`/`isel` cut of a file-backed variable reduces the steps it holds, not its source's."""
 
@@ -944,7 +943,6 @@ class TestReduceOnADerivedVariable:
         expected = _eager_mean(view, "valid_time")
         assert values.shape == expected.shape, (values.shape, expected.shape)
         assert_allclose(values, expected)
-
 
 
 class TestReadsAsItsStore:
