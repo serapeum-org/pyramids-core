@@ -421,7 +421,12 @@ python = { version = "3.14.*", build = "*_cp314" }
 # resolve LazyFeatureCollection through the real entry point rather than a monkeypatch
 # (tests/base/test_spatial_object_protocol.py). Scoped to the `parquet` feature so it reaches
 # dev/parquet/docs but never the py3XX legs, which must stay pyarrow-free.
-pyramids-lazy = { version = ">=0.1.0", extras = ["parquet"] }
+# TEMPORARY co-development pin (#1590 / pyramids-lazy#42): this PR's lazy ops delegate to backend
+# methods that only exist on the pyramids-lazy feat/41 branch, so the dev/parquet/docs test envs
+# install the plugin from that branch to run green. REVERT to the released version pin
+# (`{ version = ">=0.2.1", extras = ["parquet"] }`, or whatever release carries the new methods)
+# once pyramids-lazy #42 is merged and released. Test-env only — NOT the published `[lazy]` extra.
+pyramids-lazy = { git = "https://github.com/serapeum-org/pyramids-lazy.git", branch = "feat/41-dataset-lazy-ops", extras = ["parquet"] }
 
 [tool.pixi.feature.lazy.dependencies]
 # Conda only for what PyPI cannot safely supply here. h5py/hdf5: a PyPI h5py bundles its own HDF5,
