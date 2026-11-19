@@ -40,8 +40,6 @@ from pyramids.base._utils import (
     DEFAULT_RESAMPLING,
     _is_identity_packing,
     apply_unpack,
-    import_dask,
-    lazy_backend_hint,
     resolve_resampling,
 )
 from pyramids.base.crs import crs_spec, epsg_from_user_input
@@ -61,8 +59,6 @@ from pyramids.dataset._plot_helpers import (
 )
 from pyramids.dataset._reduce_ops import (
     _TREND_OPS,
-    build_group_reduction,
-    resolve_dask_op,
     validate_time_op,
 )
 from pyramids.dataset._stac import from_point as _from_point
@@ -352,18 +348,16 @@ def _grouped_reduce(
     Returns:
         dict: ``{label: ndarray}`` with one reduced ``(B, R, C)`` array per group.
     """
-    dask = import_dask(
-        lazy_backend_hint(
-            "DatasetCollection grouped reductions require the optional 'dask' "
-            "dependency."
-        )
-    )
-    func = resolve_dask_op(op_name, skipna=skipna)
+    func = require_backend_method(
+        "resolve_dask_op", "DatasetCollection grouped reductions"
+    )(op_name, skipna=skipna)
     reductions = [
         func(data[np.nonzero(label_array == label)[0].tolist()], axis=0)
         for label in ordered_labels
     ]
-    computed = dask.compute(*reductions)
+    computed = require_backend_method(
+        "compute", "DatasetCollection grouped reductions"
+    )(*reductions)
     return {
         label: np.asarray(reduced) for label, reduced in zip(ordered_labels, computed)
     }
@@ -404,10 +398,8 @@ def _grouped_reduce_time(
     Returns:
         dict: ``{label: ndarray}`` with one reduced ``(B, R, C)`` array per window.
     """
-    dask = import_dask(
-        lazy_backend_hint(
-            "DatasetCollection.reduce_time requires the optional 'dask' dependency."
-        )
+    build = require_backend_method(
+        "build_group_reduction", "DatasetCollection.reduce_time"
     )
     reductions = []
     for label in ordered_labels:
@@ -417,7 +409,7 @@ def _grouped_reduce_time(
             stamps = index[positions]
             window_x = (stamps - stamps[0]) / np.timedelta64(1, "D")
         reductions.append(
-            build_group_reduction(
+            build(
                 data[positions.tolist()],
                 op,
                 skipna=skipna,
@@ -426,7 +418,9 @@ def _grouped_reduce_time(
                 min_count=min_count,
             )
         )
-    computed = dask.compute(*reductions)
+    computed = require_backend_method("compute", "DatasetCollection.reduce_time")(
+        *reductions
+    )
     return {
         label: np.asarray(reduced) for label, reduced in zip(ordered_labels, computed)
     }
@@ -1604,7 +1598,9 @@ class DatasetCollection:
 
     def _reduce(self, op_name: str, *, skipna: bool) -> np.typing.NDArray:
         """Shared reduction dispatcher over the time axis."""
-        func = resolve_dask_op(op_name, skipna=skipna)
+        func = require_backend_method(
+            "resolve_dask_op", "DatasetCollection reductions"
+        )(op_name, skipna=skipna)
         result = func(self.data, axis=0)
         return np.asarray(result.compute())
 
