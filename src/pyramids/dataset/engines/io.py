@@ -767,8 +767,11 @@ class IO(_Engine["Dataset"]):
                 without `boundless=True` or cannot be represented
                 in the band dtype, or `bbox_rounding` is neither
                 `"cover"` nor `"nearest"`.
-            ImportError: If `chunks` is non-None and `dask` is not
-                installed.
+            OptionalPackageDoesNotExist: If `chunks` is non-None and no
+                pyramids-lazy backend is installed to build the lazy read (or it
+                is too old to provide the raster reader).
+            ImportError: If `chunks` is non-None and the backend is installed but
+                its `dask` dependency is missing.
             NotImplementedError: If `out_shape` is combined with `chunks`
                 (decimate eagerly instead) or with `boundless=True`
                 (decimated boundless reads are not combined yet), or if

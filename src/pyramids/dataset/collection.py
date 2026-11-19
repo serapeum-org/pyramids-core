@@ -4444,7 +4444,10 @@ class DatasetCollection:
 
         Raises:
             ValueError: ``compute=False`` combined with ``inplace=True``.
-            OptionalPackageDoesNotExist: ``compute=False`` without the ``dask`` extra.
+            OptionalPackageDoesNotExist: ``compute=False`` with no pyramids-lazy backend
+                installed to defer the work.
+            ImportError: ``compute=False`` with the backend installed but its ``dask``
+                dependency missing.
         """
         if compute:
             new_datasets = [per_step(ds, True) for ds in self.datasets]
