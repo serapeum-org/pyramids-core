@@ -116,13 +116,10 @@ def _configure_gdal_data_env(data_dir: Path) -> None:
         # final path from the bundled dir + any companion plugin dirs + a discovered
         # conda/system dir (see `pyramids.base._gdal_plugins`) and writes it once,
         # before `gdal.AllRegister()` actually loads the plugins.
-        if gdal_env_is_host_managed():
-            # A host application already owns GDAL: its libgdal -- not the vendored one -- is
-            # what is loaded, since osgeo was imported before pyramids. Pointing
-            # GDAL_DRIVER_PATH at the vendored, ABI-locked plugins would feed the host foreign
-            # plugins, so leave its GDAL_DRIVER_PATH exactly as it is (#1588).
-            pass
-        elif os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
+        # A host-managed process never reaches here: activate_vendored_osgeo returns before
+        # calling this helper when gdal_env_is_host_managed() (#1588). So the only choice left
+        # is the #465 force vs. the PYRAMIDS_KEEP_GDAL_ENV opt-out.
+        if os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
             os.environ.setdefault("GDAL_DRIVER_PATH", str(gdal_plugins))
         else:
             os.environ["GDAL_DRIVER_PATH"] = str(gdal_plugins)
