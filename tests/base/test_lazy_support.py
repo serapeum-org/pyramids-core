@@ -106,6 +106,9 @@ _ORIGINS = {
     "no_data_value_of": "pyramids.netcdf._mdim",
     "open_mdarray": "pyramids.netcdf._mdim",
     "_dtype_to_str": "pyramids.netcdf.utils",
+    "reduce_axis": "pyramids.base._reductions",
+    "_SUPPORTED_OPS": "pyramids.dataset._reduce_ops",
+    "_NAN_TABLE": "pyramids.dataset._reduce_ops",
 }
 
 #: The lazy op *bodies* moved to pyramids-lazy; what remains in core are the small shared helpers

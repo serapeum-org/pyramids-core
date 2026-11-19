@@ -89,13 +89,16 @@ class ComputeBackend(Protocol):
     lazy ops, plus the Zarr/kerchunk writers and readers. :func:`protocol_members` returns the
     member names it enforces.
 
-    What is **not** dispatched yet, despite being lazy: ``Dataset.read_array(chunks=)`` and
-    ``DatasetCollection.data`` still construct dask arrays inside core
-    (``dataset/engines/io.py``, ``dataset/collection.py``), guarded by a local ``import
-    dask.array`` and a plain ``ImportError`` rather than this seam's branded error. So a bare core
-    with dask installed still has a working lazy raster path, and :meth:`read_array_lazy` is
-    reached only from the ``NetCDF`` read and the xarray/UGRID interop readers. Completing that
-    move is follow-up work.
+    The ``Dataset`` raster lazy surface is dispatched too, as of #1590: ``read_array(chunks=)``,
+    ``map_blocks(chunks=)``, ``DatasetCollection.data`` + its time reductions, the ``compute=False``
+    deferrals and the lazy focal filters all route through the backend now, so a bare core carries
+    no ``dask`` import. Those raster/compute ops are served by **duck-typed** methods
+    (``read_raster_array_lazy``, ``map_blocks_lazy``, ``stack_lazy`` / ``from_array_lazy`` /
+    ``read_zarr_cube``, ``resolve_dask_op`` / ``build_group_reduction`` / ``compute``, ``delayed``,
+    ``focal_lazy``) reached via ``getattr`` (see ``require_backend_method``) rather than Protocol
+    members — the same policy as ``classify_zarr_store``. :meth:`read_array_lazy` itself stays the
+    MDArray *variable* reader, reached from the ``NetCDF`` read and the xarray/UGRID interop readers;
+    the classic-raster read is the separate duck-typed ``read_raster_array_lazy``.
 
     ``MeshDataset``'s own lazy surface (``open_mfdataset`` / ``to_dask_dataframe`` / ``to_zarr`` /
     ``from_zarr``) is **intentionally not part of this Protocol** — mesh lazy parity is deferred to
@@ -163,11 +166,12 @@ class ComputeBackend(Protocol):
     def read_array_lazy(
         self, dataset: Any, *, chunks: Any, lock: Any = None, **kwargs: Any
     ) -> ArrayLike:
-        """Lazy dask-backed read of a cube variable (``NetCDF.read_array(chunks=)``).
+        """Lazy dask-backed read of an MDArray cube *variable* (``NetCDF.read_array(chunks=)``).
 
         Reached from the ``NetCDF`` read path and the xarray/UGRID interop readers.
-        ``Dataset.read_array(chunks=)`` does **not** route here — it still builds its dask array in
-        core (see the class docstring).
+        ``Dataset.read_array(chunks=)`` reads a classic raster band, not an MDArray variable, so it
+        routes through the separate duck-typed ``read_raster_array_lazy`` (see the class docstring),
+        **not** this method.
         """
         ...  # pragma: no cover - protocol
 
