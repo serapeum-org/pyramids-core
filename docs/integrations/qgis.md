@@ -34,7 +34,10 @@ hooks.
     Install pyramids into the interpreter QGIS runs — **not** a platform wheel that vendors its own GDAL. Those
     inject a private `osgeo` and force `GDAL_DRIVER_PATH`, which conflicts with QGIS's own GDAL in the same
     process. The plugin detects a vendored build and warns. Prefer conda-forge inside a conda-based QGIS, or
-    `pip` into QGIS's interpreter where that binds to the system/QGIS GDAL.
+    `pip` into QGIS's interpreter where that binds to the system/QGIS GDAL. If a vendored-GDAL wheel is
+    unavoidable, set `PYRAMIDS_MANAGE_GDAL_ENV=0` before pyramids is imported: pyramids then leaves QGIS's
+    `GDAL_DRIVER_PATH` / `GDAL_DATA` / `PROJ_LIB` / `PATH` untouched and binds to QGIS's own GDAL instead of
+    activating its vendored tree (see the [GDAL driver plugins](../reference/gdal-driver-plugins.md) reference).
 
 ## Install
 
