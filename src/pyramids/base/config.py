@@ -600,7 +600,7 @@ class Config:
         """
         # getattr default: a bare instance built via object.__new__ (as some tests do, to call
         # initialize_gdal without the __init__ side effects) may not have _manage_gdal_env set.
-        manage = getattr(self, "_manage_gdal_env", None)
+        manage: bool | None = getattr(self, "_manage_gdal_env", None)
         if manage is not None:
             return manage
         return not gdal_env_is_host_managed()
