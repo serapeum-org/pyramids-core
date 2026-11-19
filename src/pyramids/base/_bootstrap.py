@@ -30,6 +30,90 @@ import sysconfig
 import warnings
 from pathlib import Path
 
+# Captured at import time, BEFORE pyramids puts its vendored osgeo on sys.path and before
+# any `from osgeo import ...` runs downstream: `pyramids/__init__.py` imports this module
+# above those imports. If `osgeo` is already in `sys.modules` here, a host application
+# (QGIS being the motivating case) loaded its own GDAL first, and pyramids must not clobber
+# the host's process-global GDAL environment. See `gdal_env_is_host_managed` and #1588.
+_HOST_GDAL_PRELOADED = "osgeo" in sys.modules
+
+# Captured alongside the preload flag: whether a host or a conda activation had already configured
+# GDAL's driver/data environment before pyramids loaded. Auto-detection requires BOTH signals --
+# `osgeo` in sys.modules alone is too coarse (a plain standalone `import osgeo` sets it), so it is
+# paired with evidence that a host configured GDAL itself. Only the GDAL driver/data vars count:
+# PROJ_LIB / PROJ_DATA are orthogonal (a standalone user sets them for pyproj, which must not read as
+# a host), and membership (`in os.environ`, not truthiness) so an explicit empty value still counts
+# as "the host set this". Without this pairing a non-activated-conda or osgeo-first user would be
+# read as a host, skip discovery, and lose the netCDF / HDF5 / GRIB plugins -- see #1588 review
+# H1/L1/L2/L3.
+_HOST_GDAL_ENV_PRESENT = any(
+    var in os.environ for var in ("GDAL_DRIVER_PATH", "GDAL_DATA")
+)
+
+
+def host_gdal_preloaded() -> bool:
+    """Whether a host application's GDAL (`osgeo`) was imported before pyramids.
+
+    Captured once at this module's import, which `pyramids/__init__.py` runs before its own
+    `from osgeo import ...`. `True` means pyramids is embedded in a process that already owns
+    GDAL -- QGIS is the motivating case (#1588).
+
+    Returns:
+        bool: `True` when `osgeo` was already imported before pyramids loaded.
+
+    Examples:
+        - A plain standalone import has no host GDAL to defer to:
+            ```python
+            >>> from pyramids.base._bootstrap import host_gdal_preloaded
+            >>> host_gdal_preloaded()  # doctest: +SKIP
+            False
+
+            ```
+    """
+    return _HOST_GDAL_PRELOADED
+
+
+def gdal_env_is_host_managed() -> bool:
+    """Whether pyramids must leave the process-global GDAL environment to a host.
+
+    When `True`, pyramids does not set or overwrite `GDAL_DRIVER_PATH`, `GDAL_DATA`,
+    `PROJ_LIB` / `PROJ_DATA` or `PATH` and does not activate its vendored GDAL tree -- it leaves
+    those environment variables to whatever host already set them (#1588). Resolution, highest
+    precedence first:
+
+    - `PYRAMIDS_MANAGE_GDAL_ENV` -- `0` / `false` / `no` / `off` forces host-managed; `1` / `true`
+      / `yes` / `on` forces pyramids-managed; any other value (empty, whitespace, a typo) is
+      ignored and falls through to auto-detection rather than silently clobbering the host.
+    - auto-detection -- host-managed only when a host both imported `osgeo` before pyramids
+      (`host_gdal_preloaded`) AND had already configured GDAL's driver/data env (`GDAL_DRIVER_PATH`
+      or `GDAL_DATA` set). Requiring the configured env as well as the import avoids misreading a
+      bare standalone `import osgeo` as a host and dropping plugin discovery. Auto-detection is
+      best-effort; an embedder should set `PYRAMIDS_MANAGE_GDAL_ENV=0` for a guarantee.
+
+    `PYRAMIDS_KEEP_GDAL_ENV` is deliberately not consulted here: it only re-ranks the composed
+    `GDAL_DRIVER_PATH` so an inherited value leads, which is orthogonal to leaving the whole
+    GDAL environment untouched.
+
+    Returns:
+        bool: `True` when pyramids should leave the GDAL environment variables to the host.
+
+    Examples:
+        - A standalone process manages its own GDAL env by default:
+            ```python
+            >>> from pyramids.base._bootstrap import gdal_env_is_host_managed
+            >>> gdal_env_is_host_managed()  # doctest: +SKIP
+            False
+
+            ```
+    """
+    override = os.environ.get("PYRAMIDS_MANAGE_GDAL_ENV", "").strip().lower()
+    if override in ("0", "false", "no", "off"):
+        return True
+    if override in ("1", "true", "yes", "on"):
+        return False
+    return _HOST_GDAL_PRELOADED and _HOST_GDAL_ENV_PRESENT
+
+
 # Module-level handle from `os.add_dll_directory()` on Windows.
 # add_dll_directory returns a context-manager-style handle; if the
 # handle gets garbage-collected the directory falls off the DLL
@@ -69,6 +153,9 @@ def _configure_gdal_data_env(data_dir: Path) -> None:
         # final path from the bundled dir + any companion plugin dirs + a discovered
         # conda/system dir (see `pyramids.base._gdal_plugins`) and writes it once,
         # before `gdal.AllRegister()` actually loads the plugins.
+        # A host-managed process never reaches here: activate_vendored_osgeo returns before
+        # calling this helper when gdal_env_is_host_managed() (#1588). So the only choice left
+        # is the #465 force vs. the PYRAMIDS_KEEP_GDAL_ENV opt-out.
         if os.environ.get("PYRAMIDS_KEEP_GDAL_ENV") == "1":
             os.environ.setdefault("GDAL_DRIVER_PATH", str(gdal_plugins))
         else:
@@ -132,6 +219,14 @@ def activate_vendored_osgeo(pkg_dir: Path) -> bool:
     vendored_osgeo = pkg_dir / "_vendor" / "osgeo"
 
     if not vendored_osgeo.is_dir():
+        return False
+
+    if gdal_env_is_host_managed():
+        # A host already owns GDAL (osgeo was imported before pyramids, or the embedder set
+        # PYRAMIDS_MANAGE_GDAL_ENV=0). Use the host's GDAL and leave its process-global env --
+        # GDAL_DRIVER_PATH / GDAL_DATA / PROJ_LIB / PATH -- untouched: skip the vendored tree
+        # entirely rather than activating it (#1588). The host's already-imported osgeo stays
+        # the one `from osgeo import ...` resolves to.
         return False
 
     ext_suffix = sysconfig.get_config_var("EXT_SUFFIX") or ".so"

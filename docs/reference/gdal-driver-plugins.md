@@ -44,6 +44,28 @@ does not remove, so a wheel keeps its own drivers. A value that points nowhere i
 hatch. This is the escape hatch for a deliberately hand-built GDAL; it is off by default because an inherited
 path is usually a conda environment's, which is not safe for a wheel's bundled `libgdal`.
 
+### Leaving the host's GDAL alone
+
+When pyramids is imported into a process that already owns GDAL — QGIS is the motivating case — set
+`PYRAMIDS_MANAGE_GDAL_ENV=0` **before** importing pyramids. pyramids then does not touch `GDAL_DRIVER_PATH`,
+`GDAL_DATA`, `PROJ_LIB` or `PATH` and does not activate its vendored GDAL tree: it binds to the host's GDAL as-is.
+This env var is the **reliable** switch for an embedder — set it rather than relying on detection.
+
+pyramids also *auto-detects* this case, but only as best effort: the host must have both imported `osgeo` before
+pyramids **and** already set `GDAL_DRIVER_PATH` or `GDAL_DATA`. A host that configures neither (some Linux GDAL 3.x
+setups resolve their data from the install prefix and set nothing) is not detected, so an embedder should always
+set the env var rather than depend on auto-detection.
+
+!!! warning "Host-only"
+    `PYRAMIDS_MANAGE_GDAL_ENV=0` tells pyramids to use an `osgeo` the process already provides. Setting it in a
+    *standalone* install with no other GDAL — e.g. a platform wheel on its own — makes `import pyramids` fail,
+    because pyramids then neither activates its vendored `osgeo` nor finds a host one.
+
+This is distinct from `PYRAMIDS_KEEP_GDAL_ENV` above: that re-ranks the composed driver path, this makes pyramids
+hands-off entirely. `PYRAMIDS_MANAGE_GDAL_ENV=1` forces the opposite — always manage, even inside a host — and
+`Config(manage_gdal_env=False)` is the programmatic equivalent for a single `Config`, though it governs only the
+four env vars (not `gdal.UseExceptions()` or the YAML config options, which always apply).
+
 ## Registering a plugin directory
 
 Declare the entry point in your distribution's `pyproject.toml`. The **value is a module name**, optionally
