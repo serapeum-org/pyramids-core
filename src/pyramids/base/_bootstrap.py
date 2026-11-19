@@ -31,22 +31,31 @@ import warnings
 from pathlib import Path
 
 # Captured at import time, BEFORE pyramids puts its vendored osgeo on sys.path and before
-# any ``from osgeo import ...`` runs downstream: ``pyramids/__init__.py`` imports this module
-# above those imports. If ``osgeo`` is already in ``sys.modules`` here, a host application
+# any `from osgeo import ...` runs downstream: `pyramids/__init__.py` imports this module
+# above those imports. If `osgeo` is already in `sys.modules` here, a host application
 # (QGIS being the motivating case) loaded its own GDAL first, and pyramids must not clobber
-# the host's process-global GDAL environment. See :func:`gdal_env_is_host_managed` and #1588.
+# the host's process-global GDAL environment. See `gdal_env_is_host_managed` and #1588.
 _HOST_GDAL_PRELOADED = "osgeo" in sys.modules
 
 
 def host_gdal_preloaded() -> bool:
-    """Whether a host application's GDAL (``osgeo``) was imported before pyramids.
+    """Whether a host application's GDAL (`osgeo`) was imported before pyramids.
 
-    Captured once at this module's import, which ``pyramids/__init__.py`` runs before its own
-    ``from osgeo import ...``. ``True`` means pyramids is embedded in a process that already
-    owns GDAL -- QGIS is the motivating case (#1588).
+    Captured once at this module's import, which `pyramids/__init__.py` runs before its own
+    `from osgeo import ...`. `True` means pyramids is embedded in a process that already owns
+    GDAL -- QGIS is the motivating case (#1588).
 
     Returns:
-        bool: ``True`` when ``osgeo`` was already imported before pyramids loaded.
+        bool: `True` when `osgeo` was already imported before pyramids loaded.
+
+    Examples:
+        - A plain standalone import has no host GDAL to defer to:
+            ```python
+            >>> from pyramids.base._bootstrap import host_gdal_preloaded
+            >>> host_gdal_preloaded()  # doctest: +SKIP
+            False
+
+            ```
     """
     return _HOST_GDAL_PRELOADED
 
@@ -54,22 +63,37 @@ def host_gdal_preloaded() -> bool:
 def gdal_env_is_host_managed() -> bool:
     """Whether pyramids must leave the process-global GDAL environment to a host.
 
-    When ``True``, pyramids does not set or overwrite ``GDAL_DRIVER_PATH``, ``GDAL_DATA``,
-    ``PROJ_LIB`` / ``PROJ_DATA`` or ``PATH`` and does not activate its vendored GDAL tree --
-    it uses whatever GDAL the host already provides (#1588). Resolution, highest precedence
-    first:
+    When `True`, pyramids does not set or overwrite `GDAL_DRIVER_PATH`, `GDAL_DATA`,
+    `PROJ_LIB` / `PROJ_DATA` or `PATH` and does not activate its vendored GDAL tree -- it uses
+    whatever GDAL the host already provides (#1588). Resolution, highest precedence first:
 
-    - ``PYRAMIDS_MANAGE_GDAL_ENV`` -- ``0`` / ``false`` / ``no`` / ``off`` forces host-managed;
-      any other value forces pyramids-managed, overriding auto-detection either way.
-    - auto-detection -- a host's ``osgeo`` was imported before pyramids
-      (:func:`host_gdal_preloaded`).
+    - `PYRAMIDS_MANAGE_GDAL_ENV` -- `0` / `false` / `no` / `off` forces host-managed; any other
+      value forces pyramids-managed, overriding auto-detection either way.
+    - auto-detection -- a host's `osgeo` was imported before pyramids (`host_gdal_preloaded`).
 
-    ``PYRAMIDS_KEEP_GDAL_ENV`` is deliberately not consulted here: it only re-ranks the
-    composed ``GDAL_DRIVER_PATH`` so an inherited value leads, which is orthogonal to leaving
-    the whole GDAL environment untouched.
+    `PYRAMIDS_KEEP_GDAL_ENV` is deliberately not consulted here: it only re-ranks the composed
+    `GDAL_DRIVER_PATH` so an inherited value leads, which is orthogonal to leaving the whole
+    GDAL environment untouched.
 
     Returns:
-        bool: ``True`` when pyramids should leave the GDAL environment to the host.
+        bool: `True` when pyramids should leave the GDAL environment to the host.
+
+    Examples:
+        - A standalone process manages its own GDAL env by default:
+            ```python
+            >>> from pyramids.base._bootstrap import gdal_env_is_host_managed
+            >>> gdal_env_is_host_managed()  # doctest: +SKIP
+            False
+
+            ```
+        - An embedder forces hands-off before importing pyramids:
+            ```python
+            >>> import os
+            >>> os.environ["PYRAMIDS_MANAGE_GDAL_ENV"] = "0"  # doctest: +SKIP
+            >>> gdal_env_is_host_managed()  # doctest: +SKIP
+            True
+
+            ```
     """
     override = os.environ.get("PYRAMIDS_MANAGE_GDAL_ENV")
     if override is not None:
