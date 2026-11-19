@@ -29,6 +29,7 @@ from osgeo_utils import gdal2xyz
 from pandas import DataFrame
 
 from pyramids._io import new_vsimem_path, read_vsi_bytes
+from pyramids.base._compute_backend import require_backend_method
 from pyramids.base._domain import INHERIT_NO_DATA, is_no_data, is_stored_no_data
 from pyramids.base._errors import (
     FailedToSaveError,
@@ -2434,11 +2435,8 @@ class IO(_Engine["Dataset"]):
                 "synchronous write — GeoTIFF writes are lock-serialised "
                 "by GDAL. For truly parallel writes use to_zarr."
             )
-            try:
-                import dask
-            except ImportError as exc:
-                raise ImportError(_LAZY_IMPORT_ERROR) from exc
-            result = dask.delayed(_io_module._write_to_file_sync)(
+            result = require_backend_method("delayed", "to_file(compute=False)")(
+                _io_module._write_to_file_sync,
                 self._ds,
                 path,
                 band,

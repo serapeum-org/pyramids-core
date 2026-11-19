@@ -131,5 +131,8 @@ class TestImportError:
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
         out_path = str(tmp_path / "nope.tif")
-        with pytest.raises(ImportError, match="pip install pyramids-lazy"):
+        # The deferral now routes through the pyramids-lazy backend, so a missing dask surfaces the
+        # backend's own branded install hint (``pip install dask`` / ``--force-reinstall
+        # pyramids-lazy``) rather than core's old bare-dask message.
+        with pytest.raises(ImportError, match="pip install dask"):
             tiny_dataset.to_file(out_path, compute=False)

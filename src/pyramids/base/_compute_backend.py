@@ -51,6 +51,7 @@ __all__ = [
     "clear_compute_backend_cache",
     "compute_backends",
     "protocol_members",
+    "require_backend_method",
     "require_compute_backend",
 ]
 
@@ -652,6 +653,67 @@ def require_compute_backend() -> ComputeBackend:
             f">= {COMPUTE_BACKEND_API_VERSION}. Upgrade with `pip install -U pyramids-lazy`."
         )
     return backend
+
+
+def require_backend_method(name: str, operation: str) -> Any:
+    """Resolve an additive, duck-typed capability method from the installed compute backend.
+
+    Core's dataset lazy ops (raster ``read_array(chunks=)``, ``map_blocks``, the collection cube and
+    its reductions, the ``compute=False`` deferrals, lazy focal filters) are served by backend
+    methods added as **additive, duck-typed capabilities** — reached by ``getattr`` rather than
+    declared on the ``runtime_checkable`` :class:`ComputeBackend` Protocol — so an already-released
+    backend that predates one still passes core's structural ``isinstance`` check (the same policy as
+    ``classify_zarr_store`` / ``open_mesh_mfdataset``). This resolves one such method and brands the
+    two failure modes: no backend installed (delegated to :func:`require_compute_backend`), or an
+    installed backend too old to provide it.
+
+    Args:
+        name: The backend method name, e.g. ``"delayed"`` or ``"read_raster_array_lazy"``.
+        operation: The user-facing operation needing it, named in the "too old" error.
+
+    Returns:
+        The bound backend method, ready to call.
+
+    Raises:
+        OptionalPackageDoesNotExist: No compute backend is installed, or the installed backend does
+            not provide ``name`` (an upgrade is needed).
+
+    Examples:
+        - A backend exposing the method returns it ready to call:
+            ```python
+            >>> from pyramids.base import _compute_backend
+            >>> class _Fake:
+            ...     api_version = _compute_backend.COMPUTE_BACKEND_API_VERSION
+            ...     def delayed(self, func, *a, **k): return func(*a, **k)
+            >>> _compute_backend._CACHE = {"lazy": _Fake()}
+            >>> _compute_backend.require_backend_method("delayed", "to_file(compute=False)")(len, "ab")
+            2
+            >>> _compute_backend.clear_compute_backend_cache()
+
+            ```
+        - A backend missing the method raises the branded upgrade error naming the operation:
+            ```python
+            >>> from pyramids.base import _compute_backend
+            >>> class _Old:
+            ...     api_version = _compute_backend.COMPUTE_BACKEND_API_VERSION
+            >>> _compute_backend._CACHE = {"lazy": _Old()}
+            >>> try:
+            ...     _compute_backend.require_backend_method("delayed", "to_file(compute=False)")
+            ... except Exception as exc:
+            ...     print(type(exc).__name__, "upgrade" in str(exc).lower())
+            OptionalPackageDoesNotExist True
+            >>> _compute_backend.clear_compute_backend_cache()
+
+            ```
+    """
+    backend = require_compute_backend()
+    method = getattr(backend, name, None)
+    if not callable(method):
+        raise OptionalPackageDoesNotExist(
+            f"{operation} requires a pyramids-lazy backend that provides {name!r}, but the "
+            f"installed backend does not. Upgrade with `pip install -U pyramids-lazy`."
+        )
+    return method
 
 
 def backend_lazy_type(attribute: str, public_name: str) -> type:

@@ -22,15 +22,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from pyramids.base._utils import DEFAULT_RESAMPLING, lazy_backend_hint
+from pyramids.base._compute_backend import require_backend_method
+from pyramids.base._utils import DEFAULT_RESAMPLING
 
 if TYPE_CHECKING:
     from pyramids.dataset import Dataset
-
-
-_LAZY_IMPORT_ERROR = lazy_backend_hint(
-    "Lazy reprojection (compute=False) requires the optional 'dask' dependency."
-)
 
 
 @dataclass(frozen=True)
@@ -190,21 +186,17 @@ def _apply_plan(plan: ReprojectPlan, ds: Dataset) -> Dataset:
 
 
 def _deferred(plan: ReprojectPlan, ds: Dataset) -> Any:
-    """Wrap :func:`_apply_plan` in :func:`dask.delayed`."""
-    try:
-        import dask
-    except ImportError as exc:
-        raise ImportError(_LAZY_IMPORT_ERROR) from exc
-    return dask.delayed(_apply_plan)(plan, ds)
+    """Defer :func:`_apply_plan` through the lazy compute backend's ``dask.delayed`` wrapper."""
+    return require_backend_method("delayed", "Reprojector(compute=False)")(
+        _apply_plan, plan, ds
+    )
 
 
 def _deferred_align(reference: Dataset, method: str, ds: Dataset) -> Any:
-    """Wrap :meth:`Dataset.align` in :func:`dask.delayed`."""
-    try:
-        import dask
-    except ImportError as exc:
-        raise ImportError(_LAZY_IMPORT_ERROR) from exc
-    return dask.delayed(_align_sync)(reference, method, ds)
+    """Defer :func:`_align_sync` through the lazy compute backend's ``dask.delayed`` wrapper."""
+    return require_backend_method("delayed", "Aligner(compute=False)")(
+        _align_sync, reference, method, ds
+    )
 
 
 def _align_sync(reference: Dataset, method: str, ds: Dataset) -> Dataset:
