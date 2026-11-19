@@ -23,7 +23,6 @@ from osgeo import gdal
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import _read_no_data, _reduces_as_a_variable
 from pyramids.netcdf.netcdf import Container, Variable
-from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -862,112 +861,6 @@ class TestReduceOnAVariable:
         assert_allclose(doubled.read_array(), np.asarray(plain.read_array()) * 2.0)
 
 
-@requires_lazy
-class TestTheChunkedPathAgrees:
-    """A file-backed variable reduces through dask and must answer what memory answers."""
-
-    @pytest.mark.parametrize(
-        ("how", "kwargs"),
-        [
-            ("median", {}),
-            ("prod", {}),
-            ("quantile", {"q": 0.25}),
-            ("count", {}),
-            ("all", {}),
-            ("any", {}),
-        ],
-        ids=["median", "prod", "quantile", "count", "all", "any"],
-    )
-    def test_file_backed_equals_in_memory(self, tmp_path, how, kwargs):
-        """The same stack, written to disk and reopened, reduces to the same cells.
-
-        Args:
-            tmp_path: pytest temp directory.
-            how: The reduction name.
-            kwargs: Extra arguments for `reduce`.
-        """
-        path = str(tmp_path / "stack.nc")
-        _container().to_file(path)
-        on_disk = NetCDF.read_file(path).reduce("time", how, **kwargs).get_variable("v")
-        in_memory = _container().reduce("time", how, **kwargs).get_variable("v")
-        assert_allclose(on_disk.read_array(), in_memory.read_array())
-
-    @pytest.mark.parametrize("skipna", [True, False])
-    @pytest.mark.parametrize(
-        ("how", "kwargs"),
-        [
-            ("count", {}),
-            ("all", {}),
-            ("any", {}),
-            ("median", {}),
-            ("quantile", {"q": 0.5}),
-        ],
-        ids=["count", "all", "any", "median", "quantile"],
-    )
-    @pytest.mark.parametrize(
-        ("dtype", "ndv"), [("int16", -1), ("uint8", 255)], ids=["int16", "uint8"]
-    )
-    def test_an_integer_band_on_disk_equals_in_memory(
-        self, tmp_path, dtype, ndv, how, kwargs, skipna
-    ):
-        """An integer stack streams through dask and answers the in-memory cells and dtype.
-
-        Args:
-            tmp_path: pytest temp directory.
-            dtype: The band's storage type.
-            ndv: Its declared no-data value.
-            how: The reduction name.
-            kwargs: Extra arguments for `reduce`.
-            skipna: Whether gaps are skipped.
-
-        Test scenario:
-            The on-disk read is asserted to be a dask array first, so the comparison is
-            between the chunked path and the eager one rather than eager against eager.
-        """
-        container, _ = _integer_container(dtype, ndv)
-        path = str(tmp_path / "stack.nc")
-        container.to_file(path)
-        store = NetCDF.read_file(path)
-        lazy = NetCDF._materialize_variable_array(store.get_variable("v"), lazy=True)
-        assert hasattr(lazy, "dask"), (
-            f"expected a dask array, got {type(lazy).__name__}"
-        )
-        on_disk = store.reduce("time", how, skipna=skipna, **kwargs).get_variable("v")
-        in_memory = container.reduce("time", how, skipna=skipna, **kwargs).get_variable(
-            "v"
-        )
-        assert on_disk.dtype == in_memory.dtype, (on_disk.dtype, in_memory.dtype)
-        assert_allclose(on_disk.read_array(), in_memory.read_array())
-
-    def test_a_file_backed_variable_reduces_to_a_named_variable(self, tmp_path):
-        """`read_file(...).get_variable("v").reduce(...)` streams and keeps the name `v`.
-
-        Args:
-            tmp_path: pytest temp directory.
-        """
-        path = str(tmp_path / "stack.nc")
-        _container().to_file(path)
-        variable = NetCDF.read_file(path).get_variable("v")
-        result = variable.reduce("time", "quantile", q=0.25)
-        in_memory = _container().get_variable("v").reduce("time", "quantile", q=0.25)
-        assert isinstance(result, Variable), type(result).__name__
-        assert result._source_var_name == "v", result._source_var_name
-        assert_allclose(result.read_array(), in_memory.read_array())
-
-    def test_a_file_without_a_sentinel_keeps_nan_for_an_empty_column(self, tmp_path):
-        """A float stack declaring no no-data value reduces its all-NaN column to NaN.
-
-        Args:
-            tmp_path: pytest temp directory.
-        """
-        path = str(tmp_path / "stack.nc")
-        _float_container_without_sentinel(_masked()).to_file(path)
-        result = NetCDF.read_file(path).reduce("time", "sum").get_variable("v")
-        values = np.asarray(result.read_array())
-        assert result.no_data_value[0] is None, result.no_data_value
-        assert np.isnan(values[ALL_MASKED]), values[ALL_MASKED]
-        assert not np.isnan(values[ONCE_MASKED]), values[ONCE_MASKED]
-
 
 class TestReduceOnASelection:
     """A `sel`/`isel` cut of a file-backed variable reduces the steps it holds, not its source's."""
@@ -1052,78 +945,6 @@ class TestReduceOnADerivedVariable:
         assert values.shape == expected.shape, (values.shape, expected.shape)
         assert_allclose(values, expected)
 
-
-@requires_lazy
-class TestWhichVariablesStream:
-    """Only a variable still reading as its store is streamed; anything derived is read eagerly."""
-
-    def test_a_fresh_variable_streams(self):
-        """`get_variable` hands back the store's own view, which the chunked read reproduces."""
-        variable = NetCDF.read_file(str(ERA5_T2M)).get_variable("t2m")
-        array = NetCDF._materialize_variable_array(variable, lazy=True)
-        assert type(array).__module__.startswith("dask"), type(array)
-
-    def test_a_geostationary_variable_streams(self):
-        """A geostationary variable is copied into memory while it is built, and still streams.
-
-        Test scenario:
-            The copy is made inside `get_variable` and holds the store's values unchanged, so
-            the chunked read still describes it; `main` streamed it too.
-        """
-        variable = NetCDF.read_file(str(GEOS)).get_variable("CMI")
-        array = NetCDF._materialize_variable_array(variable, lazy=True)
-        assert type(array).__module__.startswith("dask"), type(array)
-
-    def test_a_view_materialized_as_a_side_effect_still_streams(self):
-        """`resample` copies its source's view into memory unchanged; the source still streams."""
-        variable = NetCDF.read_file(str(ERA5_T2M)).get_variable("t2m")
-        _ = variable.resample(abs(variable.geotransform[1]) * 2)
-        array = NetCDF._materialize_variable_array(variable, lazy=True)
-        assert type(array).__module__.startswith("dask"), type(array)
-
-    def test_a_variable_changed_in_place_is_read_eagerly(self):
-        """An in-place `fill` replaces the raster's values, so the store no longer describes it."""
-        variable = NetCDF.read_file(str(ERA5_T2M)).get_variable("t2m")
-        variable.fill(1.0, inplace=True)
-        array = NetCDF._materialize_variable_array(variable, lazy=True)
-        assert isinstance(array, np.ndarray), type(array)
-        assert float(np.nanmax(array)) == 1.0
-
-    @pytest.mark.parametrize(
-        "derive",
-        [
-            pytest.param(lambda v: v.isel(valid_time=slice(4, 12)), id="isel"),
-            pytest.param(lambda v: v.to_crs(3035), id="to_crs"),
-            pytest.param(lambda v: v * 2.0, id="operator"),
-        ],
-    )
-    def test_a_derived_variable_is_read_eagerly(self, derive):
-        """A cut, a reprojection and an operator result are not the store's variable.
-
-        Args:
-            derive: How the variable is derived from the store's.
-        """
-        variable = derive(NetCDF.read_file(str(ERA5_T2M)).get_variable("t2m"))
-        array = NetCDF._materialize_variable_array(variable, lazy=True)
-        assert isinstance(array, np.ndarray), type(array)
-
-    def test_a_reprojection_materialized_later_reduces_its_own_values(self):
-        """A `to_crs` result whose view a later `resample` copied still reduces its warped cells.
-
-        Test scenario:
-            The copy is made on the reprojected variable, which never read as its store, so the
-            copy must not start it streaming; a streamed read would rebuild the unprojected 5x5
-            source and hand back its mean on the 7x4 grid.
-        """
-        warped = NetCDF.read_file(str(ERA5_T2M)).get_variable("t2m").to_crs(3035)
-        _ = warped.resample(abs(warped.geotransform[1]) * 2)
-        assert warped._md_view_materialized, "resample should have copied the view"
-        array = NetCDF._materialize_variable_array(warped, lazy=True)
-        assert isinstance(array, np.ndarray), type(array)
-        values = np.asarray(warped.reduce("valid_time", "mean").read_array())
-        expected = _eager_mean(warped, "valid_time")
-        assert values.shape == expected.shape, (values.shape, expected.shape)
-        assert_allclose(values, expected)
 
 
 class TestReadsAsItsStore:

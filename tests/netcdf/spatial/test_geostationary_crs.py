@@ -19,7 +19,6 @@ import pytest
 from osgeo import gdal
 
 from pyramids.netcdf import GeoReference, NetCDF
-from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -299,24 +298,6 @@ class TestGeostationaryContainerOps:
         gdf = var.to_polygons()
         assert gdf is not None and "geometry" in gdf.columns
 
-    @requires_lazy
-    def test_to_zarr_writes_geostationary_wkt(self, tmp_path):
-        """`to_zarr` writes without an `int(None)` crash and stores the geostationary WKT."""
-        import glob
-
-        path = str(tmp_path / "geos.nc")
-        _write_geostationary_mdim(path)
-        var = NetCDF.read_file(path).get_variable("CMI_C02")
-        store = str(tmp_path / "geos.zarr")
-        var.to_zarr(store)
-        assert os.path.exists(store)
-        # the geostationary CRS is preserved in the store's `spatial_ref` metadata
-        meta = glob.glob(
-            os.path.join(store, "**", "*.json"), recursive=True
-        ) + glob.glob(os.path.join(store, "**", ".z*"), recursive=True)
-        assert any(
-            "Geostationary_Satellite" in open(f, encoding="utf-8").read() for f in meta
-        )
 
     def test_set_variable_preserves_geostationary_crs(self, tmp_path):
         """`set_variable` carries the geostationary WKT instead of erasing it."""

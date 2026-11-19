@@ -307,21 +307,6 @@ class TestToXyz:
 class TestToZarr:
     """`pyramids to-zarr`."""
 
-    @pytest.mark.lazy
-    def test_writes_store(self, cli_raster, tmp_path):
-        """A Zarr store directory is created (needs the pyramids-lazy backend)."""
-        out = str(tmp_path / "store.zarr")
-        assert main(["raster", "export", "zarr", cli_raster, out]) == 0, "must exit 0"
-        assert os.path.isdir(out), "expected a Zarr store directory"
-
-    @pytest.mark.lazy
-    def test_overwrite_guard(self, cli_raster, tmp_path):
-        """An existing output without --overwrite exits 1."""
-        out = str(tmp_path / "store.zarr")
-        os.mkdir(out)
-        rc = main(["raster", "export", "zarr", cli_raster, out])
-        assert rc == 1, "existing output without --overwrite must exit 1"
-
     def test_missing_lazy_extra_remapped(
         self, cli_raster, tmp_path, monkeypatch, capsys
     ):

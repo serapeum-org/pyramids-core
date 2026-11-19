@@ -432,16 +432,6 @@ class TestFromArchive:
 class TestFromZarr:
     """`pyramids from-zarr`."""
 
-    @pytest.mark.lazy
-    def test_happy_path(self, tmp_path):
-        """A pyramids-written Zarr store reads back into an openable raster."""
-        store = str(tmp_path / "store.zarr")
-        Dataset.read_file(_band_tif(tmp_path, "src.tif", 7)).to_zarr(store)
-        out = str(tmp_path / "o.tif")
-        rc = main(["raster", "import", "zarr", store, out])
-        assert rc == 0
-        assert Dataset.read_file(out).band_count == 1
-
     def test_overwrite_guard(self, tmp_path):
         """An existing output without --overwrite exits 1 before any zarr read."""
         out = str(tmp_path / "o.tif")

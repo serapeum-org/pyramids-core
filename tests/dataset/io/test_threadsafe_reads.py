@@ -377,42 +377,14 @@ class TestThreadLocalManagerSemantics:
         assert handle.RasterXSize == 256, "restored manager must reopen the file"
 
 
-@pytest.mark.lazy
 class TestThreadsafeLazyReads:
-    """The dask wiring: chunks= + lock=False + threadsafe=True.
+    """The lazy threadsafe path's MEM-rejection guard.
 
-    Tagged ``lazy`` so the conftest hook auto-skips these when the lazy stack
-    (dask / zarr) is absent — e.g. the bare-wheel smoke test that installs the
-    wheel without ``pyramids-lazy``. Without it they error with
-    ``ModuleNotFoundError: No module named 'dask'`` instead of skipping.
+    Not ``lazy``-marked: this guard raises before any backend is reached (a MEM
+    dataset has no reopenable path), so it runs in the plugin-free core env. The
+    actual dask wiring (chunks= + lock=False + threadsafe=True) lives in the
+    pyramids-lazy plugin's suite.
     """
-
-    def test_lockfree_equals_locked(self, tiled_raster):
-        """The lock-free per-thread-handle compute equals the locked default."""
-        ds, _ = tiled_raster
-        lockfree = ds.read_array(band=0, chunks=64, lock=False, threadsafe=True)
-        locked = ds.read_array(band=0, chunks=64)
-        np.testing.assert_array_equal(
-            lockfree.compute(),
-            locked.compute(),
-            err_msg="lock-free chunked compute diverged from the locked default",
-        )
-
-    def test_default_lock_is_lockfree_when_threadsafe(self, tiled_raster):
-        """threadsafe=True without an explicit lock still computes correctly.
-
-        Test scenario:
-            lock=None with threadsafe=True resolves to DummyLock (per-thread
-            handles need no chunk lock), so the parallel compute must equal
-            the locked default without the caller passing lock=False.
-        """
-        ds, arr = tiled_raster
-        lazy = ds.read_array(band=0, chunks=64, threadsafe=True)
-        np.testing.assert_array_equal(
-            lazy.compute(),
-            arr,
-            err_msg="threadsafe default-lock compute returned wrong pixels",
-        )
 
     def test_mem_dataset_rejected_on_lazy_path(self):
         """The lazy threadsafe path rejects MEM datasets too."""

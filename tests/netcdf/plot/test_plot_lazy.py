@@ -13,7 +13,10 @@ from pyramids.netcdf.netcdf import NetCDF
 from tests.netcdf.conftest import make_plot_3d_nc
 from tests.netcdf.plot._plot_helpers import _make_4d_nc
 
-pytestmark = pytest.mark.plot
+# Both markers: these render a dask-backed (lazy) array, so they need the pyramids-lazy backend AND
+# cleopatra. The main CI plot step runs `-m 'plot and not lazy'` (plugin-free); the separate e2e job
+# runs `-m 'plot and lazy'` in the `e2e` env, which installs the plugin.
+pytestmark = [pytest.mark.plot, pytest.mark.lazy]
 
 _cleo_array = pytest.importorskip(
     "cleopatra.glyphs.gridded.array_glyph", reason="cleopatra not installed"

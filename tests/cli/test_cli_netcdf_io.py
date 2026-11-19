@@ -93,50 +93,6 @@ class TestNcToDict:
         assert "data_vars:" in capsys.readouterr().out
 
 
-class TestNcToZarr:
-    """`pyramids nc export zarr` (needs the pyramids-lazy backend)."""
-
-    @pytest.mark.lazy
-    def test_writes_zarr_store(self, tmp_path):
-        """export zarr writes a per-variable Zarr store."""
-        out = tmp_path / "out.zarr"
-        assert main(["nc", "export", "zarr", str(_NC), str(out), "--var", "tas"]) == 0
-        assert out.exists()
-
-    @pytest.mark.lazy
-    def test_unknown_variable_errors(self, tmp_path, capsys):
-        """An unknown --var exits 1 with a clean error, not a traceback."""
-        rc = main(
-            [
-                "nc",
-                "export",
-                "zarr",
-                str(_NC),
-                str(tmp_path / "o.zarr"),
-                "--var",
-                "nope",
-            ]
-        )
-        err = capsys.readouterr().err
-        assert rc == 1
-        assert "unexpected failure" not in err
-        assert "Traceback" not in err
-
-    @pytest.mark.lazy
-    def test_non_raster_variable_errors(self, tmp_path, monkeypatch, capsys):
-        """A variable with no .to_zarr (a labeled array) exits 1 with a clear message."""
-        monkeypatch.setattr(
-            cli_netcdf_io.NetCDF, "get_variable", lambda self, *a, **k: object()
-        )
-        rc = main(
-            ["nc", "export", "zarr", str(_NC), str(tmp_path / "o.zarr"), "--var", "tas"]
-        )
-        err = capsys.readouterr().err
-        assert rc == 1
-        assert "not exposable as a raster plane" in err
-        assert "unexpected failure" not in err
-
-
 class TestNcFromDataframe:
     """`pyramids nc import dataframe` (issue #1467)."""
 
@@ -272,70 +228,6 @@ class TestNcMerge:
         out = str(tmp_path / "mg.nc")
         assert main(["nc", "import", "merge", out, "--inputs", a]) == 0
         assert main(["nc", "import", "merge", out, "--inputs", a]) == 1
-
-
-class TestNcToKerchunk:
-    """`pyramids nc export kerchunk` (needs kerchunk + h5py; issue #1467)."""
-
-    @pytest.mark.netcdf_lazy
-    def test_writes_manifest(self, tmp_path):
-        """export kerchunk writes a non-empty JSON reference manifest for an HDF5 cube."""
-        src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
-        out = tmp_path / "ref.json"
-        assert main(["nc", "export", "kerchunk", src, str(out)]) == 0
-        assert out.exists()
-        assert out.stat().st_size > 0
-
-    @pytest.mark.netcdf_lazy
-    def test_refuses_existing(self, tmp_path):
-        """A second export kerchunk without --overwrite is refused."""
-        src = _cube(str(tmp_path / "cube.nc"), [1.0, 2.0, 3.0])
-        out = str(tmp_path / "ref.json")
-        assert main(["nc", "export", "kerchunk", src, out]) == 0
-        assert main(["nc", "export", "kerchunk", src, out]) == 1
-
-
-class TestNcCombineKerchunk:
-    """`pyramids nc combine-kerchunk` (needs kerchunk + h5py; issue #1467)."""
-
-    @pytest.mark.netcdf_lazy
-    def test_writes_combined_manifest(self, tmp_path):
-        """combine-kerchunk writes one manifest spanning several HDF5 cubes."""
-        a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
-        b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
-        out = tmp_path / "combined.json"
-        rc = main(["nc", "export", "combine-kerchunk", str(out), "--inputs", a, b])
-        assert rc == 0
-        assert out.exists()
-        assert out.stat().st_size > 0
-
-
-class TestNcOpenMf:
-    """`pyramids nc open-mf` (needs dask; issue #1467)."""
-
-    @pytest.mark.lazy
-    def test_reports_stack_shape(self, tmp_path, capsys):
-        """open-mf reports the lazy stack's shape/dtype over several files."""
-        a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
-        b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
-        assert (
-            main(["nc", "import", "open-mf", "--paths", a, b, "--var", "t", "--json"])
-            == 0
-        )
-        payload = json.loads(capsys.readouterr().out)
-        assert payload["files"] == 2
-        assert payload["shape"][0] == 2
-        assert payload["variable"] == "t"
-
-    @pytest.mark.lazy
-    def test_text_output_reports_stack(self, tmp_path, capsys):
-        """Without --json the stack report prints as 'key: value' lines."""
-        a = _cube(str(tmp_path / "a.nc"), [1.0, 2.0])
-        b = _cube(str(tmp_path / "b.nc"), [3.0, 4.0])
-        assert main(["nc", "import", "open-mf", "--paths", a, b, "--var", "t"]) == 0
-        out = capsys.readouterr().out
-        assert "variable: t" in out
-        assert "files: 2" in out
 
 
 def _raise_import(*_a, **_k):

@@ -28,7 +28,6 @@ from pyproj import CRS as PyProjCRS
 
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.interop_xarray import (
-    chunked_variables,
     from_xarray,
     read_crs_wkt,
     to_xarray,
@@ -55,11 +54,6 @@ class _UnserialisableCRS:
     def to_wkt(self) -> str:
         """Always fail, as a CRS carrying an unsupported projection would."""
         raise RuntimeError("this CRS cannot be expressed as WKT")
-
-
-def _no_array() -> None:
-    """A loader that yields no array, so the variable has a source but no data."""
-    return None
 
 
 def _mesh(**kwargs) -> Mesh2d:
@@ -232,24 +226,3 @@ class TestCrsReadersTolerateBadInput:
             read_crs_wkt(self._with_crs_attrs({"crs_wkt": "not a wkt at all"}))
             == "not a wkt at all"
         )
-
-
-@pytest.mark.lazy
-class TestChunkedVariablesSkips:
-    """The two ``chunked_variables`` skip paths, where a variable has nothing to chunk."""
-
-    def test_a_metadata_only_variable_is_left_out(self):
-        """A variable with neither an array nor a loader cannot be chunked, so it is skipped."""
-        pytest.importorskip("dask.array")
-        chunked = chunked_variables(
-            {"depth": _depth(), "ghost": _depth(name="ghost", _data=None)}, chunks=1
-        )
-        assert set(chunked) == {"depth"}
-
-    def test_a_loader_yielding_no_array_is_left_out(self):
-        """A loader that answers None also leaves the variable out of the mapping."""
-        pytest.importorskip("dask.array")
-        chunked = chunked_variables(
-            {"empty": _depth(name="empty", _data=None, _loader=_no_array)}, chunks=1
-        )
-        assert chunked == {}

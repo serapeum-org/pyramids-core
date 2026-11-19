@@ -525,17 +525,3 @@ class TestPlotDispatch:
         kwargs = render.call_args.kwargs
         assert kwargs["title"] == "custom"
         assert np.asarray(kwargs["data"]).tolist() == [1.0, 2.0]
-
-
-@pytest.mark.interop
-@pytest.mark.lazy
-class TestZarrRoundTrip:
-    def test_from_zarr_reads_back_what_to_zarr_wrote(self, mesh, tmp_path):
-        """The zarr pair opens the store once and rebuilds both the mesh and its variables."""
-        pytest.importorskip("xarray")
-        pytest.importorskip("zarr")
-        store = str(tmp_path / "mesh.zarr")
-        mesh.to_zarr(store)
-        back = MeshDataset.from_zarr(store)
-        assert (back.n_node, back.n_face) == (4, 2)
-        assert back["depth"].data.tolist() == [2.0, 4.0]

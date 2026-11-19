@@ -54,8 +54,12 @@ jobs:
         # lock-freshness check, so the deselection lives here instead.
         run: pixi run -e ${{ matrix.environment }} pytest -vvv --cov=src/pyramids -sv -m 'not plot and not interop and not vfs and not live' --cov-report=xml --cov-append --cov-fail-under=0
 
-      - name: Run plot tests
-        run: pixi run -e ${{ matrix.environment }} plot --cov-fail-under=0
+      - name: Run plot tests (eager only; lazy-plot runs in the lazy_plot e2e job)
+        # Explicit -m (not the `plot` task) so we can exclude the lazy (dask-backed) plot tests, which
+        # need the pyramids-lazy backend the plugin-free main-matrix envs do not install. They run in
+        # the `lazy_plot` extras target (the `e2e` env installs the plugin). Overriding here instead of
+        # editing the pixi `plot` task avoids invalidating pixi.lock's manifest hash.
+        run: pixi run -e ${{ matrix.environment }} pytest -vvv --cov=src/pyramids -sv -m 'plot and not lazy' --cov-report=xml --cov-append --cov-fail-under=0
 
       - name: Run interop tests
         run: pixi run -e ${{ matrix.environment }} interop-tests --cov-fail-under=84
@@ -135,6 +139,16 @@ jobs:
             env: dev
             paths: ""
             markexpr: "e2e and not live"
+            strict: ""
+          # lazy_plot: the lazy (dask-backed) plot tests need the pyramids-lazy backend AND cleopatra.
+          # The backend is a plugin, so the plugin-free main-matrix envs cannot run them; the `e2e`
+          # env is the one core env that installs the plugin (via the `e2e` dependency-group) and also
+          # carries cleopatra, so they execute here. The eager plot tests stay in the main matrix's
+          # plot step (`-m 'plot and not lazy'`); this runs their lazy counterpart.
+          - name: lazy_plot
+            env: e2e
+            paths: "tests/netcdf/plot/test_plot_lazy.py"
+            markexpr: "plot and lazy and not live"
             strict: ""
 
     steps:

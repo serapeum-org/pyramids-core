@@ -24,14 +24,6 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
-# _metadata_dict moved to the pyramids-lazy backend. This is a `core` packing module (128 tests);
-# only TestAZarrStoreDescribesEveryBand needs it, so guard the import and skip just that class when
-# the backend is absent — never abort collection of the core packing tests.
-try:
-    from pyramids_lazy._zarr import _metadata_dict
-except ImportError:  # pragma: no cover - backend absent, or its optional deps are
-    _metadata_dict = None
-
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
@@ -44,7 +36,6 @@ from pyramids.dataset import Dataset
 from pyramids.dataset.collection import (
     DatasetCollection,
     _agree_on_one_sentinel,
-    _unpack_lazy_timestep,
 )
 from pyramids.dataset.engines.analysis import Analysis
 from pyramids.dataset.engines.io import IO
@@ -394,32 +385,6 @@ class TestPackedReadsArePhysical:
             store.close()
         assert float(np.nanmax(raw)) == pytest.approx(PACKED_RAW_MAX)
 
-    @pytest.mark.parametrize(
-        "multidim", [True, False], ids=["multidim-opener", "classic-opener"]
-    )
-    def test_the_lazy_path_agrees_with_the_eager_one(self, multidim):
-        """`chunks=` builds its array separately, so it can drift from the eager read.
-
-        Test scenario:
-            Both openers, because they put the packing in different places. Opened
-            multidimensionally the variable carries `_scale` / `_offset` of its own;
-            opened classically it does not, and only the driver's band declares them.
-            While the eager arm consulted the band and the lazy arm consulted only
-            `_scale`, the classic-opened variable read 2.5 eagerly and 100.0 through
-            `chunks=` -- the same variable, in different units, by keyword.
-        """
-        pytest.importorskip("dask")
-        store = NetCDF.read_file(PACKED_NC, open_as_multi_dimensional=multidim)
-        try:
-            variable = store.get_variable("z")
-            eager = np.asarray(variable.read_array(), dtype="float64")
-            lazy = np.asarray(variable.read_array(chunks="auto"), dtype="float64")
-        finally:
-            store.close()
-        np.testing.assert_allclose(np.nanmax(lazy), np.nanmax(eager))
-        assert float(np.nanmax(eager)) == pytest.approx(PACKED_PHYSICAL_MAX), (
-            f"both paths agree, but on the raw counts: {np.nanmax(eager)}"
-        )
 
     def test_unpacking_is_not_applied_twice(self):
         """The value is the packing applied once, not once per layer.
@@ -1916,16 +1881,6 @@ class TestEveryBandIsUnpackedWithItsOwnFactor:
         assert got.shape == (2, 2, 2), got.shape
         np.testing.assert_allclose(got[:, 0, 0], [5.0, 194.0])
 
-    def test_the_lazy_read_can_also_reach_the_stored_counts(self):
-        """`unpack=False` means the same thing through `chunks=` as it does eagerly."""
-        pytest.importorskip("dask")
-        store = NetCDF.read_file(PACKED_NC)
-        try:
-            lazy = store.get_variable("z").read_array(chunks="auto", unpack=False)
-            raw = np.asarray(lazy.compute(), dtype="float64")
-        finally:
-            store.close()
-        assert float(np.nanmax(raw)) == pytest.approx(PACKED_RAW_MAX)
 
 
 class TestPythonHeldPackingReachesEveryReader:
@@ -2256,139 +2211,6 @@ class TestEachBandIsJudgedOnItsOwn:
         )
 
 
-class TestACollectionAnswersInOneUnit:
-    """`values` and the lazy `data` cube read the same stack; they must agree."""
-
-    def test_a_temporal_reduction_matches_the_eager_stack(self, tmp_path):
-        """`col.mean()` is the lazy spelling of `col.values.mean(0)`.
-
-        Test scenario:
-            `values` reads through `read_array` and went physical; `data`, and every
-            temporal reduction built on it, reads raw blocks and stayed in stored
-            counts. On two packed timesteps `col.mean()` answered 150 where
-            `col.values.mean(0)` answered 3.0. Each file carries its own recipe.
-        """
-        pytest.importorskip("dask")
-        for index, counts in enumerate(
-            ([[100, 200], [300, 400]], [[200, 300], [400, 500]])
-        ):
-            step = _packed_raster(counts, 0.01, 1.5)
-            step.to_file(str(tmp_path / f"t{index}.tif"))
-        collection = DatasetCollection.from_files(str(tmp_path), glob="*.tif")
-
-        eager = np.asarray(collection.values, dtype="float64").mean(axis=0)
-        reduced = collection.mean()
-        lazy = np.asarray(
-            reduced.read_array() if hasattr(reduced, "read_array") else reduced,
-            dtype="float64",
-        )
-
-        np.testing.assert_allclose(lazy.reshape(eager.shape), eager)
-
-    def test_a_packed_and_an_unpacked_timestep_reduce_in_one_unit(self, tmp_path):
-        """Each file supplies its own recipe, and a file that declares none is left alone.
-
-        Test scenario:
-            The first timestep is plain counts and the second is packed at `0.01`, so the
-            lazy cube unpacks only the second. The lazy mean and `values.mean(0)` agree,
-            and both are the average of `100` and `1.0`.
-        """
-        pytest.importorskip("dask")
-        counts = np.array([[100, 200], [300, 400]], dtype="int16")
-        _write_step(tmp_path / "t0.tif", counts)
-        _write_step(tmp_path / "t1.tif", counts, scale=[0.01], offset=[0.0])
-        collection = DatasetCollection.from_files(str(tmp_path), glob="*.tif")
-
-        eager = np.asarray(collection.values, dtype="float64").mean(axis=0)
-        lazy = np.asarray(collection.mean(), dtype="float64")
-
-        np.testing.assert_allclose(lazy.reshape(eager.shape), eager)
-        np.testing.assert_allclose(eager.ravel(), [50.5, 101.0, 151.5, 202.0])
-
-
-class TestUnpackingOneLazyTimestep:
-    """`_unpack_lazy_timestep` -- one file's lazy cube, put into physical units."""
-
-    @pytest.mark.parametrize(
-        ("scale", "offset"),
-        [(None, None), ([0.0], [0.0])],
-        ids=["undeclared", "unusable-zero-factor"],
-    )
-    def test_a_timestep_with_nothing_to_unpack_comes_back_as_stored(
-        self, tmp_path, scale, offset
-    ):
-        """No usable recipe means the stored cube itself, not a transformed copy.
-
-        Test scenario:
-            A file that declares nothing -- or declares a zero factor, which is not a
-            legal `scale_factor` -- costs nothing: no `float64` promotion and no extra
-            layer on the graph.
-        """
-        da = pytest.importorskip("dask.array")
-        counts = np.array([[1, 2], [3, 4]], dtype="int16")
-        path = tmp_path / "step.tif"
-        _write_step(path, counts, scale=scale, offset=offset)
-        stored = da.from_array(counts[np.newaxis], chunks=(1, 2, 2))
-
-        result = _unpack_lazy_timestep(stored, path, 1, None, None)
-
-        assert result is stored, "an unpacked timestep was rebuilt instead of reused"
-
-    def test_each_band_is_unpacked_with_its_own_recipe(self, tmp_path):
-        """A band with a usable recipe is unpacked; one with a zero factor keeps its counts.
-
-        Test scenario:
-            The recipe comes from the file's own header, band by band. Band 1's zero
-            factor is refused, so that band stays as stored instead of collapsing onto
-            the offset, while band 0 is unpacked beside it in the same lazy cube.
-        """
-        da = pytest.importorskip("dask.array")
-        counts = np.array([[[-9999, 100], [200, 300]], [[1, 2], [3, 4]]], dtype="int16")
-        path = tmp_path / "mixed.tif"
-        _write_step(path, counts, scale=[0.01, 0.0], offset=[1.5, 0.0])
-
-        lazy = _unpack_lazy_timestep(
-            da.from_array(counts, chunks=(2, 2, 2)), path, 2, None, None
-        )
-
-        got = np.asarray(lazy.compute())
-        np.testing.assert_allclose(got[0], counts[0] * 0.01 + 1.5)
-        np.testing.assert_allclose(got[1], counts[1])
-
-
-@pytest.mark.skipif(
-    _metadata_dict is None,
-    reason="requires the pyramids-lazy backend (_metadata_dict moved there)",
-)
-class TestAZarrStoreDescribesEveryBand:
-    """`_metadata_dict` on packed rasters whose bands cannot share one fill value."""
-
-    def test_bands_whose_gaps_read_differently_record_no_single_fill(self):
-        """Each band's physical sentinel is recorded, and no one `_FillValue` claims both.
-
-        Test scenario:
-            The same stored `-9999` reads `-98.49` in one band and `-1002.9` in the
-            other, so the materialised array holds two different fills. Naming either
-            as the array's `_FillValue` would unmask the other band's gap.
-        """
-        metadata = _metadata_dict(_two_packed_bands())
-
-        assert metadata["dtype"] == "float64", metadata["dtype"]
-        assert metadata["no_data_value"] == pytest.approx([-98.49, -1002.9]), metadata[
-            "no_data_value"
-        ]
-        assert "_FillValue" not in metadata, metadata.get("_FillValue")
-
-    def test_a_packed_band_with_no_sentinel_records_none(self):
-        """No declared sentinel converts to none, and no fill is invented for it."""
-        dataset = _bare_raster()
-        dataset.scale = [0.01]
-
-        metadata = _metadata_dict(dataset)
-
-        assert metadata["no_data_value"] == [None], metadata["no_data_value"]
-        assert metadata["dtype"] == "float64", metadata["dtype"]
-        assert "_FillValue" not in metadata, metadata.get("_FillValue")
 
 
 class TestTheRendererIsHandedThePhysicalSentinel:
@@ -2556,34 +2378,6 @@ class TestTerrainRGBEncodesPhysicalHeights:
             atol=0.05,
             err_msg="the encoded heights are not the physical ones",
         )
-
-
-class TestAZarrStoreDescribesWhatItHolds:
-    """`to_zarr` materialises a packed raster; its metadata has to say so."""
-
-    def test_the_gap_survives_the_round_trip(self, tmp_path):
-        """The written sentinel is the one the written array actually holds.
-
-        Test scenario:
-            `to_zarr` writes the physical values `read_array` returns, and pyramids'
-            Zarr metadata has no channel for a recipe. It recorded the stored `-9999`
-            and the stored `int16` over a `float64` array whose gap held `-98.49`, so
-            reading the store back treated the gap as a measurement.
-        """
-        pytest.importorskip("zarr")
-        pytest.importorskip("dask")
-        source = _packed_raster([[-9999, 100], [200, 300]], 0.01, 1.5)
-        source.no_data_value = [-9999]
-        source.to_file(str(tmp_path / "source.tif"))
-        Dataset.read_file(str(tmp_path / "source.tif")).to_zarr(
-            str(tmp_path / "out.zarr")
-        )
-
-        restored = Dataset.from_zarr(str(tmp_path / "out.zarr"))
-        values = restored.read_array(masked=True)
-
-        assert bool(np.ma.getmaskarray(values).ravel()[0]), "the gap was read as data"
-        np.testing.assert_allclose(np.asarray(values).ravel()[1:], [2.5, 3.5, 4.5])
 
 
 class TestApplyOnARasterWithNoSentinel:

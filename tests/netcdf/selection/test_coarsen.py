@@ -24,7 +24,6 @@ from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import _resize_axis, _window_coordinates
 from pyramids.netcdf.engines.selection import _coarsen_windows
 from pyramids.netcdf.netcdf import Variable
-from tests._marks import requires_lazy
 
 pytestmark = pytest.mark.core
 
@@ -744,126 +743,6 @@ class TestWindowHelpers:
         assert first(labels[0]), labels
         assert labels[1] == 15.0, labels
 
-
-@requires_lazy
-class TestTheChunkedPathAgrees:
-    """A file-backed variable coarsens through dask and must answer what memory answers."""
-
-    @pytest.mark.parametrize(
-        ("window", "boundary"),
-        [(2, "exact"), (3, "trim"), (3, "pad")],
-        ids=["exact", "trim", "pad"],
-    )
-    def test_file_backed_equals_in_memory(self, tmp_path, window, boundary):
-        """The same stack, written and reopened, coarsens to the same cells and labels.
-
-        Args:
-            tmp_path: pytest temp directory.
-            window: The window length.
-            boundary: The boundary mode.
-        """
-        path = str(tmp_path / "stack.nc")
-        _container().to_file(path)
-        on_disk = (
-            NetCDF.read_file(path)
-            .coarsen("time", window, boundary=boundary)
-            .get_variable("v")
-        )
-        in_memory = (
-            _container().coarsen("time", window, boundary=boundary).get_variable("v")
-        )
-        assert_allclose(on_disk.read_array(), in_memory.read_array())
-        assert (
-            on_disk._band_dim_values_map["time"]
-            == in_memory._band_dim_values_map["time"]
-        )
-
-    @pytest.mark.parametrize(
-        ("how", "skipna", "kwargs"),
-        [
-            ("mean", True, {}),
-            ("max", False, {}),
-            ("count", True, {}),
-            ("all", False, {}),
-            ("any", True, {}),
-            ("quantile", True, {"q": 0.5}),
-        ],
-        ids=["mean", "max-raw", "count", "all-raw", "any", "quantile"],
-    )
-    @pytest.mark.parametrize(
-        ("dtype", "ndv"), [("int16", -1), ("uint8", 255)], ids=["int16", "uint8"]
-    )
-    def test_an_integer_band_pads_on_disk_as_in_memory(
-        self, tmp_path, dtype, ndv, how, skipna, kwargs
-    ):
-        """A padded integer stack streams through dask and answers the in-memory cells.
-
-        Args:
-            tmp_path: pytest temp directory.
-            dtype: The band's storage type.
-            ndv: Its declared no-data value.
-            how: The reducer.
-            skipna: Whether gaps are skipped.
-            kwargs: Extra arguments for `coarsen`.
-
-        Test scenario:
-            The padding is concatenated onto a dask array here and onto a numpy one in
-            memory; the on-disk read is asserted to be dask so the two paths really differ.
-        """
-        container, _ = _integer_container(dtype, ndv)
-        path = str(tmp_path / "stack.nc")
-        container.to_file(path)
-        store = NetCDF.read_file(path)
-        lazy = NetCDF._materialize_variable_array(store.get_variable("v"), lazy=True)
-        assert hasattr(lazy, "dask"), (
-            f"expected a dask array, got {type(lazy).__name__}"
-        )
-        options = {"boundary": "pad", "how": how, "skipna": skipna, **kwargs}
-        on_disk = store.coarsen("time", 3, **options).get_variable("v")
-        in_memory = container.coarsen("time", 3, **options).get_variable("v")
-        assert on_disk.dtype == in_memory.dtype, (on_disk.dtype, in_memory.dtype)
-        assert_allclose(on_disk.read_array(), in_memory.read_array())
-
-    @pytest.mark.parametrize("size", [2, 6], ids=["cut", "pad"])
-    def test_resize_keeps_a_dask_array_lazy(self, tmp_path, size):
-        """`_resize_axis` on a chunked read returns a dask array holding the numpy answer.
-
-        Args:
-            tmp_path: pytest temp directory.
-            size: The length to resize `time` to.
-        """
-        path = str(tmp_path / "stack.nc")
-        _container().to_file(path)
-        variable = NetCDF.read_file(path).get_variable("v")
-        lazy = NetCDF._materialize_variable_array(variable, lazy=True)
-        eager = NetCDF._materialize_variable_array(variable)
-        result = _resize_axis(lazy, 0, size)
-        assert hasattr(result, "dask"), (
-            f"expected a dask array, got {type(result).__name__}"
-        )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            computed = np.asarray(result)
-        assert_array_equal(computed, _resize_axis(eager, 0, size))
-
-    def test_a_file_backed_variable_coarsens_to_a_named_variable(self, tmp_path):
-        """`read_file(...).get_variable("v").coarsen(...)` streams and keeps the name `v`.
-
-        Args:
-            tmp_path: pytest temp directory.
-        """
-        path = str(tmp_path / "stack.nc")
-        _container().to_file(path)
-        result = (
-            NetCDF.read_file(path).get_variable("v").coarsen("time", 3, boundary="pad")
-        )
-        in_memory = _container().get_variable("v").coarsen("time", 3, boundary="pad")
-        assert isinstance(result, Variable), type(result).__name__
-        assert result._source_var_name == "v", result._source_var_name
-        assert_allclose(result.read_array(), in_memory.read_array())
-        assert result._band_dim_values_map["time"] == [6.0, 18.0], (
-            result._band_dim_values_map
-        )
 
 
 class TestCoarsenOnASelection:

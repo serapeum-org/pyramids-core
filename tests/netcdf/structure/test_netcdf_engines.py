@@ -425,23 +425,6 @@ class TestSelectionEngine:
         with pytest.raises(ValueError, match="does not overlap the curvilinear grid"):
             var.crop(mask=fc)
 
-    def test_curvilinear_crop_chunks_matches_eager(self, curvilinear_container):
-        """The lazy/chunked curvilinear crop equals the eager one.
-
-        Test scenario:
-            ``crop(..., chunks="auto")`` reads the bounding window through the
-            dask-backed lazy path; the materialised result is value-equal to the
-            default eager read.
-        """
-        pytest.importorskip("dask")
-        var = curvilinear_container.get_variable("Tair")
-        bbox = self._middle_bbox(curvilinear_container)
-        fc = FeatureCollection.from_bbox(bbox, epsg=var.epsg)
-        eager = curvilinear_container.get_variable("Tair").crop(mask=fc).read_array()
-        lazy = var.crop(mask=fc, chunks="auto").read_array()
-        np.testing.assert_array_equal(
-            lazy, eager, err_msg="lazy curvilinear crop differs from eager"
-        )
 
     def test_crop_chunks_on_root_container_raises(self, curvilinear_container):
         """``crop(chunks=…)`` on a root container is rejected.
