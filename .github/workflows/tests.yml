@@ -47,18 +47,24 @@ jobs:
           cache: true
           version: v0.73.0
 
-      - name: Run main tests (not plot, not interop, not vfs, not live)
-        # Run pytest directly (not the `main` task) so we can append `not vfs`/`not live`
-        # to the selector — the live-network vfs/live tests must not run in CI. Editing
-        # the pixi `main` task in pyproject.toml would invalidate pixi.lock and fail the
-        # lock-freshness check, so the deselection lives here instead.
-        # `-n auto --dist loadfile` (pytest-xdist, one file per worker): after the lazy decouple the
-        # main envs are plugin-free, and the netcdf/structure suite accumulates GDAL/HDF5 native
-        # state that faults the whole interpreter when the full suite runs in one process without
-        # the dask stack loaded. Per-file worker isolation resets that native state between files
-        # (the same mode the `test-fast` task uses), turning a process-killing crash back into
-        # ordinary pass/fail. pytest-cov combines the per-worker coverage automatically.
-        run: pixi run -e ${{ matrix.environment }} pytest -vvv --cov=src/pyramids -sv -m 'not plot and not interop and not vfs and not live' -n auto --dist loadfile --cov-report=xml --cov-append --cov-fail-under=0
+      - name: Run netcdf tests (xdist-isolated — the crash-prone subtree)
+        # Only the netcdf subtree runs under pytest-xdist. After the lazy decouple the main envs are
+        # plugin-free, and the netcdf/structure suite accumulates GDAL/HDF5 native state that faults
+        # the whole interpreter when it runs in one process without the dask stack loaded. `-n auto
+        # --dist loadfile` (one file per worker, the mode the `test-fast` task uses) resets that native
+        # state between files, turning the process-killing crash back into ordinary pass/fail.
+        # It is scoped to tests/netcdf on purpose: running the WHOLE suite under xdist makes the
+        # geodesic datum-shift tests (tests/feature) race on PROJ's shared on-disk grid cache
+        # (PROJ_NETWORK=ON), which returns NaN on one worker — so everything else runs serially below.
+        # Direct pytest (not the `main` task) keeps `not vfs`/`not live` out of CI without editing the
+        # pixi task (which would invalidate pixi.lock). pytest-cov combines the per-worker coverage.
+        run: pixi run -e ${{ matrix.environment }} pytest tests/netcdf -vvv --cov=src/pyramids -sv -m 'not plot and not interop and not vfs and not live' -n auto --dist loadfile --cov-report=xml --cov-append --cov-fail-under=0
+
+      - name: Run main tests (serial — everything except netcdf/plot/interop/vfs/live)
+        # The rest of the suite runs serially (no xdist): it has no native-crash problem, and serial
+        # execution is what keeps PROJ's datum-grid cache from being raced by concurrent workers (see
+        # the netcdf step). --cov-append aggregates onto the netcdf step's coverage.
+        run: pixi run -e ${{ matrix.environment }} pytest --ignore=tests/netcdf -vvv --cov=src/pyramids -sv -m 'not plot and not interop and not vfs and not live' --cov-report=xml --cov-append --cov-fail-under=0
 
       - name: Run plot tests (eager only; lazy-plot runs in the lazy_plot e2e job)
         # Explicit -m (not the `plot` task) so we can exclude the lazy (dask-backed) plot tests, which
