@@ -5460,8 +5460,15 @@ class Analysis(_Engine["Dataset"]):
             array (np.ndarray): Numpy array to normalize; NaNs are treated as
                 gaps and excluded from the range.
 
+        Degenerate inputs are handled explicitly rather than through numpy's
+        `0/0`, and no range warnings are emitted: an array with no finite value
+        returns all-NaN, and a constant (zero-range) array returns `0.0` at every
+        finite cell (NaNs preserved).
+
         Returns:
-            np.ndarray: The values rescaled to 0.0-1.0, with NaNs preserved.
+            np.ndarray: The values rescaled to 0.0-1.0 (NaNs preserved); all-NaN
+                for an all-NaN/non-finite input, and `0.0` at each finite cell
+                for a constant input.
 
         See Also:
             pyramids.dataset.Dataset.normalize: The raster-level facade that
@@ -5470,10 +5477,14 @@ class Analysis(_Engine["Dataset"]):
                 skewing it.
         """
         array = np.asarray(array, dtype=float)
+        if not np.isfinite(array).any():
+            return np.full_like(array, np.nan)
         array_min = np.nanmin(array)
         array_max = np.nanmax(array)
-        val = (array - array_min) / (array_max - array_min)
-        return np.asarray(val)
+        span = array_max - array_min
+        if span == 0:
+            return np.where(np.isnan(array), np.nan, 0.0)
+        return np.asarray((array - array_min) / span)
 
     @staticmethod
     def _rescale(

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import gc
 import pickle
+import warnings
 import weakref
 
 import numpy as np
@@ -574,6 +575,43 @@ class TestDatasetNormalizeFacade:
         assert not np.isnan(out).any(), "no cell should be NaN without a sentinel"
         assert float(np.min(out)) == pytest.approx(0.0), "global min must map to 0.0"
         assert float(np.max(out)) == pytest.approx(1.0), "global max must map to 1.0"
+
+
+    def test_entirely_no_data_returns_all_nan_without_warning(self):
+        """A fully-no-data raster yields all-NaN and emits no numpy range warning.
+
+        Test scenario:
+            Every cell is the sentinel, so after masking the whole array is NaN;
+            `normalize` must short-circuit to all-NaN rather than let
+            ``np.nanmin`` emit ``All-NaN slice encountered``.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.full((2, 2), -9999.0, dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=-9999.0)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            out = ds.normalize()
+
+        assert np.isnan(out).all()
+
+    def test_constant_raster_maps_to_zero_without_warning(self):
+        """A constant (zero-range) raster maps every finite cell to 0.0, no warning.
+
+        Test scenario:
+            ``max == min`` would make numpy's ``(x-min)/(max-min)`` a ``0/0`` and
+            warn; `normalize` must return a deterministic 0.0 for the finite
+            cells instead.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.full((2, 2), 7.0, dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=None)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            out = ds.normalize()
+
+        assert np.array_equal(out, np.zeros((2, 2)))
 
 
 class TestPickleRoundTrip:
