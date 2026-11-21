@@ -524,7 +524,14 @@ class MeshDataset(_MeshFacades):
 
     @property
     def variable_names(self) -> list[str]:
-        """Names of all data variables."""
+        """Names of all data variables, in insertion order.
+
+        The list counterpart of :attr:`data_vars` (the ``{name: variable}`` mapping), named
+        to match the sibling :attr:`pyramids.netcdf.NetCDF.variable_names`.
+
+        Returns:
+            list[str]: The data-variable names; empty when the mesh carries no data variables.
+        """
         result = list(self._data_variables.keys())
         return result
 
