@@ -287,15 +287,15 @@ def focal_std(
     chunks: Any = None,
     band: int = 0,
 ) -> np.ndarray | da.Array:
-    """Standard deviation over a `(2*radius+1)`-side window.
+    """Population standard deviation (``ddof=0``) over a `(2*radius+1)`-side window.
 
-    uses the two-pass formulation `sqrt(mean((x - local_mean)²))`
-    rather than the unstable `sqrt(E[x²] - E[x]²)`. The cancellation
-    error in the latter blows up for large magnitudes with small
-    variance (a common DEM case — elevations in metres where the
-    local deviation is centimetres). The two-pass variant does one
-    extra uniform_filter; the cost is linear in pixels and negligible
-    compared to the I/O.
+    The spread of each cell's neighbourhood about **that cell's** window mean, via the
+    moments identity ``var_i = E[x^2]_i - (E[x]_i)^2`` -- the only form a linear box filter
+    can express, because the focal variance needs deviations about the centre's mean and no
+    second filtering pass can produce those. Stability comes from a block-independent
+    ``shift`` near the data (the band's mean): variance is shift-invariant, so subtracting a
+    finite constant removes the catastrophic cancellation that the bare identity suffers for
+    a large magnitude with small variance (a DEM in metres with centimetre roughness).
 
     Args:
         ds: Source :class:`~pyramids.dataset.Dataset`.
@@ -327,28 +327,45 @@ def focal_std(
             0.0
 
             ```
+        - A constant-gradient ramp has the true window spread, not zero:
+            ```python
+            >>> ramp = np.tile(np.arange(5, dtype=np.float64), (5, 1))
+            >>> ds = Dataset.from_array(
+            ...     ramp,
+            ...     geo_ref=GeoReference(top_left_corner=(0.0, 5.0), cell_size=1.0, epsg=32636),
+            ... )
+            >>> float(round(float(np.asarray(focal_std(ds, radius=1))[2, 2]), 6))
+            0.816497
+
+            ```
     """
     size = 2 * radius + 1
+    # A block-independent constant near the data: variance is shift-invariant, so this
+    # changes no answer but removes the moments identity's cancellation. One cheap metadata
+    # read, computed ONCE (not per block, or each lazy block would subtract a different
+    # constant); 0.0 when stats are unavailable, which is exactly the pre-shift behaviour.
+    try:
+        shift = float(ds.stats(band=band, approx_ok=True)["mean"].iloc[0])
+    except Exception:  # nosec B110 - stats are an optimisation; 0.0 is a valid shift
+        shift = 0.0
+    if not np.isfinite(shift):
+        shift = 0.0
 
     def _kernel(arr: np.ndarray) -> np.typing.NDArray:
         valid, weight = _valid_fraction(arr, size)
-        filled = np.where(valid, arr, 0.0)
-        local_mean = _normalise(
-            ndimage.uniform_filter(filled, size=size, mode="reflect"), weight
+        centred = np.where(valid, arr - shift, 0.0)
+        mean = _normalise(
+            ndimage.uniform_filter(centred, size=size, mode="reflect"), weight
         )
-        # Deviations are only defined where the cell itself is valid; zero them
-        # elsewhere so they contribute nothing to the windowed sum.
-        deviations = np.where(valid, (arr - local_mean) ** 2, 0.0)
-        var = _normalise(
-            ndimage.uniform_filter(deviations, size=size, mode="reflect"), weight
+        mean_sq = _normalise(
+            ndimage.uniform_filter(centred * centred, size=size, mode="reflect"), weight
         )
+        var = mean_sq - mean * mean
         return np.sqrt(np.clip(var, 0.0, None))
 
-    # Two chained `uniform_filter` passes reach 2*radius in each direction, so a
-    # `radius` halo would let block edges see a truncated neighbourhood.
-    return _apply_eager_or_lazy(
-        _kernel, ds, radius, chunks, band, np.float64, depth=2 * radius
-    )
+    # A single box filter reaches only `radius` in each direction, so the lazy halo is
+    # `radius` -- narrower than the old two-pass kernel's `2*radius`.
+    return _apply_eager_or_lazy(_kernel, ds, radius, chunks, band, np.float64)
 
 
 def focal_apply(
