@@ -501,6 +501,80 @@ class TestDatasetNormalizeFacade:
             np.sort(out[~np.isnan(out)]), np.array([0.0, 0.5, 1.0])
         )
 
+    def test_a_2d_raster_without_no_data_is_normalized_unmasked(self):
+        """A 2-D raster whose band declares no sentinel is rescaled without masking.
+
+        Test scenario:
+            With ``no_data_value=None`` the physical sentinel is ``None``, so the
+            2-D facade path skips the masking step (the ``sentinel is None``
+            branch) and normalises every cell. No cell becomes NaN and the real
+            values still span 0-1.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=None)
+
+        out = ds.normalize()
+
+        assert not np.isnan(out).any(), "no cell should be NaN without a sentinel"
+        assert float(np.min(out)) == pytest.approx(0.0)
+        assert float(np.max(out)) == pytest.approx(1.0)
+
+    def test_multiband_masks_each_bands_no_data_against_a_global_range(self):
+        """A multi-band raster masks each band's sentinel and scales on one global range.
+
+        Test scenario:
+            The 3-D facade path loops over every band, masks that band's physical
+            no-data cell to NaN, then normalises the whole stack against a single
+            global min/max. Each band's sentinel cell must come back NaN while the
+            global minimum maps to 0.0 and the global maximum to 1.0.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        stack = np.array(
+            [
+                [[0.0, 5.0], [10.0, -9999.0]],
+                [[1.0, 6.0], [11.0, -9999.0]],
+                [[2.0, 7.0], [12.0, -9999.0]],
+            ],
+            dtype="float32",
+        )
+        ds = Dataset.from_array(arr=stack, geo_ref=geo, no_data_value=-9999.0)
+
+        out = ds.normalize()
+
+        assert out.shape == (3, 2, 2), f"expected a 3-band result, got {out.shape}"
+        assert np.isnan(out[:, 1, 1]).all(), "every band's sentinel cell must stay NaN"
+        assert float(np.nanmin(out)) == pytest.approx(0.0), "global min must map to 0.0"
+        assert float(np.nanmax(out)) == pytest.approx(1.0), "global max must map to 1.0"
+        assert float(out[0, 0, 0]) == pytest.approx(0.0), "the smallest value is 0.0"
+        assert float(out[2, 1, 0]) == pytest.approx(1.0), "the largest value is 1.0"
+
+    def test_multiband_without_no_data_is_normalized_unmasked(self):
+        """A multi-band raster with no sentinel runs the loop but masks nothing.
+
+        Test scenario:
+            With ``no_data_value=None`` every band's physical sentinel is ``None``,
+            so the 3-D loop iterates without masking (the per-band
+            ``sentinel is None`` branch). No cell becomes NaN and the stack is
+            rescaled to 0-1 against its global range.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        stack = np.array(
+            [
+                [[0.0, 3.0], [6.0, 9.0]],
+                [[1.0, 4.0], [7.0, 10.0]],
+                [[2.0, 5.0], [8.0, 11.0]],
+            ],
+            dtype="float32",
+        )
+        ds = Dataset.from_array(arr=stack, geo_ref=geo, no_data_value=None)
+
+        out = ds.normalize()
+
+        assert not np.isnan(out).any(), "no cell should be NaN without a sentinel"
+        assert float(np.min(out)) == pytest.approx(0.0), "global min must map to 0.0"
+        assert float(np.max(out)) == pytest.approx(1.0), "global max must map to 1.0"
+
 
 class TestPickleRoundTrip:
     """Pickle behaviour of collaborators and of the parent Dataset."""
