@@ -52,6 +52,7 @@ from pyramids.base._utils import (
 from pyramids.base.crs import crs_from_user_input, crs_spec, reproject_coordinates
 from pyramids.base.protocols import ArrayLike
 from pyramids.base.remote import ambient_store_config, is_network_backed
+from pyramids.dataset.cog.options import to_gdal_options
 from pyramids.dataset.abstract_dataset import (
     OVERVIEW_LEVELS,
     RESAMPLING_METHODS,
@@ -2548,7 +2549,9 @@ class IO(_Engine["Dataset"]):
         vsi_dir = new_vsimem_path("")
         out_name = f"out.{extension}"
         vsi_path = f"{vsi_dir}/{out_name}"
-        options = [f"{key}={value}" for key, value in (creation_options or {}).items()]
+        # Shared robust serializer (bool -> YES/NO, drops None, upper-cases keys)
+        # rather than a bare f-string that emitted "KEY=True" / "KEY=None".
+        options = to_gdal_options(creation_options)
         try:
             # strict=1 (the GDAL default): a driver that cannot represent the
             # dataset faithfully (e.g. PNG asked to encode float32) must fail
