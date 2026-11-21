@@ -275,7 +275,7 @@ def curvefit_axis(
 
 
 def differentiate_axis(
-    values: np.ndarray, coord: Any, axis: int = 0
+    values: np.ndarray, coord: Any, axis: int = 0, nodata: Any = None
 ) -> np.typing.NDArray:
     """The derivative along ``axis``, honouring the coordinate's own spacing.
 
@@ -286,24 +286,31 @@ def differentiate_axis(
         values: The data array.
         coord: The coordinate along ``axis``.
         axis: The axis to differentiate along.
+        nodata: The declared no-data sentinel, masked to ``NaN`` before the gradient so a
+            missing step is not differentiated as a measurement (D3). ``None`` masks only NaN.
 
     Returns:
-        np.ndarray: The derivative, the same shape as ``values``.
+        np.ndarray: The derivative, the same shape as ``values``, ``NaN`` where a step read a gap.
 
     Raises:
         ValueError: The axis has fewer than two steps, so no difference is defined.
     """
-    array = np.asarray(values, dtype="float64")
+    array = np.array(
+        values, dtype="float64"
+    )  # copy: the mask must not touch the caller's buffer
     x = numeric_coordinate(coord)
     if array.shape[axis] < 2:
         raise ValueError(
             f"differentiate: needs at least two steps along the axis, got "
             f"{array.shape[axis]}."
         )
+    array[nodata_mask(array, nodata)] = np.nan
     return np.asarray(np.gradient(array, x, axis=axis), dtype="float64")
 
 
-def integrate_axis(values: np.ndarray, coord: Any, axis: int = 0) -> np.typing.NDArray:
+def integrate_axis(
+    values: np.ndarray, coord: Any, axis: int = 0, nodata: Any = None
+) -> np.typing.NDArray:
     """The definite integral along ``axis``, which the integral consumes.
 
     Trapezoidal over the coordinate's own spacing.
@@ -312,24 +319,29 @@ def integrate_axis(values: np.ndarray, coord: Any, axis: int = 0) -> np.typing.N
         values: The data array.
         coord: The coordinate along ``axis``.
         axis: The axis to integrate along.
+        nodata: The declared no-data sentinel, masked to ``NaN`` before the integral so a
+            missing step is not integrated as a measurement (D3). ``None`` masks only NaN.
 
     Returns:
-        np.ndarray: The integral, with ``axis`` removed.
+        np.ndarray: The integral, with ``axis`` removed; ``NaN`` where any step read a gap.
 
     Raises:
         ValueError: The axis has fewer than two steps.
     """
-    array = np.asarray(values, dtype="float64")
+    array = np.array(
+        values, dtype="float64"
+    )  # copy: the mask must not touch the caller's buffer
     x = numeric_coordinate(coord)
     if array.shape[axis] < 2:
         raise ValueError(
             f"integrate: needs at least two steps along the axis, got {array.shape[axis]}."
         )
+    array[nodata_mask(array, nodata)] = np.nan
     return np.asarray(np.trapezoid(array, x=x, axis=axis), dtype="float64")
 
 
 def cumulative_integrate_axis(
-    values: np.ndarray, coord: Any, axis: int = 0
+    values: np.ndarray, coord: Any, axis: int = 0, nodata: Any = None
 ) -> np.typing.NDArray:
     """The running integral along ``axis``, which keeps the axis.
 
@@ -340,20 +352,26 @@ def cumulative_integrate_axis(
         values: The data array.
         coord: The coordinate along ``axis``.
         axis: The axis to integrate along.
+        nodata: The declared no-data sentinel, masked to ``NaN`` before the integral so a
+            missing step is not accumulated as a measurement (D3). ``None`` masks only NaN.
 
     Returns:
-        np.ndarray: The running integral, the same shape as ``values``.
+        np.ndarray: The running integral, the same shape as ``values``; ``NaN`` from the first
+        step that read a gap onward.
 
     Raises:
         ValueError: The axis has fewer than two steps.
     """
-    array = np.asarray(values, dtype="float64")
+    array = np.array(
+        values, dtype="float64"
+    )  # copy: the mask must not touch the caller's buffer
     x = numeric_coordinate(coord)
     if array.shape[axis] < 2:
         raise ValueError(
             f"cumulative_integrate: needs at least two steps along the axis, got "
             f"{array.shape[axis]}."
         )
+    array[nodata_mask(array, nodata)] = np.nan
     return np.asarray(
         cumulative_trapezoid(array, x=x, axis=axis, initial=0.0), dtype="float64"
     )

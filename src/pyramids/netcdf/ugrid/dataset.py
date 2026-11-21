@@ -4641,8 +4641,8 @@ class MeshDataset(_MeshFacades):
         return self._map_alongtime(
             "differentiate",
             variable_name,
-            lambda values, axis, _nodata, coord: _timeseries.differentiate_axis(
-                values, coord, axis
+            lambda values, axis, nodata, coord: _timeseries.differentiate_axis(
+                values, coord, axis, nodata
             ),
         )
 
@@ -4669,8 +4669,8 @@ class MeshDataset(_MeshFacades):
         return self._map_alongtime(
             "cumulative_integrate",
             variable_name,
-            lambda values, axis, _nodata, coord: _timeseries.cumulative_integrate_axis(
-                values, coord, axis
+            lambda values, axis, nodata, coord: _timeseries.cumulative_integrate_axis(
+                values, coord, axis, nodata
             ),
         )
 
@@ -4790,7 +4790,7 @@ class MeshDataset(_MeshFacades):
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to integrate.")
             total = _timeseries.integrate_axis(
-                np.asarray(data), _variable_time_coord(var), axis
+                np.asarray(data), _variable_time_coord(var), axis, var.nodata
             )
             # The implicit carry is what decides: a static mask survives the collapse (as it
             # does through `reduce`), while a per-step one cannot follow an axis that is gone.

@@ -151,6 +151,56 @@ class TestIntegrate:
         assert result.data.shape == (2,), "one value per face"
 
 
+class TestCalculusHonoursTheSentinel:
+    """D3: differentiate / integrate / cumulative_integrate must mask the declared gap.
+
+    Before the fix the sentinel was integrated as a measurement, so face 1 answered
+    ``-9997`` instead of a missing marker, declaring ``nodata=None`` so nothing downstream
+    could tell. The kernels now mask the gap to ``NaN`` (the documented convention) and the
+    gap-free face is unchanged.
+    """
+
+    def _gappy(self):
+        """Face 0 is clean (1,10,20 over t=0,1,2); face 1's middle step is a -9999 gap."""
+        ds = _temporal(np.array([[0.0, 1.0], [10.0, -9999.0], [20.0, 3.0]]))
+        ds["v"].nodata = -9999.0
+        return ds
+
+    def test_integrate_masks_the_gap(self):
+        out = self._gappy().integrate()["v"].data
+        assert out[0] == pytest.approx(20.0), "the clean face is unchanged"
+        assert np.isnan(out[1]), "the gap is missing, not -9997"
+
+    def test_differentiate_masks_the_gap(self):
+        out = self._gappy().differentiate()["v"].data
+        assert out[:, 0].tolist() == pytest.approx([10.0, 10.0, 10.0])
+        assert np.isnan(out[:, 1]).any(), "the gap no longer differentiates as data"
+
+    def test_cumulative_integrate_masks_the_gap(self):
+        out = self._gappy().cumulative_integrate()["v"].data
+        assert out[:, 0].tolist() == pytest.approx([0.0, 5.0, 20.0])
+        assert np.isnan(out[-1, 1]), (
+            "the running total is poisoned past the gap, not -9997"
+        )
+
+    def test_the_kernels_do_not_mutate_the_source(self):
+        """The in-place NaN mask must copy first, or the live variable buffer corrupts."""
+        ds = self._gappy()
+        before = np.array(ds["v"].data, copy=True)
+        ds.integrate()
+        ds.differentiate()
+        ds.cumulative_integrate()
+        assert np.array_equal(ds["v"].data, before), "the source variable was mutated"
+
+    def test_rank_and_polyfit_are_unchanged(self):
+        """The regression fence: the two members that already honoured nodata still do."""
+        ds = self._gappy()
+        rank = ds.rank()["v"].data
+        assert np.isnan(rank[1, 1]), "the gap is still excluded from ranking"
+        slopes = ds.polyfit(1)["v"].data
+        assert slopes[0, 1] == pytest.approx(1.0), "still fitted over the finite steps"
+
+
 class TestCumulativeIntegrate:
     """The running integral keeps the axis."""
 
