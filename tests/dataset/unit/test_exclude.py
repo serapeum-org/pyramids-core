@@ -28,7 +28,8 @@ class TestBuildExcludeList:
     def test_nan_sentinel_is_kept(self):
         """A NaN sentinel is a value, not None, so it stays in the list."""
         out = build_exclude_list(float("nan"))
-        assert len(out) == 1 and np.isnan(out[0])
+        assert len(out) == 1
+        assert np.isnan(out[0])
 
 
 class TestRequireOneLabelPerFrame:

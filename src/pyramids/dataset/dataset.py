@@ -1239,14 +1239,14 @@ class Dataset(RasterBase):
         """
         arr = np.array(self.read_array(), dtype="float64")
         if arr.ndim == 2:
-            sentinel = self.analysis._physical_no_data(0)
-            if sentinel is not None:
-                arr = np.where(is_no_data(arr, sentinel), np.nan, arr)
+            no_data = self.analysis._physical_no_data(0)
+            if no_data is not None:
+                arr = np.where(is_no_data(arr, no_data), np.nan, arr)
         else:
             for band in range(arr.shape[0]):
-                sentinel = self.analysis._physical_no_data(band)
-                if sentinel is not None:
-                    arr[band] = np.where(is_no_data(arr[band], sentinel), np.nan, arr[band])
+                no_data = self.analysis._physical_no_data(band)
+                if no_data is not None:
+                    arr[band] = np.where(is_no_data(arr[band], no_data), np.nan, arr[band])
         return self.analysis.normalize(arr)
 
     def fill(self, *args, **kwargs):
