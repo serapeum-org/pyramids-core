@@ -138,7 +138,7 @@ class TestPlotAnimationAxisValues:
         """An explicit override whose length != frame count raises a clear error."""
         cube = _collection(3)
         with patch("pyramids.dataset.collection.render_array") as render:
-            with pytest.raises(ValueError, match="got 2 frame label\(s\) for 3 frame"):
+            with pytest.raises(ValueError, match=r"got 2 frame label\(s\) for 3 frame"):
                 cube.plot(band=0, animation_axis_values=[7, 8])
         render.assert_not_called()
 
@@ -147,7 +147,7 @@ class TestPlotAnimationAxisValues:
         cube = _collection(3)
         labels = iter([7, 8])  # a sized-less iterator, built outside the raises block
         with patch("pyramids.dataset.collection.render_array"):
-            with pytest.raises(ValueError, match="got 2 frame label\(s\) for 3 frame"):
+            with pytest.raises(ValueError, match=r"got 2 frame label\(s\) for 3 frame"):
                 cube.plot(band=0, animation_axis_values=labels)
 
     def test_parsed_dates_label_frames_end_to_end(self, tmp_path):
