@@ -52,12 +52,12 @@ from pyramids.base._utils import (
 from pyramids.base.crs import crs_from_user_input, crs_spec, reproject_coordinates
 from pyramids.base.protocols import ArrayLike
 from pyramids.base.remote import ambient_store_config, is_network_backed
-from pyramids.dataset.cog.options import to_gdal_options
 from pyramids.dataset.abstract_dataset import (
     OVERVIEW_LEVELS,
     RESAMPLING_METHODS,
     under_gdal_env,
 )
+from pyramids.dataset.cog.options import to_gdal_options
 from pyramids.dataset.engines.cog import (
     _RESAMPLING_ALG,
     _WEB_MERCATOR_HALF_EXTENT,
