@@ -44,6 +44,11 @@ from scipy import ndimage
 
 from pyramids.base._compute_backend import require_backend_method
 from pyramids.base._domain import is_no_data
+from pyramids.base._terrain import (
+    aspect_from_gradient,
+    slope_from_gradient,
+    validate_angle_units,
+)
 
 if TYPE_CHECKING:
     import dask.array as da
@@ -478,13 +483,12 @@ def slope(
 
             ```
     """
+    validate_angle_units(units, operation="slope")
     cell_size = float(ds.cell_size)
 
     def _kernel(arr: np.ndarray) -> np.typing.NDArray:
         dz_dx, dz_dy = _gradient(arr, cell_size)
-        magnitude = np.hypot(dz_dx, dz_dy)
-        radians = np.arctan(magnitude)
-        return np.degrees(radians) if units == "degrees" else radians
+        return slope_from_gradient(dz_dx, dz_dy, units=units)
 
     return _apply_eager_or_lazy(_kernel, ds, 1, chunks, band, np.float64)
 
@@ -534,8 +538,7 @@ def aspect(
 
     def _kernel(arr: np.ndarray) -> np.typing.NDArray:
         dz_dx, dz_dy = _gradient(arr, cell_size)
-        angle = np.degrees(np.arctan2(dz_dy, -dz_dx))
-        return np.mod(450.0 - angle, 360.0)
+        return aspect_from_gradient(dz_dx, dz_dy)
 
     return _apply_eager_or_lazy(_kernel, ds, 1, chunks, band, np.float64)
 

@@ -74,6 +74,18 @@ class TestSlope:
         inside = out[1:-1, 1:-1]
         assert float(inside.mean()) > 0.0
 
+    def test_valid_units_are_unchanged(self, ramp_raster):
+        """D7: degrees and radians still produce the same numbers as before."""
+        deg = float(np.nanmax(np.asarray(ramp_raster.slope(units="degrees"))))
+        rad = float(np.nanmax(np.asarray(ramp_raster.slope(units="radians"))))
+        assert deg == pytest.approx(np.degrees(rad))
+
+    @pytest.mark.parametrize("units", ["DEGREES", "radian", "deg", "banana"])
+    def test_an_unknown_unit_raises_instead_of_silent_radians(self, ramp_raster, units):
+        """D7: a bad or miscased ``units`` raises; it used to silently return radians."""
+        with pytest.raises(ValueError, match="units must be 'degrees' or 'radians'"):
+            ramp_raster.slope(units=units)
+
 
 class TestAspect:
     def test_returns_degrees(self, ramp_raster):
