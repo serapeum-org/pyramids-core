@@ -5462,6 +5462,12 @@ class Analysis(_Engine["Dataset"]):
 
         Returns:
             np.ndarray: The values rescaled to 0.0-1.0, with NaNs preserved.
+
+        See Also:
+            pyramids.dataset.Dataset.normalize: The raster-level facade that
+                masks each band's physical no-data to NaN before calling this,
+                so stored sentinels are excluded from the range rather than
+                skewing it.
         """
         array = np.asarray(array, dtype=float)
         array_min = np.nanmin(array)

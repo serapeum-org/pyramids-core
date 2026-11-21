@@ -209,8 +209,8 @@ class GeoTransform(NamedTuple):
     def is_north_up(self) -> bool:
         """True for a plain north-up grid: axis-aligned, columns east, rows south.
 
-        The common raster orientation — no rotation, a positive ``pixel_width``
-        (columns run east) and a negative ``pixel_height`` (rows run south).
+        The common raster orientation — no rotation, a positive `pixel_width`
+        (columns run east) and a negative `pixel_height` (rows run south).
         Callers use it to take a fast divide-by-pixel-size path that is only
         valid when the grid is neither rotated nor flipped.
 

@@ -15,17 +15,17 @@ from typing import Any
 def enumerate_overviews(
     band: Any, full_width: int
 ) -> Iterator[tuple[int, int, int, tuple[int, int], int]]:
-    """Yield one record per overview level of ``band``.
+    """Yield one record per overview level of `band`.
 
     Args:
-        band: A GDAL raster band (``gdal.Band``) to walk the overviews of.
+        band: A GDAL raster band (`gdal.Band`) to walk the overviews of.
         full_width: The full-resolution raster width in pixels, used as the
             numerator of each level's decimation factor.
 
     Yields:
-        tuple[int, int, int, tuple[int, int], int]: ``(index, width, height,
-            (block_x, block_y), decimation)`` for each overview level, where
-            ``decimation`` is ``round(full_width / level_width)`` (0 when the
+        tuple[int, int, int, tuple[int, int], int]: `(index, width, height,
+            (block_x, block_y), decimation)` for each overview level, where
+            `decimation` is `round(full_width / level_width)` (0 when the
             level reports a zero width).
     """
     for index in range(band.GetOverviewCount()):

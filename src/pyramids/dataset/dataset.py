@@ -1227,15 +1227,15 @@ class Dataset(RasterBase):
     def normalize(self) -> np.ndarray:
         """Facade — delegates to :meth:`Analysis.normalize <pyramids.dataset.engines.Analysis.normalize>`.
 
-        Linearly rescale the raster's values into the ``0.0``-``1.0`` range,
+        Linearly rescale the raster's values into the `0.0`-`1.0` range,
         excluding no-data. Each band's physical no-data cells are masked to
-        ``NaN`` first, so they neither pollute the global min/max nor appear as
-        data, and they stay ``NaN`` in the result. A multi-band raster is
+        `NaN` first, so they neither pollute the global min/max nor appear as
+        data, and they stay `NaN` in the result. A multi-band raster is
         normalised against one global min/max across every band.
 
         Returns:
-            numpy.ndarray: The raster's values rescaled to ``0.0``-``1.0``, with
-                no-data cells returned as ``NaN``.
+            numpy.ndarray: The raster's values rescaled to `0.0`-`1.0`, with
+                no-data cells returned as `NaN`.
         """
         arr = np.array(self.read_array(), dtype="float64")
         if arr.ndim == 2:
