@@ -320,7 +320,7 @@ The four stages each map onto a per-subsystem how-to. Continue to:
 The bundled notebooks exercise the full stack against real public
 datasets:
 
-- `docs/examples/dataset/dask-lazy-datasets.ipynb` — Sentinel-2 COGs
+- `dask-lazy-datasets.ipynb` (in the `pyramids-lazy` repo) — Sentinel-2 COGs
   on AWS open-data.
 - `docs/examples/feature/dask-lazy-features.ipynb` — Overture Maps
   GeoParquet on AWS.

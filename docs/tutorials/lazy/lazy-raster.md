@@ -292,5 +292,5 @@ peak = lazy.max().compute()
 print(f"max DN: {peak}")
 ```
 
-The full, runnable version is
-`docs/examples/dataset/dask-lazy-datasets.ipynb`.
+The full, runnable version lives in the `pyramids-lazy` repo
+(`docs/examples/dataset/dask-lazy-datasets.ipynb`).
