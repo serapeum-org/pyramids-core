@@ -73,6 +73,33 @@ def copy_yields_writable(driver_name: str) -> bool:
     return bool(entry.get("Creation"))
 
 
+def default_creation_options(driver: str) -> list[str]:
+    """The default GDAL creation options for a plain write to ``driver``.
+
+    GTiff gets lossless ``COMPRESS=LZW`` -- the package's historical default,
+    which compresses well at some CPU cost; every other driver gets none rather
+    than an option it would reject. This is the single source of that policy,
+    adopted by the default (no explicit options) write paths.
+
+    Args:
+        driver: The GDAL driver short name (e.g. ``"GTiff"``).
+
+    Returns:
+        list[str]: ``["COMPRESS=LZW"]`` for ``"GTiff"``, otherwise ``[]``.
+
+    Examples:
+        ```python
+        >>> from pyramids.dataset._driver import default_creation_options
+        >>> default_creation_options("GTiff")
+        ['COMPRESS=LZW']
+        >>> default_creation_options("PNG")
+        []
+
+        ```
+    """
+    return ["COMPRESS=LZW"] if driver == "GTiff" else []
+
+
 def resolve_output_driver(path: str | Path | None, *, for_copy: bool = False) -> str:
     """Return the GDAL driver name for a destination path.
 

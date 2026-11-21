@@ -73,6 +73,7 @@ from pyramids.base.remote import cloud_config_from_env, redact_credentials
 from pyramids.dataset._driver import (
     MEMORY_DRIVER,
     copy_yields_writable,
+    default_creation_options,
     resolve_output_driver,
 )
 from pyramids.dataset._drivers import (
@@ -5947,13 +5948,8 @@ class Dataset(RasterBase):
                 # Callers that need tiled / sparse / BigTIFF output (e.g.
                 # create_empty) pass their own options.
                 creation_options = options
-            elif driver == "GTiff":
-                # LZW is lossless and compresses well, at the cost of more
-                # computation. GTiff-specific, so other drivers get nothing
-                # rather than an option they would reject.
-                creation_options = ["COMPRESS=LZW"]
             else:
-                creation_options = []
+                creation_options = default_creation_options(driver)
             dataset = gdal.GetDriverByName(driver).Create(
                 str(path), cols, rows, bands, dtype, creation_options
             )
@@ -7558,7 +7554,7 @@ class Dataset(RasterBase):
                 # depend on an unrelated argument. That is the same defect this
                 # branch removed from `merge_rasters`; one gate for both paths.
                 driver = resolve_output_driver(path)
-                options = ["COMPRESS=LZW"] if driver == "GTiff" else []
+                options = default_creation_options(driver)
                 dst = gdal.GetDriverByName(driver).CreateCopy(
                     str(path), vrt, strict=1, options=options
                 )
