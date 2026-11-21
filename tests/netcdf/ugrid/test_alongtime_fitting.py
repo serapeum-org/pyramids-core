@@ -262,6 +262,26 @@ class TestCoarsen:
     def test_other_reducers(self):
         assert np.allclose(_temporal(_RAMP).coarsen(2, "sum")["v"].data, [[10.0, 20.0]])
         assert np.allclose(_temporal(_RAMP).coarsen(2, "max")["v"].data, [[10.0, 20.0]])
+
+    def test_it_skips_the_sentinel_instead_of_averaging_it(self):
+        """D6: coarsen was the one binning path that averaged -9999 as data.
+
+        mean(1.0, -9999.0) under skipna is 1.0, as MeshDataset.reduce and the cube answer;
+        it used to return -4999.0 while still declaring nodata=-9999.0.
+        """
+        ds = _temporal(np.array([[1.0, 1.0], [-9999.0, 3.0], [2.0, 2.0], [4.0, 4.0]]))
+        ds["v"].nodata = -9999.0
+        assert ds.coarsen(2, "mean")["v"].data.tolist() == [[1.0, 2.0], [3.0, 3.0]]
+        assert ds.coarsen(2, "sum")["v"].data.tolist() == [[1.0, 4.0], [6.0, 6.0]]
+        assert ds.coarsen(2, "min")["v"].data.tolist() == [[1.0, 1.0], [2.0, 2.0]]
+
+    def test_coarsen_does_not_mutate_the_source(self):
+        """The in-place NaN mask must copy first."""
+        ds = _temporal(np.array([[1.0, 1.0], [-9999.0, 3.0], [2.0, 2.0], [4.0, 4.0]]))
+        ds["v"].nodata = -9999.0
+        before = np.array(ds["v"].data, copy=True)
+        ds.coarsen(2, "mean")
+        assert np.array_equal(ds["v"].data, before)
         assert np.allclose(_temporal(_RAMP).coarsen(2, "min")["v"].data, [[0.0, 0.0]])
 
     def test_an_unknown_reducer_is_refused(self):

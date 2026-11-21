@@ -7127,7 +7127,7 @@ def _coarsened_variable(
         )
     axis = cast("int", var.time_axis_index)
     labels = [coord[index * window] for index in range(blocks)]
-    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis)
+    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis, var.nodata)
     # The axis is re-binned, so a per-step mask no longer lines up with it.
     moved = var.with_data(reduced, active=None if var.active_has_time else _KEEP_ACTIVE)
     moved.attributes = {**var.attributes, "time_values": labels}

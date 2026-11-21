@@ -414,7 +414,11 @@ def rank_axis(
 
 
 def coarsen_axis(
-    values: np.ndarray, window: int, how: str = "mean", axis: int = 0
+    values: np.ndarray,
+    window: int,
+    how: str = "mean",
+    axis: int = 0,
+    nodata: Any = None,
 ) -> np.typing.NDArray:
     """Block-aggregate ``axis`` into windows of ``window`` steps.
 
@@ -430,6 +434,9 @@ def coarsen_axis(
         window: Steps per block, at least 1.
         how: ``"mean"``, ``"sum"``, ``"min"``, ``"max"``, ``"median"`` or ``"std"``.
         axis: The axis to aggregate along.
+        nodata: The declared no-data sentinel, masked to ``NaN`` so the nan-aware reducers
+            skip it rather than averaging ``-9999`` in as a measurement (D6). ``None`` masks
+            only NaN.
 
     Returns:
         np.ndarray: The aggregate, with ``axis`` shortened to ``n // window``. A block holding
@@ -454,7 +461,11 @@ def coarsen_axis(
         raise ValueError(
             f"coarsen: how must be one of {sorted(reducers)}, got {how!r}."
         )
-    array = np.moveaxis(np.asarray(values, dtype="float64"), axis, 0)
+    array = np.moveaxis(np.array(values, dtype="float64"), axis, 0)
+    # D6: mask the declared gap to NaN so the nan-aware reducers below skip it instead of
+    # averaging the sentinel in as data. `np.array` copied above, so the caller's buffer is
+    # untouched.
+    array[nodata_mask(array, nodata)] = np.nan
     blocks = array.shape[0] // window
     if blocks == 0:
         raise ValueError(
