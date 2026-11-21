@@ -49,9 +49,9 @@ def _validate_variable(mesh: MeshDataset, var: str | None) -> None:
     Raises:
         ValueError: ``var`` is given but is not among the mesh's data variables.
     """
-    if var is not None and var not in mesh.data_variable_names:
+    if var is not None and var not in mesh.variable_names:
         raise ValueError(
-            f"unknown mesh variable {var!r}; available: {list(mesh.data_variable_names)}"
+            f"unknown mesh variable {var!r}; available: {list(mesh.variable_names)}"
         )
 
 
@@ -78,7 +78,7 @@ def _cmd_mesh_info(args: argparse.Namespace) -> int:
         "n_layers": mesh.n_layer,
         "epsg": mesh.epsg,
         "bounds": None if bounds is None else [json_safe(float(v)) for v in bounds],
-        "variables": list(mesh.data_variable_names),
+        "variables": list(mesh.variable_names),
         "time_steps": 0 if time_values is None else len(time_values),
     }
     if args.json:

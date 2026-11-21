@@ -18,7 +18,7 @@ grouped by category.
 |----------|--------|-------------|
 | `mesh` | **(D)** | The `Mesh2d` topology object |
 | `mesh_name` | **(D)** | Name of the mesh topology variable |
-| `data_variable_names` | **(D)** | Names of all data variables |
+| `variable_names` | **(D)** | Names of all data variables |
 | `crs` | **(D)** | CRS as `pyproj.CRS`, or `None` |
 | `epsg` | **(D)** | EPSG code of the CRS, or `None` |
 | `crs_wkt` | **(D)** | CRS as WKT string, or `None` |

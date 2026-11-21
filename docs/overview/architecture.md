@@ -108,7 +108,7 @@ graph LR
     end
 
     subgraph MeshDataset
-        UG_props["<b>Properties</b><br/>mesh · epsg · n_face<br/>data_variable_names"]
+        UG_props["<b>Properties</b><br/>mesh · epsg · n_face<br/>variable_names"]
         UG_create["<b>Create</b><br/>read_file<br/>from_arrays"]
         UG_spatial["<b>Spatial</b><br/>subset_by_bounds<br/>clip"]
         UG_convert["<b>Convert</b><br/>to_dataset<br/>to_geodataframe"]

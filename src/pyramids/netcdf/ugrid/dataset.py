@@ -523,10 +523,27 @@ class MeshDataset(_MeshFacades):
         return result
 
     @property
-    def data_variable_names(self) -> list[str]:
+    def variable_names(self) -> list[str]:
         """Names of all data variables."""
         result = list(self._data_variables.keys())
         return result
+
+    @property
+    def data_variable_names(self) -> list[str]:
+        """Deprecated alias for :attr:`variable_names`.
+
+        Deprecated: Renamed to ``variable_names`` for parity with the sibling
+        :attr:`pyramids.netcdf.NetCDF.variable_names`.
+
+        Returns:
+            list[str]: The names of all data variables.
+        """
+        warnings.warn(
+            "MeshDataset.data_variable_names is deprecated; use variable_names.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variable_names
 
     @property
     def crs(self) -> CRS | None:
@@ -747,7 +764,7 @@ class MeshDataset(_MeshFacades):
         """
         if key not in self._data_variables:
             raise KeyError(
-                f"Variable '{key}' not found. Available: {self.data_variable_names}"
+                f"Variable '{key}' not found. Available: {self.variable_names}"
             )
         return self._data_variables[key]
 
@@ -906,7 +923,7 @@ class MeshDataset(_MeshFacades):
         for name in drop:
             if name not in new_vars:
                 raise KeyError(
-                    f"Variable {name!r} not found. Available: {self.data_variable_names}"
+                    f"Variable {name!r} not found. Available: {self.variable_names}"
                 )
             del new_vars[name]
         return self._rebuild(new_vars)
@@ -927,7 +944,7 @@ class MeshDataset(_MeshFacades):
         """
         if old not in self._data_variables:
             raise KeyError(
-                f"Variable {old!r} not found. Available: {self.data_variable_names}"
+                f"Variable {old!r} not found. Available: {self.variable_names}"
             )
         if new in self._data_variables and new != old:
             raise ValueError(f"Variable {new!r} already exists.")
@@ -1882,7 +1899,7 @@ class MeshDataset(_MeshFacades):
                 ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
                 ...     data={"depth": np.array([1.5, 2.5])},
                 ... )
-                >>> mesh.data_variable_names
+                >>> mesh.variable_names
                 ['depth']
                 >>> mesh["depth"].location
                 'face'
@@ -6748,7 +6765,7 @@ class MeshDataset(_MeshFacades):
         result = (
             f"MeshDataset(mesh='{self.mesh_name}', "
             f"n_node={self.n_node}, n_face={self.n_face}, n_edge={self.n_edge}, "
-            f"variables={self.data_variable_names})"
+            f"variables={self.variable_names})"
         )
         return result
 

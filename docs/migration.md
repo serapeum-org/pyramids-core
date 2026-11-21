@@ -1221,6 +1221,7 @@ constructors, which were internal plumbing and are now private with **no** alias
 
 | old | new | note |
 |---|---|---|
+| `MeshDataset.data_variable_names` | `MeshDataset.variable_names` | parity with the sibling `NetCDF.variable_names` |
 | `MeshVariable.time_index` | `MeshVariable.time_axis_index` | returns the time *axis number*, not a time *step* |
 | `MeshDataset.n_layers` | `MeshDataset.n_layer` | singular, matching `n_node`/`n_face`/`n_edge` |
 | `MeshDataset.n_layer_interfaces` | `MeshDataset.n_layer_interface` | singular `n_*` family |
@@ -1235,10 +1236,12 @@ constructors, which were internal plumbing and are now private with **no** alias
 var = mesh.get_data("salinity")
 axis = var.time_index
 n = mesh.n_layers
+names = mesh.data_variable_names
 # After
 var = mesh["salinity"]          # or mesh.get("salinity") for a default
 axis = var.time_axis_index
 n = mesh.n_layer
+names = mesh.variable_names
 ```
 
 **`NetCDF.meta_data` is now `NetCDF.metadata`** (part of the dataset naming cleanup, issue #1462). `meta_data`

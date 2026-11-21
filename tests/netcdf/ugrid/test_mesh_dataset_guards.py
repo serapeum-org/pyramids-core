@@ -121,7 +121,7 @@ class TestRenameVariable:
         """A rename rebuilds the mapping, so every other variable survives it unchanged."""
         two = mesh.with_variable("extra", np.array([5.0, 6.0]), location="face")
         renamed = two.rename_variable("depth", "bed_level")
-        assert sorted(renamed.data_variable_names) == ["bed_level", "extra"]
+        assert sorted(renamed.variable_names) == ["bed_level", "extra"]
         assert renamed["extra"].data.tolist() == [5.0, 6.0]
 
 

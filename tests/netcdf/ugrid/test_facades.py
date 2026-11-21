@@ -105,7 +105,7 @@ class TestVectorFacades:
     def test_burn_adds_a_variable(self, strip):
         out = strip.burn(box(-1.0, -1.0, 1.05, 2.0), 9.0, name="b")
         assert out["b"].data[0] == 9.0
-        assert "b" in out.data_variable_names
+        assert "b" in out.variable_names
 
 
 class TestRegridFacades:
@@ -155,7 +155,7 @@ class TestConstructors:
         )
         mesh = MeshDataset.from_structured(raster)
         assert mesh.n_face == 6
-        assert "band_1" in mesh.data_variable_names
+        assert "band_1" in mesh.variable_names
 
 
 class TestVariableResolution:

@@ -59,16 +59,32 @@ class TestUgridDatasetReadFile:
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
         assert ds.n_edge == 17270, f"Expected 17270 edges, got {ds.n_edge}"
 
-    def test_data_variable_names(self, ugrid_convention_nc_path):
+    def test_variable_names(self, ugrid_convention_nc_path):
         """Test that data variable names are detected.
 
         Test scenario:
             Should include mesh2d_node_z and mesh2d_edge_type.
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
-        names = ds.data_variable_names
+        names = ds.variable_names
         assert "mesh2d_node_z" in names, f"Expected 'mesh2d_node_z' in {names}"
         assert "mesh2d_edge_type" in names, f"Expected 'mesh2d_edge_type' in {names}"
+
+    def test_data_variable_names_deprecated_alias(self, ugrid_convention_nc_path):
+        """The old ``data_variable_names`` still works but warns and matches ``variable_names``.
+
+        Test scenario:
+            Accessing the renamed property emits a ``DeprecationWarning`` and returns exactly
+            what ``variable_names`` returns.
+        """
+        ds = MeshDataset.read_file(ugrid_convention_nc_path)
+        with pytest.warns(
+            DeprecationWarning, match="data_variable_names is deprecated"
+        ):
+            deprecated = ds.data_variable_names
+        assert deprecated == ds.variable_names, (
+            f"Alias must match the new property, got {deprecated} vs {ds.variable_names}"
+        )
 
     def test_mesh_name(self, ugrid_convention_nc_path):
         """Test mesh name property.

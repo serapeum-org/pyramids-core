@@ -158,7 +158,7 @@ class TestToFile:
         """export file re-writes a readable UGRID NetCDF."""
         out = str(tmp_path / "copy.nc")
         assert _dispatch(["mesh", "export", "file", str(_MESH), out]) == 0
-        assert set(MeshDataset.read_file(out).data_variable_names)
+        assert set(MeshDataset.read_file(out).variable_names)
 
     def test_refuses_existing(self, tmp_path):
         """A second write without --overwrite raises."""
@@ -420,7 +420,7 @@ class TestToLocation:
             ]
         )
         assert rc == 0
-        assert "mesh2d_node_z" in MeshDataset.read_file(out).data_variable_names
+        assert "mesh2d_node_z" in MeshDataset.read_file(out).variable_names
 
 
 class TestToCrs:
@@ -497,7 +497,7 @@ class TestBurn:
             ]
         )
         assert rc == 0
-        assert "mask" in MeshDataset.read_file(out).data_variable_names
+        assert "mask" in MeshDataset.read_file(out).variable_names
 
     def test_no_all_touched(self, tmp_path):
         """--no-all-touched flips the all_touched flag off and still writes."""
@@ -517,7 +517,7 @@ class TestBurn:
             ]
         )
         assert rc == 0
-        assert "burned" in MeshDataset.read_file(out).data_variable_names
+        assert "burned" in MeshDataset.read_file(out).variable_names
 
 
 class TestRegrid:
@@ -531,7 +531,7 @@ class TestRegrid:
             ["mesh", "export", "regrid", face, out, "--target", face, "--var", "fv"]
         )
         assert rc == 0
-        assert "fv" in MeshDataset.read_file(out).data_variable_names
+        assert "fv" in MeshDataset.read_file(out).variable_names
 
 
 class TestPolygonize:
@@ -570,7 +570,7 @@ class TestAttachData:
             ]
         )
         assert rc == 0
-        assert "velocity" in MeshDataset.read_file(out).data_variable_names
+        assert "velocity" in MeshDataset.read_file(out).variable_names
 
     def test_missing_results_file_raises(self, tmp_path):
         """A non-existent results file raises (a clean OSError subclass)."""
@@ -615,7 +615,7 @@ class TestWithVariable:
             ]
         )
         assert rc == 0
-        assert "wv" in MeshDataset.read_file(out).data_variable_names
+        assert "wv" in MeshDataset.read_file(out).variable_names
 
 
 class TestRenameVariable:
@@ -638,7 +638,7 @@ class TestRenameVariable:
             ]
         )
         assert rc == 0
-        names = MeshDataset.read_file(out).data_variable_names
+        names = MeshDataset.read_file(out).variable_names
         assert "zz" in names
         assert "mesh2d_node_z" not in names
 

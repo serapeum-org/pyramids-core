@@ -81,7 +81,7 @@ class TestMergeCompat:
         a = _temporal(np.array([[1.0, 1.0]]))
         b = _temporal(np.array([[2.0, 2.0]]), name="e")
         out = a.merge([b])
-        assert sorted(out.data_variable_names) == ["d", "e"]
+        assert sorted(out.variable_names) == ["d", "e"]
 
 
 class TestCallShapes:
@@ -109,7 +109,7 @@ class TestCallShapes:
         a = _temporal(np.array([[1.0, 1.0]]))
         b = _temporal(np.array([[2.0, 2.0]]), name="e")
         out = MeshDataset.merge([a, b])
-        assert sorted(out.data_variable_names) == ["d", "e"]
+        assert sorted(out.variable_names) == ["d", "e"]
 
     def test_empty_class_call_refused(self):
         with pytest.raises(ValueError, match="at least one dataset"):

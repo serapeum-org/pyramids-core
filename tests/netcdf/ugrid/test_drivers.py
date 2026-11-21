@@ -585,8 +585,8 @@ class TestAttachData:
         target = tmp_path / "velocity.res"
         target.write_bytes(b"")
         result = mesh.attach_data(target)
-        assert "velocity" in result.data_variable_names
-        assert "velocity" not in mesh.data_variable_names
+        assert "velocity" in result.variable_names
+        assert "velocity" not in mesh.variable_names
         assert result is not mesh
 
     def test_attach_refuses_an_element_count_mismatch(self, tmp_path, registered):
@@ -1029,8 +1029,8 @@ class TestAttachThroughVirtualFilesystem:
         target = tmp_path / "velocity.unclaimed"
         target.write_bytes(b"")
         result = _square_mesh().attach_data(target, driver="attach")
-        assert "velocity" in result.data_variable_names, (
-            f"Expected the attached variable, got: {result.data_variable_names}"
+        assert "velocity" in result.variable_names, (
+            f"Expected the attached variable, got: {result.variable_names}"
         )
 
 
@@ -1365,11 +1365,11 @@ class TestAttachMergeContract:
         target = tmp_path / "v.vres"
         target.write_bytes(b"")
         result = mesh.attach_data(target)
-        assert sorted(result.data_variable_names) == ["depth", "velocity"], (
-            f"Expected both variables, got: {sorted(result.data_variable_names)}"
+        assert sorted(result.variable_names) == ["depth", "velocity"], (
+            f"Expected both variables, got: {sorted(result.variable_names)}"
         )
-        assert mesh.data_variable_names == ["depth"], (
-            f"The original must be unchanged, got: {mesh.data_variable_names}"
+        assert mesh.variable_names == ["depth"], (
+            f"The original must be unchanged, got: {mesh.variable_names}"
         )
 
     def test_a_rebuilt_variable_is_not_a_spurious_collision(self, tmp_path, registered):
@@ -1385,11 +1385,11 @@ class TestAttachMergeContract:
         target = tmp_path / "v.vres"
         target.write_bytes(b"")
         result = _square_mesh().attach_data(target)
-        assert sorted(result.data_variable_names) == [
+        assert sorted(result.variable_names) == [
             "depth",
             "salinity",
             "velocity",
-        ], f"All three expected, got: {sorted(result.data_variable_names)}"
+        ], f"All three expected, got: {sorted(result.variable_names)}"
 
     def test_a_genuine_name_collision_is_refused(self, tmp_path, registered):
         """A driver producing a name the mesh already defines is an unambiguous collision.
@@ -2409,8 +2409,8 @@ class TestAttachResolutionOrder:
         target = tmp_path / "v.res"
         target.write_bytes(b"")
         result = _square_mesh().attach_data(target)
-        assert "velocity" in result.data_variable_names, (
-            f"The second driver should have attached, got: {result.data_variable_names}"
+        assert "velocity" in result.variable_names, (
+            f"The second driver should have attached, got: {result.variable_names}"
         )
         assert first.sniffed == [str(target)], (
             f"The first driver should have been asked and declined, got: {first.sniffed}"
