@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9864,6 +9864,11 @@ constructors, which were internal plumbing and are now private with <strong>no</
 </thead>
 <tbody>
 <tr>
+<td><code>MeshDataset.data_variable_names</code></td>
+<td><code>MeshDataset.variable_names</code></td>
+<td>parity with the sibling <code>NetCDF.variable_names</code></td>
+</tr>
+<tr>
 <td><code>MeshVariable.time_index</code></td>
 <td><code>MeshVariable.time_axis_index</code></td>
 <td>returns the time <em>axis number</em>, not a time <em>step</em></td>
@@ -9909,10 +9914,12 @@ constructors, which were internal plumbing and are now private with <strong>no</
 <a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">var</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">"salinity"</span><span class="p">)</span>
 <a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">axis</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">time_index</span>
 <a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">n</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_layers</span>
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="c1"># After</span>
-<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="n">var</span> <span class="o">=</span> <span class="n">mesh</span><span class="p">[</span><span class="s2">"salinity"</span><span class="p">]</span>          <span class="c1"># or mesh.get("salinity") for a default</span>
-<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="n">axis</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">time_axis_index</span>
-<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="n">n</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_layer</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="n">names</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">data_variable_names</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="c1"># After</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="n">var</span> <span class="o">=</span> <span class="n">mesh</span><span class="p">[</span><span class="s2">"salinity"</span><span class="p">]</span>          <span class="c1"># or mesh.get("salinity") for a default</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="n">axis</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">time_axis_index</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="n">n</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_layer</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="n">names</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">variable_names</span>
 </code></pre></div>
 <p><strong><code>NetCDF.meta_data</code> is now <code>NetCDF.metadata</code></strong> (part of the dataset naming cleanup, issue #1462). <code>meta_data</code>
 keeps working as a <code>DeprecationWarning</code>-emitting alias and still returns the same cached <code>NetCDFMetadata</code>. See the

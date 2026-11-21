@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9186,7 +9186,7 @@ print(f"Edge 0: ({start[0]:.1f}, {start[1]:.1f}) -&gt; ({end[0]:.1f}, {end[1]:.1
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Mesh name: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">mesh_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Data variables: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Data variables: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CRS/EPSG: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5"># Global attributes
@@ -9194,7 +9194,7 @@ for key, value in ds.global_attributes.items():
     print(f"  {key}: {value}")
 
 print(f"\nMesh name: {ds.mesh_name}")
-print(f"Data variables: {ds.data_variable_names}")
+print(f"Data variables: {ds.variable_names}")
 print(f"CRS/EPSG: {ds.epsg}")</div>
 </div>
 </div>
@@ -9221,7 +9221,7 @@ print(f"CRS/EPSG: {ds.epsg}")</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Inspect data variables</span>
-<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="p">:</span>
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">variable_names</span><span class="p">:</span>
     <span class="n">var</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  location:      </span><span class="si">{</span><span class="n">var</span><span class="o">.</span><span class="n">location</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -9233,7 +9233,7 @@ print(f"CRS/EPSG: {ds.epsg}")</div>
     <span class="nb">print</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6"># Inspect data variables
-for name in ds.data_variable_names:
+for name in ds.variable_names:
     var = ds[name]
     print(f"{name}:")
     print(f"  location:      {var.location}")
@@ -10307,7 +10307,7 @@ print(
 <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Round-trip verification:"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Nodes: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2"> (expected </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Faces: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> (expected </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Variables: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">data_variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Variables: </span><span class="si">{</span><span class="n">ds_roundtrip</span><span class="o">.</span><span class="n">variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-27"># Write the synthetic dataset to a new UGRID NetCDF file
 out_path = Path("ugrid_convention_nc_synthetic.nc")
@@ -10319,7 +10319,7 @@ ds_roundtrip = MeshDataset.read_file(out_path)
 print("\nRound-trip verification:")
 print(f"  Nodes: {ds_roundtrip.n_node} (expected {synth_ds.n_node})")
 print(f"  Faces: {ds_roundtrip.n_face} (expected {synth_ds.n_face})")
-print(f"  Variables: {ds_roundtrip.data_variable_names}")</div>
+print(f"  Variables: {ds_roundtrip.variable_names}")</div>
 </div>
 </div>
 </div>

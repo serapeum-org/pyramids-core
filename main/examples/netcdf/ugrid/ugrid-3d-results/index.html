@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8755,7 +8755,7 @@ rewrote that subset through pyramids' own UGRID writer so the sample is small an
 
 <span class="n">ds</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"mesh :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">mesh_name</span><span class="p">,</span> <span class="s2">"| nodes:"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">n_node</span><span class="p">,</span> <span class="s2">"faces:"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">n_face</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"vars :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"vars :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 <span class="n">depth</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">"waterdepth:"</span><span class="p">,</span>
@@ -8783,7 +8783,7 @@ DATA = Path("../../../../examples/data/ugrid/manzese_flood_mesh2d.nc")
 
 ds = MeshDataset.read_file(DATA)
 print("mesh :", ds.mesh_name, "| nodes:", ds.n_node, "faces:", ds.n_face)
-print("vars :", ds.data_variable_names)
+print("vars :", ds.variable_names)
 depth = ds["mesh2d_waterdepth"]
 print(
     "waterdepth:",
@@ -8881,7 +8881,7 @@ plt.show()</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3631/245703939.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+<pre>/tmp/ipykernel_3588/245703939.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre>
 </div>
@@ -9037,13 +9037,7 @@ print(
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>dry cells blanked at last step: 1617
 same cells in the raw data are not NaN: True
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>a dry cell keeps its real value in .data: 0.0 -&gt; NaN in masked_values: nan
+a dry cell keeps its real value in .data: 0.0 -&gt; NaN in masked_values: nan
 </pre>
 </div>
 </div>
@@ -9220,7 +9214,7 @@ the main variable now advertises its mask companion: mesh2d_waterdepth_active
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3631/2762037098.py:3: DeprecationWarning: MeshDataset.sel_time_range is deprecated; use isel(time=slice(start, stop)) instead.
+<pre>/tmp/ipykernel_3588/2762037098.py:3: DeprecationWarning: MeshDataset.sel_time_range is deprecated; use isel(time=slice(start, stop)) instead.
   rng = ds.sel_time_range(1, 4)
 </pre>
 </div>

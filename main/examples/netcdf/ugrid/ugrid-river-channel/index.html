@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8896,12 +8896,12 @@ print(ds)</div>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Bounds:      x=[</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">] m"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"             y=[</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">] m"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"EPSG:        </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variables:   </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variables:   </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">variable_names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Conventions: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">global_attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Conventions'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">()</span>
 
 <span class="c1"># Inspect each variable</span>
-<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_variable_names</span><span class="p">:</span>
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">variable_names</span><span class="p">:</span>
     <span class="n">var</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  location=</span><span class="si">{</span><span class="n">var</span><span class="o">.</span><span class="n">location</span><span class="si">}</span><span class="s2">, shape=</span><span class="si">{</span><span class="n">var</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, has_time=</span><span class="si">{</span><span class="n">var</span><span class="o">.</span><span class="n">has_time</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -8914,12 +8914,12 @@ print(f"Edges:       {mesh.n_edge}")
 print(f"Bounds:      x=[{mesh.bounds[0]:.0f}, {mesh.bounds[2]:.0f}] m")
 print(f"             y=[{mesh.bounds[1]:.0f}, {mesh.bounds[3]:.0f}] m")
 print(f"EPSG:        {ds.epsg}")
-print(f"Variables:   {ds.data_variable_names}")
+print(f"Variables:   {ds.variable_names}")
 print(f"Conventions: {ds.global_attributes.get('Conventions', 'N/A')}")
 print()
 
 # Inspect each variable
-for name in ds.data_variable_names:
+for name in ds.variable_names:
     var = ds[name]
     print(f"{name}:")
     print(f"  location={var.location}, shape={var.shape}, has_time={var.has_time}")</div>
@@ -9356,9 +9356,9 @@ Time step 3: water_level shape = (273,)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3689/2128985135.py:2: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
+<pre>/tmp/ipykernel_3646/2128985135.py:2: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
   ds_t0 = ds.sel_time(0)
-/tmp/ipykernel_3689/2128985135.py:3: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
+/tmp/ipykernel_3646/2128985135.py:3: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
   ds_t3 = ds.sel_time(3)
 </pre>
 </div>
@@ -9812,7 +9812,7 @@ plt.show()</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3689/618950163.py:6: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+<pre>/tmp/ipykernel_3646/618950163.py:6: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre>
 </div>
@@ -10393,36 +10393,36 @@ input[type=range].anim-slider {
 }
 </style>
 <div class="animation">
-<img alt="No description has been provided for this image" id="_anim_img72a8b27125af47a6a8083a4fb6f66f4d"/>
+<img alt="No description has been provided for this image" id="_anim_imgd5b4108cb23f4e4c8f0826c1d36ca9d6"/>
 <div class="anim-controls">
-<input class="anim-slider" id="_anim_slider72a8b27125af47a6a8083a4fb6f66f4d" max="1" min="0" name="points" oninput="anim72a8b27125af47a6a8083a4fb6f66f4d.set_frame(parseInt(this.value));" step="1" type="range" value="0"/>
+<input class="anim-slider" id="_anim_sliderd5b4108cb23f4e4c8f0826c1d36ca9d6" max="1" min="0" name="points" oninput="animd5b4108cb23f4e4c8f0826c1d36ca9d6.set_frame(parseInt(this.value));" step="1" type="range" value="0"/>
 <div class="anim-buttons">
-<button aria-label="Decrease speed" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.slower()" title="Decrease speed">
+<button aria-label="Decrease speed" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.slower()" title="Decrease speed">
 <i class="fa fa-minus"></i></button>
-<button aria-label="First frame" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.first_frame()" title="First frame">
+<button aria-label="First frame" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.first_frame()" title="First frame">
 <i class="fa fa-fast-backward"></i></button>
-<button aria-label="Previous frame" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.previous_frame()" title="Previous frame">
+<button aria-label="Previous frame" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.previous_frame()" title="Previous frame">
 <i class="fa fa-step-backward"></i></button>
-<button aria-label="Play backwards" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.reverse_animation()" title="Play backwards">
+<button aria-label="Play backwards" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.reverse_animation()" title="Play backwards">
 <i class="fa fa-play fa-flip-horizontal"></i></button>
-<button aria-label="Pause" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.pause_animation()" title="Pause">
+<button aria-label="Pause" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.pause_animation()" title="Pause">
 <i class="fa fa-pause"></i></button>
-<button aria-label="Play" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.play_animation()" title="Play">
+<button aria-label="Play" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.play_animation()" title="Play">
 <i class="fa fa-play"></i></button>
-<button aria-label="Next frame" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.next_frame()" title="Next frame">
+<button aria-label="Next frame" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.next_frame()" title="Next frame">
 <i class="fa fa-step-forward"></i></button>
-<button aria-label="Last frame" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.last_frame()" title="Last frame">
+<button aria-label="Last frame" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.last_frame()" title="Last frame">
 <i class="fa fa-fast-forward"></i></button>
-<button aria-label="Increase speed" onclick="anim72a8b27125af47a6a8083a4fb6f66f4d.faster()" title="Increase speed">
+<button aria-label="Increase speed" onclick="animd5b4108cb23f4e4c8f0826c1d36ca9d6.faster()" title="Increase speed">
 <i class="fa fa-plus"></i></button>
 </div>
-<form action="#n" aria-label="Repetition mode" class="anim-state" name="_anim_loop_select72a8b27125af47a6a8083a4fb6f66f4d" title="Repetition mode">
-<input id="_anim_radio1_72a8b27125af47a6a8083a4fb6f66f4d" name="state" type="radio" value="once"/>
-<label for="_anim_radio1_72a8b27125af47a6a8083a4fb6f66f4d">Once</label>
-<input checked="" id="_anim_radio2_72a8b27125af47a6a8083a4fb6f66f4d" name="state" type="radio" value="loop"/>
-<label for="_anim_radio2_72a8b27125af47a6a8083a4fb6f66f4d">Loop</label>
-<input id="_anim_radio3_72a8b27125af47a6a8083a4fb6f66f4d" name="state" type="radio" value="reflect"/>
-<label for="_anim_radio3_72a8b27125af47a6a8083a4fb6f66f4d">Reflect</label>
+<form action="#n" aria-label="Repetition mode" class="anim-state" name="_anim_loop_selectd5b4108cb23f4e4c8f0826c1d36ca9d6" title="Repetition mode">
+<input id="_anim_radio1_d5b4108cb23f4e4c8f0826c1d36ca9d6" name="state" type="radio" value="once"/>
+<label for="_anim_radio1_d5b4108cb23f4e4c8f0826c1d36ca9d6">Once</label>
+<input checked="" id="_anim_radio2_d5b4108cb23f4e4c8f0826c1d36ca9d6" name="state" type="radio" value="loop"/>
+<label for="_anim_radio2_d5b4108cb23f4e4c8f0826c1d36ca9d6">Loop</label>
+<input id="_anim_radio3_d5b4108cb23f4e4c8f0826c1d36ca9d6" name="state" type="radio" value="reflect"/>
+<label for="_anim_radio3_d5b4108cb23f4e4c8f0826c1d36ca9d6">Reflect</label>
 </form>
 </div>
 </div>
@@ -10430,9 +10430,9 @@ input[type=range].anim-slider {
   /* Instantiate the Animation class. */
   /* The IDs given should match those used in the template above. */
   (function() {
-    var img_id = "_anim_img72a8b27125af47a6a8083a4fb6f66f4d";
-    var slider_id = "_anim_slider72a8b27125af47a6a8083a4fb6f66f4d";
-    var loop_select_id = "_anim_loop_select72a8b27125af47a6a8083a4fb6f66f4d";
+    var img_id = "_anim_imgd5b4108cb23f4e4c8f0826c1d36ca9d6";
+    var slider_id = "_anim_sliderd5b4108cb23f4e4c8f0826c1d36ca9d6";
+    var loop_select_id = "_anim_loop_selectd5b4108cb23f4e4c8f0826c1d36ca9d6";
     var frames = new Array(6);
     
   frames[0] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAMgCAYAAADbcAZoAAAAOnRFWHRTb2Z0d2FyZQBNYXRwbG90\
@@ -13969,7 +13969,7 @@ GEMAAQAAAGAMAQQAAACAMQQQAAAAAMb8P9BW0P8DADqbAAAAAElFTkSuQmCC\
     /* set a timeout to make sure all the above elements are created before
        the object is initialized. */
     setTimeout(function() {
-        anim72a8b27125af47a6a8083a4fb6f66f4d = new Animation(frames, img_id, slider_id, 800.0,
+        animd5b4108cb23f4e4c8f0826c1d36ca9d6 = new Animation(frames, img_id, slider_id, 800.0,
                                  loop_select_id);
     }, 0);
   })()

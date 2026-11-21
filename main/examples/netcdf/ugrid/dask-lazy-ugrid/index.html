@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8794,12 +8794,12 @@ DATA.is_dir()</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.netcdf.ugrid.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshDataset</span>
 
 <span class="n">u</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'netcdf'</span> <span class="o">/</span> <span class="s1">'ugrid'</span> <span class="o">/</span> <span class="s1">'ugrid.nc'</span><span class="p">)</span>
-<span class="n">u</span><span class="o">.</span><span class="n">n_node</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_face</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_edge</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">data_variable_names</span>
+<span class="n">u</span><span class="o">.</span><span class="n">n_node</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_face</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">n_edge</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">variable_names</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">from pyramids.netcdf.ugrid.dataset import MeshDataset
 
 u = MeshDataset.read_file(DATA / 'netcdf' / 'ugrid' / 'ugrid.nc')
-u.n_node, u.n_face, u.n_edge, u.data_variable_names</div>
+u.n_node, u.n_face, u.n_edge, u.variable_names</div>
 </div>
 </div>
 </div>
