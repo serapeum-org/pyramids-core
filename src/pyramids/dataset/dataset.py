@@ -1224,6 +1224,19 @@ class Dataset(RasterBase):
         result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
 
+    def normalize(self) -> np.ndarray:
+        """Facade — delegates to :meth:`Analysis.normalize <pyramids.dataset.engines.Analysis.normalize>`.
+
+        Linearly rescale the raster's values into the ``0.0``-``1.0`` range using
+        the global minimum and maximum. The engine helper is a pure array
+        transform, so this reads the data and forwards it; a multi-band raster is
+        normalised against one global min/max across every band.
+
+        Returns:
+            numpy.ndarray: The raster's values rescaled to ``0.0``-``1.0``.
+        """
+        return self.analysis.normalize(self.read_array())
+
     def fill(self, *args, **kwargs):
         """Deprecated alias for :meth:`fill_domain`."""
         warnings.warn(

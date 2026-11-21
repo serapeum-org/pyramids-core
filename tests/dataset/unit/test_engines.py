@@ -443,6 +443,28 @@ class TestAnalysisNormalize:
         )
 
 
+class TestDatasetNormalizeFacade:
+    """`Dataset.normalize` is the public facade over `Analysis.normalize`."""
+
+    def test_facade_matches_engine_and_is_unit_range(self):
+        """`ds.normalize()` returns the engine's 0-1 rescaling of the raster.
+
+        Test scenario:
+            The documented public `Dataset.normalize` must exist and forward to
+            `Analysis.normalize` over the dataset's own data, mapping the global
+            min to 0.0 and max to 1.0.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo)
+
+        out = ds.normalize()
+
+        np.testing.assert_allclose(out, Analysis.normalize(ds.read_array()))
+        assert float(np.nanmin(out)) == pytest.approx(0.0)
+        assert float(np.nanmax(out)) == pytest.approx(1.0)
+
+
 class TestPickleRoundTrip:
     """Pickle behaviour of collaborators and of the parent Dataset."""
 
