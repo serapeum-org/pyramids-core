@@ -22,11 +22,9 @@ from pyramids._io import normalize_open_options
 from pyramids._io import read_file as io_read_file
 from pyramids.base._file_manager import gdal_raster_open
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset import collection as collection_module
 from pyramids.dataset.engines import io as io_engine
 from pyramids.netcdf import NetCDF
 from tests._helpers import write_raster
-from tests._marks import requires_lazy
 
 _NETCDF_DIR = Path(__file__).resolve().parents[2] / "data" / "netcdf"
 _NETCDF_FIXTURE = _NETCDF_DIR / "none__1v__1d1.nc"
@@ -145,35 +143,6 @@ class TestReadFileOpenOptions:
         result = np.asarray(dataset.read_array(threadsafe=True))
         assert result.shape == (8, 8), f"unexpected shape {result.shape}"
         assert seen, "the per-thread reopen opener was never called"
-        assert all(o == ("GEOREF_SOURCES=NONE",) for o in seen), seen
-
-    @requires_lazy
-    def test_options_survive_lazy_chunked_reopen(self, georeferenced_tif, mocker):
-        """A lazy chunked read forwards the captured options to the per-chunk opener.
-
-        Test scenario:
-            `read_array(chunks=...)` builds a dask array whose per-chunk opener is
-            a `CachingFileManager`; spy on the reopen opener to prove it is fed the
-            captured options (again the georef option is inert for array values, so
-            the array assertion alone could not catch a dropped option).
-        """
-        dataset = Dataset.read_file(
-            georeferenced_tif, open_options={"GEOREF_SOURCES": "NONE"}
-        )
-        real = io_engine.gdal_raster_open
-        seen: list = []
-
-        def spy(*args, **kwargs):
-            seen.append(kwargs.get("open_options"))
-            return real(*args, **kwargs)
-
-        mocker.patch.object(io_engine, "gdal_raster_open", side_effect=spy)
-        lazy = dataset.read_array(chunks=4)
-        assert hasattr(lazy, "dask"), "expected a lazy dask array"
-        result = np.asarray(lazy.compute())
-        assert result.shape == (8, 8), f"unexpected shape {result.shape}"
-        assert np.allclose(result, 1.0), "lazy chunked read altered the values"
-        assert seen, "the per-chunk reopen opener was never called"
         assert all(o == ("GEOREF_SOURCES=NONE",) for o in seen), seen
 
     def test_two_opens_different_options_do_not_share_a_handle(self, georeferenced_tif):
@@ -377,28 +346,6 @@ class TestCollectionOpenOptions:
         handle = collection._dataset_at(0)
         assert handle.geotransform == _IDENTITY_GT, "option not applied at index"
         assert handle.open_options == ["GEOREF_SOURCES=NONE"], "option not captured"
-
-    @requires_lazy
-    def test_lazy_data_forwards_the_option(self, two_files, mocker):
-        """The lazy `.data` graph threads the option into every per-timestep open.
-
-        Test scenario:
-            Building the dask stack calls `_lazy_timestep` once per file; each
-            call must receive the captured options as the hashable tuple form.
-        """
-        collection = DatasetCollection.from_files(
-            two_files, open_options={"GEOREF_SOURCES": "NONE"}
-        )
-        real = collection_module._lazy_timestep
-        seen: list = []
-
-        def spy(path, meta, gdal_env, lock, **kwargs):
-            seen.append(kwargs.get("open_options"))
-            return real(path, meta, gdal_env, lock, **kwargs)
-
-        mocker.patch.object(collection_module, "_lazy_timestep", side_effect=spy)
-        _ = collection.data
-        assert seen == [("GEOREF_SOURCES=NONE",), ("GEOREF_SOURCES=NONE",)], seen
 
     def test_from_archive_threads_the_option(self, two_files, tmp_path):
         """`from_archive` forwards the option to every per-member open (L1).

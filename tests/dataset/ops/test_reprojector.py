@@ -23,13 +23,6 @@ from pyramids.dataset.ops.reproject import (
 
 pytestmark = pytest.mark.core
 
-try:
-    from dask.delayed import Delayed
-except (
-    ImportError
-):  # pragma: no cover - Delayed-using tests are @pytest.mark.lazy gated
-    Delayed = None
-
 
 @pytest.fixture
 def wgs84_dataset(tmp_path):
@@ -106,25 +99,6 @@ class TestReprojectorPickle:
         assert restored.plan == op.plan
 
 
-class TestReprojectorLazy:
-    """``compute=False`` returns :class:`dask.delayed.Delayed`."""
-
-    @pytest.mark.lazy
-    def test_returns_delayed(self, wgs84_dataset):
-        op = Reprojector(target_epsg=3857)
-        result = op(wgs84_dataset, compute=False)
-        assert isinstance(result, Delayed)
-
-    @pytest.mark.lazy
-    def test_delayed_compute_equals_eager(self, wgs84_dataset):
-        op = Reprojector(target_epsg=3857)
-        eager = op(wgs84_dataset)
-        lazy = op(wgs84_dataset, compute=False).compute()
-        assert lazy.epsg == eager.epsg
-        assert lazy.rows == eager.rows
-        np.testing.assert_array_equal(lazy.read_array(), eager.read_array())
-
-
 class TestAlignerEager:
     """``Aligner`` matches the reference geobox."""
 
@@ -137,24 +111,6 @@ class TestAlignerEager:
     def test_plan_epsg_matches_reference(self, wgs84_dataset):
         aligner = Aligner(wgs84_dataset)
         assert aligner.plan.target_epsg == wgs84_dataset.epsg
-
-
-class TestAlignerLazy:
-    """``Aligner(..., compute=False)`` returns :class:`Delayed`."""
-
-    @pytest.mark.lazy
-    def test_returns_delayed(self, wgs84_dataset, wgs84_dataset_fine):
-        aligner = Aligner(wgs84_dataset)
-        result = aligner(wgs84_dataset_fine, compute=False)
-        assert isinstance(result, Delayed)
-
-    @pytest.mark.lazy
-    def test_delayed_compute_matches_eager(self, wgs84_dataset, wgs84_dataset_fine):
-        aligner = Aligner(wgs84_dataset)
-        eager = aligner(wgs84_dataset_fine)
-        lazy = aligner(wgs84_dataset_fine, compute=False).compute()
-        assert lazy.rows == eager.rows
-        np.testing.assert_array_equal(lazy.read_array(), eager.read_array())
 
 
 class TestImportErrorWithoutDask:

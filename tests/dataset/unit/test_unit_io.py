@@ -187,7 +187,6 @@ class TestReadArray:
         with pytest.raises(ValueError, match="is out of range for a"):
             single_band_dataset.read_array(band=-1)
 
-    @pytest.mark.lazy
     def test_read_array_negative_band_lazy_raises(self, single_band_dataset):
         """Lazy path: negative band index rejected with same error."""
         with pytest.raises(ValueError, match="is out of range for a"):

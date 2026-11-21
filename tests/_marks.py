@@ -115,7 +115,10 @@ EXTRA_MARKERS: dict[str, pytest.MarkDecorator] = {
     "plot": requires_plot,
     "lazy": requires_lazy,
     "interop": requires_interop,
-    "netcdf_lazy": requires_netcdf_lazy,
+    # `netcdf_lazy` is no longer here: every netcdf_lazy test moved to the pyramids-lazy repo with
+    # the decouple, so core has none to auto-skip or run in CI. The marker stays registered (and
+    # `requires_netcdf_lazy` defined) for the branded-absent contract tests, but it is not an active
+    # extras category core executes.
     "parquet": requires_parquet,
     "stac": requires_stac,
 }

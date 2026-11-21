@@ -307,7 +307,7 @@ cube.to_zarr("s2_nir_summer.zarr")
 ```
 
 A full runnable notebook spanning search → cube → reduction →
-write is at `docs/examples/dataset/dask-lazy-datasets.ipynb`.
+write lives in the `pyramids-lazy` repo (`docs/examples/dataset/dask-lazy-datasets.ipynb`).
 
 ## Minimal-install behaviour
 

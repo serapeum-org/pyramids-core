@@ -10,9 +10,11 @@ So if the seam is bumped without the floor moving, the dev/CI environments still
 the oldest plugin and core rejects it at import. These tests make that pairing explicit,
 so the floor bump cannot be forgotten alongside a seam bump.
 
-The floor lives in the ``lazy`` dependency-group, not in a published extra: the backend is
-a plugin installed as ``pip install pyramids-lazy``, exactly like pyramids-eo and
-pyramids-mesh. The group is dev/CI-only and the same-named pixi feature maps to it.
+After the test decouple, core's MAIN envs install no plugin at all — all heavy lazy testing
+lives in the pyramids-lazy repo. The only place core declares the backend is the small ``e2e``
+dependency-group (for the lazy-plot + chunked-interop smoke tests), so the floor is guarded there,
+not in a published extra: the backend is a plugin installed as ``pip install pyramids-lazy``,
+exactly like pyramids-eo and pyramids-mesh. The ``e2e`` pixi env maps to that group.
 """
 
 import re
@@ -45,16 +47,21 @@ FIRST_HINT_FREE_PLUGIN_RELEASE: str | None = "0.1.1"
 
 
 def _lazy_group_floor() -> str:
-    """The `>=` floor of the `pyramids-lazy` requirement in the `lazy` group."""
+    """The `>=` floor of the `pyramids-lazy` requirement in the `e2e` group.
+
+    After the test decouple core's MAIN envs install no plugin; the only place core declares
+    the backend is the small `e2e` dependency-group (for the lazy-plot + chunked-interop smoke
+    tests). So the seam-floor pairing is guarded against that group.
+    """
     manifest = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     groups = manifest["dependency-groups"]
     requirements = [
         req
-        for req in groups["lazy"]
+        for req in groups["e2e"]
         if req.replace("_", "-").startswith("pyramids-lazy")
     ]
     assert len(requirements) == 1, (
-        f"expected exactly one pyramids-lazy requirement in the lazy group, "
+        f"expected exactly one pyramids-lazy requirement in the e2e group, "
         f"got {requirements!r}"
     )
     match = re.search(r">=\s*([0-9][0-9.]*)", requirements[0])
@@ -98,11 +105,11 @@ def test_the_backend_is_not_published_as_an_extra():
 
     assert "lazy" not in extras, (
         "a `lazy` extra is back in [project.optional-dependencies]; the backend is a plugin "
-        "installed as `pip install pyramids-lazy`, declared in the `lazy` dependency-group"
+        "installed as `pip install pyramids-lazy`, and core's MAIN envs install no plugin at all"
     )
-    assert "lazy" in manifest["dependency-groups"], (
-        "the `lazy` dependency-group is gone; the pixi `lazy` feature maps to it, so the "
-        "dev/CI environments would stop installing the backend"
+    assert "e2e" in manifest["dependency-groups"], (
+        "the `e2e` dependency-group is gone; it is the only place core declares the backend "
+        "(for the lazy-plot + chunked-interop smoke tests), and the `e2e` pixi env maps to it"
     )
 
 

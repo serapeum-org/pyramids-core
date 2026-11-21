@@ -123,35 +123,6 @@ class TestToImage:
             ds.to_image()
 
 
-class TestToDaskDataframe:
-    """The lazy sibling of the tidy frame."""
-
-    pytestmark = pytest.mark.core
-
-    def test_it_returns_a_dask_dataframe(self):
-        dd = pytest.importorskip("dask.dataframe")
-        frame = _mesh([1.0, 2.0]).to_dask_dataframe()
-        assert isinstance(frame, dd.DataFrame)
-
-    def test_it_computes_to_the_same_rows_as_to_dataframe(self):
-        """The lazy and eager paths must agree, or one of them is wrong."""
-        pytest.importorskip("dask.dataframe")
-        ds = _mesh([1.0, 2.0])
-        eager = ds.to_dataframe()
-        lazy = ds.to_dask_dataframe().compute()
-        assert list(lazy.columns) == list(eager.columns)
-        assert len(lazy) == len(eager)
-
-    def test_partitions_are_honoured(self):
-        pytest.importorskip("dask.dataframe")
-        assert _mesh([1.0, 2.0]).to_dask_dataframe(npartitions=2).npartitions == 2
-
-    def test_zero_partitions_is_refused(self):
-        subject = _mesh([1.0, 2.0])
-        with pytest.raises(ValueError, match="at least 1"):
-            subject.to_dask_dataframe(npartitions=0)
-
-
 class TestOpenMfdataset:
     """Many files, one topology, stacked along time."""
 
@@ -475,32 +446,6 @@ class TestOpenMfdataset:
 
         with pytest.raises(error, match=match):
             MeshDataset.open_mfdataset(chunks="auto", **kwargs)
-
-    @pytest.mark.lazy
-    def test_the_real_resolver_never_leaks_a_raw_attribute_error(self, tmp_path):
-        """Through the real seam, the probe yields a mesh or a branded error -- never AttributeError.
-
-        Test scenario:
-            Every other lazy test replaces `require_compute_backend`, so none covers the
-            integration with entry-point discovery and the api_version gate. Asserting
-            "raises OptionalPackageDoesNotExist" would invert the day the plugin ships
-            `open_mesh_mfdataset`, so this asserts the invariant that holds either way
-            (review L4).
-        """
-        self._write_run(tmp_path, dated=True)
-
-        try:
-            result = MeshDataset.open_mfdataset(
-                str(tmp_path / "run_*.nc"), chunks="auto"
-            )
-        except OptionalPackageDoesNotExist as exc:
-            assert "open_mesh_mfdataset" in str(exc), (
-                f"the branded error should name the missing member, got: {exc}"
-            )
-        else:
-            assert result is not None, (
-                "a backend that serves chunks= must return something"
-            )
 
     @pytest.mark.parametrize(
         "judgeable",

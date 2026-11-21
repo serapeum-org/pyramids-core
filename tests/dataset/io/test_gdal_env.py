@@ -243,53 +243,6 @@ class TestCollectionHandsEnvToTimesteps:
         )
 
 
-class TestGdalEnvOnLazyReads:
-    """The captured config travels with the dask tasks of a lazy read."""
-
-    def test_chunk_tasks_receive_the_env(self, tif, monkeypatch):
-        """`_read_chunk` is handed the dataset's captured config.
-
-        Test scenario:
-            Chunks open the file inside the task, after (and possibly in another
-            process from) the call that built the graph, so the config cannot be
-            an ambient one — it has to travel as a plain dict.
-        """
-        pytest.importorskip("dask")
-        from pyramids.dataset.ops import io as ops_io
-
-        seen = {}
-        original = ops_io._read_chunk
-
-        def spy(block_info=None, *, gdal_env=None, **kwargs):
-            seen["gdal_env"] = gdal_env
-            return original(block_info, gdal_env=gdal_env, **kwargs)
-
-        monkeypatch.setattr(ops_io, "_read_chunk", spy)
-        Dataset.read_file(tif, gdal_env=ENV).read_array(chunks=-1).compute()
-        assert seen["gdal_env"] == ENV, f"env not shipped to the chunk task: {seen}"
-
-    def test_unsigned_chunk_tasks_receive_none(self, tif, monkeypatch):
-        """An ordinary lazy read ships no config at all.
-
-        Test scenario:
-            `None` rather than an empty dict, so the task pickles a little
-            smaller and the worker takes the nullcontext path.
-        """
-        pytest.importorskip("dask")
-        from pyramids.dataset.ops import io as ops_io
-
-        seen = {}
-        original = ops_io._read_chunk
-
-        def spy(block_info=None, *, gdal_env=None, **kwargs):
-            seen["gdal_env"] = gdal_env
-            return original(block_info, gdal_env=gdal_env, **kwargs)
-
-        monkeypatch.setattr(ops_io, "_read_chunk", spy)
-        Dataset.read_file(tif).read_array(chunks=-1).compute()
-        assert seen["gdal_env"] is None, f"unexpected env on an unsigned read: {seen}"
-
-
 class TestGdalEnvOnEveryReadPath:
     """Coverage is structural: every decorated read primitive installs the config.
 

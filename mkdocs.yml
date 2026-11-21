@@ -173,9 +173,6 @@ nav:
           - Cloud Optimized GeoTIFFs: tutorials/cog.md
           - COG basics (offline): examples/cog/cog-basics.ipynb
           - COG with real data: examples/cog/cog-real-data.ipynb
-          - Dask — lazy evaluation explained: examples/dataset/lazy-and-dask-explained.ipynb
-          - Dask — lazy reads + parallel writes: examples/dataset/dask-lazy-datasets.ipynb
-          - Dask — Dataset (complete cookbook): examples/dataset/lazy-dataset-complete.ipynb
           - Dask — DatasetCollection (complete cookbook): examples/dataset/lazy-collection-complete.ipynb
       - Zarr:
           - Zarr basics (offline): examples/zarr/zarr-basics.ipynb
@@ -210,7 +207,6 @@ nav:
               - Staggered grids (WRF): examples/netcdf/explore/05-staggered-wrf.ipynb
               - Structural / grouped / netCDF-4: examples/netcdf/explore/06-structural-groups-nc4.ipynb
               - UGRID unstructured mesh: examples/netcdf/explore/07-ugrid-mesh.ipynb
-              - Y-axis orientation (north-up reads): examples/netcdf/explore/08-y-axis-orientation.ipynb
           - UGRID:
               - Mesh exploration: examples/netcdf/ugrid/ugrid-mesh-exploration.ipynb
               - Plotting gallery: examples/netcdf/ugrid/plotting-gallery.ipynb

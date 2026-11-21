@@ -80,9 +80,12 @@ jobs:
         env:
           SKIP: no-commit-to-branch,gitleaks,pytest-check,doctest,notebook-check,pixi-lock-check
 
-  # Src doctests. Need the full `dev` pixi env (typed deps and an importable package) but
-  # are not platform- or Python-version-sensitive, so one runner covers them. (mypy now
-  # runs in the `pre-commit` job above, via its hook.)
+  # Src doctests. Run in the `e2e` env, not `dev`: several shipped `>>>` examples demonstrate the
+  # lazy (dask-backed) read/compute path, which needs the pyramids-lazy backend. The main test envs
+  # are plugin-free after the decouple, so `e2e` (the one env that installs the plugin, plus
+  # cleopatra/xarray) is the env that matches what these doctests assume a reader has installed.
+  # Not platform- or Python-version-sensitive, so one runner covers them. (mypy runs in the
+  # `pre-commit` job above, via its hook.)
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -93,8 +96,8 @@ jobs:
       - name: Set up Python
         uses: serapeum-org/github-actions/actions/python-setup/pixi@961524686fb512c05ca8e4c7bfe81ba68eef4dda  # pixi/v1.5.1
         with:
-          environments: dev
-          activate-environment: dev
+          environments: e2e
+          activate-environment: e2e
           cache: true
           version: v0.73.0
 
@@ -104,7 +107,7 @@ jobs:
         # opens a GUI window; -p no:cacheprovider disables the pytest cache plugin.
         env:
           MPLBACKEND: Agg
-        run: pixi run -e dev pytest --doctest-modules src -p no:cacheprovider
+        run: pixi run -e e2e pytest --doctest-modules src -p no:cacheprovider
 
   # The repo's secret gate. gitleaks is the single secret scanner (it replaced
   # detect-secrets). The pre-commit hook only scans staged changes, which are empty in

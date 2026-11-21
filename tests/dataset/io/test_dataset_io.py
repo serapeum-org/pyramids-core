@@ -194,31 +194,6 @@ class TestToFileReopen:
 
         assert out.exists(), f"ASCII output was not written: {out}"
 
-    def test_reopen_false_forwarded_through_compute_false(self, tmp_path: Path):
-        """The compute=False (dask.delayed) path forwards reopen=False.
-
-        Test scenario:
-            A deferred write of an on-disk source with ``reopen=False`` writes the
-            output on ``.compute()`` and leaves the source's ``file_name``
-            unchanged — the delayed branch threads the flag through to the
-            synchronous writer.
-        """
-        pytest.importorskip("dask")
-        in_path = tmp_path / "src.tif"
-        arr = np.arange(12, dtype="float32").reshape(3, 4)
-        self._mem(arr).to_file(in_path)
-        source = Dataset.read_file(str(in_path))
-
-        out = tmp_path / "deferred.tif"
-        delayed = source.to_file(out, reopen=False, compute=False)
-        assert delayed is not None, "compute=False should return a Delayed"
-        delayed.compute()
-
-        assert out.exists(), f"deferred output was not written: {out}"
-        assert Path(source.file_name) == in_path, (
-            "reopen=False through compute=False must not repoint the source"
-        )
-
 
 class TestNCtoGeoTIFF:
     def test_convert_0_360_to_180_180_longitude_new_dataset(self, noah: gdal.Dataset):

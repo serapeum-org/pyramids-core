@@ -39,7 +39,7 @@ Y = 4600015.0 - 30.0 * np.arange(4)
 class TestTheSpatialCoordinatesMustBeTheLastTwoAxes:
     """A coordinate that does not label the axis it is used for is refused."""
 
-    @pytest.mark.lazy
+    @pytest.mark.interop
     @needs_xarray
     def test_a_trailing_time_axis_is_refused(self):
         """The regression: a 4x6x3 array became a 6x3 raster with 4 bands.
@@ -60,7 +60,7 @@ class TestTheSpatialCoordinatesMustBeTheLastTwoAxes:
         with pytest.raises(ValueError, match="do not match its last two axes"):
             _dataarray_to_dataset(da, None, None)
 
-    @pytest.mark.lazy
+    @pytest.mark.interop
     @needs_xarray
     def test_the_message_says_how_to_fix_it(self):
         """A refusal the caller can act on names the axes and the remedy.
@@ -84,7 +84,7 @@ class TestTheSpatialCoordinatesMustBeTheLastTwoAxes:
         assert "'y' (4)" in message, "the message does not name the y axis and its size"
         assert "'x' (6)" in message, "the message does not name the x axis and its size"
 
-    @pytest.mark.lazy
+    @pytest.mark.interop
     @needs_xarray
     def test_a_two_dimensional_array_still_builds(self):
         """The ordinary case must be untouched.
@@ -105,7 +105,7 @@ class TestTheSpatialCoordinatesMustBeTheLastTwoAxes:
         assert (dataset.rows, dataset.columns) == (4, 6)
         assert dataset.band_count == 1
 
-    @pytest.mark.lazy
+    @pytest.mark.interop
     @needs_xarray
     def test_a_leading_band_axis_still_builds(self):
         """`(time, y, x)` is the shape a multi-band export actually has.
@@ -127,7 +127,7 @@ class TestTheSpatialCoordinatesMustBeTheLastTwoAxes:
         assert (dataset.rows, dataset.columns) == (4, 6)
         assert dataset.band_count == 3
 
-    @pytest.mark.lazy
+    @pytest.mark.interop
     @needs_xarray
     def test_transposed_spatial_axes_are_refused(self):
         """`(x, y)` is the subtler half of the same mistake.

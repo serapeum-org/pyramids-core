@@ -161,14 +161,3 @@ class TestReadArrayUnpack:
             assert not np.allclose(raw, ds.read_array()), (
                 "unpack=False returned the unpacked values"
             )
-
-    def test_lazy_matches_eager(self, packed_multi, tmp_path):
-        """A lazy (chunks) read computes to the same values as the eager one."""
-        pytest.importorskip("dask.array")
-        # The chunked path reopens the source by path, so back it with a real file.
-        path = tmp_path / "packed.tif"
-        packed_multi.to_file(str(path))
-        ds = Dataset.read_file(str(path))
-        lazy = ds.read_array(chunks="auto")
-        assert hasattr(lazy, "compute"), "chunks= must return a lazy array"
-        np.testing.assert_allclose(lazy.compute(), ds.read_array())

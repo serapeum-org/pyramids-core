@@ -98,8 +98,7 @@ sample data. Prefer a task list? See the ["How do I…?" index](index.md).
 
     ---
 
-    [STAC (offline)](stac/stac-local.ipynb) · [STAC (live)](stac/stac-cloud-earth-search.ipynb) ·
-    [Dask on cloud COGs](dataset/dask-lazy-datasets.ipynb)
+    [STAC (offline)](stac/stac-local.ipynb) · [STAC (live)](stac/stac-cloud-earth-search.ipynb)
 
 </div>
 

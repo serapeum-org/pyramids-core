@@ -46,37 +46,6 @@ class TestApplyDeferred:
         assert isinstance(result, DatasetCollection)
         assert len(result.datasets) == 3
 
-    def test_deferred_returns_something_computable(self, collection: DatasetCollection):
-        """`compute=False` defers, and computing it yields the collection."""
-        dask = pytest.importorskip("dask")
-
-        deferred = collection.apply(lambda a: a + 1, compute=False)
-
-        assert not isinstance(deferred, DatasetCollection)
-        computed = dask.compute(deferred, scheduler="synchronous")[0]
-        assert isinstance(computed, DatasetCollection)
-        assert len(computed.datasets) == 3
-
-    def test_deferred_rejects_inplace(self, collection: DatasetCollection):
-        """The `compute=False` + `inplace=True` combination stays refused."""
-        pytest.importorskip("dask")
-
-        with pytest.raises(ValueError, match="cannot be combined with inplace"):
-            collection.apply(lambda a: a + 1, inplace=True, compute=False)
-
-
-class TestCropDeferred:
-    """`crop` honours `compute=False`."""
-
-    def test_deferred_rejects_inplace(self, collection: DatasetCollection):
-        """The same guard applies to crop."""
-        pytest.importorskip("dask")
-
-        with pytest.raises(ValueError, match="cannot be combined with inplace"):
-            collection.crop(
-                bbox=[0.0, 0.0, 2.0, 2.0], epsg=4326, inplace=True, compute=False
-            )
-
 
 class TestTimeAxisPropagation:
     """The time axis survives a per-timestep operation, when it still fits."""

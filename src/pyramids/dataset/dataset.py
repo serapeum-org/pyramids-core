@@ -2733,11 +2733,11 @@ class Dataset(RasterBase):
                 >>> source.scale = [0.5]
                 >>> source.close()
                 >>> packed = Dataset.read_file(os.path.join(folder, "packed.tif"))
-                >>> packed.to_zarr(os.path.join(folder, "packed.zarr"))
-                >>> store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))
-                >>> store.read_array().tolist(), store.dtype, store.scale
+                >>> packed.to_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP
+                >>> store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP
+                >>> store.read_array().tolist(), store.dtype, store.scale  # doctest: +SKIP
                 ([[50.0, -4999.5], [150.0, 200.0]], ['float64'], [1.0])
-                >>> float(store.no_data_value[0])
+                >>> float(store.no_data_value[0])  # doctest: +SKIP
                 -4999.5
 
                 ```

@@ -105,14 +105,6 @@ class TestFromStac:
             f"files mismatch (normalised): got {left}, expected {right}"
         )
 
-    @pytest.mark.lazy
-    def test_lazy_data_computes(self, stac_items):
-        collection = DatasetCollection.from_stac(stac_items, asset="data")
-        arr = collection.data.compute()
-        assert arr.shape[0] == 3
-        for i in range(3):
-            assert (arr[i] == i + 1).all()
-
 
 class TestPatchUrl:
     """patch_url rewrites every href before it becomes a file path."""
@@ -283,29 +275,6 @@ class TestCollectionGdalEnvLazyReads:
         _ = coll.datasets
         assert seen, "the spy must have recorded at least one open"
         assert all(v is None for v in seen), f"unexpected env without signer: {seen}"
-
-    def test_path_b_lazy_data_installs_env(self, three_tifs, monkeypatch):
-        """Path B: the tiled `data` graph installs the collection's env around each open.
-
-        Test scenario:
-            A spy on the module-level opener records the sentinel option; computing the
-            tiled `data` cube for an env-carrying collection must see it active.
-        """
-        from pyramids.dataset import collection as coll_mod
-
-        captured: dict[str, str | None] = {}
-        real_open = coll_mod.gdal_raster_open
-
-        def spy(*args, **kwargs):
-            captured["v"] = gdal.GetConfigOption("PYRAMIDS_TEST_KEY")
-            return real_open(*args, **kwargs)
-
-        monkeypatch.setattr(coll_mod, "gdal_raster_open", spy)
-        coll = coll_mod.DatasetCollection.from_files(
-            three_tifs, gdal_env={"PYRAMIDS_TEST_KEY": "on"}
-        )
-        coll.data.compute()
-        assert captured["v"] == "on", f"env not active during Path B open: {captured}"
 
     def test_gdal_env_survives_pickle(self, three_tifs):
         """H4: the persisted env survives pickling (so it reaches dask workers).

@@ -25,7 +25,6 @@ from pyramids.netcdf.engines.interop import (
     _write_md_array_streamed,
 )
 from pyramids.netcdf.netcdf import NetCDF
-from tests._marks import requires_lazy
 
 GEOG_3D_NC = "tests/data/netcdf/cf__5v__1d4-3d1__geog__y-desc.nc"
 
@@ -797,65 +796,6 @@ class TestInteropEngineBranches:
 class TestToXarrayLazy:
     """Chunked interop export builds dask-backed variables in native order (ARC-48)."""
 
-    @requires_lazy
-    def test_numeric_var_is_dask_backed(self):
-        """A numeric data variable is dask-backed when chunks= is given.
-
-        Test scenario:
-            The chunked interop export on a file-backed container returns the
-            numeric ``t2m`` as a dask array rather than an eager numpy array.
-        """
-        nc = NetCDF.read_file(GEOG_3D_NC)
-        try:
-            lazy = nc.to_xarray(chunks="auto")
-            assert hasattr(lazy["t2m"].data, "dask"), (
-                "numeric var should be dask-backed"
-            )
-        finally:
-            nc.close()
-
-    @requires_lazy
-    def test_lazy_values_match_eager(self):
-        """Computed lazy values equal the eager interop values (raw order kept).
-
-        Test scenario:
-            The lazy read uses ``orient=False``, so it must not be flipped relative to the raw
-            coordinate arrays; computing it reproduces the eager numpy result exactly.
-        """
-        nc = NetCDF.read_file(GEOG_3D_NC)
-        try:
-            eager = nc.to_xarray()
-            lazy = nc.to_xarray(chunks="auto")
-            assert_allclose(
-                np.asarray(lazy["t2m"].compute().values),
-                np.asarray(eager["t2m"].values),
-                equal_nan=True,
-            )
-        finally:
-            nc.close()
-
-    @requires_lazy
-    def test_string_var_falls_back_to_eager(self):
-        """A non-chunkable string variable is read eagerly, not as dask, and still matches.
-
-        Test scenario:
-            ``expver`` is a string MDArray a chunked read cannot represent; the
-            chunked interop export must fall back to the eager read for it
-            instead of failing the whole conversion.
-        """
-        nc = NetCDF.read_file(GEOG_3D_NC)
-        try:
-            eager = nc.to_xarray()
-            lazy = nc.to_xarray(chunks="auto")
-            assert not hasattr(lazy["expver"].data, "dask"), (
-                "string var must fall back to eager"
-            )
-            assert_array_equal(
-                np.asarray(lazy["expver"].values), np.asarray(eager["expver"].values)
-            )
-        finally:
-            nc.close()
-
     def test_default_is_eager(self):
         """Without chunks=, data variables stay eager numpy arrays (unchanged default)."""
         nc = NetCDF.read_file(GEOG_3D_NC)
@@ -864,63 +804,6 @@ class TestToXarrayLazy:
             assert not hasattr(eager["t2m"].data, "dask"), "default export stays eager"
         finally:
             nc.close()
-
-    @requires_lazy
-    def test_in_memory_container_ignores_chunks(self):
-        """An in-memory container has no file to reopen, so chunks= falls back to eager.
-
-        Test scenario:
-            A ``from_array`` container's data is already resident; the
-            chunked interop export returns eager numpy arrays rather than raising
-            or attempting a lazy reopen.
-        """
-        nc = _make_3d_nc(variable_name="temperature")
-        ds = nc.to_xarray(chunks="auto")
-        assert not hasattr(ds["temperature"].data, "dask"), (
-            "in-memory container should ignore chunks and stay eager"
-        )
-
-    @requires_lazy
-    def test_lazy_read_threads_gdal_env(self, monkeypatch):
-        """The container's `_gdal_env` is carried into the lazy read so a signed remote store
-        re-opens authenticated (#839).
-
-        Test scenario:
-            Attach a `gdal_env` to a file-backed container and spy on `build_lazy_array`;
-            `_lazy_var_data` must forward that env (and ``orient=False``) to the chunk graph.
-        """
-        from pyramids.netcdf.engines import interop as interop_mod
-
-        captured = {}
-
-        def _spy(path, variable_name, chunks, lock=None, orient=True, gdal_env=None):
-            captured["gdal_env"] = gdal_env
-            captured["orient"] = orient
-            return object()  # stand-in lazy array; _lazy_var_data returns it unchanged
-
-        # Patch at the home module: interop._lazy_var_data defers build_lazy_array via a
-        # function-local import, so it looks the name up on pyramids_lazy._lazy at call time. This
-        # reaches a backend private to assert core forwards orient/lock correctly; importorskip the
-        # attribute so a plugin rename skips this test rather than erroring it (the backend itself is
-        # already gated by the requires_lazy marker on the class).
-        lazy_mod = pytest.importorskip("pyramids_lazy._lazy", exc_type=ImportError)
-        if not hasattr(lazy_mod, "build_lazy_array"):
-            pytest.skip(
-                "pyramids_lazy._lazy.build_lazy_array not present in this backend"
-            )
-        monkeypatch.setattr(lazy_mod, "build_lazy_array", _spy)
-        nc = NetCDF.read_file(GEOG_3D_NC)
-        try:
-            nc.attach_gdal_env({"AWS_REQUEST_PAYER": "requester"})
-            interop_mod._lazy_var_data(nc, "t2m", "auto", None)
-        finally:
-            nc.close()
-        assert captured["gdal_env"] == {"AWS_REQUEST_PAYER": "requester"}, (
-            f"container gdal_env must be threaded into the lazy read, got {captured}"
-        )
-        assert captured["orient"] is False, (
-            "lazy interop read must be raw (orient=False)"
-        )
 
 
 class _RecordingMDArray:
@@ -948,61 +831,6 @@ class _RecordingMDArray:
 
 class TestFromXarrayStreaming:
     """from_xarray streams a dask-backed variable block by block, not all at once (ARC-48)."""
-
-    @requires_lazy
-    def test_dask_input_round_trips_and_matches_eager(self):
-        """A dask-backed input reproduces the data and agrees with the equivalent numpy input.
-
-        Test scenario:
-            Build the same 3-D variable once dask-backed and once as numpy; `from_xarray` of each
-            must yield the same values on read-back, proving the streamed write is correct.
-        """
-        import dask.array as da
-
-        base = np.arange(4 * 3 * 2, dtype="float32").reshape(4, 3, 2)
-        coords = {"time": np.arange(4), "lat": [10.0, 11.0, 12.0], "lon": [20.0, 21.0]}
-        lazy = xr.Dataset(
-            {"t": (("time", "lat", "lon"), da.from_array(base, chunks=(2, 2, 1)))},
-            coords=coords,
-        )
-        eager = xr.Dataset({"t": (("time", "lat", "lon"), base)}, coords=coords)
-        nc_lazy = NetCDF.from_xarray(lazy)
-        nc_eager = NetCDF.from_xarray(eager)
-        try:
-            got = np.asarray(nc_lazy.to_xarray()["t"].values)
-            assert np.array_equal(got, base), (
-                "streamed dask input must reproduce the data"
-            )
-            assert np.array_equal(got, np.asarray(nc_eager.to_xarray()["t"].values)), (
-                "streamed and eager from_xarray must agree"
-            )
-        finally:
-            nc_lazy.close()
-            nc_eager.close()
-
-    @requires_lazy
-    def test_dask_written_block_by_block(self):
-        """A dask array is written one hyperslab per block, and the blocks reconstruct the array.
-
-        Test scenario:
-            A `(4, 3, 2)` array chunked `(2, 3, 1)` has 4 blocks; `_write_md_array_streamed` must
-            issue exactly 4 hyperslab writes whose offsets/counts reassemble the original.
-        """
-        import dask.array as da
-
-        base = np.arange(24, dtype="float32").reshape(4, 3, 2)
-        arr = da.from_array(base, chunks=(2, 3, 1))  # 2 * 1 * 2 = 4 blocks
-        rec = _RecordingMDArray((4, 3, 2), "float32")
-        _write_md_array_streamed(rec, arr)
-        assert len(rec.writes) == 4, (
-            f"expected one write per block, got {len(rec.writes)}"
-        )
-        assert all(s is not None and c is not None for s, c in rec.writes), (
-            "each streamed write must be a bounded hyperslab (array_start_idx + count)"
-        )
-        assert np.array_equal(rec.buf, base), (
-            "the block writes must reconstruct the full array"
-        )
 
     def test_numpy_written_in_a_single_hyperslab(self):
         """A numpy array is written whole, not streamed.
