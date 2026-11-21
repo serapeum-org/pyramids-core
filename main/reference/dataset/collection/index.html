@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -2409,90 +2409,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../examples/dataset/lazy-and-dask-explained/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy evaluation &amp; Dask, explained
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/dataset/dask-lazy-datasets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy raster reads + parallel writes with and
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/dataset/lazy-dataset-complete/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy — complete cookbook
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../examples/dataset/lazy-collection-complete/" class="md-nav__link">
         
   
@@ -3597,34 +3513,6 @@
     
   
     UGRID unstructured-mesh files
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/netcdf/explore/08-y-axis-orientation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Y-axis orientation — north-up reads, whatever the file stores
   
 
     
@@ -14696,11 +14584,11 @@ to construct one.")``.
 <a id="__codelineno-0-1522" name="__codelineno-0-1522"></a><span class="sd">                ...     paths.append(p)</span>
 <a id="__codelineno-0-1523" name="__codelineno-0-1523"></a><span class="sd">                &gt;&gt;&gt; coll = DatasetCollection.from_files(paths)</span>
 <a id="__codelineno-0-1524" name="__codelineno-0-1524"></a><span class="sd">                &gt;&gt;&gt; times = pd.date_range("2022-01-01", periods=2, freq="1D")</span>
-<a id="__codelineno-0-1525" name="__codelineno-0-1525"></a><span class="sd">                &gt;&gt;&gt; windows = coll.reduce_time(times, freq="1MS", op="median")</span>
-<a id="__codelineno-0-1526" name="__codelineno-0-1526"></a><span class="sd">                &gt;&gt;&gt; len(windows)  # one January window</span>
+<a id="__codelineno-0-1525" name="__codelineno-0-1525"></a><span class="sd">                &gt;&gt;&gt; windows = coll.reduce_time(times, freq="1MS", op="median")  # doctest: +SKIP</span>
+<a id="__codelineno-0-1526" name="__codelineno-0-1526"></a><span class="sd">                &gt;&gt;&gt; len(windows)  # one January window  # doctest: +SKIP</span>
 <a id="__codelineno-0-1527" name="__codelineno-0-1527"></a><span class="sd">                1</span>
-<a id="__codelineno-0-1528" name="__codelineno-0-1528"></a><span class="sd">                &gt;&gt;&gt; label, ds = windows[0]</span>
-<a id="__codelineno-0-1529" name="__codelineno-0-1529"></a><span class="sd">                &gt;&gt;&gt; ds.read_array().tolist()  # median of day0 and day1, per pixel</span>
+<a id="__codelineno-0-1528" name="__codelineno-0-1528"></a><span class="sd">                &gt;&gt;&gt; label, ds = windows[0]  # doctest: +SKIP</span>
+<a id="__codelineno-0-1529" name="__codelineno-0-1529"></a><span class="sd">                &gt;&gt;&gt; ds.read_array().tolist()  # median of day0 and day1, per pixel  # doctest: +SKIP</span>
 <a id="__codelineno-0-1530" name="__codelineno-0-1530"></a><span class="sd">                [[2.0, 3.0], [4.0, 5.0]]</span>
 <a id="__codelineno-0-1531" name="__codelineno-0-1531"></a>
 <a id="__codelineno-0-1532" name="__codelineno-0-1532"></a><span class="sd">                ```</span>
@@ -14927,11 +14815,11 @@ to construct one.")``.
 <a id="__codelineno-0-1753" name="__codelineno-0-1753"></a><span class="sd">                ...     step.close()</span>
 <a id="__codelineno-0-1754" name="__codelineno-0-1754"></a><span class="sd">                ...     paths.append(p)</span>
 <a id="__codelineno-0-1755" name="__codelineno-0-1755"></a><span class="sd">                &gt;&gt;&gt; col = DatasetCollection.from_files(paths)</span>
-<a id="__codelineno-0-1756" name="__codelineno-0-1756"></a><span class="sd">                &gt;&gt;&gt; col.data.shape, col.data.dtype</span>
+<a id="__codelineno-0-1756" name="__codelineno-0-1756"></a><span class="sd">                &gt;&gt;&gt; col.data.shape, col.data.dtype  # doctest: +SKIP</span>
 <a id="__codelineno-0-1757" name="__codelineno-0-1757"></a><span class="sd">                ((2, 1, 2, 2), dtype('float64'))</span>
-<a id="__codelineno-0-1758" name="__codelineno-0-1758"></a><span class="sd">                &gt;&gt;&gt; col.data[:, 0, 0, 0].compute().tolist()</span>
+<a id="__codelineno-0-1758" name="__codelineno-0-1758"></a><span class="sd">                &gt;&gt;&gt; col.data[:, 0, 0, 0].compute().tolist()  # doctest: +SKIP</span>
 <a id="__codelineno-0-1759" name="__codelineno-0-1759"></a><span class="sd">                [1.0, 2.0]</span>
-<a id="__codelineno-0-1760" name="__codelineno-0-1760"></a><span class="sd">                &gt;&gt;&gt; col.mean()[0].tolist()</span>
+<a id="__codelineno-0-1760" name="__codelineno-0-1760"></a><span class="sd">                &gt;&gt;&gt; col.mean()[0].tolist()  # doctest: +SKIP</span>
 <a id="__codelineno-0-1761" name="__codelineno-0-1761"></a><span class="sd">                [[1.5, 3.0], [4.5, 6.0]]</span>
 <a id="__codelineno-0-1762" name="__codelineno-0-1762"></a>
 <a id="__codelineno-0-1763" name="__codelineno-0-1763"></a><span class="sd">                ```</span>
@@ -14946,9 +14834,9 @@ to construct one.")``.
 <a id="__codelineno-0-1772" name="__codelineno-0-1772"></a><span class="sd">                ...     for v in (1, 2, 3)</span>
 <a id="__codelineno-0-1773" name="__codelineno-0-1773"></a><span class="sd">                ... ]</span>
 <a id="__codelineno-0-1774" name="__codelineno-0-1774"></a><span class="sd">                &gt;&gt;&gt; col = DatasetCollection(scenes[0], time_length=3, datasets=scenes)</span>
-<a id="__codelineno-0-1775" name="__codelineno-0-1775"></a><span class="sd">                &gt;&gt;&gt; col.data.shape</span>
+<a id="__codelineno-0-1775" name="__codelineno-0-1775"></a><span class="sd">                &gt;&gt;&gt; col.data.shape  # doctest: +SKIP</span>
 <a id="__codelineno-0-1776" name="__codelineno-0-1776"></a><span class="sd">                (3, 1, 2, 2)</span>
-<a id="__codelineno-0-1777" name="__codelineno-0-1777"></a><span class="sd">                &gt;&gt;&gt; col.data[:, 0, 0, 0].compute().tolist()</span>
+<a id="__codelineno-0-1777" name="__codelineno-0-1777"></a><span class="sd">                &gt;&gt;&gt; col.data[:, 0, 0, 0].compute().tolist()  # doctest: +SKIP</span>
 <a id="__codelineno-0-1778" name="__codelineno-0-1778"></a><span class="sd">                [1.0, 2.0, 3.0]</span>
 <a id="__codelineno-0-1779" name="__codelineno-0-1779"></a>
 <a id="__codelineno-0-1780" name="__codelineno-0-1780"></a><span class="sd">                ```</span>
@@ -18287,11 +18175,11 @@ in-memory collection).</p>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="o">...</span>     <span class="n">step</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="o">...</span>     <span class="n">paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span> <span class="o">=</span> <span class="n">DatasetCollection</span><span class="o">.</span><span class="n">from_files</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dtype</span><span class="p">(</span><span class="s1">'float64'</span><span class="p">))</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">mean</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">mean</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">[[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">4.5</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">]]</span>
 </code></pre></div></li>
 <li>An in-memory (<code>datasets=</code>-backed) collection stacks its resident
@@ -18304,9 +18192,9 @@ in-memory collection).</p>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="o">...</span>     <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="o">...</span> <span class="p">]</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span> <span class="o">=</span> <span class="n">DatasetCollection</span><span class="p">(</span><span class="n">scenes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time_length</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">datasets</span><span class="o">=</span><span class="n">scenes</span><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]</span>
 </code></pre></div></li>
 </ul>
@@ -19892,11 +19780,11 @@ negative.</p>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="o">...</span>     <span class="n">paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">coll</span> <span class="o">=</span> <span class="n">DatasetCollection</span><span class="o">.</span><span class="n">from_files</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="s2">"2022-01-01"</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1D"</span><span class="p">)</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">windows</span> <span class="o">=</span> <span class="n">coll</span><span class="o">.</span><span class="n">reduce_time</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1MS"</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">"median"</span><span class="p">)</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span>  <span class="c1"># one January window</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">windows</span> <span class="o">=</span> <span class="n">coll</span><span class="o">.</span><span class="n">reduce_time</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1MS"</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">"median"</span><span class="p">)</span>  <span class="c1"># doctest: +SKIP</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span>  <span class="c1"># one January window  # doctest: +SKIP</span>
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="mi">1</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">label</span><span class="p">,</span> <span class="n">ds</span> <span class="o">=</span> <span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># median of day0 and day1, per pixel</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">label</span><span class="p">,</span> <span class="n">ds</span> <span class="o">=</span> <span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># doctest: +SKIP</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># median of day0 and day1, per pixel  # doctest: +SKIP</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">[[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">]]</span>
 </code></pre></div></li>
 <li>A yearly 90th percentile and a per-pixel linear trend:
@@ -20257,11 +20145,11 @@ negative.</p>
 <a id="__codelineno-0-1522" name="__codelineno-0-1522"></a><span class="sd">            ...     paths.append(p)</span>
 <a id="__codelineno-0-1523" name="__codelineno-0-1523"></a><span class="sd">            &gt;&gt;&gt; coll = DatasetCollection.from_files(paths)</span>
 <a id="__codelineno-0-1524" name="__codelineno-0-1524"></a><span class="sd">            &gt;&gt;&gt; times = pd.date_range("2022-01-01", periods=2, freq="1D")</span>
-<a id="__codelineno-0-1525" name="__codelineno-0-1525"></a><span class="sd">            &gt;&gt;&gt; windows = coll.reduce_time(times, freq="1MS", op="median")</span>
-<a id="__codelineno-0-1526" name="__codelineno-0-1526"></a><span class="sd">            &gt;&gt;&gt; len(windows)  # one January window</span>
+<a id="__codelineno-0-1525" name="__codelineno-0-1525"></a><span class="sd">            &gt;&gt;&gt; windows = coll.reduce_time(times, freq="1MS", op="median")  # doctest: +SKIP</span>
+<a id="__codelineno-0-1526" name="__codelineno-0-1526"></a><span class="sd">            &gt;&gt;&gt; len(windows)  # one January window  # doctest: +SKIP</span>
 <a id="__codelineno-0-1527" name="__codelineno-0-1527"></a><span class="sd">            1</span>
-<a id="__codelineno-0-1528" name="__codelineno-0-1528"></a><span class="sd">            &gt;&gt;&gt; label, ds = windows[0]</span>
-<a id="__codelineno-0-1529" name="__codelineno-0-1529"></a><span class="sd">            &gt;&gt;&gt; ds.read_array().tolist()  # median of day0 and day1, per pixel</span>
+<a id="__codelineno-0-1528" name="__codelineno-0-1528"></a><span class="sd">            &gt;&gt;&gt; label, ds = windows[0]  # doctest: +SKIP</span>
+<a id="__codelineno-0-1529" name="__codelineno-0-1529"></a><span class="sd">            &gt;&gt;&gt; ds.read_array().tolist()  # median of day0 and day1, per pixel  # doctest: +SKIP</span>
 <a id="__codelineno-0-1530" name="__codelineno-0-1530"></a><span class="sd">            [[2.0, 3.0], [4.0, 5.0]]</span>
 <a id="__codelineno-0-1531" name="__codelineno-0-1531"></a>
 <a id="__codelineno-0-1532" name="__codelineno-0-1532"></a><span class="sd">            ```</span>

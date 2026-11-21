@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -2582,90 +2582,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../examples/dataset/lazy-and-dask-explained/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy evaluation &amp; Dask, explained
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/dataset/dask-lazy-datasets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy raster reads + parallel writes with and
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/dataset/lazy-dataset-complete/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy — complete cookbook
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../examples/dataset/lazy-collection-complete/" class="md-nav__link">
         
   
@@ -3770,34 +3686,6 @@
     
   
     UGRID unstructured-mesh files
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../examples/netcdf/explore/08-y-axis-orientation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Y-axis orientation — north-up reads, whatever the file stores
   
 
     
@@ -8489,7 +8377,7 @@ use it for anything that operates on a single raster (plotting,
 <a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a><span class="n">cube</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s2">"s2_nir_summer.zarr"</span><span class="p">)</span>
 </code></pre></div>
 <p>A full runnable notebook spanning search → cube → reduction →
-write is at <code>docs/examples/dataset/dask-lazy-datasets.ipynb</code>.</p>
+write lives in the <code>pyramids-lazy</code> repo (<code>docs/examples/dataset/dask-lazy-datasets.ipynb</code>).</p>
 <h2 id="minimal-install-behaviour"><a class="toclink" href="#minimal-install-behaviour">Minimal-install behaviour</a><a class="headerlink" href="#minimal-install-behaviour" title="Permanent link">#</a></h2>
 <ul>
 <li><code>DatasetCollection.from_files</code> works without the <code>[lazy]</code> extra

@@ -165,10 +165,6 @@
          <lastmod>2026-11-21</lastmod>
     </url>
     <url>
-         <loc>https://serapeum-org.github.io/pyramids-core/main/examples/dataset/dask-lazy-datasets/</loc>
-         <lastmod>2026-11-21</lastmod>
-    </url>
-    <url>
          <loc>https://serapeum-org.github.io/pyramids-core/main/examples/dataset/dataset/</loc>
          <lastmod>2026-11-21</lastmod>
     </url>
@@ -177,15 +173,7 @@
          <lastmod>2026-11-21</lastmod>
     </url>
     <url>
-         <loc>https://serapeum-org.github.io/pyramids-core/main/examples/dataset/lazy-and-dask-explained/</loc>
-         <lastmod>2026-11-21</lastmod>
-    </url>
-    <url>
          <loc>https://serapeum-org.github.io/pyramids-core/main/examples/dataset/lazy-collection-complete/</loc>
-         <lastmod>2026-11-21</lastmod>
-    </url>
-    <url>
-         <loc>https://serapeum-org.github.io/pyramids-core/main/examples/dataset/lazy-dataset-complete/</loc>
          <lastmod>2026-11-21</lastmod>
     </url>
     <url>
@@ -278,10 +266,6 @@
     </url>
     <url>
          <loc>https://serapeum-org.github.io/pyramids-core/main/examples/netcdf/explore/07-ugrid-mesh/</loc>
-         <lastmod>2026-11-21</lastmod>
-    </url>
-    <url>
-         <loc>https://serapeum-org.github.io/pyramids-core/main/examples/netcdf/explore/08-y-axis-orientation/</loc>
          <lastmod>2026-11-21</lastmod>
     </url>
     <url>

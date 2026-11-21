@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -2409,90 +2409,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/dataset/lazy-and-dask-explained/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy evaluation &amp; Dask, explained
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../examples/dataset/dask-lazy-datasets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy raster reads + parallel writes with and
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../examples/dataset/lazy-dataset-complete/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Lazy — complete cookbook
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../examples/dataset/lazy-collection-complete/" class="md-nav__link">
         
   
@@ -3597,34 +3513,6 @@
     
   
     UGRID unstructured-mesh files
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../examples/netcdf/explore/08-y-axis-orientation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Y-axis orientation — north-up reads, whatever the file stores
   
 
     
@@ -21561,11 +21449,11 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2733" name="__codelineno-0-2733"></a><span class="sd">                &gt;&gt;&gt; source.scale = [0.5]</span>
 <a id="__codelineno-0-2734" name="__codelineno-0-2734"></a><span class="sd">                &gt;&gt;&gt; source.close()</span>
 <a id="__codelineno-0-2735" name="__codelineno-0-2735"></a><span class="sd">                &gt;&gt;&gt; packed = Dataset.read_file(os.path.join(folder, "packed.tif"))</span>
-<a id="__codelineno-0-2736" name="__codelineno-0-2736"></a><span class="sd">                &gt;&gt;&gt; packed.to_zarr(os.path.join(folder, "packed.zarr"))</span>
-<a id="__codelineno-0-2737" name="__codelineno-0-2737"></a><span class="sd">                &gt;&gt;&gt; store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))</span>
-<a id="__codelineno-0-2738" name="__codelineno-0-2738"></a><span class="sd">                &gt;&gt;&gt; store.read_array().tolist(), store.dtype, store.scale</span>
+<a id="__codelineno-0-2736" name="__codelineno-0-2736"></a><span class="sd">                &gt;&gt;&gt; packed.to_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP</span>
+<a id="__codelineno-0-2737" name="__codelineno-0-2737"></a><span class="sd">                &gt;&gt;&gt; store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP</span>
+<a id="__codelineno-0-2738" name="__codelineno-0-2738"></a><span class="sd">                &gt;&gt;&gt; store.read_array().tolist(), store.dtype, store.scale  # doctest: +SKIP</span>
 <a id="__codelineno-0-2739" name="__codelineno-0-2739"></a><span class="sd">                ([[50.0, -4999.5], [150.0, 200.0]], ['float64'], [1.0])</span>
-<a id="__codelineno-0-2740" name="__codelineno-0-2740"></a><span class="sd">                &gt;&gt;&gt; float(store.no_data_value[0])</span>
+<a id="__codelineno-0-2740" name="__codelineno-0-2740"></a><span class="sd">                &gt;&gt;&gt; float(store.no_data_value[0])  # doctest: +SKIP</span>
 <a id="__codelineno-0-2741" name="__codelineno-0-2741"></a><span class="sd">                -4999.5</span>
 <a id="__codelineno-0-2742" name="__codelineno-0-2742"></a>
 <a id="__codelineno-0-2743" name="__codelineno-0-2743"></a><span class="sd">                ```</span>
@@ -33530,11 +33418,11 @@ levels are written eagerly.</p>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">source</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">]</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">source</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">packed</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"packed.tif"</span><span class="p">))</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">packed</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"packed.zarr"</span><span class="p">))</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">store</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"packed.zarr"</span><span class="p">))</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">store</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">store</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">scale</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">packed</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"packed.zarr"</span><span class="p">))</span>  <span class="c1"># doctest: +SKIP</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">store</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"packed.zarr"</span><span class="p">))</span>  <span class="c1"># doctest: +SKIP</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">store</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">store</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">scale</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">([[</span><span class="mf">50.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">4999.5</span><span class="p">],</span> <span class="p">[</span><span class="mf">150.0</span><span class="p">,</span> <span class="mf">200.0</span><span class="p">]],</span> <span class="p">[</span><span class="s1">'float64'</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">])</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">no_data_value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">&gt;&gt;&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">no_data_value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># doctest: +SKIP</span>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="o">-</span><span class="mf">4999.5</span>
 </code></pre></div></li>
 </ul>
@@ -33737,11 +33625,11 @@ levels are written eagerly.</p>
 <a id="__codelineno-0-2733" name="__codelineno-0-2733"></a><span class="sd">            &gt;&gt;&gt; source.scale = [0.5]</span>
 <a id="__codelineno-0-2734" name="__codelineno-0-2734"></a><span class="sd">            &gt;&gt;&gt; source.close()</span>
 <a id="__codelineno-0-2735" name="__codelineno-0-2735"></a><span class="sd">            &gt;&gt;&gt; packed = Dataset.read_file(os.path.join(folder, "packed.tif"))</span>
-<a id="__codelineno-0-2736" name="__codelineno-0-2736"></a><span class="sd">            &gt;&gt;&gt; packed.to_zarr(os.path.join(folder, "packed.zarr"))</span>
-<a id="__codelineno-0-2737" name="__codelineno-0-2737"></a><span class="sd">            &gt;&gt;&gt; store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))</span>
-<a id="__codelineno-0-2738" name="__codelineno-0-2738"></a><span class="sd">            &gt;&gt;&gt; store.read_array().tolist(), store.dtype, store.scale</span>
+<a id="__codelineno-0-2736" name="__codelineno-0-2736"></a><span class="sd">            &gt;&gt;&gt; packed.to_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP</span>
+<a id="__codelineno-0-2737" name="__codelineno-0-2737"></a><span class="sd">            &gt;&gt;&gt; store = Dataset.from_zarr(os.path.join(folder, "packed.zarr"))  # doctest: +SKIP</span>
+<a id="__codelineno-0-2738" name="__codelineno-0-2738"></a><span class="sd">            &gt;&gt;&gt; store.read_array().tolist(), store.dtype, store.scale  # doctest: +SKIP</span>
 <a id="__codelineno-0-2739" name="__codelineno-0-2739"></a><span class="sd">            ([[50.0, -4999.5], [150.0, 200.0]], ['float64'], [1.0])</span>
-<a id="__codelineno-0-2740" name="__codelineno-0-2740"></a><span class="sd">            &gt;&gt;&gt; float(store.no_data_value[0])</span>
+<a id="__codelineno-0-2740" name="__codelineno-0-2740"></a><span class="sd">            &gt;&gt;&gt; float(store.no_data_value[0])  # doctest: +SKIP</span>
 <a id="__codelineno-0-2741" name="__codelineno-0-2741"></a><span class="sd">            -4999.5</span>
 <a id="__codelineno-0-2742" name="__codelineno-0-2742"></a>
 <a id="__codelineno-0-2743" name="__codelineno-0-2743"></a><span class="sd">            ```</span>
