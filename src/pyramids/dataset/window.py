@@ -19,6 +19,8 @@ from typing import Any
 
 from osgeo import gdal
 
+from pyramids.dataset.transform import GeoTransform
+
 
 @dataclass(frozen=True)
 class Window:
@@ -245,17 +247,9 @@ class Window:
         Returns:
             tuple[float, float, float, float]: The window's bounding box.
         """
-        gt = list(geotransform)
-        corners = [
-            gdal.ApplyGeoTransform(
-                gt, float(self.col_off + dc), float(self.row_off + dr)
-            )
-            for dc in (0, self.cols)
-            for dr in (0, self.rows)
-        ]
-        xs = [corner[0] for corner in corners]
-        ys = [corner[1] for corner in corners]
-        return (min(xs), min(ys), max(xs), max(ys))
+        return GeoTransform(*geotransform).extent(
+            self.cols, self.rows, col_off=self.col_off, row_off=self.row_off
+        )
 
     def intersection(self, other: Window) -> Window | None:
         """Return the overlapping window, or ``None`` when disjoint.

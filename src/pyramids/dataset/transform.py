@@ -419,7 +419,14 @@ class GeoTransform(NamedTuple):
             self.pixel_height
         )
 
-    def extent(self, columns: int, rows: int) -> tuple[float, float, float, float]:
+    def extent(
+        self,
+        columns: int,
+        rows: int,
+        *,
+        col_off: float = 0.0,
+        row_off: float = 0.0,
+    ) -> tuple[float, float, float, float]:
         """The normalised map-space bounding box of a grid this size.
 
         The inverse of :meth:`from_bounds`, and the answer to "where is this
@@ -432,6 +439,10 @@ class GeoTransform(NamedTuple):
         Args:
             columns: Grid width in pixels.
             rows: Grid height in pixels.
+            col_off: Column index of the window's top-left pixel; 0 (default)
+                projects the whole grid. A sub-window passes its own offset so
+                it reuses this one projection instead of re-rolling it.
+            row_off: Row index of the window's top-left pixel; 0 by default.
 
         Returns:
             tuple[float, float, float, float]: `(min_x, min_y, max_x, max_y)`,
@@ -468,8 +479,8 @@ class GeoTransform(NamedTuple):
                 sub-window rather than the whole grid.
         """
         corners_x, corners_y = self.apply(
-            [0, columns, 0, columns],
-            [0, 0, rows, rows],
+            [col_off, col_off + columns, col_off, col_off + columns],
+            [row_off, row_off, row_off + rows, row_off + rows],
         )
         return (
             float(corners_x.min()),
