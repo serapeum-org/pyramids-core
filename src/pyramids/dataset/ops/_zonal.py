@@ -75,8 +75,13 @@ def _rasterize_labels(ds: Dataset, fc: FeatureCollection) -> np.typing.NDArray:
         layer_crs = None
     # Synthesise the 0-based feature index as a `pid` column and let the shared
     # FeatureCollection -> OGR path build the datasource, rather than hand-rolling
-    # a MEM layer. `as_datasource` preserves the CRS, so `RasterizeLayer` still
-    # reprojects when the vector and raster CRSes disagree (H4).
+    # a MEM layer. zonal requires the vector and raster to share a CRS (the guard
+    # above raises on any authority-resolvable mismatch), and `as_datasource` (via
+    # `gdf.to_json`) preserves an authority (EPSG) CRS -- so the rasterised layer
+    # and the target agree and no reprojection happens. A custom-WKT CRS with no
+    # EPSG code cannot round-trip through GeoJSON (it is read back as CRS84), so it
+    # is not supported on this path: reproject the FeatureCollection to an EPSG CRS
+    # first. (H4)
     labelled = gpd.GeoDataFrame(
         {"pid": list(range(len(fc.geometry)))},
         geometry=list(fc.geometry),
