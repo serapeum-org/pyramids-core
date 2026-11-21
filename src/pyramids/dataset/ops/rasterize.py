@@ -1,4 +1,8 @@
-"""Vectorization, clustering, and translate mixin for Dataset."""
+"""Rasterization: burn a FeatureCollection's geometries into a Dataset-shaped grid.
+
+(Vector -> raster. The inverse, raster -> vector polygonization, lives in
+``pyramids.dataset.engines.vectorize``.)
+"""
 
 from __future__ import annotations
 

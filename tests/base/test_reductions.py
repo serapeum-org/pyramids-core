@@ -10,11 +10,15 @@ import numpy as np
 import pytest
 
 from pyramids.base._reductions import (
+    _LABEL_STAT_FUNCS,
+    CORE_REDUCER_NAMES,
+    REDUCERS,
     reduce_axis,
     reduce_by_label,
     validate_min_count,
     weighted_statistic,
 )
+from pyramids.dataset._reduce_ops import _SUPPORTED_OPS
 
 
 class TestReduceByLabelUnweighted:
@@ -286,3 +290,22 @@ class TestReduceAxisMinCount:
         out = reduce_axis(self._stack(), 0, "count", True, None, None, 5)
         assert int(out[0, 0]) == 1, f"count must ignore min_count, got {out[0, 0]}"
         assert int(out[0, 1]) == 3, "the full column counts 3"
+
+
+class TestCoreReducerNamesGuard:
+    """`CORE_REDUCER_NAMES` must not drift from the numpy tables or the dask dispatch list."""
+
+    def test_core_reducer_names_subset_of_numpy_tables(self):
+        """The six shared names are contained in both numpy reducer tables."""
+        names = set(CORE_REDUCER_NAMES)
+        assert names <= set(REDUCERS), names - set(REDUCERS)
+        assert names <= set(_LABEL_STAT_FUNCS), names - set(_LABEL_STAT_FUNCS)
+
+    def test_dask_supported_ops_is_the_shared_object(self):
+        """`_reduce_ops._SUPPORTED_OPS` is the same object as `CORE_REDUCER_NAMES`.
+
+        Identity (not just equality) proves the dask dispatch list imports the
+        shared constant rather than re-spelling a matching literal, so a future
+        revert to a hard-coded tuple fails here.
+        """
+        assert _SUPPORTED_OPS is CORE_REDUCER_NAMES

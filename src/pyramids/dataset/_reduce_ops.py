@@ -9,7 +9,9 @@ backend through :mod:`pyramids.lazy_support`.
 
 from __future__ import annotations
 
-_SUPPORTED_OPS = ("mean", "sum", "min", "max", "std", "var")
+from pyramids.base._reductions import CORE_REDUCER_NAMES
+
+_SUPPORTED_OPS = CORE_REDUCER_NAMES
 _NAN_TABLE = {op: f"nan{op}" for op in _SUPPORTED_OPS}
 
 #: Holistic ops :meth:`DatasetCollection.reduce_time` adds on top of the six

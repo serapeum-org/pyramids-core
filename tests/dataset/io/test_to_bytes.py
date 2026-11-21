@@ -153,6 +153,29 @@ class TestToBytes:
             f"deflate ({len(compressed)}) should beat raw ({len(raw)}) on zeros"
         )
 
+    def test_creation_options_serialized_via_to_gdal_options(self, monkeypatch):
+        """Creation options route through the shared `to_gdal_options`, not a bare f-string.
+
+        Test scenario:
+            The old serializer emitted `KEY=True` / `KEY=None`; the fix forwards
+            the mapping to `to_gdal_options` (bool -> YES/NO, drops None). Spy on
+            the module global to prove `to_bytes` hands it the raw mapping.
+        """
+        captured = {}
+        real = io_engine.to_gdal_options
+
+        def spy(opts):
+            captured["opts"] = opts
+            return real(opts)
+
+        monkeypatch.setattr(io_engine, "to_gdal_options", spy)
+        flat = Dataset.from_array(
+            np.zeros((8, 8), dtype="float32"),
+            geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
+        )
+        flat.to_bytes(creation_options={"BIGTIFF": True, "X": None})
+        assert captured.get("opts") == {"BIGTIFF": True, "X": None}, captured
+
     def test_png_driver(self):
         """A uint8 dataset serializes to a valid PNG payload.
 

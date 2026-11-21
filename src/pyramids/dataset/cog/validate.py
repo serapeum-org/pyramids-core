@@ -23,6 +23,7 @@ from typing import Any
 from osgeo import gdal
 
 from pyramids.base.remote import is_network_backed
+from pyramids.dataset.cog._overviews import enumerate_overviews
 from pyramids.dataset.cog.options import COG_READ_DEFAULTS
 
 
@@ -339,19 +340,18 @@ def _probe_overview_layout(path: str) -> dict[str, Any]:
         band = ds.GetRasterBand(1)
         block_x, block_y = band.GetBlockSize()
         width = ds.RasterXSize
-        overviews = []
-        for i in range(band.GetOverviewCount()):
-            ovr = band.GetOverview(i)
-            obx, oby = ovr.GetBlockSize()
-            overviews.append(
-                {
-                    "index": i,
-                    "width": ovr.XSize,
-                    "height": ovr.YSize,
-                    "blocksize": [obx, oby],
-                    "decimation": round(width / ovr.XSize) if ovr.XSize else 0,
-                }
+        overviews = [
+            {
+                "index": index,
+                "width": ovr_width,
+                "height": ovr_height,
+                "blocksize": [block_x, block_y],
+                "decimation": decimation,
+            }
+            for index, ovr_width, ovr_height, (block_x, block_y), decimation in (
+                enumerate_overviews(band, width)
             )
+        ]
         out["blocksize"] = [block_x, block_y]
         out["overview_count"] = len(overviews)
         out["overviews"] = overviews

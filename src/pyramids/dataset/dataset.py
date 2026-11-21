@@ -31,7 +31,7 @@ from pyramids.base._dataframe_grid import (
     reshape_to_grid,
     value_columns,
 )
-from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data
+from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data, is_no_data
 from pyramids.base._errors import (
     AlignmentError,
     ContainerRasterWarning,
@@ -73,6 +73,7 @@ from pyramids.base.remote import cloud_config_from_env, redact_credentials
 from pyramids.dataset._driver import (
     MEMORY_DRIVER,
     copy_yields_writable,
+    default_creation_options,
     resolve_output_driver,
 )
 from pyramids.dataset._drivers import (
@@ -115,8 +116,8 @@ from pyramids.dataset.ops._focal import (
 from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
+from pyramids.dataset.ops.rasterize import rasterize_features
 from pyramids.dataset.ops.units import convert_array
-from pyramids.dataset.ops.vectorize import rasterize_features
 from pyramids.dataset.stac_options import BandMetadata, Footprint, StacExtensions
 from pyramids.dataset.transform import GeoTransform
 from pyramids.feature import FeatureCollection, create_polygon
@@ -1222,6 +1223,33 @@ class Dataset(RasterBase):
         """
         result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
+
+    def normalize(self) -> np.ndarray:
+        """Facade — delegates to :meth:`Analysis.normalize <pyramids.dataset.engines.Analysis.normalize>`.
+
+        Linearly rescale the raster's values into the `0.0`-`1.0` range,
+        excluding no-data. Each band's physical no-data cells are masked to
+        `NaN` first, so they neither pollute the global min/max nor appear as
+        data, and they stay `NaN` in the result. A multi-band raster is
+        normalised against one global min/max across every band.
+
+        Returns:
+            numpy.ndarray: The raster's values rescaled to `0.0`-`1.0`, with
+                no-data cells returned as `NaN`.
+        """
+        arr = np.array(self.read_array(), dtype="float64")
+        if arr.ndim == 2:
+            no_data = self.analysis._physical_no_data(0)
+            if no_data is not None:
+                arr = np.where(is_no_data(arr, no_data), np.nan, arr)
+        else:
+            for band in range(arr.shape[0]):
+                no_data = self.analysis._physical_no_data(band)
+                if no_data is not None:
+                    arr[band] = np.where(
+                        is_no_data(arr[band], no_data), np.nan, arr[band]
+                    )
+        return self.analysis.normalize(arr)
 
     def fill(self, *args, **kwargs):
         """Deprecated alias for :meth:`fill_domain`."""
@@ -5947,13 +5975,8 @@ class Dataset(RasterBase):
                 # Callers that need tiled / sparse / BigTIFF output (e.g.
                 # create_empty) pass their own options.
                 creation_options = options
-            elif driver == "GTiff":
-                # LZW is lossless and compresses well, at the cost of more
-                # computation. GTiff-specific, so other drivers get nothing
-                # rather than an option they would reject.
-                creation_options = ["COMPRESS=LZW"]
             else:
-                creation_options = []
+                creation_options = default_creation_options(driver)
             dataset = gdal.GetDriverByName(driver).Create(
                 str(path), cols, rows, bands, dtype, creation_options
             )
@@ -7558,7 +7581,7 @@ class Dataset(RasterBase):
                 # depend on an unrelated argument. That is the same defect this
                 # branch removed from `merge_rasters`; one gate for both paths.
                 driver = resolve_output_driver(path)
-                options = ["COMPRESS=LZW"] if driver == "GTiff" else []
+                options = default_creation_options(driver)
                 dst = gdal.GetDriverByName(driver).CreateCopy(
                     str(path), vrt, strict=1, options=options
                 )

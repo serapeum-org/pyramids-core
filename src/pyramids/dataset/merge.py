@@ -38,7 +38,7 @@ from pyramids.base.remote import (
     redact_credentials,
     signer_cloud_config,
 )
-from pyramids.dataset._driver import resolve_output_driver
+from pyramids.dataset._driver import default_creation_options, resolve_output_driver
 from pyramids.dataset.dataset import Dataset
 from pyramids.dataset.transform import GeoTransform
 from pyramids.feature.bbox import normalise_longitude
@@ -321,7 +321,7 @@ def _restrict_grid(
     # geotransform should not reach here. Guard it anyway rather than silently
     # mis-georeferencing, and do not imply that dropping the bbox would help — a
     # rotated mosaic is not something merge_rasters handles either way.
-    if row_skew or col_skew:
+    if not GeoTransform(*geotransform).is_axis_aligned:
         raise ValueError(
             "cannot resolve a bbox against a rotated or sheared mosaic "
             f"(geotransform skew terms {row_skew!r}, {col_skew!r}); the window would "
@@ -1807,7 +1807,7 @@ def merge_rasters(
         # rather than removing one.
         translate_opts = gdal.TranslateOptions(
             format=out_driver,
-            creationOptions=["COMPRESS=LZW"] if out_driver == "GTiff" else [],
+            creationOptions=default_creation_options(out_driver),
             projWin=proj_win,
             noData=("none" if resolved_no_data is None else str(resolved_no_data)),
         )
@@ -2260,7 +2260,7 @@ def _merge_reduce(
     # produced a netCDF for method="last" and a GTiff for method="min". LZW is
     # GTiff-specific and is applied only there.
     out_driver = resolve_output_driver(dst)
-    out_options = ["COMPRESS=LZW"] if out_driver == "GTiff" else []
+    out_options = default_creation_options(out_driver)
     # Resolved before the thunk: an unknown driver yields None here, and
     # `.Create` on it would raise AttributeError -- which run_gdal_op does not
     # catch, so the failure would escape un-branded.

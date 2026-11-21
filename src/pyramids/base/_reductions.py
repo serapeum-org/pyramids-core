@@ -774,6 +774,14 @@ def _weighted_group_var(
         return np.asarray(np.where(wtotal != 0, weighted_sq / wtotal, np.nan))
 
 
+#: The six elementary reductions the dask string-dispatch table in
+#: :mod:`pyramids.dataset._reduce_ops` is built from (its `_SUPPORTED_OPS` is this tuple).
+#: The numpy tables below (:data:`REDUCERS`, :data:`_LABEL_STAT_FUNCS`) are **not** generated
+#: from it -- they keep their own callable values and extra keys -- but must each contain all
+#: six; a guard test (`test_core_reducer_names_subset_of_numpy_tables`) asserts that subset so
+#: the dask and numpy sides cannot drift apart silently.
+CORE_REDUCER_NAMES: tuple[str, ...] = ("mean", "sum", "min", "max", "std", "var")
+
 #: Per-operation ``(skipna_func, plain_func)`` pairs for the statistics ``reduce`` /
 #: ``coarsen`` compute. Under ``skipna``, :func:`reduce_axis` runs the first on float64, so
 #: the result is float64; without it, the second runs on the raw values in the dtype numpy
