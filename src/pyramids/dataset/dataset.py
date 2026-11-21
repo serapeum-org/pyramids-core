@@ -31,7 +31,7 @@ from pyramids.base._dataframe_grid import (
     reshape_to_grid,
     value_columns,
 )
-from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data
+from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data, is_no_data
 from pyramids.base._errors import (
     AlignmentError,
     ContainerRasterWarning,
@@ -1227,15 +1227,27 @@ class Dataset(RasterBase):
     def normalize(self) -> np.ndarray:
         """Facade — delegates to :meth:`Analysis.normalize <pyramids.dataset.engines.Analysis.normalize>`.
 
-        Linearly rescale the raster's values into the ``0.0``-``1.0`` range using
-        the global minimum and maximum. The engine helper is a pure array
-        transform, so this reads the data and forwards it; a multi-band raster is
+        Linearly rescale the raster's values into the ``0.0``-``1.0`` range,
+        excluding no-data. Each band's physical no-data cells are masked to
+        ``NaN`` first, so they neither pollute the global min/max nor appear as
+        data, and they stay ``NaN`` in the result. A multi-band raster is
         normalised against one global min/max across every band.
 
         Returns:
-            numpy.ndarray: The raster's values rescaled to ``0.0``-``1.0``.
+            numpy.ndarray: The raster's values rescaled to ``0.0``-``1.0``, with
+                no-data cells returned as ``NaN``.
         """
-        return self.analysis.normalize(self.read_array())
+        arr = np.array(self.read_array(), dtype="float64")
+        if arr.ndim == 2:
+            sentinel = self.analysis._physical_no_data(0)
+            if sentinel is not None:
+                arr = np.where(is_no_data(arr, sentinel), np.nan, arr)
+        else:
+            for band in range(arr.shape[0]):
+                sentinel = self.analysis._physical_no_data(band)
+                if sentinel is not None:
+                    arr[band] = np.where(is_no_data(arr[band], sentinel), np.nan, arr[band])
+        return self.analysis.normalize(arr)
 
     def fill(self, *args, **kwargs):
         """Deprecated alias for :meth:`fill_domain`."""

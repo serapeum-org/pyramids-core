@@ -5450,16 +5450,22 @@ class Analysis(_Engine["Dataset"]):
 
     @staticmethod
     def normalize(array: np.ndarray) -> np.typing.NDArray:
-        """Normalize numpy arrays into scale 0.0-1.0.
+        """Normalize a numpy array into the 0.0-1.0 range, ignoring NaNs.
+
+        NaN cells are excluded from the min/max (via `np.nanmin` / `np.nanmax`)
+        and stay NaN in the output, so a single no-data cell does not collapse
+        the whole result to NaN.
 
         Args:
-            array (np.ndarray): Numpy array to normalize.
+            array (np.ndarray): Numpy array to normalize; NaNs are treated as
+                gaps and excluded from the range.
 
         Returns:
-            np.ndarray: Normalized array.
+            np.ndarray: The values rescaled to 0.0-1.0, with NaNs preserved.
         """
-        array_min = array.min()
-        array_max = array.max()
+        array = np.asarray(array, dtype=float)
+        array_min = np.nanmin(array)
+        array_max = np.nanmax(array)
         val = (array - array_min) / (array_max - array_min)
         return np.asarray(val)
 

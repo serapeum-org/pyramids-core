@@ -460,9 +460,46 @@ class TestDatasetNormalizeFacade:
 
         out = ds.normalize()
 
-        np.testing.assert_allclose(out, Analysis.normalize(ds.read_array()))
         assert float(np.nanmin(out)) == pytest.approx(0.0)
         assert float(np.nanmax(out)) == pytest.approx(1.0)
+
+    def test_nan_no_data_is_excluded_not_propagated(self):
+        """A NaN no-data cell is excluded from the range, not spread to every cell.
+
+        Test scenario:
+            A float raster with one NaN no-data cell must still rescale its real
+            values to 0-1 (the no-data cell stays NaN), rather than returning
+            all-NaN because the global min/max saw the NaN.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.array([[0.0, 5.0], [10.0, np.nan]], dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=np.nan)
+
+        out = ds.normalize()
+
+        assert np.isnan(out[1, 1]), "the no-data cell must stay NaN"
+        np.testing.assert_allclose(
+            np.sort(out[~np.isnan(out)]), np.array([0.0, 0.5, 1.0])
+        )
+
+    def test_sentinel_no_data_does_not_pollute_the_scale(self):
+        """A sentinel no-data value is excluded, not treated as the global minimum.
+
+        Test scenario:
+            With ``no_data_value=-9999`` the sentinel must not become the range
+            floor (which would squash every real value into ~1.0); it is excluded
+            and the real values span 0-1.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.array([[0.0, 5.0], [10.0, -9999.0]], dtype="float32")
+        ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=-9999.0)
+
+        out = ds.normalize()
+
+        assert np.isnan(out[1, 1]), "the no-data cell must be excluded (NaN)"
+        np.testing.assert_allclose(
+            np.sort(out[~np.isnan(out)]), np.array([0.0, 0.5, 1.0])
+        )
 
 
 class TestPickleRoundTrip:
