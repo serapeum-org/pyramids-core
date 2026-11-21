@@ -209,12 +209,14 @@ pyramids is the GIS engine at the centre of a small family of packages. There ar
 relate to it:
 
 - **Plugins** extend the core through entry-point hooks (`pyramids.raster_drivers`, `pyramids.vector_drivers`,
-  `pyramids.mesh_drivers`, `pyramids.plot_backends`) — install one and pyramids discovers it automatically, no
-  code change. Current plugins: [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) (Earth-observation
-  raster sources), [`pyramids-mesh`](https://github.com/serapeum-org/pyramids-mesh) (hydraulic/simulation mesh
-  formats), [`pyramids-citymodels`](https://github.com/serapeum-org/pyramids-citymodels) (CityJSON / CityGML / 3D
-  Tiles), and [`digitalearth`](https://github.com/serapeum-org/Digital-Earth) (interactive / 3-D / web plot
-  backends). See the [plugins catalog](docs/plugins.md) and
+  `pyramids.mesh_drivers`, `pyramids.plot_backends`, `pyramids.compute_backend`, `pyramids.cli_commands`,
+  `pyramids.gdal_plugin_path`) — install one and pyramids discovers it automatically, no code change. Current
+  plugins: [`pyramids-eo`](https://github.com/serapeum-org/pyramids-eo) (Earth-observation raster sources),
+  [`pyramids-mesh`](https://github.com/serapeum-org/pyramids-mesh) (hydraulic/simulation mesh formats),
+  [`pyramids-citymodels`](https://github.com/serapeum-org/pyramids-citymodels) (CityJSON / CityGML / 3D Tiles),
+  [`digitalearth`](https://github.com/serapeum-org/Digital-Earth) (interactive / 3-D / web plot backends), and
+  [`pyramids-lazy`](https://github.com/serapeum-org/pyramids-lazy) (Dask out-of-core compute — chunked reads,
+  Zarr & kerchunk writes). See the [plugins catalog](docs/plugins.md) and
   [Extending pyramids](docs/extending-pyramids.md) to write your own.
 - **Sibling engines** are standalone and interop *toward* pyramids rather than depending on it being installed —
   e.g. [`pointclouds`](https://github.com/serapeum-org/pointclouds), the GDAL-free point-cloud engine, which
