@@ -106,7 +106,7 @@ class TestTerrainWriters:
     def test_slope_writes_a_mesh_with_the_derived_variable(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
         assert _run(["mesh", "analysis", "slope", ramp_file, out]) == 0
-        assert "slope" in MeshDataset.read_file(out).data_variable_names
+        assert "slope" in MeshDataset.read_file(out).variable_names
 
     def test_slope_radians(self, ramp_file, tmp_path):
         out = str(tmp_path / "slope.nc")
@@ -119,7 +119,7 @@ class TestTerrainWriters:
     def test_aspect_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "aspect.nc")
         assert _run(["mesh", "analysis", "aspect", ramp_file, out]) == 0
-        assert "aspect" in MeshDataset.read_file(out).data_variable_names
+        assert "aspect" in MeshDataset.read_file(out).variable_names
 
     def test_hillshade_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "hs.nc")
@@ -127,7 +127,7 @@ class TestTerrainWriters:
             _run(["mesh", "analysis", "hillshade", ramp_file, out, "--azimuth", "270"])
             == 0
         )
-        assert "hillshade" in MeshDataset.read_file(out).data_variable_names
+        assert "hillshade" in MeshDataset.read_file(out).variable_names
 
     def test_focal_mean_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "fm.nc")
@@ -135,12 +135,12 @@ class TestTerrainWriters:
             _run(["mesh", "analysis", "focal-mean", ramp_file, out, "--rings", "2"])
             == 0
         )
-        assert "focal_mean" in MeshDataset.read_file(out).data_variable_names
+        assert "focal_mean" in MeshDataset.read_file(out).variable_names
 
     def test_focal_std_writes_a_mesh(self, ramp_file, tmp_path):
         out = str(tmp_path / "fs.nc")
         assert _run(["mesh", "analysis", "focal-std", ramp_file, out]) == 0
-        assert "focal_std" in MeshDataset.read_file(out).data_variable_names
+        assert "focal_std" in MeshDataset.read_file(out).variable_names
 
     def test_proximity_writes_distances(self, ramp_file, tmp_path):
         out = str(tmp_path / "prox.nc")
@@ -751,7 +751,7 @@ class TestFocalReduce:
             )
             == 0
         )
-        assert "focal_median" in MeshDataset.read_file(out).data_variable_names
+        assert "focal_median" in MeshDataset.read_file(out).variable_names
 
     @pytest.mark.parametrize("reducer", ["median", "min", "max", "sum", "range", "var"])
     def test_every_named_reducer_runs(self, mesh_file, reducer, tmp_path):
@@ -777,7 +777,7 @@ class TestFocalReduce:
             )
             == 0
         )
-        assert f"focal_{reducer}" in MeshDataset.read_file(out).data_variable_names
+        assert f"focal_{reducer}" in MeshDataset.read_file(out).variable_names
 
     def test_median_values_match_a_two_ring_neighbourhood(self, mesh_file, tmp_path):
         """``median`` over two rings on ``[5, 0, 0, 7]`` yields the known per-face medians."""

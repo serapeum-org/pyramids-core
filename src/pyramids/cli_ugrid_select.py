@@ -90,7 +90,7 @@ def _resolve_variable(mesh: MeshDataset, name: str | None) -> str:
     """
     if name is not None:
         return name
-    names = list(mesh.data_variable_names)
+    names = list(mesh.variable_names)
     if len(names) != 1:
         raise ValueError(
             f"this mesh exposes {len(names)} data variables ({names}); pass --var to choose one"

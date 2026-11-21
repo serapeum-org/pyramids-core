@@ -238,7 +238,7 @@ class TestConcatMerge:
         a = self._mesh(np.array([1.0, 2.0]), "x")
         b = self._mesh(np.array([3.0, 4.0]), "y")
         merged = a.merge(b)
-        assert sorted(merged.data_variable_names) == ["x", "y"]
+        assert sorted(merged.variable_names) == ["x", "y"]
 
     def test_merge_conflict_raises(self):
         a = self._mesh(np.array([1.0, 2.0]), "x")
@@ -300,8 +300,8 @@ class TestVariableManagement:
 
     def test_with_variable_is_immutable(self, mesh):
         out = mesh.with_variable("e", np.array([5.0, 6.0]))
-        assert sorted(out.data_variable_names) == ["d", "e"]
-        assert mesh.data_variable_names == ["d"]  # original untouched
+        assert sorted(out.variable_names) == ["d", "e"]
+        assert mesh.variable_names == ["d"]  # original untouched
 
     def test_with_variable_temporal(self, mesh):
         out = mesh.with_variable("t", np.array([[1.0, 2.0], [3.0, 4.0]]))
@@ -309,7 +309,7 @@ class TestVariableManagement:
 
     def test_drop_variables(self, mesh):
         out = mesh.with_variable("e", np.array([5.0, 6.0])).drop_variables("d")
-        assert out.data_variable_names == ["e"]
+        assert out.variable_names == ["e"]
 
     def test_drop_missing_raises(self, mesh):
         with pytest.raises(KeyError, match="not found"):
@@ -317,7 +317,7 @@ class TestVariableManagement:
 
     def test_rename_preserves_lazy_and_relabels(self, mesh):
         out = mesh.rename_variable("d", "depth")
-        assert out.data_variable_names == ["depth"]
+        assert out.variable_names == ["depth"]
         assert out["depth"].name == "depth"
         assert out["depth"].data.tolist() == [1.0, 2.0]
 

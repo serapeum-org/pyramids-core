@@ -440,14 +440,14 @@ class TestLayerSelect:
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "isel-layer", src, out, "--index", "0"]) == 0
-        assert "sal" in MeshDataset.read_file(out).data_variable_names
+        assert "sal" in MeshDataset.read_file(out).variable_names
 
     def test_sel_layer(self, tmp_path):
         """sel-layer selects a layer by (positional) coordinate value."""
         src = _write_mesh(_volume_mesh(), tmp_path, "vol.nc")
         out = str(tmp_path / "o.nc")
         assert _run(["mesh", "select", "sel-layer", src, out, "--value", "1"]) == 0
-        assert "sal" in MeshDataset.read_file(out).data_variable_names
+        assert "sal" in MeshDataset.read_file(out).variable_names
 
     def test_collapse_layer(self, tmp_path):
         """collapse-layer flattens the volume onto a 2-D face field."""
@@ -654,7 +654,7 @@ class TestValueOps:
             )
             == 0
         )
-        assert "mesh2d_edge_type" not in MeshDataset.read_file(out).data_variable_names
+        assert "mesh2d_edge_type" not in MeshDataset.read_file(out).variable_names
 
     def test_drop_variables_unknown_raises(self, tmp_path):
         """Dropping an absent variable is remapped to a clean ValueError."""

@@ -19,7 +19,7 @@ class TestUgridDataset:
     def test_counts_and_geo_properties(self, ug):
         assert ug.n_node == 16 and ug.n_face == 4
         assert len(ug.bounds) == 4
-        assert ug.data_variable_names == []  # this file is mesh-only
+        assert ug.variable_names == []  # this file is mesh-only
         assert isinstance(ug.global_attributes, dict)
         assert ug.mesh_name
 

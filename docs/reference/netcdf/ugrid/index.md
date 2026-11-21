@@ -18,7 +18,7 @@ elements (nodes, faces, edges).
 classDiagram
     class MeshDataset {
       +mesh : Mesh2d
-      +data_variable_names
+      +variable_names
       +n_node / n_face / n_edge
       +bounds · crs · epsg
       +get_data(name)

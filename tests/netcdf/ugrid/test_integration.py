@@ -53,7 +53,7 @@ class TestFullLifecycle:
 
         ds2 = MeshDataset.read_file(out_path)
         assert ds2.n_face == 4, f"Step 3 failed: expected 4 faces, got {ds2.n_face}"
-        assert "temperature" in ds2.data_variable_names, (
+        assert "temperature" in ds2.variable_names, (
             "Step 3 failed: temperature variable missing"
         )
 

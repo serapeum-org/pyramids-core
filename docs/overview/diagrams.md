@@ -411,7 +411,7 @@ classDiagram
     class ugrid_MeshDataset {
         +__init__(src)
         +mesh · n_face
-        +data_variable_names
+        +variable_names
         +read_file(path)
         +from_arrays(...)
         +to_dataset(...)

@@ -110,7 +110,7 @@ def _reopen_has_depth(path: str) -> bool:
     Returns:
         bool: ``True`` when the file reads back carrying ``depth``.
     """
-    return "depth" in MeshDataset.read_file(path).data_variable_names
+    return "depth" in MeshDataset.read_file(path).variable_names
 
 
 @pytest.fixture

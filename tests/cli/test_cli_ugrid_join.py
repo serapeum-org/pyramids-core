@@ -106,7 +106,7 @@ class TestMeshMerge:
             ]
         )
         assert rc == 0
-        assert len(MeshDataset.read_file(out).data_variable_names) > 0
+        assert len(MeshDataset.read_file(out).variable_names) > 0
 
     def test_default_compat_rejects_conflict(self, tmp_path):
         """The default no_conflicts policy refuses a variable shared by both inputs."""

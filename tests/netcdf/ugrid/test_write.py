@@ -92,8 +92,8 @@ class TestWriteUgrid:
         ds2 = MeshDataset.read_file(out_path)
         assert ds2.n_node == 3, f"Expected 3 nodes, got {ds2.n_node}"
         assert ds2.n_face == 1, f"Expected 1 face, got {ds2.n_face}"
-        assert "elevation" in ds2.data_variable_names, (
-            f"Expected 'elevation', got {ds2.data_variable_names}"
+        assert "elevation" in ds2.variable_names, (
+            f"Expected 'elevation', got {ds2.variable_names}"
         )
         np.testing.assert_array_almost_equal(
             ds2["elevation"].data,
@@ -277,9 +277,7 @@ class TestCreateFromArrays:
             data={"temperature": np.array([20.0])},
             data_locations={"temperature": "face"},
         )
-        assert "temperature" in ds.data_variable_names, (
-            "Should have temperature variable"
-        )
+        assert "temperature" in ds.variable_names, "Should have temperature variable"
         assert ds["temperature"].data[0] == pytest.approx(20.0), (
             "Temperature should be 20.0"
         )
@@ -398,7 +396,7 @@ class TestTemporalWrite:
         ds.to_file(out_path)
 
         ds2 = MeshDataset.read_file(out_path)
-        assert "wl" in ds2.data_variable_names, "Should have wl variable"
+        assert "wl" in ds2.variable_names, "Should have wl variable"
         var = ds2["wl"]
         assert var.has_time, "Should have time dimension"
         assert var.n_time_steps == 2, f"Expected 2 time steps, got {var.n_time_steps}"
