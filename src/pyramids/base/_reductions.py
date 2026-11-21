@@ -779,6 +779,12 @@ def _weighted_group_var(
 #: the result is float64; without it, the second runs on the raw values in the dtype numpy
 #: gives that reduction — the ``min`` of an ``int16`` band stays ``int16``. ``quantile`` is
 #: the one that takes an extra argument, ``q``.
+#: The six elementary reductions shared by the numpy reducer tables in this module and the
+#: dask string-dispatch table in :mod:`pyramids.dataset._reduce_ops` -- the single source of
+#: that name list. Each table keeps its own, differently-typed values (numpy callables here,
+#: ``nan*`` dispatch names there) and adds its own extra keys.
+CORE_REDUCER_NAMES: tuple[str, ...] = ("mean", "sum", "min", "max", "std", "var")
+
 REDUCERS: dict[str, tuple[Any, Any]] = {
     "mean": (np.nanmean, np.mean),
     "sum": (np.nansum, np.sum),
