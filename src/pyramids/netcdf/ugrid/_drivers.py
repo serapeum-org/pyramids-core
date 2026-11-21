@@ -419,13 +419,15 @@ def _instantiate(entry_point: EntryPoint) -> MeshDriver | None:
     # every non-NetCDF read, and contradicting this module's "every failure is a warning"
     # guarantee.
     try:
-        driver = entry_point.load()()
-        if extra_missing(getattr(driver, "extra", None)):
+        loaded = entry_point.load()
+        if extra_missing(getattr(loaded, "extra", None)):
             # D9: the driver declares an optional backend (`extra = "mikeio"`) that is not
-            # installed. Skip it silently, as the raster hook does via the same
-            # `base/_driver_discovery.extra_missing` helper, rather than offering a driver
-            # whose backend cannot load or -- worse -- reporting it as a broken plugin.
+            # installed. Skip it silently -- read `extra` off the loaded CLASS and return
+            # BEFORE constructing, as the raster hook does, so a driver that imports its
+            # backend in `__init__` is not run (and so not reported as a broken plugin)
+            # when the backend is absent.
             return None
+        driver = loaded()
         problem = _validate(driver)
     except Exception as error:  # noqa: BLE001 - a plugin may fail in any way at all
         warnings.warn(
