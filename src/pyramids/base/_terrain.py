@@ -32,6 +32,21 @@ def validate_angle_units(units: str, *, operation: str = "slope") -> None:
         ValueError: ``units`` is not one of the two accepted spellings. The check is
             exact and case-sensitive, so ``"DEGREES"`` and ``"radian"`` are refused --
             otherwise a typo silently returns radians, a 57x error (D7).
+
+    Examples:
+        - An accepted spelling passes silently:
+            ```python
+            >>> validate_angle_units("degrees")
+
+            ```
+        - A miscased or unknown unit is refused:
+            ```python
+            >>> validate_angle_units("DEGREES")
+            Traceback (most recent call last):
+                ...
+            ValueError: slope: units must be 'degrees' or 'radians', got 'DEGREES'.
+
+            ```
     """
     if units not in _ANGLE_UNITS:
         raise ValueError(
@@ -59,6 +74,22 @@ def slope_from_gradient(
 
     Raises:
         ValueError: ``units`` is neither ``"degrees"`` nor ``"radians"``.
+
+    Examples:
+        - A unit east-west gradient is a 45-degree slope:
+            ```python
+            >>> import numpy as np
+            >>> slope_from_gradient(np.array([0.0, 1.0]), np.array([0.0, 0.0]))
+            array([ 0., 45.])
+
+            ```
+        - The same in radians:
+            ```python
+            >>> import numpy as np
+            >>> np.round(slope_from_gradient(np.array([1.0]), np.array([0.0]), units="radians"), 6)
+            array([0.785398])
+
+            ```
     """
     validate_angle_units(units, operation="slope")
     radians = np.arctan(np.hypot(dz_dx, dz_dy))
@@ -79,6 +110,22 @@ def aspect_from_gradient(dz_dx: np.ndarray, dz_dy: np.ndarray) -> np.ndarray:
 
     Returns:
         numpy.ndarray: Per-cell aspect in ``[0, 360)`` degrees, clockwise from north.
+
+    Examples:
+        - A surface rising to the east faces west, 270 degrees:
+            ```python
+            >>> import numpy as np
+            >>> aspect_from_gradient(np.array([1.0]), np.array([0.0]))
+            array([270.])
+
+            ```
+        - A surface rising to the north faces south, 180 degrees:
+            ```python
+            >>> import numpy as np
+            >>> aspect_from_gradient(np.array([0.0]), np.array([-1.0]))
+            array([180.])
+
+            ```
     """
     angle = np.degrees(np.arctan2(dz_dy, -dz_dx))
     return np.mod(450.0 - angle, 360.0)
