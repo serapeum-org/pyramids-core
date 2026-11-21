@@ -582,9 +582,7 @@ class TestCrop:
             The 'temperature' face variable survives and its length matches the new face count.
         """
         cropped = unit_square_dataset.crop(box(-0.1, -0.1, 1.1, 1.1), touch=False)
-        assert "temperature" in cropped.variable_names, (
-            "data variable dropped by crop"
-        )
+        assert "temperature" in cropped.variable_names, "data variable dropped by crop"
         assert len(cropped["temperature"].data) == cropped.n_face, (
             "data length must match the cropped face count"
         )

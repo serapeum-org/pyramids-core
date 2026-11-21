@@ -277,9 +277,7 @@ class TestCreateFromArrays:
             data={"temperature": np.array([20.0])},
             data_locations={"temperature": "face"},
         )
-        assert "temperature" in ds.variable_names, (
-            "Should have temperature variable"
-        )
+        assert "temperature" in ds.variable_names, "Should have temperature variable"
         assert ds["temperature"].data[0] == pytest.approx(20.0), (
             "Temperature should be 20.0"
         )
