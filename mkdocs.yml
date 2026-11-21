@@ -173,8 +173,6 @@ nav:
           - Cloud Optimized GeoTIFFs: tutorials/cog.md
           - COG basics (offline): examples/cog/cog-basics.ipynb
           - COG with real data: examples/cog/cog-real-data.ipynb
-          - Dask — lazy reads + parallel writes: examples/dataset/dask-lazy-datasets.ipynb
-          - Dask — Dataset (complete cookbook): examples/dataset/lazy-dataset-complete.ipynb
           - Dask — DatasetCollection (complete cookbook): examples/dataset/lazy-collection-complete.ipynb
       - Zarr:
           - Zarr basics (offline): examples/zarr/zarr-basics.ipynb
