@@ -32,12 +32,12 @@ from typing import TYPE_CHECKING, Any
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from osgeo import gdal, ogr, osr
+from osgeo import gdal
 
 from pyramids.base._domain import is_no_data
 from pyramids.base._reductions import reduce_by_label
 from pyramids.base._utils import apply_unpack
-from pyramids.base.crs import sr_from_epsg, sr_from_wkt
+from pyramids.feature._ogr import as_datasource
 
 if TYPE_CHECKING:
     from pyramids.dataset import Dataset
@@ -68,38 +68,35 @@ def _rasterize_labels(ds: Dataset, fc: FeatureCollection) -> np.typing.NDArray:
             )
 
     if fc_crs is not None:
-        srs = sr_from_wkt(fc_crs.to_wkt())
+        layer_crs: Any = fc_crs
     elif ds_epsg is not None:
-        srs = sr_from_epsg(ds_epsg)
+        layer_crs = ds_epsg
     else:
-        srs = osr.SpatialReference()
-    mem_driver = ogr.GetDriverByName("MEM")
-    ds_vec = mem_driver.CreateDataSource("zonal_mem")
-    layer = ds_vec.CreateLayer("features", srs=srs, geom_type=ogr.wkbPolygon)
-    id_field = ogr.FieldDefn("pid", ogr.OFTInteger)
-    layer.CreateField(id_field)
-    for idx, geom in enumerate(fc.geometry):
-        feat = ogr.Feature(layer.GetLayerDefn())
-        feat.SetField("pid", int(idx))
-        ogr_geom = ogr.CreateGeometryFromWkb(geom.wkb)
-        feat.SetGeometry(ogr_geom)
-        layer.CreateFeature(feat)
-        feat = None
+        layer_crs = None
+    # Synthesise the 0-based feature index as a `pid` column and let the shared
+    # FeatureCollection -> OGR path build the datasource, rather than hand-rolling
+    # a MEM layer. `as_datasource` preserves the CRS, so `RasterizeLayer` still
+    # reprojects when the vector and raster CRSes disagree (H4).
+    labelled = gpd.GeoDataFrame(
+        {"pid": list(range(len(fc.geometry)))},
+        geometry=list(fc.geometry),
+        crs=layer_crs,
+    )
 
     mem_drv = gdal.GetDriverByName("MEM")
     label_ds = mem_drv.Create("", ds.columns, ds.rows, 1, gdal.GDT_Int32)
     label_ds.SetGeoTransform(ds.geotransform)
     label_ds.SetProjection(ds.raster.GetProjection())
     label_ds.GetRasterBand(1).Fill(-1)
-    gdal.RasterizeLayer(
-        label_ds,
-        [1],
-        layer,
-        options=["ATTRIBUTE=pid", "ALL_TOUCHED=FALSE"],
-    )
+    with as_datasource(labelled, gdal_dataset=True) as vector_ds:
+        gdal.RasterizeLayer(
+            label_ds,
+            [1],
+            vector_ds.GetLayer(),
+            options=["ATTRIBUTE=pid", "ALL_TOUCHED=FALSE"],
+        )
     labels = label_ds.GetRasterBand(1).ReadAsArray()
     label_ds = None
-    ds_vec = None
     return labels
 
 
