@@ -321,7 +321,7 @@ def _restrict_grid(
     # geotransform should not reach here. Guard it anyway rather than silently
     # mis-georeferencing, and do not imply that dropping the bbox would help — a
     # rotated mosaic is not something merge_rasters handles either way.
-    if row_skew or col_skew:
+    if not GeoTransform(*geotransform).is_axis_aligned:
         raise ValueError(
             "cannot resolve a bbox against a rotated or sheared mosaic "
             f"(geotransform skew terms {row_skew!r}, {col_skew!r}); the window would "

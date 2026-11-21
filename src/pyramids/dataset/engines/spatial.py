@@ -54,6 +54,7 @@ from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._warp import carry_raster_metadata, warp_to_dataset
 from pyramids.dataset.engines._warp import dst_srs_arg as _dst_srs_arg
 from pyramids.dataset.engines.vectorize import Vectorize
+from pyramids.dataset.transform import GeoTransform
 from pyramids.dataset.window import Window
 
 
@@ -2495,9 +2496,8 @@ class Spatial(_Engine["Dataset"]):
         """
         window: tuple[float, float, float, float] | None = None
         geotransform = src._raster.GetGeoTransform()
-        _, dx, row_skew, _, col_skew, dy = geotransform
         source_crs = src.crs
-        north_up = not row_skew and not col_skew and dx > 0 and dy < 0
+        north_up = GeoTransform(*geotransform).is_north_up
         same_crs = (
             bool(source_crs)
             and feature.crs is not None
@@ -2676,8 +2676,9 @@ class Spatial(_Engine["Dataset"]):
                 The windowed crop, or ``None`` when the fast path does not apply.
         """
         result: Dataset | None = None
-        x0, dx, row_skew, y0, col_skew, dy = self._ds._raster.GetGeoTransform()
-        north_up = not row_skew and not col_skew and dx > 0 and dy < 0
+        geotransform = self._ds._raster.GetGeoTransform()
+        x0, dx, _, y0, _, dy = geotransform
+        north_up = GeoTransform(*geotransform).is_north_up
         source_crs = self._ds.crs
         west, south, east, north = (float(v) for v in bbox)
         eligible = (
