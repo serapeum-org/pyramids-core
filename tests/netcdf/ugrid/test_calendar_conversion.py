@@ -62,6 +62,25 @@ class TestConvertCalendar:
         converted = ds.convert_calendar("noleap")
         assert np.array_equal(converted["depth"].data, ds["depth"].data)
 
+    @pytest.mark.parametrize(
+        ("units", "target"),
+        [("days since 2000-02-29", "noleap"), ("days since 2001-12-31", "360_day")],
+    )
+    def test_an_epoch_absent_in_the_target_calendar_refuses_up_front(
+        self, units, target
+    ):
+        """D8: a units epoch that does not exist in the target calendar is refused now.
+
+        Before the fix the conversion succeeded and the invalid (units, calendar) pair only
+        detonated at `to_file`, where `_write_time_coordinate` warned and wrote a file with no
+        time coordinate -- real dates silently degraded to positional indices. The cube
+        refused this up front; the mesh now does too.
+        """
+        stamps = _days("standard", (2001, 3, 1), (2001, 3, 2), (2001, 3, 3))
+        ds = _mesh(stamps, units=units)
+        with pytest.raises(ValueError, match="reference date must exist"):
+            ds.convert_calendar(target)
+
     def test_the_target_calendar_is_carried(self):
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2))
         converted = _mesh(stamps).convert_calendar("360_day")

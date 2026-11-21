@@ -5049,6 +5049,19 @@ class MeshDataset(_MeshFacades):
                 f"convert_calendar() would drop every step: no date on this axis exists in the "
                 f"{calendar!r} calendar."
             )
+        try:
+            # D8: re-encode the carried instants against the SOURCE units, as the cube does
+            # (selection.py:_run_convert_calendar). The new calendar is stored beside the
+            # unchanged units, so the units' reference date must exist in that calendar too --
+            # "days since 2000-02-29" has no meaning on noleap. Without this check the invalid
+            # pair survives to write and _write_time_coordinate silently drops the time axis.
+            [float(value) for value in cftime.date2num(carried, units, calendar)]
+        except (ValueError, TypeError) as error:
+            raise ValueError(
+                f"convert_calendar() cannot count the time axis in {units!r} on the "
+                f"{calendar!r} calendar: {error}. The units' reference date must exist in the "
+                f"target calendar too -- restamp it with assign_coords/attrs before converting."
+            ) from error
         indices = np.asarray(kept, dtype=np.intp)
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
