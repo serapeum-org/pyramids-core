@@ -39,6 +39,13 @@ shadow the version-locked ones the active `libgdal` was built with. The binaries
 `libgdal`, which is a real constraint rather than a formality; see
 [GDAL driver plugins](reference/gdal-driver-plugins.md).
 
+A seventh seam, `pyramids.cli_commands`, adds **subcommands to the `pyramids` CLI**. Each entry point is an
+`add_<domain>_commands(sub)` callable that receives the top-level argparse subparsers action and registers its own
+verbs, so an installed plugin's commands appear under `pyramids` automatically. Discovery is failure-isolated — a
+plugin that fails to import or raises while registering is recorded and skipped rather than crashing the CLI — and
+`pyramids plugins list` reports what is installed and whether each plugin loaded. See the module docstring of
+`pyramids.cli_plugins` for the contract and a worked example.
+
 ## How registration works
 
 A plugin declares its entry points in its own `pyproject.toml` under the matching group. For example, a package
