@@ -25,6 +25,7 @@ from osgeo import gdal, osr
 from pandas import DataFrame
 from shapely.geometry import LineString
 
+from pyramids.base._array_ops import fill_dtype
 from pyramids.base._domain import (
     fits_dtype,
     free_no_data,
@@ -429,18 +430,11 @@ def _mask_dtype(band: np.dtype, fill: Any) -> np.dtype:
 
           ```
     """
-    filler = np.asarray(fill)
-    chosen = np.result_type(band, filler)
-    if np.issubdtype(band, np.floating):
-        holds = bool(np.isnan(filler).all()) or bool(np.isinf(filler).all())
-        if holds or bool(np.abs(filler) <= np.finfo(band).max):
-            chosen = np.dtype(band)
-    elif np.issubdtype(band, np.integer) and not np.isnan(filler).any():
-        limits = np.iinfo(band)
-        value = float(filler)
-        if value.is_integer() and limits.min <= value <= limits.max:
-            chosen = np.dtype(band)
-    return chosen
+    # Delegated to the shared base kernel (D1/D5 dedup): the two were character-identical
+    # pure-numpy dtype policies, so the raster now consumes the one in `base/_array_ops`
+    # rather than keeping a second copy. `_mask_dtype` stays as the raster's named entry
+    # point, and its doctests below pin that the delegation is behaviour-preserving.
+    return fill_dtype(band, fill)
 
 
 class Analysis(_Engine["Dataset"]):
