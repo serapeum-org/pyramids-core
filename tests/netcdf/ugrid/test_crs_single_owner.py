@@ -78,19 +78,32 @@ class TestCrsSingleOwner:
         mesh.set_crs_wkt(None)  # also a no-op, never raises
         assert mesh.crs is None
 
-    def test_fill_is_monotonic_never_clobbers(self):
-        """A mesh that already has a CRS is not overwritten by a different WKT."""
+    def test_a_matching_crs_wkt_is_accepted_and_does_not_clobber(self):
+        """Building from an already-CRS'd mesh with the SAME CRS is fine and changes nothing."""
         from pyproj import CRS
 
         ds = _square_mesh(epsg=4326)
         shared = ds.mesh
         assert shared.crs.to_epsg() == 4326
-        # Build a second dataset from the same, already-CRS'd mesh with a different WKT.
         MeshDataset(
             mesh=shared,
             data_variables=ds._data_variables,
             global_attributes=ds._global_attributes,
             topology_info=ds._topology_info,
-            crs_wkt=CRS.from_epsg(3857).to_wkt(),
+            crs_wkt=CRS.from_epsg(4326).to_wkt(),
         )
-        assert shared.crs.to_epsg() == 4326  # first write wins; no clobber
+        assert shared.crs.to_epsg() == 4326
+
+    def test_a_conflicting_crs_wkt_is_refused_not_kept_split(self):
+        """A crs_wkt disagreeing with the mesh's CRS raises, so the two cannot diverge (M1)."""
+        from pyproj import CRS
+
+        ds = _square_mesh(epsg=4326)
+        with pytest.raises(ValueError, match="disagrees with the mesh"):
+            MeshDataset(
+                mesh=ds.mesh,
+                data_variables=ds._data_variables,
+                global_attributes=ds._global_attributes,
+                topology_info=ds._topology_info,
+                crs_wkt=CRS.from_epsg(3857).to_wkt(),
+            )
