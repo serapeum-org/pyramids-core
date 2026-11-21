@@ -16,6 +16,7 @@ standard library here, so nothing it imports can reach back up into ``dataset`` 
 
 from __future__ import annotations
 
+import operator
 import warnings
 from numbers import Real
 from typing import Any
@@ -349,6 +350,74 @@ def resize_axis(arr: Any, axis: int, size: int) -> Any:
             [arr.astype("float64"), np.full(padding_shape, np.nan)], axis=axis
         )
     return result
+
+
+def _check_window(window: Any, *, caller: str) -> int:
+    """A ``coarsen`` or ``rolling`` window as a positive ``int``, or the refusal why it is not.
+
+    The shared home (D10) for the window guard both the raster ``Selection`` and the mesh
+    ``MeshDataset.rolling`` need, so it is written and worded once.
+
+    Args:
+        window: The window as passed.
+        caller: The member named in the message.
+
+    Returns:
+        int: The window length.
+
+    Raises:
+        TypeError: ``window`` is a boolean or not something ``operator.index()`` accepts.
+        ValueError: ``window`` is below 1.
+    """
+    if isinstance(window, (bool, np.bool_)):
+        raise TypeError(f"{caller}() needs an integer window, got {window!r}.")
+    try:
+        length = operator.index(window)
+    except TypeError:
+        raise TypeError(
+            f"{caller}() needs an integer window, got {window!r}."
+        ) from None
+    if length < 1:
+        raise ValueError(f"{caller}() needs a window of at least 1, got {length}.")
+    return length
+
+
+def _check_min_periods(min_periods: Any, window: int) -> int:
+    """The valid cells a ``rolling`` window needs, or the refusal why ``min_periods`` is unusable.
+
+    Args:
+        min_periods: As passed; ``None`` asks for a whole window.
+        window: The checked window length.
+
+    Returns:
+        int: ``window`` for ``None``, otherwise ``min_periods`` as an ``int``.
+
+    Raises:
+        TypeError: ``min_periods`` is a boolean or not something ``operator.index()`` accepts.
+        ValueError: ``min_periods`` is below 1, or above ``window``.
+    """
+    needed = window
+    if min_periods is not None:
+        if isinstance(min_periods, (bool, np.bool_)):
+            raise TypeError(
+                f"rolling() needs an integer min_periods, got {min_periods!r}."
+            )
+        try:
+            needed = operator.index(min_periods)
+        except TypeError:
+            raise TypeError(
+                f"rolling() needs an integer min_periods, got {min_periods!r}."
+            ) from None
+        if needed < 1:
+            raise ValueError(
+                f"rolling() needs min_periods of at least 1, got {needed}."
+            )
+        if needed > window:
+            raise ValueError(
+                f"rolling() min_periods={needed} can never be met by a window of {window} "
+                f"step(s); pass at most {window}."
+            )
+    return needed
 
 
 def window_coordinates(

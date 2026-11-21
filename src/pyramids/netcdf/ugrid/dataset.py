@@ -59,6 +59,8 @@ from pyramids.base._reductions import (
     INTERP_METHODS,
     REDUCERS,
     WEIGHTED_HOWS,
+    _check_min_periods,
+    _check_window,
     gaps_as_nan,
     interpolated,
     pushed,
@@ -5492,16 +5494,11 @@ class MeshDataset(_MeshFacades):
             raise ValueError(
                 f"rolling(q=...) is only valid with how='quantile', not {how!r}."
             )
-        if window < 1:
-            raise ValueError(f"rolling: window must be >= 1, got {window!r}.")
-        # `None` means the full window, as the raster rolling defaults — a step whose window
-        # runs off the axis then has no statistic rather than a partial one.
-        needed = window if min_periods is None else int(min_periods)
-        if not 1 <= needed <= window:
-            raise ValueError(
-                f"rolling: min_periods must be between 1 and window ({window}), got "
-                f"{min_periods!r}."
-            )
+        # The shared window / min_periods guards (D10), the same the raster rolling uses, so
+        # the mesh does not carry its own copy. `None` min_periods means the full window -- a
+        # step whose window runs off the axis then has no statistic rather than a partial one.
+        window = _check_window(window, caller="rolling")
+        needed = _check_min_periods(min_periods, window)
 
         def _roll(data: np.ndarray, axis: int) -> np.ndarray:
             moved = np.moveaxis(data, axis, 0)
