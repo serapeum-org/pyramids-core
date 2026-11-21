@@ -24,7 +24,7 @@ from shapely.geometry import Point, box
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset.ops.vectorize import _features_outside_template
+from pyramids.dataset.ops.rasterize import _features_outside_template
 from pyramids.feature import FeatureCollection
 
 pytestmark = [pytest.mark.core, pytest.mark.e2e]
@@ -916,7 +916,7 @@ class TestRasterizeRoundTrip:
         top_left = (500000.0, 3400000.0)
         x0, y0 = top_left
         monkeypatch.setattr(
-            "pyramids.dataset.ops.vectorize._resolve_raster_geometry",
+            "pyramids.dataset.ops.rasterize._resolve_raster_geometry",
             lambda *args, **kwargs: (x0, y0, 5, 5, cell_size, None),
         )
 

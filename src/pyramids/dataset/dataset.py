@@ -117,7 +117,7 @@ from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.units import convert_array
-from pyramids.dataset.ops.vectorize import rasterize_features
+from pyramids.dataset.ops.rasterize import rasterize_features
 from pyramids.dataset.stac_options import BandMetadata, Footprint, StacExtensions
 from pyramids.dataset.transform import GeoTransform
 from pyramids.feature import FeatureCollection, create_polygon
