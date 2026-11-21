@@ -35,6 +35,7 @@ from shapely import box, contains_xy
 
 from pyramids.base._axes import X_AXIS_NAMES, Y_AXIS_NAMES
 from pyramids.base._errors import AlignmentError
+from pyramids.base._reductions import _check_min_periods, _check_window
 from pyramids.base._utils import apply_unpack, carry_band_packing
 from pyramids.base.crs import crs_equal, crs_spec, sr_from_epsg, sr_from_user_input
 from pyramids.dataset import DEFAULT_NO_DATA_VALUE, Dataset
@@ -6113,33 +6114,6 @@ def _check_how(how: str, known: set[str]) -> None:
         raise ValueError(f"how must be one of {sorted(known)}; got {how!r}")
 
 
-def _check_window(window: Any, *, caller: str) -> int:
-    """A `coarsen` or `rolling` window as a positive `int`, or the refusal saying why it is not one.
-
-    Args:
-        window: The window as passed.
-        caller: The member named in the message.
-
-    Returns:
-        int: The window length.
-
-    Raises:
-        TypeError: `window` is a boolean or not something `operator.index()` accepts.
-        ValueError: `window` is below 1.
-    """
-    if isinstance(window, (bool, np.bool_)):
-        raise TypeError(f"{caller}() needs an integer window, got {window!r}.")
-    try:
-        length = operator.index(window)
-    except TypeError:
-        raise TypeError(
-            f"{caller}() needs an integer window, got {window!r}."
-        ) from None
-    if length < 1:
-        raise ValueError(f"{caller}() needs a window of at least 1, got {length}.")
-    return length
-
-
 _DIFF_LABELS = ("upper", "lower")
 """Which of a difference's two steps labels it, in xarray's vocabulary."""
 
@@ -6206,45 +6180,6 @@ def _check_fill_value(fill_value: Any) -> None:
     )
     if unusable:
         raise TypeError(f"shift() needs a real fill_value or None, got {fill_value!r}.")
-
-
-def _check_min_periods(min_periods: Any, window: int) -> int:
-    """The valid cells a `rolling` window needs, or the refusal saying why `min_periods` is unusable.
-
-    Args:
-        min_periods: As passed; `None` asks for a whole window.
-        window: The checked window length.
-
-    Returns:
-        int: `window` for `None`, otherwise `min_periods` as an `int`.
-
-    Raises:
-        TypeError: `min_periods` is a boolean or not something `operator.index()` accepts —
-            a float, NaN included.
-        ValueError: `min_periods` is below 1, or above `window`, which no window could meet.
-    """
-    needed = window
-    if min_periods is not None:
-        if isinstance(min_periods, (bool, np.bool_)):
-            raise TypeError(
-                f"rolling() needs an integer min_periods, got {min_periods!r}."
-            )
-        try:
-            needed = operator.index(min_periods)
-        except TypeError:
-            raise TypeError(
-                f"rolling() needs an integer min_periods, got {min_periods!r}."
-            ) from None
-        if needed < 1:
-            raise ValueError(
-                f"rolling() needs min_periods of at least 1, got {needed}."
-            )
-        if needed > window:
-            raise ValueError(
-                f"rolling() min_periods={needed} can never be met by a window of {window} "
-                f"step(s); pass at most {window}."
-            )
-    return needed
 
 
 _INTERP_KINDS = (

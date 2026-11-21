@@ -59,6 +59,8 @@ from pyramids.base._reductions import (
     INTERP_METHODS,
     REDUCERS,
     WEIGHTED_HOWS,
+    _check_min_periods,
+    _check_window,
     gaps_as_nan,
     interpolated,
     pushed,
@@ -297,6 +299,40 @@ class MeshDataset(_MeshFacades):
         self._file_name = file_name
         self._volume_topology = volume_topology
         self._cached_crs: Any = None
+        # One reconciliation point for every derivation (D4): the mesh is the CRS owner,
+        # the dataset's WKT is only what to_file writes.
+        mesh_crs = getattr(mesh, "crs", None)
+        if crs_wkt is not None and mesh is not None and mesh_crs is None:
+            # Fill the mesh's CRS from the WKT when the mesh has none -- a monotonic fill, so
+            # a derivation sharing the parent's mesh never changes a CRS already set.
+            set_crs_wkt = getattr(mesh, "set_crs_wkt", None)
+            if callable(set_crs_wkt):
+                set_crs_wkt(crs_wkt)
+        elif crs_wkt is not None and mesh_crs is not None:
+            # Both stores carry a CRS: they must agree, or metadata exports (which read
+            # `_crs_wkt`) and geometry exports (which read `mesh.crs`) would report different
+            # CRSes for one dataset. A conflicting construction is refused rather than kept
+            # split; a matching one (every in-tree derivation and the read path) passes.
+            try:
+                given: CRS | None = CRS.from_wkt(crs_wkt)
+            except Exception:  # nosec B110 - a malformed WKT is tolerated as before
+                given = None
+            # Compare by EPSG code, not `CRS.equals`: a GDAL-derived WKT (what `to_crs` /
+            # `from_geodataframe` carry to keep authority nodes, #943/#1404) is the same CRS
+            # as the mesh's pyproj one yet is not `.equals` to it. Two differing EPSG codes
+            # are an unambiguous conflict; a no-EPSG WKT is left to pass rather than guessed.
+            given_epsg = given.to_epsg() if given is not None else None
+            mesh_epsg = mesh_crs.to_epsg()
+            if (
+                given_epsg is not None
+                and mesh_epsg is not None
+                and given_epsg != mesh_epsg
+            ):
+                raise ValueError(
+                    f"MeshDataset was built with a crs_wkt (EPSG {given_epsg}) that disagrees "
+                    f"with the mesh's own CRS (EPSG {mesh_epsg}); the two would diverge. Pass "
+                    "a mesh with no CRS, or a matching crs_wkt."
+                )
 
     @classmethod
     def read_file(
@@ -605,6 +641,10 @@ class MeshDataset(_MeshFacades):
         wkt, crs_obj = resolve_crs(self._mesh, crs=crs, epsg=epsg)
         self._crs_wkt = wkt
         self._cached_crs = crs_obj
+        # Keep the fourth slot from going stale (D4): topo_info.crs_wkt is only read back
+        # on the read path, but leaving it behind after set_crs is a loaded gun.
+        if self._topology_info is not None:
+            self._topology_info = replace(self._topology_info, crs_wkt=wkt)
 
     def _mesh_equals(self, other: MeshDataset) -> bool:
         """Compare mesh topology and coordinate arrays."""
@@ -4625,8 +4665,8 @@ class MeshDataset(_MeshFacades):
         return self._map_alongtime(
             "differentiate",
             variable_name,
-            lambda values, axis, _nodata, coord: _timeseries.differentiate_axis(
-                values, coord, axis
+            lambda values, axis, nodata, coord: _timeseries.differentiate_axis(
+                values, coord, axis, nodata
             ),
         )
 
@@ -4653,8 +4693,8 @@ class MeshDataset(_MeshFacades):
         return self._map_alongtime(
             "cumulative_integrate",
             variable_name,
-            lambda values, axis, _nodata, coord: _timeseries.cumulative_integrate_axis(
-                values, coord, axis
+            lambda values, axis, nodata, coord: _timeseries.cumulative_integrate_axis(
+                values, coord, axis, nodata
             ),
         )
 
@@ -4774,7 +4814,7 @@ class MeshDataset(_MeshFacades):
             if data is None:
                 raise ValueError(f"Variable {name!r} has no loaded data to integrate.")
             total = _timeseries.integrate_axis(
-                np.asarray(data), _variable_time_coord(var), axis
+                np.asarray(data), _variable_time_coord(var), axis, var.nodata
             )
             # The implicit carry is what decides: a static mask survives the collapse (as it
             # does through `reduce`), while a per-step one cannot follow an axis that is gone.
@@ -5033,6 +5073,19 @@ class MeshDataset(_MeshFacades):
                 f"convert_calendar() would drop every step: no date on this axis exists in the "
                 f"{calendar!r} calendar."
             )
+        try:
+            # D8: re-encode the carried instants against the SOURCE units, as the cube does
+            # (selection.py:_run_convert_calendar). The new calendar is stored beside the
+            # unchanged units, so the units' reference date must exist in that calendar too --
+            # "days since 2000-02-29" has no meaning on noleap. Without this check the invalid
+            # pair survives to write and _write_time_coordinate silently drops the time axis.
+            [float(value) for value in cftime.date2num(carried, units, calendar)]
+        except (ValueError, TypeError) as error:
+            raise ValueError(
+                f"convert_calendar() cannot count the time axis in {units!r} on the "
+                f"{calendar!r} calendar: {error}. The units' reference date must exist in the "
+                f"target calendar too -- restamp it with assign_coords/attrs before converting."
+            ) from error
         indices = np.asarray(kept, dtype=np.intp)
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -5463,16 +5516,11 @@ class MeshDataset(_MeshFacades):
             raise ValueError(
                 f"rolling(q=...) is only valid with how='quantile', not {how!r}."
             )
-        if window < 1:
-            raise ValueError(f"rolling: window must be >= 1, got {window!r}.")
-        # `None` means the full window, as the raster rolling defaults — a step whose window
-        # runs off the axis then has no statistic rather than a partial one.
-        needed = window if min_periods is None else int(min_periods)
-        if not 1 <= needed <= window:
-            raise ValueError(
-                f"rolling: min_periods must be between 1 and window ({window}), got "
-                f"{min_periods!r}."
-            )
+        # The shared window / min_periods guards (D10), the same the raster rolling uses, so
+        # the mesh does not carry its own copy. `None` min_periods means the full window -- a
+        # step whose window runs off the axis then has no statistic rather than a partial one.
+        window = _check_window(window, caller="rolling")
+        needed = _check_min_periods(min_periods, window)
 
         def _roll(data: np.ndarray, axis: int) -> np.ndarray:
             moved = np.moveaxis(data, axis, 0)
@@ -7111,7 +7159,7 @@ def _coarsened_variable(
         )
     axis = cast("int", var.time_axis_index)
     labels = [coord[index * window] for index in range(blocks)]
-    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis)
+    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis, var.nodata)
     # The axis is re-binned, so a per-step mask no longer lines up with it.
     moved = var.with_data(reduced, active=None if var.active_has_time else _KEEP_ACTIVE)
     moved.attributes = {**var.attributes, "time_values": labels}

@@ -352,6 +352,52 @@ class TestValidation:
         with pytest.warns(RuntimeWarning, match=expected):
             assert mesh_drivers() == {}
 
+    def test_a_driver_with_a_missing_extra_is_skipped_silently(self, fake_entry_points):
+        """D9: a driver whose optional backend is absent is skipped, not reported broken.
+
+        The raster hook skips such a driver silently via `extra_missing`; the mesh hook used
+        to report it as a broken plugin ("could not be loaded"). A driver declaring an `extra`
+        that is not installed is now skipped with no warning.
+        """
+
+        class NeedsBackend(FakeDriver):
+            extra = "no_such_backend_xyz"
+
+        fake_entry_points(("needs_backend", NeedsBackend))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            assert mesh_drivers() == {}  # skipped, and no RuntimeWarning raised
+
+    def test_a_driver_with_a_present_extra_still_registers(self, fake_entry_points):
+        """An `extra` naming an installed package does not block the driver."""
+
+        class NeedsNumpy(FakeDriver):
+            extra = "numpy"
+
+        fake_entry_points(("needs_numpy", NeedsNumpy))
+        assert set(mesh_drivers()) == {"fake"}
+
+    def test_a_driver_importing_its_absent_backend_in_init_is_skipped_silently(
+        self, fake_entry_points
+    ):
+        """D9/M2: `extra` is checked on the class BEFORE construction.
+
+        The realistic driver imports its optional backend in `__init__`; if that check ran
+        only after construction, the import would raise and be reported as a broken plugin.
+        Reading `extra` off the loaded class and returning first keeps __init__ from running.
+        """
+
+        class ImportsInInit(FakeDriver):
+            extra = "no_such_backend_xyz"
+
+            def __init__(self):
+                raise ImportError("No module named 'no_such_backend_xyz'")
+
+        fake_entry_points(("imports_in_init", ImportsInInit))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            assert mesh_drivers() == {}  # skipped, and no "broken plugin" warning
+
     def test_driver_missing_an_attribute_is_skipped(self, fake_entry_points):
         """A class lacking a contract attribute is reported by name, not an AttributeError."""
 

@@ -90,6 +90,9 @@ class TestCrsRoundTrip:
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
             data={"d": np.array([1.0, 2.0])},
         )
+        # `from_arrays` defaults to epsg=4326, and D4 now carries that onto the mesh, so
+        # clear it to exercise the genuinely-CRS-less export path.
+        bare.mesh.crs = None
         exported = to_xarray(bare.mesh, bare.data_vars, crs_wkt=None)
         assert "crs" not in exported.variables
 

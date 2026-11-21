@@ -1181,7 +1181,7 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("clip_values", variable_name)
-        result = _array_ops.clip_values(np.asarray(var.data), lower, upper)
+        result = _array_ops.clip_values(np.asarray(var.data), lower, upper, var.nodata)
         return self._rewrap(var, result)
 
     def round(self, decimals: int = 0, variable_name: str | None = None) -> Any:
@@ -1199,7 +1199,7 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("round", variable_name)
-        result = _array_ops.round_values(np.asarray(var.data), decimals)
+        result = _array_ops.round_values(np.asarray(var.data), decimals, var.nodata)
         return self._rewrap(var, result)
 
     def astype(self, dtype: Any, variable_name: str | None = None) -> Any:
@@ -1217,7 +1217,7 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("astype", variable_name)
-        result = _array_ops.astype_values(np.asarray(var.data), dtype)
+        result = _array_ops.astype_values(np.asarray(var.data), dtype, var.nodata)
         return self._rewrap(var, result)
 
     def where(
@@ -1282,7 +1282,7 @@ class _MeshFacades:
             round: Round values to a number of decimal places.
         """
         var = self._facade_variable("apply", variable_name)
-        result = _array_ops.apply_values(np.asarray(var.data), func)
+        result = _array_ops.apply_values(np.asarray(var.data), func, var.nodata)
         return self._rewrap(var, result)
 
     def get_histogram(
@@ -1327,7 +1327,7 @@ class _MeshFacades:
             MeshDataset: A new dataset with boolean data.
         """
         var = self._facade_variable("isin", variable_name)
-        result = _array_ops.isin_values(np.asarray(var.data), test_values)
+        result = _array_ops.isin_values(np.asarray(var.data), test_values, var.nodata)
         return self._rewrap(var, result)
 
     def domain_area(self) -> float:
