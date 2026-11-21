@@ -37,6 +37,7 @@ import warnings
 from importlib.metadata import EntryPoint, entry_points
 from typing import TYPE_CHECKING, Any, Protocol
 
+from pyramids.base._driver_discovery import extra_missing
 from pyramids.base._errors import FileFormatNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle, types only
@@ -419,6 +420,12 @@ def _instantiate(entry_point: EntryPoint) -> MeshDriver | None:
     # guarantee.
     try:
         driver = entry_point.load()()
+        if extra_missing(getattr(driver, "extra", None)):
+            # D9: the driver declares an optional backend (`extra = "mikeio"`) that is not
+            # installed. Skip it silently, as the raster hook does via the same
+            # `base/_driver_discovery.extra_missing` helper, rather than offering a driver
+            # whose backend cannot load or -- worse -- reporting it as a broken plugin.
+            return None
         problem = _validate(driver)
     except Exception as error:  # noqa: BLE001 - a plugin may fail in any way at all
         warnings.warn(
