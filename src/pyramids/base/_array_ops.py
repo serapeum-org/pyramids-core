@@ -160,6 +160,10 @@ def fillna(values: np.ndarray, fill_value, nodata=None) -> np.ndarray:
             missing positions.
     """
     mask = nodata_mask(values, nodata)
+    if not mask.any():
+        # Nothing to fill: keep the array's own dtype rather than widening for a fill that
+        # is never written (int16 stayed int16). Still a fresh array, never the caller's.
+        return np.asarray(values).copy()
     # Widen before the fill (D5): writing 1e300 into a float32 array stores inf behind a
     # RuntimeWarning, and 2.5 into int16 truncates to 2 -- both silent. `fill_dtype` keeps
     # the array's own type when it can hold the fill and widens only when it cannot.
@@ -567,6 +571,10 @@ def apply_values(values: np.ndarray, func: Any, nodata=None) -> np.ndarray:
             f"{result.shape}; it must return one value per element so the result still "
             f"lines up with the mesh."
         )
+    if result is array or np.shares_memory(result, array):
+        # `func` may return its input (an identity, or an in-place ufunc), which would make
+        # the result alias the caller's buffer -- a later write through one mutates both.
+        result = result.copy()
     # A gap has no measurement to transform (D1): `func` ran over the whole array for a
     # vectorised ufunc, and the gaps are then restored so -9999 is not doubled to -19998.
     return _restore_gaps(result, array, nodata)

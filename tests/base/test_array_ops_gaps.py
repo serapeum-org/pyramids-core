@@ -122,3 +122,26 @@ class TestGapKernels:
     def test_fillna_without_a_fitting_type_widens(self):
         out = fillna(np.array([5, -9999], dtype="int16"), 2.5, nodata=-9999)
         assert out.dtype == np.float64 and out.tolist() == [5.0, 2.5]
+
+
+class TestOutputHygiene:
+    """fillna and apply_values return fresh arrays and do not widen needlessly (L1/L4)."""
+
+    def test_fillna_keeps_dtype_when_nothing_is_missing(self):
+        """A gap-free integer band is not widened to float64 by a fill never written."""
+        out = fillna(np.array([1, 2, 3], dtype="int16"), 2.5, nodata=-9999)
+        assert out.dtype == np.int16 and out.tolist() == [1, 2, 3]
+
+    def test_fillna_returns_a_fresh_array(self):
+        """The no-fill path still returns a copy, not the caller's buffer."""
+        src = np.array([1, 2, 3], dtype="int16")
+        out = fillna(src, 0, nodata=-9999)
+        assert out is not src
+
+    def test_apply_does_not_alias_the_source_on_an_identity(self):
+        """An identity func must not make the result share the caller's buffer."""
+        src = np.array([1.0, 2.0, 3.0])
+        out = apply_values(src, lambda a: a)
+        assert out is not src and not np.shares_memory(out, src)
+        out[0] = 99.0
+        assert src[0] == 1.0, "mutating the result must not touch the source"
