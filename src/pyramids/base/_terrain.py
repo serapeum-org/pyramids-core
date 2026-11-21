@@ -93,7 +93,8 @@ def slope_from_gradient(
     """
     validate_angle_units(units, operation="slope")
     radians = np.arctan(np.hypot(dz_dx, dz_dy))
-    return np.degrees(radians) if units == "degrees" else radians
+    result = np.degrees(radians) if units == "degrees" else radians
+    return np.asarray(result, dtype=np.float64)
 
 
 def aspect_from_gradient(dz_dx: np.ndarray, dz_dy: np.ndarray) -> np.ndarray:
@@ -128,4 +129,4 @@ def aspect_from_gradient(dz_dx: np.ndarray, dz_dy: np.ndarray) -> np.ndarray:
             ```
     """
     angle = np.degrees(np.arctan2(dz_dy, -dz_dx))
-    return np.mod(450.0 - angle, 360.0)
+    return np.asarray(np.mod(450.0 - angle, 360.0), dtype=np.float64)

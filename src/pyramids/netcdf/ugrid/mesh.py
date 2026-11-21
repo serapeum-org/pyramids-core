@@ -178,7 +178,7 @@ class Mesh2d:
         if self._crs is None:
             return None
         try:
-            return self._crs.to_wkt()
+            return str(self._crs.to_wkt())
         except Exception:  # nosec B110 - best-effort export; None when it cannot
             return None
 
