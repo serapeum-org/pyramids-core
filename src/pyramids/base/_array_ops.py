@@ -57,22 +57,29 @@ def nodata_mask(values: np.ndarray, nodata=None) -> np.ndarray:
 
 
 def _holds(target: np.dtype, value: Any) -> bool:
-    """Whether ``target`` can carry ``value`` as a sentinel at all.
+    """Whether ``target`` can carry ``value`` as a sentinel **exactly**.
 
-    A float type takes any value inside its range, NaN and the infinities included -- the
-    sentinel is snapped to the type on the way in. An integer type is stricter: only a whole
-    number in range, because no snapping keeps a fraction or an out-of-range value a gap.
+    A gap is found later by exact equality (:func:`nodata_mask`), so a sentinel that merely
+    fits the type's *range* is not enough -- it must be representable without rounding.
+    ``float16`` fits the magnitude 9999 but snaps ``-9999.0`` to ``-10000.0``, which would
+    stop matching its own declaration, so it does not hold it. NaN and the infinities exist
+    in every float width. An integer type holds only a whole number in range.
 
     Args:
         target: The candidate dtype.
         value: The candidate sentinel.
 
     Returns:
-        bool: ``True`` when ``target`` can hold ``value`` as a gap marker.
+        bool: ``True`` when ``target`` represents ``value`` exactly as a gap marker.
     """
     number = float(value)
     if np.issubdtype(target, np.floating):
-        return not np.isfinite(number) or abs(number) <= float(np.finfo(target).max)
+        if not np.isfinite(number):
+            return True
+        with np.errstate(over="ignore"):
+            # float() forces a float64 comparison: `float16(-9999) == -9999` is True because
+            # numpy snaps BOTH sides to float16, hiding the rounding this check exists to catch.
+            return float(np.dtype(target).type(number)) == number
     limits = np.iinfo(target)
     return (
         bool(np.isfinite(number))

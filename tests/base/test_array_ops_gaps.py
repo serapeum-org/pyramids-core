@@ -27,6 +27,8 @@ class TestHolds:
             ("float32", np.inf, True),
             ("float32", np.nan, True),
             ("float32", 1e300, False),
+            ("float32", -9999.9, False),
+            ("float16", -9999.0, False),
             ("float16", 70000.0, False),
             ("int16", -9999.0, True),
             ("int16", 0.5, False),
@@ -106,6 +108,16 @@ class TestGapKernels:
     def test_astype_refuses_when_the_target_cannot_hold_the_sentinel(self):
         with pytest.raises(ValueError, match="cannot mark a gap"):
             astype_values(np.array([5.0, -9999.0]), np.uint8, nodata=-9999.0)
+
+    def test_astype_refuses_a_float_target_that_rounds_the_sentinel(self):
+        """float16 fits 9999's magnitude but snaps -9999 to -10000, so the gap would be lost."""
+        with pytest.raises(ValueError, match="cannot mark a gap"):
+            astype_values(np.array([5.0, -9999.0]), np.float16, nodata=-9999.0)
+
+    def test_astype_to_a_wider_float_keeps_the_gap(self):
+        """A target that represents the sentinel exactly is allowed and preserves it."""
+        out = astype_values(np.array([5.0, -9999.0]), np.float32, nodata=-9999.0)
+        assert out.tolist() == [5.0, -9999.0] and out.dtype == np.float32
 
     def test_fillna_without_a_fitting_type_widens(self):
         out = fillna(np.array([5, -9999], dtype="int16"), 2.5, nodata=-9999)
