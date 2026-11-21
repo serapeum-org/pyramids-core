@@ -301,6 +301,11 @@ class TestCoreReducerNamesGuard:
         assert names <= set(REDUCERS), names - set(REDUCERS)
         assert names <= set(_LABEL_STAT_FUNCS), names - set(_LABEL_STAT_FUNCS)
 
-    def test_dask_supported_ops_is_the_shared_tuple(self):
-        """`_reduce_ops._SUPPORTED_OPS` is exactly `CORE_REDUCER_NAMES`."""
-        assert _SUPPORTED_OPS == CORE_REDUCER_NAMES
+    def test_dask_supported_ops_is_the_shared_object(self):
+        """`_reduce_ops._SUPPORTED_OPS` is the same object as `CORE_REDUCER_NAMES`.
+
+        Identity (not just equality) proves the dask dispatch list imports the
+        shared constant rather than re-spelling a matching literal, so a future
+        revert to a hard-coded tuple fails here.
+        """
+        assert _SUPPORTED_OPS is CORE_REDUCER_NAMES
