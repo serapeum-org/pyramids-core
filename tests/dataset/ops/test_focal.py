@@ -95,6 +95,27 @@ class TestFocalStd:
         truth = float(np.std(arr[3:6, 3:6]))
         assert out[4, 4] == pytest.approx(truth, rel=1e-9)
 
+    def test_eager_equals_lazy_on_a_large_offset_dem(self):
+        """The shift is block-independent, so a chunked read matches the eager one exactly.
+
+        The only test that catches a per-block shift: the chunk-sweep tests use loose
+        tolerances a per-block shift would slip through, so this uses a 1e6-magnitude DEM
+        (where a block-wise shift diverges) and a strict rtol. Needs the pyramids-lazy
+        backend, so it runs in the netcdf_lazy CI job and skips in a bare env.
+        """
+        pytest.importorskip("pyramids_lazy", reason="lazy focal path needs the backend")
+        rng = np.random.default_rng(2)
+        arr = 1e6 + rng.normal(size=(16, 16)) * 0.01
+        ds = Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(
+                top_left_corner=(0.0, 16.0), cell_size=1.0, epsg=32636
+            ),
+        )
+        eager = np.asarray(ds.focal_std(radius=1))
+        lazy = np.asarray(ds.focal_std(radius=1, chunks=(4, 4)))
+        np.testing.assert_allclose(lazy, eager, rtol=1e-12, equal_nan=True)
+
 
 class TestFocalApply:
     def test_identity_func(self, constant_raster):
