@@ -297,6 +297,18 @@ class MeshDataset(_MeshFacades):
         self._file_name = file_name
         self._volume_topology = volume_topology
         self._cached_crs: Any = None
+        # One reconciliation point for every derivation (D4): the mesh is the CRS owner,
+        # the dataset's WKT is only what to_file writes. Fill the mesh's CRS from the WKT
+        # only when the mesh has none, so a derivation sharing the parent's mesh never
+        # changes a CRS already set -- a monotonic fill, never a clobber.
+        if (
+            crs_wkt is not None
+            and mesh is not None
+            and getattr(mesh, "crs", None) is None
+        ):
+            set_crs_wkt = getattr(mesh, "set_crs_wkt", None)
+            if callable(set_crs_wkt):
+                set_crs_wkt(crs_wkt)
 
     @classmethod
     def read_file(
@@ -605,6 +617,10 @@ class MeshDataset(_MeshFacades):
         wkt, crs_obj = resolve_crs(self._mesh, crs=crs, epsg=epsg)
         self._crs_wkt = wkt
         self._cached_crs = crs_obj
+        # Keep the fourth slot from going stale (D4): topo_info.crs_wkt is only read back
+        # on the read path, but leaving it behind after set_crs is a loaded gun.
+        if self._topology_info is not None:
+            self._topology_info = replace(self._topology_info, crs_wkt=wkt)
 
     def _mesh_equals(self, other: MeshDataset) -> bool:
         """Compare mesh topology and coordinate arrays."""
