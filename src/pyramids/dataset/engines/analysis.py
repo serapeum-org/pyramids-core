@@ -46,6 +46,7 @@ from pyramids.base._utils import (
     require_cleopatra,
 )
 from pyramids.base.protocols import as_numpy, is_lazy
+from pyramids.dataset._exclude import build_exclude_list, require_one_label_per_frame
 from pyramids.dataset._mask import MaskFlags
 from pyramids.dataset._plot_helpers import (
     ModeSpec,
@@ -4019,11 +4020,7 @@ class Analysis(_Engine["Dataset"]):
         physical_sentinel = self._physical_no_data(band if band is not None else 0)
         no_data_value = physical_sentinel if physical_sentinel is not None else np.nan
         if mask is None:
-            exclude_list = (
-                [no_data_value, exclude_value]
-                if exclude_value is not None
-                else [no_data_value]
-            )
+            exclude_list = build_exclude_list(no_data_value, exclude_value)
             values = self._extract_streamed(band, exclude_list)
         else:
             arr = self._ds.read_array(band=band)
@@ -6602,11 +6599,7 @@ class Analysis(_Engine["Dataset"]):
         arr = self._resolve_plot_array(
             band, rgb, overview, overview_index, mode, facet_stack, chunks
         )
-        exclude_value = (
-            [no_data_value[band], exclude_value]
-            if exclude_value is not None
-            else [no_data_value[band]]
-        )
+        exclude_value = build_exclude_list(no_data_value[band], exclude_value)
         # On the self-read paths (`mode="plot"` / `_chunks`) the data and
         # the extent both come from `self._ds`. On the injected-stack path
         # (`mode="facet"`) the caller passes `_extent` so the panels are
@@ -6727,11 +6720,7 @@ class Analysis(_Engine["Dataset"]):
             if animation_axis_values is None
             else list(animation_axis_values)
         )
-        if len(labels) != len(selected):
-            raise ValueError(
-                f"animate() got {len(labels)} frame label(s) for {len(selected)} frame(s); "
-                f"there must be one label per frame."
-            )
+        require_one_label_per_frame(len(labels), len(selected))
         full = np.asarray(self._ds.read_array(band=None))
         if full.ndim == 2:
             # A single-band raster reads back 2-D, and `bands=[0, 0]` passes the frame-count
@@ -6745,9 +6734,7 @@ class Analysis(_Engine["Dataset"]):
         # Use the *physical* sentinel: cleopatra compares `exclude_value` against the physical
         # `read_array` values, so a stored sentinel misses every gap on a CF-packed band.
         no_data_sentinel = self._physical_no_data(selected[0])
-        masked = [no_data_sentinel] if no_data_sentinel is not None else []
-        if exclude_value is not None:
-            masked.append(exclude_value)
+        masked = build_exclude_list(no_data_sentinel, exclude_value)
         return render_array(
             RenderRequest(
                 arr=stack,
