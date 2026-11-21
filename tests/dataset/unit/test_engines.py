@@ -576,7 +576,6 @@ class TestDatasetNormalizeFacade:
         assert float(np.min(out)) == pytest.approx(0.0), "global min must map to 0.0"
         assert float(np.max(out)) == pytest.approx(1.0), "global max must map to 1.0"
 
-
     def test_entirely_no_data_returns_all_nan_without_warning(self):
         """A fully-no-data raster yields all-NaN and emits no numpy range warning.
 

@@ -1246,7 +1246,9 @@ class Dataset(RasterBase):
             for band in range(arr.shape[0]):
                 no_data = self.analysis._physical_no_data(band)
                 if no_data is not None:
-                    arr[band] = np.where(is_no_data(arr[band], no_data), np.nan, arr[band])
+                    arr[band] = np.where(
+                        is_no_data(arr[band], no_data), np.nan, arr[band]
+                    )
         return self.analysis.normalize(arr)
 
     def fill(self, *args, **kwargs):
