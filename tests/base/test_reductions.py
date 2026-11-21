@@ -10,9 +10,9 @@ import numpy as np
 import pytest
 
 from pyramids.base._reductions import (
+    _LABEL_STAT_FUNCS,
     CORE_REDUCER_NAMES,
     REDUCERS,
-    _LABEL_STAT_FUNCS,
     reduce_axis,
     reduce_by_label,
     validate_min_count,
