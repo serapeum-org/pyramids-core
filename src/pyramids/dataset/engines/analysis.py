@@ -925,16 +925,20 @@ class Analysis(_Engine["Dataset"]):
         """Map-space bounding box of the cells a band holds data in.
 
         Where :attr:`Dataset.total_bounds` is the box of the whole grid, this is the
-        tight box around only the cells inside the domain -- every cell the band's
-        no-data sentinel does not mark. A raster whose data sits in one corner has a
-        ``data_extent`` smaller than its ``total_bounds``; a band with no gaps has the
-        two equal.
+        box of a band's valid cells -- the cells its no-data sentinel does not mark. A
+        raster whose data sits in one corner has a ``data_extent`` smaller than its
+        ``total_bounds``; a band with no gaps has the two equal. The box is derived the
+        same way ``total_bounds`` is -- the four corners of the valid-cell pixel window
+        projected and reduced -- so on a rotated grid it is the map box of that
+        axis-aligned pixel window, not the tighter hull of the rotated cell footprints.
 
         Which cell is a gap is judged against the band's **stored** values, where
         ``no_data_value`` lives, so a CF-packed band (``scale_factor`` / ``add_offset``)
         is measured the same as an unpacked one. The band is streamed in row strips, so
         a very large or ``/vsicurl`` raster is never read whole. A band that declares no
-        sentinel has no gaps, so its data extent is the full grid.
+        sentinel has no gaps and spans the full grid -- except that a float band's
+        ``NaN`` cells are always treated as absent, sentinel or not, so a band holding
+        ``NaN`` can still shrink.
 
         Args:
             band (int):

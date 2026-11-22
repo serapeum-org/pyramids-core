@@ -82,6 +82,15 @@ class TestTheWholeGridCases:
         ds = _raster(np.full((4, 4), -9999.0, dtype="float32"), no_data_value=-9999.0)
         assert ds.data_extent() is None
 
+    def test_a_no_sentinel_float_band_still_shrinks_around_nan(self):
+        """Without a sentinel, NaN cells are still gaps, so a NaN border shrinks the box."""
+        values = np.ones((4, 4), dtype="float32")
+        values[0, :] = np.nan
+        values[:, 0] = np.nan
+        ds = _raster(values, no_data_value=None)
+        assert np.array_equal(ds.data_extent(), np.array([1.0, 0.0, 4.0, 3.0]))
+        assert not np.array_equal(ds.data_extent(), ds.total_bounds)
+
 
 class TestTheMaskIsReadFromStoredValues:
     """A CF-packed band is measured on its stored counts, not the physical values."""
