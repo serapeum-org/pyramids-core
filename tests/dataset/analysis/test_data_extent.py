@@ -63,6 +63,13 @@ class TestTheExtentShrinksToTheData:
         assert extent[2] <= grid[2] and extent[3] <= grid[3]
         assert not np.array_equal(extent, grid)
 
+    def test_an_asymmetric_block_pins_the_row_and_col_offsets(self):
+        """A block with min_row != min_col distinguishes col_off from row_off on an axis-aligned grid."""
+        values = np.full((4, 4), -9999.0, dtype="float32")
+        values[1:3, 2:4] = 1.0
+        ds = _raster(values, no_data_value=-9999.0)
+        assert np.array_equal(ds.data_extent(), np.array([2.0, 1.0, 4.0, 3.0]))
+
 
 class TestTheWholeGridCases:
     """The extremes: no gaps at all, and nothing but gaps."""
