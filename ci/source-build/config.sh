@@ -416,8 +416,20 @@ src_libaec() {
 }
 
 src_hdf5() {
+    # HDF5_ENABLE_THREADSAFE defaults to OFF, and a non-threadsafe HDF5 may not be entered
+    # from more than one OS thread over the process lifetime -- even when the calls are
+    # serialized -- so dask's threaded scheduler eventually segfaults inside GDAL
+    # OpenMDArray (#1620). Only the Linux wheels build HDF5 here; macOS and Windows take
+    # conda-forge's already-threadsafe binaries via setup-gdal-from-pixi, which is why they
+    # never showed the crash.
+    #
+    # HDF5_ALLOW_UNSUPPORTED is required, not belt-and-braces: HDF5's top-level CMakeLists
+    # raises FATAL_ERROR for "HL and thread-safety options are not supported" unless it is
+    # set, and libhdf5_hl is what libnetcdf links against. conda-forge ships the same pair.
     cmake_install "$(src_dir hdf5)" 4 \
         -DBUILD_SHARED_LIBS=ON \
+        -DHDF5_ENABLE_THREADSAFE:BOOL=ON \
+        -DHDF5_ALLOW_UNSUPPORTED:BOOL=ON \
         -DHDF5_ENABLE_ZLIB_SUPPORT=ON \
         -DZLIB_ROOT="${BUILD_PREFIX}" \
         -DHDF5_ENABLE_SZIP_SUPPORT:BOOL=ON \

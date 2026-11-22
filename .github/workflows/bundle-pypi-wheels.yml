@@ -296,9 +296,12 @@ jobs:
           # block, which applies to musllinux builds too.
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_SKIP: "*pp* cp31*t-*"
+          # This override replaces the TOML repair command wholesale, so it must carry the
+          # #1620 thread-safety guard too or a musllinux regression ships unchecked.
           CIBW_REPAIR_WHEEL_COMMAND: >-
             LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-            auditwheel repair --plat ${{ matrix.plat }} -w {dest_dir} {wheel}
+            auditwheel repair --plat ${{ matrix.plat }} -w {dest_dir} {wheel} &&
+            python ci/check-bundled-hdf5.py {dest_dir}
 
       # Gate on the stack cache having missed too — see the glibc job: a
       # compiled-stack HIT skips config.sh, leaving .srcbuild-distfiles empty,
