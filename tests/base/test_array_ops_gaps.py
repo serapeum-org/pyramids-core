@@ -41,6 +41,32 @@ class TestHolds:
         """A float type holds any in-range value; an integer type only a whole one in range."""
         assert _holds(np.dtype(dtype), value) is expected, f"{dtype} holds {value}?"
 
+    def test_a_large_int_beyond_float64_mantissa_is_not_held(self):
+        """Review L1: ``float(2**53 + 1)`` rounds to ``2**53`` before any check could see it.
+
+        The exactness guard must measure against the original integer, not a pre-rounded
+        ``float`` of it, or it declares a value representable that ``float64`` cannot carry.
+        """
+        assert _holds(np.dtype("float64"), 2**53 + 1) is False
+        assert _holds(np.dtype("float64"), 2**53) is True
+        assert _holds(np.dtype("int64"), 2**62) is True
+
+    @pytest.mark.parametrize(
+        "value",
+        [np.array([-9999]), np.array([[-9999.0]]), [1, 2], (1,), "not-a-number"],
+    )
+    def test_a_non_scalar_or_non_numeric_sentinel_is_rejected_not_raised(self, value):
+        """Review N1: a one-element array, a sequence or a string is not a scalar sentinel.
+
+        Probing such a value's finiteness used to surface a raw numpy ``TypeError``; it now
+        answers ``False`` so the caller simply widens rather than crashing.
+        """
+        assert _holds(np.dtype("float64"), value) is False
+
+    def test_a_zero_dimensional_array_sentinel_is_still_accepted(self):
+        """A 0-d array wraps exactly one value, so it is a valid scalar sentinel."""
+        assert _holds(np.dtype("float64"), np.array(-9999.0)) is True
+
 
 class TestFillDtype:
     """`fill_dtype` — the widening policy before a masked write."""

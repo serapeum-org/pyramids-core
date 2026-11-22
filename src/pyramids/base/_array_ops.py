@@ -70,22 +70,40 @@ def _holds(target: np.dtype, value: Any) -> bool:
         value: The candidate sentinel.
 
     Returns:
-        bool: ``True`` when ``target`` represents ``value`` exactly as a gap marker.
+        bool: ``True`` when ``target`` represents ``value`` exactly as a gap marker. A
+        non-scalar (a list or an array of more than zero dimensions) or a non-numeric
+        value is not a sentinel and answers ``False`` rather than raising.
     """
-    number = float(value)
+    # A sentinel is one scalar; a one-element array or a list is not, and probing its
+    # finiteness below would raise a raw numpy error -- answer False instead (review N1).
+    if np.ndim(value) != 0:
+        return False
+    try:
+        finite = bool(np.isfinite(value))
+    except (TypeError, ValueError):
+        # A non-numeric value (e.g. a string) is not a sentinel for a numeric array.
+        return False
     if np.issubdtype(target, np.floating):
-        if not np.isfinite(number):
+        if not finite:
             return True
         with np.errstate(over="ignore"):
-            # float() forces a float64 comparison: `float16(-9999) == -9999` is True because
-            # numpy snaps BOTH sides to float16, hiding the rounding this check exists to catch.
-            return float(np.dtype(target).type(number)) == number
+            # Compare the cast result against the ORIGINAL value, never a float() of it:
+            # `float(2**53 + 1)` already rounds to 2**53, so pre-converting would call the
+            # value representable when float64 cannot hold it (review L1). Python compares
+            # int and float exactly, so `float(cast) == value` is the true round-trip test;
+            # `float16(-9999) == -9999` stays False because the cast snaps to -10000.
+            return bool(float(np.dtype(target).type(value)) == value)
+    if not finite:
+        return False
+    if isinstance(value, (int, np.integer)):
+        as_int = int(value)  # exact: no float() to round a large int first
+    else:
+        as_float = float(value)
+        if not as_float.is_integer():
+            return False
+        as_int = int(as_float)
     limits = np.iinfo(target)
-    return (
-        bool(np.isfinite(number))
-        and number.is_integer()
-        and limits.min <= number <= limits.max
-    )
+    return bool(limits.min <= as_int <= limits.max)
 
 
 def fill_dtype(source: Any, fill: Any) -> np.dtype:
