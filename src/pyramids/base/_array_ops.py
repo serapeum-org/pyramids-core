@@ -361,6 +361,12 @@ def fillna(
         [1.0, 0.0]
     """
     array = np.asarray(values)
+    if bool(np.all(domain)):
+        # Nothing is missing, so no cell is written and the fill never lands. Keep the array's
+        # own dtype rather than widening for a value that is not used -- otherwise a gap-free
+        # ``int16`` filled with ``2.5`` returns ``float64`` despite changing nothing (review
+        # M1). A fresh array still, so a caller cannot alias the source.
+        return array.copy(), sentinel
     dtype = fill_dtype(array.dtype, fill_value)
     out = np.asarray(np.where(domain, array.astype(dtype, copy=False), fill_value))
     return out, sentinel

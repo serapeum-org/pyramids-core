@@ -280,6 +280,32 @@ class TestOutputHygiene:
         out, _ = fillna(src, 0.0, domain=np.array([True, True, True]))
         assert out is not src
 
+    def test_fillna_keeps_the_dtype_when_nothing_is_missing(self):
+        """A gap-free array fills no cell, so the fill never lands -- the dtype must not widen.
+
+        Review M1: the shared kernel used to widen a gap-free ``int16`` to ``float64`` for a
+        fractional fill it never wrote. One owner now, so both hierarchies keep the dtype when
+        there is nothing to fill.
+        """
+        src = np.array([1, 2, 3], dtype="int16")
+        out, sentinel = fillna(
+            src, 2.5, domain=np.array([True, True, True]), sentinel=-9999
+        )
+        assert out.dtype == np.int16
+        assert out.tolist() == [1, 2, 3]
+        assert out is not src, "still a fresh array, never the caller's buffer"
+
+    def test_fillna_still_widens_when_a_gap_is_actually_filled(self):
+        """The fast path is only for a gap-free array; a real fill still widens (D5)."""
+        out, _ = fillna(
+            np.array([1, -9999], dtype="int16"),
+            2.5,
+            domain=np.array([True, False]),
+            sentinel=-9999,
+        )
+        assert out.dtype == np.float64
+        assert out.tolist() == [1.0, 2.5]
+
     def test_apply_does_not_alias_the_source_on_an_identity(self):
         src = np.array([1.0, 2.0, 3.0])
         out, _ = apply_values(src, lambda a: a, domain=np.array([True, True, True]))

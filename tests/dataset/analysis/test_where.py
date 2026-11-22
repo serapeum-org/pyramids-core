@@ -948,11 +948,17 @@ class TestTheResultKeepsItsType:
             type — so `fillna(1e300)` on a `float32` band stored `inf` with nothing but a
             `RuntimeWarning: overflow encountered in cast`, while `where` widened.
 
+            The band carries a gap so `fillna` actually writes the fill — only then do the two
+            share a dtype judgement. A gap-free `fillna` writes nothing and keeps its dtype (the
+            fast path pinned in ``test_array_ops_gaps.py``); `where` always writes, so it would
+            widen where `fillna` would not, and the two would legitimately differ.
+
         Args:
             fill: The fill both members are given.
         """
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
-        raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
+        with_gap = np.where(values > 8, -9999.0, values).astype("float32")
+        raster = Dataset.from_array(with_gap, geo_ref=GEO_REF, no_data_value=-9999.0)
         masked = np.asarray(raster.where(values > 4, fill).read_array())
         filled = np.asarray(raster.fillna(fill).read_array())
         assert masked.dtype == filled.dtype
