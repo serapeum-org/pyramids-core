@@ -241,9 +241,8 @@ class TestInterpCalendar:
         with pytest.raises(ValueError, match="found no overlap") as raised:
             source.interp_calendar(target)
         message = str(raised.value)
-        assert "2001.0000" in message and "2050.0000" in message, (
-            "the message names both spans so the caller sees how far apart the runs are"
-        )
+        assert "2001.0000" in message, "the message names the source span"
+        assert "2050.0000" in message, "the message names the target span"
 
     def test_a_single_source_step_is_refused(self):
         source = _mesh(_days("standard", (2001, 1, 1)))

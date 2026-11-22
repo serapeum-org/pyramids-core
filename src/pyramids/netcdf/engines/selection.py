@@ -7647,7 +7647,7 @@ def _run_convert_calendar(
     # the `_carried_to_calendar` kernel they wrap, so the mesh's `convert_calendar` runs exactly
     # the same plan (issue #1381, D8). `axis` is the dimension's `repr` so the refusals read as
     # they did when this orchestration lived here.
-    carried, kept, offsets = _plan_calendar_conversion(
+    _, kept, offsets = _plan_calendar_conversion(
         instants, units, calendar, align_on, caller=caller, axis=f"{dim!r}"
     )
     op = _TakeSteps(

@@ -1094,25 +1094,25 @@ class TestPlanCalendarConversion:
         assert offsets == [0.0, 1.0, 2.0]
 
     def test_an_unknown_alignment_is_refused(self):
+        instants = _standard((2001, 1, 1))
         with pytest.raises(ValueError, match="align_on"):
             _plan_calendar_conversion(
-                _standard((2001, 1, 1)), "days since 2001-01-01", "noleap", "month"
+                instants, "days since 2001-01-01", "noleap", "month"
             )
 
     def test_an_unknown_calendar_is_refused(self):
+        instants = _standard((2001, 1, 1))
         with pytest.raises(ValueError, match="cftime does not know"):
             _plan_calendar_conversion(
-                _standard((2001, 1, 1)), "days since 2001-01-01", "mayan", "date"
+                instants, "days since 2001-01-01", "mayan", "date"
             )
 
     def test_dropping_every_step_is_refused(self):
         # Only 31st days, which no 360_day month has, so every step is dropped.
+        instants = _standard((2001, 1, 31), (2001, 12, 31))
         with pytest.raises(ValueError, match="would drop every step"):
             _plan_calendar_conversion(
-                _standard((2001, 1, 31), (2001, 12, 31)),
-                "days since 2001-01-01",
-                "360_day",
-                "date",
+                instants, "days since 2001-01-01", "360_day", "date"
             )
 
     @pytest.mark.parametrize(
@@ -1126,10 +1126,9 @@ class TestPlanCalendarConversion:
         `360_day` / `days since 2001-12-31` pair both raise, so the carried stamps cannot be
         written and the plan refuses here rather than letting the invalid pair reach `to_file`.
         """
+        instants = _standard((2001, 3, 1), (2001, 3, 2))
         with pytest.raises(ValueError, match="reference date must exist"):
-            _plan_calendar_conversion(
-                _standard((2001, 3, 1), (2001, 3, 2)), units, calendar, "date"
-            )
+            _plan_calendar_conversion(instants, units, calendar, "date")
 
 
 class TestPlanCalendarInterpolation:
@@ -1140,22 +1139,23 @@ class TestPlanCalendarInterpolation:
             _standard((2001, 1, 1), (2002, 1, 1)), _standard((2001, 7, 2))
         )
         assert source.tolist() == [2001.0, 2002.0]
-        assert target.size == 1 and 2001.4 < float(target[0]) < 2001.6
+        assert target.size == 1
+        assert 2001.4 < float(target[0]) < 2001.6
 
     def test_fewer_than_two_source_steps_is_refused(self):
+        source_axis = _standard((2001, 1, 1))
+        target_axis = _standard((2001, 1, 1), (2001, 1, 2))
         with pytest.raises(ValueError, match="at least 2 steps"):
-            _plan_calendar_interpolation(
-                _standard((2001, 1, 1)), _standard((2001, 1, 1), (2001, 1, 2))
-            )
+            _plan_calendar_interpolation(source_axis, target_axis)
 
     def test_no_overlap_is_refused_with_both_spans(self):
+        source_axis = _standard((2001, 1, 1), (2001, 1, 5))
+        target_axis = _standard((2050, 1, 1), (2050, 1, 5))
         with pytest.raises(ValueError, match="found no overlap") as raised:
-            _plan_calendar_interpolation(
-                _standard((2001, 1, 1), (2001, 1, 5)),
-                _standard((2050, 1, 1), (2050, 1, 5)),
-            )
+            _plan_calendar_interpolation(source_axis, target_axis)
         message = str(raised.value)
-        assert "2001.0000" in message and "2050.0000" in message
+        assert "2001.0000" in message
+        assert "2050.0000" in message
 
 
 class TestCubeAndMeshShareOneCalendarPlan:

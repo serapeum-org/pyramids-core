@@ -1133,10 +1133,10 @@ class _MeshFacades:
         var = self._facade_variable("fillna", variable_name)
         values = np.asarray(var.data)
         domain = _array_ops.notnull(values, var.nodata)
-        result, sentinel = _array_ops.fillna(
+        result, declared = _array_ops.fillna(
             values, value, domain=domain, sentinel=var.nodata
         )
-        return self._rewrap(var, result, nodata=sentinel)
+        return self._rewrap(var, result, nodata=declared)
 
     def isnull(self, variable_name: str | None = None) -> Any:
         """Boolean mask of missing positions.
@@ -1196,7 +1196,7 @@ class _MeshFacades:
         var = self._facade_variable("clip_values", variable_name)
         values = np.asarray(var.data)
         domain = _array_ops.notnull(values, var.nodata)
-        result, sentinel = _array_ops.clip_values(
+        result, declared = _array_ops.clip_values(
             values,
             lower,
             upper,
@@ -1204,7 +1204,7 @@ class _MeshFacades:
             sentinel=var.nodata,
             operation="clip_values",
         )
-        return self._rewrap(var, result, nodata=sentinel)
+        return self._rewrap(var, result, nodata=declared)
 
     def round(self, decimals: int = 0, variable_name: str | None = None) -> Any:
         """Round variable values to *decimals* decimal places.
@@ -1223,10 +1223,10 @@ class _MeshFacades:
         var = self._facade_variable("round", variable_name)
         values = np.asarray(var.data)
         domain = _array_ops.notnull(values, var.nodata)
-        result, sentinel = _array_ops.round_values(
+        result, declared = _array_ops.round_values(
             values, decimals, domain=domain, sentinel=var.nodata, operation="round"
         )
-        return self._rewrap(var, result, nodata=sentinel)
+        return self._rewrap(var, result, nodata=declared)
 
     def astype(self, dtype: Any, variable_name: str | None = None) -> Any:
         """Cast variable values to a different dtype.
@@ -1245,10 +1245,10 @@ class _MeshFacades:
         var = self._facade_variable("astype", variable_name)
         values = np.asarray(var.data)
         domain = _array_ops.notnull(values, var.nodata)
-        result, sentinel = _array_ops.astype_values(
+        result, declared = _array_ops.astype_values(
             values, dtype, domain=domain, sentinel=var.nodata, operation="astype"
         )
-        return self._rewrap(var, result, nodata=sentinel)
+        return self._rewrap(var, result, nodata=declared)
 
     def where(
         self,
@@ -1314,10 +1314,10 @@ class _MeshFacades:
         var = self._facade_variable("apply", variable_name)
         values = np.asarray(var.data)
         domain = _array_ops.notnull(values, var.nodata)
-        result, sentinel = _array_ops.apply_values(
+        result, declared = _array_ops.apply_values(
             values, func, domain=domain, sentinel=var.nodata
         )
-        return self._rewrap(var, result, nodata=sentinel)
+        return self._rewrap(var, result, nodata=declared)
 
     def get_histogram(
         self,

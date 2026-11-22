@@ -99,7 +99,9 @@ def test_fillna_widens_a_float32_band_on_both():
 def test_both_refuse_bad_clip_bounds(bad):
     """Crossed, NaN and empty bounds are a ``ValueError`` on either hierarchy."""
     lower, upper = bad
+    raster = _raster([5.0, 25.0], -9999.0)
     with pytest.raises(ValueError):
-        _raster([5.0, 25.0], -9999.0).clip(lower, upper)
+        raster.clip(lower, upper)
+    mesh = _mesh([5.0, 25.0], -9999.0)
     with pytest.raises(ValueError):
-        _mesh([5.0, 25.0], -9999.0).clip_values(lower, upper)
+        mesh.clip_values(lower, upper)
