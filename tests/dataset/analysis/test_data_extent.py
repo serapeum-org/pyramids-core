@@ -34,7 +34,9 @@ def _raster(values: np.ndarray, no_data_value: float | None = None) -> Dataset:
     return Dataset.from_array(
         values,
         no_data_value=no_data_value,
-        geo_ref=GeoReference(top_left_corner=(0.0, float(rows)), cell_size=1.0, epsg=4326),
+        geo_ref=GeoReference(
+            top_left_corner=(0.0, float(rows)), cell_size=1.0, epsg=4326
+        ),
     )
 
 
