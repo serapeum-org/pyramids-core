@@ -146,3 +146,35 @@ class TestBandSelectionAndTheFacade:
         ds = _raster(np.ones((4, 4), dtype="float32"), no_data_value=-9999.0)
         with pytest.raises(ValueError, match="out of range"):
             ds.data_extent(band=3)
+
+
+class TestOrientationHandling:
+    """The pixel-window projection holds on south-up, non-square and rotated grids."""
+
+    SOUTH_UP = GeoReference(geo=(100.0, 2.0, 0.0, 50.0, 0.0, 3.0), epsg=3857)
+    ROTATED = GeoReference(geo=(0.0, 1.0, 0.2, 0.0, 0.1, -1.0), epsg=3857)
+
+    def test_a_gap_free_south_up_non_square_band_equals_total_bounds(self):
+        """A gap-free band on a south-up, non-square grid has the whole-grid box."""
+        ds = Dataset.from_array(np.ones((4, 5), dtype="float32"), geo_ref=self.SOUTH_UP)
+        assert np.array_equal(ds.data_extent(), ds.total_bounds)
+        assert np.array_equal(ds.data_extent(), np.array([100.0, 50.0, 110.0, 62.0]))
+
+    def test_a_gappy_south_up_non_square_band_has_the_shrunk_box(self):
+        """A rows-1-2, cols-1-3 block projects to its tight box on the south-up grid."""
+        values = np.full((4, 5), -9999.0, dtype="float32")
+        values[1:3, 1:4] = 1.0
+        ds = Dataset.from_array(values, geo_ref=self.SOUTH_UP, no_data_value=-9999.0)
+        assert np.array_equal(ds.data_extent(), np.array([102.0, 53.0, 108.0, 59.0]))
+
+    def test_a_gap_free_rotated_band_equals_total_bounds(self):
+        """A gap-free band on a rotated grid still reduces to the whole-grid box."""
+        ds = Dataset.from_array(np.ones((4, 4), dtype="float32"), geo_ref=self.ROTATED)
+        assert np.array_equal(ds.data_extent(), ds.total_bounds)
+
+    def test_a_rotated_grid_projects_the_valid_window_with_offsets(self):
+        """A single valid cell on a rotated grid projects its window with col/row offsets."""
+        values = np.full((4, 4), -9999.0, dtype="float32")
+        values[1, 2] = 5.0
+        ds = Dataset.from_array(values, geo_ref=self.ROTATED, no_data_value=-9999.0)
+        np.testing.assert_allclose(ds.data_extent(), [2.2, -1.8, 3.4, -0.7])
