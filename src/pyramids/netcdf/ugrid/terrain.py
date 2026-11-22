@@ -19,6 +19,11 @@ from __future__ import annotations
 
 import numpy as np
 
+from pyramids.base._terrain import (
+    aspect_from_gradient,
+    slope_from_gradient,
+    validate_angle_units,
+)
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 
 __all__ = ["aspect", "face_plane_gradient", "hillshade", "slope"]
@@ -126,13 +131,11 @@ def slope(
         ValueError: ``units`` is neither ``"degrees"`` nor ``"radians"``, or ``node_values`` is
             not one value per node.
     """
-    if units not in ("degrees", "radians"):
-        raise ValueError(f"slope: units must be 'degrees' or 'radians', got {units!r}.")
+    validate_angle_units(units, operation="slope")
     dz_dx, dz_dy = face_plane_gradient(mesh, node_values)
     # `hypot` is sign-blind, so `_row_wise` cannot change this result; it is applied for
     # symmetry with the `arctan2` calls, where the sign is load bearing.
-    radians = np.arctan(np.hypot(dz_dx, _row_wise(dz_dy)))
-    result = np.degrees(radians) if units == "degrees" else radians
+    result = slope_from_gradient(dz_dx, _row_wise(dz_dy), units=units)
     return np.asarray(result, dtype="float64")
 
 
@@ -157,8 +160,8 @@ def aspect(mesh: Mesh2d, node_values: np.ndarray) -> np.typing.NDArray:
         ValueError: ``node_values`` is not one value per node.
     """
     dz_dx, dz_dy = face_plane_gradient(mesh, node_values)
-    angle = np.degrees(np.arctan2(_row_wise(dz_dy), -dz_dx))
-    return np.asarray(np.mod(450.0 - angle, 360.0), dtype="float64")
+    result = aspect_from_gradient(dz_dx, _row_wise(dz_dy))
+    return np.asarray(result, dtype="float64")
 
 
 def hillshade(

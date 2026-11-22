@@ -53,9 +53,68 @@ class TestFocalStd:
         out = constant_raster.focal_std(radius=1)
         assert np.allclose(out, 0.0, atol=1e-6)
 
-    def test_ramp_has_nonzero(self, ramp_raster):
-        out = ramp_raster.focal_std(radius=1)
-        assert float(out.mean()) > 0.0
+    def test_ramp_matches_numpy_population_std(self, ramp_raster):
+        """D2: a constant-gradient ramp has the true window spread, not 0.0.
+
+        The old kernel built deviations about each neighbour's own window mean, which
+        collapses to exactly zero on a ramp -- the P0. ``test_ramp_has_nonzero`` passed it
+        because it only asserted ``mean() > 0``. The true 3x3 population std is 0.816497 at
+        every interior cell.
+        """
+        out = np.asarray(ramp_raster.focal_std(radius=1))
+        assert out[2, 1:4] == pytest.approx([0.816497, 0.816497, 0.816497], abs=1e-6)
+
+    def test_random_data_matches_numpy_window_std(self):
+        """Every interior cell equals ``np.std`` over its own 3x3 window."""
+        rng = np.random.default_rng(0)
+        arr = rng.normal(size=(6, 6)) * 10.0
+        ds = Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(top_left_corner=(0.0, 6.0), cell_size=1.0, epsg=32636),
+        )
+        out = np.asarray(ds.focal_std(radius=1))
+        for i in range(1, 5):
+            for j in range(1, 5):
+                assert out[i, j] == pytest.approx(
+                    float(np.std(arr[i - 1 : i + 2, j - 1 : j + 2])), abs=1e-9
+                )
+
+    def test_large_magnitude_dem_is_not_cancellation_wrecked(self):
+        """1e6-magnitude bed levels with cm roughness: the shift keeps it accurate.
+
+        Without the block-independent shift the bare moments identity is ~138% wrong here;
+        with it the interior matches ``np.std`` to machine precision.
+        """
+        rng = np.random.default_rng(1)
+        arr = 1e6 + rng.normal(size=(9, 9)) * 0.01
+        ds = Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(top_left_corner=(0.0, 9.0), cell_size=1.0, epsg=32636),
+        )
+        out = np.asarray(ds.focal_std(radius=1))
+        truth = float(np.std(arr[3:6, 3:6]))
+        assert out[4, 4] == pytest.approx(truth, rel=1e-9)
+
+    def test_eager_equals_lazy_on_a_large_offset_dem(self):
+        """The shift is block-independent, so a chunked read matches the eager one exactly.
+
+        The only test that catches a per-block shift: the chunk-sweep tests use loose
+        tolerances a per-block shift would slip through, so this uses a 1e6-magnitude DEM
+        (where a block-wise shift diverges) and a strict rtol. Needs the pyramids-lazy
+        backend, so it runs in the netcdf_lazy CI job and skips in a bare env.
+        """
+        pytest.importorskip("pyramids_lazy", reason="lazy focal path needs the backend")
+        rng = np.random.default_rng(2)
+        arr = 1e6 + rng.normal(size=(16, 16)) * 0.01
+        ds = Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(
+                top_left_corner=(0.0, 16.0), cell_size=1.0, epsg=32636
+            ),
+        )
+        eager = np.asarray(ds.focal_std(radius=1))
+        lazy = np.asarray(ds.focal_std(radius=1, chunks=(4, 4)))
+        np.testing.assert_allclose(lazy, eager, rtol=1e-12, equal_nan=True)
 
 
 class TestFocalApply:
@@ -73,6 +132,18 @@ class TestSlope:
         out = ramp_raster.slope()
         inside = out[1:-1, 1:-1]
         assert float(inside.mean()) > 0.0
+
+    def test_valid_units_are_unchanged(self, ramp_raster):
+        """D7: degrees and radians still produce the same numbers as before."""
+        deg = float(np.nanmax(np.asarray(ramp_raster.slope(units="degrees"))))
+        rad = float(np.nanmax(np.asarray(ramp_raster.slope(units="radians"))))
+        assert deg == pytest.approx(np.degrees(rad))
+
+    @pytest.mark.parametrize("units", ["DEGREES", "radian", "deg", "banana"])
+    def test_an_unknown_unit_raises_instead_of_silent_radians(self, ramp_raster, units):
+        """D7: a bad or miscased ``units`` raises; it used to silently return radians."""
+        with pytest.raises(ValueError, match="units must be 'degrees' or 'radians'"):
+            ramp_raster.slope(units=units)
 
 
 class TestAspect:

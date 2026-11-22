@@ -58,13 +58,14 @@ class TestMinPeriods:
         assert out[0].tolist() == [1.0, 2.0]
 
     def test_above_window_is_refused(self, mesh):
-        with pytest.raises(ValueError, match="between 1 and window"):
+        with pytest.raises(ValueError, match="can never be met by a window"):
             mesh.rolling(2, "mean", min_periods=5)
 
     def test_below_one_is_refused(self, mesh):
-        with pytest.raises(ValueError, match="between 1 and window"):
+        with pytest.raises(ValueError, match="min_periods of at least 1"):
             mesh.rolling(2, "mean", min_periods=0)
 
     def test_window_below_one_is_refused(self, mesh):
-        with pytest.raises(ValueError, match="window must be >= 1"):
+        # D10: the mesh now shares the raster's window guard, so the wording is the shared one.
+        with pytest.raises(ValueError, match="needs a window of at least 1"):
             mesh.rolling(0, "mean")

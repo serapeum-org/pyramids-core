@@ -173,6 +173,32 @@ class Mesh2d:
         self._crs = value
 
     @property
+    def crs_wkt(self) -> str | None:
+        """This mesh's CRS as WKT, or ``None`` when it has none or cannot export."""
+        if self._crs is None:
+            return None
+        try:
+            return str(self._crs.to_wkt())
+        except Exception:  # nosec B110 - best-effort export; None when it cannot
+            return None
+
+    def set_crs_wkt(self, wkt: str | None) -> None:
+        """Adopt a CRS from a WKT string, tolerating an unparseable one as ``None``.
+
+        Mirrors the lenient parse the readers already do inline (``_from_gdal_group``,
+        :attr:`MeshDataset.crs`): a malformed WKT leaves :attr:`crs` unchanged rather
+        than raising. Assignment goes through the validating :attr:`crs` setter, so the
+        mesh is the single owner of its coordinate system.
+        """
+        if wkt is None:
+            return
+        try:
+            parsed = PyProjCRS.from_wkt(wkt)
+        except Exception:  # nosec B110 - lenient parse; a bad WKT is left as-is
+            return
+        self.crs = parsed
+
+    @property
     def edge_node_connectivity(self) -> Connectivity | None:
         """Edge-to-node connectivity array, or None if not available."""
         return self._edge_node_connectivity

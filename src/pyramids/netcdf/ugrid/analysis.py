@@ -208,6 +208,7 @@ def contour_lines(
     values: np.ndarray,
     levels: Any = None,
     location: str = "face",
+    crs: Any = None,
 ) -> Any:
     """Generate contour lines from mesh data via tricontour.
 
@@ -216,6 +217,10 @@ def contour_lines(
         values: 1-D variable data (one value per element).
         levels: Contour levels (int for count, array for explicit).
         location: ``"face"`` or ``"node"``.
+        crs: CRS to stamp on the result. The caller (``MeshFacades.contour``) passes the
+            dataset's own CRS, so the single owner of the dataset's coordinate system is the
+            dataset -- geometry exports no longer depend on the mesh carrying a duplicate
+            copy (D4). Falls back to ``mesh.crs`` when not given, for a direct caller.
 
     Returns:
         GeoDataFrame: Contour lines with a ``level`` column.
@@ -249,7 +254,9 @@ def contour_lines(
     plt.close(fig)
 
     result = gpd.GeoDataFrame(
-        {"level": level_values}, geometry=geometries, crs=mesh.crs
+        {"level": level_values},
+        geometry=geometries,
+        crs=crs if crs is not None else mesh.crs,
     )
     return result
 
