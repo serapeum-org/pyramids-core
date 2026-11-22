@@ -528,6 +528,48 @@ def round_values(
     return regap(rounded, domain, sentinel), sentinel
 
 
+def _snapped_markers(
+    sentinel: Any, no_data_value: Any, target: np.dtype, operation: str
+) -> list:
+    """The per-band gap markers an ``astype`` declares -- validated and snapped to ``target``.
+
+    Resolves the source's own sentinel(s), or an override, into one marker per band; refuses a
+    marker ``target`` cannot hold (cast, it would become an ordinary value and every gap would
+    read as data); and snaps each surviving marker to ``target``, so the value the result
+    declares is exactly the value its gap cells will hold. A float sentinel loses precision here
+    (``-9999.9`` into ``float32`` becomes ``-9999.900390625``); it must not land on a cell
+    holding data, which the caller checks after the cast.
+
+    Args:
+        sentinel: The source's declared sentinel(s): a scalar, a list/tuple per band, or ``None``.
+        no_data_value: :data:`KEEP_NO_DATA` keeps the source's own; a value overrides every band;
+            ``None`` declares none.
+        target: The dtype the cast produces.
+        operation: The caller's spelling, for the ``ValueError`` message.
+
+    Returns:
+        list: one snapped marker (or ``None``) per band.
+
+    Raises:
+        ValueError: a marker is outside ``target``'s range or fractional in an integer target.
+    """
+    bands = len(sentinel) if isinstance(sentinel, (list, tuple)) else 1
+    if no_data_value is KEEP_NO_DATA:
+        source = list(sentinel) if isinstance(sentinel, (list, tuple)) else [sentinel]
+        marks = [source[i] if i < len(source) else None for i in range(bands)]
+    else:
+        marks = [no_data_value] * bands
+    for mark in marks:
+        if mark is not None and not holds(target, mark):
+            raise ValueError(
+                f"{operation}({target.name!r}) cannot mark a gap with {float(mark)}, which "
+                f"{target.name} does not hold — cast, it would become an ordinary value "
+                f"and every gap would read as data. Pass no_data_value= with one it "
+                f"does hold."
+            )
+    return [None if mark is None else float(target.type(mark)) for mark in marks]
+
+
 def astype_values(
     values: np.ndarray,
     dtype: Any,
@@ -585,25 +627,8 @@ def astype_values(
             f"integer, or a float — and {target.name} is not one."
         )
     array = np.asarray(values)
-    bands = len(sentinel) if isinstance(sentinel, (list, tuple)) else 1
-    if no_data_value is KEEP_NO_DATA:
-        source = list(sentinel) if isinstance(sentinel, (list, tuple)) else [sentinel]
-        marks = [source[i] if i < len(source) else None for i in range(bands)]
-    else:
-        marks = [no_data_value] * bands
-    for mark in marks:
-        if mark is not None and not holds(target, mark):
-            raise ValueError(
-                f"{operation}({target.name!r}) cannot mark a gap with {float(mark)}, which "
-                f"{target.name} does not hold — cast, it would become an ordinary value "
-                f"and every gap would read as data. Pass no_data_value= with one it "
-                f"does hold."
-            )
-    # Snapped to the target before anything is written or declared, so the value the result
-    # declares is exactly the value its gap cells hold. A float sentinel loses precision here
-    # (`-9999.9` into float32 becomes `-9999.900390625`); what it must not do is land on a
-    # cell holding data, which is checked after the cast.
-    marks = [None if mark is None else float(target.type(mark)) for mark in marks]
+    marks = _snapped_markers(sentinel, no_data_value, target, operation)
+    bands = len(marks)
     markers = [
         _gap_marker(mark, target, domain, band, bands)
         for band, mark in enumerate(marks)
