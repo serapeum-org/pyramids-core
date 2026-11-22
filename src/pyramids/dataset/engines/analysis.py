@@ -977,6 +977,19 @@ class Analysis(_Engine["Dataset"]):
                 True
 
                 ```
+            - A band that is nothing but the sentinel has no data extent:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> empty = Dataset.from_array(
+                ...     np.full((4, 4), -9999.0, dtype="float32"),
+                ...     geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
+                ...     no_data_value=-9999.0,
+                ... )
+                >>> empty.data_extent() is None
+                True
+
+                ```
 
         See Also:
             total_bounds: The box of the whole grid, data or not.
