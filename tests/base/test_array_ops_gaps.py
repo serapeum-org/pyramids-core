@@ -32,6 +32,8 @@ class TestHolds:
             ("float16", 70000.0, False),
             ("int16", -9999.0, True),
             ("int16", 0.5, False),
+            ("int16", np.nan, False),
+            ("int32", np.inf, False),
             ("uint8", 255.0, True),
             ("uint8", -9999.0, False),
             ("uint8", 300.0, False),
