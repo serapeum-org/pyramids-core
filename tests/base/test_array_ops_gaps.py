@@ -149,6 +149,19 @@ class TestClipValues:
                 operation="clip_values",
             )
 
+    def test_a_bool_bound_is_refused(self):
+        """Review M2: a ``bool`` is a ``Real`` subclass, so the old ``float(bound)`` took it as
+        ``1.0``; the shared kernel refuses it rather than silently clamping to a boolean.
+        """
+        with pytest.raises(TypeError, match=r"clip_values\(\) needs a number"):
+            clip_values(
+                np.array([1.0, 2.0]),
+                True,
+                8.0,
+                domain=np.array([True, True]),
+                operation="clip_values",
+            )
+
     def test_a_one_sided_bound_is_allowed(self):
         out, sentinel = clip_values(
             np.array([1.0, 9.0]), None, 8.0, domain=np.array([True, True])
@@ -203,6 +216,15 @@ class TestGapKernels:
             np.array([5.0, -9999.0]), [-9999.0], domain=np.array([True, False])
         )
         assert out.tolist() == [False, False]
+
+    def test_isin_accepts_a_set(self):
+        """Review M2: the old base ``isin_values`` left a ``set`` as a 0-d object array, so a
+        mesh ``isin({...})`` returned all-``False``; the shared kernel converts it.
+        """
+        out = isin_values(
+            np.array([5.0, -9999.0]), {5.0}, domain=np.array([True, False])
+        )
+        assert out.tolist() == [True, False]
 
     def test_apply_refuses_a_shape_change(self):
         with pytest.raises(ValueError, match="changed the array shape"):
