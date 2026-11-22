@@ -921,6 +921,111 @@ class Analysis(_Engine["Dataset"]):
         # decided against the stored sentinel.
         return float(self._ds.io.stream_reduce(_sum, 0.0, band=band, unpack=False))
 
+    def data_extent(self, band: int = 0) -> np.ndarray | None:
+        """Map-space bounding box of the cells a band holds data in.
+
+        Where :attr:`Dataset.total_bounds` is the box of the whole grid, this is the
+        tight box around only the cells inside the domain -- every cell the band's
+        no-data sentinel does not mark. A raster whose data sits in one corner has a
+        ``data_extent`` smaller than its ``total_bounds``; a band with no gaps has the
+        two equal.
+
+        Which cell is a gap is judged against the band's **stored** values, where
+        ``no_data_value`` lives, so a CF-packed band (``scale_factor`` / ``add_offset``)
+        is measured the same as an unpacked one. The band is streamed in row strips, so
+        a very large or ``/vsicurl`` raster is never read whole. A band that declares no
+        sentinel has no gaps, so its data extent is the full grid.
+
+        Args:
+            band (int):
+                Zero-based band index. Default is 0.
+
+        Returns:
+            numpy.ndarray | None:
+                The box ``[min_x, min_y, max_x, max_y]`` of the band's valid cells,
+                ordered min-before-max on each axis regardless of grid orientation, or
+                ``None`` when no cell of the band holds data.
+
+        Raises:
+            ValueError: `band` is out of range for the dataset.
+
+        Examples:
+            - Data in a single cell gives a one-cell extent, not the whole grid:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> values = np.full((4, 4), -9999.0, dtype="float32")
+                >>> values[1, 2] = 5.0
+                >>> ds = Dataset.from_array(
+                ...     values,
+                ...     geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
+                ...     no_data_value=-9999.0,
+                ... )
+                >>> ds.data_extent()
+                array([2., 2., 3., 3.])
+
+                ```
+            - A band with no gaps has its data extent equal to ``total_bounds``:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> full = Dataset.from_array(
+                ...     np.ones((4, 4), dtype="float32"),
+                ...     geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
+                ... )
+                >>> bool(np.array_equal(full.data_extent(), full.total_bounds))
+                True
+
+                ```
+
+        See Also:
+            total_bounds: The box of the whole grid, data or not.
+            footprint: The valid cells as a polygon rather than a bounding box.
+        """
+        self._require_band(band)
+        no_data_value = self._ds.no_data_value[band]
+
+        def _window(
+            acc: list[int] | None, strip: np.ndarray, window: list[int]
+        ) -> list[int] | None:
+            # `window` is [xoff, yoff, xsize, ysize]; `stream_reduce` gives full-width
+            # strips, so a valid cell's column is its own index and its row is the
+            # strip's row offset (`window[1]`) plus its local index. Stored counts
+            # (`unpack=False`), so a packed band's gaps are matched by the stored
+            # sentinel, exactly as `count_domain_cells` decides "inside".
+            rows, cols = np.nonzero(~is_stored_no_data(strip, no_data_value))
+            if rows.size:
+                strip_box = [
+                    window[1] + int(rows.min()),
+                    int(cols.min()),
+                    window[1] + int(rows.max()),
+                    int(cols.max()),
+                ]
+                acc = (
+                    strip_box
+                    if acc is None
+                    else [
+                        min(acc[0], strip_box[0]),
+                        min(acc[1], strip_box[1]),
+                        max(acc[2], strip_box[2]),
+                        max(acc[3], strip_box[3]),
+                    ]
+                )
+            return acc
+
+        pixel_box = self._ds.io.stream_reduce(_window, None, band=band, unpack=False)
+        extent = None
+        if pixel_box is not None:
+            min_row, min_col, max_row, max_col = pixel_box
+            min_x, min_y, max_x, max_y = self._ds.transform.extent(
+                max_col - min_col + 1,
+                max_row - min_row + 1,
+                col_off=min_col,
+                row_off=min_row,
+            )
+            extent = np.array([min_x, min_y, max_x, max_y])
+        return extent
+
     def apply(
         self,
         func,

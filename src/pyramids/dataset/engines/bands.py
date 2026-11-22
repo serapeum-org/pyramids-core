@@ -14,10 +14,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast, overload
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
-from geopandas.geodataframe import GeoDataFrame
 from osgeo import gdal
 from pandas import DataFrame
 
@@ -31,12 +29,10 @@ from pyramids.base._utils import (
     require_cleopatra,
 )
 from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
-from pyramids.feature import create_polygon
 
 if TYPE_CHECKING:
     from pyramids.dataset.dataset import Dataset
 
-from pyramids.base.crs import crs_spec
 from pyramids.dataset._driver import MEMORY_DRIVER, resolve_output_driver
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._validate import (
@@ -1824,31 +1820,6 @@ class Bands(_Engine["Dataset"]):
                         "the type of the given no_data_value differs from the dtype of the raster"
                         f"no_data_value now is set to {DEFAULT_NO_DATA_VALUE} in the raster"
                     )
-
-    def _calculate_bbox(self) -> list:
-        """Calculate bounding box from the geotransform's separate X/Y pixel sizes.
-
-        Uses ``geotransform[1]``/``geotransform[5]`` rather than a single ``cell_size`` so non-square
-        grids (e.g. 2° longitude, 1° latitude) are not stretched.
-        """
-        # `transform.extent` projects and reduces all four corners, so it returns a
-        # normalised [min_x, min_y, max_x, max_y] for a south-up (gt[5] > 0), east-left
-        # (gt[1] < 0) or rotated grid alike -- the shared "where is this raster"
-        # derivation, not a hand-rolled copy that assumed north-up, west-left. A no-op
-        # for the usual north-up, west-left grid.
-        min_x, min_y, max_x, max_y = self._ds.transform.extent(
-            self._ds.columns, self._ds.rows
-        )
-        return [min_x, min_y, max_x, max_y]
-
-    def _calculate_bounds(self) -> GeoDataFrame:
-        """Get the bbox as a geodataframe with a polygon geometry."""
-        x_min, y_min, x_max, y_max = self._calculate_bbox()
-        coords = [(x_min, y_max), (x_min, y_min), (x_max, y_min), (x_max, y_max)]
-        poly = create_polygon(coords)
-        gdf = gpd.GeoDataFrame(geometry=[poly])
-        gdf.set_crs(crs_spec(self._ds.epsg, self._ds.crs), inplace=True)
-        return gdf
 
     def _set_no_data_value_backend(self, band: int, no_data_value: Any) -> None:
         """

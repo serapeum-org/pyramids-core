@@ -1149,6 +1149,10 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Analysis.count_domain_cells <pyramids.dataset.engines.Analysis.count_domain_cells>`."""
         return self.analysis.count_domain_cells(*args, **kwargs)
 
+    def data_extent(self, *args, **kwargs):
+        """Facade — delegates to :meth:`Analysis.data_extent <pyramids.dataset.engines.Analysis.data_extent>`."""
+        return self.analysis.data_extent(*args, **kwargs)
+
     def apply(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.apply <pyramids.dataset.engines.Analysis.apply>`.
 
