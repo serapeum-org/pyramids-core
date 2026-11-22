@@ -35,7 +35,11 @@ from shapely import box, contains_xy
 
 from pyramids.base._axes import X_AXIS_NAMES, Y_AXIS_NAMES
 from pyramids.base._errors import AlignmentError
-from pyramids.base._reductions import _check_min_periods, _check_window
+from pyramids.base._reductions import (
+    _check_min_periods,
+    _check_window,
+    window_positions,
+)
 from pyramids.base._utils import apply_unpack, carry_band_packing
 from pyramids.base.crs import crs_equal, crs_spec, sr_from_epsg, sr_from_user_input
 from pyramids.dataset import DEFAULT_NO_DATA_VALUE, Dataset
@@ -104,6 +108,11 @@ from pyramids.netcdf.utils import (
 
 if TYPE_CHECKING:
     from pyramids.netcdf.netcdf import NetCDF
+
+# `window_positions` moved to `pyramids.base._reductions` (D6, one coarsen implementation). The
+# old private name is kept as a re-export so this engine, the lazy cube and the lazy-backend
+# support surface (`pyramids.lazy_support`) go on importing `_coarsen_windows` from here.
+_coarsen_windows = window_positions
 
 # The window must cover strictly less than 1/N of the variable's cells before reading it through
 # the MDArray earns a second code path: the windowed read pays off by skipping most of the
@@ -8353,52 +8362,6 @@ def _band_dimension_size(nc: NetCDF, dim: str, *, is_variable: bool) -> int:
                 f"variable in this container."
             )
     return int(size)
-
-
-def _coarsen_windows(
-    dim: str, size: int, window: int, boundary: str
-) -> tuple[int, list[np.ndarray]]:
-    """The axis length `coarsen` reduces over, and the positions in each window.
-
-    Args:
-        dim: The dimension, for the messages.
-        size: Its length.
-        window: Steps per window.
-        boundary: `"exact"`, `"trim"` or `"pad"`. Any other value is treated as `"pad"`,
-            so the caller validates it first.
-
-    Returns:
-        tuple: The resized length — `size` for `exact`, the largest multiple of `window`
-        not above it for `trim`, the smallest not below it for `pad` — and one array of
-        positions per window over that length.
-
-    Raises:
-        ValueError: `exact` and `window` does not divide `size`, or `trim` and `window`
-            is longer than `size`.
-    """
-    if boundary == "exact":
-        if size % window:
-            raise ValueError(
-                f"cannot coarsen {dim!r} of length {size} into windows of {window} with "
-                f"boundary='exact': {size % window} step(s) would be left over. Pass "
-                f"boundary='trim' to drop them, or boundary='pad' to reduce them as a "
-                f"shorter last window."
-            )
-        resized = size
-    elif boundary == "trim":
-        resized = size // window * window
-        if resized == 0:
-            raise ValueError(
-                f"boundary='trim' would leave nothing of {dim!r}: its length {size} is "
-                f"shorter than the window {window}. Pass boundary='pad' to reduce it as "
-                f"one window."
-            )
-    else:
-        resized = -(-size // window) * window
-    positions = [
-        np.arange(start, start + window) for start in range(0, resized, window)
-    ]
-    return resized, positions
 
 
 def _check_quantile(how: str, q: Any) -> float | None:

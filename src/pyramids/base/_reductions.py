@@ -451,6 +451,58 @@ def window_coordinates(
     return labels
 
 
+def window_positions(
+    dim: str, size: int, window: int, boundary: str = "exact"
+) -> tuple[int, list[np.ndarray]]:
+    """The axis length to reduce over, and the positions in each window.
+
+    The positional counterpart of a frequency binning: ``coarsen`` reduces a dimension into
+    fixed-width blocks of ``window`` steps, and this returns the length those blocks cover
+    plus one array of positions per block. Shared by the raster ``Selection.coarsen`` and the
+    mesh ``MeshDataset.coarsen`` so there is one block-boundary policy (D6).
+
+    Args:
+        dim: The dimension, for the messages.
+        size: Its length.
+        window: Steps per window.
+        boundary: ``"exact"`` (refuse a remainder, the default), ``"trim"`` (drop it) or
+            ``"pad"`` (reduce it as a shorter last window, which the caller's resize pads with
+            NaN). Any other value is treated as ``"pad"``, so the caller validates it first.
+
+    Returns:
+        tuple: The resized length — ``size`` for ``exact``, the largest multiple of ``window``
+        not above it for ``trim``, the smallest not below it for ``pad`` — and one array of
+        positions per window over that length.
+
+    Raises:
+        ValueError: ``exact`` and ``window`` does not divide ``size``, or ``trim`` and
+            ``window`` is longer than ``size``.
+    """
+    if boundary == "exact":
+        if size % window:
+            raise ValueError(
+                f"cannot coarsen {dim!r} of length {size} into windows of {window} with "
+                f"boundary='exact': {size % window} step(s) would be left over. Pass "
+                f"boundary='trim' to drop them, or boundary='pad' to reduce them as a "
+                f"shorter last window."
+            )
+        resized = size
+    elif boundary == "trim":
+        resized = size // window * window
+        if resized == 0:
+            raise ValueError(
+                f"boundary='trim' would leave nothing of {dim!r}: its length {size} is "
+                f"shorter than the window {window}. Pass boundary='pad' to reduce it as "
+                f"one window."
+            )
+    else:
+        resized = -(-size // window) * window
+    positions = [
+        np.arange(start, start + window) for start in range(0, resized, window)
+    ]
+    return resized, positions
+
+
 #: The statistics :func:`weighted_statistic` understands. Callers should validate ``how``
 #: against this set before calling — the kernel itself treats any value other than
 #: ``"sum_of_weights"`` / ``"sum"`` / ``"mean"`` / ``"var"`` as ``"std"`` (its catch-all
@@ -1023,6 +1075,54 @@ def count_axis(arr: Any, axis: int, how: str, skipna: bool, ndv: Any) -> Any:
     return result
 
 
+def reduce_groups(
+    arr: Any,
+    axis: int,
+    group_positions: list[np.ndarray],
+    how: str,
+    skipna: bool,
+    ndv: Any,
+    q: float | None = None,
+    min_count: int = 0,
+) -> Any:
+    """Reduce each group of positions along ``axis`` and stack the results back.
+
+    The array kernel both dataset families share for a grouped reduction (``coarsen``, a
+    grouped ``reduce``): each group is taken from ``arr``, reduced with :func:`reduce_axis`,
+    and the per-group results are stacked back along ``axis`` in the order the groups were
+    given. The positions are used verbatim and never reordered, so an unsorted group stays
+    unsorted and a ``"trim"`` boundary that covers fewer positions than the axis length is
+    fine — this kernel does not require the groups to cover the whole axis (the caller that
+    needs that checks it).
+
+    It touches neither band layout nor attributes: the per-hierarchy bookkeeping (band names,
+    coordinate relabelling, mesh attributes) stays with each caller. It is dask-safe —
+    :func:`numpy.take` and :func:`numpy.stack` stay lazy and nothing here calls
+    :func:`numpy.asarray` — so a lazy cube keeps its reduction deferred.
+
+    Args:
+        arr: The unflattened values, numpy or dask.
+        axis: The axis the groups index into.
+        group_positions: The groups of positions to reduce, each an integer array.
+        how: The reduction, forwarded to :func:`reduce_axis`.
+        skipna: Whether gaps are skipped.
+        ndv: The sentinel as it appears in ``arr``, or ``None``.
+        q: The quantile, for ``how="quantile"``.
+        min_count: Forwarded to :func:`reduce_axis` so a per-group window with fewer than
+            ``min_count`` valid cells is no-data (``skipna`` only).
+
+    Returns:
+        The stacked per-group reductions, ``axis`` now holding one step per group.
+    """
+    slices = [
+        reduce_axis(
+            np.take(arr, positions, axis=axis), axis, how, skipna, ndv, q, min_count
+        )
+        for positions in group_positions
+    ]
+    return np.stack(slices, axis=axis)
+
+
 def reduce_variable_array(
     arr: Any,
     axis: int,
@@ -1075,13 +1175,9 @@ def reduce_variable_array(
                 f"groupby covers {covered} positions but dimension {dim!r} "
                 f"has size {arr.shape[axis]}."
             )
-        slices = [
-            reduce_axis(
-                np.take(arr, positions, axis=axis), axis, how, skipna, ndv, q, min_count
-            )
-            for positions in group_positions
-        ]
-        new_arr = np.stack(slices, axis=axis)
+        new_arr = reduce_groups(
+            arr, axis, group_positions, how, skipna, ndv, q, min_count
+        )
         coord = values_map.get(dim)
         new_band_names = list(band_names)
         new_values_map = dict(values_map)

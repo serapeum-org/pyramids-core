@@ -24,7 +24,6 @@ from scipy.stats import rankdata
 from pyramids.base._array_ops import nodata_mask
 
 __all__ = [
-    "coarsen_axis",
     "cumulative_integrate_axis",
     "curvefit_axis",
     "differentiate_axis",
@@ -411,80 +410,6 @@ def rank_axis(
                 usable > 0, ranks / np.where(usable > 0, usable, 1.0), np.nan
             )
     return ranks
-
-
-def coarsen_axis(
-    values: np.ndarray,
-    window: int,
-    how: str = "mean",
-    axis: int = 0,
-    nodata: Any = None,
-) -> np.typing.NDArray:
-    """Block-aggregate ``axis`` into windows of ``window`` steps.
-
-    Bins by a **count of steps**, needing no coordinate at all — which is what makes it usable
-    where ``resample`` is not, since that one bins by a calendar frequency and so requires
-    date-like coordinates (issue #1377).
-
-    A trailing remainder shorter than a full window is **dropped**, so every reported bin is a
-    full one rather than a short bin that would read as a dip in the series.
-
-    Args:
-        values: The data array.
-        window: Steps per block, at least 1.
-        how: ``"mean"``, ``"sum"``, ``"min"``, ``"max"``, ``"median"`` or ``"std"``.
-        axis: The axis to aggregate along.
-        nodata: The declared no-data sentinel, masked to ``NaN`` so the nan-aware reducers
-            skip it rather than averaging ``-9999`` in as a measurement (D6). ``None`` masks
-            only NaN.
-
-    Returns:
-        np.ndarray: The aggregate, with ``axis`` shortened to ``n // window``. A block holding
-        no usable value reports ``NaN`` for every reducer, ``sum`` included — ``0.0`` there
-        would be indistinguishable from a real zero.
-
-    Raises:
-        ValueError: ``window`` is below 1, ``how`` is unknown, or the axis is shorter than one
-            window, which would leave nothing to report.
-    """
-    reducers: dict[str, Any] = {
-        "mean": np.nanmean,
-        "sum": np.nansum,
-        "min": np.nanmin,
-        "max": np.nanmax,
-        "median": np.nanmedian,
-        "std": np.nanstd,
-    }
-    if window < 1:
-        raise ValueError(f"coarsen: window must be at least 1, got {window}.")
-    if how not in reducers:
-        raise ValueError(
-            f"coarsen: how must be one of {sorted(reducers)}, got {how!r}."
-        )
-    array = np.moveaxis(np.array(values, dtype="float64"), axis, 0)
-    # D6: mask the declared gap to NaN so the nan-aware reducers below skip it instead of
-    # averaging the sentinel in as data. `np.array` copied above, so the caller's buffer is
-    # untouched.
-    array[nodata_mask(array, nodata)] = np.nan
-    blocks = array.shape[0] // window
-    if blocks == 0:
-        raise ValueError(
-            f"coarsen: the axis has {array.shape[0]} steps, fewer than one window of "
-            f"{window}; there would be nothing to report."
-        )
-    trimmed = array[: blocks * window]
-    reshaped = trimmed.reshape((blocks, window, *array.shape[1:]))
-    with warnings.catch_warnings():
-        # The nan-aware reducers warn on an all-missing block ("Mean of empty slice",
-        # "All-NaN slice encountered"). That block is reported as NaN just below, so the
-        # warning tells the caller nothing they are not already being told by the value.
-        warnings.simplefilter("ignore", RuntimeWarning)
-        reduced = np.asarray(reducers[how](reshaped, axis=1), dtype="float64")
-    # `nansum` of an all-missing block is 0.0, which is indistinguishable from a real zero —
-    # so every reducer reports a block with nothing in it as missing instead.
-    empty = ~np.isfinite(reshaped).any(axis=1)
-    reduced = np.where(empty, np.nan, reduced)
-    return np.moveaxis(reduced, 0, axis)
 
 
 def interp_axis(

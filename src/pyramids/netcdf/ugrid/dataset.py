@@ -66,10 +66,12 @@ from pyramids.base._reductions import (
     pushed,
     reduce_axis,
     reduce_by_label,
+    reduce_groups,
     shifted,
     validate_min_count,
     weighted_statistic,
     window_members,
+    window_positions,
 )
 from pyramids.base._summary import DEFAULT_METRICS, variable_summary
 from pyramids.base._utils import import_dask, require_optional
@@ -4840,6 +4842,10 @@ class MeshDataset(_MeshFacades):
         """
         if window < 1:
             raise ValueError(f"coarsen: window must be at least 1, got {window}.")
+        if how not in _COARSEN_HOWS:
+            raise ValueError(
+                f"coarsen: how must be one of {sorted(_COARSEN_HOWS)}, got {how!r}."
+            )
         self._require_variable_name("coarsen", variable_name)
         self._alongtime_coord("coarsen")
         sweeping = variable_name is None
@@ -6772,6 +6778,14 @@ _ROLLING_HOWS: frozenset[str] = frozenset(
     {"mean", "sum", "min", "max", "std", "var", "median", "quantile"}
 )
 
+#: The reducers :meth:`MeshDataset.coarsen` accepts — the set the retired ``coarsen_axis``
+#: kernel hard-coded. Kept narrower than the full :data:`REDUCERS` registry on purpose: the
+#: positional binner has always reported one float statistic per block, so the counting and
+#: quantile reducers stay out of its surface.
+_COARSEN_HOWS: frozenset[str] = frozenset(
+    {"mean", "sum", "min", "max", "median", "std"}
+)
+
 
 def _check_reduce_how(
     how: str, q: float | None, *, allow_quantile: bool = True
@@ -7069,7 +7083,7 @@ def _coarsened_variable(
         name: The variable's name, for messages.
         var: The variable to bin.
         window: Steps per block.
-        how: Reducer name, as :func:`pyramids.base._timeseries.coarsen_axis` takes it.
+        how: Reducer name, one of :data:`_COARSEN_HOWS`.
         sweeping: True when every variable is being binned, which is what decides whether a
             variable with fewer steps than one window is skipped or refused.
 
@@ -7085,6 +7099,9 @@ def _coarsened_variable(
     if data is None:
         raise ValueError(f"Variable {name!r} has no loaded data to coarsen.")
     coord = _variable_time_coord(var)
+    # The blocks==0 decision runs BEFORE window_positions: a sweep must skip a too-short
+    # variable, where window_positions(boundary="trim") would raise instead, and the caller's
+    # own "no variable has as many as N steps" aggregate error must be the one that fires.
     blocks = len(coord) // window
     if blocks == 0:
         if sweeping:
@@ -7098,8 +7115,15 @@ def _coarsened_variable(
             f"{window}; there would be nothing to report."
         )
     axis = cast("int", var.time_axis_index)
-    labels = [coord[index * window] for index in range(blocks)]
-    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis, var.nodata)
+    # One coarsen implementation (D6): the window positions and the grouped reduction are the
+    # shared raster/mesh primitives. `boundary="trim"` keeps the mesh's historical silent-drop
+    # of a trailing remainder. The sentinel is masked to NaN first and `ndv=None` is passed, so
+    # a declared gap is skipped (not averaged in) and an all-missing block stays NaN rather than
+    # declaring the sentinel — the positional binner's long-standing convention.
+    _resized, positions = window_positions("time", len(coord), window, "trim")
+    labels = [coord[int(group[0])] for group in positions]
+    masked = gaps_as_nan(np.asarray(data), var.nodata)
+    reduced = reduce_groups(masked, axis, positions, how, True, None)
     # The axis is re-binned, so a per-step mask no longer lines up with it.
     moved = var.with_data(reduced, active=None if var.active_has_time else _KEEP_ACTIVE)
     moved.attributes = {**var.attributes, "time_values": labels}
