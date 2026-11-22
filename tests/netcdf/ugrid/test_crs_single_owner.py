@@ -1,4 +1,4 @@
-"""D4: the mesh is the single CRS owner; dataset exports never disagree with it."""
+"""D4: the dataset is the single CRS owner; every export resolves from it, so none disagree."""
 
 from __future__ import annotations
 
@@ -21,13 +21,12 @@ def _square_mesh(epsg: int | None = None) -> MeshDataset:
 
 
 class TestCrsSingleOwner:
-    """Every derivation keeps the dataset CRS and the mesh CRS in agreement."""
+    """Every geometry export reads the dataset CRS, so they all agree -- even across derivations."""
 
-    def test_from_arrays_sets_the_mesh_crs(self):
-        """``from_arrays(epsg=)`` reconciles the mesh, so contour is not CRS-less."""
+    def test_from_arrays_drives_contour_from_the_dataset_crs(self):
+        """``from_arrays(epsg=)`` gives the dataset a CRS, so contour is not CRS-less."""
         ds = _square_mesh(epsg=4326)
         assert ds.epsg == 4326
-        assert ds.mesh.crs is not None and ds.mesh.crs.to_epsg() == 4326
         assert ds.contour(3, "depth").crs is not None
         assert ds.contour(3, "depth").crs.to_epsg() == 4326
 
@@ -38,14 +37,14 @@ class TestCrsSingleOwner:
         contour_epsg = ds.contour(3, "depth").crs.to_epsg()
         assert gdf_epsg == contour_epsg == 4326
 
-    def test_to_crs_keeps_the_mesh_crs(self):
-        """Reprojection carries the CRS onto the new mesh, not just the dataset."""
+    def test_to_crs_carries_the_crs_to_contour(self):
+        """Reprojection's new CRS reaches the geometry exports."""
         reprojected = _square_mesh(epsg=4326).to_crs(3857)
-        assert reprojected.mesh.crs is not None
+        assert reprojected.epsg == 3857
         assert reprojected.contour(3, "depth").crs.to_epsg() == 3857
 
-    def test_clip_keeps_the_mesh_crs(self):
-        """A spatial subset no longer returns a CRS-less mesh."""
+    def test_clip_keeps_the_crs_on_contour(self):
+        """A spatial subset's contour is not CRS-less."""
         clipped = _square_mesh(epsg=4326).clip(box(0.0, 0.0, 1.0, 1.0))
         assert clipped.contour(3, "depth").crs.to_epsg() == 4326
 
@@ -78,32 +77,52 @@ class TestCrsSingleOwner:
         mesh.set_crs_wkt(None)  # also a no-op, never raises
         assert mesh.crs is None
 
-    def test_a_matching_crs_wkt_is_accepted_and_does_not_clobber(self):
-        """Building from an already-CRS'd mesh with the SAME CRS is fine and changes nothing."""
+    def test_construction_does_not_mutate_the_caller_mesh(self):
+        """Review M2: building a dataset must not write a CRS onto the passed-in mesh.
+
+        The dataset owns its CRS via ``_crs_wkt``; an earlier design filled ``mesh.crs`` in
+        ``__init__``, mutating a caller-held object. A bare mesh stays CRS-less after
+        construction, and two datasets built from the same bare mesh with different CRSes are
+        independent (neither raises, neither clobbers the other).
+        """
         from pyproj import CRS
 
         ds = _square_mesh(epsg=4326)
-        shared = ds.mesh
-        assert shared.crs.to_epsg() == 4326
-        MeshDataset(
-            mesh=shared,
+        bare = ds.mesh
+        assert bare.crs is None, (
+            "from_arrays builds a CRS-less mesh; __init__ must not fill it"
+        )
+        d1 = MeshDataset(
+            mesh=bare,
             data_variables=ds._data_variables,
-            global_attributes=ds._global_attributes,
-            topology_info=ds._topology_info,
+            global_attributes={},
+            topology_info=None,
             crs_wkt=CRS.from_epsg(4326).to_wkt(),
         )
-        assert shared.crs.to_epsg() == 4326
+        assert bare.crs is None, "the caller's mesh was mutated"
+        d2 = MeshDataset(
+            mesh=bare,
+            data_variables=ds._data_variables,
+            global_attributes={},
+            topology_info=None,
+            crs_wkt=CRS.from_epsg(3857).to_wkt(),
+        )
+        assert d1.epsg == 4326 and d2.epsg == 3857
 
-    def test_a_conflicting_crs_wkt_is_refused_not_kept_split(self):
-        """A crs_wkt disagreeing with the mesh's CRS raises, so the two cannot diverge (M1)."""
+    def test_exports_stay_consistent_when_the_mesh_carries_another_crs(self):
+        """Review M1: exports resolve from the dataset, so a stale mesh CRS cannot diverge.
+
+        Even when the mesh happens to carry a different CRS than the dataset's ``crs_wkt`` --
+        including an authority-less (no-EPSG) one that defeated the old EPSG-based guard -- every
+        geometry export reports the dataset's CRS, never the mesh's.
+        """
         from pyproj import CRS
 
+        laea = CRS.from_proj4(
+            "+proj=laea +lat_0=52 +lon_0=10 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        )
         ds = _square_mesh(epsg=4326)
-        with pytest.raises(ValueError, match="disagrees with the mesh"):
-            MeshDataset(
-                mesh=ds.mesh,
-                data_variables=ds._data_variables,
-                global_attributes=ds._global_attributes,
-                topology_info=ds._topology_info,
-                crs_wkt=CRS.from_epsg(3857).to_wkt(),
-            )
+        ds.mesh.crs = laea  # a different, no-EPSG CRS sitting on the mesh
+        gdf_epsg = ds.to_geodataframe().crs.to_epsg()
+        contour_epsg = ds.contour(3, "depth").crs.to_epsg()
+        assert gdf_epsg == contour_epsg == ds.epsg == 4326

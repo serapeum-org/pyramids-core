@@ -1470,6 +1470,7 @@ class _MeshFacades:
             data,
             levels,
             var.location,
+            crs=self.crs,  # type: ignore[attr-defined]
         )
         return result
 

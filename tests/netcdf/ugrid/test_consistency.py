@@ -81,15 +81,16 @@ class TestPublicCrs:
         assert mesh.crs == "EPSG:4326"
 
     def test_it_tracks_the_dataset_crs(self, dataset):
-        """D4: the mesh is the CRS owner, so a dataset with a CRS has a mesh CRS.
+        """D4: the dataset owns its CRS, so every export resolves from it.
 
-        The fixture's ``from_arrays`` defaults to ``epsg=4326``, so the dataset carries a
-        CRS; before D4 the mesh copy was silently left ``None`` while ``dataset.epsg``
-        answered 4326 -- the exact split this test used to pin.
+        The fixture's ``from_arrays`` defaults to ``epsg=4326``. Before D4 ``contour`` read a
+        mesh copy that was silently ``None`` while ``dataset.epsg`` answered 4326 -- the split
+        this pins. The dataset is the owner now, so ``epsg``/``crs`` carry it regardless of the
+        mesh's own (unfilled) ``crs``.
         """
         assert dataset.epsg == 4326
-        assert dataset.mesh.crs is not None
-        assert dataset.mesh.crs.to_epsg() == 4326
+        assert dataset.crs is not None
+        assert dataset.crs.to_epsg() == 4326
 
     def test_it_is_none_when_genuinely_absent(self):
         """A mesh built with no CRS and no WKT to reconcile from stays ``None``."""

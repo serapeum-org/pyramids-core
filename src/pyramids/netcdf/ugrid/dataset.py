@@ -299,40 +299,13 @@ class MeshDataset(_MeshFacades):
         self._file_name = file_name
         self._volume_topology = volume_topology
         self._cached_crs: Any = None
-        # One reconciliation point for every derivation (D4): the mesh is the CRS owner,
-        # the dataset's WKT is only what to_file writes.
-        mesh_crs = getattr(mesh, "crs", None)
-        if crs_wkt is not None and mesh is not None and mesh_crs is None:
-            # Fill the mesh's CRS from the WKT when the mesh has none -- a monotonic fill, so
-            # a derivation sharing the parent's mesh never changes a CRS already set.
-            set_crs_wkt = getattr(mesh, "set_crs_wkt", None)
-            if callable(set_crs_wkt):
-                set_crs_wkt(crs_wkt)
-        elif crs_wkt is not None and mesh_crs is not None:
-            # Both stores carry a CRS: they must agree, or metadata exports (which read
-            # `_crs_wkt`) and geometry exports (which read `mesh.crs`) would report different
-            # CRSes for one dataset. A conflicting construction is refused rather than kept
-            # split; a matching one (every in-tree derivation and the read path) passes.
-            try:
-                given: CRS | None = CRS.from_wkt(crs_wkt)
-            except Exception:  # nosec B110 - a malformed WKT is tolerated as before
-                given = None
-            # Compare by EPSG code, not `CRS.equals`: a GDAL-derived WKT (what `to_crs` /
-            # `from_geodataframe` carry to keep authority nodes, #943/#1404) is the same CRS
-            # as the mesh's pyproj one yet is not `.equals` to it. Two differing EPSG codes
-            # are an unambiguous conflict; a no-EPSG WKT is left to pass rather than guessed.
-            given_epsg = given.to_epsg() if given is not None else None
-            mesh_epsg = mesh_crs.to_epsg()
-            if (
-                given_epsg is not None
-                and mesh_epsg is not None
-                and given_epsg != mesh_epsg
-            ):
-                raise ValueError(
-                    f"MeshDataset was built with a crs_wkt (EPSG {given_epsg}) that disagrees "
-                    f"with the mesh's own CRS (EPSG {mesh_epsg}); the two would diverge. Pass "
-                    "a mesh with no CRS, or a matching crs_wkt."
-                )
+        # D4: the dataset is the single owner of its coordinate system. `crs` / `epsg` /
+        # `crs_wkt` and every geometry export (`contour`, `polygonize`, `to_geodataframe`)
+        # resolve from `self._crs_wkt`, so they cannot disagree. `__init__` does NOT write
+        # onto the passed `mesh`: an earlier approach filled `mesh.crs` here, but that
+        # mutated a caller-held object (review M2) and needed a fragile, leaky mesh-vs-wkt
+        # conflict check (review M1). The mesh's own `crs` is set only where it genuinely
+        # belongs to the mesh -- the file read path and `set_crs`.
 
     @classmethod
     def read_file(
