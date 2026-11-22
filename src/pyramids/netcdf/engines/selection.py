@@ -93,14 +93,13 @@ from pyramids.netcdf.engines._along_dim import (
 )
 from pyramids.netcdf.engines._weighted import _WEIGHTED_HOWS, _weighted_result
 
-# The calendar helpers moved to `netcdf/utils.py` so the ugrid side can share them. Only
-# the three this module actually references are imported: `_days_in_year` and
-# `_same_position_in_year` were kept bound for a hypothetical `selection.<name>` patch
-# written against the old layout, and nothing in `src` or `tests` references either.
+# The calendar helpers live in `netcdf/utils.py` so the ugrid side can share them. This module
+# now calls the two orchestrators (`_plan_calendar_conversion` / `_plan_calendar_interpolation`),
+# which own the validation preamble and wrap the `_carried_to_calendar` / `_decimal_years`
+# kernels, so neither kernel is referenced here directly any more.
 from pyramids.netcdf.utils import (
-    _CALENDAR_ALIGNMENTS,
-    _carried_to_calendar,
-    _decimal_years,
+    _plan_calendar_conversion,
+    _plan_calendar_interpolation,
 )
 
 if TYPE_CHECKING:
@@ -7634,36 +7633,14 @@ def _run_convert_calendar(
             `cftime`; or `dim` cannot be decoded.
     """
     caller = "convert_calendar"
-    if align_on not in _CALENDAR_ALIGNMENTS:
-        raise ValueError(
-            f"{caller}() got align_on={align_on!r}; it must be one of "
-            f"{list(_CALENDAR_ALIGNMENTS)}."
-        )
-    try:
-        cftime.datetime(2001, 1, 1, calendar=calendar)
-    except (ValueError, KeyError) as exc:
-        raise ValueError(
-            f"{caller}() got calendar={calendar!r}, which cftime does not know: {exc}"
-        ) from exc
     instants, units, _source = _decoded_instants(nc, dim, caller=caller)
-    carried, kept = _carried_to_calendar(instants, calendar, align_on)
-    if not kept:
-        raise ValueError(
-            f"{caller}() would drop every step of {dim!r}: no date on it exists in the "
-            f"{calendar!r} calendar."
-        )
-    try:
-        offsets = [float(value) for value in cftime.date2num(carried, units, calendar)]
-    except (ValueError, TypeError) as exc:
-        # The source's `units` string is kept, so its reference date must also exist in the
-        # target calendar — "days since 2001-02-29" has no meaning on `noleap`. Wrapped the way
-        # `_decoded_instants` wraps `num2date`, rather than letting cftime's own message
-        # surface naming neither the member nor a way out.
-        raise ValueError(
-            f"{caller}() cannot count {dim!r} in {units!r} on the {calendar!r} calendar: "
-            f"{exc}. The units' reference date must exist in the target calendar too — "
-            f"restamp it with assign_coords/attrs before converting."
-        ) from exc
+    # The five calendar validations and the `units` re-encode live in `netcdf/utils.py` beside
+    # the `_carried_to_calendar` kernel they wrap, so the mesh's `convert_calendar` runs exactly
+    # the same plan (issue #1381, D8). `axis` is the dimension's `repr` so the refusals read as
+    # they did when this orchestration lived here.
+    carried, kept, offsets = _plan_calendar_conversion(
+        instants, units, calendar, align_on, caller=caller, axis=f"{dim!r}"
+    )
     op = _TakeSteps(
         kept=tuple(kept),
         stamps=tuple(offsets),
@@ -7706,25 +7683,11 @@ def _run_interp_calendar(nc: NetCDF, target: NetCDF, *, dim: str) -> NetCDF:
     target_instants, target_units, target_calendar = _decoded_instants(
         target, dim, caller=caller
     )
-    source_scale = _decimal_years(source_instants)
-    target_scale = _decimal_years(target_instants)
-    if source_scale.size < 2:
-        raise ValueError(
-            f"{caller}() needs at least 2 steps along {dim!r} to interpolate between, but it "
-            f"has {source_scale.size}."
-        )
-    # Every target outside the source's span interpolates to a gap, so a target that shares no
-    # span at all answers a fully-masked cube. Silently handing that back is the worst outcome
-    # for the member's stated purpose — lining two cubes up before `concat` — because `concat`
-    # then succeeds on nothing.
-    low, high = float(source_scale.min()), float(source_scale.max())
-    if float(target_scale.min()) > high or float(target_scale.max()) < low:
-        raise ValueError(
-            f"{caller}() found no overlap along {dim!r}: this cube spans {low:.4f} to "
-            f"{high:.4f} in decimal years and the target spans "
-            f"{float(target_scale.min()):.4f} to {float(target_scale.max()):.4f}. Every step "
-            f"would interpolate to a gap. Check the two cubes' time units and epochs."
-        )
+    # The common-scale build and its two refusals are shared with the mesh's `interp_calendar`
+    # from `netcdf/utils.py`; `axis` is the dimension's `repr` and `noun` keeps the cube wording.
+    source_scale, target_scale = _plan_calendar_interpolation(
+        source_instants, target_instants, caller=caller, axis=f"{dim!r}", noun="cube"
+    )
     offsets = [
         float(value)
         for value in cftime.date2num(

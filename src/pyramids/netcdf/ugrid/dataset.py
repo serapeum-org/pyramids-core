@@ -137,10 +137,10 @@ from pyramids.netcdf.ugrid.spatial import (
     subset_mesh_by_faces,
 )
 from pyramids.netcdf.utils import (
-    _CALENDAR_ALIGNMENTS,
-    _carried_to_calendar,
     _decimal_years,
     _dtype_to_str,
+    _plan_calendar_conversion,
+    _plan_calendar_interpolation,
     _read_attributes,
     decode_cf_time,
     encode_cf_time,
@@ -5027,38 +5027,15 @@ class MeshDataset(_MeshFacades):
         See Also:
             interp_calendar: Keeps every step by interpolating instead of dropping.
         """
-        if align_on not in _CALENDAR_ALIGNMENTS:
-            raise ValueError(
-                f"convert_calendar() got align_on={align_on!r}; it must be one of "
-                f"{list(_CALENDAR_ALIGNMENTS)}."
-            )
-        try:
-            cftime.datetime(2001, 1, 1, calendar=calendar)
-        except (ValueError, KeyError) as error:
-            raise ValueError(
-                f"convert_calendar() got calendar={calendar!r}, which cftime does not know: "
-                f"{error}"
-            ) from error
         instants, units, _source = self._calendar_instants("convert_calendar")
-        carried, kept = _carried_to_calendar(instants, calendar, align_on)
-        if not kept:
-            raise ValueError(
-                f"convert_calendar() would drop every step: no date on this axis exists in the "
-                f"{calendar!r} calendar."
-            )
-        try:
-            # D8: re-encode the carried instants against the SOURCE units, as the cube does
-            # (selection.py:_run_convert_calendar). The new calendar is stored beside the
-            # unchanged units, so the units' reference date must exist in that calendar too --
-            # "days since 2000-02-29" has no meaning on noleap. Without this check the invalid
-            # pair survives to write and _write_time_coordinate silently drops the time axis.
-            [float(value) for value in cftime.date2num(carried, units, calendar)]
-        except (ValueError, TypeError) as error:
-            raise ValueError(
-                f"convert_calendar() cannot count the time axis in {units!r} on the "
-                f"{calendar!r} calendar: {error}. The units' reference date must exist in the "
-                f"target calendar too -- restamp it with assign_coords/attrs before converting."
-            ) from error
+        # The five validations and the D8 `units` re-encode are the shared plan in
+        # `netcdf/utils.py`, so the mesh refuses exactly where the cube's `convert_calendar`
+        # does (issue #1381): an epoch the target calendar has no day for is caught here rather
+        # than surviving to write, where `_write_time_coordinate` would warn and silently drop
+        # the time axis. The mesh does not need the re-encoded offsets, only the refusal.
+        carried, kept, _offsets = _plan_calendar_conversion(
+            instants, units, calendar, align_on, caller="convert_calendar"
+        )
         indices = np.asarray(kept, dtype=np.intp)
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -5124,22 +5101,12 @@ class MeshDataset(_MeshFacades):
         target_instants, target_units, target_calendar = target._calendar_instants(
             "interp_calendar"
         )
-        source_years = _decimal_years(source_instants)
-        target_years = _decimal_years(target_instants)
-        if source_years.size < 2:
-            raise ValueError(
-                f"interp_calendar() needs at least two steps to interpolate between, got "
-                f"{source_years.size}."
-            )
-        if (
-            target_years.max() < source_years.min()
-            or target_years.min() > source_years.max()
-        ):
-            raise ValueError(
-                "interp_calendar() got a target whose time span does not overlap this "
-                "dataset's at all, so every step would come back a gap. Check that the two "
-                "runs cover the same period."
-            )
+        # The common-scale build and its two refusals (too few source steps, no overlap) are the
+        # shared plan in `netcdf/utils.py`, the same one the cube's `interp_calendar` runs; the
+        # no-overlap message now reports both decimal-year spans, as the cube's always has.
+        source_years, target_years = _plan_calendar_interpolation(
+            source_instants, target_instants, caller="interp_calendar", noun="dataset"
+        )
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
             if not var.has_time:

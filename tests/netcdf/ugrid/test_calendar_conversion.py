@@ -231,16 +231,24 @@ class TestInterpCalendar:
         assert np.isnan(result[1]).all(), "outside it"
 
     def test_a_target_that_does_not_overlap_at_all_is_refused(self):
-        """Rather than returning a fully-masked dataset that looks like a result."""
+        """Rather than returning a fully-masked dataset that looks like a result.
+
+        D8: the refusal now runs through the shared plan, so the message reports both
+        decimal-year spans numerically — as the cube's no-overlap refusal always has.
+        """
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 5)))
         target = _mesh(_days("standard", (2050, 1, 1), (2050, 1, 5)))
-        with pytest.raises(ValueError, match="does not overlap"):
+        with pytest.raises(ValueError, match="found no overlap") as raised:
             source.interp_calendar(target)
+        message = str(raised.value)
+        assert "2001.0000" in message and "2050.0000" in message, (
+            "the message names both spans so the caller sees how far apart the runs are"
+        )
 
     def test_a_single_source_step_is_refused(self):
         source = _mesh(_days("standard", (2001, 1, 1)))
         target = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 2)))
-        with pytest.raises(ValueError, match="at least two steps"):
+        with pytest.raises(ValueError, match="at least 2 steps"):
             source.interp_calendar(target)
 
     def test_a_different_mesh_is_refused(self):

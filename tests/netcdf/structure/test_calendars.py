@@ -17,6 +17,12 @@ import pytest
 
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.netcdf import Container
+from pyramids.netcdf.ugrid import MeshDataset
+from pyramids.netcdf.ugrid.dataset import TIME_CALENDAR_ATTR, TIME_UNITS_ATTR
+from pyramids.netcdf.utils import (
+    _plan_calendar_conversion,
+    _plan_calendar_interpolation,
+)
 
 NY, NX = 2, 3
 GEO = (0.0, 1.0, 0.0, 2.0, 0.0, -1.0)
@@ -1017,4 +1023,165 @@ class TestAlignOnYearStaysMonotonic:
 
         assert len(_stamps(converted)) == int(expected.time.size), (
             f"pyramids {len(_stamps(converted))} steps vs xarray {int(expected.time.size)}"
+        )
+
+
+_MESH_NODE_X = np.array([0.0, 1.0, 1.0, 0.0])
+_MESH_NODE_Y = np.array([0.0, 0.0, 1.0, 1.0])
+_MESH_TRIANGLES = np.array([[0, 1, 2], [0, 2, 3]])
+
+
+def _mesh(
+    stamps: list, *, units: str = "days since 2000-01-01", calendar: str = "standard"
+):
+    """A two-face mesh whose time axis carries `stamps` and CF metadata.
+
+    The mesh counterpart of `_cube`, so a parity test can drive both hierarchies on one input.
+
+    Args:
+        stamps: The decoded time stamps for the single temporal variable.
+        units: The CF time units to declare.
+        calendar: The CF calendar to declare.
+
+    Returns:
+        MeshDataset: A one-variable mesh dataset on the given time axis.
+    """
+    data = np.arange(2.0 * len(stamps)).reshape(len(stamps), 2)
+    ds = MeshDataset.from_arrays(
+        node_x=_MESH_NODE_X,
+        node_y=_MESH_NODE_Y,
+        face_node_connectivity=_MESH_TRIANGLES,
+        data={"depth": data},
+        data_locations={"depth": "face"},
+    )
+    ds["depth"].dimensions = ("time", "mesh2d_nFaces")
+    ds["depth"].attributes = {
+        **ds["depth"].attributes,
+        "time_values": list(stamps),
+        TIME_UNITS_ATTR: units,
+        TIME_CALENDAR_ATTR: calendar,
+    }
+    return ds
+
+
+def _standard(*dates: tuple) -> list:
+    """`cftime` stamps on the standard calendar from `(year, month, day)` triples.
+
+    Args:
+        *dates: The `(year, month, day)` triples.
+
+    Returns:
+        list: The stamps.
+    """
+    return [cftime.datetime(*date, calendar="standard") for date in dates]
+
+
+class TestPlanCalendarConversion:
+    """The shared conversion orchestrator, driven with no dataset in sight.
+
+    The point of the pure home: every refusal `convert_calendar` makes is reachable from here,
+    so both the cube and the mesh inherit exactly one copy of it (issue #1381, D8).
+    """
+
+    def test_it_carries_the_dates_and_re_encodes_the_offsets(self):
+        instants = _standard((2001, 1, 1), (2001, 1, 2), (2001, 1, 3))
+        carried, kept, offsets = _plan_calendar_conversion(
+            instants, "days since 2001-01-01", "noleap", "date"
+        )
+        assert [(s.month, s.day) for s in carried] == [(1, 1), (1, 2), (1, 3)]
+        assert all(s.calendar == "noleap" for s in carried)
+        assert kept == [0, 1, 2]
+        assert offsets == [0.0, 1.0, 2.0]
+
+    def test_an_unknown_alignment_is_refused(self):
+        with pytest.raises(ValueError, match="align_on"):
+            _plan_calendar_conversion(
+                _standard((2001, 1, 1)), "days since 2001-01-01", "noleap", "month"
+            )
+
+    def test_an_unknown_calendar_is_refused(self):
+        with pytest.raises(ValueError, match="cftime does not know"):
+            _plan_calendar_conversion(
+                _standard((2001, 1, 1)), "days since 2001-01-01", "mayan", "date"
+            )
+
+    def test_dropping_every_step_is_refused(self):
+        # Only 31st days, which no 360_day month has, so every step is dropped.
+        with pytest.raises(ValueError, match="would drop every step"):
+            _plan_calendar_conversion(
+                _standard((2001, 1, 31), (2001, 12, 31)),
+                "days since 2001-01-01",
+                "360_day",
+                "date",
+            )
+
+    @pytest.mark.parametrize(
+        ("units", "calendar"),
+        [("days since 2000-02-29", "noleap"), ("days since 2001-12-31", "360_day")],
+    )
+    def test_an_epoch_absent_in_the_target_calendar_is_refused(self, units, calendar):
+        """The two verified cftime epochs: a leap-day epoch on noleap, a 31st on 360_day.
+
+        `date2num(datetime(2001,3,1,'noleap'), 'days since 2000-02-29', 'noleap')` and the
+        `360_day` / `days since 2001-12-31` pair both raise, so the carried stamps cannot be
+        written and the plan refuses here rather than letting the invalid pair reach `to_file`.
+        """
+        with pytest.raises(ValueError, match="reference date must exist"):
+            _plan_calendar_conversion(
+                _standard((2001, 3, 1), (2001, 3, 2)), units, calendar, "date"
+            )
+
+
+class TestPlanCalendarInterpolation:
+    """The shared interpolation orchestrator, driven with no dataset in sight."""
+
+    def test_it_returns_both_axes_on_decimal_years(self):
+        source, target = _plan_calendar_interpolation(
+            _standard((2001, 1, 1), (2002, 1, 1)), _standard((2001, 7, 2))
+        )
+        assert source.tolist() == [2001.0, 2002.0]
+        assert target.size == 1 and 2001.4 < float(target[0]) < 2001.6
+
+    def test_fewer_than_two_source_steps_is_refused(self):
+        with pytest.raises(ValueError, match="at least 2 steps"):
+            _plan_calendar_interpolation(
+                _standard((2001, 1, 1)), _standard((2001, 1, 1), (2001, 1, 2))
+            )
+
+    def test_no_overlap_is_refused_with_both_spans(self):
+        with pytest.raises(ValueError, match="found no overlap") as raised:
+            _plan_calendar_interpolation(
+                _standard((2001, 1, 1), (2001, 1, 5)),
+                _standard((2050, 1, 1), (2050, 1, 5)),
+            )
+        message = str(raised.value)
+        assert "2001.0000" in message and "2050.0000" in message
+
+
+class TestCubeAndMeshShareOneCalendarPlan:
+    """The invariant whose absence caused the D8 bug: the two hierarchies now refuse alike.
+
+    The mesh used to accept an epoch the target calendar had no day for and only detonate at
+    write; both now route the same impossible pair through `_plan_calendar_conversion`, so they
+    refuse up front with the same remedy. This is the test that stops the two drifting apart.
+    """
+
+    _REMEDY = (
+        "The units' reference date must exist in the target calendar too \u2014 "
+        "restamp it with assign_coords/attrs before converting."
+    )
+
+    def test_both_refuse_the_impossible_epoch_with_the_same_remedy(self):
+        cube = _cube([0.0, 1.0, 2.0], "standard", units="days since 2000-02-29")
+        mesh = _mesh(
+            _standard((2001, 3, 1), (2001, 3, 2), (2001, 3, 3)),
+            units="days since 2000-02-29",
+        )
+        with pytest.raises(ValueError) as cube_raised:
+            cube.convert_calendar("noleap")
+        with pytest.raises(ValueError) as mesh_raised:
+            mesh.convert_calendar("noleap")
+        assert self._REMEDY in str(cube_raised.value)
+        assert self._REMEDY in str(mesh_raised.value), (
+            "the mesh must carry the cube's remedy clause verbatim, em-dash and all"
         )
