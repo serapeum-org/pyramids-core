@@ -11,9 +11,15 @@ kernels that both sides of the class tree can import safely.
 
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
+from numbers import Real
 from typing import Any
 
 import numpy as np
+
+KEEP_NO_DATA = object()
+"""``astype_values``' default for ``no_data_value``: keep the source's own sentinel."""
 
 
 def nodata_mask(values: np.ndarray, nodata=None) -> np.ndarray:
@@ -56,54 +62,228 @@ def nodata_mask(values: np.ndarray, nodata=None) -> np.ndarray:
     return mask
 
 
-def _holds(target: np.dtype, value: Any) -> bool:
-    """Whether ``target`` can carry ``value`` as a sentinel **exactly**.
+def regap(values: np.ndarray, domain: np.ndarray, sentinel: Any) -> np.ndarray:
+    """``values`` with every cell outside ``domain`` set back to its sentinel.
 
-    A gap is found later by exact equality (:func:`nodata_mask`), so a sentinel that merely
-    fits the type's *range* is not enough -- it must be representable without rounding.
-    ``float16`` fits the magnitude 9999 but snaps ``-9999.0`` to ``-10000.0``, which would
-    stop matching its own declaration, so it does not hold it. NaN and the infinities exist
-    in every float width. An integer type holds only a whole number in range.
+    The kernels that transform cell values leave the gaps out and put them back here, so a
+    gap is never clipped, rounded or cast into a measurement. Writing in place, rather than
+    through ``np.where``, keeps the array's type: a ``numpy.float64`` sentinel would
+    otherwise promote a ``float32`` array under NEP 50.
+
+    ``sentinel`` is a scalar applied to the whole array, or a list/tuple carrying one per
+    plane of the LEADING AXIS. The split keys off that **sequence-ness**, not off
+    ``values.ndim`` -- a 1-D mesh array has no band axis, and the ndim rule raised
+    ``TypeError: 'numpy.float64' object does not support item assignment`` on one, while a
+    scalar sentinel on a 3-D raster stack is written across every plane either way.
+
+    The result is **always a fresh array**, never ``values`` itself -- a later in-place write
+    through one must not reach the caller's buffer (the mesh facade aliases it otherwise).
 
     Args:
-        target: The candidate dtype.
+        values: The transformed cells.
+        domain: True where a cell holds data, shaped like ``values``.
+        sentinel: The value that marks a gap -- one scalar for the whole array, or a
+            list/tuple holding each leading-axis plane's own. ``None``, or a list entry of
+            ``None``, leaves that plane's gaps as the operation left them.
+
+    Returns:
+        np.ndarray: A fresh copy of the cells, gaps re-marked.
+
+    Examples:
+        >>> import numpy as np
+        >>> regap(np.array([8.0, 8.0]), np.array([True, False]), -9999.0).tolist()
+        [8.0, -9999.0]
+    """
+    marks = list(sentinel) if isinstance(sentinel, (list, tuple)) else [sentinel]
+    out = np.array(values, copy=True)  # never the caller's object (mesh aliasing)
+    if not domain.all() and any(one is not None for one in marks):
+        if isinstance(sentinel, (list, tuple)):
+            for index in range(out.shape[0]):
+                mark = _mark_for(marks, index)
+                if mark is not None:
+                    out[index][~domain[index]] = mark
+        elif marks[0] is not None:
+            out[~domain] = marks[0]
+    return out
+
+
+def _mark_for(marks: list, index: int) -> Any:
+    """The sentinel for one plane of a stack.
+
+    Args:
+        marks: The sentinels, one per plane -- or fewer, when the caller passed one for a
+            stack, which every plane then shares.
+        index: The plane's index.
+
+    Returns:
+        Any: That plane's sentinel, or the first when the list is shorter than the stack.
+    """
+    return marks[index] if index < len(marks) else marks[0]
+
+
+def _same_gap(one: Any, other: Any) -> bool:
+    """Whether two planes declare the same gap marker.
+
+    Compared by value, not by ``repr``: GDAL hands a sentinel back as ``numpy.float64`` while
+    a caller passes a Python ``float``, and ``-9999.0`` is the same declaration either way.
+    Two NaN markers agree as well, though NaN equals nothing.
+
+    Args:
+        one: One plane's sentinel, or ``None``.
+        other: Another plane's sentinel, or ``None``.
+
+    Returns:
+        bool: ``True`` when they declare the same thing.
+    """
+    if one is None or other is None:
+        same = one is None and other is None
+    else:
+        left, right = float(one), float(other)
+        same = left == right or (math.isnan(left) and math.isnan(right))
+    return same
+
+
+def declared_gap(sentinels: Sequence[Any]) -> Any:
+    """What a result should declare as its gaps, given each plane's own sentinel.
+
+    One value when every plane declares the same thing -- the ordinary single-plane and
+    uniform-stack cases, where a scalar keeps the metadata simplest -- and the per-plane list
+    otherwise. Collapsing a mixed stack onto the first plane's sentinel rewrote the others'
+    declarations, and a plane holding another plane's sentinel as a real value then read as
+    missing.
+
+    Args:
+        sentinels: One sentinel per plane, ``None`` where a plane declares none.
+
+    Returns:
+        Any: The scalar the planes agree on, or the list of per-plane sentinels.
+
+    Examples:
+        >>> declared_gap([-9999.0, -9999.0])
+        -9999.0
+    """
+    marks = list(sentinels)
+    agreed = all(_same_gap(one, marks[0]) for one in marks)
+    return marks[0] if agreed and marks else marks
+
+
+def holds(target: np.dtype, value: Any) -> bool:
+    """Whether ``target`` can carry ``value`` as a sentinel at all.
+
+    A float target takes any value inside its range: the sentinel is **snapped** to the type
+    on the way in (``-9999.9`` into ``float32`` is declared and written as
+    ``-9999.900390625``), and the cells it marks are found by the caller's own domain mask,
+    so a value that merely loses precision still marks exactly the cells it should. What must
+    not happen is a snapped sentinel landing on a cell that holds data -- ``1e-50`` into
+    ``float32`` snaps to ``0.0`` -- and that is
+    :func:`_refuse_a_sentinel_the_data_holds`'s question, asked of the cast cells rather than
+    guessed from the type.
+
+    An integer target is stricter, because no snapping keeps a gap a gap there: a fraction or
+    an out-of-range value wraps into an ordinary number.
+
+    Args:
+        target: The target type.
         value: The candidate sentinel.
 
     Returns:
-        bool: ``True`` when ``target`` represents ``value`` exactly as a gap marker. A
-        non-scalar (a list or an array of more than zero dimensions) or a non-numeric
-        value is not a sentinel and answers ``False`` rather than raising.
+        bool: ``True`` for a float type and any value inside its range, NaN and the
+        infinities included; for an integer type, only a whole number inside its range.
+
+    Examples:
+        >>> holds(np.dtype("float16"), -9999.0)
+        True
+        >>> holds(np.dtype("uint8"), -9999.0)
+        False
     """
-    # A sentinel is one scalar; a one-element array or a list is not, and probing its
-    # finiteness below would raise a raw numpy error -- answer False instead (review N1).
-    if np.ndim(value) != 0:
-        return False
-    try:
-        finite = bool(np.isfinite(value))
-    except (TypeError, ValueError):
-        # A non-numeric value (e.g. a string) is not a sentinel for a numeric array.
-        return False
+    number = float(value)
     if np.issubdtype(target, np.floating):
-        if not finite:
-            return True
-        with np.errstate(over="ignore"):
-            # Compare the cast result against the ORIGINAL value, never a float() of it:
-            # `float(2**53 + 1)` already rounds to 2**53, so pre-converting would call the
-            # value representable when float64 cannot hold it (review L1). Python compares
-            # int and float exactly, so `float(cast) == value` is the true round-trip test;
-            # `float16(-9999) == -9999` stays False because the cast snaps to -10000.
-            return bool(float(np.dtype(target).type(value)) == value)
-    if not finite:
-        return False
-    if isinstance(value, (int, np.integer)):
-        as_int = int(value)  # exact: no float() to round a large int first
+        fits = not np.isfinite(number) or abs(number) <= float(np.finfo(target).max)
     else:
-        as_float = float(value)
-        if not as_float.is_integer():
-            return False
-        as_int = int(as_float)
-    limits = np.iinfo(target)
-    return bool(limits.min <= as_int <= limits.max)
+        limits = np.iinfo(target)
+        fits = (
+            bool(np.isfinite(number))
+            and number.is_integer()
+            and limits.min <= number <= limits.max
+        )
+    return fits
+
+
+def _gap_marker(
+    mark: Any, target: np.dtype, domain: np.ndarray, band: int, bands: int
+) -> Any:
+    """What to write into one plane's gap cells before the cast fills the rest.
+
+    Args:
+        mark: The plane's declared sentinel, or ``None``.
+        target: The type being cast to.
+        domain: True where a cell holds data.
+        band: The plane's index.
+        bands: How many planes there are.
+
+    Returns:
+        Any: The value to fill that plane's gaps with.
+
+    Raises:
+        ValueError: The plane has gaps, declares no sentinel, and ``target`` is an integer
+            type, which has no NaN to leave them as.
+    """
+    marker = mark
+    if marker is None:
+        plane = domain if bands == 1 or domain.ndim == 2 else domain[band]
+        if not plane.all():
+            if target.kind != "f":
+                raise ValueError(
+                    f"astype({target.name!r}) would leave {int((~plane).sum())} gap cells "
+                    f"of band {band + 1} unmarked: it declares no no-data value and "
+                    f"{target.name} has no NaN, so every gap would read as an ordinary "
+                    f"number. Pass no_data_value= with one {target.name} holds, or fill "
+                    f"the gaps first."
+                )
+            marker = np.nan
+        else:
+            marker = 0
+    return marker
+
+
+def _refuse_a_sentinel_the_data_holds(
+    cast: np.ndarray,
+    domain: np.ndarray,
+    marks: Sequence[Any],
+    target: np.dtype,
+    bands: int,
+) -> None:
+    """Refuse a cast in which a cell holding data lands on its plane's sentinel.
+
+    The mirror of "a gap stays a gap": data has to stay data. A sentinel a real cell already
+    holds -- ``255`` after ``clip(0, 255)``, or ``-9999`` after truncating ``-9999.4`` --
+    would read as missing from then on.
+
+    Args:
+        cast: The cast cells.
+        domain: True where a cell holds data.
+        marks: Each plane's sentinel, ``None`` where a plane declares none.
+        target: The type cast to.
+        bands: How many planes there are.
+
+    Raises:
+        ValueError: A plane's data holds its own sentinel.
+    """
+    for band in range(bands):
+        mark = marks[band]
+        if mark is None or not np.isfinite(float(mark)):
+            continue
+        plane = cast if bands == 1 else cast[band]
+        kept = domain if bands == 1 else domain[band]
+        collisions = int(np.count_nonzero(plane[kept] == target.type(mark)))
+        if collisions:
+            raise ValueError(
+                f"astype({target.name!r}) would mark {collisions} cell(s) of band "
+                f"{band + 1} that hold data as missing: they already hold {float(mark)} "
+                f"once cast, and that is the value the result declares as its gap. Bound "
+                f"or shift them first (clip), or pass no_data_value= with one the data "
+                f"never takes."
+            )
 
 
 def fill_dtype(source: Any, fill: Any) -> np.dtype:
@@ -150,44 +330,40 @@ def fill_dtype(source: Any, fill: Any) -> np.dtype:
     return chosen
 
 
-def fillna(values: np.ndarray, fill_value, nodata=None) -> np.ndarray:
-    """Replace missing values with *fill_value*.
+def fillna(
+    values: np.ndarray, fill_value, *, domain: np.ndarray, sentinel: Any = None
+) -> tuple[np.ndarray, Any]:
+    """Give every cell outside ``domain`` the value ``fill_value``.
+
+    ``domain`` is **required** and is computed by the caller (the raster from stored counts
+    before CF unpacking, the mesh from the declared sentinel), never guessed here from
+    ``values == sentinel`` -- a packed raster's gaps are found on the raw array while the
+    values are physical. The result widens via :func:`fill_dtype` BEFORE the fill goes in, so
+    ``1e300`` into a ``float32`` array does not store ``inf`` behind a ``RuntimeWarning`` and
+    ``2.5`` into ``int16`` does not truncate to ``2`` (D5).
 
     Args:
         values: The data array.
-        fill_value: The replacement value.
-        nodata: The declared no-data sentinel, or ``None``.
+        fill_value: The replacement value for a gap.
+        domain: True where a cell holds data; its gaps are the ``~domain`` cells filled.
+        sentinel: The no-data value the result declares -- it now marks nothing, as a filled
+            array's does. Returned unchanged.
 
     Returns:
-        A copy of *values* with missing positions replaced.
+        tuple: the filled array (fresh), and the sentinel the result declares.
 
     Examples:
-        - Replace NaN in a float array:
-
-            >>> import numpy as np
-            >>> fillna(np.array([1.0, np.nan, 3.0]), 0.0)
-            array([1., 0., 3.])
-
-        - Replace a sentinel value in an integer array:
-
-            >>> fillna(np.array([1, -9999, 3]), 0, nodata=-9999)
-            array([1, 0, 3])
-
-    See Also:
-        nodata_mask: The underlying mask logic used to locate
-            missing positions.
+        >>> import numpy as np
+        >>> out, sentinel = fillna(
+        ...     np.array([1.0, -9999.0]), 0.0, domain=np.array([True, False]), sentinel=-9999.0
+        ... )
+        >>> out.tolist()
+        [1.0, 0.0]
     """
-    mask = nodata_mask(values, nodata)
-    if not mask.any():
-        # Nothing to fill: keep the array's own dtype rather than widening for a fill that
-        # is never written (int16 stayed int16). Still a fresh array, never the caller's.
-        return np.asarray(values).copy()
-    # Widen before the fill (D5): writing 1e300 into a float32 array stores inf behind a
-    # RuntimeWarning, and 2.5 into int16 truncates to 2 -- both silent. `fill_dtype` keeps
-    # the array's own type when it can hold the fill and widens only when it cannot.
-    result = np.asarray(values).astype(fill_dtype(values.dtype, fill_value))
-    result[mask] = fill_value
-    return result
+    array = np.asarray(values)
+    dtype = fill_dtype(array.dtype, fill_value)
+    out = np.asarray(np.where(domain, array.astype(dtype, copy=False), fill_value))
+    return out, sentinel
 
 
 def isnull(values: np.ndarray, nodata=None) -> np.ndarray:
@@ -216,32 +392,33 @@ def notnull(values: np.ndarray, nodata=None) -> np.ndarray:
     return ~nodata_mask(values, nodata)
 
 
-def _restore_gaps(result: np.ndarray, values: np.ndarray, nodata) -> np.ndarray:
-    """Put every gap back to its original value after an elementwise op (D1).
+def clip_values(
+    values: np.ndarray,
+    lower: Any,
+    upper: Any,
+    *,
+    domain: np.ndarray,
+    sentinel: Any = None,
+    operation: str = "clip",
+) -> tuple[np.ndarray, Any]:
+    """Bound the cells that hold data to ``[lower, upper]``; a gap stays a gap.
 
-    A missing cell has no measurement to clamp, round or transform, so the operation runs
-    on the whole array and the gaps are then restored from the source -- which also preserves
-    a fractional sentinel (``-9999.5``) that rounding would otherwise move off its own
-    declaration.
-    """
-    gaps = nodata_mask(values, nodata)
-    if gaps.any():
-        result = np.array(result)  # a fresh, writeable array; never the caller's buffer
-        result[gaps] = np.asarray(values)[gaps]
-    return result
-
-
-def clip_values(values: np.ndarray, lower, upper, nodata=None) -> np.ndarray:
-    """Clamp the cells that hold data to ``[lower, upper]``; a gap stays a gap.
+    The gaps (the ``~domain`` cells) are left out of the clipping and re-marked with
+    ``sentinel`` afterwards. Clipping the stored array instead would lift a ``-9999.0`` gap
+    to the lower bound and turn a missing cell into a measurement. The array keeps its own
+    type unless a bound cannot fit it, widening then the way :func:`fill_dtype` does.
 
     Args:
-        values: The data array.
+        values: The data array (physical units -- a packed raster unpacks before this).
         lower: Minimum allowed value, or ``None`` for no lower bound.
         upper: Maximum allowed value, or ``None`` for no upper bound.
-        nodata: The declared no-data sentinel, preserved rather than clamped (D1).
+        domain: True where a cell holds data; its gaps are preserved.
+        sentinel: The no-data value a gap is re-marked with, and the one the result declares.
+        operation: The caller's own spelling, carried into the error messages so the raster
+            says ``clip()`` and the mesh ``clip_values()``.
 
     Returns:
-        A new array with the data cells clamped and the gaps untouched.
+        tuple: the clipped array (fresh), and the sentinel the result declares.
 
     Raises:
         ValueError: Neither bound is given, a bound is NaN, or ``lower`` exceeds ``upper``.
@@ -249,96 +426,219 @@ def clip_values(values: np.ndarray, lower, upper, nodata=None) -> np.ndarray:
 
     Examples:
         >>> import numpy as np
-        >>> clip_values(np.array([1.0, 5.0, 10.0]), 2.0, 8.0)
-        array([2., 5., 8.])
-        >>> clip_values(np.array([5.0, -9999.0]), 8.0, 22.0, nodata=-9999.0)
-        array([ 8.000e+00, -9.999e+03])
-
+        >>> out, sentinel = clip_values(
+        ...     np.array([5.0, -9999.0]), 8.0, 22.0,
+        ...     domain=np.array([True, False]), sentinel=-9999.0,
+        ... )
+        >>> out.tolist(), sentinel
+        ([8.0, -9999.0], -9999.0)
     """
     if lower is None and upper is None:
-        raise ValueError("clip_values: needs at least one of lower and upper.")
-    for name, bound in (("lower", lower), ("upper", upper)):
-        if bound is None:
-            continue
-        try:
-            number = float(bound)
-        except (TypeError, ValueError):
-            raise TypeError(
-                f"clip_values: {name} must be a real number, got {bound!r}."
-            ) from None
-        if np.isnan(number):
-            raise ValueError(f"clip_values: {name} must not be NaN.")
-    if lower is not None and upper is not None and float(lower) > float(upper):
+        raise ValueError(f"{operation}() needs at least one of min and max.")
+    for bound in (lower, upper):
+        if bound is not None and (
+            not isinstance(bound, Real) or isinstance(bound, (bool, np.bool_))
+        ):
+            raise TypeError(f"{operation}() needs a number for a bound; got {bound!r}.")
+        if bound is not None and np.isnan(float(bound)):
+            raise ValueError(
+                f"{operation}() cannot bound anything with NaN: every cell would come back "
+                f"NaN, and a raster that declares another sentinel does not read those "
+                f"as missing. Drop the bound, or use where() to mask."
+            )
+    if lower is not None and upper is not None and lower > upper:
         raise ValueError(
-            f"clip_values: lower ({lower}) must not exceed upper ({upper})."
+            f"{operation}() needs min at or below max, got min={lower!r} above max={upper!r}."
         )
-    result: np.ndarray = np.clip(values, lower, upper)
-    return _restore_gaps(result, values, nodata)
+    array = np.asarray(values)
+    # Cast back after clipping, not only before it: a bound that arrives as a numpy scalar --
+    # every percentile, mean or quantile does -- promotes the result under NEP 50, so a
+    # float32 array came back float64 and a uint8 array int64.
+    dtype = array.dtype
+    for bound in (lower, upper):
+        if bound is not None:
+            dtype = np.promote_types(dtype, fill_dtype(array.dtype, bound))
+    clipped = np.clip(array.astype(dtype, copy=False), lower, upper).astype(
+        dtype, copy=False
+    )
+    return regap(clipped, domain, sentinel), sentinel
 
 
-def round_values(values: np.ndarray, decimals: int = 0, nodata=None) -> np.ndarray:
-    """Round the cells that hold data to *decimals* places; a gap stays a gap.
+def round_values(
+    values: np.ndarray,
+    decimals: int = 0,
+    *,
+    domain: np.ndarray,
+    sentinel: Any = None,
+    operation: str = "round",
+) -> tuple[np.ndarray, Any]:
+    """Round the cells that hold data to ``decimals`` places; a gap stays a gap.
+
+    The gaps are left out and re-marked afterwards: a fractional sentinel such as ``-9999.5``
+    rounds to ``-10000.0``, which no longer matches what was declared. An integer array
+    rounded to a negative ``decimals`` can leave its own range (numpy wraps ``uint8`` 255 to
+    4), so the result widens then rather than corrupting the data silently.
 
     Args:
         values: The data array.
         decimals: Number of decimal places.
-        nodata: The declared no-data sentinel, preserved rather than rounded (D1) -- so a
-            fractional sentinel like ``-9999.5`` is not rounded off its own declaration.
+        domain: True where a cell holds data; its gaps are preserved.
+        sentinel: The no-data value a gap is re-marked with, and the one the result declares.
+        operation: The caller's spelling, for the error message.
 
     Returns:
-        A new array with the data cells rounded and the gaps untouched.
-    """
-    return _restore_gaps(np.round(values, decimals), values, nodata)
-
-
-def astype_values(values: np.ndarray, dtype, nodata=None) -> np.ndarray:
-    """Cast to a different dtype, refusing a cast that would erase a gap (D1).
-
-    Args:
-        values: The data array.
-        dtype: Target numpy dtype.
-        nodata: The declared no-data sentinel. When the data carries a gap and the target
-            cannot hold the sentinel, the cast is refused rather than letting ``-9999`` wrap
-            to an ordinary value with the declaration silently dropped.
-
-    Returns:
-        A new array with the requested dtype; a gap keeps its sentinel value.
+        tuple: the rounded array (fresh), and the sentinel the result declares.
 
     Raises:
-        ValueError: The data has a gap and ``dtype`` cannot hold the sentinel.
+        TypeError: ``decimals`` is not an integer.
+
+    Examples:
+        >>> import numpy as np
+        >>> out, sentinel = round_values(
+        ...     np.array([5.0, -9999.5]), 0, domain=np.array([True, False]), sentinel=-9999.5
+        ... )
+        >>> out.tolist()
+        [5.0, -9999.5]
     """
-    target = np.dtype(dtype)
-    if (
-        nodata is not None
-        and nodata_mask(values, nodata).any()
-        and not _holds(target, nodata)
-    ):
-        raise ValueError(
-            f"astype({target.name!r}) cannot mark a gap with {float(nodata)}, which "
-            f"{target.name} does not hold: cast, it would become an ordinary value and every "
-            f"gap would read as data. Clip or shift the sentinel into range first, or drop it."
+    if isinstance(decimals, bool) or not isinstance(decimals, (int, np.integer)):
+        raise TypeError(
+            f"{operation}() needs an integer number of decimals, got {decimals!r}."
         )
-    return values.astype(target)
+    array = np.asarray(values)
+    rounded = np.round(array, int(decimals))
+    if array.dtype.kind in "iu" and int(decimals) < 0:
+        wide = np.round(array.astype("float64"), int(decimals))
+        limits = np.iinfo(array.dtype)
+        inside = wide[domain] if domain.any() else wide
+        fits = bool(((inside >= limits.min) & (inside <= limits.max)).all())
+        rounded = wide.astype(array.dtype, copy=False) if fits else wide
+    return regap(rounded, domain, sentinel), sentinel
 
 
-def isin_values(values: np.ndarray, test_values, nodata=None) -> np.ndarray:
-    """Boolean mask where *values* is in *test_values*; a gap is in no set (D1).
+def astype_values(
+    values: np.ndarray,
+    dtype: Any,
+    *,
+    domain: np.ndarray,
+    sentinel: Any = None,
+    no_data_value: Any = KEEP_NO_DATA,
+    operation: str = "astype",
+) -> tuple[np.ndarray, Any]:
+    """Cast to a different dtype; a gap stays a gap, re-marked for the new type (D1).
+
+    The cells that hold data are cast as numpy casts them. The gaps are not cast at all: they
+    are re-marked with the target's sentinel, snapped to the new type, so a missing cell stays
+    missing. A cast that would leave a gap unmarked (an integer target with no NaN and no
+    declared sentinel), that cannot carry the sentinel, or in which a cell holding data lands
+    on the sentinel once cast, is refused.
+
+    ``sentinel`` carries the per-plane no-data values: a scalar for one plane, or a
+    list/tuple for a stack. ``bands`` is read off its sequence-ness, so a 1-D mesh array (one
+    plane) and a 3-D raster stack both work.
 
     Args:
         values: The data array.
-        test_values: Set of values to test membership against.
-        nodata: The declared no-data sentinel. A gap answers ``False`` even when the set
-            holds the gap's own sentinel -- a missing cell is in no set.
+        dtype: Target numpy dtype -- any real numeric type (signed/unsigned integer, float).
+        domain: True where a cell holds data.
+        sentinel: The source's declared sentinel(s): a scalar, a list/tuple per plane, or
+            ``None``. Used only when ``no_data_value`` keeps the source's own.
+        no_data_value: The sentinel the result declares. :data:`KEEP_NO_DATA` (default) keeps
+            the source's own, snapped to the new type; a value overrides it for every plane;
+            ``None`` declares none.
+        operation: The caller's spelling, for the ``TypeError`` message.
 
     Returns:
-        Boolean array, same shape as *values*.
+        tuple: the cast array (fresh), and the sentinel the result declares.
+
+    Raises:
+        TypeError: ``dtype`` is not a real numeric type.
+        ValueError: The sentinel is outside ``dtype``'s range or fractional in an integer
+            target; a cell holding data lands on the sentinel once cast; or gaps would be left
+            unmarked in an integer target.
+
+    Examples:
+        >>> import numpy as np
+        >>> out, sentinel = astype_values(
+        ...     np.array([5.0, -9999.0]), np.int32,
+        ...     domain=np.array([True, False]), sentinel=-9999.0,
+        ... )
+        >>> out.tolist(), sentinel
+        ([5, -9999], -9999.0)
     """
-    flags = np.isin(values, test_values)
-    gaps = nodata_mask(values, nodata)
-    if gaps.any():
-        flags = np.array(flags)
-        flags[gaps] = False
-    return flags
+    target = np.dtype(dtype)
+    if target.kind not in "iuf":
+        raise TypeError(
+            f"{operation}() needs a real numeric type GDAL can store — a signed or unsigned "
+            f"integer, or a float — and {target.name} is not one."
+        )
+    array = np.asarray(values)
+    bands = len(sentinel) if isinstance(sentinel, (list, tuple)) else 1
+    if no_data_value is KEEP_NO_DATA:
+        source = list(sentinel) if isinstance(sentinel, (list, tuple)) else [sentinel]
+        marks = [source[i] if i < len(source) else None for i in range(bands)]
+    else:
+        marks = [no_data_value] * bands
+    for mark in marks:
+        if mark is not None and not holds(target, mark):
+            raise ValueError(
+                f"{operation}({target.name!r}) cannot mark a gap with {float(mark)}, which "
+                f"{target.name} does not hold — cast, it would become an ordinary value "
+                f"and every gap would read as data. Pass no_data_value= with one it "
+                f"does hold."
+            )
+    # Snapped to the target before anything is written or declared, so the value the result
+    # declares is exactly the value its gap cells hold. A float sentinel loses precision here
+    # (`-9999.9` into float32 becomes `-9999.900390625`); what it must not do is land on a
+    # cell holding data, which is checked after the cast.
+    marks = [None if mark is None else float(target.type(mark)) for mark in marks]
+    markers = [
+        _gap_marker(mark, target, domain, band, bands)
+        for band, mark in enumerate(marks)
+    ]
+    # Filled, never `np.empty`: the cells outside the domain are not cast, so an
+    # uninitialised buffer would ship whatever the allocator held as data.
+    cast = np.empty(array.shape, dtype=target)
+    for band in range(bands):
+        plane = cast if bands == 1 else cast[band]
+        plane[...] = markers[band]
+    cast[domain] = array[domain].astype(target)
+    _refuse_a_sentinel_the_data_holds(cast, domain, marks, target, bands)
+    return cast, declared_gap(marks)
+
+
+def isin_values(
+    values: np.ndarray, test_elements: Any, *, domain: np.ndarray
+) -> np.ndarray:
+    """Boolean mask where ``values`` is in ``test_elements``; a gap is in no set (D1).
+
+    A gap (a ``~domain`` cell) answers ``False`` even when the set holds the gap's own
+    sentinel -- a missing cell is missing, not that value. The result declares no sentinel,
+    so it is a plain flag, not a ``(values, sentinel)`` pair; the raster stores it as
+    ``uint8`` and the mesh as ``bool``, each its own band type.
+
+    Args:
+        values: The data array.
+        test_elements: One value, or a sequence of them (a list, tuple, set or array).
+        domain: True where a cell holds data.
+
+    Returns:
+        Boolean array, same shape as ``values``.
+
+    Examples:
+        >>> import numpy as np
+        >>> isin_values(
+        ...     np.array([5.0, -9999.0]), [-9999.0], domain=np.array([True, False])
+        ... ).tolist()
+        [False, False]
+    """
+    # A `set` survives `np.asarray` as a 0-d object array holding the set itself, so every
+    # comparison is False and the flags come back all zero -- spelled as a list, it compares.
+    wanted = (
+        list(test_elements)
+        if isinstance(test_elements, (set, frozenset))
+        else test_elements
+    )
+    return np.asarray(np.isin(np.asarray(values), np.asarray(wanted)) & domain)
 
 
 def array_equals(
@@ -541,45 +841,41 @@ def _fits(value: Any, dtype: np.dtype) -> bool:
     return result
 
 
-def apply_values(values: np.ndarray, func: Any, nodata=None) -> np.ndarray:
-    """Apply ``func`` elementwise to ``values``, keeping the shape.
+def apply_values(
+    values: np.ndarray, func: Any, *, domain: np.ndarray, sentinel: Any = None
+) -> tuple[np.ndarray, Any]:
+    """Apply ``func`` elementwise to ``values``, keeping the shape; a gap stays a gap.
 
-    The array half of the ``apply`` capability. ``func`` is handed the whole array, so a numpy
-    ufunc runs vectorised rather than per element; anything that preserves the shape is
-    acceptable. A function that changes the shape is refused, because the result would no
-    longer line up with the mesh elements it is supposed to describe.
+    ``func`` is handed the whole array, so a numpy ufunc runs vectorised rather than per
+    element; anything that preserves the shape is acceptable. A function that changes the
+    shape is refused, because the result would no longer line up with the elements it
+    describes. The gaps (the ``~domain`` cells) are re-marked with ``sentinel`` after
+    ``func``, so ``-9999`` is not doubled to ``-19998`` as if it were a measurement.
 
     Args:
         values: The data array.
         func: A callable taking and returning an array of the same shape.
-        nodata: The declared no-data sentinel, restored after ``func`` so a gap is not
-            transformed as a measurement (D1).
+        domain: True where a cell holds data; its gaps are preserved.
+        sentinel: The no-data value a gap is re-marked with, and the one the result declares.
 
     Returns:
-        np.ndarray: The transformed array, gaps untouched.
+        tuple: the transformed array (fresh), and the sentinel the result declares.
 
     Raises:
         ValueError: ``func`` returned an array of a different shape.
 
     Examples:
-        - Apply a numpy ufunc across the whole array:
-            ```python
-            >>> import numpy as np
-            >>> from pyramids.base._array_ops import apply_values
-            >>> apply_values(np.array([1.0, 4.0, 9.0]), np.sqrt).tolist()
-            [1.0, 2.0, 3.0]
-
-            ```
-        - A shape-changing function is refused rather than silently mis-aligning the mesh:
-            ```python
-            >>> import numpy as np
-            >>> from pyramids.base._array_ops import apply_values
-            >>> apply_values(np.array([1.0, 2.0]), lambda a: a[:1])
-            Traceback (most recent call last):
-                ...
-            ValueError: apply: the function changed the array shape from (2,) to (1,); ...
-
-            ```
+        >>> import numpy as np
+        >>> out, sentinel = apply_values(
+        ...     np.array([5.0, -9999.0]), lambda a: a * 2,
+        ...     domain=np.array([True, False]), sentinel=-9999.0,
+        ... )
+        >>> out.tolist()
+        [10.0, -9999.0]
+        >>> apply_values(np.array([1.0, 2.0]), lambda a: a[:1], domain=np.array([True, True]))
+        Traceback (most recent call last):
+            ...
+        ValueError: apply: the function changed the array shape from (2,) to (1,); ...
     """
     array = np.asarray(values)
     result = np.asarray(func(array))
@@ -589,10 +885,6 @@ def apply_values(values: np.ndarray, func: Any, nodata=None) -> np.ndarray:
             f"{result.shape}; it must return one value per element so the result still "
             f"lines up with the mesh."
         )
-    if result is array or np.shares_memory(result, array):
-        # `func` may return its input (an identity, or an in-place ufunc), which would make
-        # the result alias the caller's buffer -- a later write through one mutates both.
-        result = result.copy()
-    # A gap has no measurement to transform (D1): `func` ran over the whole array for a
-    # vectorised ufunc, and the gaps are then restored so -9999 is not doubled to -19998.
-    return _restore_gaps(result, array, nodata)
+    # `regap` always returns a fresh array, so an identity `func` cannot leave the result
+    # aliasing the caller's buffer -- a later in-place write through one must not reach both.
+    return regap(result, domain, sentinel), sentinel
