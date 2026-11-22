@@ -5,7 +5,7 @@ Statistics, extraction, overlay, apply, combine, fill, histogram, and plotting.
 ```mermaid
 flowchart LR
     AN(("Analysis<br/>ds.analysis"))
-    AN --> S["<b>statistics</b><br/>stats · count_domain_cells · domain_area<br/>get_histogram · normalize"]
+    AN --> S["<b>statistics</b><br/>stats · count_domain_cells · domain_area<br/>data_extent · get_histogram · normalize"]
     AN --> E["<b>sample / extract</b><br/>extract · sample · overlay"]
     AN --> T["<b>transform</b><br/>apply · combine · fill<br/>sieve · proximity"]
     AN --> N["<b>missing data</b><br/>where · fillna · isnull · notnull<br/>equals · identical"]

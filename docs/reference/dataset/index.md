@@ -224,6 +224,7 @@ classDiagram
         +count_domain_cells()
         +cell_area()
         +domain_area()
+        +data_extent()
         +get_band_names()
         +extract()
         +stats()
