@@ -338,9 +338,11 @@ def fillna(
     ``domain`` is **required** and is computed by the caller (the raster from stored counts
     before CF unpacking, the mesh from the declared sentinel), never guessed here from
     ``values == sentinel`` -- a packed raster's gaps are found on the raw array while the
-    values are physical. The result widens via :func:`fill_dtype` BEFORE the fill goes in, so
-    ``1e300`` into a ``float32`` array does not store ``inf`` behind a ``RuntimeWarning`` and
-    ``2.5`` into ``int16`` does not truncate to ``2`` (D5).
+    values are physical. When a gap is filled the result widens via :func:`fill_dtype` BEFORE
+    the fill goes in, so ``1e300`` into a ``float32`` array does not store ``inf`` behind a
+    ``RuntimeWarning`` and ``2.5`` into ``int16`` does not truncate to ``2`` (D5). When
+    ``domain`` is full -- nothing is missing -- no cell is written, so the array's own dtype is
+    kept rather than widened for a fill that never lands (review M1).
 
     Args:
         values: The data array.
