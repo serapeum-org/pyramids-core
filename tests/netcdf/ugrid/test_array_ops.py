@@ -207,8 +207,9 @@ class TestCellwiseKernelsHonourTheSentinel:
         ],
     )
     def test_clip_validates_its_bounds(self, lower, upper, exc):
+        ds = _make_ds(np.array([5.0, 25.0]))
         with pytest.raises(exc):
-            _make_ds(np.array([5.0, 25.0])).clip_values(lower, upper)
+            ds.clip_values(lower, upper)
 
     def test_round_preserves_a_fractional_sentinel(self):
         out = _make_ds(np.array([5.0, -9999.5]), nodata=-9999.5).round(0)
@@ -223,8 +224,9 @@ class TestCellwiseKernelsHonourTheSentinel:
         assert out["depth"].data.tolist() == [10.0, -9999.0]  # was [10.0, -19998.0]
 
     def test_astype_refuses_to_erase_a_gap(self):
+        ds = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0)
         with pytest.raises(ValueError, match="cannot mark a gap"):
-            _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).astype(np.uint8)
+            ds.astype(np.uint8)
 
     def test_astype_is_fine_when_the_target_holds_the_sentinel(self):
         out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).astype(np.int32)

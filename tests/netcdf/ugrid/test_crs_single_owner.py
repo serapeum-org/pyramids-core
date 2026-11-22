@@ -107,7 +107,8 @@ class TestCrsSingleOwner:
             topology_info=None,
             crs_wkt=CRS.from_epsg(3857).to_wkt(),
         )
-        assert d1.epsg == 4326 and d2.epsg == 3857
+        assert d1.epsg == 4326
+        assert d2.epsg == 3857
 
     def test_exports_stay_consistent_when_the_mesh_carries_another_crs(self):
         """Review M1: exports resolve from the dataset, so a stale mesh CRS cannot diverge.

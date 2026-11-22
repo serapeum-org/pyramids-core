@@ -145,11 +145,13 @@ class TestGapKernels:
     def test_astype_to_a_wider_float_keeps_the_gap(self):
         """A target that represents the sentinel exactly is allowed and preserves it."""
         out = astype_values(np.array([5.0, -9999.0]), np.float32, nodata=-9999.0)
-        assert out.tolist() == [5.0, -9999.0] and out.dtype == np.float32
+        assert out.tolist() == [5.0, -9999.0]
+        assert out.dtype == np.float32
 
     def test_fillna_without_a_fitting_type_widens(self):
         out = fillna(np.array([5, -9999], dtype="int16"), 2.5, nodata=-9999)
-        assert out.dtype == np.float64 and out.tolist() == [5.0, 2.5]
+        assert out.dtype == np.float64
+        assert out.tolist() == [5.0, 2.5]
 
 
 class TestOutputHygiene:
@@ -158,7 +160,8 @@ class TestOutputHygiene:
     def test_fillna_keeps_dtype_when_nothing_is_missing(self):
         """A gap-free integer band is not widened to float64 by a fill never written."""
         out = fillna(np.array([1, 2, 3], dtype="int16"), 2.5, nodata=-9999)
-        assert out.dtype == np.int16 and out.tolist() == [1, 2, 3]
+        assert out.dtype == np.int16
+        assert out.tolist() == [1, 2, 3]
 
     def test_fillna_returns_a_fresh_array(self):
         """The no-fill path still returns a copy, not the caller's buffer."""
@@ -170,6 +173,7 @@ class TestOutputHygiene:
         """An identity func must not make the result share the caller's buffer."""
         src = np.array([1.0, 2.0, 3.0])
         out = apply_values(src, lambda a: a)
-        assert out is not src and not np.shares_memory(out, src)
+        assert out is not src
+        assert not np.shares_memory(out, src)
         out[0] = 99.0
         assert src[0] == 1.0, "mutating the result must not touch the source"
