@@ -91,6 +91,14 @@ class TestTheWholeGridCases:
         assert np.array_equal(ds.data_extent(), np.array([1.0, 0.0, 4.0, 3.0]))
         assert not np.array_equal(ds.data_extent(), ds.total_bounds)
 
+    def test_nan_with_a_concrete_sentinel_is_counted_as_data(self):
+        """With a concrete sentinel declared, a NaN cell is data (not a gap), so it widens the box."""
+        values = np.full((4, 4), -9999.0, dtype="float32")
+        values[0, 0] = 5.0
+        values[3, 3] = np.nan
+        ds = _raster(values, no_data_value=-9999.0)
+        assert np.array_equal(ds.data_extent(), np.array([0.0, 0.0, 4.0, 4.0]))
+
 
 class TestTheMaskIsReadFromStoredValues:
     """A CF-packed band is measured on its stored counts, not the physical values."""

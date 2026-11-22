@@ -936,9 +936,10 @@ class Analysis(_Engine["Dataset"]):
         ``no_data_value`` lives, so a CF-packed band (``scale_factor`` / ``add_offset``)
         is measured the same as an unpacked one. The band is streamed in row strips, so
         a very large or ``/vsicurl`` raster is never read whole. A band that declares no
-        sentinel has no gaps and spans the full grid -- except that a float band's
-        ``NaN`` cells are always treated as absent, sentinel or not, so a band holding
-        ``NaN`` can still shrink.
+        sentinel spans the full grid, with one exception: when no sentinel is declared a
+        float band's ``NaN`` cells are themselves the gaps, so even a sentinel-free band
+        holding ``NaN`` can shrink. Once a concrete sentinel is declared only the cells
+        matching it are gaps -- a ``NaN`` is then counted as data, not a gap.
 
         Args:
             band (int):
