@@ -452,7 +452,7 @@ def window_coordinates(
 
 
 def window_positions(
-    dim: str, size: int, window: int, boundary: str = "exact"
+    dim: str, size: int, window: int, boundary: str
 ) -> tuple[int, list[np.ndarray]]:
     """The axis length to reduce over, and the positions in each window.
 

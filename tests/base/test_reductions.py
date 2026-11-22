@@ -309,3 +309,24 @@ class TestCoreReducerNamesGuard:
         revert to a hard-coded tuple fails here.
         """
         assert _SUPPORTED_OPS is CORE_REDUCER_NAMES
+
+
+class TestWindowPositionsContract:
+    """``window_positions`` keeps ``boundary`` required -- no silent default (review L2)."""
+
+    def test_boundary_is_required(self):
+        """The retired ``_coarsen_windows`` had no default; a caller must choose trim vs exact,
+        so a future caller cannot silently inherit ``"exact"``.
+        """
+        from pyramids.base._reductions import window_positions
+
+        with pytest.raises(TypeError):
+            window_positions("time", 4, 2)  # type: ignore[call-arg]
+
+    def test_trim_drops_a_short_trailing_window(self):
+        """``"trim"`` bins only full windows, dropping a short remainder."""
+        from pyramids.base._reductions import window_positions
+
+        resized, positions = window_positions("time", 5, 2, "trim")
+        assert resized == 4
+        assert len(positions) == 2
