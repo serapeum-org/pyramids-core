@@ -370,7 +370,12 @@ def fillna(
         # M1). A fresh array still, so a caller cannot alias the source.
         return array.copy(), sentinel
     dtype = fill_dtype(array.dtype, fill_value)
-    out = np.asarray(np.where(domain, array.astype(dtype, copy=False), fill_value))
+    # Cast the fill into the dtype fill_dtype already chose, so a strongly-typed numpy scalar
+    # does not re-promote the result past it under NEP 50: fill_dtype(int16, np.float64(5.0))
+    # is int16, so the fill must land as int16(5), not drag the array to float64 (review L1).
+    # The cast is lossless by construction -- fill_dtype returns a dtype that holds the fill.
+    fill = np.asarray(fill_value).astype(dtype, copy=False)
+    out = np.asarray(np.where(domain, array.astype(dtype, copy=False), fill))
     return out, sentinel
 
 

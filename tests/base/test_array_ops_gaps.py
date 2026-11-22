@@ -328,6 +328,22 @@ class TestOutputHygiene:
         assert out.dtype == np.float64
         assert out.tolist() == [1.0, 2.5]
 
+    def test_fillna_honours_fill_dtype_for_a_numpy_scalar_fill(self):
+        """Review L1: a strongly-typed numpy scalar must not re-promote past ``fill_dtype``.
+
+        ``fill_dtype(int16, np.float64(5.0))`` is ``int16`` (integral, in range), so filling a
+        gap with it keeps ``int16`` rather than dragging the array to ``float64`` through NEP 50
+        promotion in ``np.where``.
+        """
+        out, _ = fillna(
+            np.array([1, 2, -9999, 4], dtype="int16"),
+            np.float64(5.0),
+            domain=np.array([True, True, False, True]),
+            sentinel=-9999,
+        )
+        assert out.dtype == np.int16
+        assert out.tolist() == [1, 2, 5, 4]
+
     def test_apply_does_not_alias_the_source_on_an_identity(self):
         src = np.array([1.0, 2.0, 3.0])
         out, _ = apply_values(src, lambda a: a, domain=np.array([True, True, True]))
