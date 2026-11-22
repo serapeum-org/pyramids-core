@@ -50,6 +50,7 @@ from pyramids.base.remote import (
     _bucket_prefix,
     cloud_config_from_env,
 )
+from pyramids.dataset._exclude import build_exclude_list, require_one_label_per_frame
 from pyramids.dataset._plot_helpers import (
     ModeSpec,
     RenderRequest,
@@ -3691,11 +3692,7 @@ class DatasetCollection:
         # defaults are correct-length by construction, but a wrong-length
         # override would otherwise be forwarded verbatim to cleopatra and
         # silently mislabel / truncate the animation. Fail fast instead.
-        if len(axis_values) != self.time_length:
-            raise ValueError(
-                f"animation_axis_values has {len(axis_values)} labels but the "
-                f"collection has {self.time_length} timesteps."
-            )
+        require_one_label_per_frame(len(axis_values), self.time_length)
         # Styling kwargs forwarded once to both render paths as render_array's
         # ``**kwargs``. ``basemap`` / ``basemap_epsg`` are RenderRequest fields
         # (set on the request below), not styling kwargs. ``frame_label`` is only
@@ -3768,11 +3765,7 @@ class DatasetCollection:
         # stretched the colour scale down to it.
         physical = self.base.analysis._physical_no_data(band)
         no_data_value = np.nan if physical is None else physical
-        exclude_value = (
-            [no_data_value, exclude_value]
-            if exclude_value is not None
-            else [no_data_value]
-        )
+        exclude_value = build_exclude_list(no_data_value, exclude_value)
         return render_array(
             RenderRequest(
                 arr=data,

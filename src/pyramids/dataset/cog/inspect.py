@@ -20,6 +20,7 @@ from typing import Any
 from osgeo import gdal
 
 from pyramids.base.crs import epsg_of_crs
+from pyramids.dataset.cog._overviews import enumerate_overviews
 from pyramids.dataset.cog.validate import (
     _resolve_read_config,
     config_context,
@@ -183,20 +184,18 @@ def _cog_info_impl(p: str) -> COGInfo:
         # raised on an OGC:CRS84 raster.
         epsg = epsg_of_crs(ds.GetProjectionRef())
 
-        overviews: list[OverviewLevel] = []
-        for i in range(band0.GetOverviewCount()):
-            ovr = band0.GetOverview(i)
-            obx, oby = ovr.GetBlockSize()
-            decimation = round(width / ovr.XSize) if ovr.XSize else 0
-            overviews.append(
-                OverviewLevel(
-                    index=i,
-                    width=ovr.XSize,
-                    height=ovr.YSize,
-                    blocksize=(obx, oby),
-                    decimation=decimation,
-                )
+        overviews = [
+            OverviewLevel(
+                index=index,
+                width=ovr_width,
+                height=ovr_height,
+                blocksize=(block_x, block_y),
+                decimation=decimation,
             )
+            for index, ovr_width, ovr_height, (block_x, block_y), decimation in (
+                enumerate_overviews(band0, width)
+            )
+        ]
 
         band_tags = {
             i: dict(ds.GetRasterBand(i).GetMetadata())
