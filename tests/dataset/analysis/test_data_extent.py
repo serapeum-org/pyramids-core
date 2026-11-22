@@ -59,8 +59,10 @@ class TestTheExtentShrinksToTheData:
         values[1:3, 1:3] = 5.0
         ds = _raster(values, no_data_value=-9999.0)
         extent, grid = ds.data_extent(), ds.total_bounds
-        assert extent[0] >= grid[0] and extent[1] >= grid[1]
-        assert extent[2] <= grid[2] and extent[3] <= grid[3]
+        assert extent[0] >= grid[0]
+        assert extent[1] >= grid[1]
+        assert extent[2] <= grid[2]
+        assert extent[3] <= grid[3]
         assert not np.array_equal(extent, grid)
 
     def test_an_asymmetric_block_pins_the_row_and_col_offsets(self):
