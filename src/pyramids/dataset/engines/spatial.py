@@ -2397,7 +2397,9 @@ class _Spatial(_Engine["Dataset"]):
         # from the base. #1075 converged the signatures, so that specific divergence
         # is gone -- but a subclass may still override a constructor, so intermediate
         # GDAL results are still built through the base class rather than `type(self)`.
-        dst_obj = _Spatial._correct_wrap_cutline_error(_Spatial._as_base_dataset(dst_obj))
+        dst_obj = _Spatial._correct_wrap_cutline_error(
+            _Spatial._as_base_dataset(dst_obj)
+        )
         return dst_obj
 
     @staticmethod

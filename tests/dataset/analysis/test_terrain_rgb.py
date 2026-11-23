@@ -312,7 +312,9 @@ class TestTerrainTileMath:
     def test_native_zoom_floored_at_min_zoom(self):
         """A coarse pixel size would give a low zoom; ``min_zoom`` is the floor."""
         # huge pixel size -> computed zoom is small/negative -> min_zoom wins
-        assert _IO._native_terrain_zoom(1e7, 256, min_zoom=3) == 3, "min_zoom must floor"
+        assert _IO._native_terrain_zoom(1e7, 256, min_zoom=3) == 3, (
+            "min_zoom must floor"
+        )
 
     def test_native_zoom_matches_resolution(self):
         """A finer pixel size yields a higher zoom than a coarser one."""

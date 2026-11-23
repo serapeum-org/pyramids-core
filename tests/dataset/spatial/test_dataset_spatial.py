@@ -1533,9 +1533,9 @@ class TestCropBoundsTheReadToTheCrop:
             mask=self._grid_aligned_mask(), touch=True
         )
         crs_less_source = self._crs_less_source()
-        assert _Spatial._cutline_window_bounds(crs_less_source, crs_less_mask) is None, (
-            "a CRS-less source must trigger the full-source fallback"
-        )
+        assert (
+            _Spatial._cutline_window_bounds(crs_less_source, crs_less_mask) is None
+        ), "a CRS-less source must trigger the full-source fallback"
         fallback = crs_less_source.crop(mask=crs_less_mask, touch=True)
         assert fallback.shape == reference.shape, (
             f"fallback shape {fallback.shape} != reference {reference.shape}"

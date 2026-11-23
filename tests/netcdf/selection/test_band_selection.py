@@ -19,8 +19,8 @@ from numpy.testing import assert_allclose
 
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines.selection import (
-    _Selection,
     _kept,
+    _Selection,
     _spatial_dimension_names,
 )
 

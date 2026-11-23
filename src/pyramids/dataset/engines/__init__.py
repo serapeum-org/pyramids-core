@@ -12,14 +12,14 @@ keeps GDAL handle release deterministic on Windows. See
 :class:`pyramids.dataset.engines._base._Engine` for the contract.
 """
 
-from pyramids.dataset.engines.analysis import _Analysis
-from pyramids.dataset.engines.bands import _Bands
-from pyramids.dataset.engines.cell import _Cell
-from pyramids.dataset.engines.cog import _COG
-from pyramids.dataset.engines.georef import _Georef
-from pyramids.dataset.engines.io import _IO
-from pyramids.dataset.engines.spatial import _Spatial
-from pyramids.dataset.engines.vectorize import _Vectorize
+from pyramids.dataset.engines.analysis import _Analysis as _Analysis
+from pyramids.dataset.engines.bands import _Bands as _Bands
+from pyramids.dataset.engines.cell import _Cell as _Cell
+from pyramids.dataset.engines.cog import _COG as _COG
+from pyramids.dataset.engines.georef import _Georef as _Georef
+from pyramids.dataset.engines.io import _IO as _IO
+from pyramids.dataset.engines.spatial import _Spatial as _Spatial
+from pyramids.dataset.engines.vectorize import _Vectorize as _Vectorize
 
 # The engine classes are internal implementation detail. User code reaches their
 # functionality through the main classes -- the facade methods on ``Dataset``

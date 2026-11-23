@@ -147,7 +147,9 @@ class TestTheFacadesMatchTheEngine:
             member: The member whose two signatures are compared.
         """
         facade = list(inspect.signature(getattr(NetCDF, member)).parameters.values())
-        engine = list(inspect.signature(getattr(_Selection, member)).parameters.values())
+        engine = list(
+            inspect.signature(getattr(_Selection, member)).parameters.values()
+        )
         assert [(p.name, p.kind) for p in facade] == [
             (p.name, p.kind) for p in engine
         ], f"{member}() signatures differ"
