@@ -35,6 +35,9 @@ from pyramids.netcdf.ugrid.messages import unknown_variable_message
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.models import MeshVariable
 
+_KEEP = object()
+"""``_rewrap``'s default for ``nodata``: carry the source's sentinel if the dtype holds it."""
+
 
 def _representable(nodata: Any, dtype: np.dtype) -> bool:
     """Whether ``dtype`` can hold ``nodata`` as a distinguishable value.
@@ -220,18 +223,20 @@ class _MeshFacades:
         return var
 
     def _rewrap(
-        self, var: MeshVariable, values: np.ndarray, *, keep_nodata: bool = True
+        self, var: MeshVariable, values: np.ndarray, *, nodata: Any = _KEEP
     ) -> Any:
         """A new dataset on the same mesh, with ``var`` replaced by ``values``.
 
         Args:
             var: The variable being replaced; everything but its data is carried over.
             values: The new data.
-            keep_nodata: Carry the source's sentinel onto the result when it is representable
-                in the result's dtype. ``False`` for a facade whose answer is a **different
-                quantity** from its input — a cluster label, say — where the source's sentinel
-                is representable but means nothing, and the result's own "absent" marker is
-                something else entirely.
+            nodata: The sentinel the result declares. :data:`_KEEP` (the default) carries the
+                source's own sentinel onto the result when it is representable in the result's
+                dtype -- the morphology / fill facades that return the same quantity. ``None``
+                declares no sentinel, for a facade whose answer is a **different quantity**
+                (a boolean mask, a cluster label). Any other value is the one the shared
+                cell-wise kernel already worked out and snapped to the result's type, so it is
+                taken as given rather than guessed from dtype representability.
 
         Returns:
             MeshDataset: A new dataset carrying ``values`` under ``var``'s name.
@@ -239,12 +244,16 @@ class _MeshFacades:
         new_vars = dict(self._data_variables)  # type: ignore[attr-defined]
         array = np.asarray(values)
         replacement = var.with_data(array)
-        if not keep_nodata or not _representable(replacement.nodata, array.dtype):
-            # The morphology facades answer a boolean mask. Carrying over a float sentinel
-            # like -9999.0 declares a `_FillValue` no element of the result can equal, which
-            # `to_file` would then stamp on the variable. `keep_nodata=False` covers the other
-            # case: a sentinel that IS representable but describes the input, not the answer.
-            replacement.nodata = None
+        if nodata is _KEEP:
+            # A float sentinel like -9999.0 carried onto a boolean mask declares a
+            # `_FillValue` no element of the result can equal, which `to_file` would then
+            # stamp on the variable; drop it when the result's dtype cannot hold it.
+            if not _representable(replacement.nodata, array.dtype):
+                replacement.nodata = None
+        else:
+            # The kernel answered the sentinel (or `None` to declare none); it already fits
+            # the result's dtype, so it is set directly rather than re-guessed.
+            replacement.nodata = nodata
         new_vars[var.name] = replacement
         return self._rebuild(new_vars)  # type: ignore[attr-defined]
 
@@ -580,7 +589,7 @@ class _MeshFacades:
             upper,
             var.nodata,
         )
-        return self._rewrap(var, labels, keep_nodata=False)
+        return self._rewrap(var, labels, nodata=None)
 
     def footprint(self, variable_name: str | None = None) -> Any:
         """The dissolved outline of the faces carrying valid values (#1379).
@@ -1122,8 +1131,12 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("fillna", variable_name)
-        result = _array_ops.fillna(np.asarray(var.data), value, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result, declared = _array_ops.fillna(
+            values, value, domain=domain, sentinel=var.nodata
+        )
+        return self._rewrap(var, result, nodata=declared)
 
     def isnull(self, variable_name: str | None = None) -> Any:
         """Boolean mask of missing positions.
@@ -1181,8 +1194,17 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("clip_values", variable_name)
-        result = _array_ops.clip_values(np.asarray(var.data), lower, upper, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result, declared = _array_ops.clip_values(
+            values,
+            lower,
+            upper,
+            domain=domain,
+            sentinel=var.nodata,
+            operation="clip_values",
+        )
+        return self._rewrap(var, result, nodata=declared)
 
     def round(self, decimals: int = 0, variable_name: str | None = None) -> Any:
         """Round variable values to *decimals* decimal places.
@@ -1199,8 +1221,12 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("round", variable_name)
-        result = _array_ops.round_values(np.asarray(var.data), decimals, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result, declared = _array_ops.round_values(
+            values, decimals, domain=domain, sentinel=var.nodata, operation="round"
+        )
+        return self._rewrap(var, result, nodata=declared)
 
     def astype(self, dtype: Any, variable_name: str | None = None) -> Any:
         """Cast variable values to a different dtype.
@@ -1217,8 +1243,12 @@ class _MeshFacades:
 
         """
         var = self._facade_variable("astype", variable_name)
-        result = _array_ops.astype_values(np.asarray(var.data), dtype, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result, declared = _array_ops.astype_values(
+            values, dtype, domain=domain, sentinel=var.nodata, operation="astype"
+        )
+        return self._rewrap(var, result, nodata=declared)
 
     def where(
         self,
@@ -1258,7 +1288,7 @@ class _MeshFacades:
         overwrites_gaps = other is not None and not (
             isinstance(other, float) and np.isnan(other)
         )
-        return self._rewrap(var, result, keep_nodata=not overwrites_gaps)
+        return self._rewrap(var, result, nodata=None if overwrites_gaps else _KEEP)
 
     def apply(self, func: Any, variable_name: str | None = None) -> Any:
         """Apply ``func`` to every element of a variable (issue #1375).
@@ -1282,8 +1312,12 @@ class _MeshFacades:
             round: Round values to a number of decimal places.
         """
         var = self._facade_variable("apply", variable_name)
-        result = _array_ops.apply_values(np.asarray(var.data), func, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result, declared = _array_ops.apply_values(
+            values, func, domain=domain, sentinel=var.nodata
+        )
+        return self._rewrap(var, result, nodata=declared)
 
     def get_histogram(
         self,
@@ -1327,8 +1361,11 @@ class _MeshFacades:
             MeshDataset: A new dataset with boolean data.
         """
         var = self._facade_variable("isin", variable_name)
-        result = _array_ops.isin_values(np.asarray(var.data), test_values, var.nodata)
-        return self._rewrap(var, result)
+        values = np.asarray(var.data)
+        domain = _array_ops.notnull(values, var.nodata)
+        result = _array_ops.isin_values(values, test_values, domain=domain)
+        # A boolean membership mask is a different quantity from the data; it declares no gap.
+        return self._rewrap(var, result, nodata=None)
 
     def domain_area(self) -> float:
         """Total area of the mesh domain.

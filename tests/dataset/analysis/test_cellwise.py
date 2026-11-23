@@ -18,9 +18,11 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
+from pyramids.base._array_ops import declared_gap as _declared_gaps
+from pyramids.base._array_ops import holds as _holds
+from pyramids.base._array_ops import regap as _regapped
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.analysis import _declared_gaps, _holds, _regapped
 from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.core
@@ -679,11 +681,18 @@ class TestRegappingBandByBand:
             [[-1.0, 4.0]],
         ]
 
-    def test_a_full_domain_is_returned_untouched(self):
-        """With no gap there is nothing to re-mark, and the array is not copied."""
+    def test_a_full_domain_returns_a_fresh_array(self):
+        """With no gap there is nothing to re-mark, but the result is still never the input.
+
+        The mesh facade wraps this result straight into a new variable, so returning the
+        caller's own buffer would alias it and a later in-place write would mutate both
+        (audit D1 risk #1). The cost is one copy on the all-domain path.
+        """
         values = np.array([[1.0, 2.0]])
         domain = np.array([[True, True]])
-        assert _regapped(values, domain, [-9999.0]) is values
+        out = _regapped(values, domain, [-9999.0])
+        assert out is not values
+        assert out.tolist() == [[1.0, 2.0]]
 
     def test_declared_gaps_collapses_agreement(self):
         """One sentinel when the bands agree, the list when they do not."""
