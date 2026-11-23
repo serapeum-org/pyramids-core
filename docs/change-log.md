@@ -1,5 +1,22 @@
 ﻿# Change log
 
+## 0.82.0 (2026-11-23)
+
+### Feat
+
+- **dataset**: add data_extent and drop the dead Bands bbox helpers (#1617)
+
+### Fix
+
+- **wheel**: build HDF5 thread-safe in both source-built stacks and guard it (#1625)
+- **ugrid**: make the mesh operations gap-aware and consolidate shared logic (#1604)
+
+### Refactor
+
+- **netcdf**: collapse the deferred D1/D6/D8 netcdf-ugrid duplication (#1622)
+- **dataset**: consolidate duplicated grid/IO/COG/analysis logic (#1602)
+- **ugrid**: rename MeshDataset.data_variable_names to variable_names (#1597)
+
 ## 0.81.0 (2026-11-19)
 
 ### BREAKING CHANGE
