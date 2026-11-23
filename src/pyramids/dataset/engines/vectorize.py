@@ -65,7 +65,7 @@ _CELL_ORDER = "_pyramids_cell_order"
 _AUTO_TILE_BYTES = 256 * 1024 * 1024
 
 
-class Vectorize(_Engine["Dataset"]):
+class _Vectorize(_Engine["Dataset"]):
     """Mixin providing vectorization, clustering, and translate methods for Dataset."""
 
     def _band_to_polygon(self, band: int, col_name: str) -> GeoDataFrame:
@@ -418,7 +418,7 @@ class Vectorize(_Engine["Dataset"]):
         on any raster spanning more than one tile.
 
         The tiles come from `get_tile`, in physical units, so the no-data rows are
-        dropped by band 0's sentinel in those units (`Analysis._physical_no_data`).
+        dropped by band 0's sentinel in those units (`_Analysis._physical_no_data`).
 
         Args:
             band_names (list): Band names for the DataFrame columns.
@@ -470,7 +470,7 @@ class Vectorize(_Engine["Dataset"]):
         """Extract all raster band values into a DataFrame (no tiling).
 
         The values come from `read_array`, in physical units, so the no-data rows are
-        dropped by band 0's sentinel in those units (`Analysis._physical_no_data`) --
+        dropped by band 0's sentinel in those units (`_Analysis._physical_no_data`) --
         the same rule `_extract_values_tiled` applies.
 
         Args:
@@ -854,9 +854,9 @@ class Vectorize(_Engine["Dataset"]):
 
               ```python
               >>> import numpy as np
-              >>> from pyramids.dataset.engines.vectorize import Vectorize
+              >>> from pyramids.dataset.engines.vectorize import _Vectorize
               >>> arr = np.array([[1.0, 2.0, 3.0], [4.0, -9999.0, 6.0], [7.0, 8.0, 9.0]])
-              >>> filled = Vectorize._nearest_neighbour(arr, -9999.0, [1], [1])
+              >>> filled = _Vectorize._nearest_neighbour(arr, -9999.0, [1], [1])
               >>> float(filled[1, 1])
               6.0
 

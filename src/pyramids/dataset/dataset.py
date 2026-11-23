@@ -91,14 +91,14 @@ from pyramids.dataset.abstract_dataset import (
     RasterBase,
 )
 from pyramids.dataset.engines import (
-    COG,
-    IO,
-    Analysis,
-    Bands,
-    Cell,
-    Georef,
-    Spatial,
-    Vectorize,
+    _COG,
+    _IO,
+    _Analysis,
+    _Bands,
+    _Cell,
+    _Georef,
+    _Spatial,
+    _Vectorize,
 )
 
 # The engine's "derive the sentinel from the computed values" default. Imported
@@ -904,14 +904,14 @@ class Dataset(RasterBase):
         # exposes facade methods that delegate to the collaborator,
         # so both `ds.crop(mask)` and `ds.spatial.crop(mask)` are
         # equivalent.
-        self.io = IO(self)
-        self.spatial = Spatial(self)
-        self.bands = Bands(self)
-        self.analysis = Analysis(self)
-        self.cell = Cell(self)
-        self.vectorize = Vectorize(self)
-        self.cog = COG(self)
-        self.georef = Georef(self)
+        self.io = _IO(self)
+        self.spatial = _Spatial(self)
+        self.bands = _Bands(self)
+        self.analysis = _Analysis(self)
+        self.cell = _Cell(self)
+        self.vectorize = _Vectorize(self)
+        self.cog = _COG(self)
+        self.georef = _Georef(self)
 
     def _update_inplace(self, src: gdal.Dataset, access: str | None = None) -> None:
         """Swap internal state from a new GDAL dataset.
@@ -1988,7 +1988,7 @@ class Dataset(RasterBase):
         built on it (`point`, `read_part`, `preview`, `get_tile`, the overview reads),
         `stats`, `get_histogram`, `plot_histogram`, the domain reads behind `apply` and
         `combine`, `stream_transform`, `map_blocks`, `zonal_stats`, the sentinel
-        conversion in `Analysis._physical_no_data`, and the writers that carry or spend
+        conversion in `_Analysis._physical_no_data`, and the writers that carry or spend
         the recipe (`to_zarr`, `DatasetCollection.to_netcdf`, `NetCDF.set_variable`) --
         so they cannot resolve it differently and report the same band in different
         units. For a plain raster the band's own `GetScale` / `GetOffset` are the whole
@@ -2406,7 +2406,7 @@ class Dataset(RasterBase):
         Defined directly on Dataset (not via the bands collaborator)
         because `Dataset.__init__` calls `self._get_band_names()`
         before the `Bands` collaborator is wired up. Mirrors
-        :meth:`Bands._get_band_names`.
+        :meth:`_Bands._get_band_names`.
         """
         names: list[str] = []
         for i in range(1, self.band_count + 1):
@@ -2429,7 +2429,7 @@ class Dataset(RasterBase):
         `RasterBase.__init__` calls `_get_epsg()` (which calls
         `_get_crs()`) before `Dataset.__init__` has a chance to wire
         up the Spatial collaborator. The Spatial collaborator's
-        `Spatial._get_crs` returns the projection as GDAL reports it; this
+        `_Spatial._get_crs` returns the projection as GDAL reports it; this
         override adds the CF inference on top, so the two bodies differ.
         """
         crs = str(self.raster.GetProjection())
@@ -2891,14 +2891,14 @@ class Dataset(RasterBase):
     __array_ufunc__ = None
 
     def _combine_layout_source(self, other: Any, band: int | None) -> Any:
-        """Check two operands' band layouts before `Analysis._combine` computes, and name the source.
+        """Check two operands' band layouts before `_Analysis._combine` computes, and name the source.
 
-        A hook: `Analysis._combine` calls it on the left operand after the grid and band-count
+        A hook: `_Analysis._combine` calls it on the left operand after the grid and band-count
         checks, and hands what it returns to `_label_combined`. A plain raster has no band
         dimensions, so it checks nothing and names no source; `NetCDF` overrides it.
 
         Args:
-            other: The right operand, or `None` when `Analysis._fold` combines this raster with
+            other: The right operand, or `None` when `_Analysis._fold` combines this raster with
                 itself.
             band: The single band being combined, or `None` for all of them.
 
@@ -2907,7 +2907,7 @@ class Dataset(RasterBase):
         """
 
     def _label_combined(self, result: Any, source: Any) -> None:
-        """Label a combined result with its operands' band layout, after `Analysis._combine`.
+        """Label a combined result with its operands' band layout, after `_Analysis._combine`.
 
         A hook, paired with `_combine_layout_source`. A plain raster has no layout to carry;
         `NetCDF` overrides it.
@@ -2932,7 +2932,7 @@ class Dataset(RasterBase):
 
         A scalar takes the **same** route as a raster operand — `combine`'s
         machinery, with the constant folded into the callable and this raster read
-        once rather than twice (:meth:`Analysis._fold`) — so `ds * 2` agrees with
+        once rather than twice (:meth:`_Analysis._fold`) — so `ds * 2` agrees with
         `ds * other` on band count, dtype and sentinel. It does *not* always
         agree with `ds.apply(lambda v: v * 2)`: :meth:`apply` transforms one
         band and keeps the source's sentinel, while :meth:`combine` spans every
@@ -3045,7 +3045,7 @@ class Dataset(RasterBase):
 
         Nothing short-circuits *here*: the operators that land on this method have no
         left identity to absorb — `0 - ds` negates and `1 / ds` is a reciprocal — so
-        every call computes. It does so through :meth:`Analysis._fold`, one read of
+        every call computes. It does so through :meth:`_Analysis._fold`, one read of
         this raster with the scalar folded into the callable, which is what keeps
         `2 - ds` agreeing with `ds - 2` on band span, dtype and derived sentinel.
 
@@ -3068,7 +3068,7 @@ class Dataset(RasterBase):
         See Also:
             Dataset._arithmetic: The left-hand form, and the identity short-circuit
                 the commutative operators share with it.
-            Analysis._fold: The single-read path the computed result comes back
+            _Analysis._fold: The single-read path the computed result comes back
                 through.
         """
         result: Any = NotImplemented
@@ -3623,7 +3623,7 @@ class Dataset(RasterBase):
 
         Exponentiation does not commute, so this cannot defer to :meth:`__pow__`; the
         operands keep the order the caller wrote them in, computed through
-        :meth:`Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype
+        :meth:`_Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype
         NumPy makes of the base and the cells, exactly as `ds ** other` does.
 
         Args:
@@ -3662,7 +3662,7 @@ class Dataset(RasterBase):
     def __neg__(self) -> Any:
         """Negate every cell, `-ds`, keeping gaps and band dimensions.
 
-        A one-operand transform run through :meth:`Analysis._fold`, so it inherits the
+        A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the
         same no-data domain, band-dimension labelling and dtype behaviour as the binary
         operators: a masked cell stays masked, every band is negated, and a signed band
         keeps its dtype.
@@ -3690,14 +3690,14 @@ class Dataset(RasterBase):
 
         See Also:
             Dataset.__abs__: The magnitude, the other unary transform.
-            Analysis._fold: The single-read path the result comes back through.
+            _Analysis._fold: The single-read path the result comes back through.
         """
         return self.analysis._fold(operator.neg)
 
     def __abs__(self) -> Any:
         """Take the magnitude of every cell, `abs(ds)`, keeping gaps and band dimensions.
 
-        A one-operand transform run through :meth:`Analysis._fold`, so it inherits the
+        A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the
         same no-data domain, band-dimension labelling and dtype behaviour as the binary
         operators: a masked cell stays masked and every band is folded.
 
@@ -3724,7 +3724,7 @@ class Dataset(RasterBase):
 
         See Also:
             Dataset.__neg__: The sign flip, the other unary transform.
-            Analysis._fold: The single-read path the result comes back through.
+            _Analysis._fold: The single-read path the result comes back through.
         """
         return self.analysis._fold(operator.abs)
 

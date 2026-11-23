@@ -9,7 +9,7 @@ import pytest
 from pyramids.base._errors import OptionalPackageDoesNotExist
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines import Analysis
+from pyramids.dataset.engines import _Analysis
 
 from ._render_helpers import render_array
 
@@ -55,7 +55,7 @@ class TestAnalysisPlotEngine:
 
     @pytest.mark.plot
     def test_explicit_band_renders_array_glyph(self):
-        """Calling ``Analysis.plot(band=N)`` directly must work.
+        """Calling ``_Analysis.plot(band=N)`` directly must work.
 
         Test scenario:
             Bypass the facade and hit the engine directly with an

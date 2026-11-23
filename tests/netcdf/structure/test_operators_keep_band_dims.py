@@ -1058,7 +1058,7 @@ class TestEveryRouteToCombineSharesTheLayout:
 
         Args:
             cube: The on-disk 4x3 variable.
-            route: A way of reaching `Analysis._combine` other than the `NetCDF.combine` facade.
+            route: A way of reaching `_Analysis._combine` other than the `NetCDF.combine` facade.
         """
         result = route(cube)
         assert _layout(result) == _layout(cube), _layout(result)
@@ -1534,7 +1534,7 @@ class TestLabelsDoNotDependOnOperandOrder:
 
 
 class TestLabelCombined:
-    """`_label_combined` labels the raster `Analysis._combine` built, and unlabels what disagreed."""
+    """`_label_combined` labels the raster `_Analysis._combine` built, and unlabels what disagreed."""
 
     @staticmethod
     def _labelled() -> NetCDF:
@@ -1888,7 +1888,7 @@ class TestFillBandLabel:
 
 
 class TestCombineLayoutSource:
-    """`_combine_layout_source` is the hook `Analysis._combine` checks the layouts through."""
+    """`_combine_layout_source` is the hook `_Analysis._combine` checks the layouts through."""
 
     def test_one_band_skips_the_check(self):
         """With `band=0` two layouts that could never pair name no source and do not refuse."""
@@ -2031,7 +2031,7 @@ class TestBandLayoutSource:
             right: Builds a right operand whose names differ and whose band count or grid does too.
 
         Test scenario:
-            `Analysis._combine` reports those mismatches itself; the layout check must not
+            `_Analysis._combine` reports those mismatches itself; the layout check must not
             pre-empt them with a message about `step`.
         """
         left = _variable([("time", TIMES), ("pressure_level", LEVELS)])

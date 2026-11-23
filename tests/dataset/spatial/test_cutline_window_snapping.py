@@ -1,6 +1,6 @@
 """The cutline read-window is snapped by `Window`, not by hand.
 
-`Spatial._cutline_window_bounds` had its own copy of the arithmetic `Window`
+`_Spatial._cutline_window_bounds` had its own copy of the arithmetic `Window`
 already owns -- cover the envelope, grow by a cell, clip to the raster. The two
 were equivalent, which is precisely why the copy was invisible: nothing would
 have caught the day one of them changed.
@@ -21,7 +21,7 @@ from shapely.geometry import LineString, Point, Polygon, box
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.spatial import Spatial
+from pyramids.dataset.engines.spatial import _Spatial
 from pyramids.dataset.window import Window
 
 pytestmark = pytest.mark.core
@@ -205,7 +205,7 @@ class TestTheWindowDoesNotChangeTheCrop:
             crs=raster.crs,
         )
 
-        window = Spatial._cutline_window_bounds(raster, cutline)
+        window = _Spatial._cutline_window_bounds(raster, cutline)
 
         assert window is not None
         assert window[0] <= west, "the window starts east of the cutline"
@@ -252,7 +252,7 @@ class TestDegenerateCutlinesDeclineTheOptimisation:
             crs=raster.crs,
         )
 
-        assert Spatial._cutline_window_bounds(raster, cutline) is None
+        assert _Spatial._cutline_window_bounds(raster, cutline) is None
 
     def test_gdal_rejects_it_on_both_paths_alike(self, raster):
         """Declining the optimisation costs nothing: the error is the same."""

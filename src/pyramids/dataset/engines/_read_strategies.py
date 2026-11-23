@@ -31,7 +31,7 @@ from pyramids.dataset.engines._read_request import ReadRequest
 from pyramids.dataset.engines._validate import validate_band_index
 
 if TYPE_CHECKING:
-    from pyramids.dataset.engines.io import IO
+    from pyramids.dataset.engines.io import _IO
 
 
 class ReadStrategy(ABC):
@@ -78,7 +78,7 @@ class ReadStrategy(ABC):
         """Return whether this strategy handles ``req``'s option combination."""
 
     @abstractmethod
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Validate this path's preconditions and read through ``io``.
 
         Args:
@@ -100,7 +100,7 @@ class LazyRead(ReadStrategy):
         """Match when a dask ``chunks`` spec was given."""
         return req.chunks is not None
 
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Reject eager-only pairings, then build the lazy array."""
         if window is not None:
             raise ValueError(
@@ -133,7 +133,7 @@ class DecimatedRead(ReadStrategy):
         """Match when a decimated ``out_shape`` was given."""
         return req.out_shape is not None
 
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Read at the requested shape, masking the decimated read when asked."""
         # ``matches`` only selected this path because an out_shape was given.
         assert req.out_shape is not None
@@ -159,7 +159,7 @@ class BoundlessRead(ReadStrategy):
         """Match when boundless padding was requested."""
         return req.boundless
 
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Require a pixel window, pad-read, and mask padding + invalid pixels when asked."""
         if window is None:
             raise ValueError(
@@ -184,7 +184,7 @@ class ThreadsafeRead(ReadStrategy):
         """Match when a per-thread isolated read was requested."""
         return req.threadsafe
 
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Reject masked thread-safe reads, then read via the per-thread handle."""
         if req.masked:
             raise NotImplementedError(
@@ -205,7 +205,7 @@ class EagerRead(ReadStrategy):
         """Always match — this is the fallback path."""
         return True
 
-    def read(self, io: IO, req: ReadRequest, window: Any) -> Any:
+    def read(self, io: _IO, req: ReadRequest, window: Any) -> Any:
         """Read all bands or a single band directly, optionally masking the result."""
         band = req.band
         arr: Any

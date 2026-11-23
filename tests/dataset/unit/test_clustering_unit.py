@@ -11,7 +11,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset.dataset import Dataset
-from pyramids.dataset.engines import Vectorize
+from pyramids.dataset.engines import _Vectorize
 
 pytestmark = pytest.mark.core
 
@@ -34,7 +34,7 @@ def make_dataset():
 
 
 class TestGroupNeighbours:
-    """Tests for Vectorize._group_neighbours static method.
+    """Tests for _Vectorize._group_neighbours static method.
 
     Note on starting-cell behavior: _group_neighbours queues (i, j) but
     does not mark it.  When a discovered neighbor later checks *its* own
@@ -49,7 +49,7 @@ class TestGroupNeighbours:
         cluster = np.zeros(array.shape, dtype=float)
         position = []
         values = []
-        Vectorize._group_neighbours(
+        _Vectorize._group_neighbours(
             array, i, j, lower_bound, upper_bound, position, values, count, cluster
         )
         return position, values, cluster
@@ -160,7 +160,7 @@ class TestGroupNeighbours:
         cluster_arr[2, 0] = 1
         position = []
         values = []
-        Vectorize._group_neighbours(arr, 2, 0, 4, 6, position, values, 1, cluster_arr)
+        _Vectorize._group_neighbours(arr, 2, 0, 4, 6, position, values, 1, cluster_arr)
 
         found = {(r, c) for r, c in position}
         expected = {(0, 0), (1, 0), (2, 1), (2, 2)}
@@ -179,7 +179,7 @@ class TestGroupNeighbours:
         cluster_arr[0, 1] = 99
         position = []
         values = []
-        Vectorize._group_neighbours(arr, 1, 1, 1, 10, position, values, 1, cluster_arr)
+        _Vectorize._group_neighbours(arr, 1, 1, 1, 10, position, values, 1, cluster_arr)
 
         found = {(r, c) for r, c in position}
         assert (0, 0) not in found, "Cell (0,0) already clustered, should be skipped"

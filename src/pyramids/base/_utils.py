@@ -1930,7 +1930,7 @@ def apply_unpack(
 
     Computes `arr * scale + offset` as `float64`, the single shared primitive behind both
     the NetCDF CF `scale_factor` / `add_offset` path and the raster
-    `IO.read_array(unpack=True)` path, which is the default. `scale` / `offset` may be
+    `_IO.read_array(unpack=True)` path, which is the default. `scale` / `offset` may be
     scalars or a broadcastable `numpy` array (e.g. a per-band `(bands, 1, 1)` factor); a
     `dask` array input keeps the arithmetic lazy, and a masked array keeps its mask.
 

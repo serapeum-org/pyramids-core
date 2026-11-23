@@ -615,7 +615,7 @@ def fits_dtype(value: Any, dtype: np.dtype) -> bool:
     if value is None or isinstance(value, (bool, np.bool_)):
         # A bool fits every numeric dtype as `0` or `1`, so accepting one
         # would let `True` become a `1` sentinel and put every genuine 1 in
-        # the band out of domain. `Analysis._requested_no_data` rejects it
+        # the band out of domain. `_Analysis._requested_no_data` rejects it
         # with its own message before asking; the crop path asks directly,
         # and would have stamped it.
         fits = False

@@ -1,6 +1,6 @@
 """A scalar operator folds one variable with itself, so there is no second layout to compare.
 
-`Analysis._fold` hands the variable to `Analysis._combine` as both operands, through the engine's
+`_Analysis._fold` hands the variable to `_Analysis._combine` as both operands, through the engine's
 `weakref.proxy`. No identity test can tell that proxy from a second operand, so the fold must say
 so itself: the layout hook is told there is no other operand, and neither compares coordinates nor
 fills labels from one.

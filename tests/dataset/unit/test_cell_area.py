@@ -23,7 +23,7 @@ from pyproj import CRS
 
 from pyramids.base._domain import is_stored_no_data
 from pyramids.dataset import Dataset, GeoReference
-from pyramids.dataset.engines.cell import Cell
+from pyramids.dataset.engines.cell import _Cell
 
 pytestmark = pytest.mark.core
 
@@ -881,7 +881,7 @@ class TestPrecisionAtSmallCellSizes:
         low, high = np.radians(latitude), np.radians(latitude + size)
         exact = scipy_integrate.quad(element, low, high, epsabs=0, epsrel=1e-13)[0]
 
-        answer = float(Cell._zone_areas(np.array([high, low]), geod.a, geod.f)[0])
+        answer = float(_Cell._zone_areas(np.array([high, low]), geod.a, geod.f)[0])
 
         assert answer == pytest.approx(exact, rel=1e-12)
 
@@ -897,7 +897,7 @@ class TestPrecisionAtSmallCellSizes:
         edges = np.radians(np.array([1.0, 0.0]))
 
         with pytest.raises(ValueError, match="prolate"):
-            Cell._zone_areas(edges, 6378137.0, -0.003)
+            _Cell._zone_areas(edges, 6378137.0, -0.003)
 
 
 class TestACompoundCrs:

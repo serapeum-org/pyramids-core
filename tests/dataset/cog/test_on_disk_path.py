@@ -1,4 +1,4 @@
-"""Tests for the shared COG._on_disk_path predicate (ARC-5).
+"""Tests for the shared _COG._on_disk_path predicate (ARC-5).
 
 is_cog, validate_cog, and info must all agree on what counts as a validatable
 on-disk backing file, via one shared predicate.

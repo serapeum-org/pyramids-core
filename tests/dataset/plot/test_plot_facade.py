@@ -9,7 +9,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset.engines import Analysis
+from pyramids.dataset.engines import _Analysis
 from pyramids.netcdf import NetCDF
 
 pytestmark = pytest.mark.plot
@@ -647,7 +647,7 @@ class TestPlotFigAxSignatureContract:
         "plot_callable",
         [
             pytest.param(Dataset.plot, id="Dataset.plot"),
-            pytest.param(Analysis.plot, id="Analysis.plot"),
+            pytest.param(_Analysis.plot, id="Analysis.plot"),
             pytest.param(NetCDF.plot, id="NetCDF.plot"),
             pytest.param(DatasetCollection.plot, id="DatasetCollection.plot"),
         ],

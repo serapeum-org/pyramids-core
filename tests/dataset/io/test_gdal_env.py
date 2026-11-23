@@ -106,13 +106,13 @@ class TestGdalEnvOnReads:
             active even though the dataset's own handle already exists.
         """
         seen = {}
-        original = io_engine.IO._read_block
+        original = io_engine._IO._read_block
 
         def spy(self, *args, **kwargs):
             seen["payer"] = gdal.GetConfigOption("AWS_REQUEST_PAYER")
             return original(self, *args, **kwargs)
 
-        monkeypatch.setattr(io_engine.IO, "_read_block", spy)
+        monkeypatch.setattr(io_engine._IO, "_read_block", spy)
         Dataset.read_file(tif, gdal_env=ENV).read_array(window=[0, 0, 2, 2])
         assert seen["payer"] == "requester", f"env not active during read: {seen}"
 
@@ -124,13 +124,13 @@ class TestGdalEnvOnReads:
             captured config that handle is built with no credentials.
         """
         seen = {}
-        original = io_engine.IO._read_via_handle
+        original = io_engine._IO._read_via_handle
 
         def spy(self, *args, **kwargs):
             seen["payer"] = gdal.GetConfigOption("AWS_REQUEST_PAYER")
             return original(self, *args, **kwargs)
 
-        monkeypatch.setattr(io_engine.IO, "_read_via_handle", spy)
+        monkeypatch.setattr(io_engine._IO, "_read_via_handle", spy)
         Dataset.read_file(tif, gdal_env=ENV).read_array(threadsafe=True)
         assert seen["payer"] == "requester", (
             f"env not active in threadsafe read: {seen}"
@@ -143,13 +143,13 @@ class TestGdalEnvOnReads:
             No captured config -> no GDAL config is touched.
         """
         seen = {}
-        original = io_engine.IO._read_block
+        original = io_engine._IO._read_block
 
         def spy(self, *args, **kwargs):
             seen["payer"] = gdal.GetConfigOption("AWS_REQUEST_PAYER")
             return original(self, *args, **kwargs)
 
-        monkeypatch.setattr(io_engine.IO, "_read_block", spy)
+        monkeypatch.setattr(io_engine._IO, "_read_block", spy)
         Dataset.read_file(tif).read_array(window=[0, 0, 2, 2])
         assert seen["payer"] is None, f"unexpected config for an unsigned open: {seen}"
 

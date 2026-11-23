@@ -187,7 +187,7 @@ class TestWhyTheSignMattered:
 class TestAMagnitudeIsNotACoRegistrationCheck:
     """Making `cell_size` a magnitude removed a signal one consumer relied on.
 
-    `Spatial._assert_crop_aligned` compared the top-left corner and this
+    `_Spatial._assert_crop_aligned` compared the top-left corner and this
     scalar. The sign was the only term distinguishing a grid from its mirror,
     so once the scalar became a magnitude, a west-flipped mask sharing a
     top-left corner compared identical on both terms -- and `crop` proceeded

@@ -83,7 +83,7 @@ def _release_staged_dem(dem_path: str) -> None:
     unregister_vsimem(dem_path)
 
 
-class Georef(_Engine["Dataset"]):
+class _Georef(_Engine["Dataset"]):
     """Ground-control-point and RPC georeferencing for a :class:`Dataset`.
 
     A normal raster is georeferenced by an affine geotransform. Raw imagery
@@ -94,7 +94,7 @@ class Georef(_Engine["Dataset"]):
     """
 
     @property
-    def gcps(self: Georef) -> list[GroundControlPoint]:
+    def gcps(self: _Georef) -> list[GroundControlPoint]:
         """The dataset's ground-control points (empty list when it has none).
 
         Returns:
@@ -119,7 +119,7 @@ class Georef(_Engine["Dataset"]):
         return [GroundControlPoint.from_gdal(gcp) for gcp in self._ds.raster.GetGCPs()]
 
     @property
-    def gcp_count(self: Georef) -> int:
+    def gcp_count(self: _Georef) -> int:
         """Number of ground-control points attached (``0`` when none).
 
         Returns:
@@ -128,7 +128,7 @@ class Georef(_Engine["Dataset"]):
         return cast(int, self._ds.raster.GetGCPCount())
 
     @property
-    def gcp_projection(self: Georef) -> str | None:
+    def gcp_projection(self: _Georef) -> str | None:
         """WKT of the GCPs' CRS, or ``None`` when the dataset has no GCPs.
 
         Returns:
@@ -138,7 +138,7 @@ class Georef(_Engine["Dataset"]):
         return wkt if self._ds.raster.GetGCPCount() else None
 
     @property
-    def has_gcps(self: Georef) -> bool:
+    def has_gcps(self: _Georef) -> bool:
         """``True`` when the dataset carries at least one ground-control point.
 
         Returns:
@@ -147,7 +147,7 @@ class Georef(_Engine["Dataset"]):
         return cast(int, self._ds.raster.GetGCPCount()) > 0
 
     @property
-    def rpcs(self: Georef) -> dict[str, str] | None:
+    def rpcs(self: _Georef) -> dict[str, str] | None:
         """The dataset's rational-polynomial coefficients, or ``None`` if absent.
 
         RPCs live in GDAL's ``"RPC"`` metadata domain — a vendor sensor model of
@@ -176,7 +176,7 @@ class Georef(_Engine["Dataset"]):
         return metadata or None
 
     @property
-    def has_rpcs(self: Georef) -> bool:
+    def has_rpcs(self: _Georef) -> bool:
         """``True`` when the dataset carries RPC metadata.
 
         Returns:
@@ -184,7 +184,7 @@ class Georef(_Engine["Dataset"]):
         """
         return bool(self._ds.raster.GetMetadata("RPC"))
 
-    def set_rpcs(self: Georef, rpc: Mapping[str, str | float]) -> None:
+    def set_rpcs(self: _Georef, rpc: Mapping[str, str | float]) -> None:
         """Attach rational-polynomial coefficients (an RPC sensor model).
 
         Values are stringified before being written to GDAL's ``"RPC"`` metadata
@@ -236,7 +236,7 @@ class Georef(_Engine["Dataset"]):
         self._ds.raster.SetMetadata(stringified, "RPC")
 
     def orthorectify(
-        self: Georef,
+        self: _Georef,
         *,
         dem: str | Path | Dataset | None = None,
         to_epsg: int | str | None = None,
@@ -359,7 +359,7 @@ class Georef(_Engine["Dataset"]):
         return result
 
     def set_gcps(
-        self: Georef,
+        self: _Georef,
         gcps: Sequence[GroundControlPoint],
         projection: int | str,
     ) -> None:
@@ -413,7 +413,7 @@ class Georef(_Engine["Dataset"]):
         self._ds.raster.SetGCPs([point.to_gdal() for point in gcp_list], wkt)
 
     def georeference(
-        self: Georef,
+        self: _Georef,
         *,
         to_epsg: int | str | None = None,
         method: str = DEFAULT_RESAMPLING,

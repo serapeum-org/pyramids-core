@@ -1485,7 +1485,7 @@ class NetCDFPlot:
                 are read through `read_array`, so they are physical values on a
                 CF-packed variable: this value is compared against those, and the
                 variable's sentinel is matched in the same units
-                (`Analysis._physical_no_data`), not as the stored number.
+                (`_Analysis._physical_no_data`), not as the stored number.
             basemap: Forwarded to :func:`render_array`. A web-tile basemap
                 (``str`` / ``True``) draws on the animation's single
                 persistent ``Axes`` underneath the frames; a cleopatra

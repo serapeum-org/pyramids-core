@@ -53,7 +53,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._warp import carry_raster_metadata, warp_to_dataset
 from pyramids.dataset.engines._warp import dst_srs_arg as _dst_srs_arg
-from pyramids.dataset.engines.vectorize import Vectorize
+from pyramids.dataset.engines.vectorize import _Vectorize
 from pyramids.dataset.transform import GeoTransform
 from pyramids.dataset.window import Window
 
@@ -552,7 +552,7 @@ def _survives_a_c_double(value: Any) -> bool:
     return survives
 
 
-class Spatial(_Engine["Dataset"]):
+class _Spatial(_Engine["Dataset"]):
     """Mixin providing CRS, resampling, alignment and cropping operations for Dataset.
 
     Owns `set_crs`, `to_crs`, `warped_view`, `wrap_longitude`, `resample`,
@@ -1295,7 +1295,7 @@ class Spatial(_Engine["Dataset"]):
             dst_sr: Target spatial reference. Any axis-mapping strategy is
                 accepted: the function normalises both sides, on a clone, so
                 the object passed in is never mutated. Built from
-                ``Spatial.to_crs(..., maintain_alignment=True)`` via
+                ``_Spatial.to_crs(..., maintain_alignment=True)`` via
                 :func:`pyramids.base.crs.sr_from_user_input`, but callers may
                 pass any pre-built SRS.
             method: GDAL resampling algorithm constant (e.g.
@@ -1549,7 +1549,7 @@ class Spatial(_Engine["Dataset"]):
             # need to be interpolated from neighbors.
             if elem_mask > elem_src:
                 gap_rows, gap_cols = np.nonzero(src_no_data & ~mask_no_data)
-                src_array = Vectorize._nearest_neighbour(
+                src_array = _Vectorize._nearest_neighbour(
                     src_array,
                     gap_value,
                     gap_rows.tolist(),
@@ -1655,7 +1655,7 @@ class Spatial(_Engine["Dataset"]):
                 # already `NaN` are both "no measurement", so a band carrying
                 # its own gaps is not a collision to route around -- treating
                 # it as one hands the band `-9999` instead and turns those
-                # pre-existing gaps into data. `Analysis._resolve_no_data`
+                # pre-existing gaps into data. `_Analysis._resolve_no_data`
                 # settles the floating case the same way, and it is what this
                 # path wrote before the fill was derived at all.
                 fills.append(self._ds.numpy_dtype[band](np.nan))
@@ -1801,7 +1801,7 @@ class Spatial(_Engine["Dataset"]):
     def _declare_fills(dst_obj: Any, fills: list) -> None:
         """Record the fill on each band of a warp result, without writing cells.
 
-        `Bands._set_no_data_value` would also `Fill()` the band, which a warped
+        `_Bands._set_no_data_value` would also `Fill()` the band, which a warped
         VRT refuses; only the declaration is wanted here, the pixels having
         been written by the warp itself.
 
@@ -2397,7 +2397,7 @@ class Spatial(_Engine["Dataset"]):
         # from the base. #1075 converged the signatures, so that specific divergence
         # is gone -- but a subclass may still override a constructor, so intermediate
         # GDAL results are still built through the base class rather than `type(self)`.
-        dst_obj = Spatial._correct_wrap_cutline_error(Spatial._as_base_dataset(dst_obj))
+        dst_obj = _Spatial._correct_wrap_cutline_error(_Spatial._as_base_dataset(dst_obj))
         return dst_obj
 
     @staticmethod
@@ -2441,7 +2441,7 @@ class Spatial(_Engine["Dataset"]):
         Returns:
             Dataset: `src` itself, or a base-class wrapper over the same GDAL dataset.
         """
-        base_cls = Spatial._base_dataset_class(src.__class__)
+        base_cls = _Spatial._base_dataset_class(src.__class__)
         if type(src) is base_cls:
             return cast("Dataset", src)
         carried = {
@@ -2625,7 +2625,7 @@ class Spatial(_Engine["Dataset"]):
         )
         if needs_reprojection:
             densified = feature.copy()
-            step = Spatial._cutline_segment_length(src, feature)
+            step = _Spatial._cutline_segment_length(src, feature)
             if step is not None:
                 densified.geometry = densified.geometry.segmentize(step)
             result = densified.to_crs(crs_from_user_input(source_crs))
@@ -2720,7 +2720,7 @@ class Spatial(_Engine["Dataset"]):
                 new_gt = window.transform(self._ds._raster.GetGeoTransform())
                 # Rebuild on the base Dataset class (never a subclass like NetCDF), whose
                 # from_array has the plain array->raster behaviour this path needs.
-                base_cls = Spatial._base_dataset_class(self._ds.__class__)
+                base_cls = _Spatial._base_dataset_class(self._ds.__class__)
                 dst = cast(
                     "Dataset",
                     base_cls.from_array(
@@ -2737,7 +2737,7 @@ class Spatial(_Engine["Dataset"]):
                 # rows/cols and raise "no valid pixels" when the whole window is
                 # no-data. The read above covered only the AOI, so this stays off the
                 # full source.
-                result = Spatial._correct_wrap_cutline_error(dst)
+                result = _Spatial._correct_wrap_cutline_error(dst)
         return result
 
     def _crop_with_polygon_warp(
@@ -2780,7 +2780,7 @@ class Spatial(_Engine["Dataset"]):
         # Intermediate GDAL warp results are built on the base Dataset class, never a subclass:
         # `_correct_wrap_cutline_error` calls `from_array`, whose NetCDF override takes a
         # different signature. See `_base_dataset_class`.
-        base_cls = Spatial._base_dataset_class(self._ds.__class__)
+        base_cls = _Spatial._base_dataset_class(self._ds.__class__)
 
         # The warp output (VRT) may resolve the cutline lazily, so we must
         # complete every access that could touch the cutline path inside
@@ -2854,7 +2854,7 @@ class Spatial(_Engine["Dataset"]):
                 # answer the same way.
                 self._declare_fills(dst_obj, fills)
             if touch:
-                dst_obj = Spatial._correct_wrap_cutline_error(dst_obj)
+                dst_obj = _Spatial._correct_wrap_cutline_error(dst_obj)
 
         return dst_obj
 

@@ -9,7 +9,7 @@ from shapely.geometry import box
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines import Bands
+from pyramids.dataset.engines import _Bands
 
 pytestmark = pytest.mark.core
 
@@ -146,7 +146,7 @@ class TestGetAttributeTable:
                 "value": [1.1, 2.2, 3.3],
             }
         )
-        rat = Bands._df_to_attribute_table(df)
+        rat = _Bands._df_to_attribute_table(df)
         assert rat.GetColumnCount() == 1, "RAT should have 1 column"
         assert rat.GetRowCount() == 3, "RAT should have 3 rows"
         val = rat.GetValueAsDouble(0, 0)
@@ -161,8 +161,8 @@ class TestGetAttributeTable:
                 "str_col": ["a", "b"],
             }
         )
-        rat = Bands._df_to_attribute_table(df)
-        result = Bands._attribute_table_to_df(rat)
+        rat = _Bands._df_to_attribute_table(df)
+        result = _Bands._attribute_table_to_df(rat)
         assert len(result) == 2, "Should have 2 rows"
         assert "float_col" in result.columns, "Should contain float_col"
         assert abs(result["float_col"].iloc[0] - 1.5) < 0.01, (

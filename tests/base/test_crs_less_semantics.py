@@ -25,7 +25,7 @@ from pyramids.base.crs import (
 )
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset.engines.spatial import Spatial
+from pyramids.dataset.engines.spatial import _Spatial
 from pyramids.dataset.ops._geobox_zarr import geobox_crs
 from pyramids.netcdf import NetCDF
 
@@ -919,7 +919,7 @@ class TestAlignSkipsAnUnnecessaryWarp:
         assert source.crs != reference.crs, "fixture must use two spellings"
 
         calls = []
-        original = Spatial.to_crs
+        original = _Spatial.to_crs
 
         def _spy(self, *args, **kwargs):
             """Record the call, then delegate."""
@@ -938,7 +938,7 @@ class TestAlignSkipsAnUnnecessaryWarp:
             "the fixture must reach the raw-WKT comparison"
         )
 
-        monkeypatch.setattr(Spatial, "to_crs", _spy)
+        monkeypatch.setattr(_Spatial, "to_crs", _spy)
         assert source.align(reference) is not None, "align must return a dataset"
         assert not calls, "align warped between two spellings of one CRS"
 
@@ -961,14 +961,14 @@ class TestAlignSkipsAnUnnecessaryWarp:
         )
 
         calls = []
-        original = Spatial.to_crs
+        original = _Spatial.to_crs
 
         def _spy(self, *args, **kwargs):
             """Record the call, then delegate."""
             calls.append(args)
             return original(self, *args, **kwargs)
 
-        monkeypatch.setattr(Spatial, "to_crs", _spy)
+        monkeypatch.setattr(_Spatial, "to_crs", _spy)
         source.align(reference)
         assert calls, "the spy must fire when a warp is genuinely required"
 

@@ -37,8 +37,8 @@ from pyramids.dataset.collection import (
     DatasetCollection,
     _agree_on_one_sentinel,
 )
-from pyramids.dataset.engines.analysis import Analysis
-from pyramids.dataset.engines.io import IO
+from pyramids.dataset.engines.analysis import _Analysis
+from pyramids.dataset.engines.io import _IO
 from pyramids.netcdf import NetCDF
 from pyramids.netcdf._plot import NetCDFPlot
 
@@ -492,7 +492,7 @@ class TestStatsArePhysical:
 
     def test_a_report_that_is_not_the_four_numbers_is_left_alone(self):
         """`_unpack_stats` transforms `[min, max, mean, std]` and nothing else."""
-        assert Analysis._unpack_stats([1.0, 2.0], 0.01, 1.5) == [1.0, 2.0]
+        assert _Analysis._unpack_stats([1.0, 2.0], 0.01, 1.5) == [1.0, 2.0]
 
     @pytest.mark.parametrize("band", [None, 0], ids=["all-bands", "one-band"])
     def test_the_report_keeps_float64_resolution(self, band):
@@ -886,7 +886,7 @@ class TestStreamingRespectsTheDestination:
 
 
 class TestTheTileAndItsDomain:
-    """`IO._tile_with_domain` -- a window's values, with its gaps judged in stored units."""
+    """`_IO._tile_with_domain` -- a window's values, with its gaps judged in stored units."""
 
     @staticmethod
     def _distinct_sentinels() -> Dataset:
@@ -943,11 +943,11 @@ class TestTheTileAndItsDomain:
 
 
 class TestPuttingTheGapBack:
-    """`IO._restore_gap` -- the declared sentinel written back over the source's gaps."""
+    """`_IO._restore_gap` -- the declared sentinel written back over the source's gaps."""
 
     def test_a_2d_result_takes_the_sentinel_at_every_gap(self):
         """Cells outside the domain get the sentinel; the rest keep the result."""
-        result = IO._restore_gap(
+        result = _IO._restore_gap(
             np.array([[1.0, 2.0], [3.0, 4.0]]),
             np.array([[False, True], [True, False]]),
             -9999.0,
@@ -958,7 +958,7 @@ class TestPuttingTheGapBack:
         """Nothing is declared, so nothing is written -- but the result is still a copy."""
         computed = np.array([[1, 2]], dtype="int16")
 
-        result = IO._restore_gap(computed, np.array([[False, True]]), None)
+        result = _IO._restore_gap(computed, np.array([[False, True]]), None)
 
         np.testing.assert_array_equal(result, [[1, 2]])
         assert result is not computed, "the restore must not hand back its input"
@@ -971,7 +971,7 @@ class TestPuttingTheGapBack:
             so there is nothing to write there. Assigning `None` into an `int16` band
             raises, which is why the band is skipped rather than written.
         """
-        result = IO._restore_gap(
+        result = _IO._restore_gap(
             np.array([[[1, 2]], [[3, 4]]], dtype="int16"),
             np.array([[[False, True]], [[False, True]]]),
             [-9999, None],
@@ -982,13 +982,13 @@ class TestPuttingTheGapBack:
         """The restore works on a copy, so the function's own output is left alone."""
         computed = np.array([[1.0, 2.0]])
 
-        IO._restore_gap(computed, np.array([[False, True]]), -9999.0)
+        _IO._restore_gap(computed, np.array([[False, True]]), -9999.0)
 
         np.testing.assert_array_equal(computed, [[1.0, 2.0]])
 
 
 class TestRepackingForADestination:
-    """`IO._repack` -- physical values packed with a destination's own recipe."""
+    """`_IO._repack` -- physical values packed with a destination's own recipe."""
 
     def test_an_integer_destination_rounds_to_the_nearest_count(self):
         """`(value - offset) / scale` is rounded, not truncated, into an integer type.
@@ -997,14 +997,14 @@ class TestRepackingForADestination:
             `1.006` at `0.01` is `100.6` counts: truncation stores `100` and reads back
             `1.0`, rounding stores `101`. A negative value rounds the same way.
         """
-        counts = IO._repack(np.array([[1.006, -0.006]]), 0.01, 0.0, np.dtype("int16"))
+        counts = _IO._repack(np.array([[1.006, -0.006]]), 0.01, 0.0, np.dtype("int16"))
 
         assert counts.dtype == np.dtype("int16"), counts.dtype
         np.testing.assert_array_equal(counts, [[101, -1]])
 
     def test_a_float_destination_keeps_the_fraction(self):
         """A float stored type holds the exact quotient, with no rounding."""
-        counts = IO._repack(np.array([[1.0, 2.0]]), 0.4, 0.0, np.dtype("float32"))
+        counts = _IO._repack(np.array([[1.0, 2.0]]), 0.4, 0.0, np.dtype("float32"))
 
         assert counts.dtype == np.dtype("float32"), counts.dtype
         np.testing.assert_allclose(counts, [[2.5, 5.0]])
@@ -1018,7 +1018,7 @@ class TestRepackingForADestination:
         """
         values = np.array([[[2.5, 3.5]], [[7.0, 17.0]]])
 
-        counts = IO._repack(values, [0.01, 0.1], [1.5, -3.0], np.dtype("int16"))
+        counts = _IO._repack(values, [0.01, 0.1], [1.5, -3.0], np.dtype("int16"))
 
         np.testing.assert_array_equal(counts, [[[100, 200]], [[100, 200]]])
 
@@ -1026,7 +1026,7 @@ class TestRepackingForADestination:
         """A `None` scale means no factor, and a `None` offset means no shift."""
         values = np.array([[[2.0, 4.0]], [[6.0, 8.0]]])
 
-        counts = IO._repack(values, [None, 2.0], [1.0, None], np.dtype("float64"))
+        counts = _IO._repack(values, [None, 2.0], [1.0, None], np.dtype("float64"))
 
         np.testing.assert_allclose(counts, [[[1.0, 3.0]], [[3.0, 4.0]]])
 
@@ -1034,7 +1034,7 @@ class TestRepackingForADestination:
         """Repack then unpack is the identity, to within half a count."""
         values = np.array([[0.53, 2.47], [1.5, -0.99]])
 
-        counts = IO._repack(values, 0.01, 1.5, np.dtype("int16"))
+        counts = _IO._repack(values, 0.01, 1.5, np.dtype("int16"))
 
         np.testing.assert_allclose(apply_unpack(counts, 0.01, 1.5), values, atol=0.005)
 
@@ -1540,7 +1540,7 @@ class TestApplyPicksTheResultType:
         """
         source = np.array([[-9999, -9999]], dtype="int16")
         domain = np.zeros_like(source, dtype=bool)
-        resolved = Analysis._storable_dtype(lambda a: a * 0.5, source, domain)
+        resolved = _Analysis._storable_dtype(lambda a: a * 0.5, source, domain)
         assert resolved == np.dtype("float64"), resolved
 
     def test_the_probe_is_taken_from_the_domain_not_from_cell_zero(self):
@@ -1553,8 +1553,8 @@ class TestApplyPicksTheResultType:
         """
         source = np.array([[-9999, 4, 6]], dtype="int16")
         domain = np.array([[False, True, True]])
-        with_domain = Analysis._storable_dtype(_refuse_the_sentinel, source, domain)
-        without = Analysis._storable_dtype(_refuse_the_sentinel, source)
+        with_domain = _Analysis._storable_dtype(_refuse_the_sentinel, source, domain)
+        without = _Analysis._storable_dtype(_refuse_the_sentinel, source)
         assert with_domain == np.dtype("float64"), with_domain
         assert without == np.dtype("int16"), without
 
@@ -1567,7 +1567,7 @@ class TestApplyPicksTheResultType:
             fallback is the behaviour before #1124, so an awkward case is no worse off.
         """
         dataset = _int_raster([[1, 2, 3]])
-        with patch.object(Analysis, "_domain_read", side_effect=RuntimeError("boom")):
+        with patch.object(_Analysis, "_domain_read", side_effect=RuntimeError("boom")):
             resolved = dataset.analysis._elementwise_result_dtype(lambda a: a * 0.5, 0)
         assert resolved == np.dtype("int16"), resolved
 
@@ -1582,7 +1582,7 @@ class TestApplyPicksTheResultType:
         source = np.array([[1, -9999, 3]], dtype="int16")
         out = np.full(source.shape, -9999, dtype="int16")
 
-        Analysis._apply_func_to_domain(lambda a: a * 2, source, out, -9999)
+        _Analysis._apply_func_to_domain(lambda a: a * 2, source, out, -9999)
 
         np.testing.assert_array_equal(out, [[2, -9999, 6]])
 
@@ -2124,7 +2124,7 @@ class TestApplyPredictsTheTypeTheCallProduces:
             as well raise `ValueError`. Both are lifted, so the predicted type is the one
             the lifted call produces.
         """
-        probe = Analysis._probe_call(_scalar_only_half, np.array([3], dtype="int16"))
+        probe = _Analysis._probe_call(_scalar_only_half, np.array([3], dtype="int16"))
 
         assert probe.dtype == np.dtype("float64"), probe.dtype
         np.testing.assert_allclose(probe, [1.5])
@@ -2139,8 +2139,8 @@ class TestApplyPredictsTheTypeTheCallProduces:
         sample = np.array([2], dtype="int16")
 
         with pytest.raises(TypeError, match="refuses every input"):
-            Analysis._probe_call(_refuse_everything, sample)
-        resolved = Analysis._storable_dtype(_refuse_everything, sample)
+            _Analysis._probe_call(_refuse_everything, sample)
+        resolved = _Analysis._storable_dtype(_refuse_everything, sample)
 
         assert resolved == np.dtype("int16"), resolved
 
@@ -2154,7 +2154,7 @@ class TestApplyPredictsTheTypeTheCallProduces:
         explosion = _CountingExplosion()
 
         with pytest.raises(RuntimeError, match="went away"):
-            Analysis._probe_call(explosion, np.array([2], dtype="int16"))
+            _Analysis._probe_call(explosion, np.array([2], dtype="int16"))
 
         assert explosion.calls == 1, f"the probe retried {explosion.calls - 1} time(s)"
 

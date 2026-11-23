@@ -16,7 +16,7 @@ from pyramids.base._errors import OutOfBoundsError
 from pyramids.base.crs import sr_from_epsg
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines import Bands
+from pyramids.dataset.engines import _Bands
 
 pytestmark = pytest.mark.core
 
@@ -110,7 +110,7 @@ class TestCreateRasterObject:
         # "OverflowError: Python int too large to convert to C long"
         # then the default_no_data_value (-9999) will be converted to int32 and used as the no_data_value
 
-        # Bands._change_no_data_value_attr(band=0, no_data_value=-9999.0)
+        # _Bands._change_no_data_value_attr(band=0, no_data_value=-9999.0)
         # the _change_no_data_value_attr method will try to change the no_data_value to -9999.0 (int32)
         # but the self.raster.GetRasterBand(band + 1).SetNoDataValue(no_data_value) will raise an error
         # "TypeError: in method 'Band_SetNoDataValue', argument 2 of type 'double'" , so the no_data_value will be
@@ -228,13 +228,13 @@ class TestAttributesTable:
 
     def test_convert_df_to_attribute_table(self):
         df = pd.DataFrame(self.data)
-        rat = Bands._df_to_attribute_table(df)
+        rat = _Bands._df_to_attribute_table(df)
         assert isinstance(rat, gdal.RasterAttributeTable)
 
     def test_convert_attribute_table_to_df(self):
         df = pd.DataFrame(self.data)
-        rat = Bands._df_to_attribute_table(df)
-        df2 = Bands._attribute_table_to_df(rat)
+        rat = _Bands._df_to_attribute_table(df)
+        df2 = _Bands._attribute_table_to_df(rat)
         assert isinstance(df2, pd.DataFrame)
         assert df.equals(df2)
 

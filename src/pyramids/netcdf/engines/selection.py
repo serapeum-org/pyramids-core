@@ -629,7 +629,7 @@ class Selection(_Engine["NetCDF"]):
         gt = nc._geotransform
         if not gt or not gt[1] or not gt[5] or gt[2] or gt[4]:
             return None
-        # Compare the CRSs themselves, the way `Spatial._cutline_window_bounds` does. An `epsg`
+        # Compare the CRSs themselves, the way `_Spatial._cutline_window_bounds` does. An `epsg`
         # comparison fails open twice over: `crop(mask=...)` accepts a bare `GeoDataFrame`, which
         # has no `.epsg` at all, and a grid with no authority code (rotated pole, geostationary)
         # reports `epsg` as `None`. Either way the guard would be skipped and the mask's
@@ -3755,7 +3755,7 @@ class Selection(_Engine["NetCDF"]):
             Analysis.equals: The comparison it ends in.
         """
         nc = self._ds
-        # The same predicate `equals` uses (`Analysis._refuse_a_container`): a cube is a
+        # The same predicate `equals` uses (`_Analysis._refuse_a_container`): a cube is a
         # container only when it *has* variables and no band dimensions of its own.
         # `_reduces_as_a_variable` is wider — it is false for a classic-mode raster too,
         # which has real cells, an empty `variable_names`, and which `equals` accepts.

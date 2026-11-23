@@ -133,7 +133,7 @@ def _apply_eager_or_lazy(
     The kernel runs on physical values: the band is read through `read_array`,
     so a CF-packed band (`scale_factor` / `add_offset`) is unpacked first. The
     gaps are therefore looked for with the sentinel in those same units
-    (`Analysis._physical_no_data`), matched exactly -- the read and that
+    (`_Analysis._physical_no_data`), matched exactly -- the read and that
     conversion apply the same arithmetic, so a stored `-9999` and its physical
     form agree bit for bit. The marker written back is the declared
     `no_data_value` itself, so on a packed band the output holds physical values

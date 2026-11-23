@@ -767,7 +767,7 @@ def _carry_identity(source: Any, target: Any, units: list[str] | None) -> None:
        (MODIS sinusoidal, a geostationary product, a custom LCC) — so rebuilding
        from the code alone leaves such a result with no CRS at all, which
        silently breaks every later `to_crs`, `crop(bbox)`, `align` and write.
-       The same WKT carry is what `Spatial._correct_wrap_cutline_error` does
+       The same WKT carry is what `_Spatial._correct_wrap_cutline_error` does
        for the same reason. A source with no projection is skipped: assigning
        its empty WKT would wipe the `from_array` default.
     2. **Band names and per-band metadata**, which identify the bands of a

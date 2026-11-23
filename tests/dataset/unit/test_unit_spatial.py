@@ -9,7 +9,7 @@ from osgeo import gdal
 from pyramids.base._errors import AlignmentError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines import Analysis, Spatial, Vectorize
+from pyramids.dataset.engines import _Analysis, _Spatial, _Vectorize
 
 pytestmark = pytest.mark.core
 
@@ -34,7 +34,7 @@ class TestCorrectWrapCutlineError:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        corrected = Spatial._correct_wrap_cutline_error(ds)
+        corrected = _Spatial._correct_wrap_cutline_error(ds)
         assert corrected.rows == 2, (
             f"Expected 2 rows after correction, got {corrected.rows}"
         )
@@ -74,7 +74,7 @@ class TestCorrectWrapCutlineError:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        corrected = Spatial._correct_wrap_cutline_error(ds)
+        corrected = _Spatial._correct_wrap_cutline_error(ds)
         assert corrected.rows == 1, "Expected 1 row after 3D correction"
         assert corrected.columns == 1, "Expected 1 col after 3D correction"
 
@@ -110,7 +110,7 @@ class TestCorrectWrapCutlineError:
         )
         ds.crs = grib_wkt
 
-        corrected = Spatial._correct_wrap_cutline_error(ds)
+        corrected = _Spatial._correct_wrap_cutline_error(ds)
 
         assert corrected.rows == 2, f"expected 2 rows after trim, got {corrected.rows}"
         assert corrected.columns == 2, (
@@ -152,7 +152,7 @@ class TestCorrectWrapCutlineError:
         ds.raster.SetProjection("")
         assert ds.crs == "", "precondition: source must be unprojected"
 
-        corrected = Spatial._correct_wrap_cutline_error(ds)
+        corrected = _Spatial._correct_wrap_cutline_error(ds)
 
         assert corrected.crs != "", "output projection must not be wiped to empty"
         assert corrected.epsg == 4326, f"expected default 4326, got {corrected.epsg}"
@@ -967,19 +967,19 @@ class TestNearestNeighbour:
     def test_invalid_array_type_raises(self):
         """Non-array input should raise TypeError."""
         with pytest.raises(TypeError, match="gdal"):
-            Vectorize._nearest_neighbour("not_array", -9999, [0], [0])
+            _Vectorize._nearest_neighbour("not_array", -9999, [0], [0])
 
     def test_invalid_rows_type_raises(self):
         """Non-list rows should raise TypeError."""
         arr = np.ones((3, 3), dtype=np.float32)
         with pytest.raises(TypeError, match="rows"):
-            Vectorize._nearest_neighbour(arr, -9999, 0, [0])
+            _Vectorize._nearest_neighbour(arr, -9999, 0, [0])
 
     def test_invalid_cols_type_raises(self):
         """Non-list cols should raise TypeError."""
         arr = np.ones((3, 3), dtype=np.float32)
         with pytest.raises(TypeError, match="cols"):
-            Vectorize._nearest_neighbour(arr, -9999, [0], 0)
+            _Vectorize._nearest_neighbour(arr, -9999, [0], 0)
 
     def test_nearest_neighbour_fills_from_right(self):
         """_nearest_neighbour should fill from right neighbor."""
@@ -992,7 +992,7 @@ class TestNearestNeighbour:
             ],
             dtype=np.float32,
         )
-        result = Vectorize._nearest_neighbour(arr.copy(), nd, [1], [0])
+        result = _Vectorize._nearest_neighbour(arr.copy(), nd, [1], [0])
         assert result[1, 0] != nd, "Cell (1,0) should be filled by right neighbor"
 
     def test_nearest_neighbour_from_left(self):
@@ -1006,7 +1006,7 @@ class TestNearestNeighbour:
             ],
             dtype=np.float32,
         )
-        result = Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
+        result = _Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
         assert result[1, 2] != nd, "Cell at last col should be filled from left"
 
     def test_nearest_neighbour_left_neighbor(self):
@@ -1022,7 +1022,7 @@ class TestNearestNeighbour:
         )
         # Cell (1,2) is last col, so right check skipped.
         # Left (1,1) = 5.0 != nd -> filled
-        result = Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
+        result = _Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
         assert result[1, 2] == pytest.approx(5.0), (
             "Cell at last col should fill from left"
         )
@@ -1042,7 +1042,7 @@ class TestNearestNeighbour:
             dtype=np.float32,
         )
         # Cell (1,2) at last col. Left (1,1)=5.0, cols[i]-1=1 > 0
-        result = Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
+        result = _Vectorize._nearest_neighbour(arr.copy(), nd, [1], [2])
         assert result[1, 2] == pytest.approx(5.0), (
             "Cell should be filled from left neighbor"
         )
@@ -1202,7 +1202,7 @@ class TestNormalizeRescale:
     def test_normalize(self):
         """normalize should scale array to [0, 1] range."""
         arr = np.array([0.0, 50.0, 100.0])
-        result = Analysis.normalize(arr)
+        result = _Analysis.normalize(arr)
         assert abs(result[0] - 0.0) < 1e-6, "Min should be normalized to 0.0"
         assert abs(result[2] - 1.0) < 1e-6, "Max should be normalized to 1.0"
         assert abs(result[1] - 0.5) < 1e-6, "Middle should be 0.5"
@@ -1210,7 +1210,7 @@ class TestNormalizeRescale:
     def test_rescale(self):
         """_rescale should linearly rescale with given min/max."""
         arr = np.array([10.0, 20.0, 30.0])
-        result = Analysis._rescale(arr, 10.0, 30.0)
+        result = _Analysis._rescale(arr, 10.0, 30.0)
         assert abs(result[0] - 0.0) < 1e-6, "Min should rescale to 0.0"
         assert abs(result[2] - 1.0) < 1e-6, "Max should rescale to 1.0"
 
@@ -1256,7 +1256,7 @@ class TestCorrectWrapCutlineErrorNdim:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = Spatial._correct_wrap_cutline_error(ds_3d)
+        result = _Spatial._correct_wrap_cutline_error(ds_3d)
         assert result.rows == 2, "Should trim first row of nodata"
 
 

@@ -37,7 +37,7 @@ _NO_EXTENT = (
 )
 
 
-class Cell(_Engine["Dataset"]):
+class _Cell(_Engine["Dataset"]):
     """Cell-geometry operations on a Dataset.
 
     Owns the real implementations of `get_cell_coords`, the private cell-geometry

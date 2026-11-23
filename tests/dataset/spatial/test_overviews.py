@@ -12,7 +12,7 @@ import pytest
 from osgeo import gdal, osr
 
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.io import _DESCRIPTION_EXCERPT, IO
+from pyramids.dataset.engines.io import _DESCRIPTION_EXCERPT, _IO
 from pyramids.errors import OverviewTargetError, PyramidsError, ReadOnlyError
 from pyramids.netcdf import Container, GeoReference, NetCDF
 
@@ -694,7 +694,7 @@ class TestCreateOverviewsPathlessGuard:
         handle.GetMetadata.return_value = metadata
         handle.GetDescription.return_value = ""
         stub = MagicMock(spec=Dataset, driver_type="vrt", raster=handle)
-        engine = IO(stub)
+        engine = _IO(stub)
         assert engine._has_nowhere_for_an_overview_sidecar() is blocked, (
             f"expected blocked={blocked} for xml:VRT metadata {metadata!r}"
         )
@@ -743,7 +743,7 @@ class TestCreateOverviewsPathlessGuard:
         handle = MagicMock(spec=gdal.Dataset)
         handle.GetDescription.return_value = description
         stub = MagicMock(spec=Dataset, driver_type=driver_type, raster=handle)
-        assert IO(stub)._has_nowhere_for_an_overview_sidecar() is False, (
+        assert _IO(stub)._has_nowhere_for_an_overview_sidecar() is False, (
             f"a {driver_type} handle described as {description!r} must not be blocked"
         )
         handle.GetMetadata.assert_not_called()
@@ -1203,7 +1203,7 @@ class TestCreateOverviewsPathlessGuard:
         finally:
             writable.close()
         serialise = MagicMock(return_value=False)
-        monkeypatch.setattr(IO, "_is_warped_vrt", serialise)
+        monkeypatch.setattr(_IO, "_is_warped_vrt", serialise)
         dataset = Dataset.read_file(str(vrt_path), read_only=True)
         try:
             assert _level_owner_driver(dataset._iloc(0)) == "GTiff", (
@@ -1345,7 +1345,7 @@ class TestCreateOverviewsPathlessGuard:
         handle = MagicMock(spec=gdal.Dataset)
         handle.GetDescription.return_value = description
         stub = MagicMock(spec=Dataset, driver_type="vrt", raster=handle)
-        message = IO(stub)._no_sidecar_message()
+        message = _IO(stub)._no_sidecar_message()
         marker = "..." if truncated else ""
         assert (
             f"Description: {description[:_DESCRIPTION_EXCERPT]!r}{marker}. Save it first"
@@ -1435,7 +1435,7 @@ class TestCreateOverviewsPathlessGuard:
         """
         handle = MagicMock()
         handle.GetDescription.return_value = "short.vrt"
-        engine = IO(MagicMock(spec=Dataset, driver_type="vrt", raster=handle))
+        engine = _IO(MagicMock(spec=Dataset, driver_type="vrt", raster=handle))
         built = engine._no_sidecar_message()
         regenerated = engine._no_sidecar_message(regenerating=True)
         for message in (built, regenerated):
@@ -1536,7 +1536,7 @@ class TestOverviewTargetIsVirtual:
         assert (None if actual is None else actual.ShortName) == driver, (
             f"precondition: the {owner} level's owner must report driver {driver}"
         )
-        assert IO._overview_target_is_virtual([level]) is virtual, (
+        assert _IO._overview_target_is_virtual([level]) is virtual, (
             f"a level owned by a {driver} dataset must read as "
             f"{'computed' if virtual else 'stored'}"
         )
@@ -1549,7 +1549,7 @@ class TestOverviewTargetIsVirtual:
             an empty list in production — expected: False anyway, since "no evidence of a
             VRT" must never default to the answer that tells the caller to rebuild.
         """
-        assert IO._overview_target_is_virtual([]) is False, (
+        assert _IO._overview_target_is_virtual([]) is False, (
             "with no levels to inspect there is nothing to prove computed"
         )
 
@@ -1573,7 +1573,7 @@ class TestOverviewTargetIsVirtual:
             the VRT one, so the None-driver guard cannot short-circuit the scan either.
         """
         levels = [level_owners[first], level_owners[second]]
-        assert IO._overview_target_is_virtual(levels) is True, (
+        assert _IO._overview_target_is_virtual(levels) is True, (
             f"a {first} level followed by a {second} one must read as computed"
         )
 
@@ -1589,7 +1589,7 @@ class TestOverviewTargetIsVirtual:
         """
         level = MagicMock(spec=gdal.Band)
         level.GetDataset.return_value = None
-        assert IO._overview_target_is_virtual([level]) is False, (
+        assert _IO._overview_target_is_virtual([level]) is False, (
             "an owner-less level cannot be proven computed"
         )
 

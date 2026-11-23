@@ -477,7 +477,7 @@ def _stack_bands(
     return result
 
 
-class IO(_Engine["Dataset"]):
+class _IO(_Engine["Dataset"]):
     """Mixin providing array, file, streaming and overview IO for Dataset.
 
     Owns the reads (`read_array`, `read_windows`, `get_tile`,
@@ -2765,20 +2765,20 @@ class IO(_Engine["Dataset"]):
             - A gap the function doubled goes back to the sentinel:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.io import IO
+                >>> from pyramids.dataset.engines.io import _IO
                 >>> result = np.array([[-196.98, 4.0]])
                 >>> domain = np.array([[False, True]])
-                >>> IO._restore_gap(result, domain, -9999.0).tolist()
+                >>> _IO._restore_gap(result, domain, -9999.0).tolist()
                 [[-9999.0, 4.0]]
 
                 ```
             - Per band on a 3-D tile, skipping a band that declares no sentinel:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.io import IO
+                >>> from pyramids.dataset.engines.io import _IO
                 >>> result = np.array([[[2.0, 4.0]], [[6.0, 8.0]]])
                 >>> domain = np.array([[[False, True]], [[True, False]]])
-                >>> IO._restore_gap(result, domain, [-9999.0, None]).tolist()
+                >>> _IO._restore_gap(result, domain, [-9999.0, None]).tolist()
                 [[[-9999.0, 4.0]], [[6.0, 8.0]]]
 
                 ```
@@ -3072,17 +3072,17 @@ class IO(_Engine["Dataset"]):
             - Half a unit above an offset of `1.0` is fifty counts at `scale=0.01`:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.io import IO
-                >>> IO._repack(np.array([[1.5, 2.5]]), 0.01, 1.0, np.dtype("int16")).tolist()
+                >>> from pyramids.dataset.engines.io import _IO
+                >>> _IO._repack(np.array([[1.5, 2.5]]), 0.01, 1.0, np.dtype("int16")).tolist()
                 [[50, 150]]
 
                 ```
             - A per-band recipe packs each band of a 3-D tile with its own factor:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.io import IO
+                >>> from pyramids.dataset.engines.io import _IO
                 >>> tile = np.array([[[1.0]], [[1.0]]])
-                >>> IO._repack(tile, [0.5, 0.25], [None, None], np.dtype("int16")).tolist()
+                >>> _IO._repack(tile, [0.5, 0.25], [None, None], np.dtype("int16")).tolist()
                 [[[2]], [[4]]]
 
                 ```
@@ -3112,7 +3112,7 @@ class IO(_Engine["Dataset"]):
             )
             counts = counts.astype(dtype)
             if np.any(invalid):
-                counts[invalid] = IO._sentinel_for(invalid, sentinels, info.min)
+                counts[invalid] = _IO._sentinel_for(invalid, sentinels, info.min)
             return counts
         return counts.astype(dtype)
 
@@ -3876,7 +3876,7 @@ class IO(_Engine["Dataset"]):
 
         The heights are the band's physical values (`read_array`'s default), and the
         gap is handed to the encoder as the sentinel in those units
-        (`Analysis._physical_no_data`), so a packed DEM's gaps stay transparent.
+        (`_Analysis._physical_no_data`), so a packed DEM's gaps stay transparent.
 
         Args:
             source: The EPSG:3857 raster to encode.
@@ -5244,7 +5244,7 @@ class IO(_Engine["Dataset"]):
                     f"band {band} has no overviews, please create overviews first"
                 )
             arr = np.asarray(self.get_overview(band, overview_index).ReadAsArray())
-        # Physical units, like `read_array`. `Analysis._read_plot_array` routes
+        # Physical units, like `read_array`. `_Analysis._read_plot_array` routes
         # `plot(overview=True)` through here, so leaving it in stored counts drew the
         # same raster on two different colour scales depending on that flag. The
         # all-bands branch above allocates at the stored dtype and fills it band by

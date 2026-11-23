@@ -17,7 +17,7 @@ from osgeo import gdal, osr
 from pyramids.base._errors import OutOfBoundsError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.cog import COG, _xyz_bounds_3857
+from pyramids.dataset.engines.cog import _COG, _xyz_bounds_3857
 from tests.dataset.cog.conftest import COG_GEOTRANSFORM
 
 pytestmark = pytest.mark.core
@@ -645,7 +645,7 @@ class TestReadPartReturnTransform:
 
 
 class TestOutputGeotransform:
-    """Tests for the COG._output_geotransform static helper."""
+    """Tests for the _COG._output_geotransform static helper."""
 
     def test_a_rotated_source_carries_its_skew_terms_through(self):
         """The affine composition holds for a rotated source (non-zero skew).
@@ -663,7 +663,7 @@ class TestOutputGeotransform:
         source_gt = (100.0, 2.0, 0.5, 200.0, 0.3, -1.5)
         req_xoff, req_yoff, req_xsize, req_ysize, out_w, out_h = 5, 7, 4, 6, 2, 2
 
-        out_gt = COG._output_geotransform(
+        out_gt = _COG._output_geotransform(
             source_gt, req_xoff, req_yoff, req_xsize, req_ysize, out_w, out_h
         )
 
@@ -692,7 +692,7 @@ class TestReadPartFacadeTyping:
             to. Dropping the engine overloads would silently erase narrowing
             everywhere `read_part` is called directly, including `read_tile`.
         """
-        assert len(get_overloads(COG.read_part)) == 3, (
+        assert len(get_overloads(_COG.read_part)) == 3, (
             "COG.read_part must keep its narrowing @overload stubs"
         )
 

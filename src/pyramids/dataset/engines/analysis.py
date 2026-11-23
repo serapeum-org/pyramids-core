@@ -438,7 +438,7 @@ def _mask_dtype(band: np.dtype, fill: Any) -> np.dtype:
     return fill_dtype(band, fill)
 
 
-class Analysis(_Engine["Dataset"]):
+class _Analysis(_Engine["Dataset"]):
     """Mixin providing analysis, statistics, and data extraction operations for Dataset."""
 
     def stats(
@@ -1422,7 +1422,7 @@ class Analysis(_Engine["Dataset"]):
             if candidates.size:
                 flat = candidates
         try:
-            probe = Analysis._probe_call(func, flat[:1])
+            probe = _Analysis._probe_call(func, flat[:1])
             promoted = np.result_type(source.dtype, probe.dtype)
             numpy_to_gdal_dtype(promoted)
         except Exception:
@@ -1459,16 +1459,16 @@ class Analysis(_Engine["Dataset"]):
                 ```python
                 >>> import math
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.analysis import Analysis
-                >>> Analysis._probe_call(math.sqrt, np.array([2], dtype="int16")).dtype
+                >>> from pyramids.dataset.engines.analysis import _Analysis
+                >>> _Analysis._probe_call(math.sqrt, np.array([2], dtype="int16")).dtype
                 dtype('float64')
 
                 ```
             - A vectorised function is called on the array directly:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.analysis import Analysis
-                >>> probe = Analysis._probe_call(lambda v: v * 2, np.array([2], dtype="int16"))
+                >>> from pyramids.dataset.engines.analysis import _Analysis
+                >>> probe = _Analysis._probe_call(lambda v: v * 2, np.array([2], dtype="int16"))
                 >>> probe.tolist(), probe.dtype
                 ([4], dtype('int16'))
 
@@ -2223,7 +2223,7 @@ class Analysis(_Engine["Dataset"]):
         # comparison that needed no pixels. `cli.py` orders its own grid check
         # the same way. A single band is not a mismatch -- it broadcasts across
         # the other operand's bands.
-        if band is None and not Analysis._broadcastable_bands(
+        if band is None and not _Analysis._broadcastable_bands(
             self._ds.band_count, other.band_count
         ):
             raise ValueError(
@@ -2358,7 +2358,7 @@ class Analysis(_Engine["Dataset"]):
         sentinels = (
             [ds.no_data_value[band]] if band is not None else list(ds.no_data_value)
         )
-        domain = Analysis._domain_mask(raw, sentinels)
+        domain = _Analysis._domain_mask(raw, sentinels)
         indices = [band] if band is not None else range(ds.band_count)
         packing = [ds._effective_packing(index) for index in indices]
         if raw.ndim == 2:
@@ -2510,7 +2510,7 @@ class Analysis(_Engine["Dataset"]):
                     "`no_data_value=` the result cannot hold",
                     NoDataCollisionWarning,
                     # 5 frames out is the caller of `Dataset.combine`: warn ->
-                    # _resolve_combined_no_data -> Analysis._combine ->
+                    # _resolve_combined_no_data -> _Analysis._combine ->
                     # Analysis.combine -> Dataset.combine -> user. Reached as
                     # `ds.analysis.combine` the facade frame is absent, so the
                     # same count lands one frame too far -- on whatever called
@@ -3277,7 +3277,7 @@ class Analysis(_Engine["Dataset"]):
             ValueError: The condition carries several bands and this raster carries one.
         """
         self._refuse_a_container("where")
-        planes = Analysis._condition_planes(cond)
+        planes = _Analysis._condition_planes(cond)
         if planes is not None and planes > self._ds.band_count:
             raise ValueError(
                 f"the operands carry a different number of bands "
@@ -7012,7 +7012,7 @@ class Analysis(_Engine["Dataset"]):
         from cleopatra.styling.colors import category_boundaries
         from matplotlib.colors import BoundaryNorm, ListedColormap
 
-        processed = Analysis._process_color_table(color_table).sort_values("values")
+        processed = _Analysis._process_color_table(color_table).sort_values("values")
         rgba = (
             processed[["red", "green", "blue", "alpha"]].to_numpy(dtype=float) / 255.0
         )
