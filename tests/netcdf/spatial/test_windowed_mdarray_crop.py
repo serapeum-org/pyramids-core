@@ -597,7 +597,7 @@ class TestCropUsesTheWindow:
             the full-read path against itself and the test would pass while covering nothing.
         """
         mask = gpd.GeoDataFrame(geometry=[box(*bounds)], crs="EPSG:4326")
-        real_source = selection_module.Selection._mask_window_source
+        real_source = selection_module._Selection._mask_window_source
         taken: list[bool] = []
 
         def _spy(self, mask):
@@ -605,14 +605,14 @@ class TestCropUsesTheWindow:
             taken.append(source is not None)
             return source
 
-        monkeypatch.setattr(selection_module.Selection, "_mask_window_source", _spy)
+        monkeypatch.setattr(selection_module._Selection, "_mask_window_source", _spy)
         fast = NetCDF.read_file(grid_path).get_variable("v").crop(mask=mask, touch=True)
         assert taken, "the crop never consulted the window shortcut at all"
         assert any(taken), (
             "the crop did not take the window shortcut, so this comparison proves nothing"
         )
         monkeypatch.setattr(
-            selection_module.Selection, "_mask_window_source", lambda self, mask: None
+            selection_module._Selection, "_mask_window_source", lambda self, mask: None
         )
         reference = (
             NetCDF.read_file(grid_path).get_variable("v").crop(mask=mask, touch=True)
@@ -773,7 +773,7 @@ class TestCropUsesTheWindow:
             fast.geotransform, [-179.75, CELL, 0.0, -88.25, 0.0, -CELL]
         ), f"expected the mask's affine, got {fast.geotransform}"
         monkeypatch.setattr(
-            selection_module.Selection, "_mask_window_source", lambda self, mask: None
+            selection_module._Selection, "_mask_window_source", lambda self, mask: None
         )
         reference = _cropped()
         assert np.array_equal(
@@ -807,7 +807,7 @@ class TestCropUsesTheWindow:
 
         fast = _cropped()
         monkeypatch.setattr(
-            selection_module.Selection, "_mask_window_source", lambda self, mask: None
+            selection_module._Selection, "_mask_window_source", lambda self, mask: None
         )
         reference = _cropped()
         assert fast.shape == reference.shape, (

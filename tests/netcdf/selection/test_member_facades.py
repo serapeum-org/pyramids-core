@@ -17,7 +17,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
-from pyramids.netcdf.engines.selection import Selection
+from pyramids.netcdf.engines.selection import _Selection
 
 pytestmark = pytest.mark.core
 
@@ -147,7 +147,7 @@ class TestTheFacadesMatchTheEngine:
             member: The member whose two signatures are compared.
         """
         facade = list(inspect.signature(getattr(NetCDF, member)).parameters.values())
-        engine = list(inspect.signature(getattr(Selection, member)).parameters.values())
+        engine = list(inspect.signature(getattr(_Selection, member)).parameters.values())
         assert [(p.name, p.kind) for p in facade] == [
             (p.name, p.kind) for p in engine
         ], f"{member}() signatures differ"
@@ -160,7 +160,7 @@ class TestTheFacadesMatchTheEngine:
             member: The member whose two signatures are compared.
         """
         facade = inspect.signature(getattr(NetCDF, member)).parameters
-        engine = inspect.signature(getattr(Selection, member)).parameters
+        engine = inspect.signature(getattr(_Selection, member)).parameters
         assert {n: p.default for n, p in facade.items()} == {
             n: p.default for n, p in engine.items()
         }, f"{member}() defaults differ"

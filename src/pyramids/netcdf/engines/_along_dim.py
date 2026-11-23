@@ -1068,7 +1068,7 @@ class _InterpTo(_AlongDim):
         axis = band_names.index(dim)
         coords = values_map[dim]
         if coords is None:
-            # `Selection._run_interp` validates the source coordinates before this runs, so a
+            # `_Selection._run_interp` validates the source coordinates before this runs, so a
             # coordinate-less axis is refused up front; guard here too to narrow the type and stay
             # safe if ever reached directly.
             raise ValueError(

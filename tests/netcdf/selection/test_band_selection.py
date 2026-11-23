@@ -19,7 +19,7 @@ from numpy.testing import assert_allclose
 
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines.selection import (
-    Selection,
+    _Selection,
     _kept,
     _spatial_dimension_names,
 )
@@ -1083,7 +1083,7 @@ class TestTheFacadesAgreeWithTheEngine:
             member: The member under test.
         """
         facade = inspect.signature(getattr(NetCDF, member))
-        engine = inspect.signature(getattr(Selection, member))
+        engine = inspect.signature(getattr(_Selection, member))
         facade_defaults = {
             name: parameter.default
             for name, parameter in facade.parameters.items()

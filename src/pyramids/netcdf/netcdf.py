@@ -104,13 +104,13 @@ from pyramids.netcdf.engines import variables as _variables
 from pyramids.netcdf.engines._along_dim import _read_no_data, _reduces_as_a_variable
 from pyramids.netcdf.engines.combine import concat as _concat
 from pyramids.netcdf.engines.combine import merge as _merge
-from pyramids.netcdf.engines.interop import Interop
+from pyramids.netcdf.engines.interop import _Interop
 from pyramids.netcdf.engines.selection import (
     _SPATIAL_AXIS_NAMES,
     CumulativeAccessor,
-    Selection,
+    _Selection,
 )
-from pyramids.netcdf.engines.variables import Variables
+from pyramids.netcdf.engines.variables import _Variables
 from pyramids.netcdf.labeled import LabeledArray
 from pyramids.netcdf.metadata import get_metadata
 from pyramids.netcdf.models import (
@@ -2613,11 +2613,11 @@ class NetCDF(Dataset):
         # not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin
         # façade methods that delegate here (e.g. `nc.<method>()` ->
         # `self.interop.<method>()`).
-        self.interop = Interop(self)
+        self.interop = _Interop(self)
         # `varops` (not `variables`) because `variables` is an existing read-side
         # property returning the lazy variable dict — the engine must not shadow it.
-        self.varops = Variables(self)
-        self.selection = Selection(self)
+        self.varops = _Variables(self)
+        self.selection = _Selection(self)
 
     def close(self) -> None:
         """Release every GDAL handle this container holds, then close the base.

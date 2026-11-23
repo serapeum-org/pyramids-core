@@ -238,7 +238,7 @@ if TYPE_CHECKING:
     from pyramids.netcdf.netcdf import NetCDF
 
 
-class Interop(_Engine["NetCDF"]):
+class _Interop(_Engine["NetCDF"]):
     """xarray ↔ pyramids NetCDF conversion collaborator.
 
     Holds the body of :meth:`NetCDF.to_xarray`. The companion

@@ -26,9 +26,9 @@ from osgeo import gdal
 
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
-from pyramids.netcdf.engines.interop import Interop
-from pyramids.netcdf.engines.selection import Selection
-from pyramids.netcdf.engines.variables import Variables
+from pyramids.netcdf.engines.interop import _Interop
+from pyramids.netcdf.engines.selection import _Selection
+from pyramids.netcdf.engines.variables import _Variables
 
 pytestmark = pytest.mark.core
 
@@ -69,12 +69,12 @@ class TestEngineWiring:
             ``selection`` bound to the matching engine classes, and ``varops``
             does not shadow the read-side ``variables`` property.
         """
-        assert isinstance(mdim_container.interop, Interop), "interop engine missing"
-        assert isinstance(mdim_container.varops, Variables), "varops engine missing"
-        assert isinstance(mdim_container.selection, Selection), (
+        assert isinstance(mdim_container.interop, _Interop), "interop engine missing"
+        assert isinstance(mdim_container.varops, _Variables), "varops engine missing"
+        assert isinstance(mdim_container.selection, _Selection), (
             "selection engine missing"
         )
-        assert not isinstance(mdim_container.variables, Variables), (
+        assert not isinstance(mdim_container.variables, _Variables), (
             "`variables` must stay the read-side property, not the engine"
         )
 
@@ -112,9 +112,9 @@ class TestEngineWiring:
             variable_name="data",
         )
         nc.epsg = 3857
-        assert isinstance(nc.selection, Selection), "selection engine lost on update"
-        assert isinstance(nc.varops, Variables), "varops engine lost on update"
-        assert isinstance(nc.interop, Interop), "interop engine lost on update"
+        assert isinstance(nc.selection, _Selection), "selection engine lost on update"
+        assert isinstance(nc.varops, _Variables), "varops engine lost on update"
+        assert isinstance(nc.interop, _Interop), "interop engine lost on update"
         # A façade call must still reach the live instance after the swap.
         assert nc.selection._ds.epsg == nc.epsg, "engine back-ref points at stale state"
 
