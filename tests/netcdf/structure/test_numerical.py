@@ -23,11 +23,10 @@ from pyramids.base._timeseries import (
     integrate_axis,
 )
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
+from pyramids.netcdf.engines import _along_dim as along_dim
 from pyramids.netcdf.engines._along_dim import (
     _apply_to_variable,
-    _CumulativeIntegrate,
     _Differentiate,
-    _Integrate,
     _is_zero_sentinel,
     _PolyFit,
 )
@@ -1074,8 +1073,6 @@ class TestTheCalculusDelegatesToTheSharedKernels:
             ``cumulative_integrate`` must call it. This pins the delegation by behaviour rather
             than by inspecting the method's source.
         """
-        import pyramids.netcdf.engines._along_dim as along_dim
-
         planes = np.stack(
             [np.full((NY, NX), v, dtype="float64") for v in (1.0, 2.0, 4.0)]
         )
@@ -1125,12 +1122,18 @@ class TestTheCalculusDelegatesToTheSharedKernels:
     def test_the_cube_answer_equals_the_kernel_over_the_same_axis(
         self, member: str, kernel, keeps_axis: bool
     ):
-        """The cube result is the shared kernel's output, refilled with the cube's sentinel.
+        """The cube wraps the shared kernel's output with its sentinel refill, nothing more.
+
+        This pins the cube's `_Applied` contract *around* the kernel -- that it masks, calls the
+        kernel, and refills the sentinel where the kernel left NaN. It does NOT by itself prove
+        the collapse preserved the old inline arithmetic (the cube and `expected` both call the
+        same kernel); that is pinned by the pre-existing cube value tests in this module and the
+        byte-identical differential proof in the commit body.
 
         Test scenario:
             A gap-carrying, unevenly spaced cube (`-9999` at the middle step, stamps
             `[0, 1, 3]`) answers exactly `kernel(gaps_as_nan(values, -9999), coord)` with the
-            sentinel put back where the kernel left NaN — the cube's own `_Applied` contract.
+            sentinel put back where the kernel left NaN.
         """
         values = [1.0, -9999.0, 3.0]
         stamps = [0.0, 1.0, 3.0]
