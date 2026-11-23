@@ -10,15 +10,24 @@ ignores the coordinates still passes.
 pin the *equivalence* rather than re-deriving the arithmetic.
 """
 
+import inspect
 import warnings
 
 import numpy as np
 import pytest
 
+from pyramids.base._reductions import gaps_as_nan
+from pyramids.base._timeseries import (
+    cumulative_integrate_axis,
+    differentiate_axis,
+    integrate_axis,
+)
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
 from pyramids.netcdf.engines._along_dim import (
     _apply_to_variable,
+    _CumulativeIntegrate,
     _Differentiate,
+    _Integrate,
     _is_zero_sentinel,
     _PolyFit,
 )
@@ -1036,3 +1045,78 @@ class TestAZeroSentinelCannotMaskAComputedZero:
         assert _series(rate.reduce("level", "mean")) == [0.0], (
             "a derivative of zero is a value, so the mean of three of them is zero"
         )
+
+
+class TestTheCalculusDelegatesToTheSharedKernels:
+    """D3 (#1618): the three calculus members must call `base/_timeseries`, not re-derive it.
+
+    The differentiate / integrate / cumulative_integrate arithmetic lived twice — once in
+    `base/_timeseries.py` (the home the mesh imports) and once inline in `_along_dim`. After the
+    collapse the `_AlongDim` steps are callers of the single kernels, keeping only the cube's
+    sentinel/band wrapper. These tests pin that the inline arithmetic is gone and that the
+    delegation is behaviour-preserving.
+    """
+
+    def test_each_step_calls_its_kernel_and_drops_its_inline_arithmetic(self):
+        """The source of each `apply` names the kernel and no longer re-implements it.
+
+        Test scenario:
+            `_Differentiate.apply` calls `differentiate_axis` and holds no `np.gradient`;
+            `_Integrate.apply` calls `integrate_axis` and holds no `np.trapezoid`;
+            `_CumulativeIntegrate.apply` calls `cumulative_integrate_axis` and no longer
+            hand-rolls the running trapezoid (`np.cumsum` over `(moved[1:] + moved[:-1])`).
+        """
+        differentiate = inspect.getsource(_Differentiate.apply)
+        integrate = inspect.getsource(_Integrate.apply)
+        cumulative = inspect.getsource(_CumulativeIntegrate.apply)
+
+        assert "differentiate_axis(" in differentiate
+        assert "np.gradient(" not in differentiate
+        assert "integrate_axis(" in integrate
+        assert "np.trapezoid(" not in integrate
+        assert "cumulative_integrate_axis(" in cumulative
+        assert "cumulative_trapezoid" not in cumulative
+        assert "moved[1:]" not in cumulative
+
+    @pytest.mark.parametrize(
+        ("member", "kernel", "keeps_axis"),
+        [
+            ("differentiate", differentiate_axis, True),
+            ("integrate", integrate_axis, False),
+            ("cumulative_integrate", cumulative_integrate_axis, True),
+        ],
+    )
+    def test_the_cube_answer_equals_the_kernel_over_the_same_axis(
+        self, member: str, kernel, keeps_axis: bool
+    ):
+        """The cube result is the shared kernel's output, refilled with the cube's sentinel.
+
+        Test scenario:
+            A gap-carrying, unevenly spaced cube (`-9999` at the middle step, stamps
+            `[0, 1, 3]`) answers exactly `kernel(gaps_as_nan(values, -9999), coord)` with the
+            sentinel put back where the kernel left NaN — the cube's own `_Applied` contract.
+        """
+        values = [1.0, -9999.0, 3.0]
+        stamps = [0.0, 1.0, 3.0]
+        planes = np.stack([np.full((NY, NX), v, dtype="float64") for v in values])
+        source = NetCDF.from_array(
+            planes,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=list(stamps)),
+        )
+
+        result = getattr(source, member)("level").get_variable("t")
+        got = np.asarray(result.read_array(squeeze=False), dtype="float64")
+
+        coord = np.asarray(stamps, dtype="float64")
+        raw = kernel(gaps_as_nan(planes, -9999.0), coord, axis=0)
+        expected = np.where(np.isnan(raw), -9999.0, raw)
+
+        assert got.shape == expected.shape
+        assert np.array_equal(got, expected, equal_nan=True), (
+            f"{member}: cube {got.ravel()[:6]} != kernel {expected.ravel()[:6]}"
+        )
+        assert result.no_data_value[0] == -9999.0
+        assert (result._band_dim_names == ("level",)) is keeps_axis

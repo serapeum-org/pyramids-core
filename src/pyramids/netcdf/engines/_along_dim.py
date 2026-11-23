@@ -62,6 +62,11 @@ from pyramids.base._reductions import (
 from pyramids.base._reductions import (
     window_members as _window_members,
 )
+from pyramids.base._timeseries import (
+    cumulative_integrate_axis,
+    differentiate_axis,
+    integrate_axis,
+)
 from pyramids.base.crs import crs_spec
 from pyramids.dataset.transform import GeoTransform
 from pyramids.netcdf._mdim import scalar_no_data
@@ -1388,11 +1393,15 @@ class _Differentiate(_AlongDim):
         arr, band_names, values_map, ndv = _materialize_inputs(nc, var)
         axis = band_names.index(dim)
         positions = _required_axis_positions(values_map, dim, self.caller)
-        data = _gaps_as_nan(arr, ndv)
-        gradient = np.gradient(data, positions, axis=axis)
+        # The gradient arithmetic is the shared `base._timeseries` kernel (D3, #1618). The cube
+        # masks its own gaps first through `_gaps_as_nan` — which compares the sentinel in the
+        # stored type, before the float64 cast, where the kernel's own post-cast mask cannot —
+        # and hands the kernel NaN-gapped data with `nodata=None`, so the collapse keeps the
+        # cube's exact masking and the kernel contributes only the derivative.
+        gradient = differentiate_axis(_gaps_as_nan(arr, ndv), positions, axis=axis)
         # A derivative of zero is an ordinary answer — a flat series — so it must not be
         # maskable. See `_is_zero_sentinel`: a sentinel of `0.0` would turn every flat stretch
-        # into a gap.
+        # into a gap. The sentinel refill is a band-contract concern and stays at this call site.
         fill: Any = np.nan if ndv is None or _is_zero_sentinel(ndv) else ndv
         values = np.where(np.isnan(gradient), fill, gradient)
         return _Applied(np.asarray(values), band_names, values_map, fill)
@@ -1432,14 +1441,15 @@ class _Integrate(_AlongDim):
         arr, band_names, values_map, ndv = _materialize_inputs(nc, var)
         axis = band_names.index(dim)
         positions = _required_axis_positions(values_map, dim, self.caller)
-        # Materialised before the kernel: `_materialize_inputs` reads lazily, and dask
-        # implements neither `trapezoid` nor `polyfit`, so handing it one emits a FutureWarning
-        # and computes eagerly anyway. Being explicit says what happens and keeps the warning
-        # out of the caller's output.
-        data = np.asarray(_gaps_as_nan(arr, ndv))
-        integral = np.trapezoid(data, positions, axis=axis)
+        # The trapezoidal integral is the shared `base._timeseries` kernel (D3, #1618). The cube
+        # masks its own gaps through `_gaps_as_nan` (stored-type sentinel, pre-cast) and hands the
+        # kernel NaN-gapped data with `nodata=None`; the explicit `np.asarray` materialises the
+        # lazily-read array, as before, so nothing deferred reaches the eager arithmetic.
+        integral = integrate_axis(
+            np.asarray(_gaps_as_nan(arr, ndv)), positions, axis=axis
+        )
         # An integral of zero is an ordinary answer — a series that cancels, or a flat zero —
-        # so a sentinel of `0.0` must not claim it.
+        # so a sentinel of `0.0` must not claim it. The refill stays at this call site.
         fill: Any = np.nan if ndv is None or _is_zero_sentinel(ndv) else ndv
         values = np.where(np.isnan(integral), fill, integral)
         remaining = [name for name in band_names if name != dim]
@@ -1479,13 +1489,13 @@ class _CumulativeIntegrate(_AlongDim):
         arr, band_names, values_map, ndv = _materialize_inputs(nc, var)
         axis = band_names.index(dim)
         positions = _required_axis_positions(values_map, dim, self.caller)
-        data = _gaps_as_nan(arr, ndv)
-        moved = np.moveaxis(data, axis, 0)
-        widths = np.diff(positions).reshape(-1, *([1] * (moved.ndim - 1)))
-        areas = widths * (moved[1:] + moved[:-1]) / 2.0
-        running = np.cumsum(areas, axis=0)
-        leading = np.zeros((1, *moved.shape[1:]), dtype="float64")
-        stacked = np.moveaxis(np.concatenate([leading, running], axis=0), 0, axis)
+        # The running trapezoid is the shared `base._timeseries` kernel (D3, #1618), which starts
+        # its first step at zero exactly as the hand-rolled accumulation did. The cube masks its
+        # own gaps through `_gaps_as_nan` (stored-type sentinel, pre-cast) and hands the kernel
+        # NaN-gapped data with `nodata=None`.
+        stacked = cumulative_integrate_axis(
+            _gaps_as_nan(arr, ndv), positions, axis=axis
+        )
         # The first step is a *computed* zero — no interval traversed yet — so it must not be
         # maskable. Borrowing the source's sentinel would make it one whenever that sentinel is
         # `0.0`, which is ordinary for an accumulation, a count or a flux: every gap-aware
@@ -1770,7 +1780,7 @@ class _RollingExp(_AlongDim):
         arr, band_names, values_map, ndv = _materialize_inputs(nc, var)
         axis = band_names.index(dim)
         # Materialised because `pandas.ewm` is not implemented by dask and a lazy array would
-        # compute eagerly anyway, as `_Integrate` does for `np.trapezoid`.
+        # compute eagerly anyway, as `_Integrate` does before its trapezoidal kernel.
         data = np.asarray(_gaps_as_nan(arr, ndv))
         moved = np.moveaxis(data, axis, 0)
         columns = moved.reshape(moved.shape[0], -1).astype("float64")
