@@ -17,6 +17,22 @@
     "version": "0",
     "dependencies": [
         {
+            "$comment": [
+                "gdal pulls hdf5 in transitively for its hdf5/netcdf features, and vcpkg builds it",
+                "with HDF5_ENABLE_THREADSAFE=OFF by default. A non-threadsafe HDF5 may not be",
+                "entered from more than one OS thread over the process lifetime, so dask threaded",
+                "reads segfault inside GDAL OpenMDArray (#1620). Naming hdf5 explicitly here is",
+                "what carries the feature: features are unioned per port, so gdal still gets the",
+                "same build. The port maps threadsafe -> HDF5_ENABLE_THREADSAFE and implicitly",
+                "sets HDF5_ALLOW_UNSUPPORTED=ON because hl is also built, which is the combination",
+                "libnetcdf needs. This file is in the vcpkg cache key, so the change rebuilds."
+            ],
+            "name": "hdf5",
+            "features": [
+                "threadsafe"
+            ]
+        },
+        {
             "name": "tiff",
             "features": [
                 "zstd",
