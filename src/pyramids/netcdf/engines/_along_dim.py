@@ -1443,11 +1443,11 @@ class _Integrate(_AlongDim):
         positions = _required_axis_positions(values_map, dim, self.caller)
         # The trapezoidal integral is the shared `base._timeseries` kernel (D3, #1618). The cube
         # masks its own gaps through `_gaps_as_nan` (stored-type sentinel, pre-cast) and hands the
-        # kernel NaN-gapped data with `nodata=None`; the explicit `np.asarray` materialises the
-        # lazily-read array, as before, so nothing deferred reaches the eager arithmetic.
-        integral = integrate_axis(
-            np.asarray(_gaps_as_nan(arr, ndv)), positions, axis=axis
-        )
+        # kernel NaN-gapped data with `nodata=None`. The kernel casts a lazily-read array to
+        # float64 before the eager arithmetic, so no extra `np.asarray` is needed here (matching
+        # the differentiate / cumulative_integrate call sites). A `<2`-step axis is refused
+        # upstream by `selection.py`'s `minimum` guard before this kernel sees it.
+        integral = integrate_axis(_gaps_as_nan(arr, ndv), positions, axis=axis)
         # An integral of zero is an ordinary answer — a series that cancels, or a flat zero —
         # so a sentinel of `0.0` must not claim it. The refill stays at this call site.
         fill: Any = np.nan if ndv is None or _is_zero_sentinel(ndv) else ndv
@@ -1492,7 +1492,8 @@ class _CumulativeIntegrate(_AlongDim):
         # The running trapezoid is the shared `base._timeseries` kernel (D3, #1618), which starts
         # its first step at zero exactly as the hand-rolled accumulation did. The cube masks its
         # own gaps through `_gaps_as_nan` (stored-type sentinel, pre-cast) and hands the kernel
-        # NaN-gapped data with `nodata=None`.
+        # NaN-gapped data with `nodata=None`. A `<2`-step axis is refused upstream by
+        # `selection.py`'s `minimum` guard before this kernel sees it.
         stacked = cumulative_integrate_axis(
             _gaps_as_nan(arr, ndv), positions, axis=axis
         )
