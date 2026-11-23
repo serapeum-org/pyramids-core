@@ -66,10 +66,12 @@ from pyramids.base._reductions import (
     pushed,
     reduce_axis,
     reduce_by_label,
+    reduce_groups,
     shifted,
     validate_min_count,
     weighted_statistic,
     window_members,
+    window_positions,
 )
 from pyramids.base._summary import DEFAULT_METRICS, variable_summary
 from pyramids.base._utils import import_dask, require_optional
@@ -137,10 +139,10 @@ from pyramids.netcdf.ugrid.spatial import (
     subset_mesh_by_faces,
 )
 from pyramids.netcdf.utils import (
-    _CALENDAR_ALIGNMENTS,
-    _carried_to_calendar,
     _decimal_years,
     _dtype_to_str,
+    _plan_calendar_conversion,
+    _plan_calendar_interpolation,
     _read_attributes,
     decode_cf_time,
     encode_cf_time,
@@ -4840,6 +4842,10 @@ class MeshDataset(_MeshFacades):
         """
         if window < 1:
             raise ValueError(f"coarsen: window must be at least 1, got {window}.")
+        if how not in _COARSEN_HOWS:
+            raise ValueError(
+                f"coarsen: how must be one of {sorted(_COARSEN_HOWS)}, got {how!r}."
+            )
         self._require_variable_name("coarsen", variable_name)
         self._alongtime_coord("coarsen")
         sweeping = variable_name is None
@@ -5027,38 +5033,15 @@ class MeshDataset(_MeshFacades):
         See Also:
             interp_calendar: Keeps every step by interpolating instead of dropping.
         """
-        if align_on not in _CALENDAR_ALIGNMENTS:
-            raise ValueError(
-                f"convert_calendar() got align_on={align_on!r}; it must be one of "
-                f"{list(_CALENDAR_ALIGNMENTS)}."
-            )
-        try:
-            cftime.datetime(2001, 1, 1, calendar=calendar)
-        except (ValueError, KeyError) as error:
-            raise ValueError(
-                f"convert_calendar() got calendar={calendar!r}, which cftime does not know: "
-                f"{error}"
-            ) from error
         instants, units, _source = self._calendar_instants("convert_calendar")
-        carried, kept = _carried_to_calendar(instants, calendar, align_on)
-        if not kept:
-            raise ValueError(
-                f"convert_calendar() would drop every step: no date on this axis exists in the "
-                f"{calendar!r} calendar."
-            )
-        try:
-            # D8: re-encode the carried instants against the SOURCE units, as the cube does
-            # (selection.py:_run_convert_calendar). The new calendar is stored beside the
-            # unchanged units, so the units' reference date must exist in that calendar too --
-            # "days since 2000-02-29" has no meaning on noleap. Without this check the invalid
-            # pair survives to write and _write_time_coordinate silently drops the time axis.
-            [float(value) for value in cftime.date2num(carried, units, calendar)]
-        except (ValueError, TypeError) as error:
-            raise ValueError(
-                f"convert_calendar() cannot count the time axis in {units!r} on the "
-                f"{calendar!r} calendar: {error}. The units' reference date must exist in the "
-                f"target calendar too -- restamp it with assign_coords/attrs before converting."
-            ) from error
+        # The five validations and the D8 `units` re-encode are the shared plan in
+        # `netcdf/utils.py`, so the mesh refuses exactly where the cube's `convert_calendar`
+        # does (issue #1381): an epoch the target calendar has no day for is caught here rather
+        # than surviving to write, where `_write_time_coordinate` would warn and silently drop
+        # the time axis. The mesh does not need the re-encoded offsets, only the refusal.
+        carried, kept, _offsets = _plan_calendar_conversion(
+            instants, units, calendar, align_on, caller="convert_calendar"
+        )
         indices = np.asarray(kept, dtype=np.intp)
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
@@ -5124,22 +5107,12 @@ class MeshDataset(_MeshFacades):
         target_instants, target_units, target_calendar = target._calendar_instants(
             "interp_calendar"
         )
-        source_years = _decimal_years(source_instants)
-        target_years = _decimal_years(target_instants)
-        if source_years.size < 2:
-            raise ValueError(
-                f"interp_calendar() needs at least two steps to interpolate between, got "
-                f"{source_years.size}."
-            )
-        if (
-            target_years.max() < source_years.min()
-            or target_years.min() > source_years.max()
-        ):
-            raise ValueError(
-                "interp_calendar() got a target whose time span does not overlap this "
-                "dataset's at all, so every step would come back a gap. Check that the two "
-                "runs cover the same period."
-            )
+        # The common-scale build and its two refusals (too few source steps, no overlap) are the
+        # shared plan in `netcdf/utils.py`, the same one the cube's `interp_calendar` runs; the
+        # no-overlap message now reports both decimal-year spans, as the cube's always has.
+        source_years, target_years = _plan_calendar_interpolation(
+            source_instants, target_instants, caller="interp_calendar", noun="dataset"
+        )
         new_vars: dict[str, MeshVariable] = {}
         for name, var in self._data_variables.items():
             if not var.has_time:
@@ -6805,6 +6778,14 @@ _ROLLING_HOWS: frozenset[str] = frozenset(
     {"mean", "sum", "min", "max", "std", "var", "median", "quantile"}
 )
 
+#: The reducers :meth:`MeshDataset.coarsen` accepts — the set the retired ``coarsen_axis``
+#: kernel hard-coded. Kept narrower than the full :data:`REDUCERS` registry on purpose: the
+#: positional binner has always reported one float statistic per block, so the counting and
+#: quantile reducers stay out of its surface.
+_COARSEN_HOWS: frozenset[str] = frozenset(
+    {"mean", "sum", "min", "max", "median", "std"}
+)
+
 
 def _check_reduce_how(
     how: str, q: float | None, *, allow_quantile: bool = True
@@ -7102,7 +7083,7 @@ def _coarsened_variable(
         name: The variable's name, for messages.
         var: The variable to bin.
         window: Steps per block.
-        how: Reducer name, as :func:`pyramids.base._timeseries.coarsen_axis` takes it.
+        how: Reducer name, one of :data:`_COARSEN_HOWS`.
         sweeping: True when every variable is being binned, which is what decides whether a
             variable with fewer steps than one window is skipped or refused.
 
@@ -7118,6 +7099,9 @@ def _coarsened_variable(
     if data is None:
         raise ValueError(f"Variable {name!r} has no loaded data to coarsen.")
     coord = _variable_time_coord(var)
+    # The blocks==0 decision runs BEFORE window_positions: a sweep must skip a too-short
+    # variable, where window_positions(boundary="trim") would raise instead, and the caller's
+    # own "no variable has as many as N steps" aggregate error must be the one that fires.
     blocks = len(coord) // window
     if blocks == 0:
         if sweeping:
@@ -7131,8 +7115,15 @@ def _coarsened_variable(
             f"{window}; there would be nothing to report."
         )
     axis = cast("int", var.time_axis_index)
-    labels = [coord[index * window] for index in range(blocks)]
-    reduced = _timeseries.coarsen_axis(np.asarray(data), window, how, axis, var.nodata)
+    # One coarsen implementation (D6): the window positions and the grouped reduction are the
+    # shared raster/mesh primitives. `boundary="trim"` keeps the mesh's historical silent-drop
+    # of a trailing remainder. The sentinel is masked to NaN first and `ndv=None` is passed, so
+    # a declared gap is skipped (not averaged in) and an all-missing block stays NaN rather than
+    # declaring the sentinel — the positional binner's long-standing convention.
+    _resized, positions = window_positions("time", len(coord), window, "trim")
+    labels = [coord[int(group[0])] for group in positions]
+    masked = gaps_as_nan(np.asarray(data), var.nodata)
+    reduced = reduce_groups(masked, axis, positions, how, True, None)
     # The axis is re-binned, so a per-step mask no longer lines up with it.
     moved = var.with_data(reduced, active=None if var.active_has_time else _KEEP_ACTIVE)
     moved.attributes = {**var.attributes, "time_values": labels}

@@ -530,7 +530,7 @@ class TestNoConflictsFillsFromBothCopies:
 
         Test scenario:
             `2.0` is exactly representable in `int16`, so the band stays `int16` — the
-            same judgement `_mask_dtype` makes for a masked raster.
+            same judgement `fill_dtype` makes for a masked raster.
         """
         first = _typed_cube([[[1, NDV_INT], [3, 4]]], "int16", NDV_INT)
         second = _typed_cube([[[np.nan, 2.0], [3.0, 4.0]]], "float64", np.nan)

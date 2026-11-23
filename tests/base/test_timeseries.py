@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 
 from pyramids.base._timeseries import (
-    coarsen_axis,
     cumulative_integrate_axis,
     curvefit_axis,
     differentiate_axis,
@@ -192,10 +191,6 @@ class TestCalculusAlongAnotherAxis:
         values = np.array([[30.0, 10.0, 20.0]])
         assert np.allclose(rank_axis(values, axis=1), [[3.0, 1.0, 2.0]])
 
-    def test_coarsen_on_a_trailing_axis(self):
-        values = np.array([[0.0, 10.0, 20.0, 30.0]])
-        assert np.allclose(coarsen_axis(values, 2, axis=1), [[5.0, 25.0]])
-
     def test_interp_on_a_trailing_axis(self):
         values = np.array([[0.0, 10.0, 20.0]])
         result = interp_axis(values, [0.0, 1.0, 2.0], [0.5, 1.5], axis=1)
@@ -214,48 +209,6 @@ class TestUnevenSpacing:
         """Trapezoids over 0->1 and 1->3: 5 + 30 = 35, not the 20 a uniform step gives."""
         values = np.array([0.0, 10.0, 20.0])
         assert integrate_axis(values, [0.0, 1.0, 3.0]) == pytest.approx(35.0)
-
-
-class TestCoarsenAxisGuards:
-    """The kernel's own validation."""
-
-    def test_a_window_below_one_is_refused(self):
-        with pytest.raises(ValueError, match="at least 1"):
-            coarsen_axis(np.zeros((4, 2)), 0)
-
-    def test_an_unknown_reducer_is_refused_and_lists_the_valid_ones(self):
-        with pytest.raises(ValueError, match="how must be one of"):
-            coarsen_axis(np.zeros((4, 2)), 2, "geometric-mean")
-
-    def test_a_window_longer_than_the_axis_is_refused(self):
-        with pytest.raises(ValueError, match="nothing to report"):
-            coarsen_axis(np.zeros((2, 2)), 5)
-
-    @pytest.mark.parametrize(
-        "how, expected",
-        [
-            ("mean", 5.0),
-            ("sum", 10.0),
-            ("min", 0.0),
-            ("max", 10.0),
-            ("median", 5.0),
-            ("std", 5.0),
-        ],
-    )
-    def test_every_reducer(self, how, expected):
-        """Each documented reducer is reachable and gives the arithmetic answer.
-
-        Args:
-            how: The reducer name.
-            expected: Its value over the block ``[0, 10]``.
-        """
-        values = np.array([0.0, 10.0])
-        assert coarsen_axis(values, 2, how)[0] == pytest.approx(expected)
-
-    def test_the_reducers_ignore_nan(self):
-        """They are the nan-aware forms, so a gap does not poison its whole block."""
-        values = np.array([0.0, np.nan, 10.0, 20.0])
-        assert coarsen_axis(values, 2, "mean").tolist() == pytest.approx([0.0, 15.0])
 
 
 class TestRankAxis:
@@ -483,43 +436,6 @@ class TestCurvefitParameterCounting:
         fitted = curvefit_axis(np.array([[1.0], [3.0], [5.0]]), [0.0, 1.0, 2.0], model)
         assert fitted.shape == (2, 1)
         assert fitted[:, 0].tolist() == pytest.approx([2.0, 1.0], rel=1e-6)
-
-
-class TestCoarsenAllMissingBlocks:
-    """An all-missing block must report missing, not zero (review M5)."""
-
-    def test_sum_of_an_all_missing_block_is_nan_not_zero(self):
-        """`np.nansum` of an all-NaN block is 0.0, indistinguishable from a real zero."""
-        values = np.array([np.nan, np.nan, 1.0, 3.0])
-        assert np.isnan(coarsen_axis(values, 2, "sum")[0]), "the empty block is missing"
-        assert coarsen_axis(values, 2, "sum")[1] == pytest.approx(4.0)
-
-    @pytest.mark.parametrize("how", ["mean", "sum", "min", "max", "median", "std"])
-    def test_every_reducer_reports_an_all_missing_block_as_nan(self, how):
-        """Every reducer, not only `sum`, reports an empty block as missing.
-
-        Args:
-        how: The reducer under test.
-        """
-        values = np.array([np.nan, np.nan, 1.0, 3.0])
-        assert np.isnan(coarsen_axis(values, 2, how)[0]), f"{how} on an empty block"
-
-    @pytest.mark.parametrize("how", ["mean", "min", "max", "median"])
-    def test_no_runtime_warning_leaks_to_the_caller(self, how, recwarn):
-        """The nan-aware reducers warn on an empty slice; every other function in the module
-        wraps its risky arithmetic, so this one must too.
-
-        Args:
-            how: The reducer under test.
-            recwarn: pytest fixture capturing warnings.
-        """
-        coarsen_axis(np.array([np.nan, np.nan, 1.0, 3.0]), 2, how)
-        slice_warnings = [
-            w
-            for w in recwarn
-            if "empty slice" in str(w.message) or "All-NaN" in str(w.message)
-        ]
-        assert not slice_warnings, f"{how} leaked {len(slice_warnings)} warning(s)"
 
 
 class TestCoordinateEdgeCases:

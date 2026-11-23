@@ -336,6 +336,98 @@ class TestCoarsen:
         assert np.allclose(_temporal(_RAMP).coarsen(1)["v"].data, _RAMP)
 
 
+class TestCoarsenCollapse:
+    """D6 dedup: mesh coarsen routes through the shared reduction primitives.
+
+    The second binning kernel ``pyramids.base._timeseries.coarsen_axis`` is deleted and mesh
+    coarsen is expressed with ``window_positions`` + ``reduce_groups``. These cases pin the
+    behaviour that must stay byte-identical across that collapse — the all-missing-block
+    convention, every reducer, the labels, and the warning suppression the old kernel had.
+    """
+
+    def test_the_second_binning_kernel_is_gone(self):
+        """There must be exactly one coarsen implementation after the collapse."""
+        import pyramids.base._timeseries as ts
+
+        assert not hasattr(ts, "coarsen_axis"), "coarsen_axis survived the collapse"
+        with pytest.raises(ImportError):
+            from pyramids.base._timeseries import coarsen_axis  # noqa: F401
+
+    @pytest.mark.parametrize("how", ["mean", "sum", "min", "max", "median", "std"])
+    def test_an_all_missing_block_is_nan_even_with_a_sentinel(self, how):
+        """A fully-sentinel block reports NaN for every reducer, as the old kernel did — the
+        result still declares its nodata, but the binned value is a gap, not the sentinel.
+
+        Args:
+            how: The reducer under test.
+        """
+        ds = _temporal(
+            np.array([[-9999.0, -9999.0], [-9999.0, -9999.0], [2.0, 2.0], [4.0, 4.0]])
+        )
+        ds["v"].nodata = -9999.0
+        out = ds.coarsen(2, how)["v"]
+        assert np.isnan(out.data[0]).all(), f"{how}: the empty block must be missing"
+        assert np.isfinite(out.data[1]).all(), f"{how}: the full block must be finite"
+        assert out.nodata == -9999.0, "the result still declares its sentinel"
+
+    @pytest.mark.parametrize("how", ["mean", "sum", "min", "max", "median", "std"])
+    def test_an_all_missing_block_is_nan_without_a_sentinel(self, how):
+        """With nodata ``None`` a NaN block stays NaN — the same gap convention.
+
+        Args:
+            how: The reducer under test.
+        """
+        ds = _temporal(
+            np.array([[np.nan, np.nan], [np.nan, np.nan], [2.0, 2.0], [4.0, 4.0]])
+        )
+        out = ds.coarsen(2, how)["v"]
+        assert np.isnan(out.data[0]).all(), f"{how}: the empty block must be missing"
+
+    def test_median_and_std_over_a_gap(self):
+        """The two reducers the happy-path cases do not touch, over a sentinel gap."""
+        ds = _temporal(np.array([[1.0, 1.0], [-9999.0, 3.0], [2.0, 2.0], [4.0, 4.0]]))
+        ds["v"].nodata = -9999.0
+        assert ds.coarsen(2, "median")["v"].data.tolist() == [[1.0, 2.0], [3.0, 3.0]]
+        assert ds.coarsen(2, "std")["v"].data.tolist() == [[0.0, 1.0], [1.0, 1.0]]
+
+    @pytest.mark.parametrize("how", ["mean", "min", "max", "median"])
+    def test_no_runtime_warning_leaks_from_an_empty_block(self, how, recwarn):
+        """The nan-aware reducers warn on an all-NaN slice; the collapse must keep suppressing
+        it, as the old kernel did.
+
+        Args:
+            how: The reducer under test.
+            recwarn: pytest fixture capturing warnings.
+        """
+        ds = _temporal(
+            np.array([[np.nan, np.nan], [np.nan, np.nan], [1.0, 1.0], [3.0, 3.0]])
+        )
+        ds.coarsen(2, how)
+        leaked = [
+            w
+            for w in recwarn
+            if "empty slice" in str(w.message) or "All-NaN" in str(w.message)
+        ]
+        assert not leaked, f"{how} leaked {len(leaked)} warning(s)"
+
+    def test_it_matches_the_shared_reduce_groups_path(self):
+        """Parity: the mesh result equals ``reduce_groups`` applied to the same positions, so
+        the two really are one implementation."""
+        from pyramids.base._reductions import reduce_groups, window_positions
+
+        values = np.array(
+            [[1.0, 5.0], [-9999.0, 3.0], [2.0, 8.0], [4.0, 4.0], [6.0, 2.0]]
+        )
+        ds = _temporal(values)
+        ds["v"].nodata = -9999.0
+        for how in ("mean", "sum", "min", "max", "median", "std"):
+            mesh = ds.coarsen(2, how)["v"].data
+            masked = np.where(values == -9999.0, np.nan, values)
+            _resized, positions = window_positions("time", values.shape[0], 2, "trim")
+            expected = reduce_groups(masked, 0, positions, how, True, None)
+            np.testing.assert_array_equal(np.asarray(mesh), np.asarray(expected))
+
+
 class TestInterpLike:
     """Putting two runs on a common axis."""
 

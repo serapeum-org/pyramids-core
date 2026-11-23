@@ -35,7 +35,11 @@ from shapely import box, contains_xy
 
 from pyramids.base._axes import X_AXIS_NAMES, Y_AXIS_NAMES
 from pyramids.base._errors import AlignmentError
-from pyramids.base._reductions import _check_min_periods, _check_window
+from pyramids.base._reductions import (
+    _check_min_periods,
+    _check_window,
+    window_positions,
+)
 from pyramids.base._utils import apply_unpack, carry_band_packing
 from pyramids.base.crs import crs_equal, crs_spec, sr_from_epsg, sr_from_user_input
 from pyramids.dataset import DEFAULT_NO_DATA_VALUE, Dataset
@@ -93,18 +97,22 @@ from pyramids.netcdf.engines._along_dim import (
 )
 from pyramids.netcdf.engines._weighted import _WEIGHTED_HOWS, _weighted_result
 
-# The calendar helpers moved to `netcdf/utils.py` so the ugrid side can share them. Only
-# the three this module actually references are imported: `_days_in_year` and
-# `_same_position_in_year` were kept bound for a hypothetical `selection.<name>` patch
-# written against the old layout, and nothing in `src` or `tests` references either.
+# The calendar helpers live in `netcdf/utils.py` so the ugrid side can share them. This module
+# now calls the two orchestrators (`_plan_calendar_conversion` / `_plan_calendar_interpolation`),
+# which own the validation preamble and wrap the `_carried_to_calendar` / `_decimal_years`
+# kernels, so neither kernel is referenced here directly any more.
 from pyramids.netcdf.utils import (
-    _CALENDAR_ALIGNMENTS,
-    _carried_to_calendar,
-    _decimal_years,
+    _plan_calendar_conversion,
+    _plan_calendar_interpolation,
 )
 
 if TYPE_CHECKING:
     from pyramids.netcdf.netcdf import NetCDF
+
+# `window_positions` moved to `pyramids.base._reductions` (D6, one coarsen implementation). The
+# old private name is kept as a re-export so this engine, the lazy cube and the lazy-backend
+# support surface (`pyramids.lazy_support`) go on importing `_coarsen_windows` from here.
+_coarsen_windows = window_positions
 
 # The window must cover strictly less than 1/N of the variable's cells before reading it through
 # the MDArray earns a second code path: the windowed read pays off by skipping most of the
@@ -7634,36 +7642,14 @@ def _run_convert_calendar(
             `cftime`; or `dim` cannot be decoded.
     """
     caller = "convert_calendar"
-    if align_on not in _CALENDAR_ALIGNMENTS:
-        raise ValueError(
-            f"{caller}() got align_on={align_on!r}; it must be one of "
-            f"{list(_CALENDAR_ALIGNMENTS)}."
-        )
-    try:
-        cftime.datetime(2001, 1, 1, calendar=calendar)
-    except (ValueError, KeyError) as exc:
-        raise ValueError(
-            f"{caller}() got calendar={calendar!r}, which cftime does not know: {exc}"
-        ) from exc
     instants, units, _source = _decoded_instants(nc, dim, caller=caller)
-    carried, kept = _carried_to_calendar(instants, calendar, align_on)
-    if not kept:
-        raise ValueError(
-            f"{caller}() would drop every step of {dim!r}: no date on it exists in the "
-            f"{calendar!r} calendar."
-        )
-    try:
-        offsets = [float(value) for value in cftime.date2num(carried, units, calendar)]
-    except (ValueError, TypeError) as exc:
-        # The source's `units` string is kept, so its reference date must also exist in the
-        # target calendar — "days since 2001-02-29" has no meaning on `noleap`. Wrapped the way
-        # `_decoded_instants` wraps `num2date`, rather than letting cftime's own message
-        # surface naming neither the member nor a way out.
-        raise ValueError(
-            f"{caller}() cannot count {dim!r} in {units!r} on the {calendar!r} calendar: "
-            f"{exc}. The units' reference date must exist in the target calendar too — "
-            f"restamp it with assign_coords/attrs before converting."
-        ) from exc
+    # The five calendar validations and the `units` re-encode live in `netcdf/utils.py` beside
+    # the `_carried_to_calendar` kernel they wrap, so the mesh's `convert_calendar` runs exactly
+    # the same plan (issue #1381, D8). `axis` is the dimension's `repr` so the refusals read as
+    # they did when this orchestration lived here.
+    _, kept, offsets = _plan_calendar_conversion(
+        instants, units, calendar, align_on, caller=caller, axis=f"{dim!r}"
+    )
     op = _TakeSteps(
         kept=tuple(kept),
         stamps=tuple(offsets),
@@ -7706,25 +7692,11 @@ def _run_interp_calendar(nc: NetCDF, target: NetCDF, *, dim: str) -> NetCDF:
     target_instants, target_units, target_calendar = _decoded_instants(
         target, dim, caller=caller
     )
-    source_scale = _decimal_years(source_instants)
-    target_scale = _decimal_years(target_instants)
-    if source_scale.size < 2:
-        raise ValueError(
-            f"{caller}() needs at least 2 steps along {dim!r} to interpolate between, but it "
-            f"has {source_scale.size}."
-        )
-    # Every target outside the source's span interpolates to a gap, so a target that shares no
-    # span at all answers a fully-masked cube. Silently handing that back is the worst outcome
-    # for the member's stated purpose — lining two cubes up before `concat` — because `concat`
-    # then succeeds on nothing.
-    low, high = float(source_scale.min()), float(source_scale.max())
-    if float(target_scale.min()) > high or float(target_scale.max()) < low:
-        raise ValueError(
-            f"{caller}() found no overlap along {dim!r}: this cube spans {low:.4f} to "
-            f"{high:.4f} in decimal years and the target spans "
-            f"{float(target_scale.min()):.4f} to {float(target_scale.max()):.4f}. Every step "
-            f"would interpolate to a gap. Check the two cubes' time units and epochs."
-        )
+    # The common-scale build and its two refusals are shared with the mesh's `interp_calendar`
+    # from `netcdf/utils.py`; `axis` is the dimension's `repr` and `noun` keeps the cube wording.
+    source_scale, target_scale = _plan_calendar_interpolation(
+        source_instants, target_instants, caller=caller, axis=f"{dim!r}", noun="cube"
+    )
     offsets = [
         float(value)
         for value in cftime.date2num(
@@ -8390,52 +8362,6 @@ def _band_dimension_size(nc: NetCDF, dim: str, *, is_variable: bool) -> int:
                 f"variable in this container."
             )
     return int(size)
-
-
-def _coarsen_windows(
-    dim: str, size: int, window: int, boundary: str
-) -> tuple[int, list[np.ndarray]]:
-    """The axis length `coarsen` reduces over, and the positions in each window.
-
-    Args:
-        dim: The dimension, for the messages.
-        size: Its length.
-        window: Steps per window.
-        boundary: `"exact"`, `"trim"` or `"pad"`. Any other value is treated as `"pad"`,
-            so the caller validates it first.
-
-    Returns:
-        tuple: The resized length — `size` for `exact`, the largest multiple of `window`
-        not above it for `trim`, the smallest not below it for `pad` — and one array of
-        positions per window over that length.
-
-    Raises:
-        ValueError: `exact` and `window` does not divide `size`, or `trim` and `window`
-            is longer than `size`.
-    """
-    if boundary == "exact":
-        if size % window:
-            raise ValueError(
-                f"cannot coarsen {dim!r} of length {size} into windows of {window} with "
-                f"boundary='exact': {size % window} step(s) would be left over. Pass "
-                f"boundary='trim' to drop them, or boundary='pad' to reduce them as a "
-                f"shorter last window."
-            )
-        resized = size
-    elif boundary == "trim":
-        resized = size // window * window
-        if resized == 0:
-            raise ValueError(
-                f"boundary='trim' would leave nothing of {dim!r}: its length {size} is "
-                f"shorter than the window {window}. Pass boundary='pad' to reduce it as "
-                f"one window."
-            )
-    else:
-        resized = -(-size // window) * window
-    positions = [
-        np.arange(start, start + window) for start in range(0, resized, window)
-    ]
-    return resized, positions
 
 
 def _check_quantile(how: str, q: Any) -> float | None:

@@ -1948,6 +1948,129 @@ def _decimal_years(instants: Any) -> np.ndarray:
     return years
 
 
+def _plan_calendar_conversion(
+    instants: Any,
+    units: str,
+    calendar: str,
+    align_on: str,
+    *,
+    caller: str = "convert_calendar",
+    axis: str = "the time axis",
+) -> tuple[list[Any], list[int], list[float]]:
+    """Validate a calendar conversion and carry `instants` onto `calendar`.
+
+    The orchestration the gridded `convert_calendar` and its UGRID counterpart both need, one
+    rung above the `_carried_to_calendar` kernel: it runs the five argument checks, carries the
+    dates, and re-encodes them against `units` so an epoch the target calendar has no day for is
+    refused here rather than detonating at write time (issue #1381, D8). Pure cftime arithmetic
+    over already-decoded instants — no NetCDF, no mesh — so both hierarchies pass their own
+    decoded `(instants, units, calendar)` through the one implementation.
+
+    Args:
+        instants: The source instants, already decoded to calendar-aware `cftime` objects.
+        units: The CF time units string the offsets are counted in; kept across the conversion,
+            so its reference date must also exist in `calendar`.
+        calendar: The target CF calendar.
+        align_on: `"date"` keeps the calendar date and drops what the target has no day for;
+            `"year"` keeps the position in the year and drops nothing.
+        caller: The member the user called, named in every refusal.
+        axis: How the refusals name the time axis — the cube passes the dimension's `repr`, the
+            mesh a plain description.
+
+    Returns:
+        tuple: `(carried, kept, offsets)` — the target-calendar instants, the source indices they
+        came from, and those instants re-encoded against `units` on `calendar`.
+
+    Raises:
+        ValueError: `align_on` is not in `_CALENDAR_ALIGNMENTS`; `cftime` does not know
+            `calendar`; every step would be dropped; or `units`' reference date does not exist in
+            `calendar`, so the pair could never be written.
+    """
+    if align_on not in _CALENDAR_ALIGNMENTS:
+        raise ValueError(
+            f"{caller}() got align_on={align_on!r}; it must be one of "
+            f"{list(_CALENDAR_ALIGNMENTS)}."
+        )
+    try:
+        cftime.datetime(2001, 1, 1, calendar=calendar)
+    except (ValueError, KeyError) as exc:
+        raise ValueError(
+            f"{caller}() got calendar={calendar!r}, which cftime does not know: {exc}"
+        ) from exc
+    carried, kept = _carried_to_calendar(instants, calendar, align_on)
+    if not kept:
+        raise ValueError(
+            f"{caller}() would drop every step of {axis}: no date on it exists in the "
+            f"{calendar!r} calendar."
+        )
+    try:
+        offsets = [float(value) for value in cftime.date2num(carried, units, calendar)]
+    except (ValueError, TypeError) as exc:
+        # The source's `units` string is kept, so its reference date must also exist in the
+        # target calendar — "days since 2001-02-29" has no meaning on `noleap`. Wrapped the way
+        # `_decoded_instants` wraps `num2date`, rather than letting cftime's own message surface
+        # naming neither the member nor a way out.
+        raise ValueError(
+            f"{caller}() cannot count {axis} in {units!r} on the {calendar!r} calendar: "
+            f"{exc}. The units' reference date must exist in the target calendar too — "
+            f"restamp it with assign_coords/attrs before converting."
+        ) from exc
+    return carried, kept, offsets
+
+
+def _plan_calendar_interpolation(
+    source_instants: Any,
+    target_instants: Any,
+    *,
+    caller: str = "interp_calendar",
+    axis: str = "the time axis",
+    noun: str = "cube",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Put both axes on the common decimal-year scale, refusing the pairs that cannot work.
+
+    The orchestration the gridded `interp_calendar` and its UGRID counterpart both need around
+    the shared `_decimal_years` kernel: both axes onto one calendar-independent scale, then the
+    two refusals a cross-calendar interpolation needs — too few source steps, and no overlap at
+    all. Pure numpy/cftime over already-decoded instants, so both hierarchies share it.
+
+    Args:
+        source_instants: The instants the values currently sit on.
+        target_instants: The instants to interpolate onto.
+        caller: The member the user called, named in every refusal.
+        axis: How the refusals name the time axis — the cube passes the dimension's `repr`, the
+            mesh a plain description.
+        noun: What the no-overlap message calls each side — `"cube"` for the gridded member,
+            `"dataset"` for the mesh.
+
+    Returns:
+        tuple: `(source_scale, target_scale)`, float64 decimal years.
+
+    Raises:
+        ValueError: fewer than two source steps to interpolate between, or the two spans do not
+            overlap at all — reported with both spans numerically.
+    """
+    source_scale = _decimal_years(source_instants)
+    target_scale = _decimal_years(target_instants)
+    if source_scale.size < 2:
+        raise ValueError(
+            f"{caller}() needs at least 2 steps along {axis} to interpolate between, but it "
+            f"has {source_scale.size}."
+        )
+    # Every target outside the source's span interpolates to a gap, so a target that shares no
+    # span at all answers a fully-masked result. Silently handing that back is the worst outcome
+    # for the member's stated purpose — lining two runs up before `concat` — because `concat`
+    # then succeeds on nothing.
+    low, high = float(source_scale.min()), float(source_scale.max())
+    if float(target_scale.min()) > high or float(target_scale.max()) < low:
+        raise ValueError(
+            f"{caller}() found no overlap along {axis}: this {noun} spans {low:.4f} to "
+            f"{high:.4f} in decimal years and the target spans "
+            f"{float(target_scale.min()):.4f} to {float(target_scale.max()):.4f}. Every step "
+            f"would interpolate to a gap. Check the two {noun}s' time units and epochs."
+        )
+    return source_scale, target_scale
+
+
 __all__ = [
     "AttributeScalar",
     "AttributeValue",
