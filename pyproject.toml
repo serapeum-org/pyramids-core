@@ -551,7 +551,7 @@ before-build = ["python ./ci/install-and-vendor-osgeo.py"]
 repair-wheel-command = [
     "export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64",
     "auditwheel repair --plat manylinux_2_28_${AUDITWHEEL_ARCH} -w {dest_dir} {wheel}",
-    "python ci/check-bundled-hdf5.py {dest_dir}",
+    "python ci/check-bundled-stack.py {dest_dir}",
 ]
 
 [tool.cibuildwheel.linux.environment]
@@ -576,7 +576,7 @@ before-build = ["python ./ci/install-and-vendor-osgeo.py"]
 # subprocess (before-build, build, repair) inherits the same value.
 repair-wheel-command = [
     "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-    "python ci/check-bundled-hdf5.py {dest_dir}",
+    "python ci/check-bundled-stack.py {dest_dir}",
 ]
 
 [tool.cibuildwheel.macos.environment]
@@ -608,7 +608,7 @@ before-build = [
 # runtime with "not recognized as being in a supported file format".
 repair-wheel-command = [
     "delvewheel repair --analyze-existing --add-path C:/gdal-prefix/Library/bin -w {dest_dir} {wheel}",
-    "python ci/check-bundled-hdf5.py {dest_dir}",
+    "python ci/check-bundled-stack.py {dest_dir}",
 ]
 
 [tool.cibuildwheel.windows.environment]

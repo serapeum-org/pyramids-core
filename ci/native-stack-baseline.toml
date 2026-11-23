@@ -1,0 +1,45 @@
+# What every published wheel's bundled native stack must report.
+#
+# pyramids-core obtains that stack three different ways, and each route silently inherits its
+# upstream's defaults for anything not explicitly requested:
+#
+#   source build  ci/source-build/          manylinux, musllinux   (both arches)
+#   vcpkg         ci/vcpkg.json             win_arm64
+#   conda-forge   ci/setup-gdal-from-pixi   win_amd64, macOS       (both arches)
+#
+# That is how one release shipped HDF5 with thread-safety ON for three platforms and OFF for the
+# other two (#1620) while every version pin agreed, and it is why this file exists: the pins live in
+# three places, so something has to compare the *built artifact* against one declaration (#1627).
+#
+# Only libraries whose version can be read reliably out of the shipped binary belong here. GDAL
+# deliberately does not: a manylinux `libgdal` yields only a spurious "GDAL 3.6.0", macOS yields two
+# candidates, and the Windows DLLs carry no version in their filename. GDAL version parity and the
+# required-driver list are asserted from the *installed* wheel instead, where `osgeo.gdal` can be
+# asked directly -- see ci/check-installed-stack.py.
+#
+# ci/check-bundled-stack.py reads this file and runs in every repair step, on the repaired wheel.
+
+[libraries.hdf5]
+# Thread-safety is the property that has already regressed. HDF5's CMake default is OFF, so every
+# route that compiles its own HDF5 ships a non-threadsafe library unless it asks (#1620).
+threadsafety = "ON"
+# 2.2.0 is the newest upstream release and what the conda-forge route already ships; the source
+# build is pinned to the same tarball in ci/source-build/config.sh.
+version = "2.2.0"
+
+[libraries.proj]
+version = "9.8.1"
+
+[libraries.geos]
+version = "3.14.1"
+
+# Platforms that cannot meet the baseline, with the reason. An exception is a reviewed decision, not
+# a silent difference -- which is the whole point of the file. Keys are matched against the wheel's
+# platform tag. An exception may relax a *version*; it never waives `threadsafety`.
+[exceptions.win_arm64.hdf5]
+version = "2.1.1"
+reason = """
+vcpkg's pinned builtin-baseline carries no hdf5 2.2.x port -- its newest is 2.1.1 (port-version 1) --
+so this platform cannot reach the baseline version without moving the baseline itself. Revisit when
+the vcpkg baseline is next bumped; see ci/vcpkg.json.
+"""
