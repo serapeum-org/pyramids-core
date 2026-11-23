@@ -219,8 +219,19 @@ def main(argv: list[str]) -> int:
     if not argv:
         raise SystemExit(__doc__)
     baseline = load_baseline()
+    wheels = _wheels(argv)
+    if not wheels:
+        # A repair step is always pointed at a directory holding the wheel it just repaired, so an
+        # empty one means the wiring broke, not that there is nothing to check. Passing here would
+        # be a vacuous success -- the same silently-unchecked outcome this guard exists to prevent.
+        print(
+            f"check-bundled-stack: no wheels found in {', '.join(argv)}; refusing to report "
+            "success having compared nothing.",
+            file=sys.stderr,
+        )
+        return 1
     failures: list[str] = []
-    for wheel in _wheels(argv):
+    for wheel in wheels:
         failures.extend(check_wheel(wheel, baseline))
     if failures:
         print(

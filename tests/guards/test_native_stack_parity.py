@@ -580,27 +580,26 @@ class TestTheTargetsAreExpandedToWheels:
             f"the refusal should name the problem, got: {excinfo.value}"
         )
 
-    def test_a_directory_with_no_wheels_yields_nothing_to_check(self, tmp_path, capsys):
-        """A directory argument is scanned for wheels, and an empty one contributes none.
+    def test_a_directory_with_no_wheels_is_refused(self, tmp_path):
+        """An empty target set fails rather than reporting a vacuous success.
 
         Test scenario:
-            Pins what a repair step gets when its output directory is empty: no comparison is
-            made and no failure is reported, so this guard leans on the step before it having
-            produced a wheel at all.
+            A repair step is always pointed at the directory holding the wheel it just repaired, so
+            an empty one means the wiring broke. Exiting 0 there would be the same
+            silently-unchecked outcome this guard exists to prevent, which is why it is a failure
+            and not a no-op.
         """
-        checker = _checker_module("check-bundled-stack.py")
-        empty = tmp_path / "dist"
+        empty = tmp_path / "nothing"
         empty.mkdir()
 
-        assert checker._wheels([str(empty)]) == [], (
-            "an empty directory names no wheels to check"
+        result = _run(empty)
+
+        assert result.returncode == 1, (
+            f"an empty directory must fail, got {result.returncode}"
         )
-        assert checker.main([str(empty)]) == 0, (
-            "no wheels to compare cannot be reported as drift"
-        )
-        assert "FAIL" not in capsys.readouterr().out, (
-            "nothing was compared, so nothing can have failed"
-        )
+        assert (
+            "comparing nothing" in result.stderr or "compared nothing" in result.stderr
+        ), f"the refusal should say why: {result.stderr}"
 
     def test_the_same_wheel_named_twice_is_checked_once(self, tmp_path, capsys):
         """Duplicate targets are deduplicated, so each wheel is reported exactly once.
