@@ -10,8 +10,8 @@ ignores the coordinates still passes.
 pin the *equivalence* rather than re-deriving the arithmetic.
 """
 
-import inspect
 import warnings
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -1057,26 +1057,62 @@ class TestTheCalculusDelegatesToTheSharedKernels:
     delegation is behaviour-preserving.
     """
 
-    def test_each_step_calls_its_kernel_and_drops_its_inline_arithmetic(self):
-        """The source of each `apply` names the kernel and no longer re-implements it.
+    @pytest.mark.parametrize(
+        ("member", "kernel_name"),
+        [
+            ("differentiate", "differentiate_axis"),
+            ("integrate", "integrate_axis"),
+            ("cumulative_integrate", "cumulative_integrate_axis"),
+        ],
+    )
+    def test_each_step_actually_calls_its_shared_kernel(self, member, kernel_name):
+        """Running the cube operation invokes the shared kernel (behaviour, not source text).
 
         Test scenario:
-            `_Differentiate.apply` calls `differentiate_axis` and holds no `np.gradient`;
-            `_Integrate.apply` calls `integrate_axis` and holds no `np.trapezoid`;
-            `_CumulativeIntegrate.apply` calls `cumulative_integrate_axis` and no longer
-            hand-rolls the running trapezoid (`np.cumsum` over `(moved[1:] + moved[:-1])`).
+            The kernel is spied on in the ``_along_dim`` namespace with ``wraps`` so the real
+            arithmetic still runs; invoking the cube's ``differentiate`` / ``integrate`` /
+            ``cumulative_integrate`` must call it. This pins the delegation by behaviour rather
+            than by inspecting the method's source.
         """
-        differentiate = inspect.getsource(_Differentiate.apply)
-        integrate = inspect.getsource(_Integrate.apply)
-        cumulative = inspect.getsource(_CumulativeIntegrate.apply)
+        import pyramids.netcdf.engines._along_dim as along_dim
 
-        assert "differentiate_axis(" in differentiate
-        assert "np.gradient(" not in differentiate
-        assert "integrate_axis(" in integrate
-        assert "np.trapezoid(" not in integrate
-        assert "cumulative_integrate_axis(" in cumulative
-        assert "cumulative_trapezoid" not in cumulative
-        assert "moved[1:]" not in cumulative
+        planes = np.stack(
+            [np.full((NY, NX), v, dtype="float64") for v in (1.0, 2.0, 4.0)]
+        )
+        source = NetCDF.from_array(
+            planes,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=[0.0, 1.0, 3.0]),
+        )
+        spied = getattr(along_dim, kernel_name)
+        with mock.patch.object(along_dim, kernel_name, wraps=spied) as spy:
+            getattr(source, member)("level")
+        assert spy.called, f"{member} must call {kernel_name}"
+
+    @pytest.mark.parametrize(
+        "member", ["differentiate", "integrate", "cumulative_integrate"]
+    )
+    def test_a_single_step_axis_is_refused_by_the_upstream_guard(self, member):
+        """A ``<2``-step axis raises ``selection.py``'s ``minimum`` guard, not the kernel (L1).
+
+        Test scenario:
+            The extracted kernels also refuse a one-step axis, but the public path is guarded
+            first by the upstream ``minimum`` check. The surfaced message is the guard's
+            (``"needs at least 2 steps"``), unchanged from before the collapse -- so the kernel's
+            own ``<2`` refusal stays shadowed and the length-1 behaviour does not regress.
+        """
+        plane = np.full((1, NY, NX), 5.0, dtype="float64")
+        source = NetCDF.from_array(
+            plane,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=[0.0]),
+        )
+        with pytest.raises(ValueError, match=r"needs at least 2 steps"):
+            getattr(source, member)("level")
 
     @pytest.mark.parametrize(
         ("member", "kernel", "keeps_axis"),
