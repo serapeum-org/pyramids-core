@@ -33,6 +33,29 @@ version = "9.8.1"
 [libraries.geos]
 version = "3.14.1"
 
+[installed.gdal]
+version = "3.13.3"
+
+[installed.drivers]
+# The same lists ci/source-build/build-gdal-stack.sh enforces, so the guarantee it gives the source
+# build now covers the vcpkg and conda-forge wheels too.
+raster = [
+    "GTiff", "COG", "netCDF", "GRIB", "HDF5", "JP2OpenJPEG",
+    "Zarr", "PNG", "JPEG", "WCS", "OGCAPI", "VRT",
+]
+vector = [
+    "GeoJSON", "ESRI Shapefile", "GPKG", "GPX", "PMTiles", "MVT", "GML",
+    "KML", "WFS", "OAPIF", "FlatGeobuf", "CSV", "OGR_VRT",
+]
+
+[exceptions.win_arm64.gdal]
+version = "3.12.4"
+reason = """
+vcpkg's pinned builtin-baseline carries no gdal 3.13.x port -- its newest is 3.12.4
+(port-version 2) -- so this platform is a minor version behind by force, not by choice. Revisit
+when the vcpkg baseline is next bumped; see ci/vcpkg.json.
+"""
+
 # Platforms that cannot meet the baseline, with the reason. An exception is a reviewed decision, not
 # a silent difference -- which is the whole point of the file. Keys are matched against the wheel's
 # platform tag. An exception may relax a *version*; it never waives `threadsafety`.
@@ -43,3 +66,8 @@ vcpkg's pinned builtin-baseline carries no hdf5 2.2.x port -- its newest is 2.1.
 so this platform cannot reach the baseline version without moving the baseline itself. Revisit when
 the vcpkg baseline is next bumped; see ci/vcpkg.json.
 """
+
+# Properties that cannot be read from a wheel's bytes and are asserted from the *installed* package
+# instead, by ci/check-installed-stack.py in the wheel smoke jobs. GDAL's version lives in the
+# SONAME on Linux/macOS and nowhere in the Windows filename, and a driver list can only come from
+# asking the library.

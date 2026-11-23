@@ -247,3 +247,66 @@ class TestDeclaredExceptionsAreHonoured:
         assert "no platform tag" in result.stderr, (
             f"an unparseable wheel name should warn on stderr, got: {result.stderr}"
         )
+
+
+class TestTheInstalledSideResolvesExceptions:
+    """`ci/check-installed-stack.py` applies the same declared exceptions as the bundled check.
+
+    Loaded by path because the filename has dashes and cannot be imported as a module. Only the pure
+    resolution logic is driven here; the GDAL/driver assertions themselves need an installed wheel,
+    which the wheel smoke jobs provide.
+    """
+
+    @staticmethod
+    def _module():
+        """Load the installed-side checker by path.
+
+        Returns:
+            The imported module object.
+        """
+        import importlib.util
+
+        path = _REPO_ROOT / "ci" / "check-installed-stack.py"
+        spec = importlib.util.spec_from_file_location("check_installed_stack", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_a_platform_without_an_exception_gets_the_baseline_version(self):
+        """`win_amd64` has no GDAL exception, so it must meet the baseline."""
+        module = self._module()
+        baseline = {"installed": {"gdal": {"version": "3.13.3"}}, "exceptions": {}}
+
+        assert module._expected_gdal(baseline, "win_amd64") == "3.13.3"
+
+    def test_a_declared_exception_overrides_the_baseline(self):
+        """`win_arm64` is held to 3.12.4, the newest GDAL its vcpkg baseline offers."""
+        module = self._module()
+        baseline = {
+            "installed": {"gdal": {"version": "3.13.3"}},
+            "exceptions": {"win_arm64": {"gdal": {"version": "3.12.4"}}},
+        }
+
+        assert module._expected_gdal(baseline, "win_arm64") == "3.12.4"
+        assert module._expected_gdal(baseline, "manylinux_2_28_x86_64") == "3.13.3", (
+            "the exception must not leak to other platforms"
+        )
+
+    def test_the_repo_baseline_holds_win_arm64_to_its_vcpkg_version(self):
+        """The shipped baseline encodes the real, measured exception rather than a placeholder."""
+        import tomllib
+
+        module = self._module()
+        baseline = tomllib.loads(_BASELINE.read_text(encoding="utf-8"))
+
+        assert module._expected_gdal(baseline, "win_arm64") == "3.12.4"
+        assert module._expected_gdal(baseline, "win_amd64") == "3.13.3"
+
+    def test_the_platform_tag_is_resolvable_on_this_interpreter(self):
+        """A tag must always resolve, since it is what selects the exception set."""
+        module = self._module()
+
+        tag = module._platform_tag()
+
+        assert tag, "a platform tag must never be empty"
+        assert tag.replace("_", "").isalnum(), f"unexpected tag shape: {tag!r}"
