@@ -15,6 +15,7 @@ real 33 MB wheel per case would make the suite network-bound.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import subprocess
 import sys
@@ -26,6 +27,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CHECKER = _REPO_ROOT / "ci" / "check-bundled-stack.py"
+_INSTALLED_CHECKER = _REPO_ROOT / "ci" / "check-installed-stack.py"
 _BASELINE = _REPO_ROOT / "ci" / "native-stack-baseline.toml"
 
 
@@ -958,4 +960,39 @@ class TestAFloorToleratesNewerButNotOlder:
 
         assert result.returncode == 0, (
             f"9.10.0 must read as newer than the floor: {result.stdout}"
+        )
+
+
+class TestTheInstalledCheckerBootstrapsTheVendoredOsgeo:
+    """`import pyramids` must precede `import osgeo`, or the checker cannot run in a wheel job.
+
+    A published wheel ships no top-level `osgeo` package: it lives at `pyramids/_vendor/osgeo`, reachable
+    only after `pyramids/__init__.py` injects it onto `sys.path`. A bare `from osgeo import ...` therefore
+    raises `ModuleNotFoundError` in exactly the environment this checker is written for, while passing in a
+    conda dev environment where `osgeo` is a real top-level package. `ci/verify-wheel.py` pins the same
+    ordering with an `# isort: off` block; this test pins it for the checker too (#1627).
+    """
+
+    def test_pyramids_is_imported_before_osgeo(self):
+        """The vendor bootstrap must come first in module source order."""
+        tree = ast.parse(_INSTALLED_CHECKER.read_text(encoding="utf-8"))
+        order = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                order.extend(
+                    (alias.name.split(".")[0], node.lineno) for alias in node.names
+                )
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                order.append((node.module.split(".")[0], node.lineno))
+        pyramids_at = [line for name, line in order if name == "pyramids"]
+        osgeo_at = [line for name, line in order if name == "osgeo"]
+
+        assert pyramids_at, (
+            "ci/check-installed-stack.py must `import pyramids` to run the vendor bootstrap; a published "
+            "wheel has no top-level osgeo package, so a bare osgeo import raises ModuleNotFoundError"
+        )
+        assert osgeo_at, "the checker is expected to import osgeo"
+        assert min(pyramids_at) < min(osgeo_at), (
+            f"`import pyramids` (line {min(pyramids_at)}) must precede the osgeo import "
+            f"(line {min(osgeo_at)}) so the vendored package is on sys.path"
         )

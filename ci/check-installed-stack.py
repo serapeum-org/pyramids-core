@@ -28,7 +28,18 @@ import sys
 import sysconfig
 import tomllib
 
+# A published wheel ships no top-level `osgeo`: it lives at `pyramids/_vendor/osgeo`, which
+# `pyramids/__init__.py` injects onto `sys.path`. So `import pyramids` MUST precede the osgeo
+# import, or this checker raises ModuleNotFoundError in the very wheel jobs it runs in -- while
+# passing in a conda dev environment, where `osgeo` is a real top-level package. `isort: off`
+# keeps isort's first-party regrouping from floating `import pyramids` below the osgeo block,
+# the same constraint ci/verify-wheel.py pins for the same reason.
+# isort: off
+import pyramids  # noqa: F401 -- side-effecting vendor bootstrap; must precede osgeo
+
 from osgeo import gdal, ogr
+
+# isort: on
 
 _BASELINE_PATH = pathlib.Path(__file__).resolve().parent / "native-stack-baseline.toml"
 
