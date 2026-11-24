@@ -33,11 +33,19 @@ version = "2.2.0"
 # four platforms and 9.9.0/3.15.0 on osx-64. Exact-matching something that cannot be equal would mean
 # hand-maintaining exceptions that only ever record expected differences; a floor still fails the case
 # worth catching -- a route silently dragging in an OLDER library than any other ships.
+# `below_version` is an exclusive ceiling at the next major. The floor catches a route lagging; the
+# ceiling catches the other failure a floor cannot see -- a route jumping a major version, which for
+# PROJ or GEOS can change projection and geometry behaviour and must never land in a wheel
+# unnoticed. Unlike a dependency pin this constrains no solver, so it costs nothing but a failed
+# check when upstream genuinely moves, which is the reviewed-decision moment this file is for.
+# Note the ceiling is tight for PROJ (on 9.x) and loose for GEOS, which has been 3.x for years.
 [libraries.proj]
 min_version = "9.8.1"
+below_version = "10"
 
 [libraries.geos]
 min_version = "3.14.1"
+below_version = "4"
 
 [installed.gdal]
 version = "3.13.3"

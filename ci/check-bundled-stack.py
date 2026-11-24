@@ -130,7 +130,7 @@ def expected_for(baseline: dict, tag: str) -> dict:
         if name not in expected:
             continue
         for prop, value in overrides.items():
-            if prop in ("version", "min_version"):
+            if prop in ("version", "min_version", "below_version"):
                 expected[name][prop] = value
     return expected
 
@@ -235,6 +235,10 @@ def check_wheel(wheel: pathlib.Path, baseline: dict) -> list[str]:
                 have = got.get("version")
                 line = f"{member} version={have} (want >= {want})"
                 ok = have is not None and _as_tuple(have) >= _as_tuple(want)
+            elif prop == "below_version":
+                have = got.get("version")
+                line = f"{member} version={have} (want < {want})"
+                ok = have is not None and _as_tuple(have) < _as_tuple(want)
             else:
                 have = got.get(prop)
                 line = f"{member} {prop}={have} (want {want})"

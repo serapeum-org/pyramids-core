@@ -901,18 +901,55 @@ class TestAFloorToleratesNewerButNotOlder:
             f"the report should name {field}: {result.stdout}"
         )
 
-    def test_a_far_newer_library_still_passes(self, tmp_path):
-        """A floor deliberately does not cap, so a major jump is tolerated.
+    def test_a_newer_minor_within_the_same_major_passes(self, tmp_path):
+        """The floor does not cap inside a major, so a legitimate minor bump is tolerated.
 
         Test scenario:
-            This is the floor's known blind spot, pinned so the trade-off is explicit: it catches a
-            route lagging, not two routes diverging upward. HDF5 keeps an exact version for that
-            reason, since a single value is reachable there.
+            This is what the floor is for: osx-64 already runs a minor ahead of everyone else, and
+            that difference is forced rather than wrong, so it must not fail.
         """
-        result = _run(_wheel(tmp_path, proj="12.0.0", geos="9.9.9"))
+        result = _run(_wheel(tmp_path, proj="9.99.0", geos="3.99.0"))
+
+        assert result.returncode == 0, f"a newer minor must pass: {result.stdout}"
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [("proj", "10.0.0"), ("geos", "4.0.0")],
+        ids=["proj-major", "geos-major"],
+    )
+    def test_a_major_version_jump_is_refused(self, tmp_path, field, value):
+        """Crossing the next major fails, which a bare floor would have let through.
+
+        Args:
+            field: Which library jumps a major.
+            value: The over-the-ceiling version it reports.
+
+        Test scenario:
+            A PROJ or GEOS major bump can change projection and geometry behaviour, so it must not
+            land in a wheel unnoticed. When upstream genuinely moves, this failing is the prompt to
+            raise `below_version` deliberately rather than discover the jump later.
+        """
+        result = _run(_wheel(tmp_path, **{field: value}))
+
+        assert result.returncode == 1, (
+            f"{field}={value} crosses the ceiling and must fail"
+        )
+        assert "want <" in result.stdout, (
+            f"the report should show the ceiling: {result.stdout}"
+        )
+
+    def test_the_geos_ceiling_is_deliberately_loose(self, tmp_path):
+        """GEOS has been 3.x for years, so its major ceiling tolerates a wide minor spread.
+
+        Test scenario:
+            Recorded rather than left implicit: a 3.14 -> 3.20 jump passes. A minor ceiling would
+            catch it but would also fail on every legitimate upstream bump, which is the trade this
+            baseline declines.
+        """
+        result = _run(_wheel(tmp_path, geos="3.20.0"))
 
         assert result.returncode == 0, (
-            f"a floor must not cap the upper end: {result.stdout}"
+            f"geos 3.20.0 is under the 4 ceiling: {result.stdout}"
         )
 
     def test_the_version_components_compare_numerically_not_as_strings(self, tmp_path):
