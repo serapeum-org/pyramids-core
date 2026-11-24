@@ -14,6 +14,8 @@ install gdal in the conda-forge-shape wheel test) reads that same table.
 """
 
 import importlib.util
+import runpy
+import sys
 import tomllib
 from pathlib import Path
 
@@ -222,3 +224,308 @@ class TestTheCrossCompileScriptUsesTheLockedPins:
             f"{library} must be passed to micromamba create as {library}{variable}, or its "
             "version is left to the solver on the cross-compile branch"
         )
+
+
+# The reader matches an entry only on a line ending in a newline, and the environments section's
+# very last line does not end in one -- it is where the top-level `packages:` section was split off.
+# Every synthetic lock therefore ends with this sentinel, whose file name carries no parseable
+# version, so these tests describe how a name and version are read rather than which entry lands
+# last. It contributes no pin whether or not the reader reaches it.
+_TRAILING_ENTRY = "unparseable-trailing-entry.conda"
+
+
+def _lock_entries(
+    platform: str, filenames: list[str], environment: str = "wheel-build"
+) -> str:
+    """One environment's platform block, in the shape `pixi.lock` writes it.
+
+    Args:
+        platform: The conda subdir the entries belong to.
+        filenames: Package file names, e.g. `proj-9.8.1-h856bcef_1.conda`. `_TRAILING_ENTRY` is
+            appended after them, so none of these is the block's final line.
+        environment: The environment name to declare them under.
+
+    Returns:
+        The indented YAML lines, ready to hand to `_synthetic_lock`.
+    """
+    head = (
+        f"  {environment}:\n"
+        "    channels:\n"
+        "    - url: https://conda.anaconda.org/conda-forge/\n"
+        "    packages:\n"
+        f"      {platform}:\n"
+    )
+    channel = "https://conda.anaconda.org/conda-forge"
+    entries = "".join(
+        f"      - conda: {channel}/{platform}/{name}\n"
+        for name in [*filenames, _TRAILING_ENTRY]
+    )
+    return head + entries
+
+
+def _synthetic_lock(tmp_path: Path, body: str) -> Path:
+    """Write a lock carrying only the `environments:` section the reader parses.
+
+    Args:
+        tmp_path: Directory to write the lock into.
+        body: The lines under `environments:`, already indented, from `_lock_entries`.
+
+    Returns:
+        The path to the written lock.
+    """
+    lock = tmp_path / "pixi.lock"
+    lock.write_text(
+        f"version: 6\nenvironments:\n{body}packages:\n- conda: unused\n",
+        encoding="utf-8",
+    )
+    return lock
+
+
+class TestTheLockReaderTrustsOnlyTheCondaUrl:
+    """Versions come out of each entry's URL, so what the reader will and will not accept matters.
+
+    It parses `pixi.lock` with a regular expression rather than YAML, because it runs on a bare CI
+    runner before any environment exists. That is sound only as long as it reads the package name
+    and version from the conda URL itself and ignores everything it cannot parse that way -- a pin
+    quietly resolving to nothing is the failure this whole mode exists to prevent (#1627).
+    """
+
+    def test_a_dashed_package_name_keeps_its_dashes(self, tmp_path):
+        """`libgdal-netcdf-3.13.3-h1_0.conda` is one package, not `libgdal` at version `netcdf`."""
+        lock = _synthetic_lock(
+            tmp_path,
+            _lock_entries(
+                "osx-64", ["libgdal-netcdf-3.13.3-h1_0.conda", "proj-9.8.1-h1_0.conda"]
+            ),
+        )
+
+        versions = _load_gdal_pin().locked_versions("osx-64", lock=lock)
+
+        assert versions == {"libgdal-netcdf": "3.13.3", "proj": "9.8.1"}, (
+            f"the name must be split at the version, not at the first dash: {versions}"
+        )
+
+    @pytest.mark.parametrize(
+        ("label", "filename"),
+        [
+            ("non-numeric-version", "weird-abc-h1_0.conda"),
+            ("no-version-at-all", "openssl.conda"),
+            ("version-with-a-dash", "proj-9.8.1-rc1-h1_0.conda"),
+        ],
+    )
+    def test_an_entry_whose_url_carries_no_version_is_skipped(
+        self, tmp_path, label, filename
+    ):
+        """An unparseable file name contributes nothing rather than a wrong pin.
+
+        Test scenario:
+            The version is read positionally out of the file name, so anything that does not look
+            like `<name>-<version>-<build>.conda` must drop out silently and leave the well-formed
+            entry beside it untouched -- a wrong version here would be installed as an exact `==`.
+
+        Args:
+            label: Which malformed file name is under test.
+            filename: The entry to write beside a well-formed `proj`.
+        """
+        lock = _synthetic_lock(
+            tmp_path, _lock_entries("osx-64", ["proj-9.8.1-h1_0.conda", filename])
+        )
+
+        versions = _load_gdal_pin().locked_versions("osx-64", lock=lock)
+
+        assert versions == {"proj": "9.8.1"}, (
+            f"{label}: {filename!r} must contribute no pin, got {versions}"
+        )
+
+    def test_a_platform_of_only_tar_bz2_entries_pins_nothing(self, tmp_path):
+        """The legacy `.tar.bz2` artefact is not read, and the absent pin must then be loud.
+
+        Test scenario:
+            Only `.conda` URLs are matched, so a platform locked to the older artefact format
+            resolves to an empty mapping -- which `locked_pins` must turn into a refusal rather
+            than hand the version choice back to the solver.
+        """
+        module = _load_gdal_pin()
+        lock = _synthetic_lock(
+            tmp_path,
+            _lock_entries(
+                "osx-64", ["proj-9.8.1-h1_0.tar.bz2", "geos-3.14.1-h1_0.tar.bz2"]
+            ),
+        )
+
+        assert module.locked_versions("osx-64", lock=lock) == {}, (
+            "a .tar.bz2 entry is not a conda URL this reader parses"
+        )
+        with pytest.raises(KeyError, match="pins no proj"):
+            module.locked_pins(["proj"], "osx-64", lock=lock)
+
+    def test_an_environment_that_locks_another_platform_only_raises(self, tmp_path):
+        """A declared environment with no block for the asked platform is a KeyError, not `{}`.
+
+        Test scenario:
+            The cross-compile branch asks for its *target* platform, which the host never has an
+            environment for; returning an empty mapping there would install the whole stack
+            unpinned, which is exactly the divergence of #1627.
+        """
+        lock = _synthetic_lock(
+            tmp_path, _lock_entries("linux-64", ["proj-9.8.1-h1_0.conda"])
+        )
+
+        with pytest.raises(KeyError, match="has no platform 'osx-64'"):
+            _load_gdal_pin().locked_versions("osx-64", lock=lock)
+
+    def test_an_undeclared_environment_raises(self, tmp_path):
+        """Asking for an environment the lock never declares must name it in the refusal."""
+        lock = _synthetic_lock(
+            tmp_path,
+            _lock_entries("osx-64", ["proj-9.8.1-h1_0.conda"], environment="bare"),
+        )
+
+        with pytest.raises(KeyError, match="declares no environment 'wheel-build'"):
+            _load_gdal_pin().locked_versions("osx-64", lock=lock)
+
+    def test_a_missing_lock_file_raises(self, tmp_path):
+        """No lock at all is a FileNotFoundError, not an empty set of pins."""
+        with pytest.raises(FileNotFoundError):
+            _load_gdal_pin().locked_versions("osx-64", lock=tmp_path / "absent.lock")
+
+
+class TestTheCommandLineRoutesToTheRightMode:
+    """The two modes are selected by `--locked`, and each refuses an invocation it cannot serve.
+
+    `ci/setup-gdal-micromamba.sh` builds this command line from shell variables, so an unset one
+    arrives as a missing argument. Printing nothing and exiting 0 there would leave the cross-compile
+    branch solving the native stack itself, with a green step to show for it (#1627).
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "argv"),
+        [
+            ("no-platform", ["proj"]),
+            ("no-packages", ["--platform", "osx-64"]),
+            ("platform-flag-without-a-value", ["--platform"]),
+            ("environment-but-nothing-else", ["--environment", "wheel-build"]),
+        ],
+    )
+    def test_an_incomplete_locked_invocation_exits_with_the_usage(self, label, argv):
+        """Every way of naming no platform or no package must stop with the usage line.
+
+        Args:
+            label: Which incomplete invocation is under test.
+            argv: The arguments after `--locked`.
+        """
+        with pytest.raises(SystemExit) as excinfo:
+            _load_gdal_pin()._locked_main(argv)
+
+        assert "usage: gdal-pin.py --locked" in str(excinfo.value), (
+            f"{label}: the refusal must say how the mode is called, got: {excinfo.value}"
+        )
+
+    def test_the_locked_mode_prints_one_pin_per_package_in_order(self, capsys):
+        """Each requested name yields one `==` line, in the order the caller asked for them.
+
+        Test scenario:
+            The shell reads the lines positionally into `PROJ_SPEC` / `GEOS_SPEC`, so a reordered
+            or merged line would pin each library to the other's version.
+        """
+        module = _load_gdal_pin()
+        expected = module.locked_pins(["proj", "geos"], "osx-64")
+
+        status = module._locked_main(["--platform", "osx-64", "proj", "geos"])
+
+        assert status == 0, f"a resolvable request must succeed, got {status}"
+        assert capsys.readouterr().out.splitlines() == [
+            expected["proj"],
+            expected["geos"],
+        ], "one pin per package, in the requested order"
+
+    def test_an_explicit_environment_is_honoured(self, capsys):
+        """`--environment` selects which locked environment is read."""
+        module = _load_gdal_pin()
+
+        status = module._locked_main(
+            ["--platform", "osx-64", "--environment", "wheel-build", "proj"]
+        )
+
+        assert status == 0, (
+            f"the default environment named explicitly must work: {status}"
+        )
+        assert (
+            capsys.readouterr().out.strip()
+            == module.locked_pins(["proj"], "osx-64")["proj"]
+        ), "naming the default environment must resolve what omitting it does"
+
+    def test_a_trailing_environment_flag_keeps_the_default(self, capsys):
+        """An `--environment` with no value falls back rather than consuming the next package.
+
+        Test scenario:
+            An unset shell variable arrives as a bare trailing flag; dropping to the default keeps
+            the pins resolvable, where consuming a package name would have silently pinned fewer
+            libraries than the caller asked for.
+        """
+        module = _load_gdal_pin()
+
+        status = module._locked_main(["--platform", "osx-64", "proj", "--environment"])
+
+        assert status == 0, f"the default environment must still resolve, got {status}"
+        assert (
+            capsys.readouterr().out.strip()
+            == module.locked_pins(["proj"], "osx-64")["proj"]
+        ), "the trailing flag must not change which pin is printed"
+
+    def test_main_routes_locked_to_the_locked_mode(self, capsys):
+        """`--locked` anywhere in the arguments selects the lock reader, and is not a package."""
+        module = _load_gdal_pin()
+
+        status = module.main(["--locked", "--platform", "osx-64", "proj"])
+
+        assert status == 0, f"the locked mode must be reachable from main, got {status}"
+        assert (
+            capsys.readouterr().out.strip()
+            == module.locked_pins(["proj"], "osx-64")["proj"]
+        ), "main must print what the locked mode resolves"
+
+    def test_main_with_no_arguments_prints_the_gdal_range(self, capsys):
+        """The default remains the shared gdal spec, which the wheel-test job installs against."""
+        module = _load_gdal_pin()
+
+        status = module.main([])
+
+        assert status == 0, f"the default mode must succeed, got {status}"
+        assert capsys.readouterr().out.strip() == module.gdal_spec(PYPROJECT), (
+            "no arguments must still emit the gdal range from pyproject"
+        )
+
+    def test_main_prints_one_range_per_named_package(self, capsys):
+        """Named packages are emitted one per line, which is how the shell reads them back."""
+        module = _load_gdal_pin()
+        pins = module.feature_pins()
+
+        status = module.main(["gdal", "swig"])
+
+        assert status == 0, f"both names resolve, so it must succeed, got {status}"
+        assert capsys.readouterr().out.splitlines() == [pins["gdal"], pins["swig"]], (
+            "each requested package must get its own line, in order"
+        )
+
+    def test_running_the_file_as_a_script_exits_with_the_status(
+        self, monkeypatch, capsys
+    ):
+        """CI calls it as `python ci/gdal-pin.py`, so the script dispatch must reach `main`.
+
+        Test scenario:
+            The workflows and `ci/setup-gdal-micromamba.sh` capture this script's stdout into a
+            shell variable; were the `__main__` block to stop exiting with `main`'s status, a
+            failed lookup would be read as an empty pin and the solver would choose instead.
+        """
+        monkeypatch.setattr(sys, "argv", [str(GDAL_PIN_SCRIPT)])
+
+        with pytest.raises(SystemExit) as excinfo:
+            runpy.run_path(str(GDAL_PIN_SCRIPT), run_name="__main__")
+
+        assert excinfo.value.code == 0, (
+            f"the default invocation must exit 0, got {excinfo.value.code}"
+        )
+        assert capsys.readouterr().out.strip() == _load_gdal_pin().gdal_spec(
+            PYPROJECT
+        ), "running it as a script must print the same spec the function returns"

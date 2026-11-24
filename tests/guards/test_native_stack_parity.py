@@ -19,6 +19,7 @@ import ast
 import importlib.util
 import json
 import re
+import runpy
 import subprocess
 import sys
 import tomllib
@@ -40,20 +41,23 @@ _SHARED = _REPO_ROOT / "ci" / "native_stack_baseline.py"
 _BASELINE = _REPO_ROOT / "ci" / "native-stack-baseline.toml"
 
 
-def _library_bytes(hdf5: str = "2.2.0", threadsafety: str = "ON") -> bytes:
+def _library_bytes(hdf5: str = "2.2.0", threadsafety: str | None = "ON") -> bytes:
     """Bytes imitating the build-settings summary HDF5 embeds in its own binary.
 
     Args:
         hdf5: The version string to embed.
-        threadsafety: The thread-safety setting to embed.
+        threadsafety: The thread-safety setting to embed, or None to omit the line altogether, as a
+            stripped or truncated binary carrying only part of its summary does.
 
     Returns:
         A payload the checker's extractors can read, padded so it looks like a real object file
         rather than a bare string.
     """
     head = b"\x7fELF" + b"\x00" * 60
-    body = f"    HDF5 Version: {hdf5}\n    Threadsafety: {threadsafety}\n".encode()
-    return head + body + b"\x00" * 32
+    body = f"    HDF5 Version: {hdf5}\n"
+    if threadsafety is not None:
+        body += f"    Threadsafety: {threadsafety}\n"
+    return head + body.encode() + b"\x00" * 32
 
 
 def _wheel(
@@ -137,69 +141,25 @@ def _checker_module(script: str):
     return module
 
 
-#: Driver names the synthetic installed-side baseline requires. Deliberately short: what is under
-#: test is the present/missing comparison, while the real lists belong to the repo's own baseline.
-_REQUIRED_RASTER = ["GTiff", "COG", "netCDF"]
-_REQUIRED_VECTOR = ["GeoJSON", "GPKG"]
-
-
-def _installed_baseline(
-    tmp_path: Path,
-    gdal_version: str | None = "3.13.3",
-    raster: list[str] | None = None,
-    vector: list[str] | None = None,
-) -> Path:
-    """Write a baseline carrying only the `[installed]` tables the installed side reads.
+def _matched_members(tmp_path: Path, token: str, members: list[str]) -> list[str]:
+    """The members `_members_for` picks out of an archive holding exactly `members`.
 
     Args:
-        tmp_path: Directory to write the baseline into.
-        gdal_version: Version to pin, or None to leave GDAL unpinned.
-        raster: Required raster drivers. Defaults to `_REQUIRED_RASTER`.
-        vector: Required vector drivers. Defaults to `_REQUIRED_VECTOR`.
+        tmp_path: Directory to write the throwaway archive into.
+        token: The library token to match, e.g. `hdf5`.
+        members: Archive member names to write, each with a one-byte payload since only the name
+            decides whether a member is scanned.
 
     Returns:
-        The path to the written baseline.
+        The member names the checker considers a bundled copy of that library.
     """
-    raster = _REQUIRED_RASTER if raster is None else raster
-    vector = _REQUIRED_VECTOR if vector is None else vector
-    lines = []
-    if gdal_version is not None:
-        lines += ["[installed.gdal]", f'version = "{gdal_version}"', ""]
-    lines += [
-        "[installed.drivers]",
-        "raster = [" + ", ".join(f'"{name}"' for name in raster) + "]",
-        "vector = [" + ", ".join(f'"{name}"' for name in vector) + "]",
-        "",
-    ]
-    path = tmp_path / "native-stack-baseline.toml"
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return path
-
-
-def _installed_checker(
-    monkeypatch,
-    baseline: Path,
-    gdal_version: str,
-    raster: list[str],
-    vector: list[str],
-):
-    """Load the installed-side checker wired to a fake `osgeo` and a given baseline.
-
-    Args:
-        monkeypatch: The fixture that restores every patched attribute afterwards.
-        baseline: The baseline file the checker should read.
-        gdal_version: The version the fake GDAL reports.
-        raster: Raster driver short names the fake GDAL offers.
-        vector: Vector driver names the fake OGR offers.
-
-    Returns:
-        The patched module, ready to have `main()` called on it.
-    """
-    module = _checker_module("check-installed-stack.py")
-    monkeypatch.setattr(module, "_BASELINE_PATH", baseline)
-    monkeypatch.setattr(module, "gdal", _FakeOsgeo(gdal_version, raster))
-    monkeypatch.setattr(module, "ogr", _FakeOsgeo(gdal_version, vector))
-    return module
+    path = tmp_path / "members.zip"
+    with zipfile.ZipFile(path, "w") as archive:
+        for member in members:
+            archive.writestr(member, b"\x00")
+    checker = _checker_module("check-bundled-stack.py")
+    with zipfile.ZipFile(path) as archive:
+        return checker._members_for(archive, token)
 
 
 class TestTheCheckerShipsWithABaseline:
@@ -319,6 +279,110 @@ class TestAConformingWheelPasses:
 
         assert len(reported["hdf5"]) == 1, (
             f"a companion carrying no settings string must not become a reading: {reported}"
+        )
+
+
+class TestWhichArchiveMembersLookLikeALibrary:
+    """Only the members that could be a bundled native library are read, by basename alone.
+
+    The filter decides what the whole comparison ever sees: too narrow and a repair tool's mangled
+    name goes unchecked, too wide and a note file or a directory name becomes a reading. Both arms
+    of it are load-bearing, since a repaired wheel carries `geos_c-<hash>.dll` on one platform and
+    `libproj.so.25.9.8.1` on another, and nothing normalises the case of either.
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "member", "matches"),
+        [
+            ("plain-so", "pyramids_core.libs/libhdf5-abcdef12.so", True),
+            ("plain-dll", "pyramids_core/hdf5-abcdef12.dll", True),
+            ("plain-dylib", "pyramids_core/.dylibs/libhdf5.320.2.0.dylib", True),
+            ("versioned-soname", "pyramids_core.libs/libhdf5-abc.so.320.1.0", True),
+            ("upper-case-dll", "PYRAMIDS_CORE/LIBHDF5.DLL", True),
+            ("upper-case-soname", "PYRAMIDS_CORE/LIBHDF5.SO.320.1.0", True),
+            ("note-file", "pyramids_core.libs/hdf5-build-settings.txt", False),
+            ("suffix-with-a-trailing-letter", "pyramids_core.libs/libhdf5.sox", False),
+            ("token-only-in-the-directory", "libhdf5.so.1/README.md", False),
+            ("another-library", "pyramids_core.libs/libproj-abc.so.25", False),
+        ],
+    )
+    def test_a_member_is_scanned_only_when_its_basename_names_the_library(
+        self, tmp_path, label, member, matches
+    ):
+        """Each shape a published wheel carries must be classified the way the comparison needs.
+
+        Args:
+            tmp_path: Per-test directory.
+            label: Which shape is under test.
+            member: The archive member name.
+            matches: Whether the checker must treat it as a copy of HDF5.
+        """
+        found = _matched_members(tmp_path, "hdf5", [member])
+
+        assert found == ([member] if matches else []), (
+            f"{label}: {member!r} was classified the wrong way, got {found}"
+        )
+
+    def test_every_matching_copy_is_returned(self, tmp_path):
+        """The filter yields all copies, since one bad copy among good ones must still be read.
+
+        Test scenario:
+            A repair tool can land the same library twice under different mangled names, which is
+            how the ordering defect of #1627 arose; dropping all but one here would reintroduce it
+            before any comparison happens.
+        """
+        found = _matched_members(
+            tmp_path,
+            "hdf5",
+            [
+                "pyramids_core.libs/aa_libhdf5-x.so.320.2.0",
+                "pyramids_core.libs/hdf5-notes.txt",
+                "pyramids_core.libs/zz_libhdf5-y.so.320.2.0",
+            ],
+        )
+
+        assert sorted(found) == [
+            "pyramids_core.libs/aa_libhdf5-x.so.320.2.0",
+            "pyramids_core.libs/zz_libhdf5-y.so.320.2.0",
+        ], f"both copies and only those must be scanned: {found}"
+
+
+class TestAPartialSettingsStringIsStillJudged:
+    """A copy reporting some of its properties but not all must fail, not drop out of the check.
+
+    `read_reported` keeps any member that yielded at least one property, and the properties it did
+    not yield are then absent from the comparison, which makes them unequal to whatever the baseline
+    pins. The opposite rule -- requiring every pattern to match before a member counts as a copy --
+    would make the #1620 defect invisible exactly where it matters: a library whose `Threadsafety:`
+    line is gone would simply stop being a copy of HDF5, and the wheel would report no HDF5 drift.
+    """
+
+    def test_a_copy_reporting_only_its_version_still_becomes_a_reading(self, tmp_path):
+        """One matched pattern is enough to make a member a reading."""
+        checker = _checker_module("check-bundled-stack.py")
+        wheel = _wheel(tmp_path, threadsafety=None)
+
+        reported = checker.read_reported(wheel, ["hdf5"])
+
+        assert len(reported["hdf5"]) == 1, (
+            f"a partial settings string must still be read: {reported}"
+        )
+        assert reported["hdf5"][0]["version"] == "2.2.0", (
+            f"the property that is present must be read: {reported}"
+        )
+        assert "threadsafety" not in reported["hdf5"][0], (
+            f"the property that is absent must not be invented: {reported}"
+        )
+
+    def test_the_property_it_does_not_report_fails_the_comparison(self, tmp_path):
+        """An unreadable `threadsafety` is drift, since the baseline pins it unconditionally."""
+        checker = _checker_module("check-bundled-stack.py")
+        wheel = _wheel(tmp_path, threadsafety=None)
+
+        failures = checker.check_wheel(wheel, checker.load_baseline())
+
+        assert any("threadsafety=None" in failure for failure in failures), (
+            f"a copy whose thread-safety cannot be read must fail (#1620): {failures}"
         )
 
 
@@ -550,6 +614,87 @@ class TestDeclaredExceptionsAreHonoured:
             f"only a version may be relaxed by an exception: {expected}"
         )
 
+    def test_an_exception_relaxing_no_version_at_all_changes_nothing(self):
+        """An exception table that pins only another property must leave the baseline untouched.
+
+        Test scenario:
+            The validator already refuses such a table at load, so this is the second line of the
+            same defence: were one to reach `expected_for` -- from a hand-built mapping, or from a
+            future table shape -- relaxing `threadsafety` is still not something it can do.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        baseline = {
+            "libraries": {"hdf5": {"version": "2.2.0", "threadsafety": "ON"}},
+            "exceptions": {"win_arm64": {"hdf5": {"threadsafety": "OFF"}}},
+        }
+
+        expected = checker.expected_for(baseline, "win_arm64")
+
+        assert expected["hdf5"] == {"version": "2.2.0", "threadsafety": "ON"}, (
+            f"an exception pinning no version must relax nothing: {expected}"
+        )
+
+    def test_an_empty_tag_resolves_no_exception(self):
+        """A wheel whose name yielded no tag is compared against the unrelaxed baseline.
+
+        Test scenario:
+            The empty tag must not match an exception key by accident, since that would relax a
+            platform nobody declared; `check_wheel` warns about it instead.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        baseline = {
+            "libraries": {"hdf5": {"version": "2.2.0"}},
+            "exceptions": {"win_arm64": {"hdf5": {"version": "2.1.1"}}},
+        }
+
+        expected = checker.expected_for(baseline, "")
+
+        assert expected == {"hdf5": {"version": "2.2.0"}}, (
+            f"no tag must resolve no exception: {expected}"
+        )
+
+    def test_the_warning_names_every_exception_it_could_not_resolve(
+        self, tmp_path, capsys
+    ):
+        """The WARN lists the declared tags, so the log says which relaxations went unapplied.
+
+        Test scenario:
+            Driven in-process rather than through a subprocess so the message itself is asserted.
+            A wheel whose name carries no tag is compared against the unrelaxed baseline, and this
+            line is the only trace of that -- a `win_arm64` wheel renamed in a repair step would
+            otherwise look as though its stack had genuinely drifted.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        renamed = tmp_path / "renamed.whl"
+        _wheel(tmp_path, platform_tag="win_arm64", hdf5="2.1.1").rename(renamed)
+
+        failures = checker.check_wheel(renamed, checker.load_baseline())
+
+        captured = capsys.readouterr()
+        assert "no platform tag" in captured.err, (
+            f"the warning must reach stderr: {captured.err}"
+        )
+        assert "win_arm64" in captured.err, (
+            f"the warning must name the exceptions it could not resolve: {captured.err}"
+        )
+        assert failures, (
+            "compared against the unrelaxed baseline, the win_arm64 HDF5 version must fail"
+        )
+
+    def test_a_baseline_without_exceptions_warns_about_nothing(self, tmp_path, capsys):
+        """With no relaxations declared, a tagless filename costs nothing and draws no WARN."""
+        checker = _checker_module("check-bundled-stack.py")
+        renamed = tmp_path / "renamed.whl"
+        _wheel(tmp_path).rename(renamed)
+        baseline = {"libraries": {"hdf5": {"version": "2.2.0", "threadsafety": "ON"}}}
+
+        failures = checker.check_wheel(renamed, baseline)
+
+        assert failures == [], f"the wheel conforms, so nothing must fail: {failures}"
+        assert "WARN" not in capsys.readouterr().err, (
+            "there are no exceptions to resolve, so there is nothing to warn about"
+        )
+
     def test_a_reason_string_is_not_compared_as_a_property(self, tmp_path, capsys):
         """`reason` documents a baseline table; it is prose, not something a binary reports.
 
@@ -727,6 +872,99 @@ class TestTheTargetsAreExpandedToWheels:
             f"both failures should reach the summary: {captured.err}"
         )
 
+    def test_a_mistyped_wheel_path_is_refused_by_name(self, tmp_path):
+        """A path ending in `.whl` that names no file is the script's own refusal, in-process.
+
+        Test scenario:
+            The subprocess variant pins the absence of a traceback; this pins the message, since
+            `_wheels` must distinguish a mistyped wheel from an argument that could never name one.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        missing = tmp_path / "pyramids_core-9.9.9-cp312-cp312-win_amd64.whl"
+
+        with pytest.raises(SystemExit) as excinfo:
+            checker._wheels([str(missing)])
+
+        assert "does not exist" in str(excinfo.value), (
+            f"the refusal must say the path does not exist, got: {excinfo.value}"
+        )
+        assert missing.name in str(excinfo.value), (
+            f"the refusal must name the path, got: {excinfo.value}"
+        )
+
+    def test_an_empty_directory_refuses_to_report_success(self, tmp_path, capsys):
+        """`main` over a directory holding no wheels exits 1 and says it compared nothing.
+
+        Test scenario:
+            This is the vacuous-success path, so the exit code and the explanation are both part of
+            the contract: a repair step pointed at the wrong directory must fail the job rather than
+            print a green line having checked no wheel at all.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        empty = tmp_path / "nothing"
+        empty.mkdir()
+
+        status = checker.main([str(empty)])
+
+        captured = capsys.readouterr()
+        assert status == 1, f"an empty target set must fail, got {status}"
+        assert "no wheels found" in captured.err, (
+            f"the refusal must say no wheels were found: {captured.err}"
+        )
+        assert "compared nothing" in captured.err, (
+            f"the refusal must say why that is a failure: {captured.err}"
+        )
+        assert str(empty) in captured.err, (
+            f"the refusal must name the target it scanned: {captured.err}"
+        )
+
+    def test_one_drifted_wheel_fails_the_whole_directory(self, tmp_path, capsys):
+        """A conforming wheel beside a drifted one neither masks it nor is mistaken for it.
+
+        Test scenario:
+            The mixed case is the realistic one: the repair step checks a directory of wheels built
+            by five different routes, and #1620 was precisely three platforms conforming while two
+            did not. The conforming wheel must still report `ok`, and the call must still exit 1.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        passing = _wheel(tmp_path, platform_tag="manylinux_2_28_x86_64")
+        drifted = _wheel(
+            tmp_path, platform_tag="manylinux_2_28_aarch64", threadsafety="OFF"
+        )
+
+        status = checker.main([str(tmp_path)])
+
+        captured = capsys.readouterr()
+        assert status == 1, f"one drifted wheel must fail the call, got {status}"
+        assert f"ok   {passing.name}" in captured.out, (
+            f"the conforming wheel must still be reported ok: {captured.out}"
+        )
+        assert f"FAIL {drifted.name}" in captured.out, (
+            f"the drifted wheel must be reported as failing: {captured.out}"
+        )
+        assert "1 bundled-library mismatch(es)" in captured.err, (
+            f"exactly the one real mismatch must reach the summary: {captured.err}"
+        )
+
+    def test_running_the_file_as_a_script_exits_with_the_status(
+        self, tmp_path, monkeypatch
+    ):
+        """The repair steps invoke it as `python ci/check-bundled-stack.py`, so that path must fail.
+
+        Test scenario:
+            A drifted wheel has to make the *process* exit non-zero, not merely return 1 from a
+            function nobody checks -- the repair step's only signal is the exit status.
+        """
+        wheel = _wheel(tmp_path, threadsafety="OFF")
+        monkeypatch.setattr(sys, "argv", [str(_CHECKER), str(wheel)])
+
+        with pytest.raises(SystemExit) as excinfo:
+            runpy.run_path(str(_CHECKER), run_name="__main__")
+
+        assert excinfo.value.code == 1, (
+            f"a drifted wheel must exit 1 through the script dispatch, got {excinfo.value.code}"
+        )
+
 
 def _shared_module():
     """Import `ci/native_stack_baseline.py`, the validated reader both checkers share."""
@@ -784,6 +1022,22 @@ class TestABaselineThatWouldCompareNothingIsRefused:
                 "installed-without-version",
                 '[libraries.hdf5]\nversion = "2.2.0"\n[installed.gdal]\nbuild = "1"\n',
                 "pins no version",
+            ),
+            (
+                "library-pinning-nothing",
+                "[libraries.hdf5]\n",
+                "pins no property",
+            ),
+            (
+                "library-pinning-only-prose",
+                '[libraries.hdf5]\nreason = "a note is not a comparison"\n',
+                "pins no property",
+            ),
+            (
+                "exception-for-an-uncomparable-library",
+                '[libraries.hdf5]\nversion = "2.2.0"\n'
+                '[exceptions.win_arm64.sqlite3]\nversion = "3.50"\nreason = "x"\n',
+                "names a library nothing compares",
             ),
         ],
     )
@@ -875,6 +1129,110 @@ class TestTheInstalledPlatformTagSharesTheWheelNamespace:
             assert module.wheel_name_platform_tag(name) == tag, (
                 f"exception key {tag!r} is not what a wheel filename yields, so it relaxes nothing"
             )
+
+
+def _fake_distribution(tmp_path: Path, name: str, tags: list[str] | None) -> Path:
+    """Write a `.dist-info` an `importlib.metadata` scan of the returned directory will find.
+
+    Args:
+        tmp_path: Directory to serve as a synthetic site-packages.
+        name: The distribution name to install under, unique per test so no cache is shared.
+        tags: The `Tag:` values for `WHEEL`, without the `Tag: ` prefix; None omits `WHEEL`
+            entirely, as a distribution not installed from a wheel does.
+
+    Returns:
+        The directory to prepend to `sys.path`.
+    """
+    info = tmp_path / f"{name}-1.0.dist-info"
+    info.mkdir(parents=True, exist_ok=True)
+    (info / "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n", encoding="utf-8"
+    )
+    if tags is not None:
+        (info / "WHEEL").write_text(
+            "Wheel-Version: 1.0\nRoot-Is-Purelib: false\n"
+            + "".join(f"Tag: {tag}\n" for tag in tags),
+            encoding="utf-8",
+        )
+    return tmp_path
+
+
+class TestTheInstalledTagComesFromTheWheelMetadata:
+    """`installed_platform_tag` reads `.dist-info/WHEEL`, and refuses to guess when it cannot.
+
+    The tag is the key an exception is resolved under, so a wrong one is worse than none: it would
+    compare one platform against another platform's declared values. Anything short of a single
+    concrete platform therefore yields "" and leaves the caller to warn -- a fat or `any`-platform
+    install, a distribution carrying no `Tag:` line, one not installed from a wheel at all. Driven
+    against a real `.dist-info` rather than a patched reader, so the parsing is what is under test.
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "tags", "expected"),
+        [
+            ("one-platform", ["cp312-cp312-win_arm64"], "win_arm64"),
+            (
+                "one-platform-several-abis",
+                ["cp311-cp311-win_amd64", "cp312-cp312-win_amd64"],
+                "win_amd64",
+            ),
+            (
+                "several-platforms",
+                ["cp312-cp312-macosx_11_0_x86_64", "cp312-cp312-macosx_11_0_arm64"],
+                "",
+            ),
+            ("no-tag-line", [], ""),
+            ("pure-python", ["py3-none-any"], ""),
+            ("not-installed-from-a-wheel", None, ""),
+        ],
+    )
+    def test_the_tag_is_read_from_the_installed_wheel_metadata(
+        self, tmp_path, monkeypatch, label, tags, expected
+    ):
+        """Each `WHEEL` shape must yield exactly one platform tag, or none at all.
+
+        Args:
+            tmp_path: Per-test directory, used as a synthetic site-packages.
+            monkeypatch: Restores `sys.path` afterwards.
+            label: Which shape is under test; also the distribution name, kept unique so
+                `importlib.metadata` cannot serve one case's answer to another.
+            tags: The `Tag:` values to write, or None to omit `WHEEL`.
+            expected: The tag the reader must return.
+        """
+        name = f"fakedist{label.replace('-', '')}"
+        monkeypatch.syspath_prepend(str(_fake_distribution(tmp_path, name, tags)))
+        importlib.invalidate_caches()
+
+        found = _shared_module().installed_platform_tag(name)
+
+        assert found == expected, (
+            f"{label}: expected {expected!r} from Tag lines {tags!r}, got {found!r}"
+        )
+
+    def test_a_fat_install_is_reported_rather_than_guessed_at(
+        self, tmp_path, monkeypatch
+    ):
+        """Two platforms in one install must yield "", not whichever the set happens to pop.
+
+        Test scenario:
+            A `delocate`-fused universal2 install carries both arch tags. Picking one would resolve
+            that install's exceptions under a platform it is only half of, and the choice would vary
+            run to run because it comes out of a set.
+        """
+        monkeypatch.syspath_prepend(
+            str(
+                _fake_distribution(
+                    tmp_path,
+                    "fakedistfat1627",
+                    ["cp312-cp312-macosx_11_0_arm64", "cp312-cp312-macosx_11_0_x86_64"],
+                )
+            )
+        )
+        importlib.invalidate_caches()
+
+        assert _shared_module().installed_platform_tag("fakedistfat1627") == "", (
+            "a fat install must resolve no tag rather than half of one"
+        )
 
 
 class TestVerifyWheelAssertsTheGdalVersion:
