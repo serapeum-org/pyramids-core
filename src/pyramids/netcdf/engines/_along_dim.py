@@ -1073,7 +1073,7 @@ class _InterpTo(_AlongDim):
         axis = band_names.index(dim)
         coords = values_map[dim]
         if coords is None:
-            # `Selection._run_interp` validates the source coordinates before this runs, so a
+            # `_Selection._run_interp` validates the source coordinates before this runs, so a
             # coordinate-less axis is refused up front; guard here too to narrow the type and stay
             # safe if ever reached directly.
             raise ValueError(
@@ -2403,7 +2403,7 @@ def _read_no_data(var: NetCDF) -> Any:
     Every operation here reads a variable unpacked, so a CF-packed variable's fill cells hold
     `_FillValue * scale_factor + add_offset`, never the stored `_FillValue` itself. Masking
     against the stored value would count every fill cell as data. The sentinel is unpacked the
-    same way the read unpacks the data (`Analysis._physical_no_data`), so the two compare equal.
+    same way the read unpacks the data (`_Analysis._physical_no_data`), so the two compare equal.
     An unpacked variable's sentinel is returned unchanged.
 
     Args:

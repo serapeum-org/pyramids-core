@@ -4,7 +4,7 @@ Cropping a NetCDF variable by a polygon cutline used to log a GDAL warning —
 ``the input vector layer has a SRS, but the source raster dataset does not``
 — because the variable's backing raster (the ``AsClassicDataset`` view, or a
 ``wrap_longitude`` MEM raster) carried no projection string even though the
-variable tracks its EPSG. ``Selection._crop_one`` now stamps the known CRS onto
+variable tracks its EPSG. ``_Selection._crop_one`` now stamps the known CRS onto
 the raster before the affine cutline warp, so the warning is gone and a cutline
 in a different CRS would be correctly reprojected rather than mis-clipped.
 """

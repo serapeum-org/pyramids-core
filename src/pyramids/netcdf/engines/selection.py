@@ -125,7 +125,7 @@ _coarsen_windows = window_positions
 _MIN_WINDOW_SAVING = 2
 
 
-class Selection(_Engine["NetCDF"]):
+class _Selection(_Engine["NetCDF"]):
     """Spatial / dimensional selection collaborator for :class:`NetCDF`.
 
     Owns the bodies of :meth:`crop` (with the curvilinear and rectilinear
@@ -637,7 +637,7 @@ class Selection(_Engine["NetCDF"]):
         gt = nc._geotransform
         if not gt or not gt[1] or not gt[5] or gt[2] or gt[4]:
             return None
-        # Compare the CRSs themselves, the way `Spatial._cutline_window_bounds` does. An `epsg`
+        # Compare the CRSs themselves, the way `_Spatial._cutline_window_bounds` does. An `epsg`
         # comparison fails open twice over: `crop(mask=...)` accepts a bare `GeoDataFrame`, which
         # has no `.epsg` at all, and a grid with no authority code (rotated pole, geostationary)
         # reports `epsg` as `None`. Either way the guard would be skipped and the mask's
@@ -3763,7 +3763,7 @@ class Selection(_Engine["NetCDF"]):
             Analysis.equals: The comparison it ends in.
         """
         nc = self._ds
-        # The same predicate `equals` uses (`Analysis._refuse_a_container`): a cube is a
+        # The same predicate `equals` uses (`_Analysis._refuse_a_container`): a cube is a
         # container only when it *has* variables and no band dimensions of its own.
         # `_reduces_as_a_variable` is wider — it is false for a classic-mode raster too,
         # which has real cells, an empty `variable_names`, and which `equals` accepts.
@@ -8465,7 +8465,7 @@ def _reconcile_mask_to_crs(mask: FeatureCollection, epsg: int | None) -> Any:
 
     Reprojects only when the mask carries a CRS that differs from ``epsg``;
     otherwise the mask is used as-is. Helper of
-    :meth:`Selection._crop_curvilinear`.
+    :meth:`_Selection._crop_curvilinear`.
     """
     gdf = mask
     gdf_crs = getattr(gdf, "crs", None)
@@ -8499,7 +8499,7 @@ def _read_curvilinear_window(
     a 2-D plane for a variable with no band dimensions), so the crop keeps the band
     structure the caller's :meth:`from_array` rebuild reconstructs from that shape — the
     eager and lazy crops produce the identical layout (#1241). Helper of
-    :meth:`Selection._crop_curvilinear`.
+    :meth:`_Selection._crop_curvilinear`.
 
     Reads with ``unpack=False``. The caller stamps the variable's **stored** no-data
     sentinel into the cells outside the cutline and rebuilds the variable around the

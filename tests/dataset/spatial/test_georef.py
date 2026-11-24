@@ -19,7 +19,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset._gcp import GroundControlPoint
 from pyramids.dataset.engines import georef as georef_module
-from pyramids.dataset.engines.georef import Georef
+from pyramids.dataset.engines.georef import _Georef
 
 pytestmark = pytest.mark.core
 
@@ -286,9 +286,9 @@ class TestOrthorectify:
             RPC_DEM warp is GDAL-version-fragile with synthetic coefficients, so
             the DEM *handling* is unit-tested here rather than warped.)
         """
-        assert Georef._resolve_dem_path(None) is None
-        assert Georef._resolve_dem_path("dem.tif") == "dem.tif"
-        assert Georef._resolve_dem_path(Path("a/dem.tif")) == str(Path("a/dem.tif"))
+        assert _Georef._resolve_dem_path(None) is None
+        assert _Georef._resolve_dem_path("dem.tif") == "dem.tif"
+        assert _Georef._resolve_dem_path(Path("a/dem.tif")) == str(Path("a/dem.tif"))
 
     def test_resolve_dem_path_file_backed_dataset(self, tmp_path):
         """A file-backed DEM Dataset resolves to its on-disk path.
@@ -301,7 +301,7 @@ class TestOrthorectify:
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
         ).to_file(str(dem_path))
-        resolved = Georef._resolve_dem_path(Dataset.read_file(str(dem_path)))
+        resolved = _Georef._resolve_dem_path(Dataset.read_file(str(dem_path)))
         assert resolved.endswith("dem.tif")
 
     def test_resolve_dem_path_mem_dataset_staged_to_vsimem(self):
@@ -314,7 +314,7 @@ class TestOrthorectify:
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
         )
-        assert Georef._resolve_dem_path(dem).startswith("/vsimem/")
+        assert _Georef._resolve_dem_path(dem).startswith("/vsimem/")
 
 
 class TestWarpFromGCPs:

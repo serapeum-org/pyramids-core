@@ -16,7 +16,7 @@ from shapely.geometry import Polygon, box
 from pyramids.base._errors import NoDataValueError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.spatial import Spatial, _survives_a_c_double
+from pyramids.dataset.engines.spatial import _Spatial, _survives_a_c_double
 from pyramids.feature import FeatureCollection
 
 pytestmark = pytest.mark.core
@@ -360,7 +360,7 @@ class TestReproject:
 
         Test scenario:
             `sr_from_user_input` is independently tested with WKT input, but the full
-            `Spatial.to_crs(to_epsg=wkt)` path was not exercised — only EPSG ints /
+            `_Spatial.to_crs(to_epsg=wkt)` path was not exercised — only EPSG ints /
             authority strings / proj4 / pyproj.CRS. Exporting EPSG:32636 to WKT and
             passing the bytes back into `to_crs` must reproject to the same UTM zone,
             confirming that the SRS-based front door survives a full WKT round-trip.
@@ -1237,7 +1237,7 @@ class TestCutlineBorderTrim:
             dropped, and the crop came back the original size with the no-data
             border still attached.
         """
-        trimmed = Spatial._correct_wrap_cutline_error(self._bordered(np.nan))
+        trimmed = _Spatial._correct_wrap_cutline_error(self._bordered(np.nan))
         assert (trimmed.rows, trimmed.columns) == (3, 3), (
             f"the all-NaN frame must be trimmed to 3x3, got "
             f"{trimmed.rows}x{trimmed.columns}"
@@ -1254,7 +1254,7 @@ class TestCutlineBorderTrim:
             `is_no_data` replaced a plain `==`, so the numeric case has to keep
             behaving exactly as before.
         """
-        trimmed = Spatial._correct_wrap_cutline_error(self._bordered(-9999.0))
+        trimmed = _Spatial._correct_wrap_cutline_error(self._bordered(-9999.0))
         assert (trimmed.rows, trimmed.columns) == (3, 3), (
             f"the all-no-data frame must be trimmed to 3x3, got "
             f"{trimmed.rows}x{trimmed.columns}"
@@ -1267,7 +1267,7 @@ class TestCutlineBorderTrim:
             The border is one cell wide on a cell size of 1, so the top-left
             corner moves one cell right and one cell down.
         """
-        trimmed = Spatial._correct_wrap_cutline_error(self._bordered(np.nan))
+        trimmed = _Spatial._correct_wrap_cutline_error(self._bordered(np.nan))
         assert (trimmed.geotransform[0], trimmed.geotransform[3]) == (1.0, 4.0), (
             f"expected the origin at (1.0, 4.0), got {trimmed.geotransform[:4]}"
         )
@@ -1361,7 +1361,7 @@ class TestCropBoundsTheReadToTheCrop:
             snapped to the source grid.
         """
         dataset = self._large_source()
-        west, south, east, north = Spatial._cutline_window_bounds(
+        west, south, east, north = _Spatial._cutline_window_bounds(
             dataset, self._grid_aligned_mask()
         )
         assert west <= 1.0 - 0.01 + 1e-9, f"the window must clear the west edge: {west}"
@@ -1389,21 +1389,21 @@ class TestCropBoundsTheReadToTheCrop:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.5, 10.0, 0.5, -1.0), epsg=4326),
         )
         assert (
-            Spatial._cutline_window_bounds(rotated, self._grid_aligned_mask()) is None
+            _Spatial._cutline_window_bounds(rotated, self._grid_aligned_mask()) is None
         ), "a rotated grid must fall back to the full-source warp"
 
     def test_window_is_none_when_the_cutline_has_no_crs(self):
         """Without a cutline CRS the envelope cannot be projected; fall back."""
         dataset = self._large_source()
         crs_less = gpd.GeoDataFrame(geometry=[box(1.0, 3.0, 1.5, 3.5)], crs=None)
-        assert Spatial._cutline_window_bounds(dataset, crs_less) is None, (
+        assert _Spatial._cutline_window_bounds(dataset, crs_less) is None, (
             "a CRS-less cutline must fall back rather than guess a projection"
         )
 
     def test_window_is_none_when_the_source_has_no_crs(self):
         """A source with no projection cannot host the reprojected envelope; fall back."""
         crs_less_source = self._crs_less_source()
-        window = Spatial._cutline_window_bounds(
+        window = _Spatial._cutline_window_bounds(
             crs_less_source, self._grid_aligned_mask()
         )
         assert window is None, (
@@ -1430,7 +1430,7 @@ class TestCropBoundsTheReadToTheCrop:
         )
         windowed = self._large_source().crop(mask=mask, touch=True)
         monkeypatch.setattr(
-            Spatial, "_cutline_window_bounds", staticmethod(lambda src, feature: None)
+            _Spatial, "_cutline_window_bounds", staticmethod(lambda src, feature: None)
         )
         full = self._large_source().crop(mask=mask, touch=True)
         assert windowed.shape == full.shape, (
@@ -1449,8 +1449,8 @@ class TestCropBoundsTheReadToTheCrop:
             same window.
         """
         gdf = self._grid_aligned_mask()
-        from_gdf = Spatial._cutline_window_bounds(self._large_source(), gdf)
-        from_fc = Spatial._cutline_window_bounds(
+        from_gdf = _Spatial._cutline_window_bounds(self._large_source(), gdf)
+        from_fc = _Spatial._cutline_window_bounds(
             self._large_source(), FeatureCollection(gdf)
         )
         assert from_gdf == from_fc, (
@@ -1468,7 +1468,7 @@ class TestCropBoundsTheReadToTheCrop:
         """
         dataset = self._large_source()
         reprojected = self._grid_aligned_mask().to_crs(32631)
-        assert Spatial._cutline_window_bounds(dataset, reprojected) is None, (
+        assert _Spatial._cutline_window_bounds(dataset, reprojected) is None, (
             "a reprojected cutline must fall back rather than risk a truncated crop"
         )
 
@@ -1484,7 +1484,7 @@ class TestCropBoundsTheReadToTheCrop:
             np.zeros((10, 10), dtype="float32"),
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0), epsg=4326),
         )
-        window = Spatial._cutline_window_bounds(south_up, self._grid_aligned_mask())
+        window = _Spatial._cutline_window_bounds(south_up, self._grid_aligned_mask())
         assert window is None, "a south-up grid must fall back to the full-source warp"
 
     def test_a_different_crs_cutline_crops_through_the_full_source_fallback(self):
@@ -1514,7 +1514,7 @@ class TestCropBoundsTheReadToTheCrop:
         """An empty cutline yields NaN bounds, so the helper falls back."""
         dataset = self._large_source()
         empty = gpd.GeoDataFrame(geometry=gpd.GeoSeries([], crs=4326))
-        assert Spatial._cutline_window_bounds(dataset, empty) is None, (
+        assert _Spatial._cutline_window_bounds(dataset, empty) is None, (
             "a non-finite (NaN) envelope must fall back to the full-source warp"
         )
 
@@ -1522,7 +1522,7 @@ class TestCropBoundsTheReadToTheCrop:
         """A cutline beyond the source extent clips to an empty window; fall back."""
         dataset = self._large_source()
         outside = gpd.GeoDataFrame(geometry=[box(10.0, 10.0, 11.0, 11.0)], crs=4326)
-        assert Spatial._cutline_window_bounds(dataset, outside) is None, (
+        assert _Spatial._cutline_window_bounds(dataset, outside) is None, (
             "a cutline off the source must clip to empty and fall back"
         )
 
@@ -1533,9 +1533,9 @@ class TestCropBoundsTheReadToTheCrop:
             mask=self._grid_aligned_mask(), touch=True
         )
         crs_less_source = self._crs_less_source()
-        assert Spatial._cutline_window_bounds(crs_less_source, crs_less_mask) is None, (
-            "a CRS-less source must trigger the full-source fallback"
-        )
+        assert (
+            _Spatial._cutline_window_bounds(crs_less_source, crs_less_mask) is None
+        ), "a CRS-less source must trigger the full-source fallback"
         fallback = crs_less_source.crop(mask=crs_less_mask, touch=True)
         assert fallback.shape == reference.shape, (
             f"fallback shape {fallback.shape} != reference {reference.shape}"
@@ -1874,7 +1874,7 @@ class TestCropFillValues:
             the round trip would hand GDAL a value one larger than the dtype
             can hold.
         """
-        assert Spatial._warp_nodata(fills) == expected
+        assert _Spatial._warp_nodata(fills) == expected
 
     @pytest.mark.parametrize(
         ("dtype", "near_value"),

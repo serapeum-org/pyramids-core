@@ -390,7 +390,7 @@ See [Lazy rasters](../../tutorials/lazy/lazy-raster.md#neighborhood-ops-focal_-s
 for chunk-size rules and kernel examples. `zonal_stats` is covered in
 its own [section](../../tutorials/lazy/lazy-raster.md#zonal-statistics-datasetzonal_stats).
 
-::: pyramids.dataset.engines.Analysis
+::: pyramids.dataset.engines._Analysis
     options:
         show_root_heading: true
         show_source: true

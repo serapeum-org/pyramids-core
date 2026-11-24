@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from pyramids.base._domain import inside_domain, is_nan_sentinel, is_no_data
-from pyramids.dataset.engines.analysis import Analysis
+from pyramids.dataset.engines.analysis import _Analysis
 
 pytestmark = pytest.mark.core
 
@@ -117,7 +117,7 @@ class TestNanNodataIsFound:
                 logger=SimpleNamespace(warning=lambda m: emitted.append(m))
             )
         )
-        Analysis._warn_if_nodata_absent(engine, array, sentinel)
+        _Analysis._warn_if_nodata_absent(engine, array, sentinel)
         return emitted
 
     @pytest.mark.parametrize("sentinel", [None, float("nan")])

@@ -151,7 +151,7 @@ class TestSelectErrors:
 
 
 class TestSelectLazy:
-    """`Bands.select(lazy=...)` eager vs VRT-backed."""
+    """`_Bands.select(lazy=...)` eager vs VRT-backed."""
 
     def test_lazy_reads_same_pixels(self):
         """A lazy selection reads the same pixels as the eager one."""

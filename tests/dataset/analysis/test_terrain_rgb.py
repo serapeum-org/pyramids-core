@@ -14,7 +14,7 @@ from osgeo import gdal
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.engines.io import (
-    IO,
+    _IO,
     _encode_terrain_rgb,
     _overview_levels_for_tiling,
     _terrain_rgba_stack,
@@ -298,12 +298,12 @@ class TestTerrainTileMath:
     def test_zoom_zero_is_single_tile(self):
         """At zoom 0 the whole world is a single tile (0, 0)."""
         r = 20037508.34
-        tiles = list(IO._terrain_tile_indices(0, -r, -r, r, r))
+        tiles = list(_IO._terrain_tile_indices(0, -r, -r, r, r))
         assert tiles == [(0, 0)], f"zoom 0 must be one tile (0,0), got {tiles}"
 
     def test_indices_stay_in_range(self):
         """Every emitted tile index is within ``[0, 2**zoom)``."""
-        tiles = list(IO._terrain_tile_indices(5, 0.0, 0.0, 1_000_000.0, 1_000_000.0))
+        tiles = list(_IO._terrain_tile_indices(5, 0.0, 0.0, 1_000_000.0, 1_000_000.0))
         assert tiles, "a covered region must yield at least one tile"
         assert all(0 <= x < 32 and 0 <= y < 32 for x, y in tiles), (
             f"indices out of [0, 32) at zoom 5: {tiles}"
@@ -312,12 +312,14 @@ class TestTerrainTileMath:
     def test_native_zoom_floored_at_min_zoom(self):
         """A coarse pixel size would give a low zoom; ``min_zoom`` is the floor."""
         # huge pixel size -> computed zoom is small/negative -> min_zoom wins
-        assert IO._native_terrain_zoom(1e7, 256, min_zoom=3) == 3, "min_zoom must floor"
+        assert _IO._native_terrain_zoom(1e7, 256, min_zoom=3) == 3, (
+            "min_zoom must floor"
+        )
 
     def test_native_zoom_matches_resolution(self):
         """A finer pixel size yields a higher zoom than a coarser one."""
-        fine = IO._native_terrain_zoom(30.0, 256, 0)
-        coarse = IO._native_terrain_zoom(1000.0, 256, 0)
+        fine = _IO._native_terrain_zoom(30.0, 256, 0)
+        coarse = _IO._native_terrain_zoom(1000.0, 256, 0)
         assert fine > coarse, f"finer pixels need a higher zoom: {fine} <= {coarse}"
 
 
@@ -367,7 +369,7 @@ class TestTilingSourcePreparation:
             )
             return path
 
-        monkeypatch.setattr(IO, "_terrain_rgb_tiles", spy)
+        monkeypatch.setattr(_IO, "_terrain_rgb_tiles", spy)
         return seen
 
     def test_a_reprojected_source_is_staged_with_overviews(self, tmp_path, monkeypatch):
@@ -426,7 +428,7 @@ class TestTilingSourcePreparation:
             seen.append(source)
             return path
 
-        monkeypatch.setattr(IO, "_terrain_rgb_single", spy)
+        monkeypatch.setattr(_IO, "_terrain_rgb_single", spy)
         dem = _dem_3857()
         dem.to_terrain_rgb(tmp_path / "dem.png", tiles=False)
         assert len(seen) == 1, f"expected one encode call, got {len(seen)}"
@@ -552,7 +554,7 @@ class TestTilingScratchCleanup:
             seen.append(source.raster.GetDescription())
             return path
 
-        monkeypatch.setattr(IO, "_terrain_rgb_tiles", spy)
+        monkeypatch.setattr(_IO, "_terrain_rgb_tiles", spy)
         dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
         assert len(seen) == 1, f"expected one tiling call, got {len(seen)}"
         assert not seen[0].startswith("/vsimem"), (

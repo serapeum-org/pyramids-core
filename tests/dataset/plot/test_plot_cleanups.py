@@ -7,7 +7,7 @@ import pytest
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
-from pyramids.dataset.engines import Analysis
+from pyramids.dataset.engines import _Analysis
 from pyramids.netcdf.netcdf import NetCDF
 
 from ._render_helpers import render_array
@@ -81,7 +81,7 @@ class TestPlotPhase3CrossCutting:
     def test_analysis_plot_returns_array_glyph_post_refactor(
         self, random_single_band_for_plot
     ):
-        """`Analysis.plot(band=N)` still returns an ArrayGlyph after D-2.
+        """`_Analysis.plot(band=N)` still returns an ArrayGlyph after D-2.
 
         Test scenario:
             ``Analysis.plot`` is the engine; the D-2 collapse pushes
@@ -91,7 +91,7 @@ class TestPlotPhase3CrossCutting:
         """
         result = random_single_band_for_plot.analysis.plot(band=0)
         assert isinstance(result, ArrayGlyph), (
-            f"Analysis.plot() must return ArrayGlyph after D-2, "
+            f"_Analysis.plot() must return ArrayGlyph after D-2, "
             f"got: {type(result).__name__}"
         )
 

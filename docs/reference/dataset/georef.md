@@ -15,7 +15,7 @@ affine geotransform. Accessed as `ds.georef`, with same-named facades on `Datase
 
 Everything routes through GDAL — pyramids does not implement any sensor model itself.
 
-::: pyramids.dataset.engines.Georef
+::: pyramids.dataset.engines._Georef
     options:
         show_root_heading: true
         show_source: true

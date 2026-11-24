@@ -40,13 +40,13 @@ from pyramids.base.crs import sr_from_epsg
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.engines import (
-    COG,
-    IO,
-    Analysis,
-    Bands,
-    Cell,
-    Spatial,
-    Vectorize,
+    _COG,
+    _IO,
+    _Analysis,
+    _Bands,
+    _Cell,
+    _Spatial,
+    _Vectorize,
 )
 from pyramids.dataset.engines._base import (
     _Engine,
@@ -207,13 +207,13 @@ class TestCollaboratorAttachment:
     @pytest.mark.parametrize(
         "attr_name, expected_type",
         [
-            ("io", IO),
-            ("spatial", Spatial),
-            ("bands", Bands),
-            ("analysis", Analysis),
-            ("cell", Cell),
-            ("vectorize", Vectorize),
-            ("cog", COG),
+            ("io", _IO),
+            ("spatial", _Spatial),
+            ("bands", _Bands),
+            ("analysis", _Analysis),
+            ("cell", _Cell),
+            ("vectorize", _Vectorize),
+            ("cog", _COG),
         ],
     )
     def test_dataset_exposes_collaborator(
@@ -394,7 +394,7 @@ class TestAnalysisNormalize:
             Input ``[0, 5, 10]`` with min=0 and max=10 should produce
             ``[0.0, 0.5, 1.0]``.
         """
-        out = Analysis.normalize(np.array([0.0, 5.0, 10.0]))
+        out = _Analysis.normalize(np.array([0.0, 5.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -408,7 +408,7 @@ class TestAnalysisNormalize:
             A 2x2 array ``[[2, 4], [6, 8]]`` should normalize to a 2x2 array
             with min=0.0 and max=1.0 (linear scaling preserves rank).
         """
-        out = Analysis.normalize(np.array([[2.0, 4.0], [6.0, 8.0]]))
+        out = _Analysis.normalize(np.array([[2.0, 4.0], [6.0, 8.0]]))
         assert float(out.min()) == pytest.approx(0.0), (
             f"Expected min 0.0, got {out.min()}"
         )
@@ -424,7 +424,7 @@ class TestAnalysisNormalize:
             Input ``[-10, 0, 10]`` (range 20, min -10) should map to
             ``[0.0, 0.5, 1.0]``.
         """
-        out = Analysis.normalize(np.array([-10.0, 0.0, 10.0]))
+        out = _Analysis.normalize(np.array([-10.0, 0.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -438,7 +438,7 @@ class TestAnalysisNormalize:
             Integer input should not be returned as a Python list or
             Python scalar; the staticmethod always returns ``np.ndarray``.
         """
-        out = Analysis.normalize(np.array([1, 2, 3, 4]))
+        out = _Analysis.normalize(np.array([1, 2, 3, 4]))
         assert isinstance(out, np.ndarray), (
             f"Expected numpy ndarray, got {type(out).__name__}"
         )
@@ -628,25 +628,25 @@ class TestPickleRoundTrip:
             types — never ``_Placeholder`` instances.
         """
         roundtripped = pickle.loads(pickle.dumps(file_backed_dataset))
-        assert isinstance(roundtripped.io, IO), (
+        assert isinstance(roundtripped.io, _IO), (
             f"Roundtripped ds.io is wrong type: {type(roundtripped.io).__name__}"
         )
-        assert isinstance(roundtripped.spatial, Spatial), (
+        assert isinstance(roundtripped.spatial, _Spatial), (
             f"Roundtripped ds.spatial is wrong type: {type(roundtripped.spatial).__name__}"
         )
-        assert isinstance(roundtripped.bands, Bands), (
+        assert isinstance(roundtripped.bands, _Bands), (
             f"Roundtripped ds.bands is wrong type: {type(roundtripped.bands).__name__}"
         )
-        assert isinstance(roundtripped.analysis, Analysis), (
+        assert isinstance(roundtripped.analysis, _Analysis), (
             f"Roundtripped ds.analysis is wrong type: {type(roundtripped.analysis).__name__}"
         )
-        assert isinstance(roundtripped.cell, Cell), (
+        assert isinstance(roundtripped.cell, _Cell), (
             f"Roundtripped ds.cell is wrong type: {type(roundtripped.cell).__name__}"
         )
-        assert isinstance(roundtripped.vectorize, Vectorize), (
+        assert isinstance(roundtripped.vectorize, _Vectorize), (
             f"Roundtripped ds.vectorize is wrong type: {type(roundtripped.vectorize).__name__}"
         )
-        assert isinstance(roundtripped.cog, COG), (
+        assert isinstance(roundtripped.cog, _COG), (
             f"Roundtripped ds.cog is wrong type: {type(roundtripped.cog).__name__}"
         )
 

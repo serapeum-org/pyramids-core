@@ -7,7 +7,7 @@ from pandas import DataFrame
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines import Analysis
+from pyramids.dataset.engines import _Analysis
 
 pytestmark = pytest.mark.plot
 
@@ -122,7 +122,7 @@ class TestColorRelief:
     @pytest.mark.plot
     def test_process_color_table(self):
 
-        color_table = Analysis._process_color_table(self.df)
+        color_table = _Analysis._process_color_table(self.df)
         assert isinstance(color_table, DataFrame)
         assert all(color_table.columns == ["values", "red", "green", "blue", "alpha"])
 
@@ -137,7 +137,7 @@ class TestColorRelief:
         """
         bad = pd.DataFrame({"values": [1, 2, 3]})
         with pytest.raises(ValueError, match="red, green, blue, or color") as exc_info:
-            Analysis._process_color_table(bad)
+            _Analysis._process_color_table(bad)
         assert "values" in str(exc_info.value), (
             f"error should list the given columns, got: {exc_info.value}"
         )
@@ -330,7 +330,7 @@ class TestPalettePlot:
                 "blue": [255, 0, 0],
             }
         )
-        cmap, bounds = Analysis._palette_colormap(color_table)
+        cmap, bounds = _Analysis._palette_colormap(color_table)
         assert type(cmap).__name__ == "ListedColormap"
         assert cmap.N == 256
         assert len(bounds) == 4

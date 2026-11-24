@@ -8,7 +8,7 @@ from hpc.indexing import get_pixels2
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.io import IO
+from pyramids.dataset.engines.io import _IO
 from tests._helpers import traced_peak
 
 pytestmark = pytest.mark.core
@@ -369,12 +369,12 @@ class TestStreamedConsumers:
     @pytest.fixture
     def tiny_strips(self, monkeypatch):
         """Force `IO.stream_reduce` to 2-row strips so a small raster spans several."""
-        original = IO.stream_reduce
+        original = _IO.stream_reduce
 
         def small(self, fold, initial, *, band=None, strip_rows=256):
             return original(self, fold, initial, band=band, strip_rows=2)
 
-        monkeypatch.setattr(IO, "stream_reduce", small)
+        monkeypatch.setattr(_IO, "stream_reduce", small)
 
     def test_overlay_multi_strip_class_lists_are_byte_identical(self, tiny_strips):
         """`overlay` groups values by class byte-identically across multiple strips.

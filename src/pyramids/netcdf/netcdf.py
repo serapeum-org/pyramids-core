@@ -104,13 +104,13 @@ from pyramids.netcdf.engines import variables as _variables
 from pyramids.netcdf.engines._along_dim import _read_no_data, _reduces_as_a_variable
 from pyramids.netcdf.engines.combine import concat as _concat
 from pyramids.netcdf.engines.combine import merge as _merge
-from pyramids.netcdf.engines.interop import Interop
+from pyramids.netcdf.engines.interop import _Interop
 from pyramids.netcdf.engines.selection import (
     _SPATIAL_AXIS_NAMES,
     CumulativeAccessor,
-    Selection,
+    _Selection,
 )
-from pyramids.netcdf.engines.variables import Variables
+from pyramids.netcdf.engines.variables import _Variables
 from pyramids.netcdf.labeled import LabeledArray
 from pyramids.netcdf.metadata import get_metadata
 from pyramids.netcdf.models import (
@@ -2613,11 +2613,11 @@ class NetCDF(Dataset):
         # not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin
         # façade methods that delegate here (e.g. `nc.<method>()` ->
         # `self.interop.<method>()`).
-        self.interop = Interop(self)
+        self.interop = _Interop(self)
         # `varops` (not `variables`) because `variables` is an existing read-side
         # property returning the lazy variable dict — the engine must not shadow it.
-        self.varops = Variables(self)
-        self.selection = Selection(self)
+        self.varops = _Variables(self)
+        self.selection = _Selection(self)
 
     def close(self) -> None:
         """Release every GDAL handle this container holds, then close the base.
@@ -9060,7 +9060,7 @@ class NetCDF(Dataset):
             # a reversed view.
             warnings.warn(
                 f"could not materialize the multidim view of {self._source_var_name!r}; reads that "
-                "need a window (to_crs, crop, resample, COG) may fail against the reversed view.",
+                "need a window (to_crs, crop, resample, _COG) may fail against the reversed view.",
                 stacklevel=3,
             )
             return
@@ -12454,7 +12454,7 @@ class NetCDF(Dataset):
     ) -> Dataset:
         """Combine two rasters cell by cell, keeping the operands' band dimensions.
 
-        Delegates to `Dataset.combine`. Its engine, `Analysis._combine`, checks the band
+        Delegates to `Dataset.combine`. Its engine, `_Analysis._combine`, checks the band
         layouts through `_combine_layout_source` once the grids and band counts are known to
         agree and before any pixel is read, then labels the result with the band dimensions —
         names, sizes and coordinates — through `_label_combined`, so a combined
@@ -12627,15 +12627,15 @@ class NetCDF(Dataset):
     def _combine_layout_source(
         self, other: Any, band: int | None
     ) -> tuple[NetCDF | None, list[str], NetCDF | None]:
-        """Check the operands' band layouts for `Analysis._combine` and name what to copy.
+        """Check the operands' band layouts for `_Analysis._combine` and name what to copy.
 
-        Every route to a combined raster ends in `Analysis._combine` — the `combine` facade,
+        Every route to a combined raster ends in `_Analysis._combine` — the `combine` facade,
         `analysis.combine` called directly, and every operator through `combine` or `_fold` — so
         the check and the labelling live here and in `_label_combined`, not on any one door.
 
         Args:
             other: The right operand, or `None` when a scalar operator folds this variable with
-                itself (`Analysis._fold`), which leaves no second layout to compare or fill from.
+                itself (`_Analysis._fold`), which leaves no second layout to compare or fill from.
             band: The single band being combined, or `None` for all of them.
 
         Returns:
@@ -12666,7 +12666,7 @@ class NetCDF(Dataset):
         return layout
 
     def _label_combined(self, result: Any, source: Any) -> None:
-        """Copy the band layout onto the raster `Analysis._combine` built.
+        """Copy the band layout onto the raster `_Analysis._combine` built.
 
         Dimensions the operands disagree on keep their name and length and lose their
         coordinates, and the units carried for them in `_band_dim_time_attrs`, since neither
@@ -12906,7 +12906,7 @@ class NetCDF(Dataset):
         """
         disagreeing: list[str] = []
         # An operand agrees with itself: `var + var` and `var.combine(var, ...)` pass one object
-        # twice. A scalar operator's fold never gets here: `Analysis._combine` hands the hook no
+        # twice. A scalar operator's fold never gets here: `_Analysis._combine` hands the hook no
         # other operand.
         for name in () if left is right else left._band_dim_names:
             left_values = left._band_dim_values_map.get(name)

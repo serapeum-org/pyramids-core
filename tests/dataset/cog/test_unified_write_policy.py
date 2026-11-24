@@ -9,7 +9,7 @@ Covers the single-owner write policy now living in
 - dtype-aware auto-resolution of ``predictor`` and ``overview_resampling``;
 - the categorical guardrail firing only on caller-chosen averaging;
 - the ``STATISTICS`` retry now owned by the engine
-  (:meth:`COG._translate_with_statistics_retry`);
+  (:meth:`_COG._translate_with_statistics_retry`);
 - the ``to_cog`` ≡ ``write_cog`` equivalence regression guard.
 """
 
@@ -314,7 +314,7 @@ class TestToCogResamplingGuardrail:
 
 
 class TestStatisticsRetry:
-    """Tests for COG._translate_with_statistics_retry."""
+    """Tests for _COG._translate_with_statistics_retry."""
 
     def test_retries_without_statistics_on_valid_pixels_error(
         self, float_dataset, tmp_path, monkeypatch

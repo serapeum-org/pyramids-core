@@ -25,7 +25,7 @@ reads.
 
 ## Overview-decimated reads
 
-::: pyramids.dataset.engines.cog.COG
+::: pyramids.dataset.engines.cog._COG
     options:
         show_root_heading: true
         show_source: true

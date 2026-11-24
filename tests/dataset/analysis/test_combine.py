@@ -20,7 +20,7 @@ import pytest
 from pyramids.base._errors import AlignmentError, NoDataCollisionWarning
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA, Analysis
+from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA, _Analysis
 
 pytestmark = pytest.mark.core
 
@@ -1027,14 +1027,14 @@ class TestSingleBandBroadcast:
         single = np.ones((4, 4), "float32")
         stack = np.ones((12, 4, 4), "float32")
 
-        left, right = Analysis._broadcast_band_axis(stack, single)
+        left, right = _Analysis._broadcast_band_axis(stack, single)
 
         assert right.shape == (12, 4, 4)
         assert np.shares_memory(right, single), "the stretch must not copy"
         assert left is stack, "the multi-band operand is untouched"
 
         same = np.ones((3, 2, 2), "float32")
-        untouched = Analysis._broadcast_band_axis(same, same)
+        untouched = _Analysis._broadcast_band_axis(same, same)
         assert untouched[0] is same, (
             "an already-shaped left operand must be handed back"
         )
@@ -1082,10 +1082,10 @@ class TestSingleBandBroadcast:
             The three accepting shapes and one rejecting pair, asserted directly so
             the rule is readable in one place.
         """
-        assert Analysis._broadcastable_bands(3, 3) is True
-        assert Analysis._broadcastable_bands(1, 12) is True
-        assert Analysis._broadcastable_bands(12, 1) is True
-        assert Analysis._broadcastable_bands(2, 3) is False
+        assert _Analysis._broadcastable_bands(3, 3) is True
+        assert _Analysis._broadcastable_bands(1, 12) is True
+        assert _Analysis._broadcastable_bands(12, 1) is True
+        assert _Analysis._broadcastable_bands(2, 3) is False
 
 
 class TestSummingRasters:
@@ -1860,7 +1860,7 @@ class TestOneOperandIsReadOnce:
 
     @staticmethod
     def _counting_operand_arrays(monkeypatch) -> list:
-        """Instrument `Analysis._operand_arrays` and return the list it appends to.
+        """Instrument `_Analysis._operand_arrays` and return the list it appends to.
 
         Args:
             monkeypatch: pytest's patcher, so the original is restored after the test.
@@ -1869,13 +1869,13 @@ class TestOneOperandIsReadOnce:
             list: One entry per call, holding the dataset that was read.
         """
         seen: list = []
-        original = Analysis._operand_arrays
+        original = _Analysis._operand_arrays
 
         def counted(ds, band):
             seen.append(ds)
             return original(ds, band)
 
-        monkeypatch.setattr(Analysis, "_operand_arrays", staticmethod(counted))
+        monkeypatch.setattr(_Analysis, "_operand_arrays", staticmethod(counted))
         return seen
 
     def test_a_scalar_operation_reads_the_raster_once(self, monkeypatch):

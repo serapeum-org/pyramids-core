@@ -10,7 +10,7 @@ flowchart LR
     VE --> TR["<b>translate</b><br/>translate"]
 ```
 
-::: pyramids.dataset.engines.Vectorize
+::: pyramids.dataset.engines._Vectorize
     options:
         show_root_heading: true
         show_source: true

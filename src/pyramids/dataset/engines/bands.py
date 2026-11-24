@@ -76,7 +76,7 @@ def _is_read_only_error(error: BaseException) -> bool:
     return _GDAL_READ_ONLY_MESSAGE in str(error)
 
 
-class Bands(_Engine["Dataset"]):
+class _Bands(_Engine["Dataset"]):
     """Mixin providing band metadata, attribute table, and color table operations."""
 
     def apply_names(self, names: list | None, *, source: str) -> bool:
@@ -526,7 +526,7 @@ class Bands(_Engine["Dataset"]):
 
         if attribute_table is not None:
             # Attach the RAT to the raster band
-            rat = Bands._df_to_attribute_table(attribute_table)
+            rat = _Bands._df_to_attribute_table(attribute_table)
             band.SetDefaultRAT(rat)
 
         band.WriteArray(array)

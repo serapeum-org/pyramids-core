@@ -18,7 +18,7 @@ import pyramids.dataset.engines.io as io_engine
 from pyramids._io import new_vsimem_path, read_vsi_bytes
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.cog import COG
+from pyramids.dataset.engines.cog import _COG
 
 pytestmark = pytest.mark.core
 
@@ -361,6 +361,6 @@ class TestToCogBytesStillWorks:
         def _boom(self, path, **kwargs):
             raise ValueError("forced to_cog failure")
 
-        monkeypatch.setattr(COG, "to_cog", _boom)
+        monkeypatch.setattr(_COG, "to_cog", _boom)
         with pytest.raises(ValueError, match="forced to_cog failure"):
             ramp_dataset.to_cog_bytes()

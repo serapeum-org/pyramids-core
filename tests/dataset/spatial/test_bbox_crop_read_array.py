@@ -454,7 +454,7 @@ class TestWindowedBboxCropFastPath:
         """
         fast = dataset.crop(bbox=bbox)
         mocker.patch(
-            "pyramids.dataset.engines.spatial.Spatial._crop_bbox_windowed",
+            "pyramids.dataset.engines.spatial._Spatial._crop_bbox_windowed",
             return_value=None,
         )
         warp = dataset.crop(bbox=bbox)
@@ -496,7 +496,7 @@ class TestWindowedBboxCropFastPath:
         ds = make_ds()
         fast = ds.crop(bbox=bbox)
         mocker.patch(
-            "pyramids.dataset.engines.spatial.Spatial._crop_bbox_windowed",
+            "pyramids.dataset.engines.spatial._Spatial._crop_bbox_windowed",
             return_value=None,
         )
         warp = make_ds().crop(bbox=bbox)
@@ -1110,13 +1110,13 @@ class TestCutlineSegmentLength:
         """
         from shapely.geometry import Point
 
-        from pyramids.dataset.engines.spatial import Spatial
+        from pyramids.dataset.engines.spatial import _Spatial
         from pyramids.feature import FeatureCollection
 
         cutline = FeatureCollection(
             gpd.GeoDataFrame(geometry=[Point(0.0, 0.0)], crs="EPSG:4326")
         )
-        assert Spatial._cutline_segment_length(None, cutline) is None
+        assert _Spatial._cutline_segment_length(None, cutline) is None
 
     def test_returns_none_when_the_scale_cannot_be_measured(self, dataset):
         """An unmeasurable scale falls back to an undensified reprojection.
@@ -1125,13 +1125,13 @@ class TestCutlineSegmentLength:
             Passing a source with no usable geotransform exercises the give-up
             branch, which must answer None rather than propagate.
         """
-        from pyramids.dataset.engines.spatial import Spatial
+        from pyramids.dataset.engines.spatial import _Spatial
         from pyramids.feature import FeatureCollection
 
         cutline = FeatureCollection(
             gpd.GeoDataFrame(geometry=[box(0.0, 0.0, 1.0, 1.0)], crs="EPSG:4326")
         )
-        assert Spatial._cutline_segment_length(object(), cutline) is None
+        assert _Spatial._cutline_segment_length(object(), cutline) is None
 
     def test_scales_with_the_source_pixel(self, dataset):
         """The step tracks the raster's cell size, not a fixed slice of the envelope.
@@ -1141,13 +1141,13 @@ class TestCutlineSegmentLength:
             30 m one. The measured step must be positive and no larger than the
             envelope it densifies.
         """
-        from pyramids.dataset.engines.spatial import Spatial
+        from pyramids.dataset.engines.spatial import _Spatial
         from pyramids.feature import FeatureCollection
 
         cutline = FeatureCollection(
             gpd.GeoDataFrame(geometry=[box(0.1, -0.2, 0.4, -0.05)], crs="EPSG:3857")
         )
-        step = Spatial._cutline_segment_length(dataset, cutline)
+        step = _Spatial._cutline_segment_length(dataset, cutline)
         assert step is None or step > 0, f"a measured step must be positive, got {step}"
 
 
