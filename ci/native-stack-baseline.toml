@@ -27,25 +27,21 @@ threadsafety = "ON"
 # build is pinned to the same tarball in ci/source-build/config.sh.
 version = "2.2.0"
 
-# PROJ and GEOS carry a floor rather than an exact version, because no single value is reachable by
-# all three routes: conda-forge's gdal 3.13.3 requires proj >= 9.9.0 and geos >= 3.15.0, while vcpkg's
-# pinned baseline offers at most proj 9.8.1 and geos 3.14.1. Published 0.81.0 shipped 9.8.1/3.14.1 on
-# four platforms and 9.9.0/3.15.0 on osx-64. Exact-matching something that cannot be equal would mean
-# hand-maintaining exceptions that only ever record expected differences; a floor still fails the case
-# worth catching -- a route silently dragging in an OLDER library than any other ships.
-# `below_version` is an exclusive ceiling at the next major. The floor catches a route lagging; the
-# ceiling catches the other failure a floor cannot see -- a route jumping a major version, which for
-# PROJ or GEOS can change projection and geometry behaviour and must never land in a wheel
-# unnoticed. Unlike a dependency pin this constrains no solver, so it costs nothing but a failed
-# check when upstream genuinely moves, which is the reviewed-decision moment this file is for.
-# Note the ceiling is tight for PROJ (on 9.x) and loose for GEOS, which has been 3.x for years.
+# PROJ and GEOS are matched exactly, like HDF5, because all three routes target the same values:
+# the source build pins them in ci/source-build/config.sh, vcpkg's pinned baseline carries exactly
+# those ports, and pixi.lock resolves them for every platform.
+#
+# An earlier revision used a floor plus a ceiling here, on the belief that no single value was
+# reachable. That was an artifact of one build: the macOS x86_64 cross-compile re-solved from
+# conda-forge instead of installing the lock, so osx-64 alone shipped proj 9.9.0 / geos 3.15.0
+# (#1632, fixed). With the routes aligned at the source, exact matching is both achievable and
+# strictly stronger -- it catches divergence in either direction, where a floor saw only a route
+# lagging and a major-version ceiling saw only a large jump.
 [libraries.proj]
-min_version = "9.8.1"
-below_version = "10"
+version = "9.8.1"
 
 [libraries.geos]
-min_version = "3.14.1"
-below_version = "4"
+version = "3.14.1"
 
 [installed.gdal]
 version = "3.13.3"
