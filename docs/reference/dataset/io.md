@@ -102,7 +102,7 @@ The decoder is the exact inverse of the encoder — for mapbox,
 `height = base_val + (R*65536 + G*256 + B) * interval` — so a written tile
 round-trips to the source elevation within one `interval`.
 
-::: pyramids.dataset.engines.IO
+::: pyramids.dataset.engines._IO
     options:
         show_root_heading: true
         show_source: true

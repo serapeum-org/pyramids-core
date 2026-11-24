@@ -10,7 +10,7 @@ flowchart LR
     BA --> BN["<b>bands & no-data</b><br/>add_band · change_no_data_value"]
 ```
 
-::: pyramids.dataset.engines.Bands
+::: pyramids.dataset.engines._Bands
     options:
         show_root_heading: true
         show_source: true

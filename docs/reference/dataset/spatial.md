@@ -92,7 +92,7 @@ tile = view.read_array(bbox=(...), epsg=3857)   # this window is warped on deman
 Both accept a `method=` resampling name; `warped_view` also takes `cell_size=`
 and `bbox=` to fix the output grid/extent up front.
 
-::: pyramids.dataset.engines.Spatial
+::: pyramids.dataset.engines._Spatial
     options:
         show_root_heading: true
         show_source: true

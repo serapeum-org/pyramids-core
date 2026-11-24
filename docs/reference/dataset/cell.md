@@ -9,7 +9,7 @@ flowchart LR
     CE --> P["<b>pixel ↔ map</b><br/>array_to_map_coordinates<br/>map_to_array_coordinates"]
 ```
 
-::: pyramids.dataset.engines.Cell
+::: pyramids.dataset.engines._Cell
     options:
         show_root_heading: true
         show_source: true
