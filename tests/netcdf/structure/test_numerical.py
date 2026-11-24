@@ -11,11 +11,19 @@ pin the *equivalence* rather than re-deriving the arithmetic.
 """
 
 import warnings
+from unittest import mock
 
 import numpy as np
 import pytest
 
+from pyramids.base._reductions import gaps_as_nan
+from pyramids.base._timeseries import (
+    cumulative_integrate_axis,
+    differentiate_axis,
+    integrate_axis,
+)
 from pyramids.netcdf import ExtraDimensions, GeoReference, NetCDF
+from pyramids.netcdf.engines import _along_dim as along_dim
 from pyramids.netcdf.engines._along_dim import (
     _apply_to_variable,
     _Differentiate,
@@ -1036,3 +1044,118 @@ class TestAZeroSentinelCannotMaskAComputedZero:
         assert _series(rate.reduce("level", "mean")) == [0.0], (
             "a derivative of zero is a value, so the mean of three of them is zero"
         )
+
+
+class TestTheCalculusDelegatesToTheSharedKernels:
+    """D3 (#1618): the three calculus members must call `base/_timeseries`, not re-derive it.
+
+    The differentiate / integrate / cumulative_integrate arithmetic lived twice — once in
+    `base/_timeseries.py` (the home the mesh imports) and once inline in `_along_dim`. After the
+    collapse the `_AlongDim` steps are callers of the single kernels, keeping only the cube's
+    sentinel/band wrapper. These tests pin that the inline arithmetic is gone and that the
+    delegation is behaviour-preserving.
+    """
+
+    @pytest.mark.parametrize(
+        ("member", "kernel_name"),
+        [
+            ("differentiate", "differentiate_axis"),
+            ("integrate", "integrate_axis"),
+            ("cumulative_integrate", "cumulative_integrate_axis"),
+        ],
+    )
+    def test_each_step_actually_calls_its_shared_kernel(self, member, kernel_name):
+        """Running the cube operation invokes the shared kernel (behaviour, not source text).
+
+        Test scenario:
+            The kernel is spied on in the ``_along_dim`` namespace with ``wraps`` so the real
+            arithmetic still runs; invoking the cube's ``differentiate`` / ``integrate`` /
+            ``cumulative_integrate`` must call it. This pins the delegation by behaviour rather
+            than by inspecting the method's source.
+        """
+        planes = np.stack(
+            [np.full((NY, NX), v, dtype="float64") for v in (1.0, 2.0, 4.0)]
+        )
+        source = NetCDF.from_array(
+            planes,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=[0.0, 1.0, 3.0]),
+        )
+        spied = getattr(along_dim, kernel_name)
+        with mock.patch.object(along_dim, kernel_name, wraps=spied) as spy:
+            getattr(source, member)("level")
+        assert spy.called, f"{member} must call {kernel_name}"
+
+    @pytest.mark.parametrize(
+        "member", ["differentiate", "integrate", "cumulative_integrate"]
+    )
+    def test_a_single_step_axis_is_refused_by_the_upstream_guard(self, member):
+        """A ``<2``-step axis raises ``selection.py``'s ``minimum`` guard, not the kernel (L1).
+
+        Test scenario:
+            The extracted kernels also refuse a one-step axis, but the public path is guarded
+            first by the upstream ``minimum`` check. The surfaced message is the guard's
+            (``"needs at least 2 steps"``), unchanged from before the collapse -- so the kernel's
+            own ``<2`` refusal stays shadowed and the length-1 behaviour does not regress.
+        """
+        plane = np.full((1, NY, NX), 5.0, dtype="float64")
+        source = NetCDF.from_array(
+            plane,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=[0.0]),
+        )
+        with pytest.raises(ValueError, match=r"needs at least 2 steps"):
+            getattr(source, member)("level")
+
+    @pytest.mark.parametrize(
+        ("member", "kernel", "keeps_axis"),
+        [
+            ("differentiate", differentiate_axis, True),
+            ("integrate", integrate_axis, False),
+            ("cumulative_integrate", cumulative_integrate_axis, True),
+        ],
+    )
+    def test_the_cube_answer_equals_the_kernel_over_the_same_axis(
+        self, member: str, kernel, keeps_axis: bool
+    ):
+        """The cube wraps the shared kernel's output with its sentinel refill, nothing more.
+
+        This pins the cube's `_Applied` contract *around* the kernel -- that it masks, calls the
+        kernel, and refills the sentinel where the kernel left NaN. It does NOT by itself prove
+        the collapse preserved the old inline arithmetic (the cube and `expected` both call the
+        same kernel); that is pinned by the pre-existing cube value tests in this module and the
+        byte-identical differential proof in the commit body.
+
+        Test scenario:
+            A gap-carrying, unevenly spaced cube (`-9999` at the middle step, stamps
+            `[0, 1, 3]`) answers exactly `kernel(gaps_as_nan(values, -9999), coord)` with the
+            sentinel put back where the kernel left NaN.
+        """
+        values = [1.0, -9999.0, 3.0]
+        stamps = [0.0, 1.0, 3.0]
+        planes = np.stack([np.full((NY, NX), v, dtype="float64") for v in values])
+        source = NetCDF.from_array(
+            planes,
+            geo_ref=_geo_ref(),
+            variable_name="t",
+            no_data_value=-9999.0,
+            dims=ExtraDimensions(name="level", values=list(stamps)),
+        )
+
+        result = getattr(source, member)("level").get_variable("t")
+        got = np.asarray(result.read_array(squeeze=False), dtype="float64")
+
+        coord = np.asarray(stamps, dtype="float64")
+        raw = kernel(gaps_as_nan(planes, -9999.0), coord, axis=0)
+        expected = np.where(np.isnan(raw), -9999.0, raw)
+
+        assert got.shape == expected.shape
+        assert np.array_equal(got, expected, equal_nan=True), (
+            f"{member}: cube {got.ravel()[:6]} != kernel {expected.ravel()[:6]}"
+        )
+        assert result.no_data_value[0] == -9999.0
+        assert (result._band_dim_names == ("level",)) is keeps_axis
