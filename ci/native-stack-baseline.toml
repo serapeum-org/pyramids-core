@@ -13,9 +13,11 @@
 #
 # Only libraries whose version can be read reliably out of the shipped binary belong here. GDAL
 # deliberately does not: a manylinux `libgdal` yields only a spurious "GDAL 3.6.0", macOS yields two
-# candidates, and the Windows DLLs carry no version in their filename. GDAL version parity and the
-# required-driver list are asserted from the *installed* wheel instead, where `osgeo.gdal` can be
-# asked directly -- see ci/check-installed-stack.py.
+# candidates, and the Windows DLLs carry no version in their filename. Its version is asserted from
+# the *installed* wheel instead, where `osgeo.gdal` can be asked directly -- by
+# ci/verify-wheel.py's `_check_gdal_version`, which runs in every job that installs a wheel. The
+# driver set is not declared here at all: that same file's `_check_driver_set` already asserts a
+# superset of it on every platform.
 #
 # ci/check-bundled-stack.py reads this file and runs in every repair step, on the repaired wheel.
 

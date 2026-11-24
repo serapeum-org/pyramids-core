@@ -71,7 +71,10 @@ def _fail(msg: str) -> None:
     raise RuntimeError(msg)
 
 
-# ci/ is this file's own directory, but an invocation from elsewhere would not put it on sys.path.
+# `import native_stack_baseline` needs ci/ on sys.path. CPython prepends a script's own
+# directory for a plain `python ci/verify-wheel.py`, which is how CI invokes this, but NOT under
+# `-I`/`-P`, and not when the module is loaded by path -- which is exactly what the guard
+# tests do. So add it explicitly rather than depend on the invocation.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import native_stack_baseline  # noqa: E402 -- needs the sys.path line above
