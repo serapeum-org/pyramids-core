@@ -164,29 +164,37 @@ def _members_for(archive: zipfile.ZipFile, token: str) -> list[str]:
 
 
 def read_reported(wheel: pathlib.Path, libraries: list[str]) -> dict:
-    """Read what each library in a wheel reports about itself.
+    """Read what every bundled copy of each library reports about itself.
 
     Args:
         wheel: The wheel to inspect.
         libraries: The library tokens to look for.
 
     Returns:
-        A `{library: {property: value}}` mapping, each inner dict also carrying a `_member` key
-        naming the file the values were read from, for the comparison messages. A library maps to an
-        empty dict when the wheel bundles no copy of it, or bundles one whose bytes carry no settings
-        string, which the caller reports as a failure in its own right. When several members report
-        the same property the last one read wins.
+        A `{library: [{property: value}, ...]}` mapping with **one entry per bundled copy** that
+        carries a settings string, each also holding a `_member` key naming the file it was read
+        from. A library maps to an empty list when the wheel bundles no copy of it, or only copies
+        whose bytes carry no settings string -- companions such as `libhdf5_hl` and GDAL's
+        `gdal_hdf5` plugin fall out here -- which the caller reports as a failure in its own right.
+
+        Every copy is kept deliberately. Collapsing them to one reading made the verdict depend on
+        archive order: a non-threadsafe `aa_libhdf5.so` beside a conforming `zz_libhdf5.so` passed,
+        and the same pair renamed failed. The property this whole check exists to defend could
+        therefore ship broken in a wheel that reported `ok` (#1627).
     """
-    reported: dict = {name: {} for name in libraries}
+    reported: dict = {name: [] for name in libraries}
     with zipfile.ZipFile(wheel) as archive:
         for name in libraries:
             for member in _members_for(archive, name):
                 blob = archive.read(member)
+                values = {}
                 for prop, pattern in _EXTRACTORS[name].items():
                     match = pattern.search(blob)
                     if match:
-                        reported[name][prop] = match.group(1).decode("ascii", "replace")
-                        reported[name]["_member"] = member.rsplit("/", 1)[-1]
+                        values[prop] = match.group(1).decode("ascii", "replace")
+                if values:
+                    values["_member"] = member.rsplit("/", 1)[-1]
+                    reported[name].append(values)
     return reported
 
 
@@ -222,33 +230,55 @@ def check_wheel(wheel: pathlib.Path, baseline: dict) -> list[str]:
     reported = read_reported(wheel, list(expected))
     failures = []
     for name, wanted in sorted(expected.items()):
-        got = reported.get(name, {})
-        if not got:
+        readings = reported.get(name) or []
+        if not readings:
             failures.append(f"{wheel.name}: no bundled {name} found")
             print(f"FAIL {wheel.name}: no bundled {name} found")
             continue
-        member = got.get("_member", name)
-        for prop, want in sorted(wanted.items()):
-            if prop == "reason":
-                continue
-            if prop == "min_version":
-                have = got.get("version")
-                line = f"{member} version={have} (want >= {want})"
-                ok = have is not None and _as_tuple(have) >= _as_tuple(want)
-            elif prop == "below_version":
-                have = got.get("version")
-                line = f"{member} version={have} (want < {want})"
-                ok = have is not None and _as_tuple(have) < _as_tuple(want)
-            else:
-                have = got.get(prop)
-                line = f"{member} {prop}={have} (want {want})"
-                ok = have == want
-            if ok:
-                print(f"ok   {wheel.name} [{tag}]: {line}")
-            else:
-                failures.append(f"{wheel.name} [{tag}]: {line}")
-                print(f"FAIL {wheel.name} [{tag}]: {line}")
+        for got in readings:
+            member = got.get("_member", name)
+            _verdict(wheel, tag, member, wanted, got, failures)
     return failures
+
+
+def _verdict(
+    wheel: pathlib.Path,
+    tag: str,
+    member: str,
+    wanted: dict,
+    got: dict,
+    failures: list[str],
+) -> None:
+    """Compare one bundled copy against the baseline, printing and recording each property.
+
+    Args:
+        wheel: The wheel the copy came from, for the message prefix.
+        tag: The wheel's platform tag.
+        member: The bundled file being verdicted.
+        wanted: The baseline properties this library must satisfy.
+        got: What this copy reported.
+        failures: Accumulator appended to for every mismatch.
+    """
+    for prop, want in sorted(wanted.items()):
+        if prop == "reason":
+            continue
+        if prop == "min_version":
+            have = got.get("version")
+            line = f"{member} version={have} (want >= {want})"
+            ok = have is not None and _as_tuple(have) >= _as_tuple(want)
+        elif prop == "below_version":
+            have = got.get("version")
+            line = f"{member} version={have} (want < {want})"
+            ok = have is not None and _as_tuple(have) < _as_tuple(want)
+        else:
+            have = got.get(prop)
+            line = f"{member} {prop}={have} (want {want})"
+            ok = have == want
+        if ok:
+            print(f"ok   {wheel.name} [{tag}]: {line}")
+        else:
+            failures.append(f"{wheel.name} [{tag}]: {line}")
+            print(f"FAIL {wheel.name} [{tag}]: {line}")
 
 
 def _wheels(targets: list[str]) -> list[pathlib.Path]:

@@ -320,13 +320,13 @@ class TestAConformingWheelPasses:
             f"a companion library and a note file must not fail the wheel: {failures}"
         )
 
-    def test_a_library_bundled_twice_is_read_as_one_library(self, tmp_path):
-        """Two copies of the same library collapse into a single reported entry.
+    def test_every_bundled_copy_of_a_library_is_read(self, tmp_path):
+        """Two copies of a library yield two readings, not one.
 
         Test scenario:
-            A repair tool can land one library twice under different mangled names. Both are
-            scanned, so the report must name one copy rather than accumulate a second library
-            the baseline never declared.
+            A repair tool can land one library twice under different mangled names. Collapsing them
+            to a single reading made the verdict depend on archive order, which is what
+            `TestABadCopyCannotHideBehindAGoodOne` pins; this is the reading side of that contract.
         """
         checker = _checker_module("check-bundled-stack.py")
         wheel = _wheel(
@@ -338,14 +338,95 @@ class TestAConformingWheelPasses:
 
         reported = checker.read_reported(wheel, ["hdf5"])
 
-        assert reported["hdf5"]["version"] == "2.2.0", (
-            f"a duplicated library must still report its version: {reported}"
+        assert len(reported["hdf5"]) == 2, (
+            f"both bundled copies must be reported, not collapsed to one: {reported}"
         )
-        assert reported["hdf5"]["_member"].startswith("libhdf5-"), (
-            f"the report should name one of the two copies: {reported}"
+        assert {entry["version"] for entry in reported["hdf5"]} == {"2.2.0"}, (
+            f"each copy must report its own version: {reported}"
         )
-        assert checker.check_wheel(wheel, checker.load_baseline()) == [], (
-            "a wheel carrying two conforming copies must pass"
+
+    def test_a_companion_without_a_settings_string_is_not_reported(self, tmp_path):
+        """`libhdf5_hl` and friends match the token but carry no settings string, so they drop out."""
+        checker = _checker_module("check-bundled-stack.py")
+        wheel = _wheel(
+            tmp_path,
+            extra_members={
+                "pyramids_core.libs/libhdf5_hl-abc.so.320.2.0": b"\x7fELF"
+                + b"\x00" * 64
+            },
+        )
+
+        reported = checker.read_reported(wheel, ["hdf5"])
+
+        assert len(reported["hdf5"]) == 1, (
+            f"a companion carrying no settings string must not become a reading: {reported}"
+        )
+
+
+class TestABadCopyCannotHideBehindAGoodOne:
+    """A non-conforming bundled copy fails the wheel whatever its name sorts next to.
+
+    The checker read every matching member but kept only the last reading, so the verdict depended on
+    archive order: a non-threadsafe `aa_libhdf5.so` beside a conforming `zz_libhdf5.so` passed, and the
+    same pair renamed failed. Thread-safety is the property #1620 was about, so that ordering
+    dependency meant the original defect could ship again in a wheel reporting `ok` (#1627).
+    """
+
+    @pytest.mark.parametrize(
+        ("first", "second", "ids"),
+        [
+            ("OFF", "ON", "bad-copy-sorts-first"),
+            ("ON", "OFF", "bad-copy-sorts-last"),
+        ],
+        ids=["bad-first", "bad-last"],
+    )
+    def test_a_bad_copy_fails_whatever_the_order(self, tmp_path, first, second, ids):
+        """Either ordering must fail, since both bundle a non-threadsafe library.
+
+        Args:
+            tmp_path: Per-test directory.
+            first: Thread-safety of the alphabetically earlier copy.
+            second: Thread-safety of the later copy.
+            ids: Unused label kept so the parametrisation reads explicitly.
+        """
+        wheel = _wheel(
+            tmp_path,
+            extra_members={
+                "pyramids_core.libs/aa_libhdf5-x.so.320.2.0": _library_bytes(
+                    threadsafety=first
+                ),
+                "pyramids_core.libs/zz_libhdf5-y.so.320.2.0": _library_bytes(
+                    threadsafety=second
+                ),
+            },
+        )
+
+        result = _run(wheel)
+
+        assert result.returncode == 1, (
+            f"a wheel bundling a non-threadsafe copy must fail regardless of name order: {result.stdout}"
+        )
+        assert "threadsafety=OFF" in result.stdout, (
+            f"the offending copy must be named in the report: {result.stdout}"
+        )
+
+    def test_both_copies_are_reported_when_both_conform(self, tmp_path):
+        """A conforming wheel verdicts each copy rather than silently checking one."""
+        wheel = _wheel(
+            tmp_path,
+            extra_members={
+                "pyramids_core.libs/aa_libhdf5-x.so.320.2.0": _library_bytes(),
+                "pyramids_core.libs/zz_libhdf5-y.so.320.2.0": _library_bytes(),
+            },
+        )
+
+        result = _run(wheel)
+
+        assert result.returncode == 0, (
+            f"both copies conform, so the wheel passes: {result.stdout}"
+        )
+        assert result.stdout.count("threadsafety=ON") >= 2, (
+            f"each bundled copy must get its own verdict line: {result.stdout}"
         )
 
 
