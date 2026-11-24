@@ -19690,14 +19690,14 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-904" name="__codelineno-0-904"></a>        <span class="c1"># exposes facade methods that delegate to the collaborator,</span>
 <a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="c1"># so both `ds.crop(mask)` and `ds.spatial.crop(mask)` are</span>
 <a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="c1"># equivalent.</span>
-<a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">IO</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-908" name="__codelineno-0-908"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">spatial</span> <span class="o">=</span> <span class="n">Spatial</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-909" name="__codelineno-0-909"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">bands</span> <span class="o">=</span> <span class="n">Bands</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span> <span class="o">=</span> <span class="n">Analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">=</span> <span class="n">Cell</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-912" name="__codelineno-0-912"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vectorize</span> <span class="o">=</span> <span class="n">Vectorize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-913" name="__codelineno-0-913"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">cog</span> <span class="o">=</span> <span class="n">COG</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">georef</span> <span class="o">=</span> <span class="n">Georef</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">_IO</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-908" name="__codelineno-0-908"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">spatial</span> <span class="o">=</span> <span class="n">_Spatial</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-909" name="__codelineno-0-909"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">bands</span> <span class="o">=</span> <span class="n">_Bands</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span> <span class="o">=</span> <span class="n">_Analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">=</span> <span class="n">_Cell</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-912" name="__codelineno-0-912"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vectorize</span> <span class="o">=</span> <span class="n">_Vectorize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-913" name="__codelineno-0-913"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">cog</span> <span class="o">=</span> <span class="n">_COG</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">georef</span> <span class="o">=</span> <span class="n">_Georef</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-915" name="__codelineno-0-915"></a>
 <a id="__codelineno-0-916" name="__codelineno-0-916"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_update_inplace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="n">gdal</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span> <span class="n">access</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-917" name="__codelineno-0-917"></a><span class="w">        </span><span class="sd">"""Swap internal state from a new GDAL dataset.</span>
@@ -20774,7 +20774,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-1988" name="__codelineno-0-1988"></a><span class="sd">        built on it (`point`, `read_part`, `preview`, `get_tile`, the overview reads),</span>
 <a id="__codelineno-0-1989" name="__codelineno-0-1989"></a><span class="sd">        `stats`, `get_histogram`, `plot_histogram`, the domain reads behind `apply` and</span>
 <a id="__codelineno-0-1990" name="__codelineno-0-1990"></a><span class="sd">        `combine`, `stream_transform`, `map_blocks`, `zonal_stats`, the sentinel</span>
-<a id="__codelineno-0-1991" name="__codelineno-0-1991"></a><span class="sd">        conversion in `Analysis._physical_no_data`, and the writers that carry or spend</span>
+<a id="__codelineno-0-1991" name="__codelineno-0-1991"></a><span class="sd">        conversion in `_Analysis._physical_no_data`, and the writers that carry or spend</span>
 <a id="__codelineno-0-1992" name="__codelineno-0-1992"></a><span class="sd">        the recipe (`to_zarr`, `DatasetCollection.to_netcdf`, `NetCDF.set_variable`) --</span>
 <a id="__codelineno-0-1993" name="__codelineno-0-1993"></a><span class="sd">        so they cannot resolve it differently and report the same band in different</span>
 <a id="__codelineno-0-1994" name="__codelineno-0-1994"></a><span class="sd">        units. For a plain raster the band's own `GetScale` / `GetOffset` are the whole</span>
@@ -21192,7 +21192,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2406" name="__codelineno-0-2406"></a><span class="sd">        Defined directly on Dataset (not via the bands collaborator)</span>
 <a id="__codelineno-0-2407" name="__codelineno-0-2407"></a><span class="sd">        because `Dataset.__init__` calls `self._get_band_names()`</span>
 <a id="__codelineno-0-2408" name="__codelineno-0-2408"></a><span class="sd">        before the `Bands` collaborator is wired up. Mirrors</span>
-<a id="__codelineno-0-2409" name="__codelineno-0-2409"></a><span class="sd">        :meth:`Bands._get_band_names`.</span>
+<a id="__codelineno-0-2409" name="__codelineno-0-2409"></a><span class="sd">        :meth:`_Bands._get_band_names`.</span>
 <a id="__codelineno-0-2410" name="__codelineno-0-2410"></a><span class="sd">        """</span>
 <a id="__codelineno-0-2411" name="__codelineno-0-2411"></a>        <span class="n">names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-2412" name="__codelineno-0-2412"></a>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">band_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
@@ -21215,7 +21215,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2429" name="__codelineno-0-2429"></a><span class="sd">        `RasterBase.__init__` calls `_get_epsg()` (which calls</span>
 <a id="__codelineno-0-2430" name="__codelineno-0-2430"></a><span class="sd">        `_get_crs()`) before `Dataset.__init__` has a chance to wire</span>
 <a id="__codelineno-0-2431" name="__codelineno-0-2431"></a><span class="sd">        up the Spatial collaborator. The Spatial collaborator's</span>
-<a id="__codelineno-0-2432" name="__codelineno-0-2432"></a><span class="sd">        `Spatial._get_crs` returns the projection as GDAL reports it; this</span>
+<a id="__codelineno-0-2432" name="__codelineno-0-2432"></a><span class="sd">        `_Spatial._get_crs` returns the projection as GDAL reports it; this</span>
 <a id="__codelineno-0-2433" name="__codelineno-0-2433"></a><span class="sd">        override adds the CF inference on top, so the two bodies differ.</span>
 <a id="__codelineno-0-2434" name="__codelineno-0-2434"></a><span class="sd">        """</span>
 <a id="__codelineno-0-2435" name="__codelineno-0-2435"></a>        <span class="n">crs</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raster</span><span class="o">.</span><span class="n">GetProjection</span><span class="p">())</span>
@@ -21677,14 +21677,14 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2891" name="__codelineno-0-2891"></a>    <span class="n">__array_ufunc__</span> <span class="o">=</span> <span class="kc">None</span>
 <a id="__codelineno-0-2892" name="__codelineno-0-2892"></a>
 <a id="__codelineno-0-2893" name="__codelineno-0-2893"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_combine_layout_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">band</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<a id="__codelineno-0-2894" name="__codelineno-0-2894"></a><span class="w">        </span><span class="sd">"""Check two operands' band layouts before `Analysis._combine` computes, and name the source.</span>
+<a id="__codelineno-0-2894" name="__codelineno-0-2894"></a><span class="w">        </span><span class="sd">"""Check two operands' band layouts before `_Analysis._combine` computes, and name the source.</span>
 <a id="__codelineno-0-2895" name="__codelineno-0-2895"></a>
-<a id="__codelineno-0-2896" name="__codelineno-0-2896"></a><span class="sd">        A hook: `Analysis._combine` calls it on the left operand after the grid and band-count</span>
+<a id="__codelineno-0-2896" name="__codelineno-0-2896"></a><span class="sd">        A hook: `_Analysis._combine` calls it on the left operand after the grid and band-count</span>
 <a id="__codelineno-0-2897" name="__codelineno-0-2897"></a><span class="sd">        checks, and hands what it returns to `_label_combined`. A plain raster has no band</span>
 <a id="__codelineno-0-2898" name="__codelineno-0-2898"></a><span class="sd">        dimensions, so it checks nothing and names no source; `NetCDF` overrides it.</span>
 <a id="__codelineno-0-2899" name="__codelineno-0-2899"></a>
 <a id="__codelineno-0-2900" name="__codelineno-0-2900"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-2901" name="__codelineno-0-2901"></a><span class="sd">            other: The right operand, or `None` when `Analysis._fold` combines this raster with</span>
+<a id="__codelineno-0-2901" name="__codelineno-0-2901"></a><span class="sd">            other: The right operand, or `None` when `_Analysis._fold` combines this raster with</span>
 <a id="__codelineno-0-2902" name="__codelineno-0-2902"></a><span class="sd">                itself.</span>
 <a id="__codelineno-0-2903" name="__codelineno-0-2903"></a><span class="sd">            band: The single band being combined, or `None` for all of them.</span>
 <a id="__codelineno-0-2904" name="__codelineno-0-2904"></a>
@@ -21693,7 +21693,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2907" name="__codelineno-0-2907"></a><span class="sd">        """</span>
 <a id="__codelineno-0-2908" name="__codelineno-0-2908"></a>
 <a id="__codelineno-0-2909" name="__codelineno-0-2909"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_label_combined</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-2910" name="__codelineno-0-2910"></a><span class="w">        </span><span class="sd">"""Label a combined result with its operands' band layout, after `Analysis._combine`.</span>
+<a id="__codelineno-0-2910" name="__codelineno-0-2910"></a><span class="w">        </span><span class="sd">"""Label a combined result with its operands' band layout, after `_Analysis._combine`.</span>
 <a id="__codelineno-0-2911" name="__codelineno-0-2911"></a>
 <a id="__codelineno-0-2912" name="__codelineno-0-2912"></a><span class="sd">        A hook, paired with `_combine_layout_source`. A plain raster has no layout to carry;</span>
 <a id="__codelineno-0-2913" name="__codelineno-0-2913"></a><span class="sd">        `NetCDF` overrides it.</span>
@@ -21718,7 +21718,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-2932" name="__codelineno-0-2932"></a>
 <a id="__codelineno-0-2933" name="__codelineno-0-2933"></a><span class="sd">        A scalar takes the **same** route as a raster operand — `combine`'s</span>
 <a id="__codelineno-0-2934" name="__codelineno-0-2934"></a><span class="sd">        machinery, with the constant folded into the callable and this raster read</span>
-<a id="__codelineno-0-2935" name="__codelineno-0-2935"></a><span class="sd">        once rather than twice (:meth:`Analysis._fold`) — so `ds * 2` agrees with</span>
+<a id="__codelineno-0-2935" name="__codelineno-0-2935"></a><span class="sd">        once rather than twice (:meth:`_Analysis._fold`) — so `ds * 2` agrees with</span>
 <a id="__codelineno-0-2936" name="__codelineno-0-2936"></a><span class="sd">        `ds * other` on band count, dtype and sentinel. It does *not* always</span>
 <a id="__codelineno-0-2937" name="__codelineno-0-2937"></a><span class="sd">        agree with `ds.apply(lambda v: v * 2)`: :meth:`apply` transforms one</span>
 <a id="__codelineno-0-2938" name="__codelineno-0-2938"></a><span class="sd">        band and keeps the source's sentinel, while :meth:`combine` spans every</span>
@@ -21831,7 +21831,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3045" name="__codelineno-0-3045"></a>
 <a id="__codelineno-0-3046" name="__codelineno-0-3046"></a><span class="sd">        Nothing short-circuits *here*: the operators that land on this method have no</span>
 <a id="__codelineno-0-3047" name="__codelineno-0-3047"></a><span class="sd">        left identity to absorb — `0 - ds` negates and `1 / ds` is a reciprocal — so</span>
-<a id="__codelineno-0-3048" name="__codelineno-0-3048"></a><span class="sd">        every call computes. It does so through :meth:`Analysis._fold`, one read of</span>
+<a id="__codelineno-0-3048" name="__codelineno-0-3048"></a><span class="sd">        every call computes. It does so through :meth:`_Analysis._fold`, one read of</span>
 <a id="__codelineno-0-3049" name="__codelineno-0-3049"></a><span class="sd">        this raster with the scalar folded into the callable, which is what keeps</span>
 <a id="__codelineno-0-3050" name="__codelineno-0-3050"></a><span class="sd">        `2 - ds` agreeing with `ds - 2` on band span, dtype and derived sentinel.</span>
 <a id="__codelineno-0-3051" name="__codelineno-0-3051"></a>
@@ -21854,7 +21854,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3068" name="__codelineno-0-3068"></a><span class="sd">        See Also:</span>
 <a id="__codelineno-0-3069" name="__codelineno-0-3069"></a><span class="sd">            Dataset._arithmetic: The left-hand form, and the identity short-circuit</span>
 <a id="__codelineno-0-3070" name="__codelineno-0-3070"></a><span class="sd">                the commutative operators share with it.</span>
-<a id="__codelineno-0-3071" name="__codelineno-0-3071"></a><span class="sd">            Analysis._fold: The single-read path the computed result comes back</span>
+<a id="__codelineno-0-3071" name="__codelineno-0-3071"></a><span class="sd">            _Analysis._fold: The single-read path the computed result comes back</span>
 <a id="__codelineno-0-3072" name="__codelineno-0-3072"></a><span class="sd">                through.</span>
 <a id="__codelineno-0-3073" name="__codelineno-0-3073"></a><span class="sd">        """</span>
 <a id="__codelineno-0-3074" name="__codelineno-0-3074"></a>        <span class="n">result</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">NotImplemented</span>
@@ -22409,7 +22409,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3623" name="__codelineno-0-3623"></a>
 <a id="__codelineno-0-3624" name="__codelineno-0-3624"></a><span class="sd">        Exponentiation does not commute, so this cannot defer to :meth:`__pow__`; the</span>
 <a id="__codelineno-0-3625" name="__codelineno-0-3625"></a><span class="sd">        operands keep the order the caller wrote them in, computed through</span>
-<a id="__codelineno-0-3626" name="__codelineno-0-3626"></a><span class="sd">        :meth:`Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype</span>
+<a id="__codelineno-0-3626" name="__codelineno-0-3626"></a><span class="sd">        :meth:`_Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype</span>
 <a id="__codelineno-0-3627" name="__codelineno-0-3627"></a><span class="sd">        NumPy makes of the base and the cells, exactly as `ds ** other` does.</span>
 <a id="__codelineno-0-3628" name="__codelineno-0-3628"></a>
 <a id="__codelineno-0-3629" name="__codelineno-0-3629"></a><span class="sd">        Args:</span>
@@ -22448,7 +22448,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3662" name="__codelineno-0-3662"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__neg__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-3663" name="__codelineno-0-3663"></a><span class="w">        </span><span class="sd">"""Negate every cell, `-ds`, keeping gaps and band dimensions.</span>
 <a id="__codelineno-0-3664" name="__codelineno-0-3664"></a>
-<a id="__codelineno-0-3665" name="__codelineno-0-3665"></a><span class="sd">        A one-operand transform run through :meth:`Analysis._fold`, so it inherits the</span>
+<a id="__codelineno-0-3665" name="__codelineno-0-3665"></a><span class="sd">        A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the</span>
 <a id="__codelineno-0-3666" name="__codelineno-0-3666"></a><span class="sd">        same no-data domain, band-dimension labelling and dtype behaviour as the binary</span>
 <a id="__codelineno-0-3667" name="__codelineno-0-3667"></a><span class="sd">        operators: a masked cell stays masked, every band is negated, and a signed band</span>
 <a id="__codelineno-0-3668" name="__codelineno-0-3668"></a><span class="sd">        keeps its dtype.</span>
@@ -22476,14 +22476,14 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3690" name="__codelineno-0-3690"></a>
 <a id="__codelineno-0-3691" name="__codelineno-0-3691"></a><span class="sd">        See Also:</span>
 <a id="__codelineno-0-3692" name="__codelineno-0-3692"></a><span class="sd">            Dataset.__abs__: The magnitude, the other unary transform.</span>
-<a id="__codelineno-0-3693" name="__codelineno-0-3693"></a><span class="sd">            Analysis._fold: The single-read path the result comes back through.</span>
+<a id="__codelineno-0-3693" name="__codelineno-0-3693"></a><span class="sd">            _Analysis._fold: The single-read path the result comes back through.</span>
 <a id="__codelineno-0-3694" name="__codelineno-0-3694"></a><span class="sd">        """</span>
 <a id="__codelineno-0-3695" name="__codelineno-0-3695"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">_fold</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">neg</span><span class="p">)</span>
 <a id="__codelineno-0-3696" name="__codelineno-0-3696"></a>
 <a id="__codelineno-0-3697" name="__codelineno-0-3697"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__abs__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-3698" name="__codelineno-0-3698"></a><span class="w">        </span><span class="sd">"""Take the magnitude of every cell, `abs(ds)`, keeping gaps and band dimensions.</span>
 <a id="__codelineno-0-3699" name="__codelineno-0-3699"></a>
-<a id="__codelineno-0-3700" name="__codelineno-0-3700"></a><span class="sd">        A one-operand transform run through :meth:`Analysis._fold`, so it inherits the</span>
+<a id="__codelineno-0-3700" name="__codelineno-0-3700"></a><span class="sd">        A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the</span>
 <a id="__codelineno-0-3701" name="__codelineno-0-3701"></a><span class="sd">        same no-data domain, band-dimension labelling and dtype behaviour as the binary</span>
 <a id="__codelineno-0-3702" name="__codelineno-0-3702"></a><span class="sd">        operators: a masked cell stays masked and every band is folded.</span>
 <a id="__codelineno-0-3703" name="__codelineno-0-3703"></a>
@@ -22510,7 +22510,7 @@ release deterministic on Windows.</p>
 <a id="__codelineno-0-3724" name="__codelineno-0-3724"></a>
 <a id="__codelineno-0-3725" name="__codelineno-0-3725"></a><span class="sd">        See Also:</span>
 <a id="__codelineno-0-3726" name="__codelineno-0-3726"></a><span class="sd">            Dataset.__neg__: The sign flip, the other unary transform.</span>
-<a id="__codelineno-0-3727" name="__codelineno-0-3727"></a><span class="sd">            Analysis._fold: The single-read path the result comes back through.</span>
+<a id="__codelineno-0-3727" name="__codelineno-0-3727"></a><span class="sd">            _Analysis._fold: The single-read path the result comes back through.</span>
 <a id="__codelineno-0-3728" name="__codelineno-0-3728"></a><span class="sd">        """</span>
 <a id="__codelineno-0-3729" name="__codelineno-0-3729"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">_fold</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">abs</span><span class="p">)</span>
 <a id="__codelineno-0-3730" name="__codelineno-0-3730"></a>
@@ -28131,14 +28131,14 @@ captures nothing (#1025).</p>
 <a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="c1"># exposes facade methods that delegate to the collaborator,</span>
 <a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="c1"># so both `ds.crop(mask)` and `ds.spatial.crop(mask)` are</span>
 <a id="__codelineno-0-906" name="__codelineno-0-906"></a>    <span class="c1"># equivalent.</span>
-<a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">IO</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-908" name="__codelineno-0-908"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">spatial</span> <span class="o">=</span> <span class="n">Spatial</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-909" name="__codelineno-0-909"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">bands</span> <span class="o">=</span> <span class="n">Bands</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-910" name="__codelineno-0-910"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span> <span class="o">=</span> <span class="n">Analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">=</span> <span class="n">Cell</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-912" name="__codelineno-0-912"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">vectorize</span> <span class="o">=</span> <span class="n">Vectorize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">cog</span> <span class="o">=</span> <span class="n">COG</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">georef</span> <span class="o">=</span> <span class="n">Georef</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">_IO</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-908" name="__codelineno-0-908"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">spatial</span> <span class="o">=</span> <span class="n">_Spatial</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-909" name="__codelineno-0-909"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">bands</span> <span class="o">=</span> <span class="n">_Bands</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-910" name="__codelineno-0-910"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span> <span class="o">=</span> <span class="n">_Analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">=</span> <span class="n">_Cell</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-912" name="__codelineno-0-912"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">vectorize</span> <span class="o">=</span> <span class="n">_Vectorize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">cog</span> <span class="o">=</span> <span class="n">_COG</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">georef</span> <span class="o">=</span> <span class="n">_Georef</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -36663,7 +36663,7 @@ warning, raised where a cell of this raster holds zero.</p>
         <p>Raise a scalar to this raster's cells — <code>2 ** ds</code>, not <code>ds ** 2</code>.</p>
 <p>Exponentiation does not commute, so this cannot defer to :meth:<code>__pow__</code>; the
 operands keep the order the caller wrote them in, computed through
-:meth:<code>Analysis._fold</code> (one read of this raster). <code>2 ** ds</code> takes whatever dtype
+:meth:<code>_Analysis._fold</code> (one read of this raster). <code>2 ** ds</code> takes whatever dtype
 NumPy makes of the base and the cells, exactly as <code>ds ** other</code> does.</p>
 
 
@@ -36841,7 +36841,7 @@ as-is, exactly as on <code>__pow__</code>.</p>
 <a id="__codelineno-0-3623" name="__codelineno-0-3623"></a>
 <a id="__codelineno-0-3624" name="__codelineno-0-3624"></a><span class="sd">    Exponentiation does not commute, so this cannot defer to :meth:`__pow__`; the</span>
 <a id="__codelineno-0-3625" name="__codelineno-0-3625"></a><span class="sd">    operands keep the order the caller wrote them in, computed through</span>
-<a id="__codelineno-0-3626" name="__codelineno-0-3626"></a><span class="sd">    :meth:`Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype</span>
+<a id="__codelineno-0-3626" name="__codelineno-0-3626"></a><span class="sd">    :meth:`_Analysis._fold` (one read of this raster). `2 ** ds` takes whatever dtype</span>
 <a id="__codelineno-0-3627" name="__codelineno-0-3627"></a><span class="sd">    NumPy makes of the base and the cells, exactly as `ds ** other` does.</span>
 <a id="__codelineno-0-3628" name="__codelineno-0-3628"></a>
 <a id="__codelineno-0-3629" name="__codelineno-0-3629"></a><span class="sd">    Args:</span>
@@ -36894,7 +36894,7 @@ as-is, exactly as on <code>__pow__</code>.</p>
     <div class="doc doc-contents ">
 
         <p>Negate every cell, <code>-ds</code>, keeping gaps and band dimensions.</p>
-<p>A one-operand transform run through :meth:<code>Analysis._fold</code>, so it inherits the
+<p>A one-operand transform run through :meth:<code>_Analysis._fold</code>, so it inherits the
 same no-data domain, band-dimension labelling and dtype behaviour as the binary
 operators: a masked cell stays masked, every band is negated, and a signed band
 keeps its dtype.</p>
@@ -36943,7 +36943,7 @@ for the band. Negate a signed or float band if a true sign flip is wanted.</p>
 <details class="see-also" open>
   <summary>See Also</summary>
   <p>Dataset.<strong>abs</strong>: The magnitude, the other unary transform.
-Analysis._fold: The single-read path the result comes back through.</p>
+_Analysis._fold: The single-read path the result comes back through.</p>
 </details>
 
             <details class="mkdocstrings-source">
@@ -36984,7 +36984,7 @@ Analysis._fold: The single-read path the result comes back through.</p>
 <span class="normal"><a href="#__codelineno-0-3695">3695</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-3662" name="__codelineno-0-3662"></a><span class="k">def</span><span class="w"> </span><span class="fm">__neg__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-3663" name="__codelineno-0-3663"></a><span class="w">    </span><span class="sd">"""Negate every cell, `-ds`, keeping gaps and band dimensions.</span>
 <a id="__codelineno-0-3664" name="__codelineno-0-3664"></a>
-<a id="__codelineno-0-3665" name="__codelineno-0-3665"></a><span class="sd">    A one-operand transform run through :meth:`Analysis._fold`, so it inherits the</span>
+<a id="__codelineno-0-3665" name="__codelineno-0-3665"></a><span class="sd">    A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the</span>
 <a id="__codelineno-0-3666" name="__codelineno-0-3666"></a><span class="sd">    same no-data domain, band-dimension labelling and dtype behaviour as the binary</span>
 <a id="__codelineno-0-3667" name="__codelineno-0-3667"></a><span class="sd">    operators: a masked cell stays masked, every band is negated, and a signed band</span>
 <a id="__codelineno-0-3668" name="__codelineno-0-3668"></a><span class="sd">    keeps its dtype.</span>
@@ -37012,7 +37012,7 @@ Analysis._fold: The single-read path the result comes back through.</p>
 <a id="__codelineno-0-3690" name="__codelineno-0-3690"></a>
 <a id="__codelineno-0-3691" name="__codelineno-0-3691"></a><span class="sd">    See Also:</span>
 <a id="__codelineno-0-3692" name="__codelineno-0-3692"></a><span class="sd">        Dataset.__abs__: The magnitude, the other unary transform.</span>
-<a id="__codelineno-0-3693" name="__codelineno-0-3693"></a><span class="sd">        Analysis._fold: The single-read path the result comes back through.</span>
+<a id="__codelineno-0-3693" name="__codelineno-0-3693"></a><span class="sd">        _Analysis._fold: The single-read path the result comes back through.</span>
 <a id="__codelineno-0-3694" name="__codelineno-0-3694"></a><span class="sd">    """</span>
 <a id="__codelineno-0-3695" name="__codelineno-0-3695"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">_fold</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">neg</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -37033,7 +37033,7 @@ Analysis._fold: The single-read path the result comes back through.</p>
     <div class="doc doc-contents ">
 
         <p>Take the magnitude of every cell, <code>abs(ds)</code>, keeping gaps and band dimensions.</p>
-<p>A one-operand transform run through :meth:<code>Analysis._fold</code>, so it inherits the
+<p>A one-operand transform run through :meth:<code>_Analysis._fold</code>, so it inherits the
 same no-data domain, band-dimension labelling and dtype behaviour as the binary
 operators: a masked cell stays masked and every band is folded.</p>
 <p>Two numpy-native edges to know: on an unsigned band <code>abs(ds)</code> is a no-op (every
@@ -37081,7 +37081,7 @@ does not fit <code>int16</code>. Cast to a wider or float band first if that mat
 <details class="see-also" open>
   <summary>See Also</summary>
   <p>Dataset.<strong>neg</strong>: The sign flip, the other unary transform.
-Analysis._fold: The single-read path the result comes back through.</p>
+_Analysis._fold: The single-read path the result comes back through.</p>
 </details>
 
             <details class="mkdocstrings-source">
@@ -37121,7 +37121,7 @@ Analysis._fold: The single-read path the result comes back through.</p>
 <span class="normal"><a href="#__codelineno-0-3729">3729</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-3697" name="__codelineno-0-3697"></a><span class="k">def</span><span class="w"> </span><span class="fm">__abs__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <a id="__codelineno-0-3698" name="__codelineno-0-3698"></a><span class="w">    </span><span class="sd">"""Take the magnitude of every cell, `abs(ds)`, keeping gaps and band dimensions.</span>
 <a id="__codelineno-0-3699" name="__codelineno-0-3699"></a>
-<a id="__codelineno-0-3700" name="__codelineno-0-3700"></a><span class="sd">    A one-operand transform run through :meth:`Analysis._fold`, so it inherits the</span>
+<a id="__codelineno-0-3700" name="__codelineno-0-3700"></a><span class="sd">    A one-operand transform run through :meth:`_Analysis._fold`, so it inherits the</span>
 <a id="__codelineno-0-3701" name="__codelineno-0-3701"></a><span class="sd">    same no-data domain, band-dimension labelling and dtype behaviour as the binary</span>
 <a id="__codelineno-0-3702" name="__codelineno-0-3702"></a><span class="sd">    operators: a masked cell stays masked and every band is folded.</span>
 <a id="__codelineno-0-3703" name="__codelineno-0-3703"></a>
@@ -37148,7 +37148,7 @@ Analysis._fold: The single-read path the result comes back through.</p>
 <a id="__codelineno-0-3724" name="__codelineno-0-3724"></a>
 <a id="__codelineno-0-3725" name="__codelineno-0-3725"></a><span class="sd">    See Also:</span>
 <a id="__codelineno-0-3726" name="__codelineno-0-3726"></a><span class="sd">        Dataset.__neg__: The sign flip, the other unary transform.</span>
-<a id="__codelineno-0-3727" name="__codelineno-0-3727"></a><span class="sd">        Analysis._fold: The single-read path the result comes back through.</span>
+<a id="__codelineno-0-3727" name="__codelineno-0-3727"></a><span class="sd">        _Analysis._fold: The single-read path the result comes back through.</span>
 <a id="__codelineno-0-3728" name="__codelineno-0-3728"></a><span class="sd">    """</span>
 <a id="__codelineno-0-3729" name="__codelineno-0-3729"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">_fold</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">abs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>

@@ -24597,11 +24597,11 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-2613" name="__codelineno-0-2613"></a>        <span class="c1"># not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin</span>
 <a id="__codelineno-0-2614" name="__codelineno-0-2614"></a>        <span class="c1"># façade methods that delegate here (e.g. `nc.&lt;method&gt;()` -&gt;</span>
 <a id="__codelineno-0-2615" name="__codelineno-0-2615"></a>        <span class="c1"># `self.interop.&lt;method&gt;()`).</span>
-<a id="__codelineno-0-2616" name="__codelineno-0-2616"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">interop</span> <span class="o">=</span> <span class="n">Interop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2616" name="__codelineno-0-2616"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">interop</span> <span class="o">=</span> <span class="n">_Interop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-2617" name="__codelineno-0-2617"></a>        <span class="c1"># `varops` (not `variables`) because `variables` is an existing read-side</span>
 <a id="__codelineno-0-2618" name="__codelineno-0-2618"></a>        <span class="c1"># property returning the lazy variable dict — the engine must not shadow it.</span>
-<a id="__codelineno-0-2619" name="__codelineno-0-2619"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">varops</span> <span class="o">=</span> <span class="n">Variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-2620" name="__codelineno-0-2620"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2619" name="__codelineno-0-2619"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">varops</span> <span class="o">=</span> <span class="n">_Variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2620" name="__codelineno-0-2620"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">selection</span> <span class="o">=</span> <span class="n">_Selection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-2621" name="__codelineno-0-2621"></a>
 <a id="__codelineno-0-2622" name="__codelineno-0-2622"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-2623" name="__codelineno-0-2623"></a><span class="w">        </span><span class="sd">"""Release every GDAL handle this container holds, then close the base.</span>
@@ -31044,7 +31044,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-9060" name="__codelineno-0-9060"></a>            <span class="c1"># a reversed view.</span>
 <a id="__codelineno-0-9061" name="__codelineno-0-9061"></a>            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
 <a id="__codelineno-0-9062" name="__codelineno-0-9062"></a>                <span class="sa">f</span><span class="s2">"could not materialize the multidim view of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_var_name</span><span class="si">!r}</span><span class="s2">; reads that "</span>
-<a id="__codelineno-0-9063" name="__codelineno-0-9063"></a>                <span class="s2">"need a window (to_crs, crop, resample, COG) may fail against the reversed view."</span><span class="p">,</span>
+<a id="__codelineno-0-9063" name="__codelineno-0-9063"></a>                <span class="s2">"need a window (to_crs, crop, resample, _COG) may fail against the reversed view."</span><span class="p">,</span>
 <a id="__codelineno-0-9064" name="__codelineno-0-9064"></a>                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
 <a id="__codelineno-0-9065" name="__codelineno-0-9065"></a>            <span class="p">)</span>
 <a id="__codelineno-0-9066" name="__codelineno-0-9066"></a>            <span class="k">return</span>
@@ -34438,7 +34438,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-12454" name="__codelineno-0-12454"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 <a id="__codelineno-0-12455" name="__codelineno-0-12455"></a><span class="w">        </span><span class="sd">"""Combine two rasters cell by cell, keeping the operands' band dimensions.</span>
 <a id="__codelineno-0-12456" name="__codelineno-0-12456"></a>
-<a id="__codelineno-0-12457" name="__codelineno-0-12457"></a><span class="sd">        Delegates to `Dataset.combine`. Its engine, `Analysis._combine`, checks the band</span>
+<a id="__codelineno-0-12457" name="__codelineno-0-12457"></a><span class="sd">        Delegates to `Dataset.combine`. Its engine, `_Analysis._combine`, checks the band</span>
 <a id="__codelineno-0-12458" name="__codelineno-0-12458"></a><span class="sd">        layouts through `_combine_layout_source` once the grids and band counts are known to</span>
 <a id="__codelineno-0-12459" name="__codelineno-0-12459"></a><span class="sd">        agree and before any pixel is read, then labels the result with the band dimensions —</span>
 <a id="__codelineno-0-12460" name="__codelineno-0-12460"></a><span class="sd">        names, sizes and coordinates — through `_label_combined`, so a combined</span>
@@ -34611,15 +34611,15 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-12627" name="__codelineno-0-12627"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_combine_layout_source</span><span class="p">(</span>
 <a id="__codelineno-0-12628" name="__codelineno-0-12628"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">band</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
 <a id="__codelineno-0-12629" name="__codelineno-0-12629"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NetCDF</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">NetCDF</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<a id="__codelineno-0-12630" name="__codelineno-0-12630"></a><span class="w">        </span><span class="sd">"""Check the operands' band layouts for `Analysis._combine` and name what to copy.</span>
+<a id="__codelineno-0-12630" name="__codelineno-0-12630"></a><span class="w">        </span><span class="sd">"""Check the operands' band layouts for `_Analysis._combine` and name what to copy.</span>
 <a id="__codelineno-0-12631" name="__codelineno-0-12631"></a>
-<a id="__codelineno-0-12632" name="__codelineno-0-12632"></a><span class="sd">        Every route to a combined raster ends in `Analysis._combine` — the `combine` facade,</span>
+<a id="__codelineno-0-12632" name="__codelineno-0-12632"></a><span class="sd">        Every route to a combined raster ends in `_Analysis._combine` — the `combine` facade,</span>
 <a id="__codelineno-0-12633" name="__codelineno-0-12633"></a><span class="sd">        `analysis.combine` called directly, and every operator through `combine` or `_fold` — so</span>
 <a id="__codelineno-0-12634" name="__codelineno-0-12634"></a><span class="sd">        the check and the labelling live here and in `_label_combined`, not on any one door.</span>
 <a id="__codelineno-0-12635" name="__codelineno-0-12635"></a>
 <a id="__codelineno-0-12636" name="__codelineno-0-12636"></a><span class="sd">        Args:</span>
 <a id="__codelineno-0-12637" name="__codelineno-0-12637"></a><span class="sd">            other: The right operand, or `None` when a scalar operator folds this variable with</span>
-<a id="__codelineno-0-12638" name="__codelineno-0-12638"></a><span class="sd">                itself (`Analysis._fold`), which leaves no second layout to compare or fill from.</span>
+<a id="__codelineno-0-12638" name="__codelineno-0-12638"></a><span class="sd">                itself (`_Analysis._fold`), which leaves no second layout to compare or fill from.</span>
 <a id="__codelineno-0-12639" name="__codelineno-0-12639"></a><span class="sd">            band: The single band being combined, or `None` for all of them.</span>
 <a id="__codelineno-0-12640" name="__codelineno-0-12640"></a>
 <a id="__codelineno-0-12641" name="__codelineno-0-12641"></a><span class="sd">        Returns:</span>
@@ -34650,7 +34650,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-12666" name="__codelineno-0-12666"></a>        <span class="k">return</span> <span class="n">layout</span>
 <a id="__codelineno-0-12667" name="__codelineno-0-12667"></a>
 <a id="__codelineno-0-12668" name="__codelineno-0-12668"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_label_combined</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-12669" name="__codelineno-0-12669"></a><span class="w">        </span><span class="sd">"""Copy the band layout onto the raster `Analysis._combine` built.</span>
+<a id="__codelineno-0-12669" name="__codelineno-0-12669"></a><span class="w">        </span><span class="sd">"""Copy the band layout onto the raster `_Analysis._combine` built.</span>
 <a id="__codelineno-0-12670" name="__codelineno-0-12670"></a>
 <a id="__codelineno-0-12671" name="__codelineno-0-12671"></a><span class="sd">        Dimensions the operands disagree on keep their name and length and lose their</span>
 <a id="__codelineno-0-12672" name="__codelineno-0-12672"></a><span class="sd">        coordinates, and the units carried for them in `_band_dim_time_attrs`, since neither</span>
@@ -34890,7 +34890,7 @@ The NetCDF class contains methods to deal with NetCDF files.</p>
 <a id="__codelineno-0-12906" name="__codelineno-0-12906"></a><span class="sd">        """</span>
 <a id="__codelineno-0-12907" name="__codelineno-0-12907"></a>        <span class="n">disagreeing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-12908" name="__codelineno-0-12908"></a>        <span class="c1"># An operand agrees with itself: `var + var` and `var.combine(var, ...)` pass one object</span>
-<a id="__codelineno-0-12909" name="__codelineno-0-12909"></a>        <span class="c1"># twice. A scalar operator's fold never gets here: `Analysis._combine` hands the hook no</span>
+<a id="__codelineno-0-12909" name="__codelineno-0-12909"></a>        <span class="c1"># twice. A scalar operator's fold never gets here: `_Analysis._combine` hands the hook no</span>
 <a id="__codelineno-0-12910" name="__codelineno-0-12910"></a>        <span class="c1"># other operand.</span>
 <a id="__codelineno-0-12911" name="__codelineno-0-12911"></a>        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">()</span> <span class="k">if</span> <span class="n">left</span> <span class="ow">is</span> <span class="n">right</span> <span class="k">else</span> <span class="n">left</span><span class="o">.</span><span class="n">_band_dim_names</span><span class="p">:</span>
 <a id="__codelineno-0-12912" name="__codelineno-0-12912"></a>            <span class="n">left_values</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">_band_dim_values_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
@@ -39825,11 +39825,11 @@ captures nothing (#1025).</p>
 <a id="__codelineno-0-2613" name="__codelineno-0-2613"></a>    <span class="c1"># not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin</span>
 <a id="__codelineno-0-2614" name="__codelineno-0-2614"></a>    <span class="c1"># façade methods that delegate here (e.g. `nc.&lt;method&gt;()` -&gt;</span>
 <a id="__codelineno-0-2615" name="__codelineno-0-2615"></a>    <span class="c1"># `self.interop.&lt;method&gt;()`).</span>
-<a id="__codelineno-0-2616" name="__codelineno-0-2616"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">interop</span> <span class="o">=</span> <span class="n">Interop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2616" name="__codelineno-0-2616"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">interop</span> <span class="o">=</span> <span class="n">_Interop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-2617" name="__codelineno-0-2617"></a>    <span class="c1"># `varops` (not `variables`) because `variables` is an existing read-side</span>
 <a id="__codelineno-0-2618" name="__codelineno-0-2618"></a>    <span class="c1"># property returning the lazy variable dict — the engine must not shadow it.</span>
-<a id="__codelineno-0-2619" name="__codelineno-0-2619"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">varops</span> <span class="o">=</span> <span class="n">Variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-2620" name="__codelineno-0-2620"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2619" name="__codelineno-0-2619"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">varops</span> <span class="o">=</span> <span class="n">_Variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-2620" name="__codelineno-0-2620"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">selection</span> <span class="o">=</span> <span class="n">_Selection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -54240,7 +54240,7 @@ dims.</p>
     <div class="doc doc-contents ">
 
         <p>Combine two rasters cell by cell, keeping the operands' band dimensions.</p>
-<p>Delegates to <code>Dataset.combine</code>. Its engine, <code>Analysis._combine</code>, checks the band
+<p>Delegates to <code>Dataset.combine</code>. Its engine, <code>_Analysis._combine</code>, checks the band
 layouts through <code>_combine_layout_source</code> once the grids and band counts are known to
 agree and before any pixel is read, then labels the result with the band dimensions —
 names, sizes and coordinates — through <code>_label_combined</code>, so a combined
@@ -54735,7 +54735,7 @@ disagree, since the layouts are only compared on a shared grid.</p>
 <a id="__codelineno-0-12454" name="__codelineno-0-12454"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 <a id="__codelineno-0-12455" name="__codelineno-0-12455"></a><span class="w">    </span><span class="sd">"""Combine two rasters cell by cell, keeping the operands' band dimensions.</span>
 <a id="__codelineno-0-12456" name="__codelineno-0-12456"></a>
-<a id="__codelineno-0-12457" name="__codelineno-0-12457"></a><span class="sd">    Delegates to `Dataset.combine`. Its engine, `Analysis._combine`, checks the band</span>
+<a id="__codelineno-0-12457" name="__codelineno-0-12457"></a><span class="sd">    Delegates to `Dataset.combine`. Its engine, `_Analysis._combine`, checks the band</span>
 <a id="__codelineno-0-12458" name="__codelineno-0-12458"></a><span class="sd">    layouts through `_combine_layout_source` once the grids and band counts are known to</span>
 <a id="__codelineno-0-12459" name="__codelineno-0-12459"></a><span class="sd">    agree and before any pixel is read, then labels the result with the band dimensions —</span>
 <a id="__codelineno-0-12460" name="__codelineno-0-12460"></a><span class="sd">    names, sizes and coordinates — through `_label_combined`, so a combined</span>
