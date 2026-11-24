@@ -27,7 +27,8 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CHECKER = _REPO_ROOT / "ci" / "check-bundled-stack.py"
-_INSTALLED_CHECKER = _REPO_ROOT / "ci" / "check-installed-stack.py"
+_VERIFY_WHEEL = _REPO_ROOT / "ci" / "verify-wheel.py"
+_SHARED = _REPO_ROOT / "ci" / "native_stack_baseline.py"
 _BASELINE = _REPO_ROOT / "ci" / "native-stack-baseline.toml"
 
 
@@ -132,63 +133,6 @@ def _checker_module(script: str):
 #: test is the present/missing comparison, while the real lists belong to the repo's own baseline.
 _REQUIRED_RASTER = ["GTiff", "COG", "netCDF"]
 _REQUIRED_VECTOR = ["GeoJSON", "GPKG"]
-
-
-class _FakeDriver:
-    """A stand-in driver handle, which GDAL and OGR expose under different names."""
-
-    def __init__(self, name: str):
-        """Hold the one name both APIs report.
-
-        Args:
-            name: The driver's short name.
-        """
-        self.ShortName = name
-
-    def GetName(self) -> str:
-        """The name OGR's API reports.
-
-        Returns:
-            The driver's short name.
-        """
-        return self.ShortName
-
-
-class _FakeOsgeo:
-    """A stand-in for `osgeo.gdal`/`osgeo.ogr`, answering with fixed values.
-
-    Driving the installed-side checker against this exercises its comparisons offline, where the
-    real `osgeo` would answer with whatever GDAL the environment running the suite happens to carry.
-    """
-
-    def __init__(self, version: str, drivers: list[str]):
-        """Record what this fake library reports about itself.
-
-        Args:
-            version: The value to serve as `__version__`.
-            drivers: The driver names to offer, in order.
-        """
-        self.__version__ = version
-        self._drivers = list(drivers)
-
-    def GetDriverCount(self) -> int:
-        """How many drivers are registered.
-
-        Returns:
-            The number of drivers.
-        """
-        return len(self._drivers)
-
-    def GetDriver(self, index: int) -> _FakeDriver:
-        """The driver at one index.
-
-        Args:
-            index: Position in the registered list.
-
-        Returns:
-            The driver handle at `index`.
-        """
-        return _FakeDriver(self._drivers[index])
 
 
 def _installed_baseline(
@@ -750,211 +694,206 @@ class TestTheTargetsAreExpandedToWheels:
         )
 
 
-class TestTheInstalledSideResolvesExceptions:
-    """`ci/check-installed-stack.py` applies the same declared exceptions as the bundled check.
+def _shared_module():
+    """Import `ci/native_stack_baseline.py`, the validated reader both checkers share."""
+    spec = importlib.util.spec_from_file_location("native_stack_baseline", _SHARED)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-    Loaded by path because the filename has dashes and cannot be imported as a module. Only the pure
-    resolution logic is driven here; the assertions it feeds are driven in
-    `TestTheInstalledStackIsAsserted`, against a stand-in for `osgeo`.
+
+class TestABaselineThatWouldCompareNothingIsRefused:
+    """Validation is the point: a guard whose declaration can be mistyped into vacuity reports `ok`.
+
+    Each case below passed silently before `native_stack_baseline.validate` existed -- a library no
+    extractor knows, a property nothing reads, an exception with no reason, a platform key that
+    matches no wheel tag. A declaration that compares nothing is the failure this whole file exists
+    to prevent, so it must be refused by name rather than accepted (#1627).
     """
 
-    @staticmethod
-    def _module():
-        """Load the installed-side checker by path.
+    @pytest.mark.parametrize(
+        ("label", "body", "expected"),
+        [
+            (
+                "unsupported-library",
+                '[libraries.sqlite3]\nversion = "3.50"\n',
+                "has no extractor",
+            ),
+            (
+                "unknown-property",
+                '[libraries.hdf5]\nparallel = "OFF"\n',
+                "unknown property",
+            ),
+            ("empty-libraries", "[libraries]\n", "declares no"),
+            (
+                "no-libraries",
+                '[installed.gdal]\nversion = "3.13.3"\n',
+                "declares no",
+            ),
+            (
+                "exception-without-reason",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[exceptions.win_arm64.hdf5]\nversion = "2.1.1"\n',
+                "carries no reason",
+            ),
+            (
+                "conda-subdir-as-tag",
+                '[libraries.hdf5]\nversion = "2.2.0"\n'
+                '[exceptions.osx-64.hdf5]\nversion = "2.1.1"\nreason = "x"\n',
+                "not a wheel platform tag",
+            ),
+            (
+                "exception-without-version",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[exceptions.win_arm64.hdf5]\nreason = "x"\n',
+                "relaxes no version",
+            ),
+            (
+                "installed-without-version",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[installed.gdal]\nbuild = "1"\n',
+                "pins no version",
+            ),
+        ],
+    )
+    def test_an_unusable_baseline_is_refused_by_name(
+        self, tmp_path, label, body, expected
+    ):
+        """Each malformed declaration must raise, naming the table at fault.
 
-        Returns:
-            The imported module object.
+        Args:
+            tmp_path: Per-test directory.
+            label: Which malformation is under test.
+            body: The baseline contents.
+            expected: Text the error must contain.
         """
-        return _checker_module("check-installed-stack.py")
+        baseline = tmp_path / "native-stack-baseline.toml"
+        baseline.write_text(body, encoding="utf-8")
 
-    def test_a_platform_without_an_exception_gets_the_baseline_version(self):
-        """`win_amd64` has no GDAL exception, so it must meet the baseline."""
-        module = self._module()
-        baseline = {"installed": {"gdal": {"version": "3.13.3"}}, "exceptions": {}}
+        with pytest.raises(ValueError, match=expected):
+            _shared_module().load(baseline)
 
-        assert module._expected_gdal(baseline, "win_amd64") == "3.13.3"
+    def test_the_shipped_baseline_validates(self):
+        """The real declaration must satisfy its own rules."""
+        module = _shared_module()
 
-    def test_a_declared_exception_overrides_the_baseline(self):
-        """`win_arm64` is held to 3.12.4, the newest GDAL its vcpkg baseline offers."""
-        module = self._module()
-        baseline = {
-            "installed": {"gdal": {"version": "3.13.3"}},
-            "exceptions": {"win_arm64": {"gdal": {"version": "3.12.4"}}},
+        assert module.load(), "the shipped baseline must load and validate"
+
+    def test_the_extractors_cover_exactly_the_supported_libraries(self):
+        """A library the shared module allows but the checker cannot read would compare nothing."""
+        checker = _checker_module("check-bundled-stack.py")
+
+        assert set(checker._EXTRACTORS) == set(_shared_module().SUPPORTED_LIBRARIES), (
+            "the extractor table and the supported-library list must agree"
+        )
+
+
+class TestTheInstalledPlatformTagSharesTheWheelNamespace:
+    """Both sides must resolve exceptions from the same key space, or a relaxation matches nothing.
+
+    The installed side previously derived its tag from `sysconfig.get_platform()`, which reports
+    `linux_x86_64` for both the manylinux and musllinux wheels and the interpreter's deployment
+    target on macOS. A Linux or macOS exception would therefore have needed two different keys, and
+    whichever was missing would have silently relaxed nothing (#1627).
+    """
+
+    @pytest.mark.parametrize(
+        ("filename", "expected"),
+        [
+            ("pyramids_core-0.81.0-cp312-cp312-win_arm64.whl", "win_arm64"),
+            (
+                "pyramids_core-0.81.0-cp312-cp312-macosx_11_0_x86_64.whl",
+                "macosx_11_0_x86_64",
+            ),
+            (
+                "pyramids_core-0.81.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+                "manylinux_2_28_aarch64",
+            ),
+            (
+                "pyramids_core-0.81.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+                "musllinux_1_2_x86_64",
+            ),
+            ("not-a-wheel.whl", ""),
+        ],
+    )
+    def test_a_wheel_name_yields_its_platform_tag(self, filename, expected):
+        """The filename tag must come out exactly, since exception keys are matched against it.
+
+        Args:
+            filename: The wheel name.
+            expected: The tag it must yield, empty when the name is not PEP 427 shaped.
+        """
+        assert _shared_module().wheel_name_platform_tag(filename) == expected
+
+    def test_an_absent_distribution_yields_no_tag_rather_than_raising(self):
+        """A missing distribution must degrade to the unrelaxed baseline, with the caller warning."""
+        assert (
+            _shared_module().installed_platform_tag("no-such-distribution-1627") == ""
+        )
+
+    def test_the_declared_exception_tags_are_wheel_tags(self):
+        """Every exception key in the shipped baseline must be resolvable from a wheel name."""
+        module = _shared_module()
+        baseline = module.load()
+        wheel_names = {
+            tag: f"pyramids_core-0.81.0-cp312-cp312-{tag}.whl"
+            for tag in baseline["exceptions"]
         }
 
-        assert module._expected_gdal(baseline, "win_arm64") == "3.12.4"
-        assert module._expected_gdal(baseline, "manylinux_2_28_x86_64") == "3.13.3", (
-            "the exception must not leak to other platforms"
-        )
-
-    def test_the_repo_baseline_holds_win_arm64_to_its_vcpkg_version(self):
-        """The shipped baseline encodes the real, measured exception rather than a placeholder."""
-        module = self._module()
-        baseline = tomllib.loads(_BASELINE.read_text(encoding="utf-8"))
-
-        assert module._expected_gdal(baseline, "win_arm64") == "3.12.4"
-        assert module._expected_gdal(baseline, "win_amd64") == "3.13.3"
-
-    def test_the_platform_tag_is_resolvable_on_this_interpreter(self):
-        """A tag must always resolve, since it is what selects the exception set."""
-        module = self._module()
-
-        tag = module._platform_tag()
-
-        assert tag, "a platform tag must never be empty"
-        assert tag.replace("_", "").isalnum(), f"unexpected tag shape: {tag!r}"
-
-    @pytest.mark.parametrize(
-        ("platform", "tag"),
-        [
-            ("win-amd64", "win_amd64"),
-            ("win-arm64", "win_arm64"),
-            ("linux-x86_64", "linux_x86_64"),
-            ("macosx-11.0-arm64", "macosx_11_0_arm64"),
-        ],
-        ids=["win-amd64", "win-arm64", "linux", "macos"],
-    )
-    def test_each_platform_string_maps_to_the_tag_the_baseline_keys_on(
-        self, monkeypatch, platform, tag
-    ):
-        """Every shape of platform string derives the tag its exceptions are filed under.
-
-        Test scenario:
-            Driven over all four shapes rather than only the host's, because `win_arm64` is the
-            one platform carrying exceptions and no single machine reports every string.
-
-        Args:
-            platform: What `sysconfig.get_platform()` reports.
-            tag: The wheel platform tag that must come out of it.
-        """
-        module = self._module()
-        monkeypatch.setattr(module.sysconfig, "get_platform", lambda: platform)
-
-        assert module._platform_tag() == tag, (
-            f"{platform!r} must resolve to {tag!r}, got {module._platform_tag()!r}"
-        )
+        for tag, name in wheel_names.items():
+            assert module.wheel_name_platform_tag(name) == tag, (
+                f"exception key {tag!r} is not what a wheel filename yields, so it relaxes nothing"
+            )
 
 
-class TestTheInstalledStackIsAsserted:
-    """`ci/check-installed-stack.py` checks the installed GDAL's version and driver set.
+class TestVerifyWheelAssertsTheGdalVersion:
+    """`ci/verify-wheel.py` owns the installed-side assertion, because it runs in every job.
 
-    Driven against a stand-in for `osgeo` and a synthetic baseline, so the comparisons run offline
-    and deterministically. In CI the same code runs in the wheel smoke jobs, where the real
-    installed GDAL answers instead.
+    The version check was first written as its own script and wired into two of the eight smoke and
+    verify jobs, so GDAL parity was asserted for the musllinux source build alone -- the one route
+    whose GDAL was never in doubt -- and the `win_arm64` GDAL exception was never evaluated by any
+    job. `verify-wheel.py` already runs everywhere and already imports `pyramids` ahead of `osgeo`,
+    which a published wheel requires (#1627).
     """
 
-    @pytest.mark.parametrize(
-        "reported", ["3.13.3", "3.13.3-dev"], ids=["exact", "build-suffix"]
-    )
-    def test_the_baseline_version_and_a_full_driver_set_pass(
-        self, tmp_path, monkeypatch, capsys, reported
-    ):
-        """An installed stack meeting the baseline exits 0.
+    def test_it_asserts_the_version_and_resolves_exceptions(self):
+        """The check must read the baseline and honour a declared per-platform relaxation."""
+        source = _VERIFY_WHEEL.read_text(encoding="utf-8")
 
-        Test scenario:
-            GDAL reports a trailing build suffix on some routes, which is not drift, so only the
-            part before the first dash is compared.
-
-        Args:
-            reported: What the installed GDAL reports as its version.
-        """
-        module = _installed_checker(
-            monkeypatch,
-            _installed_baseline(tmp_path),
-            reported,
-            _REQUIRED_RASTER,
-            _REQUIRED_VECTOR,
+        assert "_check_gdal_version()" in source, (
+            "verify-wheel.py must call the GDAL version check, or no job asserts it"
+        )
+        assert "native_stack_baseline" in source, (
+            "the check must read the declared baseline"
+        )
+        assert 'exceptions", {}).get(tag, {}).get("gdal"' in source, (
+            "the check must resolve the per-platform GDAL exception, which only win_arm64 uses"
         )
 
-        assert module.main() == 0, "a conforming installed stack must pass"
-        assert "gdal version=3.13.3" in capsys.readouterr().out, (
-            "the report should name the compared version"
+    def test_it_does_not_re_assert_the_driver_set(self):
+        """`_check_driver_set` already covers drivers, over a superset, on every platform."""
+        source = _VERIFY_WHEEL.read_text(encoding="utf-8")
+
+        assert "installed.drivers" not in source, (
+            "the driver contract belongs to _check_driver_set; a second, weaker list would be a "
+            "third hand-maintained copy"
         )
 
-    def test_a_drifted_gdal_version_fails(self, tmp_path, monkeypatch, capsys):
-        """A GDAL a minor version off the baseline fails the smoke job.
+    def test_the_baseline_no_longer_declares_drivers(self):
+        """The driver lists were dropped in favour of verify-wheel.py's stronger contract."""
+        baseline = _shared_module().load()
 
-        Test scenario:
-            This is the property the bundled check deliberately leaves alone, because a wheel's
-            bytes cannot be trusted for it -- so it has to fail here or nowhere.
-        """
-        module = _installed_checker(
-            monkeypatch,
-            _installed_baseline(tmp_path),
-            "3.12.4",
-            _REQUIRED_RASTER,
-            _REQUIRED_VECTOR,
+        assert "drivers" not in baseline.get("installed", {}), (
+            "ci/verify-wheel.py owns the driver contract; the baseline must not duplicate it"
         )
-
-        assert module.main() == 1, "a GDAL off the baseline must fail"
-        assert "gdal version=3.12.4 (want 3.13.3)" in capsys.readouterr().out, (
-            "the report should name both versions"
-        )
-
-    @pytest.mark.parametrize("kind", ["raster", "vector"], ids=["raster", "vector"])
-    def test_a_missing_required_driver_fails(self, tmp_path, monkeypatch, capsys, kind):
-        """A route that built GDAL without a required driver fails, on either side.
-
-        Test scenario:
-            The source build already refuses a missing driver, but that check runs inside the
-            source build, so it says nothing about the vcpkg and conda-forge wheels (#1627).
-
-        Args:
-            kind: Whether the raster or the vector driver list is short.
-        """
-        dropped = (_REQUIRED_RASTER if kind == "raster" else _REQUIRED_VECTOR)[0]
-        module = _installed_checker(
-            monkeypatch,
-            _installed_baseline(tmp_path),
-            "3.13.3",
-            _REQUIRED_RASTER[1:] if kind == "raster" else _REQUIRED_RASTER,
-            _REQUIRED_VECTOR[1:] if kind == "vector" else _REQUIRED_VECTOR,
-        )
-
-        assert module.main() == 1, f"a missing {kind} driver must fail"
-
-        out = capsys.readouterr().out
-        assert f"missing {kind} drivers" in out, (
-            f"the report should name the side that is short: {out}"
-        )
-        assert dropped in out, f"the report should name the missing driver: {out}"
-
-    def test_a_baseline_pinning_no_gdal_version_accepts_what_is_installed(
-        self, tmp_path, monkeypatch, capsys
-    ):
-        """With no declared GDAL version there is nothing to compare, which is not a failure.
-
-        Test scenario:
-            Keeps the driver assertions usable on their own, so dropping the version pin while a
-            release is in flight does not turn every smoke job red.
-        """
-        module = _installed_checker(
-            monkeypatch,
-            _installed_baseline(tmp_path, gdal_version=None),
-            "3.11.0",
-            _REQUIRED_RASTER,
-            _REQUIRED_VECTOR,
-        )
-
-        assert module.main() == 0, "an unpinned GDAL version cannot drift"
-        assert "pins no version" in capsys.readouterr().out, (
-            "the report should say the version was not compared"
-        )
-
-
-class TestTheInstalledCheckerBootstrapsTheVendoredOsgeo:
-    """`import pyramids` must precede `import osgeo`, or the checker cannot run in a wheel job.
-
-    A published wheel ships no top-level `osgeo` package: it lives at `pyramids/_vendor/osgeo`, reachable
-    only after `pyramids/__init__.py` injects it onto `sys.path`. A bare `from osgeo import ...` therefore
-    raises `ModuleNotFoundError` in exactly the environment this checker is written for, while passing in a
-    conda dev environment where `osgeo` is a real top-level package. `ci/verify-wheel.py` pins the same
-    ordering with an `# isort: off` block; this test pins it for the checker too (#1627).
-    """
 
     def test_pyramids_is_imported_before_osgeo(self):
-        """The vendor bootstrap must come first in module source order."""
-        tree = ast.parse(_INSTALLED_CHECKER.read_text(encoding="utf-8"))
+        """The vendor bootstrap must come first, or the script cannot run against a wheel.
+
+        Test scenario:
+            A published wheel ships no top-level `osgeo`: it lives at `pyramids/_vendor/osgeo`,
+            reachable only after `pyramids/__init__.py` injects it onto `sys.path`. A bare
+            `from osgeo import ...` raises ModuleNotFoundError in exactly the environment this
+            script is written for, while passing in a conda dev environment.
+        """
+        tree = ast.parse(_VERIFY_WHEEL.read_text(encoding="utf-8"))
         order = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -967,11 +906,9 @@ class TestTheInstalledCheckerBootstrapsTheVendoredOsgeo:
         osgeo_at = [line for name, line in order if name == "osgeo"]
 
         assert pyramids_at, (
-            "ci/check-installed-stack.py must `import pyramids` to run the vendor bootstrap; a published "
-            "wheel has no top-level osgeo package, so a bare osgeo import raises ModuleNotFoundError"
+            "verify-wheel.py must import pyramids to run the vendor bootstrap"
         )
-        assert osgeo_at, "the checker is expected to import osgeo"
+        assert osgeo_at, "verify-wheel.py is expected to import osgeo"
         assert min(pyramids_at) < min(osgeo_at), (
-            f"`import pyramids` (line {min(pyramids_at)}) must precede the osgeo import "
-            f"(line {min(osgeo_at)}) so the vendored package is on sys.path"
+            f"import pyramids (line {min(pyramids_at)}) must precede osgeo (line {min(osgeo_at)})"
         )

@@ -46,18 +46,6 @@ version = "3.14.1"
 [installed.gdal]
 version = "3.13.3"
 
-[installed.drivers]
-# The same lists ci/source-build/build-gdal-stack.sh enforces, so the guarantee it gives the source
-# build now covers the vcpkg and conda-forge wheels too.
-raster = [
-    "GTiff", "COG", "netCDF", "GRIB", "HDF5", "JP2OpenJPEG",
-    "Zarr", "PNG", "JPEG", "WCS", "OGCAPI", "VRT",
-]
-vector = [
-    "GeoJSON", "ESRI Shapefile", "GPKG", "GPX", "PMTiles", "MVT", "GML",
-    "KML", "WFS", "OAPIF", "FlatGeobuf", "CSV", "OGR_VRT",
-]
-
 [exceptions.win_arm64.gdal]
 version = "3.12.4"
 reason = """

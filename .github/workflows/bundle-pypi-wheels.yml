@@ -660,7 +660,6 @@ jobs:
               if [ "${{ matrix.python-version }}" = "3.15" ]; then NOBIN="--no-binary=PyYAML"; fi
               pip install "${WHEEL}" --only-binary=:all: ${NOBIN}
               python -c "import pyramids, geopandas, pyogrio, shapely, cftime"
-              python ci/check-installed-stack.py
               pip install pytest pytest-env pytest-mock pytest-timeout pytest-xdist --only-binary=:all:
               python ci/verify-wheel.py
               pytest -q -o "pythonpath=" --timeout=60 --timeout-method=thread \
@@ -849,7 +848,6 @@ jobs:
               WHEEL=$(ls wheelhouse/pyramids_core-*cp312*musllinux_1_2_${{ matrix.arch }}.whl)
               pip install "${WHEEL}" --only-binary=:all:
               python -c "import pyramids, geopandas, pyogrio, shapely, cftime"
-              python ci/check-installed-stack.py
               pip install pytest pytest-env pytest-mock pytest-timeout --only-binary=:all:
               python ci/verify-wheel.py
               pytest -vvv -o "pythonpath=" --timeout=60 --timeout-method=thread \

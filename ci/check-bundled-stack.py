@@ -34,10 +34,13 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
-import tomllib
 import zipfile
 
-_BASELINE_PATH = pathlib.Path(__file__).resolve().parent / "native-stack-baseline.toml"
+# The repair step invokes this as `python ci/check-bundled-stack.py`, which puts ci/ first on
+# sys.path, but an invocation from elsewhere would not. Add it explicitly rather than rely on that.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import native_stack_baseline  # noqa: E402 -- needs the sys.path line above
 
 #: How to read each library's own build-settings string out of its binary. The key is the token that
 #: must appear in the library's filename; `version` and `threadsafety` are the properties the
@@ -53,66 +56,57 @@ _EXTRACTORS = {
 
 _LIBRARY_SUFFIXES = (".so", ".dll", ".dylib")
 
+# The shared module refuses a baseline naming a library with no extractor, so the two lists must
+# agree; this keeps them honest at import rather than at the first wheel.
+assert set(_EXTRACTORS) == set(native_stack_baseline.SUPPORTED_LIBRARIES), (
+    "_EXTRACTORS and native_stack_baseline.SUPPORTED_LIBRARIES disagree"
+)
 
-def load_baseline(path: pathlib.Path = _BASELINE_PATH) -> dict:
-    """Read the declared baseline.
+
+def load_baseline(path: pathlib.Path = native_stack_baseline.BASELINE_PATH) -> dict:
+    """Read the declared baseline, refusing one that would compare nothing.
 
     Args:
         path: The baseline file. Defaults to the one beside this script.
 
     Returns:
         The parsed document. `libraries` holds the properties every wheel must report, the optional
-        `exceptions` table the per-platform relaxations, and `installed` the GDAL version and driver
-        lists that only `ci/check-installed-stack.py` reads.
+        `exceptions` table the per-platform relaxations, and `installed` the GDAL version
+        `ci/verify-wheel.py` asserts after installing.
 
     Raises:
         FileNotFoundError: If `path` does not exist.
         tomllib.TOMLDecodeError: If the file is not valid TOML.
+        ValueError: If the baseline is unusable -- an unsupported library, an unknown property, an
+            exception with no reason, a malformed platform tag. See `native_stack_baseline.validate`.
     """
-    return tomllib.loads(path.read_text(encoding="utf-8"))
+    return native_stack_baseline.load(path)
 
 
 def platform_tag(wheel: pathlib.Path) -> str:
     """The platform tag of a wheel, used to resolve declared exceptions.
 
     Args:
-        wheel: A wheel path named per PEP 427, `name-version-python-abi-platform.whl`, optionally
-            with a build tag as its third component.
+        wheel: The wheel path; only its name is read.
 
     Returns:
-        The last `-`-separated component of the filename, which is the platform tag in both forms,
-        or an empty string when the name has too few components to be a wheel name -- a renamed
-        copy, for instance, whose exceptions `check_wheel` then reports as unresolvable. A
-        compressed tag set is returned whole, dots included.
+        The tag, or an empty string when the filename is not PEP 427 shaped.
     """
-    parts = wheel.stem.split("-")
-    return parts[-1] if len(parts) >= 5 else ""
+    return native_stack_baseline.wheel_name_platform_tag(wheel.name)
 
 
 def expected_for(baseline: dict, tag: str) -> dict:
-    """The properties each library must report on one platform.
+    """The properties each library must report on one platform, exceptions applied.
 
     Args:
         baseline: The parsed baseline.
         tag: The wheel's platform tag.
 
     Returns:
-        A `{library: {property: value}}` mapping, with any declared exception for `tag` applied
-        over the baseline. An exception may relax a version; `threadsafety` is never waived, so a
-        platform cannot opt out of the property that has already regressed. Every other key of an
-        exception is dropped, including the `reason` prose it must carry, and an exception naming a
-        library the `libraries` table does not list is ignored -- which is how the baseline's
-        `exceptions.<tag>.gdal` entry stays inert here while `ci/check-installed-stack.py` honours
-        it. An empty `tag` matches no exception, so the wheel is compared against the baseline.
+        A `{library: {property: value}}` mapping. An exception may relax `version` only, never
+        `threadsafety`.
     """
-    expected = {name: dict(props) for name, props in baseline["libraries"].items()}
-    for name, overrides in baseline.get("exceptions", {}).get(tag, {}).items():
-        if name not in expected:
-            continue
-        for prop, value in overrides.items():
-            if prop in ("version",):
-                expected[name][prop] = value
-    return expected
+    return native_stack_baseline.expected_for(baseline, tag)
 
 
 def _members_for(archive: zipfile.ZipFile, token: str) -> list[str]:
@@ -315,7 +309,7 @@ def main(argv: list[str]) -> int:
     if failures:
         print(
             f"\ncheck-bundled-stack: {len(failures)} bundled-library mismatch(es) against "
-            f"{_BASELINE_PATH.name}.\nEither fix the build route that drifted, or -- if the platform "
+            f"{native_stack_baseline.BASELINE_PATH.name}.\nEither fix the build route that drifted, or -- if the platform "
             "genuinely cannot meet the baseline -- add a declared exception with its reason to that "
             "file (see issue #1627).",
             file=sys.stderr,

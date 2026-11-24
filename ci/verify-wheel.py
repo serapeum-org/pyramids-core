@@ -71,6 +71,56 @@ def _fail(msg: str) -> None:
     raise RuntimeError(msg)
 
 
+# ci/ is this file's own directory, but an invocation from elsewhere would not put it on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import native_stack_baseline  # noqa: E402 -- needs the sys.path line above
+
+
+def _check_gdal_version() -> None:
+    """Assert the installed GDAL matches ci/native-stack-baseline.toml.
+
+    This lives here rather than in a script of its own because this file already runs in every
+    smoke and verify job, on every platform, and already imports `pyramids` before `osgeo` so the
+    vendored package resolves. A separate checker was wired into two of the eight jobs and asserted
+    nothing on the other six, including the one platform that carries a declared GDAL exception
+    (#1627).
+
+    GDAL's version is the one property the bundled-stack checker cannot read from a wheel's bytes: a
+    manylinux `libgdal` yields only a spurious `GDAL 3.6.0`, macOS yields two candidates, and the
+    Windows DLLs carry no version in their filename. Asking `osgeo.gdal` is exact everywhere.
+
+    The driver set is deliberately not re-asserted here -- `_check_driver_set` already does it, on
+    every platform, over a superset of what a baseline list would hold.
+    """
+    baseline = native_stack_baseline.load()
+    pinned = baseline.get("installed", {}).get("gdal", {}).get("version")
+    if not pinned:
+        _fail(
+            f"{native_stack_baseline.BASELINE_PATH.name} pins no [installed.gdal] version, so "
+            "nothing would be compared"
+        )
+    tag = native_stack_baseline.installed_platform_tag()
+    relaxed = baseline.get("exceptions", {}).get(tag, {}).get("gdal", {}).get("version")
+    expected = relaxed or pinned
+    reported = gdal.__version__.split("-")[0]
+    if not tag:
+        print(
+            "NOTE: the installed distribution carries no single wheel platform tag, so a declared "
+            f"GDAL exception cannot be resolved; comparing against the baseline {pinned}"
+        )
+    if reported != expected:
+        source = f"exceptions.{tag}.gdal" if relaxed else "installed.gdal"
+        _fail(
+            f"bundled GDAL is {reported}, but {native_stack_baseline.BASELINE_PATH.name} "
+            f"[{source}] pins {expected} for platform {tag or 'unknown'}. Either fix the build "
+            "route that drifted, or -- if the platform genuinely cannot meet the baseline -- add a "
+            "declared exception with its reason to that file (see issue #1627)."
+        )
+    via = f" (via exceptions.{tag}.gdal)" if relaxed else ""
+    print(f"GDAL version check OK — {reported} matches the declared baseline{via}.")
+
+
 print(f"pyramids {pyramids.__version__}")
 print(f"GDAL {gdal.__version__}")
 
@@ -537,6 +587,7 @@ def _check_jp2_driver() -> None:
     print("JP2OpenJPEG round-trip OK — bundled driver reads/writes JPEG2000 (#600).")
 
 
+_check_gdal_version()
 _check_driver_set()
 _check_vendored_vector_stack()
 _check_licenses()
