@@ -2,7 +2,7 @@
 #
 # Install the wheel-build environment via micromamba for a cross-platform
 # target. Used by ci/setup-gdal-from-pixi.sh when cibuildwheel builds for
-# a target arch different from the host (currently: macos-14 / arm64 host
+# a target arch different from the host (currently: macos-15 / arm64 host
 # producing an osx-64 wheel because GitHub's macos-13 Intel runner queue
 # is unusable in practice).
 #
@@ -21,22 +21,23 @@
 # every platform installed from pixi.lock got the _1 build with proj
 # 9.8.1 and geos 3.14.1. One release therefore shipped two different
 # native stacks under one version number, and only the osx-64 wheel was
-# affected -- the divergence ci/check-bundled-stack.py caught (#1627).
+# affected -- the divergence ci/check-bundled-stack.py caught (#1632).
 #
-# So the libraries whose versions the baseline asserts are pinned to
-# exactly what pixi.lock resolves for this environment and platform,
-# read by ci/gdal-pin.py --locked. The gdal family keeps its range: with
-# proj and geos pinned the solver is steered to the matching gdal build
-# anyway, verified by a cross-platform dry-run solve for osx-64.
+# So the three libraries the baseline asserts -- proj, geos, hdf5 -- are
+# pinned to exactly what pixi.lock resolves for this environment and
+# platform, read by ci/gdal-pin.py --locked. The gdal family keeps its
+# range: with proj and geos pinned the solver is steered to the matching
+# gdal build anyway, verified by a cross-platform dry-run solve for
+# osx-64.
 #
 # Inputs (must be exported by caller):
 #   BUILD_PREFIX     destination for the micromamba binary
 #   PIXI_ENV         path where the env will be created (kept as
 #                    .pixi/envs/wheel-build/ so downstream extraction
 #                    logic is identical to the pixi branch)
-#   TARGET_PLATFORM  conda platform tag for the wheel (currently only
+#   TARGET_PLATFORM  conda subdir for the wheel's target (currently only
 #                    "osx-64" is reached — the cross-compile target
-#                    for macos-14 / arm64 host)
+#                    for the macos-15 / arm64 host)
 set -euo pipefail
 
 : "${BUILD_PREFIX:?BUILD_PREFIX must be set}"

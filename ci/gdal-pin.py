@@ -14,7 +14,7 @@ wheels vendor instead of re-encoding them:
 
 Usage::
 
-    spec=$(python ci/gdal-pin.py)                    # default: gdal ->  >=3.13,<3.14
+    spec=$(python ci/gdal-pin.py)                    # default: gdal ->  >=3.13.3,<3.13.4
     python ci/gdal-pin.py gdal libgdal-netcdf swig   # one spec per line
 
 The `--locked` mode reads `pixi.lock` instead, printing the exact `==<version>` a named
@@ -22,7 +22,7 @@ environment and platform resolve to. The cross-compile branch needs it because a
 spec does not pin a *solve*: re-resolving `gdal >=3.13.3,<3.13.4` for osx-64 picks the
 newest matching build, which linked proj 9.9.0 and geos 3.15.0, while every platform
 installed from `pixi.lock` got the older build with proj 9.8.1 and geos 3.14.1 -- one
-release shipping two different native stacks (#1627)::
+release shipping two different native stacks (#1632)::
 
     python ci/gdal-pin.py --locked --platform osx-64 proj geos   # ==9.8.1 / ==3.14.1
 """
@@ -57,7 +57,7 @@ def locked_versions(
     environment: str = _DEFAULT_ENVIRONMENT,
     lock: Path = LOCK,
 ) -> dict[str, str]:
-    """Every conda package version `pixi.lock` resolves for one environment and platform.
+    """The conda package versions `pixi.lock` resolves for one environment and platform.
 
     The lock is read with a regular expression rather than a YAML parser because this runs on a
     bare CI runner before any environment exists, so only the standard library is available. That
@@ -71,7 +71,12 @@ def locked_versions(
         lock: Path to `pixi.lock`.
 
     Returns:
-        A `{package: version}` mapping for that environment and platform.
+        A `{package: version}` mapping, holding the environment's `.conda` entries served from that
+        platform's own subdir. Requiring the subdir in the URL is what makes the version readable
+        from the filename, and it excludes the two kinds of entry that carry no platform of their
+        own: the environment's `noarch` conda packages and its PyPI wheels. Nothing the baseline
+        asserts is `noarch`, so the exclusion costs this caller nothing -- but a `noarch` name asked
+        for here resolves to nothing and `locked_pins` refuses it rather than guessing.
 
     Raises:
         FileNotFoundError: If `lock` does not exist.
@@ -152,6 +157,8 @@ def _locked_main(argv: list[str]) -> int:
 
     Raises:
         SystemExit: If `--platform` is missing or no package names are given.
+        KeyError: If the lock has no such environment or platform, or does not pin every requested
+            package -- propagated from `locked_pins` so the traceback names what failed to resolve.
     """
     platform = ""
     environment = _DEFAULT_ENVIRONMENT
@@ -174,7 +181,22 @@ def _locked_main(argv: list[str]) -> int:
 
 
 def main(argv: list[str]) -> int:
-    """Print the spec for each requested package (default: gdal), one per line."""
+    """Print one version spec per requested package, newline-separated.
+
+    Args:
+        argv: The conda package names to print, defaulting to `gdal` alone. A `--locked` token
+            anywhere in the list switches to the lock reader: it is stripped and everything else is
+            handed to `_locked_main`, which prints the exact `==<version>` instead of the
+            `pyproject.toml` range and takes `--platform` and optional `--environment`.
+
+    Returns:
+        0 on success.
+
+    Raises:
+        KeyError: If a requested name is in neither feature table, or -- under `--locked` -- is not
+            pinned by the lock for that environment and platform.
+        SystemExit: Under `--locked`, if `--platform` or the package names are missing.
+    """
     if "--locked" in argv:
         rest = [token for token in argv if token != "--locked"]
         status = _locked_main(rest)

@@ -33,8 +33,10 @@ SUPPORTED_LIBRARIES = ("hdf5", "proj", "geos")
 SUPPORTED_PROPERTIES = ("version", "threadsafety")
 
 #: A platform tag's shape, as PEP 425 spells it for the wheels this project publishes. Matched by shape
-#: rather than against a fixed list so a manylinux or macOS version bump does not need an edit here,
-#: while a typo (`win_arm`, `osx-64`) still fails -- note conda subdirs use `-`, wheel tags use `_`.
+#: rather than against a fixed list so a manylinux or macOS version bump does not need an edit here.
+#: Being a shape check and not a whitelist, it catches the mistake that actually reaches this file --
+#: a conda subdir written where a wheel tag belongs (`osx-64`, `win-64`), since conda subdirs use `-`
+#: and wheel tags use `_` -- but it accepts any spelling inside a known prefix family.
 _PLATFORM_TAG = re.compile(r"^(?:manylinux|musllinux|macosx|win|linux)[a-z0-9_]*$")
 
 
@@ -67,10 +69,11 @@ def validate(baseline: dict, name: str = "baseline") -> None:
 
     Raises:
         ValueError: If `libraries` is missing or empty; if it pins a library outside
-            `SUPPORTED_LIBRARIES`, or a property outside `SUPPORTED_PROPERTIES`, or an empty table; if
-            an exception names an unsupported library or a platform tag of the wrong shape, or carries
-            no non-empty `reason`; or if `installed.gdal` exists without a `version`. Each is a way to
-            write a declaration that silently compares nothing.
+            `SUPPORTED_LIBRARIES`, or a property outside `SUPPORTED_PROPERTIES`, or an empty table;
+            if an exception is keyed by something that is not a wheel platform tag, names a library
+            nothing compares, carries no non-empty `reason`, or relaxes no `version`; or if
+            `installed.gdal` exists without a `version`. Each is a way to write a declaration that
+            silently compares nothing. Every problem found is reported, not just the first.
     """
     problems = []
     libraries = baseline.get("libraries")
@@ -168,8 +171,9 @@ def installed_platform_tag(distribution: str = "pyramids-core") -> str:
 
     Returns:
         The single platform tag its wheel was built for, or an empty string when the distribution is
-        not installed from a wheel, carries no `Tag:` line, or carries several platforms at once (an
-        `any`-platform or fat install), which the caller reports rather than guessing at.
+        not installed, ships no `WHEEL` metadata, carries no `Tag:` line, names more than one
+        platform at once (a fat install), or is platform-independent (`any`). Each of those the
+        caller reports rather than guessing at.
     """
     tag = ""
     try:

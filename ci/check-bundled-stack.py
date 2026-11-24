@@ -2,26 +2,28 @@
 """Fail the wheel build when a bundled native library drifts from the declared baseline.
 
 pyramids-core builds its native stack three different ways -- from source for the Linux wheels,
-through vcpkg for ``win_arm64``, and from conda-forge binaries for ``win_amd64``/macOS -- and each
+through vcpkg for `win_arm64`, and from conda-forge binaries for `win_amd64`/macOS -- and each
 route inherits its upstream's defaults for anything not explicitly requested. So the 0.81.0 wheels
 shipped three different HDF5s under one wheel version: 2.2.0 thread-safe from conda-forge
-(``win_amd64`` and both macOS arches), 2.1.0 non-thread-safe from the two Linux source builds, and
-2.1.1 non-thread-safe from vcpkg (``win_arm64``) -- #1620. The pins that would have shown it live in
+(`win_amd64` and both macOS arches), 2.1.0 non-thread-safe from the two Linux source builds, and
+2.1.1 non-thread-safe from vcpkg (`win_arm64`) -- #1620. The pins that would have shown it live in
 three separate places, and nothing compared the built artifacts against any of them (#1627).
 
 This reads what a repaired wheel actually contains and compares it against
-``ci/native-stack-baseline.toml``. Every property comes out of the library's own embedded
+`ci/native-stack-baseline.toml`. Every property comes out of the library's own embedded
 build-settings string, and only the archive members that look like a checked library are read, so
 the check needs no install and no import of the wheel, and costs a fraction of a second per wheel.
-Run it on the *repaired* wheel -- before ``auditwheel``/``delocate``/``delvewheel`` there are
+Run it on the *repaired* wheel -- before `auditwheel`/`delocate`/`delvewheel` there are
 no bundled libraries to inspect.
 
 GDAL is deliberately not checked here. Its version is not reliably greppable (a manylinux
-``libgdal`` yields only a spurious ``GDAL 3.6.0``, macOS yields two candidates, and the Windows DLLs
-carry no version in their filename), so GDAL parity and the driver list are asserted from the
-installed wheel instead -- see ``ci/check-installed-stack.py``.
+`libgdal` yields only a spurious `GDAL 3.6.0`, macOS yields two candidates, and the Windows DLLs
+carry no version in their filename), so GDAL parity is asserted from the *installed* wheel instead,
+by `ci/verify-wheel.py`'s `_check_gdal_version`. The required-driver set is not declared in the
+baseline at all: that same script's `_check_driver_set` already gates a superset of it on every
+platform.
 
-Every comparison is printed as an ``ok``/``FAIL`` line on stdout; the summary and any ``WARN`` go to
+Every comparison is printed as an `ok`/`FAIL` line on stdout; the summary and any `WARN` go to
 stderr. Exits 0 when every wheel matches the baseline, and 1 on any mismatch or when the arguments
 name no wheels at all.
 
@@ -121,9 +123,11 @@ def _members_for(archive: zipfile.ZipFile, token: str) -> list[str]:
         token: The substring identifying the library, lower-cased to match the basename, e.g. `hdf5`.
 
     Returns:
-        Matching member names. Companion and satellite libraries match too -- `libhdf5_hl`, the
-        `libgeos` core beneath `libgeos_c`, GDAL's own `gdal_hdf5` driver plugin -- but none of them
-        embeds a settings string, so they contribute nothing and are harmless.
+        Matching member names. Companions and satellites match too -- `libhdf5_hl`, the `libgeos`
+        core beneath `libgeos_c`, GDAL's own `gdal_HDF5` driver plugin, shapely's `_geos` extension
+        module -- but none of them embeds a settings string, so they contribute nothing and are
+        harmless. Measured across the published wheels of all five platforms, exactly one matched
+        member per library carries a reading.
     """
     found = []
     for member in archive.namelist():
