@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
+import re
 import subprocess
 import sys
 import tomllib
@@ -24,6 +26,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CHECKER = _REPO_ROOT / "ci" / "check-bundled-stack.py"
@@ -911,4 +914,178 @@ class TestVerifyWheelAssertsTheGdalVersion:
         assert osgeo_at, "verify-wheel.py is expected to import osgeo"
         assert min(pyramids_at) < min(osgeo_at), (
             f"import pyramids (line {min(pyramids_at)}) must precede osgeo (line {min(osgeo_at)})"
+        )
+
+
+_PYPROJECT = _REPO_ROOT / "pyproject.toml"
+_SOURCE_BUILD_CONFIG = _REPO_ROOT / "ci" / "source-build" / "config.sh"
+_VCPKG_MANIFEST = _REPO_ROOT / "ci" / "vcpkg.json"
+_WHEEL_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "bundle-pypi-wheels.yml"
+
+
+def _source_build_pin(library: str) -> str:
+    """The version `ci/source-build/config.sh` pins for one library.
+
+    Args:
+        library: The `define <name> <version> <sha256>` key to read.
+
+    Returns:
+        The pinned version string, or an empty string when the library is not pinned there.
+    """
+    pattern = re.compile(rf"^define\s+{re.escape(library)}\s+(\S+)", re.M)
+    match = pattern.search(_SOURCE_BUILD_CONFIG.read_text(encoding="utf-8"))
+    return match.group(1) if match else ""
+
+
+class TestTheBaselineAgreesWithEveryPinItRestates:
+    """The baseline is a fifth pinning site, so something must compare it with the other four.
+
+    Its own rationale is that the pins live in several places with nothing comparing them -- and it
+    then became another place. Without these tests the next GDAL, HDF5, PROJ or GEOS bump leaves the
+    baseline behind and the mismatch surfaces *after* the wheels are built, in a job that only runs
+    on a push to main or at release (#1627).
+    """
+
+    def test_the_installed_gdal_version_satisfies_the_pyproject_spec(self):
+        """`installed.gdal.version` restates the conda pin that pyproject calls the single source."""
+        with _PYPROJECT.open("rb") as handle:
+            spec = tomllib.load(handle)["tool"]["pixi"]["feature"]["gdal"][
+                "dependencies"
+            ]["gdal"]
+        pinned = _shared_module().load()["installed"]["gdal"]["version"]
+        floor = spec.split(",")[0].lstrip(">=")
+
+        assert pinned == floor, (
+            f"the baseline pins gdal {pinned} but pyproject's gdal feature pins {spec!r}; the "
+            "smoke jobs would fail after the wheels are built. Update both together."
+        )
+
+    @pytest.mark.parametrize("library", ["hdf5", "proj", "geos"])
+    def test_the_baseline_matches_the_source_build_pin(self, library):
+        """The source build compiles these from pinned tarballs; the baseline must expect those.
+
+        Args:
+            library: The library whose two pins must agree.
+        """
+        declared = _shared_module().load()["libraries"][library]["version"]
+        compiled = _source_build_pin(library)
+
+        assert compiled, f"ci/source-build/config.sh pins no {library}"
+        assert declared == compiled, (
+            f"the baseline expects {library} {declared} but the source build compiles {compiled}, "
+            "so every manylinux and musllinux wheel would fail its own repair step"
+        )
+
+    @pytest.mark.parametrize("library", ["proj", "geos"])
+    def test_the_baseline_matches_the_vcpkg_override(self, library):
+        """win_arm64 takes these from vcpkg, whose overrides must match the baseline.
+
+        Args:
+            library: The library whose vcpkg override must agree with the baseline.
+        """
+        manifest = json.loads(_VCPKG_MANIFEST.read_text(encoding="utf-8"))
+        overrides = {
+            entry["name"]: entry.get("version", entry.get("version-semver", ""))
+            for entry in manifest.get("overrides", [])
+        }
+        if library not in overrides:
+            pytest.skip(f"ci/vcpkg.json declares no override for {library}")
+        declared = _shared_module().load()["libraries"][library]["version"]
+
+        assert declared == overrides[library], (
+            f"the baseline expects {library} {declared} but ci/vcpkg.json overrides it to "
+            f"{overrides[library]}, so the win_arm64 wheel would fail its own repair step"
+        )
+
+
+class TestTheCheckersAreActuallyWiredIntoCi:
+    """Both top findings of this branch's review were wiring, not logic, so the wiring is guarded.
+
+    The wheel workflow has no `pull_request` trigger, so neither checker runs in anger before a
+    merge. A checker that is correct but invoked nowhere -- or invoked in two jobs out of eight --
+    asserts nothing, and nothing but a test like this notices (#1627).
+    """
+
+    def test_every_repair_command_invokes_the_bundled_checker(self):
+        """All three pyproject repair commands must run it, or that platform goes unchecked."""
+        with _PYPROJECT.open("rb") as handle:
+            cibuildwheel = tomllib.load(handle)["tool"]["cibuildwheel"]
+        repair_commands = {
+            platform: settings["repair-wheel-command"]
+            for platform, settings in cibuildwheel.items()
+            if isinstance(settings, dict) and "repair-wheel-command" in settings
+        }
+
+        assert len(repair_commands) >= 3, (
+            f"expected a repair command per platform, found {sorted(repair_commands)}"
+        )
+        for platform, command in repair_commands.items():
+            rendered = " ".join(command) if isinstance(command, list) else command
+            assert "check-bundled-stack.py" in rendered, (
+                f"the {platform} repair command does not run check-bundled-stack.py, so that "
+                "platform's bundled stack is never compared against the baseline"
+            )
+
+    def test_the_musllinux_repair_override_invokes_the_bundled_checker(self):
+        """The workflow's CIBW_REPAIR_WHEEL_COMMAND replaces the TOML command wholesale."""
+        workflow = _WHEEL_WORKFLOW.read_text(encoding="utf-8")
+        overrides = [
+            line
+            for line in workflow.splitlines()
+            if "CIBW_REPAIR_WHEEL_COMMAND" in line
+        ]
+
+        assert overrides, "expected a musllinux repair override in the wheel workflow"
+        for line in overrides:
+            index = workflow.splitlines().index(line)
+            block = "\n".join(workflow.splitlines()[index : index + 6])
+            assert "check-bundled-stack.py" in block, (
+                "a CIBW_REPAIR_WHEEL_COMMAND override replaces the repair command from "
+                "pyproject.toml entirely, so it must invoke the checker itself:\n"
+                + block
+            )
+
+    def test_every_smoke_and_verify_job_runs_verify_wheel(self):
+        """The installed-side assertion lives in verify-wheel.py, so every such job must run it."""
+        workflow = yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))
+        candidates = {
+            name: job
+            for name, job in workflow["jobs"].items()
+            if name.startswith(("test-wheels", "verify-"))
+        }
+        without = [
+            name
+            for name, job in candidates.items()
+            if "verify-wheel.py" not in yaml.safe_dump(job.get("steps", []))
+        ]
+
+        assert candidates, "expected smoke and verify jobs in the wheel workflow"
+        assert not without, (
+            f"these jobs install a wheel but never run ci/verify-wheel.py, so GDAL's version and "
+            f"the driver set go unasserted there: {without}"
+        )
+
+    def test_the_bundled_checker_runs_as_a_subprocess(self):
+        """Executing it is what makes an import-time break visible to this suite.
+
+        Test scenario:
+            The critical finding of this branch's review was an import that could not resolve in a
+            wheel environment. A test that only reads the source would not have caught it; running
+            the script would.
+        """
+        result = subprocess.run(
+            [sys.executable, str(_CHECKER)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode != 0, (
+            "with no arguments the checker must refuse, not pass"
+        )
+        assert "Traceback" not in result.stderr, (
+            f"the checker must refuse cleanly rather than crash: {result.stderr}"
+        )
+        assert "usage" in (result.stdout + result.stderr).lower(), (
+            f"the refusal should state the usage: {result.stdout} {result.stderr}"
         )
