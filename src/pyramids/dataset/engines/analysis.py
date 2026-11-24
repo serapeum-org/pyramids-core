@@ -1191,7 +1191,7 @@ class _Analysis(_Engine["Dataset"]):
                 ```python
                 >>> import math
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.analysis import Analysis
+                >>> from pyramids.dataset.engines.analysis import _Analysis
                 >>> _Analysis._probe_call(math.sqrt, np.array([2], dtype="int16")).dtype
                 dtype('float64')
 
@@ -1199,7 +1199,7 @@ class _Analysis(_Engine["Dataset"]):
             - A vectorised function is called on the array directly:
                 ```python
                 >>> import numpy as np
-                >>> from pyramids.dataset.engines.analysis import Analysis
+                >>> from pyramids.dataset.engines.analysis import _Analysis
                 >>> probe = _Analysis._probe_call(lambda v: v * 2, np.array([2], dtype="int16"))
                 >>> probe.tolist(), probe.dtype
                 ([4], dtype('int16'))

@@ -708,7 +708,7 @@ class TestReadPartFacadeTyping:
             type-safe and cannot drift to `Any` or to a different return type
             than the engine.
         """
-        engine_return = inspect.signature(COG.read_part).return_annotation
+        engine_return = inspect.signature(_COG.read_part).return_annotation
         facade_return = inspect.signature(Dataset.read_part).return_annotation
 
         assert facade_return not in (inspect.Signature.empty, "Any", None), (
