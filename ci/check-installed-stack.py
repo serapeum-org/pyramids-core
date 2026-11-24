@@ -34,12 +34,19 @@ _BASELINE_PATH = pathlib.Path(__file__).resolve().parent / "native-stack-baselin
 
 
 def _platform_tag() -> str:
-    """The wheel platform tag that matches this interpreter, for resolving declared exceptions.
+    """The platform tag that matches this interpreter, for resolving declared exceptions.
+
+    Derived from `sysconfig.get_platform()` with `-` and `.` replaced by `_`, rather than
+    reimplementing PEP 425: only the tags the baseline's exceptions actually key on have to come out
+    exact, and today those are the Windows ones.
 
     Returns:
-        A tag such as `win_arm64`, `win_amd64`, `manylinux_2_28_x86_64` or `macosx_11_0_arm64`.
-        Only the parts the baseline's exceptions key on need to be exact, so this is derived from
-        `sysconfig`'s platform string rather than reimplementing PEP 425.
+        `win_arm64` or `win_amd64` on Windows, where the two arches are told apart by the
+        interpreter's own platform string and nothing else is collapsed into them. Elsewhere, the
+        normalised `sysconfig` string as-is: `linux_x86_64` on every Linux (so neither a manylinux
+        nor a musllinux tag -- harmless, as the baseline declares no Linux exception, which leaves
+        those wheels compared against the unrelaxed baseline), and the interpreter's deployment
+        target on macOS, e.g. `macosx_11_0_arm64`.
     """
     platform = sysconfig.get_platform().replace("-", "_").replace(".", "_")
     if platform.startswith("win"):
@@ -52,10 +59,12 @@ def _expected_gdal(baseline: dict, tag: str) -> str | None:
 
     Args:
         baseline: The parsed baseline document.
-        tag: This platform's wheel tag.
+        tag: This platform's wheel tag, as `_platform_tag` reports it.
 
     Returns:
-        The required version, or None when the baseline does not pin GDAL.
+        The version from `exceptions.<tag>.gdal` when this platform declares one, otherwise the
+        `installed.gdal` pin, or None when neither exists -- which leaves GDAL's version unchecked
+        rather than failing, so the driver comparison still runs.
     """
     pinned = baseline.get("installed", {}).get("gdal", {})
     override = baseline.get("exceptions", {}).get(tag, {}).get("gdal", {})
@@ -65,8 +74,17 @@ def _expected_gdal(baseline: dict, tag: str) -> str | None:
 def main() -> int:
     """Check the installed GDAL's version and driver set against the baseline.
 
+    Compares three things, printing an `ok` or `FAIL` line for each on stdout: the version
+    `osgeo.gdal` reports, truncated at its first hyphen so a `3.14.0-dev` style suffix does not read
+    as drift, against this platform's expected version; and the `installed.drivers.raster` and
+    `installed.drivers.vector` lists against the drivers GDAL and OGR have actually registered. A
+    baseline that pins no GDAL version reports the version it found and compares nothing, and a
+    baseline that lists no drivers for a kind passes it trivially. The summary and the instruction to
+    either fix the route or declare an exception go to stderr.
+
     Returns:
-        0 when the installed stack conforms; 1 otherwise.
+        0 when the installed stack conforms; 1 when the version differs or any required driver is
+        missing, with one failure counted per mismatched version and per driver kind.
     """
     baseline = tomllib.loads(_BASELINE_PATH.read_text(encoding="utf-8"))
     tag = _platform_tag()

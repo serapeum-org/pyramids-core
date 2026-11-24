@@ -3,20 +3,27 @@
 
 pyramids-core builds its native stack three different ways -- from source for the Linux wheels,
 through vcpkg for ``win_arm64``, and from conda-forge binaries for ``win_amd64``/macOS -- and each
-route inherits its upstream's defaults for anything not explicitly requested. One release shipped
-HDF5 with thread-safety ON for three platforms and OFF for the other two while every version pin
-agreed (#1620), because nothing compared the built artifacts (#1627).
+route inherits its upstream's defaults for anything not explicitly requested. So the 0.81.0 wheels
+shipped three different HDF5s under one wheel version: 2.2.0 thread-safe from conda-forge
+(``win_amd64`` and both macOS arches), 2.1.0 non-thread-safe from the two Linux source builds, and
+2.1.1 non-thread-safe from vcpkg (``win_arm64``) -- #1620. The pins that would have shown it live in
+three separate places, and nothing compared the built artifacts against any of them (#1627).
 
 This reads what a repaired wheel actually contains and compares it against
 ``ci/native-stack-baseline.toml``. Every property comes out of the library's own embedded
-build-settings string, so the check needs no install and no import of the wheel: about a second per
-wheel. Run it on the *repaired* wheel -- before ``auditwheel``/``delocate``/``delvewheel`` there are
+build-settings string, and only the archive members that look like a checked library are read, so
+the check needs no install and no import of the wheel, and costs a fraction of a second per wheel.
+Run it on the *repaired* wheel -- before ``auditwheel``/``delocate``/``delvewheel`` there are
 no bundled libraries to inspect.
 
 GDAL is deliberately not checked here. Its version is not reliably greppable (a manylinux
 ``libgdal`` yields only a spurious ``GDAL 3.6.0``, macOS yields two candidates, and the Windows DLLs
 carry no version in their filename), so GDAL parity and the driver list are asserted from the
-installed wheel instead.
+installed wheel instead -- see ``ci/check-installed-stack.py``.
+
+Every comparison is printed as an ``ok``/``FAIL`` line on stdout; the summary and any ``WARN`` go to
+stderr. Exits 0 when every wheel matches the baseline, and 1 on any mismatch or when the arguments
+name no wheels at all.
 
 Usage:
     python ci/check-bundled-stack.py <wheel-or-directory> [...]
@@ -54,7 +61,13 @@ def load_baseline(path: pathlib.Path = _BASELINE_PATH) -> dict:
         path: The baseline file. Defaults to the one beside this script.
 
     Returns:
-        The parsed document, with `libraries` and optional `exceptions` tables.
+        The parsed document. `libraries` holds the properties every wheel must report, the optional
+        `exceptions` table the per-platform relaxations, and `installed` the GDAL version and driver
+        lists that only `ci/check-installed-stack.py` reads.
+
+    Raises:
+        FileNotFoundError: If `path` does not exist.
+        tomllib.TOMLDecodeError: If the file is not valid TOML.
     """
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
@@ -63,10 +76,14 @@ def platform_tag(wheel: pathlib.Path) -> str:
     """The platform tag of a wheel, used to resolve declared exceptions.
 
     Args:
-        wheel: A wheel path named per PEP 427, `name-version-python-abi-platform.whl`.
+        wheel: A wheel path named per PEP 427, `name-version-python-abi-platform.whl`, optionally
+            with a build tag as its third component.
 
     Returns:
-        The platform component, or an empty string when the name does not parse.
+        The last `-`-separated component of the filename, which is the platform tag in both forms,
+        or an empty string when the name has too few components to be a wheel name -- a renamed
+        copy, for instance, whose exceptions `check_wheel` then reports as unresolvable. A
+        compressed tag set is returned whole, dots included.
     """
     parts = wheel.stem.split("-")
     return parts[-1] if len(parts) >= 5 else ""
@@ -82,7 +99,11 @@ def expected_for(baseline: dict, tag: str) -> dict:
     Returns:
         A `{library: {property: value}}` mapping, with any declared exception for `tag` applied
         over the baseline. An exception may relax a version; `threadsafety` is never waived, so a
-        platform cannot opt out of the property that has already regressed.
+        platform cannot opt out of the property that has already regressed. Every other key of an
+        exception is dropped, including the `reason` prose it must carry, and an exception naming a
+        library the `libraries` table does not list is ignored -- which is how the baseline's
+        `exceptions.<tag>.gdal` entry stays inert here while `ci/check-installed-stack.py` honours
+        it. An empty `tag` matches no exception, so the wheel is compared against the baseline.
     """
     expected = {name: dict(props) for name, props in baseline["libraries"].items()}
     for name, overrides in baseline.get("exceptions", {}).get(tag, {}).items():
@@ -97,13 +118,18 @@ def expected_for(baseline: dict, tag: str) -> dict:
 def _members_for(archive: zipfile.ZipFile, token: str) -> list[str]:
     """The archive members that look like the named native library.
 
+    A member qualifies when its lower-cased basename contains `token` and carries one of the native
+    suffixes, either at the end (`geos_c-<hash>.dll`) or as a versioned soname (`libproj.so.25.9.8.1`,
+    `libhdf5.320.2.0.dylib`).
+
     Args:
         archive: The opened wheel.
-        token: The substring identifying the library, e.g. `hdf5`.
+        token: The substring identifying the library, lower-cased to match the basename, e.g. `hdf5`.
 
     Returns:
-        Matching member names. Companion libraries such as `libhdf5_hl` match too; they embed no
-        settings string, so they contribute nothing and are harmless.
+        Matching member names. Companion and satellite libraries match too -- `libhdf5_hl`, the
+        `libgeos` core beneath `libgeos_c`, GDAL's own `gdal_hdf5` driver plugin -- but none of them
+        embeds a settings string, so they contribute nothing and are harmless.
     """
     found = []
     for member in archive.namelist():
@@ -125,8 +151,11 @@ def read_reported(wheel: pathlib.Path, libraries: list[str]) -> dict:
         libraries: The library tokens to look for.
 
     Returns:
-        A `{library: {property: value}}` mapping. A library contributes nothing when it is absent
-        from the wheel, which the caller reports as a failure in its own right.
+        A `{library: {property: value}}` mapping, each inner dict also carrying a `_member` key
+        naming the file the values were read from, for the comparison messages. A library maps to an
+        empty dict when the wheel bundles no copy of it, or bundles one whose bytes carry no settings
+        string, which the caller reports as a failure in its own right. When several members report
+        the same property the last one read wins.
     """
     reported: dict = {name: {} for name in libraries}
     with zipfile.ZipFile(wheel) as archive:
@@ -144,12 +173,20 @@ def read_reported(wheel: pathlib.Path, libraries: list[str]) -> dict:
 def check_wheel(wheel: pathlib.Path, baseline: dict) -> list[str]:
     """Compare one wheel's bundled stack against the baseline.
 
+    Every comparison is also printed as an `ok` or `FAIL` line on stdout, prefixed with the wheel's
+    name and platform tag. A `reason` key is documentation rather than a property, so it is skipped
+    instead of compared -- which matters for a `reason` written into a `libraries` entry, an
+    exception's own never reaching here. A wheel whose filename yields no platform tag draws a `WARN`
+    on stderr when the baseline declares exceptions at all, since it is then compared against the
+    unrelaxed baseline and any relaxation that should have applied looks like real drift.
+
     Args:
         wheel: The repaired wheel to check.
         baseline: The parsed baseline.
 
     Returns:
-        A list of human-readable failures; empty when the wheel conforms.
+        A list of human-readable failures -- one per mismatched property, plus one per library the
+        wheel does not bundle; empty when the wheel conforms.
     """
     tag = platform_tag(wheel)
     if not tag and baseline.get("exceptions"):
@@ -188,10 +225,14 @@ def _wheels(targets: list[str]) -> list[pathlib.Path]:
     """Expand each argument into the wheels it names.
 
     Args:
-        targets: Wheel paths, or directories to scan for `*.whl`.
+        targets: Wheel paths, or directories to scan for `*.whl`. A directory is scanned one level
+            deep and may legitimately yield nothing, which `main` treats as a failure.
 
     Returns:
         The wheels to check, sorted and deduplicated.
+
+    Raises:
+        SystemExit: If a target is neither an existing directory nor a path ending in `.whl`.
     """
     found: set[pathlib.Path] = set()
     for target in targets:
@@ -214,7 +255,14 @@ def main(argv: list[str]) -> int:
         argv: Wheel paths and/or directories containing wheels.
 
     Returns:
-        0 when every wheel conforms; 1 otherwise.
+        0 only when at least one wheel was found and every one of them conforms. 1 when any wheel
+        mismatches the baseline, and 1 as well when the targets name no wheels at all: an empty
+        directory is a refusal, not a no-op, because reporting success having compared nothing is
+        the outcome this guard exists to prevent.
+
+    Raises:
+        SystemExit: If `argv` is empty, carrying this script's usage text, or if a target is neither
+            a wheel nor a directory.
     """
     if not argv:
         raise SystemExit(__doc__)
