@@ -28,6 +28,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+# These drive the checkers over synthetic wheels and parsed config, so they need nothing but
+# the standard library -- no osgeo, no built wheel -- and belong in the `core` selection like
+# the other wiring guards.
+pytestmark = pytest.mark.core
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CHECKER = _REPO_ROOT / "ci" / "check-bundled-stack.py"
 _VERIFY_WHEEL = _REPO_ROOT / "ci" / "verify-wheel.py"
@@ -244,7 +249,14 @@ class TestAConformingWheelPasses:
         )
 
     def test_a_companion_library_contributes_nothing(self, tmp_path):
-        """`libhdf5_hl` matches the `hdf5` token but embeds no build-settings string.
+        """A member matching the token but carrying no settings string must not break the check.
+
+        Test scenario:
+            Two cases, both real in published wheels: `libhdf5_hl`, which has a native suffix and is
+            scanned but embeds no settings string, and a `.txt` sidecar, which `_members_for`
+            filters out *before* any read because it has no native suffix. The filter is what this
+            pins -- an earlier docstring claimed the sidecar was scanned alongside the library,
+            which is the opposite of what happens.
 
         Test scenario:
             The token match is a substring test, so a wheel's companion libraries -- and files
@@ -608,6 +620,25 @@ class TestTheTargetsAreExpandedToWheels:
 
         assert "neither a wheel nor a directory" in str(excinfo.value), (
             f"the refusal should name the problem, got: {excinfo.value}"
+        )
+
+    def test_a_wheel_path_that_does_not_exist_is_refused(self, tmp_path):
+        """A typo'd wheel path must draw the script's own refusal, not a zipfile traceback.
+
+        Test scenario:
+            `_wheels` accepted any path whose suffix was `.whl`, so a mistyped name reached
+            `zipfile.ZipFile` and surfaced as a FileNotFoundError traceback. Unreachable from the
+            repair steps, which pass a directory, but a confusing failure for anyone running it by
+            hand.
+        """
+        result = _run(tmp_path / "pyramids_core-0.81.0-cp312-cp312-win_amd64.whl")
+
+        assert result.returncode != 0, "a non-existent wheel must be refused"
+        assert "does not exist" in (result.stdout + result.stderr), (
+            f"the refusal should say the path does not exist: {result.stdout} {result.stderr}"
+        )
+        assert "Traceback" not in result.stderr, (
+            f"it must refuse cleanly rather than crash: {result.stderr}"
         )
 
     def test_a_directory_with_no_wheels_is_refused(self, tmp_path):

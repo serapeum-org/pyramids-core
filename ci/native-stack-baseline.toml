@@ -43,9 +43,19 @@ version = "9.8.1"
 [libraries.geos]
 version = "3.14.1"
 
+# The one property that cannot be read from a wheel's bytes, so it is asserted from the *installed*
+# package instead, by ci/verify-wheel.py in every smoke and verify job. GDAL's version lives in the
+# SONAME on Linux/macOS and nowhere in the Windows filename. The driver set is not declared here:
+# ci/verify-wheel.py's own _check_driver_set already asserts a superset of it on every platform.
 [installed.gdal]
 version = "3.13.3"
 
+# Platforms that cannot meet the baseline, each with its reason. An exception is a reviewed
+# decision, not a silent difference -- which is the whole point of the file, and why a missing
+# `reason` is refused at load. Keys are matched against the wheel's platform tag, the same namespace
+# on both sides: ci/check-bundled-stack.py reads it from the wheel's filename and ci/verify-wheel.py
+# from the installed wheel's .dist-info/WHEEL. An exception may relax a *version*; it never waives
+# `threadsafety`, the property that already regressed once (#1620).
 [exceptions.win_arm64.gdal]
 version = "3.12.4"
 reason = """
@@ -54,9 +64,6 @@ vcpkg's pinned builtin-baseline carries no gdal 3.13.x port -- its newest is 3.1
 when the vcpkg baseline is next bumped; see ci/vcpkg.json.
 """
 
-# Platforms that cannot meet the baseline, with the reason. An exception is a reviewed decision, not
-# a silent difference -- which is the whole point of the file. Keys are matched against the wheel's
-# platform tag. An exception may relax a *version*; it never waives `threadsafety`.
 [exceptions.win_arm64.hdf5]
 version = "2.1.1"
 reason = """
@@ -64,8 +71,3 @@ vcpkg's pinned builtin-baseline carries no hdf5 2.2.x port -- its newest is 2.1.
 so this platform cannot reach the baseline version without moving the baseline itself. Revisit when
 the vcpkg baseline is next bumped; see ci/vcpkg.json.
 """
-
-# Properties that cannot be read from a wheel's bytes and are asserted from the *installed* package
-# instead, by ci/check-installed-stack.py in the wheel smoke jobs. GDAL's version lives in the
-# SONAME on Linux/macOS and nowhere in the Windows filename, and a driver list can only come from
-# asking the library.

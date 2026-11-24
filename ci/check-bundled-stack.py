@@ -257,15 +257,19 @@ def _wheels(targets: list[str]) -> list[pathlib.Path]:
         The wheels to check, sorted and deduplicated.
 
     Raises:
-        SystemExit: If a target is neither an existing directory nor a path ending in `.whl`.
+        SystemExit: If a target is neither an existing directory nor an existing `.whl` file.
     """
     found: set[pathlib.Path] = set()
     for target in targets:
         path = pathlib.Path(target)
         if path.is_dir():
             found.update(path.glob("*.whl"))
-        elif path.suffix == ".whl":
+        elif path.suffix == ".whl" and path.is_file():
             found.add(path)
+        elif path.suffix == ".whl":
+            # Without this arm a typo'd wheel path reached zipfile.ZipFile and surfaced as a
+            # FileNotFoundError traceback rather than the script's own refusal.
+            raise SystemExit(f"check-bundled-stack: {target!r} does not exist")
         else:
             raise SystemExit(
                 f"check-bundled-stack: {target!r} is neither a wheel nor a directory"
@@ -277,45 +281,47 @@ def main(argv: list[str]) -> int:
     """Check every wheel named on the command line against the baseline.
 
     Args:
-        argv: Wheel paths and/or directories containing wheels.
+        argv: Wheel paths, or directories to scan one level deep for `*.whl`. The repair step passes
+            cibuildwheel's `{dest_dir}`.
 
     Returns:
-        0 only when at least one wheel was found and every one of them conforms. 1 when any wheel
-        mismatches the baseline, and 1 as well when the targets name no wheels at all: an empty
-        directory is a refusal, not a no-op, because reporting success having compared nothing is
-        the outcome this guard exists to prevent.
+        0 when at least one wheel was found and all of them conform; 1 when any wheel fails a
+        comparison, or when the targets yielded no wheels at all -- refusing to report success having
+        compared nothing, which is the failure mode this check exists to prevent.
 
     Raises:
-        SystemExit: If `argv` is empty, carrying this script's usage text, or if a target is neither
-            a wheel nor a directory.
+        SystemExit: If `argv` is empty, or a target is neither an existing directory nor an existing
+            `.whl` file.
     """
     if not argv:
         raise SystemExit(__doc__)
     baseline = load_baseline()
     wheels = _wheels(argv)
+    failures = []
+    for wheel in wheels:
+        failures.extend(check_wheel(wheel, baseline))
     if not wheels:
-        # A repair step is always pointed at a directory holding the wheel it just repaired, so an
-        # empty one means the wiring broke, not that there is nothing to check. Passing here would
-        # be a vacuous success -- the same silently-unchecked outcome this guard exists to prevent.
         print(
-            f"check-bundled-stack: no wheels found in {', '.join(argv)}; refusing to report "
+            f"check-bundled-stack: no wheels found in {', '.join(argv)} -- refusing to report "
             "success having compared nothing.",
             file=sys.stderr,
         )
-        return 1
-    failures: list[str] = []
-    for wheel in wheels:
-        failures.extend(check_wheel(wheel, baseline))
-    if failures:
+        status = 1
+    elif failures:
         print(
             f"\ncheck-bundled-stack: {len(failures)} bundled-library mismatch(es) against "
-            f"{native_stack_baseline.BASELINE_PATH.name}.\nEither fix the build route that drifted, or -- if the platform "
-            "genuinely cannot meet the baseline -- add a declared exception with its reason to that "
-            "file (see issue #1627).",
+            f"{native_stack_baseline.BASELINE_PATH.name}.\nEither fix the build route that drifted, "
+            "or -- if the platform genuinely cannot meet the baseline -- add a declared exception "
+            "with its reason to that file (see issue #1627).",
             file=sys.stderr,
         )
-        return 1
-    return 0
+        status = 1
+    else:
+        print(
+            f"check-bundled-stack: {len(wheels)} wheel(s) match the declared native stack."
+        )
+        status = 0
+    return status
 
 
 if __name__ == "__main__":
