@@ -857,3 +857,68 @@ class TestTheInstalledStackIsAsserted:
         assert "pins no version" in capsys.readouterr().out, (
             "the report should say the version was not compared"
         )
+
+
+class TestAFloorToleratesNewerButNotOlder:
+    """`min_version` is a floor, so a route may lead but never lag.
+
+    PROJ and GEOS carry a floor rather than an exact version because no single value is reachable by
+    all three routes -- conda-forge's `gdal 3.13.3` requires proj >= 9.9.0 and geos >= 3.15.0, while
+    vcpkg's pinned baseline offers at most 9.8.1 and 3.14.1. Exact-matching something that cannot be
+    equal would only ever accumulate exceptions recording expected differences; the floor still fails
+    the case worth catching, a route shipping an older library than any other (#1627).
+    """
+
+    def test_a_newer_library_than_the_floor_passes(self, tmp_path):
+        """The published osx-64 values, which an exact pin rejected and a floor accepts."""
+        result = _run(_wheel(tmp_path, proj="9.9.0", geos="3.15.0"))
+
+        assert result.returncode == 0, (
+            f"newer than the floor must pass: {result.stdout}"
+        )
+        assert "want >= 9.8.1" in result.stdout, (
+            f"the report should show the floor, not an equality: {result.stdout}"
+        )
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [("proj", "9.6.0"), ("geos", "3.13.0")],
+        ids=["proj-older", "geos-older"],
+    )
+    def test_a_library_older_than_the_floor_is_refused(self, tmp_path, field, value):
+        """A route dragging in an older library than any other ships still fails.
+
+        Args:
+            field: Which library lags.
+            value: The below-floor version it reports.
+        """
+        result = _run(_wheel(tmp_path, **{field: value}))
+
+        assert result.returncode == 1, (
+            f"{field}={value} is below the floor and must fail"
+        )
+        assert field in result.stdout.lower(), (
+            f"the report should name {field}: {result.stdout}"
+        )
+
+    def test_a_far_newer_library_still_passes(self, tmp_path):
+        """A floor deliberately does not cap, so a major jump is tolerated.
+
+        Test scenario:
+            This is the floor's known blind spot, pinned so the trade-off is explicit: it catches a
+            route lagging, not two routes diverging upward. HDF5 keeps an exact version for that
+            reason, since a single value is reachable there.
+        """
+        result = _run(_wheel(tmp_path, proj="12.0.0", geos="9.9.9"))
+
+        assert result.returncode == 0, (
+            f"a floor must not cap the upper end: {result.stdout}"
+        )
+
+    def test_the_version_components_compare_numerically_not_as_strings(self, tmp_path):
+        """`9.10.0` is newer than `9.9.0`, which a string comparison would get backwards."""
+        result = _run(_wheel(tmp_path, proj="9.10.0"))
+
+        assert result.returncode == 0, (
+            f"9.10.0 must read as newer than the floor: {result.stdout}"
+        )

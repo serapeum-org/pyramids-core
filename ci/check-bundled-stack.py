@@ -37,6 +37,26 @@ import sys
 import tomllib
 import zipfile
 
+
+def _as_tuple(version: str) -> tuple[int, ...]:
+    """A dotted version as a comparable tuple of integers.
+
+    Args:
+        version: A version string such as `9.8.1`.
+
+    Returns:
+        Its numeric components, with any non-numeric trailing part dropped so a build suffix
+        (`2.2.0-dev`) still compares.
+    """
+    parts = []
+    for chunk in version.split("."):
+        digits = "".join(c for c in chunk if c.isdigit())
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
 _BASELINE_PATH = pathlib.Path(__file__).resolve().parent / "native-stack-baseline.toml"
 
 #: How to read each library's own build-settings string out of its binary. The key is the token that
@@ -110,7 +130,7 @@ def expected_for(baseline: dict, tag: str) -> dict:
         if name not in expected:
             continue
         for prop, value in overrides.items():
-            if prop in ("version",):
+            if prop in ("version", "min_version"):
                 expected[name][prop] = value
     return expected
 
@@ -211,9 +231,15 @@ def check_wheel(wheel: pathlib.Path, baseline: dict) -> list[str]:
         for prop, want in sorted(wanted.items()):
             if prop == "reason":
                 continue
-            have = got.get(prop)
-            line = f"{member} {prop}={have} (want {want})"
-            if have == want:
+            if prop == "min_version":
+                have = got.get("version")
+                line = f"{member} version={have} (want >= {want})"
+                ok = have is not None and _as_tuple(have) >= _as_tuple(want)
+            else:
+                have = got.get(prop)
+                line = f"{member} {prop}={have} (want {want})"
+                ok = have == want
+            if ok:
                 print(f"ok   {wheel.name} [{tag}]: {line}")
             else:
                 failures.append(f"{wheel.name} [{tag}]: {line}")
