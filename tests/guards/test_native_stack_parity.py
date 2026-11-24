@@ -1055,8 +1055,10 @@ class TestABaselineThatWouldCompareNothingIsRefused:
         baseline = tmp_path / "native-stack-baseline.toml"
         baseline.write_text(body, encoding="utf-8")
 
+        module = _shared_module()
+
         with pytest.raises(ValueError, match=expected):
-            _shared_module().load(baseline)
+            module.load(baseline)
 
     def test_the_shipped_baseline_validates(self):
         """The real declaration must satisfy its own rules."""

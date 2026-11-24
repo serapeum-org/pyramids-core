@@ -80,7 +80,10 @@ def locked_versions(
             to prevent.
     """
     text = lock.read_text(encoding="utf-8", errors="replace")
-    environments = text.split("\npackages:", 1)[0]
+    # Splitting on the `packages:` header consumes the newline that terminated the previous
+    # line, while the entry pattern below needs one per line -- so without re-adding it the
+    # final entry of the last platform block of the last environment is silently dropped.
+    environments = text.split("\npackages:", 1)[0] + "\n"
     block = re.search(
         rf"\n  {re.escape(environment)}:\n(.*?)(?=\n  [A-Za-z][\w-]*:\n|\Z)",
         environments,

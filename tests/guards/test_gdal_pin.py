@@ -14,6 +14,7 @@ install gdal in the conda-forge-shape wheel test) reads that same table.
 """
 
 import importlib.util
+import re
 import runpy
 import sys
 import tomllib
@@ -183,8 +184,10 @@ class TestTheLockedPinsFeedTheCrossCompileSolve:
             kwargs: Arguments naming something absent from the lock.
             expected: Text the raised message must contain.
         """
+        module = _load_gdal_pin()
+
         with pytest.raises(KeyError, match=expected):
-            _load_gdal_pin().locked_pins(**kwargs)
+            module.locked_pins(**kwargs)
 
     def test_the_range_mode_still_reads_pyproject(self):
         """Adding `--locked` must not change what the original mode emits."""
@@ -371,8 +374,10 @@ class TestTheLockReaderTrustsOnlyTheCondaUrl:
             tmp_path, _lock_entries("linux-64", ["proj-9.8.1-h1_0.conda"])
         )
 
+        module = _load_gdal_pin()
+
         with pytest.raises(KeyError, match="has no platform 'osx-64'"):
-            _load_gdal_pin().locked_versions("osx-64", lock=lock)
+            module.locked_versions("osx-64", lock=lock)
 
     def test_an_undeclared_environment_raises(self, tmp_path):
         """Asking for an environment the lock never declares must name it in the refusal."""
@@ -381,13 +386,17 @@ class TestTheLockReaderTrustsOnlyTheCondaUrl:
             _lock_entries("osx-64", ["proj-9.8.1-h1_0.conda"], environment="bare"),
         )
 
+        module = _load_gdal_pin()
+
         with pytest.raises(KeyError, match="declares no environment 'wheel-build'"):
-            _load_gdal_pin().locked_versions("osx-64", lock=lock)
+            module.locked_versions("osx-64", lock=lock)
 
     def test_a_missing_lock_file_raises(self, tmp_path):
         """No lock at all is a FileNotFoundError, not an empty set of pins."""
+        module = _load_gdal_pin()
+
         with pytest.raises(FileNotFoundError):
-            _load_gdal_pin().locked_versions("osx-64", lock=tmp_path / "absent.lock")
+            module.locked_versions("osx-64", lock=tmp_path / "absent.lock")
 
 
 class TestTheCommandLineRoutesToTheRightMode:
@@ -529,3 +538,65 @@ class TestTheCommandLineRoutesToTheRightMode:
         assert capsys.readouterr().out.strip() == _load_gdal_pin().gdal_spec(
             PYPROJECT
         ), "running it as a script must print the same spec the function returns"
+
+
+class TestTheLockIsReadToItsLastEntry:
+    """Every locked entry must be read, including the last line of the last block.
+
+    `locked_versions` splits the lock on its `packages:` header, which consumes the newline that
+    terminated the previous line, while the entry pattern needs one per line. The final entry of the
+    last platform block of the last environment was therefore dropped silently. It could not produce a
+    *wrong* pin -- `locked_pins` raises for any requested name it cannot find -- but the `(found N)`
+    count in that error was off, and a lock re-order or a new trailing environment could have made the
+    dropped entry one of proj/geos/hdf5 and broken the cross-compile step with a misleading message.
+    """
+
+    @pytest.mark.parametrize("platform", ["linux-64", "osx-64", "osx-arm64", "win-64"])
+    def test_every_conda_entry_in_the_block_is_parsed(self, platform):
+        """The parsed count must equal the entries the lock actually carries.
+
+        Args:
+            platform: The conda subdir whose block must be read completely.
+        """
+        module = _load_gdal_pin()
+        environments = LOCK.read_text(encoding="utf-8", errors="replace").split(
+            "\npackages:", 1
+        )[0]
+        block = re.search(
+            r"\n  wheel-build:\n(.*?)(?=\n  [A-Za-z][\w-]*:\n|\Z)", environments, re.S
+        )
+        section = re.search(
+            rf"\n      {platform}:\n((?:      - .*\n?)+)", block.group(1)
+        )
+        if section is None:
+            pytest.skip(f"the lock carries no {platform} block for wheel-build")
+        declared = re.findall(rf"/{platform}/([^/\s]+)\.conda", section.group(1))
+        parsed = module.locked_versions(platform)
+        unparsed = [name for name in declared if name.rsplit("-", 2)[0] not in parsed]
+
+        assert not unparsed, (
+            f"these locked entries were not read, so a pin naming one would wrongly look absent: "
+            f"{unparsed}"
+        )
+
+    def test_the_last_entry_of_a_block_is_not_dropped(self, tmp_path):
+        """A lock whose final line is an entry with no trailing newline must still be read."""
+        lock = tmp_path / "pixi.lock"
+        lock.write_text(
+            "version: 6\n"
+            "environments:\n"
+            "  wheel-build:\n"
+            "    channels:\n"
+            "    - url: https://conda.anaconda.org/conda-forge/\n"
+            "    packages:\n"
+            "      osx-64:\n"
+            "      - conda: https://conda.anaconda.org/conda-forge/osx-64/proj-9.8.1-h856bcef_1.conda\n"
+            "      - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h534d264_7.conda",
+            encoding="utf-8",
+        )
+
+        parsed = _load_gdal_pin().locked_versions("osx-64", lock=lock)
+
+        assert parsed == {"proj": "9.8.1", "zstd": "1.5.7"}, (
+            f"the final entry must be read even with no trailing newline: {parsed}"
+        )
