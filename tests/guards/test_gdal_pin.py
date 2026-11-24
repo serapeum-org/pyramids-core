@@ -95,3 +95,130 @@ def test_gdal_pin_script_resolves_micromamba_packages():
     assert not missing, (
         f"ci/gdal-pin.py cannot resolve {missing} that setup-gdal-micromamba.sh requests"
     )
+
+
+LOCK = REPO_ROOT / "pixi.lock"
+MICROMAMBA_SCRIPT = REPO_ROOT / "ci" / "setup-gdal-micromamba.sh"
+
+# The libraries whose versions ci/native-stack-baseline.toml asserts in a built wheel. The
+# cross-compile branch must pin these from the lock, or it re-solves them to whatever is newest.
+LOCKED_FROM_PIXI_LOCK = ["proj", "geos", "hdf5"]
+
+
+def _locked_platforms() -> list[str]:
+    """The conda subdirs `pixi.lock` carries entries for in the wheel-build environment."""
+    module = _load_gdal_pin()
+    candidates = ("linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64")
+    present = []
+    for platform in candidates:
+        try:
+            module.locked_versions(platform)
+        except KeyError:
+            continue
+        present.append(platform)
+    return present
+
+
+class TestTheLockedPinsFeedTheCrossCompileSolve:
+    """`--locked` must give the cross-compile branch the versions the lock already resolved.
+
+    A range spec pins a *version*, not a *solve*. Re-resolving `gdal >=3.13.3,<3.13.4` for
+    osx-64 picked the newest matching build, which links proj 9.9.0 and geos 3.15.0, while every
+    platform installed from `pixi.lock` got the older build with proj 9.8.1 and geos 3.14.1. One
+    release shipped two different native stacks under one version number, and only the osx-64
+    wheel -- the single cross-compiled target -- was affected (#1627).
+    """
+
+    def test_the_locked_native_stack_agrees_across_every_platform(self):
+        """The parity property itself: one native stack per release, whatever the platform."""
+        module = _load_gdal_pin()
+        platforms = _locked_platforms()
+        resolved = {
+            platform: module.locked_pins(LOCKED_FROM_PIXI_LOCK, platform)
+            for platform in platforms
+        }
+
+        assert len(platforms) >= 2, (
+            f"expected several locked platforms, found {platforms}"
+        )
+        distinct = {tuple(sorted(pins.items())) for pins in resolved.values()}
+        assert len(distinct) == 1, (
+            "pixi.lock resolves a different native stack per platform, so no single pin can make "
+            f"the wheels agree: {resolved}"
+        )
+
+    def test_locked_pins_are_exact_equality_specs(self):
+        """A floor would let the solver drift upward again, so the pin must be `==`."""
+        pins = _load_gdal_pin().locked_pins(LOCKED_FROM_PIXI_LOCK, "osx-64")
+
+        assert sorted(pins) == sorted(LOCKED_FROM_PIXI_LOCK), (
+            f"every name must resolve: {pins}"
+        )
+        for name, spec in pins.items():
+            assert spec.startswith("=="), f"{name} must be pinned exactly, got {spec!r}"
+
+    @pytest.mark.parametrize(
+        ("kwargs", "expected"),
+        [
+            (
+                {"names": ["no-such-package"], "platform": "osx-64"},
+                "pins no no-such-package",
+            ),
+            ({"names": ["proj"], "platform": "osx-99"}, "no platform"),
+            (
+                {"names": ["proj"], "platform": "osx-64", "environment": "nope"},
+                "no environment",
+            ),
+        ],
+        ids=["unknown-package", "unknown-platform", "unknown-environment"],
+    )
+    def test_an_unresolvable_pin_raises_rather_than_being_dropped(
+        self, kwargs, expected
+    ):
+        """A pin that resolves to nothing must fail loudly, not hand the choice back to the solver.
+
+        Args:
+            kwargs: Arguments naming something absent from the lock.
+            expected: Text the raised message must contain.
+        """
+        with pytest.raises(KeyError, match=expected):
+            _load_gdal_pin().locked_pins(**kwargs)
+
+    def test_the_range_mode_still_reads_pyproject(self):
+        """Adding `--locked` must not change what the original mode emits."""
+        module = _load_gdal_pin()
+
+        assert module.gdal_spec(PYPROJECT).startswith(">="), (
+            "the range mode must keep emitting the pyproject spec, not an exact pin"
+        )
+
+
+class TestTheCrossCompileScriptUsesTheLockedPins:
+    """The wiring: `setup-gdal-micromamba.sh` must actually consume `--locked`."""
+
+    def test_the_script_reads_the_locked_pins(self):
+        """Without this call the branch re-solves and the divergence returns."""
+        script = MICROMAMBA_SCRIPT.read_text(encoding="utf-8")
+
+        assert "--locked" in script, (
+            "ci/setup-gdal-micromamba.sh must call gdal-pin.py --locked, or it re-resolves the "
+            "native stack to whatever conda-forge currently ships newest (#1627)"
+        )
+        assert '--platform "${TARGET_PLATFORM}"' in script, (
+            "the locked lookup must use the target platform, not the host's"
+        )
+
+    @pytest.mark.parametrize("library", LOCKED_FROM_PIXI_LOCK)
+    def test_every_baseline_library_is_passed_to_micromamba(self, library):
+        """Each library the baseline asserts a version for must reach the solve as a pin.
+
+        Args:
+            library: The conda package name that must appear in the create command.
+        """
+        script = MICROMAMBA_SCRIPT.read_text(encoding="utf-8")
+        variable = f"${{{library.upper()}_SPEC}}"
+
+        assert f'"{library}{variable}"' in script, (
+            f"{library} must be passed to micromamba create as {library}{variable}, or its "
+            "version is left to the solver on the cross-compile branch"
+        )
