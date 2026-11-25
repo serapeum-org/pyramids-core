@@ -727,14 +727,7 @@ class RasterBase(ABC):
             rowcol: The inverse, mapping map coordinates to cell indices.
             transform: The affine-style geotransform object.
         """
-        # np.ndim == 0 treats Python scalars, NumPy scalars, and 0-d arrays
-        # alike; np.isscalar misses 0-d arrays (np.isscalar(np.array(5)) is False).
-        scalar = np.ndim(rows) == 0 and np.ndim(cols) == 0
-        xs_arr, ys_arr = self.transform.apply(cols, rows, center=center)
-        xs = [float(value) for value in xs_arr]
-        ys = [float(value) for value in ys_arr]
-        result = (xs[0], ys[0]) if scalar else (xs, ys)
-        return result
+        return self.cell.xy(rows, cols, center=center)
 
     def rowcol(
         self,
@@ -791,25 +784,7 @@ class RasterBase(ABC):
             xy: The inverse, mapping cell indices to map coordinates.
             transform: The affine-style geotransform object.
         """
-        # np.ndim == 0 treats Python scalars, NumPy scalars, and 0-d arrays
-        # alike; np.isscalar misses 0-d arrays (np.isscalar(np.array(5)) is False).
-        scalar = np.ndim(x) == 0 and np.ndim(y) == 0
-        x_arr = np.atleast_1d(np.asarray(x, dtype=float))
-        y_arr = np.atleast_1d(np.asarray(y, dtype=float))
-        cols_f, rows_f = self.transform.invert(x_arr, y_arr)
-        rows_idx = np.floor(rows_f).astype(int)
-        cols_idx = np.floor(cols_f).astype(int)
-        result: tuple[Any, Any]
-        if scalar:
-            result = (int(rows_idx[0]), int(cols_idx[0]))
-        else:
-            # Return Python lists for sequence input, matching xy()
-            # so the two companions have a symmetric container contract.
-            result = (
-                [int(value) for value in rows_idx],
-                [int(value) for value in cols_idx],
-            )
-        return result
+        return self.cell.rowcol(x, y)
 
     @property
     def top_left_corner(self):

@@ -48,6 +48,51 @@ class _Cell(_Engine["Dataset"]):
     equivalent.
     """
 
+    def xy(
+        self,
+        rows: np.typing.ArrayLike,
+        cols: np.typing.ArrayLike,
+        *,
+        center: bool = True,
+    ) -> tuple[Any, Any]:
+        """Map array indices ``(row, col)`` to map coordinates ``(x, y)``.
+
+        See :meth:`Dataset.xy` for the full contract (scalar in, scalar out; sequence in,
+        two lists out).
+        """
+        # np.ndim == 0 treats Python scalars, NumPy scalars, and 0-d arrays alike.
+        scalar = np.ndim(rows) == 0 and np.ndim(cols) == 0
+        xs_arr, ys_arr = self._ds.transform.apply(cols, rows, center=center)
+        xs = [float(value) for value in xs_arr]
+        ys = [float(value) for value in ys_arr]
+        return (xs[0], ys[0]) if scalar else (xs, ys)
+
+    def rowcol(
+        self, x: np.typing.ArrayLike, y: np.typing.ArrayLike
+    ) -> tuple[Any, Any]:
+        """Map map coordinates ``(x, y)`` to array indices ``(row, col)``.
+
+        See :meth:`Dataset.rowcol` for the full contract.
+        """
+        # np.ndim == 0 treats Python scalars, NumPy scalars, and 0-d arrays alike.
+        scalar = np.ndim(x) == 0 and np.ndim(y) == 0
+        x_arr = np.atleast_1d(np.asarray(x, dtype=float))
+        y_arr = np.atleast_1d(np.asarray(y, dtype=float))
+        cols_f, rows_f = self._ds.transform.invert(x_arr, y_arr)
+        rows_idx = np.floor(rows_f).astype(int)
+        cols_idx = np.floor(cols_f).astype(int)
+        result: tuple[Any, Any]
+        if scalar:
+            result = (int(rows_idx[0]), int(cols_idx[0]))
+        else:
+            # Return Python lists for sequence input, matching xy() so the two
+            # companions have a symmetric container contract.
+            result = (
+                [int(value) for value in rows_idx],
+                [int(value) for value in cols_idx],
+            )
+        return result
+
     def get_cell_coords(
         self, location: str = "center", domain_only: bool = False
     ) -> np.typing.NDArray:
