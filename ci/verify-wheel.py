@@ -100,6 +100,12 @@ def _check_gdal_version() -> None:
     The expectation itself is resolved by `native_stack_baseline.expected_gdal`, which is unit
     tested by execution; this function only reports what it returns. This file runs every check at
     import, so it cannot be imported by a test -- which is why the resolution does not live here.
+    That resolver applies `[exceptions.<tag>.gdal]` when the installed wheel's own platform tag
+    declares one -- `win_arm64` is the single live case -- and names the table it answered from, so
+    the pass and failure messages both say where the number came from. An install whose metadata
+    yields no single platform tag resolves no exception: it is compared against the unrelaxed
+    baseline, with a NOTE saying so rather than a silent pass. A baseline pinning no version at all
+    fails here rather than comparing nothing.
     """
     baseline = native_stack_baseline.load()
     tag = native_stack_baseline.installed_platform_tag()

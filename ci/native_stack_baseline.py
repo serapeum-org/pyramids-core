@@ -7,12 +7,13 @@ opposite sides, and both read this module:
 
 * `ci/check-bundled-stack.py` reads a repaired wheel's bundled binaries in the repair step.
 * `ci/verify-wheel.py` asserts GDAL's version after installing the wheel, because GDAL's version is
-  not reliably byte-readable.
+  not reliably byte-readable. The expectation it compares against comes from `expected_gdal`.
 
 The validation here is the point of the module rather than a nicety. A guard whose declaration can be
 mistyped into vacuity is worse than no guard, because it reports `ok`: a baseline naming a library no
-extractor knows, or an exception with no reason, or a platform key that matches nothing, would all have
-passed silently. `validate` refuses each of them by name.
+extractor knows, an exception with no reason, a platform key that matches no wheel the project builds,
+or an installed-side table pinning no GDAL version would all have passed silently. `validate` refuses
+each of them by name.
 """
 
 from __future__ import annotations
@@ -32,14 +33,18 @@ SUPPORTED_LIBRARIES = ("hdf5", "proj", "geos")
 #: build flag #1620 was about, and an exception may never waive it.
 SUPPORTED_PROPERTIES = ("version", "threadsafety")
 
-#: The platform tags this project actually publishes a wheel for, as PEP 425 spells them. An
-#: exception key must match one of these, because a key matching no built wheel relaxes nothing: the
-#: platform is then compared against the unrelaxed baseline and fails its own repair step against a
-#: version it provably cannot reach. A loose prefix-family check was not enough -- it admitted
-#: `winarm64` and bare `win`, both of which look right and resolve to no platform.
+#: The platform-tag spellings an exception key may use: the wheel families this project builds, as
+#: PEP 425 spells them, with the arch suffix required. A key matching no built wheel relaxes nothing:
+#: the platform is then compared against the unrelaxed baseline and fails its own repair step against
+#: a version it provably cannot reach. A loose prefix-family check was not enough -- it admitted
+#: `winarm64` and bare `win`, both of which look right and resolve to no platform (it did already
+#: refuse a conda subdir such as `osx-64`, which uses `-` where a wheel tag uses `_`).
 #:
-#: Each family keeps its version segment open (`manylinux_2_28_`, `macosx_11_0_`) so an upstream bump
-#: needs no edit here, while the arch suffix is required, which is what a typo drops.
+#: The Linux and macOS families keep their version segment open (`manylinux_2_28_`, `macosx_11_0_`)
+#: so an upstream bump needs no edit here, while the arch suffix -- what a typo drops -- is required.
+#: The arch alternatives are the ones each family can legally carry, so a few the project does not
+#: currently build (`win32`, `*_i686`, `macosx_*_universal2`) match as well: the check is here to
+#: refuse a key that is no wheel platform tag at all, not to track the build matrix.
 _PLATFORM_TAG = re.compile(
     r"^(?:"
     r"manylinux(?:_\d+_\d+|\d+)_(?:x86_64|aarch64|i686)"
@@ -79,11 +84,15 @@ def validate(baseline: dict, name: str = "baseline") -> None:
         name: The file name, for the message.
 
     Raises:
-        ValueError: If `libraries` is missing or empty; if it pins a library outside
-            `SUPPORTED_LIBRARIES`, or a property outside `SUPPORTED_PROPERTIES`, or an empty table;
-            if an exception is keyed by something that is not a wheel platform tag, names a library
-            nothing compares, carries no non-empty `reason`, or relaxes no `version`; or if
-            `installed.gdal` exists without a `version`. Each is a way to write a declaration that
+        ValueError: If the document would compare nothing, or less than it looks like it compares.
+            The refusals are: `libraries` missing, empty, or not a table; a `[libraries.*]` entry
+            that is not a table of properties, names a library outside `SUPPORTED_LIBRARIES`, pins
+            no property at all, or pins one outside `SUPPORTED_PROPERTIES`; `[exceptions]`, an
+            `[exceptions.<tag>]`, or an `[exceptions.<tag>.<library>]` that is not a table; an
+            exception keyed by something `_PLATFORM_TAG` does not accept as a published wheel's
+            platform tag; an exception that names a library nothing compares, carries no non-empty
+            `reason`, or relaxes no `version`; and a `[installed.gdal]` table that is absent,
+            misspelled, or pins no non-empty `version`. Each is a way to write a declaration that
             silently compares nothing. Every problem found is reported, not just the first.
     """
     problems = []
@@ -173,8 +182,9 @@ def expected_for(baseline: dict, tag: str) -> dict:
     Returns:
         A `{library: {property: value}}` mapping. An exception may override `version` only: every other
         key, `threadsafety` above all, comes from `libraries` and cannot be waived. An exception naming
-        a library absent from `libraries` is ignored here -- `gdal` is the live case, relaxed on the
-        installed side instead.
+        a library absent from `libraries` is ignored here -- `gdal` is the live case, and it is
+        resolved on the installed side by `expected_gdal` instead, so the two never both answer for a
+        library.
     """
     expected = {
         library: dict(properties)
@@ -243,8 +253,13 @@ def installed_platform_tag(distribution: str = "pyramids-core") -> str:
     target on macOS, so a Linux or macOS exception would have needed two different keys, and whichever
     was missing would have silently relaxed nothing.
 
+    Every installed distribution is scanned rather than asked for by name, because the name alone
+    cannot tell one install from two: `importlib.metadata.distribution` answers from whichever
+    `.dist-info` sys.path reaches first. A distribution is this one when its `Name` metadata matches
+    after `-`/`_` and case normalisation; one declaring no `Name` is passed over rather than raising.
+
     Args:
-        distribution: The installed distribution to ask.
+        distribution: The installed distribution to ask for, in either spelling of its name.
 
     Returns:
         The single platform tag its wheel was built for, or an empty string when the distribution

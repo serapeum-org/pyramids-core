@@ -161,6 +161,11 @@ def read_reported(wheel: pathlib.Path, libraries: list[str]) -> dict:
         archive order: a non-threadsafe `aa_libhdf5.so` beside a conforming `zz_libhdf5.so` passed,
         and the same pair renamed failed. The property this whole check exists to defend could
         therefore ship broken in a wheel that reported `ok` (#1627).
+
+    Raises:
+        SystemExit: If the wheel is not a readable zip archive. A truncated or corrupt wheel is a
+            build failure rather than a comparison result, so it is named instead of surfacing a
+            `zipfile.BadZipFile` traceback out of the repair step.
     """
     reported: dict = {name: [] for name in libraries}
     try:
@@ -239,6 +244,11 @@ def _verdict(
 ) -> None:
     """Compare one bundled copy against the baseline, printing and recording each property.
 
+    A property the copy does not report is a failure like any mismatch, but it prints as
+    `<not reported by this copy>` rather than as `None`, which would read as a value the library
+    reported and would be byte-identical to what a real regression prints. A `reason` key is
+    documentation rather than a property, so it is skipped instead of compared.
+
     Args:
         wheel: The wheel the copy came from, for the message prefix.
         tag: The wheel's platform tag.
@@ -309,8 +319,8 @@ def main(argv: list[str]) -> int:
         compared nothing, which is the failure mode this check exists to prevent.
 
     Raises:
-        SystemExit: If `argv` is empty, or a target is neither an existing directory nor an existing
-            `.whl` file.
+        SystemExit: If `argv` is empty, if a target is neither an existing directory nor an existing
+            `.whl` file, or if one of the wheels found is not a readable zip archive.
     """
     if not argv:
         raise SystemExit(__doc__)

@@ -120,11 +120,12 @@ fi
 { read -r PROJ_SPEC; read -r GEOS_SPEC; read -r HDF5_SPEC; } \
     < <(python3 "${GDAL_PIN}" --locked --platform "${TARGET_PLATFORM}" proj geos hdf5)
 
-# Assert the invariant rather than leave it to `set -e` firing on `read`'s EOF status, which is what
-# actually protects this today but is nowhere stated. Two harmless-looking rewrites would reopen
-# #1632 by leaving a spec empty -- piping through `head`, or adding `|| true` -- and an extra line on
-# the producer's stdout would shift all three assignments by one, failing later in micromamba's spec
-# parser, far from the cause. Each spec must be an exact pin.
+# Assert the invariant rather than leave it to `set -e` firing on `read`'s EOF status, which is all
+# that protected this before and is stated nowhere in the code. Two harmless-looking rewrites would
+# reopen #1632 by leaving a spec empty -- piping through `head`, or adding `|| true` -- and an extra
+# line on the producer's stdout would shift all three assignments by one. Any of those used to
+# surface far from its cause, in micromamba's spec parser; the loop below stops the build here
+# instead, naming the spec that is not an exact `==<version>` pin from pixi.lock.
 for spec_name in PROJ_SPEC GEOS_SPEC HDF5_SPEC; do
     spec_value="${!spec_name}"
     case "${spec_value}" in

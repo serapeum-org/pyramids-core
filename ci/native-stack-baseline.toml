@@ -49,14 +49,25 @@ version = "3.14.1"
 # package instead, by ci/verify-wheel.py in every smoke and verify job. GDAL's version lives in the
 # SONAME on Linux/macOS and nowhere in the Windows filename. The driver set is not declared here:
 # ci/verify-wheel.py's own _check_driver_set already asserts a superset of it on every platform.
+# This table is required, not optional: an absent, emptied or misspelled one is refused at load,
+# because it would compare nothing on the installed side while the file still looks complete.
 [installed.gdal]
 version = "3.13.3"
 
 # Platforms that cannot meet the baseline, each with its reason. An exception is a reviewed
 # decision, not a silent difference -- which is the whole point of the file, and why a missing
-# `reason` is refused at load. Keys are matched against the wheel's platform tag, the same namespace
-# on both sides: ci/check-bundled-stack.py reads it from the wheel's filename and ci/verify-wheel.py
-# from the installed wheel's .dist-info/WHEEL. An exception may relax a *version*; it never waives
+# `reason` is refused at load.
+#
+# Keys are matched against the wheel's platform tag, the same namespace on both sides:
+# ci/check-bundled-stack.py reads it from the wheel's filename and ci/verify-wheel.py from the
+# installed wheel's .dist-info/WHEEL, and both map the placeholder `any` to "no platform", so a key
+# means the same thing whichever side resolves it. A key that is not a platform tag of a family this
+# project builds wheels for, arch suffix included, is refused at load as well: `winarm64`, bare
+# `win` and the conda subdir `osx-64` all look right and relax nothing, which would leave the
+# platform compared against the unrelaxed baseline and failing on a version it cannot reach.
+#
+# Which side applies an exception follows the property: a `[libraries]` library is relaxed in the
+# bundled check, `gdal` on the installed side. An exception may relax a *version*; it never waives
 # `threadsafety`, the property that already regressed once (#1620).
 [exceptions.win_arm64.gdal]
 version = "3.12.4"
