@@ -2778,23 +2778,16 @@ class Dataset(RasterBase):
 
                 ```
         """
-        # Dispatch to the lazy compute backend (pyramids-lazy); raises the branded
-        # OptionalPackageDoesNotExist when no backend is installed.
-        from pyramids.base._compute_backend import require_compute_backend
-
-        resolved_chunks = chunks if chunks is not None else "auto"
-        result: Delayed | None = require_compute_backend().write_dataset_to_zarr(
-            self,
+        return self.io.to_zarr(
             store,
             compute=compute,
             mode=mode,
-            chunks=resolved_chunks,
+            chunks=chunks,
             storage_options=storage_options,
             compressor=compressor,
             overview_factors=overview_factors,
             overview_resampling=overview_resampling,
         )
-        return result
 
     @classmethod
     def from_zarr(
@@ -4687,11 +4680,7 @@ class Dataset(RasterBase):
             - pyramids.dataset.stac_options.StacExtensions: which extensions are stamped on.
             - DatasetCollection.from_stac: the inverse — Items back into a cube.
         """
-        # Imported here to avoid the dataset <-> stac import cycle at load time.
-        from pyramids.dataset._stac import to_stac_item
-
-        return to_stac_item(
-            self,
+        return self.io.to_stac_item(
             item_id,
             asset_href=asset_href,
             datetime=datetime,

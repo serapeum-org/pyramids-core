@@ -2236,6 +2236,24 @@ class _IO(_Engine["Dataset"]):
         )
         return df
 
+    def to_zarr(self, store, *, chunks=None, **kwargs):
+        """Serialise this Dataset to a Zarr store. See :meth:`Dataset.to_zarr` for the contract."""
+        # Inline to defer the optional lazy compute backend (pyramids-lazy); it raises the
+        # branded OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        resolved_chunks = chunks if chunks is not None else "auto"
+        return require_compute_backend().write_dataset_to_zarr(
+            self._ds, store, chunks=resolved_chunks, **kwargs
+        )
+
+    def to_stac_item(self, *args, **kwargs):
+        """Describe this raster as a STAC Item dict. See :meth:`Dataset.to_stac_item`."""
+        # Inline to avoid the dataset <-> stac import cycle at load time.
+        from pyramids.dataset._stac import to_stac_item
+
+        return to_stac_item(self._ds, *args, **kwargs)
+
     @under_gdal_env
     def to_file(
         self,
