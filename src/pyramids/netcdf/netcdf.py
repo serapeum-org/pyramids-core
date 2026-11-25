@@ -3954,6 +3954,12 @@ class NetCDF(Dataset):
             NetCDF.variable_names: The names alone, as a list.
             NetCDF.dtypes: The same names, mapped to their types.
         """
+        warnings.warn(
+            "`data_vars` is deprecated and will be removed in a future release; use "
+            "`variables`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.variables
 
     @property
@@ -4022,6 +4028,12 @@ class NetCDF(Dataset):
             NetCDF.dimension_sizes: The canonical member, and where the subset rule comes from.
             NetCDF.dimension_names: The names alone, as a list.
         """
+        warnings.warn(
+            "`dims` is deprecated and will be removed in a future release; use "
+            "`dimension_sizes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.dimension_sizes
 
     @property
@@ -4061,6 +4073,12 @@ class NetCDF(Dataset):
             NetCDF.dimension_sizes: The canonical member.
             NetCDF.dims: The same mapping, under xarray's other name for it.
         """
+        warnings.warn(
+            "`sizes` is deprecated and will be removed in a future release; use "
+            "`dimension_sizes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.dimension_sizes
 
     @property
@@ -4116,6 +4134,12 @@ class NetCDF(Dataset):
             NetCDF.global_attributes: The canonical member, and the setters
                 `set_global_attribute` / `delete_global_attribute`.
         """
+        warnings.warn(
+            "`attrs` is deprecated and will be removed in a future release; use "
+            "`global_attributes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.global_attributes
 
     @property
