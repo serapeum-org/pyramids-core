@@ -107,7 +107,6 @@ from pyramids.dataset.engines import (
 # the object itself is never constructed or compared outside the engine.
 from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA
 from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
-from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.rasterize import rasterize_features
 from pyramids.dataset.ops.units import convert_array
@@ -2676,8 +2675,7 @@ class Dataset(RasterBase):
             optionally `raw_values`. Indexed by `fc.index` for polygon zones, or by the class value
             (`index.name="class"`) for raster zones.
         """
-        return _zonal_stats(
-            self,
+        return self.analysis.zonal_stats(
             zones,
             stats=stats,
             method=method,

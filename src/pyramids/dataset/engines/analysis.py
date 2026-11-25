@@ -71,6 +71,7 @@ from pyramids.dataset._plot_helpers import (
 from pyramids.dataset.abstract_dataset import RasterBase
 from pyramids.dataset.window import Window
 from pyramids.dataset.ops._focal import focal_apply, focal_mean, focal_std
+from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.feature import FeatureCollection
 
 if TYPE_CHECKING:
@@ -193,6 +194,15 @@ class _Analysis(_Engine["Dataset"]):
     ) -> np.ndarray | da.Array:
         """Apply ``func`` over a square moving window of the given radius."""
         return focal_apply(self._ds, func, radius=radius, chunks=chunks, band=band)
+
+    def zonal_stats(self, *args: Any, **kwargs: Any) -> Any:
+        """Group this dataset's values by zones and reduce them per zone.
+
+        See :meth:`Dataset.zonal_stats` for the full argument contract (polygon or
+        raster-category ``zones``, ``stats``, ``method``, ``band``, ``exclude_value``,
+        ``raw_values``).
+        """
+        return _zonal_stats(self._ds, *args, **kwargs)
 
     def stats(
         self,
