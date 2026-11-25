@@ -109,7 +109,6 @@ from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA
 from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
 from pyramids.dataset.ops.rasterize import rasterize_features
-from pyramids.dataset.ops.units import convert_array
 from pyramids.dataset.stac_options import BandMetadata, Footprint, StacExtensions
 from pyramids.dataset.transform import GeoTransform
 from pyramids.feature import FeatureCollection, create_polygon
@@ -4029,61 +4028,7 @@ class Dataset(RasterBase):
 
                 ```
         """
-        if band is not None and not 0 <= band < self.band_count:
-            raise ValueError(
-                f"band {band} is out of range for a {self.band_count}-band dataset."
-            )
-
-        band_indices = range(self.band_count) if band is None else [band]
-        source_units = list(self.band_units)
-        new_units = list(self.band_units)
-
-        # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this per-band unit
-        # conversion expects, not the dimension-preserving default (#1241).
-        full = self.read_array(squeeze=True)
-        # The gaps are found in the stored counts, where the sentinel lives; the values
-        # converted are the physical ones. Comparing the physical read against the
-        # stored `-9999` matched nothing, so a packed band's gap was converted as if it
-        # were a temperature (-98.49 K came out -371.64 degC) under a declared -9999.
-        stored = np.asarray(self.read_array(unpack=False, squeeze=True))
-        single_band = self.band_count == 1
-        stack = full[np.newaxis, ...] if single_band else full
-        stored_stack = stored[np.newaxis, ...] if single_band else stored
-        # astype(copy=True by default) already returns a fresh writable array;
-        # the trailing .copy() was a redundant second full-cube copy.
-        out = stack.astype("float64")
-        no_data = self.no_data_value
-
-        for index in band_indices:
-            layer = out[index]
-            nodata_value = no_data[index]
-            mask = (
-                stored_stack[index] == nodata_value
-                if nodata_value is not None
-                else None
-            )
-            converted = convert_array(layer, source_units[index], target)
-            if mask is not None:
-                converted[mask] = nodata_value
-            out[index] = converted
-            new_units[index] = target
-
-        result_array = out[0] if single_band else out
-        # `Dataset.from_array`, not `self.from_array`: this method is inherited
-        # by NetCDF / Container / Variable, whose override returns a *bandless*
-        # Container -- so the `band_units` assignment below died with
-        # `IndexError: index 0 is out of bounds for axis 0 with size 0`, three
-        # frames from the cause. A unit conversion yields a plain raster in
-        # every case, so the base constructor is the right one to name.
-        result = Dataset.from_array(
-            result_array,
-            no_data_value=list(no_data),
-            geo_ref=GeoReference(
-                geo=self.geotransform, epsg=crs_spec(self.epsg, self.crs)
-            ),
-        )
-        result.band_units = new_units
-        return result
+        return self.bands.convert_units(target, band=band)
 
     @property
     def no_data_value(self) -> tuple:
