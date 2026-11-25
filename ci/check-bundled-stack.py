@@ -163,7 +163,15 @@ def read_reported(wheel: pathlib.Path, libraries: list[str]) -> dict:
         therefore ship broken in a wheel that reported `ok` (#1627).
     """
     reported: dict = {name: [] for name in libraries}
-    with zipfile.ZipFile(wheel) as archive:
+    try:
+        archive = zipfile.ZipFile(wheel)
+    except zipfile.BadZipFile as exc:
+        # A truncated or corrupt wheel is a build failure, not a comparison result, so say so
+        # instead of surfacing a raw traceback from the repair step.
+        raise SystemExit(
+            f"check-bundled-stack: {wheel.name} is not a readable wheel ({exc})"
+        )
+    with archive:
         for name in libraries:
             for member in _members_for(archive, name):
                 blob = archive.read(member)
@@ -243,7 +251,12 @@ def _verdict(
         if prop == "reason":
             continue
         have = got.get(prop)
-        line = f"{member} {prop}={have} (want {want})"
+        # An absent property must not print as `threadsafety=None`, which reads as a value the
+        # library reported and is byte-identical to what a real regression would print. It is still
+        # a failure -- a disappeared `Threadsafety:` line has to be drift, or #1620 goes invisible --
+        # but the message has to say which of the two happened.
+        shown = have if have is not None else "<not reported by this copy>"
+        line = f"{member} {prop}={shown} (want {want})"
         ok = have == want
         if ok:
             print(f"ok   {wheel.name} [{tag}]: {line}")

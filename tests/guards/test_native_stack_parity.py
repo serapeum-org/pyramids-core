@@ -375,14 +375,25 @@ class TestAPartialSettingsStringIsStillJudged:
         )
 
     def test_the_property_it_does_not_report_fails_the_comparison(self, tmp_path):
-        """An unreadable `threadsafety` is drift, since the baseline pins it unconditionally."""
+        """An unreadable `threadsafety` is drift, and must say so rather than report a value.
+
+        Test scenario:
+            The policy is deliberate -- a disappeared `Threadsafety:` line has to be treated as
+            drift, or #1620 becomes invisible. The message must still distinguish "this copy did not
+            report the property" from "the library reported None", because the second is what a real
+            regression would print.
+        """
         checker = _checker_module("check-bundled-stack.py")
         wheel = _wheel(tmp_path, threadsafety=None)
 
         failures = checker.check_wheel(wheel, checker.load_baseline())
 
-        assert any("threadsafety=None" in failure for failure in failures), (
+        assert any("not reported by this copy" in failure for failure in failures), (
             f"a copy whose thread-safety cannot be read must fail (#1620): {failures}"
+        )
+        assert not any("threadsafety=None" in failure for failure in failures), (
+            "an unreadable property must not print as a value the library reported, which is "
+            f"byte-identical to a real regression: {failures}"
         )
 
 
@@ -1434,6 +1445,48 @@ def _source_build_pin(library: str) -> str:
     return match.group(1) if match else ""
 
 
+def _satisfies(version: str, spec: str) -> bool:
+    """Whether a concrete version falls inside a comma-separated conda version spec.
+
+    Args:
+        version: A concrete version such as `3.13.3`.
+        spec: A conda spec such as `>=3.13.3,<3.13.4`.
+
+    Returns:
+        True when every clause holds. Only the comparisons this repo's pins use are implemented, and
+        an unparseable clause is compared for equality, so a spec this cannot read fails rather than
+        passing silently.
+    """
+    numeric = tuple(int(chunk) for chunk in version.split(".") if chunk.isdigit())
+    holds = True
+    for clause in (piece.strip() for piece in spec.split(",")):
+        for operator in (">=", "<=", "==", ">", "<"):
+            if clause.startswith(operator):
+                bound = tuple(
+                    int(chunk)
+                    for chunk in clause[len(operator) :].split(".")
+                    if chunk.isdigit()
+                )
+                if operator == ">=":
+                    holds = holds and numeric >= bound
+                elif operator == "<=":
+                    holds = holds and numeric <= bound
+                elif operator == "==":
+                    holds = holds and numeric == bound
+                elif operator == ">":
+                    holds = holds and numeric > bound
+                else:
+                    holds = holds and numeric < bound
+                break
+        else:
+            holds = (
+                holds
+                and tuple(int(chunk) for chunk in clause.split(".") if chunk.isdigit())
+                == numeric
+            )
+    return holds
+
+
 class TestTheBaselineAgreesWithEveryPinItRestates:
     """The baseline is a fifth pinning site, so something must compare it with the other four.
 
@@ -1444,17 +1497,65 @@ class TestTheBaselineAgreesWithEveryPinItRestates:
     """
 
     def test_the_installed_gdal_version_satisfies_the_pyproject_spec(self):
-        """`installed.gdal.version` restates the conda pin that pyproject calls the single source."""
+        """`installed.gdal.version` must satisfy the conda pin pyproject calls the single source.
+
+        Test scenario:
+            Compared as a range rather than against the floor's text. The earlier form stripped
+            `>=` with `lstrip`, which also eats any leading `>`/`=` characters of the version itself
+            and stops meaning anything the moment the pin is widened to `>=3.13,<3.14`.
+        """
         with _PYPROJECT.open("rb") as handle:
             spec = tomllib.load(handle)["tool"]["pixi"]["feature"]["gdal"][
                 "dependencies"
             ]["gdal"]
         pinned = _shared_module().load()["installed"]["gdal"]["version"]
-        floor = spec.split(",")[0].lstrip(">=")
 
-        assert pinned == floor, (
-            f"the baseline pins gdal {pinned} but pyproject's gdal feature pins {spec!r}; the "
-            "smoke jobs would fail after the wheels are built. Update both together."
+        assert _satisfies(pinned, spec), (
+            f"the baseline pins gdal {pinned}, which does not satisfy pyproject's gdal feature "
+            f"pin {spec!r}; the smoke jobs would fail after the wheels are built. Update both."
+        )
+
+    def test_the_win_arm64_gdal_exception_matches_the_vcpkg_override(self):
+        """The relaxed version restates ci/vcpkg.json, so the two must not drift apart.
+
+        Test scenario:
+            win_arm64 takes GDAL from vcpkg, whose `overrides` block pins it, and the baseline
+            restates that number as an exception. Nothing compared them, so a vcpkg bump would have
+            left the exception behind and failed the win_arm64 repair step at release.
+        """
+        manifest = json.loads(_VCPKG_MANIFEST.read_text(encoding="utf-8"))
+        overrides = {
+            entry["name"]: entry.get("version", entry.get("version-semver", ""))
+            for entry in manifest.get("overrides", [])
+        }
+        declared = _shared_module().load()["exceptions"]["win_arm64"]["gdal"]["version"]
+
+        assert "gdal" in overrides, "ci/vcpkg.json must pin gdal for win_arm64"
+        assert declared == overrides["gdal"], (
+            f"the baseline relaxes win_arm64 to gdal {declared} but ci/vcpkg.json overrides it to "
+            f"{overrides['gdal']}"
+        )
+
+    def test_the_win_arm64_hdf5_exception_names_the_source_it_floats_with(self):
+        """hdf5 has no vcpkg override, so its exception must at least name what pins it.
+
+        Test scenario:
+            ci/vcpkg.json pins gdal, proj and geos but not hdf5, so the 2.1.1 in that exception is
+            whatever the pinned `builtin-baseline` resolves -- the "inherits its upstream default"
+            shape this branch exists to catch. It cannot be compared against a declared pin, so the
+            reason must name the mechanism, giving a baseline bump a documented place to look.
+        """
+        manifest = json.loads(_VCPKG_MANIFEST.read_text(encoding="utf-8"))
+        overridden = {entry["name"] for entry in manifest.get("overrides", [])}
+        exception = _shared_module().load()["exceptions"]["win_arm64"]["hdf5"]
+
+        assert "hdf5" not in overridden, (
+            "ci/vcpkg.json now pins hdf5, so this exception should be compared against it directly "
+            "rather than merely documented"
+        )
+        assert "builtin-baseline" in exception["reason"], (
+            "the hdf5 exception floats with vcpkg's pinned builtin-baseline, so its reason must say "
+            f"so; got: {exception['reason']!r}"
         )
 
     @pytest.mark.parametrize("library", ["hdf5", "proj", "geos"])
