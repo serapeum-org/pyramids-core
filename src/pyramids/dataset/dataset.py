@@ -97,6 +97,7 @@ from pyramids.dataset.engines import (
     _Bands,
     _Cell,
     _Georef,
+    _Glyph,
     _Spatial,
     _Terrain,
     _Vector,
@@ -904,6 +905,7 @@ class Dataset(RasterBase):
         self.cog = _COG(self)
         self.georef = _Georef(self)
         self.terrain = _Terrain(self)
+        self.glyph = _Glyph(self)
 
     @property
     def vectorize(self) -> _Vector:
@@ -1408,16 +1410,16 @@ class Dataset(RasterBase):
         return self.analysis.get_histogram(*args, **kwargs)
 
     def plot_histogram(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Analysis.plot_histogram <pyramids.dataset.engines.Analysis.plot_histogram>`."""
-        return self.analysis.plot_histogram(*args, **kwargs)
+        """Facade — delegates to :meth:`Glyph.histogram <pyramids.dataset.engines.Glyph.histogram>`."""
+        return self.glyph.histogram(*args, **kwargs)
 
     def to_image(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.to_image <pyramids.dataset.engines.Analysis.to_image>`."""
         return self.analysis.to_image(*args, **kwargs)
 
     def plot_vector_field(self, *args, **kwargs):
-        """Facade — delegates to :meth:`Analysis.plot_vector_field <pyramids.dataset.engines.Analysis.plot_vector_field>`."""
-        return self.analysis.plot_vector_field(*args, **kwargs)
+        """Facade — delegates to :meth:`Glyph.vector_field <pyramids.dataset.engines.Glyph.vector_field>`."""
+        return self.glyph.vector_field(*args, **kwargs)
 
     def _resolve_plot_band(
         self, band: int | None, rgb: list[int] | None
@@ -2339,14 +2341,13 @@ class Dataset(RasterBase):
         end_color: str | None = None,
         colormap: str | None = None,
     ) -> None:
-        """Facade — delegates to :meth:`Bands.set_color_ramp <pyramids.dataset.engines.Bands.set_color_ramp>`.
+        """Facade — delegates to :meth:`Glyph.set_color_ramp <pyramids.dataset.engines.Glyph.set_color_ramp>`.
 
         Raises:
             ReadOnlyError: The dataset is opened read-only on-disk (writing the palette
                 would otherwise silently spill a PAM sidecar).
         """
-        self._require_writable("set a color ramp")
-        return self.bands.set_color_ramp(
+        return self.glyph.set_color_ramp(
             band,
             start_value=start_value,
             end_value=end_value,

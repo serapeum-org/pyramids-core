@@ -17,6 +17,7 @@ from pyramids.dataset.engines.bands import _Bands as _Bands
 from pyramids.dataset.engines.cell import _Cell as _Cell
 from pyramids.dataset.engines.cog import _COG as _COG
 from pyramids.dataset.engines.georef import _Georef as _Georef
+from pyramids.dataset.engines.glyph import _Glyph as _Glyph
 from pyramids.dataset.engines.io import _IO as _IO
 from pyramids.dataset.engines.spatial import _Spatial as _Spatial
 from pyramids.dataset.engines.terrain import _Terrain as _Terrain
