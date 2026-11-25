@@ -9,6 +9,7 @@ import re
 import tempfile
 import textwrap
 import warnings
+import weakref
 from collections.abc import Callable, Hashable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -715,6 +716,152 @@ def _as_source(path: Any) -> str:
     return str(path).replace("\\", "/")
 
 
+class _CollectionEngine:
+    """Base for the DatasetCollection accessor engines.
+
+    Holds a weakref proxy back to the collection so the accessors do not keep it alive
+    (mirrors the ``Dataset`` engine contract). Subclasses group the collection's stack-aware
+    methods by concern and forward to them; the flat ``DatasetCollection`` methods remain the
+    implementation for now (the ownership move follows the first-party migration).
+    """
+
+    __slots__ = ("_dc",)
+
+    def __init__(self, collection: DatasetCollection) -> None:
+        self._dc = weakref.proxy(collection)
+
+
+class _ColSpatial(_CollectionEngine):
+    """Stack-wide spatial operations, applied to every timestep. Accessed as ``dc.spatial``."""
+
+    def align(self, *args: Any, **kwargs: Any) -> Any:
+        """Align every timestep to a template. See :meth:`DatasetCollection.align`."""
+        return self._dc.align(*args, **kwargs)
+
+    def crop(self, *args: Any, **kwargs: Any) -> Any:
+        """Crop every timestep to a mask/extent. See :meth:`DatasetCollection.crop`."""
+        return self._dc.crop(*args, **kwargs)
+
+    def to_crs(self, *args: Any, **kwargs: Any) -> Any:
+        """Reproject every timestep. See :meth:`DatasetCollection.to_crs`."""
+        return self._dc.to_crs(*args, **kwargs)
+
+
+class _ColIO(_CollectionEngine):
+    """Reading, writing and export of the stack. Accessed as ``dc.io``."""
+
+    def to_file(self, *args: Any, **kwargs: Any) -> Any:
+        """Write the stack to per-timestep files. See :meth:`DatasetCollection.to_file`."""
+        return self._dc.to_file(*args, **kwargs)
+
+    def to_zarr(self, *args: Any, **kwargs: Any) -> Any:
+        """Write the stack to a Zarr store. See :meth:`DatasetCollection.to_zarr`."""
+        return self._dc.to_zarr(*args, **kwargs)
+
+    def to_cog_stack(self, *args: Any, **kwargs: Any) -> Any:
+        """Write the stack as a directory of COGs. See :meth:`DatasetCollection.to_cog_stack`."""
+        return self._dc.to_cog_stack(*args, **kwargs)
+
+    def to_netcdf(self, *args: Any, **kwargs: Any) -> Any:
+        """Write the stack to a NetCDF file. See :meth:`DatasetCollection.to_netcdf`."""
+        return self._dc.to_netcdf(*args, **kwargs)
+
+    def to_kerchunk(self, *args: Any, **kwargs: Any) -> Any:
+        """Write a kerchunk reference for the stack. See :meth:`DatasetCollection.to_kerchunk`."""
+        return self._dc.to_kerchunk(*args, **kwargs)
+
+    def close(self, *args: Any, **kwargs: Any) -> Any:
+        """Release the stack's GDAL handles. See :meth:`DatasetCollection.close`."""
+        return self._dc.close(*args, **kwargs)
+
+    def open_multi_dataset(self, *args: Any, **kwargs: Any) -> Any:
+        """Open the stack's datasets. See :meth:`DatasetCollection.open_multi_dataset`."""
+        return self._dc.open_multi_dataset(*args, **kwargs)
+
+
+class _ColGlyph(_CollectionEngine):
+    """Visualization of the stack (via cleopatra). Accessed as ``dc.glyph``."""
+
+    def plot(self, *args: Any, **kwargs: Any) -> Any:
+        """Render the stack (an animation for a collection). See :meth:`DatasetCollection.plot`."""
+        return self._dc.plot(*args, **kwargs)
+
+    def animate(self, *args: Any, **kwargs: Any) -> Any:
+        """Animate the stack's rasters as frames. See :meth:`DatasetCollection.animate`."""
+        return self._dc.animate(*args, **kwargs)
+
+
+class _ColAnalysis(_CollectionEngine):
+    """Transforms across the stack. Accessed as ``dc.analysis``."""
+
+    def apply(self, *args: Any, **kwargs: Any) -> Any:
+        """Apply a ufunc across the stack. See :meth:`DatasetCollection.apply`."""
+        return self._dc.apply(*args, **kwargs)
+
+    def merge(self, *args: Any, **kwargs: Any) -> Any:
+        """Merge the stack. See :meth:`DatasetCollection.merge`."""
+        return self._dc.merge(*args, **kwargs)
+
+
+class _ColSeries(_CollectionEngine):
+    """Operations along the time axis -- reduction and selection. Accessed as ``dc.series``."""
+
+    def mean(self, *args: Any, **kwargs: Any) -> Any:
+        """Mean over the time axis. See :meth:`DatasetCollection.mean`."""
+        return self._dc.mean(*args, **kwargs)
+
+    def std(self, *args: Any, **kwargs: Any) -> Any:
+        """Standard deviation over the time axis. See :meth:`DatasetCollection.std`."""
+        return self._dc.std(*args, **kwargs)
+
+    def sum(self, *args: Any, **kwargs: Any) -> Any:
+        """Sum over the time axis. See :meth:`DatasetCollection.sum`."""
+        return self._dc.sum(*args, **kwargs)
+
+    def min(self, *args: Any, **kwargs: Any) -> Any:
+        """Minimum over the time axis. See :meth:`DatasetCollection.min`."""
+        return self._dc.min(*args, **kwargs)
+
+    def max(self, *args: Any, **kwargs: Any) -> Any:
+        """Maximum over the time axis. See :meth:`DatasetCollection.max`."""
+        return self._dc.max(*args, **kwargs)
+
+    def var(self, *args: Any, **kwargs: Any) -> Any:
+        """Variance over the time axis. See :meth:`DatasetCollection.var`."""
+        return self._dc.var(*args, **kwargs)
+
+    def reduce_time(self, *args: Any, **kwargs: Any) -> Any:
+        """Reduce selected timesteps. See :meth:`DatasetCollection.reduce_time`."""
+        return self._dc.reduce_time(*args, **kwargs)
+
+    def first(self, *args: Any, **kwargs: Any) -> Any:
+        """First timestep as a Dataset. See :meth:`DatasetCollection.first`."""
+        return self._dc.first(*args, **kwargs)
+
+    def last(self, *args: Any, **kwargs: Any) -> Any:
+        """Last timestep as a Dataset. See :meth:`DatasetCollection.last`."""
+        return self._dc.last(*args, **kwargs)
+
+    def iloc(self, *args: Any, **kwargs: Any) -> Any:
+        """Timestep at a position as a Dataset. See :meth:`DatasetCollection.iloc`."""
+        return self._dc.iloc(*args, **kwargs)
+
+    def head(self, *args: Any, **kwargs: Any) -> Any:
+        """First ``n`` timestep arrays. See :meth:`DatasetCollection.head`."""
+        return self._dc.head(*args, **kwargs)
+
+    def tail(self, *args: Any, **kwargs: Any) -> Any:
+        """Last ``n`` timestep arrays. See :meth:`DatasetCollection.tail`."""
+        return self._dc.tail(*args, **kwargs)
+
+    def groupby(self, *args: Any, **kwargs: Any) -> Any:
+        """Group timesteps by label (the group exposes the same reduction surface).
+
+        See :meth:`DatasetCollection.groupby`.
+        """
+        return self._dc.groupby(*args, **kwargs)
+
+
 class DatasetCollection:
     """Time-stacked collection of co-registered rasters.
 
@@ -924,6 +1071,11 @@ class DatasetCollection:
         # When set (by from_zarr), the lazy `data` cube reads directly from this
         # resolved Zarr store instead of stacking per-file reads.
         self._zarr_store = zarr_store
+        self.spatial = _ColSpatial(self)
+        self.io = _ColIO(self)
+        self.glyph = _ColGlyph(self)
+        self.analysis = _ColAnalysis(self)
+        self.series = _ColSeries(self)
         # Cached lazy list of per-timestep Datasets. Populated on
         # first access via the `datasets` property: from `datasets=`
         # (caller-provided), then `files=` (open each path), then a
