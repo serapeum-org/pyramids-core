@@ -74,7 +74,7 @@ class _Engine(Generic[_DatasetT]):
     # attribute to the wrapped dataset (see the class docstring) — so the
     # slot is typed as the dataset it stands in for. The runtime value is a
     # `weakref.ProxyType[_DatasetT]`, but typing it as `_DatasetT` lets the
-    # checker resolve `self._ds.crs`, `self._ds.read_array(...)`, etc.
+    # checker resolve `self._ds.crs`, `self._ds.io.read_array(...)`, etc.
     _ds: _DatasetT
 
     def __init__(self, ds: _DatasetT) -> None:

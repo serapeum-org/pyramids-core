@@ -13,6 +13,7 @@ from shapely.geometry import box
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset, DatasetCollection
+from pyramids.dataset.engines.io import _IO
 from pyramids.dataset.engines.spatial import (
     _reaches_antimeridian_seam,
     _split_lon_bbox,
@@ -321,7 +322,7 @@ class TestWindowedBboxCropFastPath:
             never a windowless (full-source) read. This bounded read is what makes a
             ``/vsicurl`` crop range-read only the AOI.
         """
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         dataset.crop(bbox=small_bbox)
         # Spying the unbound method, a[0] is the receiver: keep only reads of the
         # source raster (later windowless reads land on the tiny derived crop, which
@@ -329,7 +330,7 @@ class TestWindowedBboxCropFastPath:
         source_windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is dataset
+            if a and a[0] is dataset.io
         ]
         assert source_windows == [[2, 2, 2, 2]], (
             f"source must be read once, windowed to the AOI; saw {source_windows}"

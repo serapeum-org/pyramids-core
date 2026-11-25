@@ -125,12 +125,12 @@ class TestStreamTransform:
             of tile reads must equal the tile count for the chosen tile size.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         ds.io.stream_transform(lambda tile: tile, tile_size=3)
         source_windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0] is ds.io
         ]
         assert source_windows, "no reads of the source were recorded"
         assert all(w is not None for w in source_windows), (
@@ -279,12 +279,12 @@ class TestStreamReduce:
             (`xoff == 0`, `xsize == columns`), and there must be one per strip.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         ds.io.stream_reduce(lambda acc, strip, _w: acc, None, strip_rows=3)
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0] is ds.io
         ]
         assert windows, "no reads of the source were recorded"
         assert all(w[0] == 0 and w[2] == 5 for w in windows), (
@@ -465,12 +465,12 @@ class TestStreamedConsumers:
             source is range-read strip by strip.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         ds.extract()
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0] is ds.io
         ]
         assert windows, "extract recorded no source reads"
         assert all(w is not None and w[0] == 0 and w[2] == 5 for w in windows), (

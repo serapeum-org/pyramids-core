@@ -1969,7 +1969,7 @@ class _IO(_Engine["Dataset"]):
 
         def _read_one(window: Window) -> np.typing.NDArray:
             return np.asarray(
-                self._ds.read_array(band=band, window=window, threadsafe=True)
+                self._ds.io.read_array(band=band, window=window, threadsafe=True)
             )
 
         # The pool threads do not inherit thread-local GDAL config, so a caller
@@ -2806,7 +2806,7 @@ class _IO(_Engine["Dataset"]):
 
                 ```
         """
-        raw = np.asarray(self._ds.read_array(band=band, window=window, unpack=False))
+        raw = np.asarray(self._ds.io.read_array(band=band, window=window, unpack=False))
         declared = self._ds.no_data_value
         if raw.ndim == 3:
             domain = np.stack(
@@ -3307,7 +3307,7 @@ class _IO(_Engine["Dataset"]):
         for yoff in range(0, self._ds.rows, strip_rows):
             ysize = min(strip_rows, self._ds.rows - yoff)
             window = [0, yoff, cols, ysize]
-            strip = self._ds.read_array(band=band, window=window, unpack=unpack)
+            strip = self._ds.io.read_array(band=band, window=window, unpack=unpack)
             acc = fold(acc, strip, window)
         return acc
 
@@ -3853,7 +3853,7 @@ class _IO(_Engine["Dataset"]):
         source = (
             self._ds
             if self._ds.epsg == 3857
-            else self._ds.to_crs(3857, method=resampling)
+            else self._ds.spatial.to_crs(3857, method=resampling)
         )
         staged = None
         scratch_dir: str | None = None
@@ -5059,9 +5059,9 @@ class _IO(_Engine["Dataset"]):
         # time series, and the branch that gets here -- that difference measured in
         # seconds, not milliseconds.
         band_names = self._ds.band_names
-        band_units = self._ds.band_units
-        scale = self._ds.scale
-        offset = self._ds.offset
+        band_units = self._ds.bands.band_units
+        scale = self._ds.bands.scale
+        offset = self._ds.bands.offset
         overview.band_names = [band_names[index] for index in selection]
         overview.band_units = [band_units[index] for index in selection]
         overview.scale = [scale[index] for index in selection]

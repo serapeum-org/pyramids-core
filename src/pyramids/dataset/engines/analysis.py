@@ -344,7 +344,7 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         dst: Dataset | None = None
         if mask is not None:
-            dst = self._ds.crop(mask, touch=True)
+            dst = self._ds.spatial.crop(mask, touch=True)
 
         if band is None:
             df = pd.DataFrame(
@@ -1047,7 +1047,7 @@ class _Analysis(_Engine["Dataset"]):
             tuple: `(values, domain_mask)` — the physical array, and `True` wherever a
                 cell holds a real measurement.
         """
-        raw = np.asarray(self._ds.read_array(band=band, unpack=False, **read_kwargs))
+        raw = np.asarray(self._ds.io.read_array(band=band, unpack=False, **read_kwargs))
         domain_mask = ~is_stored_no_data(raw, self._ds.no_data_value[band])
         values = apply_unpack(raw, *self._ds._effective_packing(band))
         return values, domain_mask
@@ -3844,7 +3844,7 @@ class _Analysis(_Engine["Dataset"]):
             exclude_list = build_exclude_list(no_data_value, exclude_value)
             values = self._extract_streamed(band, exclude_list)
         else:
-            arr = self._ds.read_array(band=band)
+            arr = self._ds.io.read_array(band=band)
             geom_types = set(getattr(mask, "geom_type", []))
             # map(str, ...) — missing geometries yield float nan, which is not
             # orderable against the str type names.
@@ -3856,7 +3856,7 @@ class _Analysis(_Engine["Dataset"]):
                     "Dataset.crop(); explode MultiPoint masks into single points "
                     "first."
                 )
-            indices = self._ds.nearest_cell(mask)
+            indices = self._ds.cell.nearest_cell(mask)
             if arr.ndim > 2:
                 values = arr[:, indices[:, 0], indices[:, 1]]
             else:
@@ -4928,7 +4928,7 @@ class _Analysis(_Engine["Dataset"]):
             DeprecationWarning,
             stacklevel=2,
         )
-        gdf = self._ds.zonal_stats(
+        gdf = self._ds.analysis.zonal_stats(
             classes_map,
             stats=("count",),
             band=band if band is not None else 0,
@@ -5542,13 +5542,13 @@ class _Analysis(_Engine["Dataset"]):
         cols = self._ds.columns
         total = rows * cols
         if max_samples is None or total <= max_samples:
-            return cast(np.ndarray, self._ds.read_array(band=band, unpack=unpack))
+            return cast(np.ndarray, self._ds.io.read_array(band=band, unpack=unpack))
         factor = (total / max_samples) ** 0.5
         out_rows = max(1, round(rows / factor))
         out_cols = max(1, round(cols / factor))
         return cast(
             np.ndarray,
-            self._ds.read_array(
+            self._ds.io.read_array(
                 band=band,
                 out_shape=(out_rows, out_cols),
                 resampling="nearest",
@@ -5805,7 +5805,7 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         validate_band_index(reference_band, reference.band_count)
 
-        source = np.asarray(self._ds.read_array(band=band), dtype=float).reshape(
+        source = np.asarray(self._ds.io.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
         ref = np.asarray(reference.read_array(band=reference_band), dtype=float)
@@ -5923,7 +5923,7 @@ class _Analysis(_Engine["Dataset"]):
             )
         validate_band_index(band, self._ds.band_count)
 
-        source = np.asarray(self._ds.read_array(band=band), dtype=float).reshape(
+        source = np.asarray(self._ds.io.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
         # Physical sentinel for a physical read: a stored `no_data_value` never appears in the
@@ -6207,8 +6207,8 @@ class _Analysis(_Engine["Dataset"]):
             # A single colour has no magnitude scale, so a magnitude colorbar
             # would be misleading; default it off (an explicit add_colorbar wins).
             kwargs.setdefault("add_colorbar", False)
-        u = self._ds.read_array(band=u_band)
-        v = self._ds.read_array(band=v_band)
+        u = self._ds.io.read_array(band=u_band)
+        v = self._ds.io.read_array(band=v_band)
         x = self._ds.x
         y = self._ds.y
         # matplotlib's ``streamplot`` requires strictly-increasing 1-D
@@ -6565,7 +6565,7 @@ class _Analysis(_Engine["Dataset"]):
             else list(animation_axis_values)
         )
         require_one_label_per_frame(len(labels), len(selected))
-        full = np.asarray(self._ds.read_array(band=None))
+        full = np.asarray(self._ds.io.read_array(band=None))
         if full.ndim == 2:
             # A single-band raster reads back 2-D, and `bands=[0, 0]` passes the frame-count
             # check above by repeating that band - so this is reachable, not defensive.
@@ -6621,14 +6621,14 @@ class _Analysis(_Engine["Dataset"]):
         else:
             read_band = None if rgb is not None else band
             if overview:
-                arr = self._ds.read_overview_array(
+                arr = self._ds.io.read_overview_array(
                     band=read_band,
                     overview_index=(
                         overview_index if overview_index is not None else 0
                     ),
                 )
             else:
-                arr = self._ds.read_array(band=read_band)
+                arr = self._ds.io.read_array(band=read_band)
         return arr
 
     def _read_plot_lazy_array(self, band: int, chunks: Any) -> np.ndarray:
@@ -6640,7 +6640,7 @@ class _Analysis(_Engine["Dataset"]):
         ``(-1, rows, cols)`` to match the eager ``read_array`` band flattening
         before ``band`` indexes it; only that band's chunks are computed.
         """
-        lazy = self._ds.read_array(chunks=chunks)
+        lazy = self._ds.io.read_array(chunks=chunks)
         if not is_lazy(lazy):
             result = lazy if band is None else lazy[band]
         elif lazy.ndim > 2:

@@ -203,7 +203,7 @@ class _Cell(_Engine["Dataset"]):
         # Stored counts: only *which* cells are in the domain matters here, and that
         # is decided against the stored sentinel. A physical read of a packed band
         # never contains it, so every gap came back as a cell.
-        arr = self._ds.read_array(band=0, unpack=False)
+        arr = self._ds.io.read_array(band=0, unpack=False)
         if domain_only and no_val not in arr:
             self._ds.logger.warning(
                 "The no data value does not exist in the band, so all the cells will be considered, and the "

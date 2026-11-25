@@ -1667,7 +1667,7 @@ class _Spatial(_Engine["Dataset"]):
                 # `unpack=False`: the sentinel has to fit the stored dtype and be
                 # free of the stored values, which is what gets written.
                 fill = free_no_data(
-                    dtype, [], self._ds.read_array(band=band, unpack=False)
+                    dtype, [], self._ds.io.read_array(band=band, unpack=False)
                 )
             if fill is None:
                 raise NoDataValueError(
@@ -1980,7 +1980,7 @@ class _Spatial(_Engine["Dataset"]):
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # mask-and-write path expects, not the dimension-preserving default (#1241).
         src_array = cast(
-            np.typing.NDArray, self._ds.read_array(unpack=False, squeeze=True)
+            np.typing.NDArray, self._ds.io.read_array(unpack=False, squeeze=True)
         )
 
         mask_no_data = is_no_data(mask_array, mask_noval)
@@ -2027,7 +2027,7 @@ class _Spatial(_Engine["Dataset"]):
                 np.typing.NDArray,
                 # `squeeze=True` keeps the classic `(bands, rows, cols)` for this band-wise
                 # tile write, not the dimension-preserving default (#1241).
-                self._ds.read_array(window=window, unpack=False, squeeze=True),
+                self._ds.io.read_array(window=window, unpack=False, squeeze=True),
             )
             mask_no_data = is_no_data(mask_tile, mask_noval)
             self._apply_mask_nodata(src_tile, mask_no_data, band_count, fills)
@@ -2711,7 +2711,7 @@ class _Spatial(_Engine["Dataset"]):
                 # over it, so it moves counts and carries the recipe with them below.
                 # `squeeze=True` keeps the classic `(bands, rows, cols)` the windowed crop
                 # rebuild expects, not the dimension-preserving default (#1241).
-                array = self._ds.read_array(
+                array = self._ds.io.read_array(
                     window=list(window.to_read_args()), unpack=False, squeeze=True
                 )
                 # `Window.transform` rather than the same arithmetic inline. On

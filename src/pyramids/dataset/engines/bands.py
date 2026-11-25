@@ -739,7 +739,7 @@ class _Bands(_Engine["Dataset"]):
         if not lazy:
             # The MEM path drops the unit type; re-apply it per selected band (a
             # harmless no-op on the VRT path, which carries units natively).
-            src_units = self._ds.band_units
+            src_units = self._ds.bands.band_units
             for position, one_based in enumerate(indices):
                 out.GetRasterBand(position + 1).SetUnitType(
                     src_units[one_based - 1] or ""
@@ -2167,7 +2167,7 @@ class _Bands(_Engine["Dataset"]):
             # `unpack=False`: the sentinel being located and the one written in its
             # place are both stored values, and the destination band holds the stored
             # dtype -- a physical read would match nothing and truncate on write.
-            tile = self._ds.read_array(
+            tile = self._ds.io.read_array(
                 band=band, window=[xoff, yoff, xsize, ysize], unpack=False
             )
             mask = is_no_data(tile, band_old_value)

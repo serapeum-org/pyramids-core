@@ -577,7 +577,7 @@ class TestChangeNoDataValueTypeError:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = ds.io.read_array
 
         def mock_read(band=None, window=None, **kwargs):
             """Return array that raises TypeError on assignment."""
@@ -591,7 +591,7 @@ class TestChangeNoDataValueTypeError:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(ds.io, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-9999.0)
 
@@ -711,7 +711,7 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = ds.io.read_array
 
         def mock_read(band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment (mimic a bad dtype)."""
@@ -723,7 +723,7 @@ class TestChangeNoDataValueStreaming:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(ds.io, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-12345.0)
 
@@ -792,7 +792,7 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = ds.io.read_array
 
         def mock_read(band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment to force a mid-stream failure."""
@@ -805,7 +805,7 @@ class TestChangeNoDataValueStreaming:
             return mock_arr
 
         out = tmp_path / "partial.tif"
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(ds.io, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-9999.0, path=out)
         assert not out.exists(), "failed disk call must remove the partial file"

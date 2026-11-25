@@ -335,7 +335,7 @@ class _Vector(_Engine["Dataset"]):
         # a masked `values=False` call must return the AOI's cell footprints, not silently the
         # whole raster.
         if mask is not None:
-            src_ds = self._ds.crop(mask=mask, touch=touch)
+            src_ds = self._ds.spatial.crop(mask=mask, touch=touch)
         else:
             src_ds = self._ds
 
@@ -439,7 +439,7 @@ class _Vector(_Engine["Dataset"]):
         df_list = []
         offsets = self._ds.io._tile_offsets(tile_size)
         for (x_off, y_off, x_size, y_size), arr in zip(
-            offsets, self._ds.get_tile(tile_size)
+            offsets, self._ds.io.get_tile(tile_size)
         ):
             idx = (1, 2) if arr.ndim > 2 else (0, 1)
             mask_arr = np.ones((arr.shape[idx[0]], arr.shape[idx[1]]))
@@ -486,7 +486,7 @@ class _Vector(_Engine["Dataset"]):
         """
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this one-column-per-band
         # reshape expects, not the dimension-preserving default (#1241).
-        arr = self._ds.read_array(squeeze=True)
+        arr = self._ds.io.read_array(squeeze=True)
 
         if self._ds.band_count == 1:
             pixels = arr.flatten()
@@ -1041,7 +1041,7 @@ class _Vector(_Engine["Dataset"]):
         """
         # `squeeze=True` collapses a single-band read to the 2-D `(rows, cols)` this
         # pixel-walk indexes, not the dimension-preserving default (#1241).
-        data = self._ds.read_array(squeeze=True)
+        data = self._ds.io.read_array(squeeze=True)
         position: list[list[int]] = []
         values: list[Any] = []
         count = 1
