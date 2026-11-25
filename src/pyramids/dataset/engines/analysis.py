@@ -70,9 +70,12 @@ from pyramids.dataset._plot_helpers import (
 )
 from pyramids.dataset.abstract_dataset import RasterBase
 from pyramids.dataset.window import Window
+from pyramids.dataset.ops._focal import focal_apply, focal_mean, focal_std
 from pyramids.feature import FeatureCollection
 
 if TYPE_CHECKING:
+    import dask.array as da
+
     from cleopatra.basemap.geo import Basemap
     from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph
     from matplotlib.axes import Axes
@@ -172,6 +175,24 @@ def _point_sample_fill(gdal_band: gdal.Band) -> tuple[Any, np.dtype]:
 
 class _Analysis(_Engine["Dataset"]):
     """Mixin providing analysis, statistics, and data extraction operations for Dataset."""
+
+    def focal_mean(
+        self, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Focal (moving-window) mean over a square neighbourhood of the given radius."""
+        return focal_mean(self._ds, radius=radius, chunks=chunks, band=band)
+
+    def focal_std(
+        self, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Focal (moving-window) standard deviation over a square neighbourhood."""
+        return focal_std(self._ds, radius=radius, chunks=chunks, band=band)
+
+    def focal_apply(
+        self, func, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Apply ``func`` over a square moving window of the given radius."""
+        return focal_apply(self._ds, func, radius=radius, chunks=chunks, band=band)
 
     def stats(
         self,

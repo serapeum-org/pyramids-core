@@ -106,11 +106,6 @@ from pyramids.dataset.engines import (
 # so the `combine` facade can declare it rather than hide it behind `**kwargs`;
 # the object itself is never constructed or compared outside the engine.
 from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA
-from pyramids.dataset.ops._focal import (
-    focal_apply,
-    focal_mean,
-    focal_std,
-)
 from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.ops.interpolate import grid_arrays, grid_points
@@ -1007,20 +1002,20 @@ class Dataset(RasterBase):
     def focal_mean(
         self, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.focal_mean`."""
-        return focal_mean(self, radius=radius, chunks=chunks, band=band)
+        """Facade — delegates to :meth:`Analysis.focal_mean <pyramids.dataset.engines.Analysis.focal_mean>`."""
+        return self.analysis.focal_mean(radius=radius, chunks=chunks, band=band)
 
     def focal_std(
         self, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.focal_std`."""
-        return focal_std(self, radius=radius, chunks=chunks, band=band)
+        """Facade — delegates to :meth:`Analysis.focal_std <pyramids.dataset.engines.Analysis.focal_std>`."""
+        return self.analysis.focal_std(radius=radius, chunks=chunks, band=band)
 
     def focal_apply(
         self, func, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.focal_apply`."""
-        return focal_apply(self, func, radius=radius, chunks=chunks, band=band)
+        """Facade — delegates to :meth:`Analysis.focal_apply <pyramids.dataset.engines.Analysis.focal_apply>`."""
+        return self.analysis.focal_apply(func, radius=radius, chunks=chunks, band=band)
 
     def slope(
         self, *, chunks=None, band: int = 0, units: str = "degrees"
