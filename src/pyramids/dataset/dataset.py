@@ -98,6 +98,7 @@ from pyramids.dataset.engines import (
     _Cell,
     _Georef,
     _Spatial,
+    _Terrain,
     _Vectorize,
 )
 
@@ -106,12 +107,9 @@ from pyramids.dataset.engines import (
 # the object itself is never constructed or compared outside the engine.
 from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA
 from pyramids.dataset.ops._focal import (
-    aspect,
     focal_apply,
     focal_mean,
     focal_std,
-    hillshade,
-    slope,
 )
 from pyramids.dataset.ops._zarr import classify_zarr_store, is_zarr_store
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
@@ -912,6 +910,7 @@ class Dataset(RasterBase):
         self.vectorize = _Vectorize(self)
         self.cog = _COG(self)
         self.georef = _Georef(self)
+        self.terrain = _Terrain(self)
 
     def _update_inplace(self, src: gdal.Dataset, access: str | None = None) -> None:
         """Swap internal state from a new GDAL dataset.
@@ -1010,12 +1009,12 @@ class Dataset(RasterBase):
     def slope(
         self, *, chunks=None, band: int = 0, units: str = "degrees"
     ) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.slope`."""
-        return slope(self, chunks=chunks, band=band, units=units)
+        """Facade — delegates to :meth:`Terrain.slope <pyramids.dataset.engines.Terrain.slope>`."""
+        return self.terrain.slope(chunks=chunks, band=band, units=units)
 
     def aspect(self, *, chunks=None, band: int = 0) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.aspect`."""
-        return aspect(self, chunks=chunks, band=band)
+        """Facade — delegates to :meth:`Terrain.aspect <pyramids.dataset.engines.Terrain.aspect>`."""
+        return self.terrain.aspect(chunks=chunks, band=band)
 
     def hillshade(
         self,
@@ -1025,13 +1024,9 @@ class Dataset(RasterBase):
         chunks=None,
         band: int = 0,
     ) -> np.ndarray | da.Array:
-        """Thin forwarder to :func:`pyramids.dataset.ops._focal.hillshade`."""
-        return hillshade(
-            self,
-            azimuth=azimuth,
-            altitude=altitude,
-            chunks=chunks,
-            band=band,
+        """Facade — delegates to :meth:`Terrain.hillshade <pyramids.dataset.engines.Terrain.hillshade>`."""
+        return self.terrain.hillshade(
+            azimuth=azimuth, altitude=altitude, chunks=chunks, band=band
         )
 
     def get_cell_coords(self, *args, **kwargs):

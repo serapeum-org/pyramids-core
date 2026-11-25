@@ -19,6 +19,7 @@ from pyramids.dataset.engines.cog import _COG as _COG
 from pyramids.dataset.engines.georef import _Georef as _Georef
 from pyramids.dataset.engines.io import _IO as _IO
 from pyramids.dataset.engines.spatial import _Spatial as _Spatial
+from pyramids.dataset.engines.terrain import _Terrain as _Terrain
 from pyramids.dataset.engines.vectorize import _Vectorize as _Vectorize
 
 # The engine classes are internal implementation detail. User code reaches their
