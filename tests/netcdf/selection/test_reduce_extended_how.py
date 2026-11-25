@@ -1089,7 +1089,7 @@ class TestReadsAsItsStore:
         """`rename_variable` swaps an in-memory container's raster through `_replace_raster`."""
         container = _container()
         before = container._raster
-        container.varops.rename_variable("v", "w")
+        container.variables.rename("v", "w")
         assert container._raster is not before, "the rename should swap the raster"
         assert container._store_raster is None, container._store_raster
 

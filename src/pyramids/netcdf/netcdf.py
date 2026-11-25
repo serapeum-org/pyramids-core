@@ -479,6 +479,26 @@ class _LazyVariableDict(dict):
         """`(name, variable)` for every variable, loading each; values as for `values`."""
         return [(k, self[k]) for k in self._names]
 
+    def add(self, *args: Any, **kwargs: Any) -> Any:
+        """Add a new variable to the container. See :meth:`NetCDF.add_variable`.
+
+        The read-through mapping is a snapshot; after a mutation, re-read ``nc.variables``
+        to see the change (item assignment ``variables[name] = ...`` is refused by design).
+        """
+        return self._nc._varops.add_variable(*args, **kwargs)
+
+    def set(self, *args: Any, **kwargs: Any) -> Any:
+        """Create or overwrite a variable. See :meth:`NetCDF.set_variable`."""
+        return self._nc._varops.set_variable(*args, **kwargs)
+
+    def remove(self, *args: Any, **kwargs: Any) -> Any:
+        """Remove a variable by name. See :meth:`NetCDF.remove_variable`."""
+        return self._nc._varops.remove_variable(*args, **kwargs)
+
+    def rename(self, *args: Any, **kwargs: Any) -> Any:
+        """Rename a variable. See :meth:`NetCDF.rename_variable`."""
+        return self._nc._varops.rename_variable(*args, **kwargs)
+
 
 def _reconstruct_netcdf(
     path: str,
@@ -2616,7 +2636,7 @@ class NetCDF(Dataset):
         self.interop = _Interop(self)
         # `varops` (not `variables`) because `variables` is an existing read-side
         # property returning the lazy variable dict — the engine must not shadow it.
-        self.varops = _Variables(self)
+        self._varops = _Variables(self)
         self.selection = _Selection(self)
 
     def close(self) -> None:
@@ -5045,6 +5065,24 @@ class NetCDF(Dataset):
             NetCDF.values: The variables alone.
         """
         return self.variables.items()
+
+    @property
+    def varops(self) -> _Variables:
+        """Deprecated alias for the variable-mutation surface, now on :attr:`variables`.
+
+        The separate ``varops`` engine is gone: read and mutate the variable collection
+        through one accessor -- ``nc.variables["t2m"]`` to read, ``nc.variables.add(...)`` /
+        ``.remove(...)`` / ``.rename(...)`` / ``.set(...)`` to mutate. This alias forwards to
+        the internal engine and will be removed in a future release.
+        """
+        warnings.warn(
+            "`nc.varops` is deprecated and will be removed in a future release; use "
+            "`nc.variables` (read via `nc.variables[name]`, mutate via "
+            "`nc.variables.add/remove/rename/set`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops
 
     @property
     def variables(self) -> _LazyVariableDict:
@@ -14576,7 +14614,7 @@ class NetCDF(Dataset):
 
     def set_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.set_variable <pyramids.netcdf.engines.variables.Variables.set_variable>`."""
-        return self.varops.set_variable(*args, **kwargs)
+        return self._varops.set_variable(*args, **kwargs)
 
     def crop_variable(
         self, variable_name: str, mask: Any, touch: bool = True
@@ -14712,15 +14750,15 @@ class NetCDF(Dataset):
 
     def add_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.add_variable <pyramids.netcdf.engines.variables.Variables.add_variable>`."""
-        return self.varops.add_variable(*args, **kwargs)
+        return self._varops.add_variable(*args, **kwargs)
 
     def remove_variable(self, *args, **kwargs):
         """Facade — :meth:`remove_variable <pyramids.netcdf.engines.variables.Variables.remove_variable>`."""
-        return self.varops.remove_variable(*args, **kwargs)
+        return self._varops.remove_variable(*args, **kwargs)
 
     def rename_variable(self, *args, **kwargs):
         """Facade — :meth:`rename_variable <pyramids.netcdf.engines.variables.Variables.rename_variable>`."""
-        return self.varops.rename_variable(*args, **kwargs)
+        return self._varops.rename_variable(*args, **kwargs)
 
     def to_xarray(
         self, chunks: dict | str | int | None = None, *, decode_times: bool = True

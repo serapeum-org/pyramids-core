@@ -70,7 +70,7 @@ class TestEngineWiring:
             does not shadow the read-side ``variables`` property.
         """
         assert isinstance(mdim_container.interop, _Interop), "interop engine missing"
-        assert isinstance(mdim_container.varops, _Variables), "varops engine missing"
+        assert isinstance(mdim_container._varops, _Variables), "varops engine missing"
         assert isinstance(mdim_container.selection, _Selection), (
             "selection engine missing"
         )
@@ -87,7 +87,7 @@ class TestEngineWiring:
         """
         for engine in (
             mdim_container.interop,
-            mdim_container.varops,
+            mdim_container._varops,
             mdim_container.selection,
         ):
             assert engine._ds.file_name == mdim_container.file_name, (
@@ -113,7 +113,7 @@ class TestEngineWiring:
         )
         nc.epsg = 3857
         assert isinstance(nc.selection, _Selection), "selection engine lost on update"
-        assert isinstance(nc.varops, _Variables), "varops engine lost on update"
+        assert isinstance(nc._varops, _Variables), "varops engine lost on update"
         assert isinstance(nc.interop, _Interop), "interop engine lost on update"
         # A façade call must still reach the live instance after the swap.
         assert nc.selection._ds.epsg == nc.epsg, "engine back-ref points at stale state"
