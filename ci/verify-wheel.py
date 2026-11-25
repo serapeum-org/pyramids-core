@@ -74,8 +74,9 @@ def _fail(msg: str) -> None:
 # `import native_stack_baseline` needs ci/ on sys.path. CPython prepends a script's own
 # directory for a plain `python ci/verify-wheel.py`, which is how CI invokes this, but NOT under
 # `-I`/`-P`, and not when the module is loaded by path -- which is exactly what the guard
-# tests do. So add it explicitly rather than depend on the invocation.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# tests do. Appended rather than prepended: this script exists to prove a published wheel's own
+# imports resolve, so it must not put the repo ahead of site-packages for anything else.
+sys.path.append(str(Path(__file__).resolve().parent))
 
 import native_stack_baseline  # noqa: E402 -- needs the sys.path line above
 

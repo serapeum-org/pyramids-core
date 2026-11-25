@@ -482,7 +482,11 @@ cibuildwheel --only cp312-win_arm64
 | `ci/setup-gdal-micromamba.sh`                      | macOS cross-compile: install micromamba and resolve target-platform env                |
 | `ci/setup-gdal-from-pixi.ps1`                      | Windows: PowerShell version of the pixi setup                                          |
 | `ci/install-and-vendor-osgeo.py`                   | Per-Python: build GDAL SWIG bindings + vendor osgeo + data + licenses                  |
-| `ci/verify-wheel.py`                               | Post-install smoke test: drivers, JP2 round-trip, TLS /vsicurl                         |
+| `ci/verify-wheel.py`                               | Post-install: GDAL version, drivers, JP2, TLS        |
+| `ci/native-stack-baseline.toml`                    | The native stack every wheel must report            |
+| `ci/native_stack_baseline.py`                      | Reads + validates that baseline (shared)            |
+| `ci/check-bundled-stack.py`                        | Every repair step: bundled HDF5/PROJ/GEOS vs baseline |
+| `ci/gdal-pin.py`                                   | Prints the conda pins (`--locked` reads pixi.lock)   |
 | `ci/check-wheel-size.sh`                           | Enforces the `WHEEL_SIZE_BUDGET_MB` ceiling per built wheel                            |
 | `pyproject.toml` `[tool.cibuildwheel.*]`           | cibuildwheel config per OS                                                             |
 | `pyproject.toml` `[tool.pixi.feature.wheel-build]` | Pixi env with GDAL native deps (conda-extract model only)                              |

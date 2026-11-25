@@ -1625,22 +1625,27 @@ class TestTheCheckersAreActuallyWiredIntoCi:
             )
 
     def test_the_musllinux_repair_override_invokes_the_bundled_checker(self):
-        """The workflow's CIBW_REPAIR_WHEEL_COMMAND replaces the TOML command wholesale."""
-        workflow = _WHEEL_WORKFLOW.read_text(encoding="utf-8")
-        overrides = [
-            line
-            for line in workflow.splitlines()
-            if "CIBW_REPAIR_WHEEL_COMMAND" in line
-        ]
+        """A `CIBW_REPAIR_WHEEL_COMMAND` override replaces the pyproject command wholesale.
+
+        Test scenario:
+            Walks the parsed YAML rather than locating the block by `list.index` over raw lines:
+            that returned the first line equal to the match, so two jobs with byte-identical
+            override lines would both have been checked against the first one's block, and an
+            override longer than the fixed six-line window would have fallen outside it.
+        """
+        workflow = yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))
+        overrides = []
+        for job_name, job in workflow["jobs"].items():
+            for step in job.get("steps", []):
+                command = (step.get("env") or {}).get("CIBW_REPAIR_WHEEL_COMMAND")
+                if command:
+                    overrides.append((job_name, command))
 
         assert overrides, "expected a musllinux repair override in the wheel workflow"
-        for line in overrides:
-            index = workflow.splitlines().index(line)
-            block = "\n".join(workflow.splitlines()[index : index + 6])
-            assert "check-bundled-stack.py" in block, (
-                "a CIBW_REPAIR_WHEEL_COMMAND override replaces the repair command from "
-                "pyproject.toml entirely, so it must invoke the checker itself:\n"
-                + block
+        for job_name, command in overrides:
+            assert "check-bundled-stack.py" in command, (
+                f"{job_name} overrides the repair command, replacing the one from pyproject.toml "
+                f"entirely, so it must invoke the checker itself: {command!r}"
             )
 
     def test_every_smoke_and_verify_job_runs_verify_wheel(self):

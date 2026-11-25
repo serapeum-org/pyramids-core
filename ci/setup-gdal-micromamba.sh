@@ -120,6 +120,24 @@ fi
 { read -r PROJ_SPEC; read -r GEOS_SPEC; read -r HDF5_SPEC; } \
     < <(python3 "${GDAL_PIN}" --locked --platform "${TARGET_PLATFORM}" proj geos hdf5)
 
+# Assert the invariant rather than leave it to `set -e` firing on `read`'s EOF status, which is what
+# actually protects this today but is nowhere stated. Two harmless-looking rewrites would reopen
+# #1632 by leaving a spec empty -- piping through `head`, or adding `|| true` -- and an extra line on
+# the producer's stdout would shift all three assignments by one, failing later in micromamba's spec
+# parser, far from the cause. Each spec must be an exact pin.
+for spec_name in PROJ_SPEC GEOS_SPEC HDF5_SPEC; do
+    spec_value="${!spec_name}"
+    case "${spec_value}" in
+        ==*) ;;
+        *)
+            echo "ERROR: ${spec_name}='${spec_value}' is not an exact pin from pixi.lock." >&2
+            echo "       ci/gdal-pin.py --locked must emit one '==<version>' line per package;" >&2
+            echo "       without it this build would install an unpinned native stack (#1632)." >&2
+            exit 1
+            ;;
+    esac
+done
+
 echo "--- Wheel-build pins (from pyproject.toml) ---"
 echo "  gdal${GDAL_SPEC}"
 echo "  libgdal-netcdf${LIBGDAL_NETCDF_SPEC}"

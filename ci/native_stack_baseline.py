@@ -247,23 +247,29 @@ def installed_platform_tag(distribution: str = "pyramids-core") -> str:
         distribution: The installed distribution to ask.
 
     Returns:
-        The single platform tag its wheel was built for, or an empty string when the distribution is
-        not installed, ships no `WHEEL` metadata, carries no `Tag:` line, names more than one
-        platform at once (a fat install), or is platform-independent (`any`). Each of those the
-        caller reports rather than guessing at.
+        The single platform tag its wheel was built for, or an empty string when the distribution
+        is not installed, is installed more than once, ships no `WHEEL` metadata, carries no `Tag:`
+        line, names more than one platform at once (a fat install), or is platform-independent
+        (`any`). Each of those the caller reports rather than guessing at.
     """
+    wanted = distribution.replace("-", "_").lower()
+    installed = [
+        found
+        for found in importlib.metadata.distributions()
+        if (found.metadata["Name"] or "").replace("-", "_").lower() == wanted
+    ]
+    platforms = set()
+    # More than one install of the same name -- a botched upgrade leaving two .dist-info trees --
+    # would otherwise be resolved by sys.path order, silently keying an exception to whichever
+    # directory happened to come first. Anything short of one concrete platform yields "".
+    if len(installed) == 1:
+        wheel_metadata = installed[0].read_text("WHEEL") or ""
+        platforms = {
+            line.split(":", 1)[1].strip().rsplit("-", 1)[-1]
+            for line in wheel_metadata.splitlines()
+            if line.startswith("Tag:")
+        }
     tag = ""
-    try:
-        wheel_metadata = (
-            importlib.metadata.distribution(distribution).read_text("WHEEL") or ""
-        )
-    except importlib.metadata.PackageNotFoundError:
-        wheel_metadata = ""
-    platforms = {
-        line.split(":", 1)[1].strip().rsplit("-", 1)[-1]
-        for line in wheel_metadata.splitlines()
-        if line.startswith("Tag:")
-    }
     if len(platforms) == 1:
         found = platforms.pop()
         tag = "" if found == "any" else found
