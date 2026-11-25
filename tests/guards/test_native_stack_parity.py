@@ -1247,18 +1247,23 @@ class TestVerifyWheelAssertsTheGdalVersion:
     which a published wheel requires (#1627).
     """
 
-    def test_it_asserts_the_version_and_resolves_exceptions(self):
-        """The check must read the baseline and honour a declared per-platform relaxation."""
+    def test_it_is_wired_to_the_shared_resolution(self):
+        """A cheap wiring check: the function must exist and defer to the shared module.
+
+        Test scenario:
+            This is deliberately only a wiring check. `verify-wheel.py` runs every check at import
+            and imports `pyramids`/`osgeo`, so it cannot be imported by a test; the behaviour it
+            reports is therefore tested through `native_stack_baseline.expected_gdal`, by execution,
+            in `TestTheInstalledGdalExpectationIsResolved`. Substring assertions alone were the whole
+            guard once, and they could survive a logic inversion that stopped the exception applying.
+        """
         source = _VERIFY_WHEEL.read_text(encoding="utf-8")
 
         assert "_check_gdal_version()" in source, (
             "verify-wheel.py must call the GDAL version check, or no job asserts it"
         )
-        assert "native_stack_baseline" in source, (
-            "the check must read the declared baseline"
-        )
-        assert 'exceptions", {}).get(tag, {}).get("gdal"' in source, (
-            "the check must resolve the per-platform GDAL exception, which only win_arm64 uses"
+        assert "native_stack_baseline.expected_gdal(" in source, (
+            "the expectation must come from the shared, tested resolution rather than be hand-rolled"
         )
 
     def test_it_does_not_re_assert_the_driver_set(self):
@@ -1479,4 +1484,89 @@ class TestTheCheckersAreActuallyWiredIntoCi:
         )
         assert "usage" in (result.stdout + result.stderr).lower(), (
             f"the refusal should state the usage: {result.stdout} {result.stderr}"
+        )
+
+
+class TestTheInstalledGdalExpectationIsResolved:
+    """`expected_gdal` decides what GDAL each platform must report, and says where that came from.
+
+    This is the installed half of #1627 -- the half that was found broken, where a separate checker
+    was wired into two of eight jobs. It is also the only evaluation of `[exceptions.win_arm64.gdal]`,
+    a relaxation that exists for exactly one platform. It previously lived inline in
+    `ci/verify-wheel.py`, which cannot be imported by a test, so it was guarded only by matching that
+    file's source text -- assertions that a reflow would break and a logic inversion would survive.
+    """
+
+    def test_a_platform_without_an_exception_gets_the_baseline_pin(self):
+        """The ordinary case: four of the five platforms resolve `installed.gdal`."""
+        baseline = _shared_module().load()
+
+        assert _shared_module().expected_gdal(baseline, "win_amd64") == (
+            baseline["installed"]["gdal"]["version"],
+            "installed.gdal",
+        )
+
+    def test_win_arm64_gets_its_declared_relaxation(self):
+        """The one live exception must actually apply, and name itself as the source.
+
+        Test scenario:
+            vcpkg's pinned baseline carries no `gdal 3.13.x` port, so this platform is a minor
+            version behind by force. If the relaxation stopped applying, every win_arm64 wheel would
+            fail its own repair step against a version it provably cannot reach.
+        """
+        module = _shared_module()
+        baseline = module.load()
+        declared = baseline["exceptions"]["win_arm64"]["gdal"]["version"]
+
+        version, source = module.expected_gdal(baseline, "win_arm64")
+
+        assert version == declared, (
+            f"win_arm64 must resolve its declared {declared}, got {version}"
+        )
+        assert source == "exceptions.win_arm64.gdal", (
+            f"the source must name the exception so the failure message can cite it, got {source}"
+        )
+        assert version != baseline["installed"]["gdal"]["version"], (
+            "this test is vacuous unless the exception differs from the baseline pin"
+        )
+
+    @pytest.mark.parametrize(
+        "tag", ["", "macosx_11_0_x86_64", "manylinux_2_28_aarch64"]
+    )
+    def test_a_tag_with_no_exception_falls_back_to_the_pin(self, tag):
+        """An unresolvable or unrelaxed tag must compare against the baseline, not against nothing.
+
+        Args:
+            tag: A platform tag the baseline declares no GDAL exception for.
+        """
+        module = _shared_module()
+        baseline = module.load()
+
+        assert module.expected_gdal(baseline, tag) == (
+            baseline["installed"]["gdal"]["version"],
+            "installed.gdal",
+        )
+
+    def test_a_baseline_pinning_no_gdal_yields_an_empty_version(self):
+        """The caller must be able to refuse rather than silently compare nothing."""
+        version, source = _shared_module().expected_gdal(
+            {"libraries": {"hdf5": {"version": "2.2.0"}}}, "win_amd64"
+        )
+
+        assert version == "", (
+            f"an absent [installed.gdal] must resolve to no version, got {version}"
+        )
+        assert source == "installed.gdal", (
+            f"the source should still be nameable, got {source}"
+        )
+
+    def test_an_exception_for_another_platform_does_not_leak(self):
+        """win_arm64's relaxation must not reach the platform next to it."""
+        module = _shared_module()
+        baseline = module.load()
+
+        leaked = module.expected_gdal(baseline, "win_amd64")[0]
+
+        assert leaked != baseline["exceptions"]["win_arm64"]["gdal"]["version"], (
+            "win_amd64 resolved win_arm64's relaxed version, so the exception is not keyed by tag"
         )

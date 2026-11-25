@@ -95,32 +95,33 @@ def _check_gdal_version() -> None:
 
     The driver set is deliberately not re-asserted here -- `_check_driver_set` already does it, on
     every platform, over a superset of what a baseline list would hold.
+
+    The expectation itself is resolved by `native_stack_baseline.expected_gdal`, which is unit
+    tested by execution; this function only reports what it returns. This file runs every check at
+    import, so it cannot be imported by a test -- which is why the resolution does not live here.
     """
     baseline = native_stack_baseline.load()
-    pinned = baseline.get("installed", {}).get("gdal", {}).get("version")
-    if not pinned:
+    tag = native_stack_baseline.installed_platform_tag()
+    expected, source = native_stack_baseline.expected_gdal(baseline, tag)
+    if not expected:
         _fail(
             f"{native_stack_baseline.BASELINE_PATH.name} pins no [installed.gdal] version, so "
             "nothing would be compared"
         )
-    tag = native_stack_baseline.installed_platform_tag()
-    relaxed = baseline.get("exceptions", {}).get(tag, {}).get("gdal", {}).get("version")
-    expected = relaxed or pinned
-    reported = gdal.__version__.split("-")[0]
     if not tag:
         print(
             "NOTE: the installed distribution carries no single wheel platform tag, so a declared "
-            f"GDAL exception cannot be resolved; comparing against the baseline {pinned}"
+            f"GDAL exception cannot be resolved; comparing against the baseline {expected}"
         )
+    reported = gdal.__version__.split("-")[0]
     if reported != expected:
-        source = f"exceptions.{tag}.gdal" if relaxed else "installed.gdal"
         _fail(
             f"bundled GDAL is {reported}, but {native_stack_baseline.BASELINE_PATH.name} "
             f"[{source}] pins {expected} for platform {tag or 'unknown'}. Either fix the build "
             "route that drifted, or -- if the platform genuinely cannot meet the baseline -- add a "
             "declared exception with its reason to that file (see issue #1627)."
         )
-    via = f" (via exceptions.{tag}.gdal)" if relaxed else ""
+    via = f" (via {source})" if source != "installed.gdal" else ""
     print(f"GDAL version check OK — {reported} matches the declared baseline{via}.")
 
 

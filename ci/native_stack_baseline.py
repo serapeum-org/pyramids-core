@@ -142,6 +142,35 @@ def expected_for(baseline: dict, tag: str) -> dict:
     return expected
 
 
+def expected_gdal(baseline: dict, tag: str) -> tuple[str, str]:
+    """The GDAL version one platform must report, and where that expectation came from.
+
+    GDAL is resolved here rather than through `expected_for` because it is not a `[libraries]` entry:
+    its version cannot be read from a wheel's bytes, so it is asserted from the installed package by
+    `ci/verify-wheel.py`. That consumer used to hand-roll this lookup, which left the only evaluation
+    of `[exceptions.<tag>.gdal]` -- a relaxation that exists for exactly one platform -- with no
+    executable test (#1627).
+
+    Args:
+        baseline: The parsed baseline.
+        tag: The installed wheel's platform tag. An empty tag resolves no exception.
+
+    Returns:
+        A `(version, source)` pair, where `source` names the table the value came from, for the
+        caller's message: `exceptions.<tag>.gdal` when this platform declares a relaxation, otherwise
+        `installed.gdal`. The version is an empty string when the baseline pins none, which the caller
+        must refuse rather than treat as "anything goes".
+    """
+    pinned = baseline.get("installed", {}).get("gdal", {}).get("version", "")
+    relaxation = baseline.get("exceptions", {}).get(tag, {}).get("gdal", {})
+    relaxed = relaxation.get("version", "") if tag else ""
+    if relaxed:
+        resolved = (relaxed, f"exceptions.{tag}.gdal")
+    else:
+        resolved = (pinned, "installed.gdal")
+    return resolved
+
+
 def wheel_name_platform_tag(filename: str) -> str:
     """The platform tag of a wheel, from its PEP 427 filename.
 
