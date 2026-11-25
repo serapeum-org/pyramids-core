@@ -1011,7 +1011,7 @@ class TestABaselineThatWouldCompareNothingIsRefused:
                 "conda-subdir-as-tag",
                 '[libraries.hdf5]\nversion = "2.2.0"\n'
                 '[exceptions.osx-64.hdf5]\nversion = "2.1.1"\nreason = "x"\n',
-                "not a wheel platform tag",
+                "not a platform tag this project publishes",
             ),
             (
                 "exception-without-version",
@@ -1021,7 +1021,33 @@ class TestABaselineThatWouldCompareNothingIsRefused:
             (
                 "installed-without-version",
                 '[libraries.hdf5]\nversion = "2.2.0"\n[installed.gdal]\nbuild = "1"\n',
-                "pins no version",
+                "declares no .installed.gdal. version",
+            ),
+            (
+                "installed-table-emptied",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[installed]\n',
+                "declares no .installed.gdal. version",
+            ),
+            (
+                "installed-key-misspelled",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[installed.libgdal]\nversion = "3.13.3"\n',
+                "declares no .installed.gdal. version",
+            ),
+            (
+                "libraries-not-a-table",
+                'libraries = "hdf5"\n',
+                "must be a table",
+            ),
+            (
+                "library-properties-not-a-table",
+                '[libraries]\nhdf5 = "2.2.0"\n[installed.gdal]\nversion = "3.13.3"\n',
+                "must be a table",
+            ),
+            (
+                "relaxation-not-a-table",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[installed.gdal]\nversion = "3.13.3"\n'
+                '[exceptions.win_arm64]\nhdf5 = "2.1.1"\n',
+                "must be a table",
             ),
             (
                 "library-pinning-nothing",
@@ -1101,6 +1127,7 @@ class TestTheInstalledPlatformTagSharesTheWheelNamespace:
                 "musllinux_1_2_x86_64",
             ),
             ("not-a-wheel.whl", ""),
+            ("pyramids_core-0.81.0-py3-none-any.whl", ""),
         ],
     )
     def test_a_wheel_name_yields_its_platform_tag(self, filename, expected):
@@ -1118,18 +1145,92 @@ class TestTheInstalledPlatformTagSharesTheWheelNamespace:
             _shared_module().installed_platform_tag("no-such-distribution-1627") == ""
         )
 
-    def test_the_declared_exception_tags_are_wheel_tags(self):
-        """Every exception key in the shipped baseline must be resolvable from a wheel name."""
+    @pytest.mark.parametrize(
+        "tag",
+        [
+            "winarm64",
+            "win",
+            "linux",
+            "manylinux",
+            "macosx",
+            "win_arm",
+            "WIN_ARM64",
+            "osx-64",
+        ],
+    )
+    def test_a_key_naming_no_published_platform_is_refused(self, tmp_path, tag):
+        """A key that looks right but matches no built wheel must be refused at load.
+
+        Args:
+            tmp_path: Per-test directory.
+            tag: An exception key that resolves to no platform this project publishes.
+
+        Test scenario:
+            A single missing underscore was accepted, relaxed nothing, and would have made the
+            win_arm64 wheel fail its own repair step against a version it provably cannot reach --
+            at release, since the wheel workflow has no `pull_request` trigger. The previous guard
+            built the wheel name *from* the tag and asserted it round-tripped, which is a tautology
+            for every key the shape check already admitted.
+        """
+        baseline = tmp_path / "native-stack-baseline.toml"
+        baseline.write_text(
+            '[libraries.hdf5]\nversion = "2.2.0"\nthreadsafety = "ON"\n'
+            '[installed.gdal]\nversion = "3.13.3"\n'
+            f'[exceptions.{tag}.hdf5]\nversion = "2.1.1"\nreason = "unreachable platform"\n',
+            encoding="utf-8",
+        )
+        module = _shared_module()
+
+        with pytest.raises(
+            ValueError, match="not a platform tag this project publishes"
+        ):
+            module.load(baseline)
+
+    @pytest.mark.parametrize(
+        "tag",
+        [
+            "win_amd64",
+            "win_arm64",
+            "macosx_11_0_x86_64",
+            "macosx_11_0_arm64",
+            "manylinux_2_28_x86_64",
+            "manylinux_2_28_aarch64",
+            "musllinux_1_2_x86_64",
+            "musllinux_1_2_aarch64",
+        ],
+    )
+    def test_every_platform_the_project_publishes_is_accepted(self, tmp_path, tag):
+        """The tags really built must all validate, or a legitimate exception cannot be declared.
+
+        Args:
+            tmp_path: Per-test directory.
+            tag: A platform tag this project publishes a wheel for.
+        """
+        baseline = tmp_path / "native-stack-baseline.toml"
+        baseline.write_text(
+            '[libraries.hdf5]\nversion = "2.2.0"\nthreadsafety = "ON"\n'
+            '[installed.gdal]\nversion = "3.13.3"\n'
+            f'[exceptions.{tag}.hdf5]\nversion = "2.1.1"\nreason = "forced by the toolchain"\n',
+            encoding="utf-8",
+        )
+        module = _shared_module()
+
+        assert module.load(baseline), f"{tag} is a published platform and must validate"
+
+    def test_the_shipped_exception_keys_resolve_to_a_real_wheel_name(self):
+        """Each declared key must be what a wheel filename actually yields, not merely well shaped."""
         module = _shared_module()
         baseline = module.load()
-        wheel_names = {
-            tag: f"pyramids_core-0.81.0-cp312-cp312-{tag}.whl"
-            for tag in baseline["exceptions"]
-        }
 
-        for tag, name in wheel_names.items():
-            assert module.wheel_name_platform_tag(name) == tag, (
-                f"exception key {tag!r} is not what a wheel filename yields, so it relaxes nothing"
+        for tag in baseline["exceptions"]:
+            produced = module.wheel_name_platform_tag(
+                f"pyramids_core-0.81.0-cp312-cp312-{tag}.whl"
+            )
+            assert produced == tag, f"{tag!r} does not round-trip from a wheel name"
+            relaxed = module.expected_for(baseline, tag)
+            unrelaxed = module.expected_for(baseline, "")
+            assert relaxed != unrelaxed or "gdal" in baseline["exceptions"][tag], (
+                f"the {tag!r} exception relaxes nothing, so it is inert"
             )
 
 

@@ -32,12 +32,23 @@ SUPPORTED_LIBRARIES = ("hdf5", "proj", "geos")
 #: build flag #1620 was about, and an exception may never waive it.
 SUPPORTED_PROPERTIES = ("version", "threadsafety")
 
-#: A platform tag's shape, as PEP 425 spells it for the wheels this project publishes. Matched by shape
-#: rather than against a fixed list so a manylinux or macOS version bump does not need an edit here.
-#: Being a shape check and not a whitelist, it catches the mistake that actually reaches this file --
-#: a conda subdir written where a wheel tag belongs (`osx-64`, `win-64`), since conda subdirs use `-`
-#: and wheel tags use `_` -- but it accepts any spelling inside a known prefix family.
-_PLATFORM_TAG = re.compile(r"^(?:manylinux|musllinux|macosx|win|linux)[a-z0-9_]*$")
+#: The platform tags this project actually publishes a wheel for, as PEP 425 spells them. An
+#: exception key must match one of these, because a key matching no built wheel relaxes nothing: the
+#: platform is then compared against the unrelaxed baseline and fails its own repair step against a
+#: version it provably cannot reach. A loose prefix-family check was not enough -- it admitted
+#: `winarm64` and bare `win`, both of which look right and resolve to no platform.
+#:
+#: Each family keeps its version segment open (`manylinux_2_28_`, `macosx_11_0_`) so an upstream bump
+#: needs no edit here, while the arch suffix is required, which is what a typo drops.
+_PLATFORM_TAG = re.compile(
+    r"^(?:"
+    r"manylinux(?:_\d+_\d+|\d+)_(?:x86_64|aarch64|i686)"
+    r"|musllinux_\d+_\d+_(?:x86_64|aarch64)"
+    r"|macosx_\d+_\d+_(?:x86_64|arm64|universal2)"
+    r"|win_(?:amd64|arm64)"
+    r"|win32"
+    r")$"
+)
 
 
 def load(path: pathlib.Path = BASELINE_PATH) -> dict:
@@ -79,7 +90,16 @@ def validate(baseline: dict, name: str = "baseline") -> None:
     libraries = baseline.get("libraries")
     if not libraries:
         problems.append("declares no [libraries] table, so it would compare nothing")
+    elif not isinstance(libraries, dict):
+        problems.append(f"[libraries] must be a table, not {type(libraries).__name__}")
+        libraries = {}
     for library, properties in (libraries or {}).items():
+        if not isinstance(properties, dict):
+            problems.append(
+                f"[libraries.{library}] must be a table of properties, not "
+                f"{type(properties).__name__}"
+            )
+            continue
         if library not in SUPPORTED_LIBRARIES:
             problems.append(
                 f"[libraries.{library}] has no extractor, so it could never be compared "
@@ -94,13 +114,32 @@ def validate(baseline: dict, name: str = "baseline") -> None:
                     f"[libraries.{library}] pins unknown property {prop!r} "
                     f"(supported: {', '.join(SUPPORTED_PROPERTIES)})"
                 )
-    for tag, relaxations in baseline.get("exceptions", {}).items():
+    exceptions = baseline.get("exceptions", {})
+    if not isinstance(exceptions, dict):
+        problems.append(
+            f"[exceptions] must be a table, not {type(exceptions).__name__}"
+        )
+        exceptions = {}
+    for tag, relaxations in exceptions.items():
+        if not isinstance(relaxations, dict):
+            problems.append(
+                f"[exceptions.{tag}] must be a table, not {type(relaxations).__name__}"
+            )
+            continue
         if not _PLATFORM_TAG.match(tag):
             problems.append(
-                f"[exceptions.{tag}] is not a wheel platform tag, so it would relax nothing "
-                "(wheel tags use underscores: win_amd64, macosx_11_0_arm64)"
+                f"[exceptions.{tag}] is not a platform tag this project publishes, so it would "
+                "relax nothing (expected e.g. win_arm64, macosx_11_0_x86_64, "
+                "manylinux_2_28_aarch64 -- note the required arch suffix, and that conda subdirs "
+                "like osx-64 are not wheel tags)"
             )
         for library, relaxation in relaxations.items():
+            if not isinstance(relaxation, dict):
+                problems.append(
+                    f"[exceptions.{tag}.{library}] must be a table, not "
+                    f"{type(relaxation).__name__}"
+                )
+                continue
             if library not in (*SUPPORTED_LIBRARIES, "gdal"):
                 problems.append(
                     f"[exceptions.{tag}.{library}] names a library nothing compares"
@@ -112,9 +151,14 @@ def validate(baseline: dict, name: str = "baseline") -> None:
                 )
             if "version" not in relaxation:
                 problems.append(f"[exceptions.{tag}.{library}] relaxes no version")
-    installed_gdal = baseline.get("installed", {}).get("gdal")
-    if installed_gdal is not None and not installed_gdal.get("version"):
-        problems.append("[installed.gdal] pins no version")
+    installed = baseline.get("installed")
+    if not isinstance(installed, dict) or not installed.get("gdal", {}).get("version"):
+        # `ci/verify-wheel.py` is a hard consumer of this value, so an absent, emptied or misspelled
+        # table is not an "optional section" -- it is a document that compares nothing on the
+        # installed side while looking complete.
+        problems.append(
+            "declares no [installed.gdal] version, so nothing would be compared on the installed side"
+        )
     if problems:
         raise ValueError(f"{name} is unusable:\n  - " + "\n  - ".join(problems))
 
@@ -179,11 +223,15 @@ def wheel_name_platform_tag(filename: str) -> str:
 
     Returns:
         The platform tag, or an empty string when the name does not carry the five dash-separated
-        parts PEP 427 requires -- which the caller reports rather than guessing at.
+        parts PEP 427 requires, or when it is `any` -- neither resolves an exception, and the caller
+        reports that rather than guessing at one.
     """
     stem = filename[:-4] if filename.endswith(".whl") else filename
     parts = stem.split("-")
-    return parts[-1] if len(parts) >= 5 else ""
+    tag = parts[-1] if len(parts) >= 5 else ""
+    # `any` is not a platform, so it resolves no exception -- the same normalisation the installed
+    # side applies, so both sides really do share one namespace.
+    return "" if tag == "any" else tag
 
 
 def installed_platform_tag(distribution: str = "pyramids-core") -> str:
