@@ -6883,59 +6883,7 @@ class Dataset(RasterBase):
 
               ```
         """
-        count = self.band_count
-        if bands is None:
-            selected = list(range(count))
-        elif isinstance(bands, bool):
-            # bool subclasses int, so guard it before the int branch or True/False
-            # would silently select band 1/0 — almost certainly a caller mistake.
-            raise TypeError(
-                f"Dataset.to_dataframe() got a boolean bands={bands!r}; pass a band index, a "
-                "sequence of indices, or None for every band."
-            )
-        elif isinstance(bands, (int, np.integer)):
-            selected = [int(bands)]
-        else:
-            selected = [int(b) for b in bands]
-        if not selected:
-            raise ValueError(
-                "Dataset.to_dataframe() was given an empty bands= selection; pass "
-                f"bands=None for every band, or indices in 0..{count - 1}."
-            )
-        out_of_range = [b for b in selected if not 0 <= b < count]
-        if out_of_range:
-            raise ValueError(
-                f"Dataset.to_dataframe() got band index/indices {out_of_range} out of range "
-                f"for a {count}-band raster (valid 0..{count - 1})."
-            )
-        # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-indexed
-        # dataframe build expects, not the dimension-preserving default (#1241).
-        array = np.asarray(self.read_array(squeeze=True), dtype="float64")
-        if array.ndim == 2:
-            array = array[np.newaxis, ...]
-        array = array[selected]
-        sentinels = self.no_data_value
-        for i, band in enumerate(selected):
-            sentinel = sentinels[band]
-            # A NaN sentinel already reads back as NaN; only a real value needs masking.
-            # Guard the isnan by type — it raises on integer sentinels (e.g. uint64).
-            is_nan_sentinel = isinstance(sentinel, (float, np.floating)) and np.isnan(
-                sentinel
-            )
-            if sentinel is not None and not is_nan_sentinel:
-                array[i] = np.where(array[i] == sentinel, np.nan, array[i])
-        index = pd.MultiIndex.from_product(
-            [
-                selected,
-                list(np.asarray(self.y, dtype="float64")),
-                list(np.asarray(self.x, dtype="float64")),
-            ],
-            names=["band", "y", "x"],
-        )
-        frame = pd.DataFrame({"values": array.reshape(-1)}, index=index)
-        if dropna:
-            frame = frame.dropna(subset=["values"])
-        return frame
+        return self.io.to_dataframe(bands=bands, dropna=dropna)
 
     @classmethod
     def from_dataframe(
