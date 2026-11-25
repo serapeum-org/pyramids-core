@@ -396,6 +396,79 @@ class TestAPartialSettingsStringIsStillJudged:
             f"byte-identical to a real regression: {failures}"
         )
 
+    def test_a_conforming_copy_never_prints_the_placeholder(self, tmp_path):
+        """A wheel reporting every pinned property must print values, not the unreadable marker.
+
+        Test scenario:
+            The placeholder stands in for a property the copy did not report, so a conforming wheel
+            printing it would mean the comparison read nothing while still saying `ok` -- the one
+            verdict this check must never produce.
+        """
+        result = _run(_wheel(tmp_path))
+
+        assert result.returncode == 0, (
+            f"the wheel matches the baseline and must pass: {result.stdout} {result.stderr}"
+        )
+        assert "not reported by this copy" not in result.stdout, (
+            f"every pinned property was readable, so none may print as unreadable: {result.stdout}"
+        )
+        assert "threadsafety=ON" in result.stdout, (
+            f"the read value itself must be printed: {result.stdout}"
+        )
+
+
+class TestACorruptWheelIsRefusedRatherThanTracebacked:
+    """A wheel whose bytes are not a readable archive is a build failure, not a comparison result.
+
+    The repair step runs this checker on whatever the previous step produced, so a truncated or
+    half-written wheel reaches it. Surfacing `zipfile`'s own `BadZipFile` traceback there reads as a
+    defect in the guard rather than in the artifact under inspection, and buries the one fact the
+    log needs: which file could not be read.
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "payload"),
+        [
+            ("empty", b""),
+            ("not-an-archive", b"this is not a zip archive, it is prose\n" * 8),
+            ("truncated-archive", None),
+        ],
+        ids=["empty", "not-an-archive", "truncated-archive"],
+    )
+    def test_an_unreadable_wheel_raises_a_named_refusal(self, tmp_path, label, payload):
+        """Each unreadable shape must raise `SystemExit` naming the file, not `BadZipFile`.
+
+        Args:
+            tmp_path: Per-test directory.
+            label: Which corruption is under test.
+            payload: The bytes to write, or None to truncate a real synthetic wheel instead.
+        """
+        checker = _checker_module("check-bundled-stack.py")
+        if payload is None:
+            payload = _wheel(tmp_path).read_bytes()[:96]
+        broken = tmp_path / "pyramids_core-9.9.9-cp312-cp312-win_amd64.whl"
+        broken.write_bytes(payload)
+
+        with pytest.raises(SystemExit, match="is not a readable wheel"):
+            checker.read_reported(broken, ["hdf5"])
+
+    def test_the_script_refuses_without_a_traceback(self, tmp_path):
+        """Run as a script, the refusal must be the whole output the repair log sees."""
+        broken = tmp_path / "pyramids_core-9.9.9-cp312-cp312-win_amd64.whl"
+        broken.write_bytes(b"PK\x03\x04 truncated before the central directory")
+
+        result = _run(broken)
+
+        assert result.returncode != 0, (
+            f"an unreadable wheel must fail the build: {result.stdout} {result.stderr}"
+        )
+        assert "is not a readable wheel" in result.stderr, (
+            f"the refusal must name what went wrong: {result.stderr}"
+        )
+        assert "Traceback" not in result.stderr, (
+            f"a corrupt artifact must not surface as a crash in the guard: {result.stderr}"
+        )
+
 
 class TestABadCopyCannotHideBehindAGoodOne:
     """A non-conforming bundled copy fails the wheel whatever its name sorts next to.
@@ -1061,6 +1134,18 @@ class TestABaselineThatWouldCompareNothingIsRefused:
                 "must be a table",
             ),
             (
+                "exceptions-not-a-table",
+                'exceptions = "win_arm64"\n[libraries.hdf5]\nversion = "2.2.0"\n'
+                '[installed.gdal]\nversion = "3.13.3"\n',
+                r"\[exceptions\] must be a table",
+            ),
+            (
+                "exception-tag-not-a-table",
+                '[libraries.hdf5]\nversion = "2.2.0"\n[installed.gdal]\nversion = "3.13.3"\n'
+                '[exceptions]\nwin_arm64 = "2.1.1"\n',
+                r"\[exceptions\.win_arm64\] must be a table",
+            ),
+            (
                 "library-pinning-nothing",
                 "[libraries.hdf5]\n",
                 "pins no property",
@@ -1245,22 +1330,28 @@ class TestTheInstalledPlatformTagSharesTheWheelNamespace:
             )
 
 
-def _fake_distribution(tmp_path: Path, name: str, tags: list[str] | None) -> Path:
-    """Write a `.dist-info` an `importlib.metadata` scan of the returned directory will find.
+def _dist_info(
+    root: Path, dirname: str, name: str | None, tags: list[str] | None
+) -> Path:
+    """Write one `.dist-info` tree exactly as named, so a scan of `root` discovers it.
 
     Args:
-        tmp_path: Directory to serve as a synthetic site-packages.
-        name: The distribution name to install under, unique per test so no cache is shared.
+        root: Directory to serve as a synthetic site-packages.
+        dirname: The `.dist-info` directory name, controlled separately from the declared name so a
+            botched upgrade leaving two trees for one distribution can be staged.
+        name: The `Name:` to declare in `METADATA`, or None to omit the line, as a distribution
+            whose metadata names nothing does.
         tags: The `Tag:` values for `WHEEL`, without the `Tag: ` prefix; None omits `WHEEL`
             entirely, as a distribution not installed from a wheel does.
 
     Returns:
-        The directory to prepend to `sys.path`.
+        `root`, for prepending to `sys.path`.
     """
-    info = tmp_path / f"{name}-1.0.dist-info"
+    info = root / dirname
     info.mkdir(parents=True, exist_ok=True)
+    declared = f"Name: {name}\n" if name is not None else ""
     (info / "METADATA").write_text(
-        f"Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n", encoding="utf-8"
+        f"Metadata-Version: 2.1\n{declared}Version: 1.0\n", encoding="utf-8"
     )
     if tags is not None:
         (info / "WHEEL").write_text(
@@ -1268,7 +1359,22 @@ def _fake_distribution(tmp_path: Path, name: str, tags: list[str] | None) -> Pat
             + "".join(f"Tag: {tag}\n" for tag in tags),
             encoding="utf-8",
         )
-    return tmp_path
+    return root
+
+
+def _fake_distribution(tmp_path: Path, name: str, tags: list[str] | None) -> Path:
+    """Write a `.dist-info` an `importlib.metadata` scan of the returned directory will find.
+
+    Args:
+        tmp_path: Directory to serve as a synthetic site-packages.
+        name: The distribution name to install under, unique per test so no cache is shared.
+        tags: The `Tag:` values for `WHEEL`, without the `Tag: ` prefix; None omits `WHEEL`
+            entirely.
+
+    Returns:
+        The directory to prepend to `sys.path`.
+    """
+    return _dist_info(tmp_path, f"{name}-1.0.dist-info", name, tags)
 
 
 class TestTheInstalledTagComesFromTheWheelMetadata:
@@ -1346,6 +1452,91 @@ class TestTheInstalledTagComesFromTheWheelMetadata:
 
         assert _shared_module().installed_platform_tag("fakedistfat1627") == "", (
             "a fat install must resolve no tag rather than half of one"
+        )
+
+    def test_two_installs_of_one_name_resolve_no_tag(self, tmp_path, monkeypatch):
+        """Two `.dist-info` trees for one distribution must yield "", not whichever comes first.
+
+        Test scenario:
+            A botched upgrade leaves both trees in place. Reading the first would key the exception
+            to whichever directory `sys.path` happened to order first, so a win_arm64 relaxation
+            could be applied to a win_amd64 install -- comparing one platform against another
+            platform's declared values. The two trees here declare the same name spelled both ways,
+            which is also how a normalising reader is made to see them as one distribution.
+        """
+        _dist_info(
+            tmp_path,
+            "fakedistdup1627-1.0.dist-info",
+            "fakedistdup1627",
+            ["cp312-cp312-win_arm64"],
+        )
+        _dist_info(
+            tmp_path,
+            "fakedistdup1627-2.0.dist-info",
+            "fakedistdup1627",
+            ["cp312-cp312-win_amd64"],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        importlib.invalidate_caches()
+
+        assert _shared_module().installed_platform_tag("fakedistdup1627") == "", (
+            "two installs of one name must resolve no tag rather than one chosen by path order"
+        )
+
+    def test_a_distribution_declaring_no_name_is_passed_over(
+        self, tmp_path, monkeypatch
+    ):
+        """A `METADATA` with no `Name:` must neither crash the scan nor count as the wanted install.
+
+        Test scenario:
+            Every distribution on `sys.path` is inspected, not just the wanted one, so one
+            nameless `METADATA` anywhere in the environment would otherwise take the reader down
+            with it -- or, counted as a second match, make the real install look duplicated.
+        """
+        _dist_info(
+            tmp_path, "nameless1627-1.0.dist-info", None, ["cp312-cp312-win_amd64"]
+        )
+        _dist_info(
+            tmp_path,
+            "fakedistnamed1627-1.0.dist-info",
+            "fakedistnamed1627",
+            ["cp312-cp312-win_arm64"],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        importlib.invalidate_caches()
+
+        found = _shared_module().installed_platform_tag("fakedistnamed1627")
+
+        assert found == "win_arm64", (
+            f"a nameless neighbour must not disturb the wanted install, got {found!r}"
+        )
+
+    @pytest.mark.parametrize(
+        "asked", ["fake-dist-norm-1627", "fake_dist_norm_1627", "Fake-Dist-Norm-1627"]
+    )
+    def test_the_name_is_matched_after_normalisation(
+        self, tmp_path, monkeypatch, asked
+    ):
+        """`pyramids-core` and `pyramids_core` name one distribution, so either spelling must match.
+
+        Args:
+            tmp_path: Per-test directory, used as a synthetic site-packages.
+            monkeypatch: Restores `sys.path` afterwards.
+            asked: The spelling the caller passes, which must resolve the same install.
+        """
+        _dist_info(
+            tmp_path,
+            "fake_dist_norm_1627-1.0.dist-info",
+            "Fake_Dist_Norm_1627",
+            ["cp312-cp312-musllinux_1_2_x86_64"],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        importlib.invalidate_caches()
+
+        found = _shared_module().installed_platform_tag(asked)
+
+        assert found == "musllinux_1_2_x86_64", (
+            f"{asked!r} must normalise onto the installed distribution, got {found!r}"
         )
 
 
@@ -1765,6 +1956,46 @@ class TestTheInstalledGdalExpectationIsResolved:
         )
         assert source == "installed.gdal", (
             f"the source should still be nameable, got {source}"
+        )
+
+    def test_an_exception_pinning_no_version_falls_back_to_the_pin(self):
+        """A relaxation carrying only prose must relax nothing, not resolve an empty version.
+
+        Test scenario:
+            `validate` refuses a versionless exception in the shipped file, but this resolver is
+            also handed baselines from `ci/verify-wheel.py`'s own reads. Returning `("",
+            "exceptions.<tag>.gdal")` here would make the caller compare the installed GDAL against
+            an empty string while naming a table that pinned nothing.
+        """
+        baseline = {
+            "libraries": {"hdf5": {"version": "2.2.0"}},
+            "installed": {"gdal": {"version": "3.13.3"}},
+            "exceptions": {"win_arm64": {"gdal": {"reason": "still being decided"}}},
+        }
+
+        assert _shared_module().expected_gdal(baseline, "win_arm64") == (
+            "3.13.3",
+            "installed.gdal",
+        )
+
+    def test_an_unresolvable_tag_cannot_be_relaxed_by_an_empty_key(self):
+        """An install whose tag could not be read must compare against the unrelaxed pin.
+
+        Test scenario:
+            The tag is "" whenever the installed wheel's metadata resolves no single platform. If
+            that empty string were used as a lookup key, a mistyped `[exceptions.""]` entry -- or a
+            future reader defaulting to one -- would relax every install whose platform is unknown,
+            which is precisely the population that must be compared most strictly.
+        """
+        baseline = {
+            "libraries": {"hdf5": {"version": "2.2.0"}},
+            "installed": {"gdal": {"version": "3.13.3"}},
+            "exceptions": {"": {"gdal": {"version": "9.9.9", "reason": "x"}}},
+        }
+
+        assert _shared_module().expected_gdal(baseline, "") == (
+            "3.13.3",
+            "installed.gdal",
         )
 
     def test_an_exception_for_another_platform_does_not_leak(self):

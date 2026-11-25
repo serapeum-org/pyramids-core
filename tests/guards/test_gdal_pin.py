@@ -16,6 +16,9 @@ install gdal in the conda-forge-shape wheel test) reads that same table.
 import importlib.util
 import re
 import runpy
+import shlex
+import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -226,6 +229,159 @@ class TestTheCrossCompileScriptUsesTheLockedPins:
         assert f'"{library}{variable}"' in script, (
             f"{library} must be passed to micromamba create as {library}{variable}, or its "
             "version is left to the solver on the cross-compile branch"
+        )
+
+
+# Git for Windows installs bash outside the PATH the pixi env inherits on some runners, so the
+# interpreter is resolved by name first and by install location second rather than assumed.
+_BASH_CANDIDATES = (
+    "bash",
+    r"C:\Program Files\Git\bin\bash.exe",
+    r"C:\Program Files\Git\usr\bin\bash.exe",
+)
+
+
+def _bash() -> str:
+    """The `bash` interpreter to run the shipped shell with, resolved without assuming PATH."""
+    found = ""
+    for candidate in _BASH_CANDIDATES:
+        resolved = shutil.which(candidate)
+        if resolved:
+            found = resolved
+            break
+    assert found, (
+        f"no runnable bash among {_BASH_CANDIDATES}; the shell guards cannot be driven"
+    )
+    return found
+
+
+def _exact_pin_guard() -> str:
+    """The exact-pin assertion loop, sliced verbatim out of `ci/setup-gdal-micromamba.sh`."""
+    script = MICROMAMBA_SCRIPT.read_text(encoding="utf-8")
+    start = script.index("for spec_name in")
+    end = script.index("\ndone\n", start) + len("\ndone\n")
+    return script[start:end]
+
+
+def _run_pin_guard(proj: str, geos: str, hdf5: str) -> subprocess.CompletedProcess:
+    """Run the shipped assertion loop over three specs and nothing else from the script.
+
+    Args:
+        proj: The value `PROJ_SPEC` holds when the loop runs.
+        geos: The value `GEOS_SPEC` holds when the loop runs.
+        hdf5: The value `HDF5_SPEC` holds when the loop runs.
+
+    Returns:
+        The completed process. The loop exits 1 and explains itself on stderr when a spec is not an
+        exact pin, and exits 0 silently when all three are.
+    """
+    program = (
+        "set -euo pipefail\n"
+        f"PROJ_SPEC={shlex.quote(proj)}\n"
+        f"GEOS_SPEC={shlex.quote(geos)}\n"
+        f"HDF5_SPEC={shlex.quote(hdf5)}\n" + _exact_pin_guard()
+    )
+    return subprocess.run(
+        [_bash(), "-c", program],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+
+class TestTheCrossCompileScriptAssertsItsPinsAreExact:
+    """The shell half of the pin: an empty or ranged spec must stop the build, not reach micromamba.
+
+    What protects this today is `set -e` firing on `read`'s EOF status, which is nowhere stated, so
+    two harmless-looking rewrites reopen #1632 by leaving a spec empty -- piping the producer
+    through `head`, or appending `|| true`. An extra line on the producer's stdout shifts all three
+    assignments by one instead, failing far away in micromamba's spec parser. The loop is executed
+    here rather than merely matched as text, because an assertion that only greps the script cannot
+    tell a working guard from a commented-out one.
+    """
+
+    def test_the_script_is_valid_shell(self):
+        """`bash -n` must parse the whole script, since nothing else in CI compiles it before use."""
+        result = subprocess.run(
+            [_bash(), "-n", str(MICROMAMBA_SCRIPT)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        assert result.returncode == 0, (
+            f"ci/setup-gdal-micromamba.sh does not parse: {result.stderr}"
+        )
+
+    def test_the_loop_asserts_exactly_the_baseline_libraries(self):
+        """A library left out of the loop keeps its pin unchecked, which is the whole failure mode."""
+        guard = _exact_pin_guard()
+        header = guard.splitlines()[0]
+
+        assert header.split(";")[0].split()[3:] == [
+            f"{library.upper()}_SPEC" for library in LOCKED_FROM_PIXI_LOCK
+        ], f"the loop must assert every baseline library's spec, got {header!r}"
+
+    def test_three_exact_pins_pass_quietly(self):
+        """The conforming case must not fail the build, or no cross-compiled wheel could be built."""
+        result = _run_pin_guard(proj="==9.8.1", geos="==3.14.1", hdf5="==2.2.0")
+
+        assert result.returncode == 0, (
+            f"three exact pins must satisfy the guard: {result.stdout} {result.stderr}"
+        )
+        assert "ERROR" not in result.stderr, (
+            f"a conforming solve must produce no complaint: {result.stderr}"
+        )
+
+    @pytest.mark.parametrize(
+        ("specs", "offender"),
+        [
+            (
+                {"proj": ">=9.8.1,<9.9", "geos": "==3.14.1", "hdf5": "==2.2.0"},
+                "PROJ_SPEC",
+            ),
+            ({"proj": "==9.8.1", "geos": "", "hdf5": "==2.2.0"}, "GEOS_SPEC"),
+            ({"proj": "==9.8.1", "geos": "==3.14.1", "hdf5": "=2.2.0"}, "HDF5_SPEC"),
+            ({"proj": "9.8.1", "geos": "==3.14.1", "hdf5": "==2.2.0"}, "PROJ_SPEC"),
+        ],
+        ids=["range", "empty", "single-equals", "bare-version"],
+    )
+    def test_a_spec_that_is_not_an_exact_pin_is_refused(self, specs, offender):
+        """Anything but `==<version>` must exit 1 and name the variable that is wrong.
+
+        Args:
+            specs: The three spec values the loop sees.
+            offender: The variable name the refusal must name, so the log points at the producer.
+        """
+        result = _run_pin_guard(**specs)
+
+        assert result.returncode == 1, (
+            f"{specs} is not a locked solve and must stop the build: {result.stdout}"
+        )
+        assert offender in result.stderr, (
+            f"the refusal must name {offender}, got {result.stderr!r}"
+        )
+        assert "#1632" in result.stderr, (
+            f"the refusal must cite the defect it prevents, got {result.stderr!r}"
+        )
+
+    def test_the_real_locked_pins_satisfy_the_guard(self):
+        """The producer and this consumer must agree, or the cross-compile branch cannot run at all.
+
+        Test scenario:
+            `ci/gdal-pin.py --locked` is the only source of these three values, so its output shape
+            and the shell's assertion are one contract. Driving the real lock through the real loop
+            is what catches a producer change -- a `=` prefix, a trailing build string -- that each
+            side would otherwise consider fine on its own.
+        """
+        pins = _load_gdal_pin().locked_pins(LOCKED_FROM_PIXI_LOCK, "osx-64")
+
+        result = _run_pin_guard(proj=pins["proj"], geos=pins["geos"], hdf5=pins["hdf5"])
+
+        assert result.returncode == 0, (
+            f"gdal-pin.py --locked emitted {pins}, which its own consumer refuses: {result.stderr}"
         )
 
 
