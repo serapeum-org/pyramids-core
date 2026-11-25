@@ -1,8 +1,8 @@
 """Vectorize engine.
 
 Owns the Vectorize family of operations on a Dataset. Accessed as
-``ds.vectorize``; the Dataset exposes same-named facade methods so
-``ds.<method>(...)`` and ``ds.vectorize.<method>(...)`` are equivalent.
+``ds.vector``; the Dataset exposes same-named facade methods so
+``ds.<method>(...)`` and ``ds.vector.<method>(...)`` are equivalent.
 """
 
 from __future__ import annotations
@@ -65,8 +65,13 @@ _CELL_ORDER = "_pyramids_cell_order"
 _AUTO_TILE_BYTES = 256 * 1024 * 1024
 
 
-class _Vectorize(_Engine["Dataset"]):
-    """Mixin providing vectorization, clustering, and translate methods for Dataset."""
+class _Vector(_Engine["Dataset"]):
+    """Raster-to-vector operations on a Dataset.
+
+    Owns vectorization, clustering, contouring and translate. Accessed as ``ds.vector``;
+    the Dataset exposes same-named facade methods so ``ds.to_polygons(...)`` and
+    ``ds.vector.to_polygons(...)`` are equivalent.
+    """
 
     def _band_to_polygon(self, band: int, col_name: str) -> GeoDataFrame:
         gdal_band = self._ds.raster.GetRasterBand(band + 1)
@@ -396,9 +401,9 @@ class _Vectorize(_Engine["Dataset"]):
         # Both branches read `src_ds` -- the cropped dataset when a mask was given -- so the
         # values and the geometry attached below come from the same extent.
         if tile:
-            df = src_ds.vectorize._extract_values_tiled(band_names, tile_size)
+            df = src_ds.vector._extract_values_tiled(band_names, tile_size)
         else:
-            df = src_ds.vectorize._extract_values_full(band_names)
+            df = src_ds.vector._extract_values_full(band_names)
 
         df = df.drop(columns=["burn_value", "geometry"], errors="ignore")
         gdf = self._attach_geometry(src_ds, df, geom, location)
@@ -854,9 +859,9 @@ class _Vectorize(_Engine["Dataset"]):
 
               ```python
               >>> import numpy as np
-              >>> from pyramids.dataset.engines.vectorize import _Vectorize
+              >>> from pyramids.dataset.engines.vectorize import _Vector
               >>> arr = np.array([[1.0, 2.0, 3.0], [4.0, -9999.0, 6.0], [7.0, 8.0, 9.0]])
-              >>> filled = _Vectorize._nearest_neighbour(arr, -9999.0, [1], [1])
+              >>> filled = _Vector._nearest_neighbour(arr, -9999.0, [1], [1])
               >>> float(filled[1, 1])
               6.0
 

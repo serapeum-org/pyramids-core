@@ -5,7 +5,7 @@ docstring and in the L-2 plan:
 
 * The seven collaborator classes are accessible as attributes on a
   ``Dataset`` (``ds.io``, ``ds.spatial``, ``ds.bands``, ``ds.analysis``,
-  ``ds.cell``, ``ds.vectorize``, ``ds.cog``).
+  ``ds.cell``, ``ds.vector``, ``ds.cog``).
 * Every public method on every collaborator is a forwarder — calling
   ``ds.<collab>.<method>(...)`` invokes ``ds.<method>(...)`` with the same
   positional and keyword arguments and returns the same value.
@@ -46,7 +46,7 @@ from pyramids.dataset.engines import (
     _Bands,
     _Cell,
     _Spatial,
-    _Vectorize,
+    _Vector,
 )
 from pyramids.dataset.engines._base import (
     _Engine,
@@ -212,7 +212,7 @@ class TestCollaboratorAttachment:
             ("bands", _Bands),
             ("analysis", _Analysis),
             ("cell", _Cell),
-            ("vectorize", _Vectorize),
+            ("vector", _Vector),
             ("cog", _COG),
         ],
     )
@@ -237,7 +237,7 @@ class TestCollaboratorAttachment:
 
 # Stage 2 facades: Dataset method delegates to the collaborator method
 # (the mixin has been removed from Dataset's MRO). PR 2.1 — cell, PR 2.2 —
-# cog, PR 2.3 — vectorize, PR 2.4 — analysis, PR 2.5 — spatial.
+# cog, PR 2.3 — vector, PR 2.4 — analysis, PR 2.5 — spatial.
 FACADE_METHODS = [
     ("bands", "get_attribute_table"),
     ("bands", "set_attribute_table"),
@@ -272,10 +272,10 @@ FACADE_METHODS = [
     ("cell", "nearest_cell"),
     ("cog", "to_cog"),
     ("cog", "validate_cog"),
-    ("vectorize", "to_geodataframe"),
-    ("vectorize", "translate"),
-    ("vectorize", "cluster"),
-    ("vectorize", "to_polygons"),
+    ("vector", "to_geodataframe"),
+    ("vector", "translate"),
+    ("vector", "cluster"),
+    ("vector", "to_polygons"),
     ("analysis", "stats"),
     ("analysis", "count_domain_cells"),
     ("analysis", "domain_area"),
@@ -643,8 +643,8 @@ class TestPickleRoundTrip:
         assert isinstance(roundtripped.cell, _Cell), (
             f"Roundtripped ds.cell is wrong type: {type(roundtripped.cell).__name__}"
         )
-        assert isinstance(roundtripped.vectorize, _Vectorize), (
-            f"Roundtripped ds.vectorize is wrong type: {type(roundtripped.vectorize).__name__}"
+        assert isinstance(roundtripped.vector, _Vector), (
+            f"Roundtripped ds.vector is wrong type: {type(roundtripped.vector).__name__}"
         )
         assert isinstance(roundtripped.cog, _COG), (
             f"Roundtripped ds.cog is wrong type: {type(roundtripped.cog).__name__}"
@@ -671,7 +671,7 @@ class TestPickleRoundTrip:
 
     @pytest.mark.parametrize(
         "collab_attr",
-        ["io", "spatial", "bands", "analysis", "cell", "vectorize", "cog"],
+        ["io", "spatial", "bands", "analysis", "cell", "vector", "cog"],
     )
     def test_directly_pickled_collaborator_yields_placeholder(
         self,

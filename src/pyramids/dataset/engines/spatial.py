@@ -53,7 +53,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._warp import carry_raster_metadata, warp_to_dataset
 from pyramids.dataset.engines._warp import dst_srs_arg as _dst_srs_arg
-from pyramids.dataset.engines.vectorize import _Vectorize
+from pyramids.dataset.engines.vectorize import _Vector
 from pyramids.dataset.transform import GeoTransform
 from pyramids.dataset.window import Window
 
@@ -1549,7 +1549,7 @@ class _Spatial(_Engine["Dataset"]):
             # need to be interpolated from neighbors.
             if elem_mask > elem_src:
                 gap_rows, gap_cols = np.nonzero(src_no_data & ~mask_no_data)
-                src_array = _Vectorize._nearest_neighbour(
+                src_array = _Vector._nearest_neighbour(
                     src_array,
                     gap_value,
                     gap_rows.tolist(),

@@ -13,7 +13,7 @@ from shapely.geometry import MultiPoint, Point, Polygon
 
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset.engines.vectorize import _Vectorize
+from pyramids.dataset.engines.vectorize import _Vector
 from pyramids.feature import FeatureCollection
 
 pytestmark = pytest.mark.core
@@ -724,7 +724,7 @@ class TestNearestNeighbourFill:
         array = np.array(
             [[1.0, 2.0, 3.0], [4.0, self.NO_DATA, self.NO_DATA], [7.0, 8.0, 9.0]]
         )
-        filled = _Vectorize._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
+        filled = _Vector._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
         assert filled[1, 1] != self.NO_DATA, (
             "a cell with a valid left neighbour must be filled even when the "
             "right neighbour is no-data"
@@ -745,7 +745,7 @@ class TestNearestNeighbourFill:
         array = np.array(
             [[10.0, 20.0, 30.0], [40.0, self.NO_DATA, self.NO_DATA], [70.0, 80.0, 90.0]]
         )
-        filled = _Vectorize._nearest_neighbour(array.copy(), self.NO_DATA, [1], [2])
+        filled = _Vector._nearest_neighbour(array.copy(), self.NO_DATA, [1], [2])
         assert filled[1, 2] == 30.0, (
             f"expected the cell directly above, 30.0; got {filled[1, 2]} "
             "(90.0 means row 0 was rejected as out of bounds)"
@@ -768,7 +768,7 @@ class TestNearestNeighbourFill:
                 [7.0, self.NO_DATA, self.NO_DATA],
             ]
         )
-        filled = _Vectorize._nearest_neighbour(array.copy(), self.NO_DATA, [2], [2])
+        filled = _Vector._nearest_neighbour(array.copy(), self.NO_DATA, [2], [2])
         assert filled[2, 2] == 5.0, (
             f"the bottom-right cell must be filled from its only valid neighbour "
             f"5.0, got {filled[2, 2]}"
@@ -777,7 +777,7 @@ class TestNearestNeighbourFill:
     def test_documented_case_is_unchanged(self):
         """The behaviour shown in the docstring still holds."""
         array = np.array([[1.0, 2.0, 3.0], [4.0, self.NO_DATA, 6.0], [7.0, 8.0, 9.0]])
-        filled = _Vectorize._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
+        filled = _Vector._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
         assert filled[1, 1] == 6.0, (
             f"the documented example must still yield 6.0, got {filled[1, 1]}"
         )
@@ -785,7 +785,7 @@ class TestNearestNeighbourFill:
     def test_isolated_cell_stays_no_data(self):
         """A cell with no valid neighbour at all is left alone."""
         array = np.full((3, 3), self.NO_DATA)
-        filled = _Vectorize._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
+        filled = _Vector._nearest_neighbour(array.copy(), self.NO_DATA, [1], [1])
         assert filled[1, 1] == self.NO_DATA, (
             f"an isolated cell must stay no-data, got {filled[1, 1]}"
         )
@@ -870,8 +870,8 @@ class TestTiledRowOrder:
             The 37x53 fixture is far below 256 MiB, so the default call takes the fast
             whole-array path, not the tiled one.
         """
-        full_spy = mocker.spy(_Vectorize, "_extract_values_full")
-        tiled_spy = mocker.spy(_Vectorize, "_extract_values_tiled")
+        full_spy = mocker.spy(_Vector, "_extract_values_full")
+        tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
         uneven.to_geodataframe()
         assert full_spy.call_count == 1, "small raster should read the whole array"
         assert tiled_spy.call_count == 0, "small raster should not tile"
@@ -887,7 +887,7 @@ class TestTiledRowOrder:
             returns, in the same order.
         """
         monkeypatch.setattr("pyramids.dataset.engines.vectorize._AUTO_TILE_BYTES", 1)
-        tiled_spy = mocker.spy(_Vectorize, "_extract_values_tiled")
+        tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
         auto = uneven.to_geodataframe(tile_size=8)
         assert tiled_spy.call_count == 1, "large raster should tile"
         untiled = uneven.to_geodataframe(tile=False)
@@ -905,8 +905,8 @@ class TestTiledRowOrder:
             `tile=False` still takes the whole-array path.
         """
         monkeypatch.setattr("pyramids.dataset.engines.vectorize._AUTO_TILE_BYTES", 1)
-        full_spy = mocker.spy(_Vectorize, "_extract_values_full")
-        tiled_spy = mocker.spy(_Vectorize, "_extract_values_tiled")
+        full_spy = mocker.spy(_Vector, "_extract_values_full")
+        tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
         uneven.to_geodataframe(tile=False)
         assert full_spy.call_count == 1, "explicit tile=False must read the whole array"
         assert tiled_spy.call_count == 0, "explicit tile=False must not tile"

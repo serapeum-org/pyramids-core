@@ -99,7 +99,7 @@ from pyramids.dataset.engines import (
     _Georef,
     _Spatial,
     _Terrain,
-    _Vectorize,
+    _Vector,
 )
 
 # The engine's "derive the sentinel from the computed values" default. Imported
@@ -830,9 +830,9 @@ class Dataset(RasterBase):
     the :class:`~pyramids.netcdf.NetCDF` subclass; for temporal stacks of
     rasters use :class:`~pyramids.dataset.DatasetCollection`.
 
-    The eight public-API families are exposed as collaborator instances
+    The public-API families are exposed as collaborator instances
     (`ds.io`, `ds.spatial`, `ds.bands`, `ds.analysis`,
-    `ds.cell`, `ds.vectorize`, `ds.cog`, `ds.georef`) and via thin facade
+    `ds.cell`, `ds.vector`, `ds.cog`, `ds.georef`, `ds.terrain`) and via thin facade
     methods on the Dataset itself, so `ds.crop(mask)` and
     `ds.spatial.crop(mask)` are equivalent. Each collaborator holds a
     weakref proxy back to the Dataset; the proxy keeps GDAL handle
@@ -907,10 +907,26 @@ class Dataset(RasterBase):
         self.bands = _Bands(self)
         self.analysis = _Analysis(self)
         self.cell = _Cell(self)
-        self.vectorize = _Vectorize(self)
+        self.vector = _Vector(self)
         self.cog = _COG(self)
         self.georef = _Georef(self)
         self.terrain = _Terrain(self)
+
+    @property
+    def vectorize(self) -> _Vector:
+        """Deprecated alias for :attr:`vector`.
+
+        The ``vectorize`` engine was renamed to ``vector`` for naming consistency (every
+        other engine is a noun). Use ``ds.vector``; this alias will be removed in a future
+        release.
+        """
+        warnings.warn(
+            "`ds.vectorize` is deprecated and will be removed in a future release; use "
+            "`ds.vector`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector
 
     def _update_inplace(self, src: gdal.Dataset, access: str | None = None) -> None:
         """Swap internal state from a new GDAL dataset.
@@ -1109,28 +1125,28 @@ class Dataset(RasterBase):
 
     def to_geodataframe(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.to_geodataframe <pyramids.dataset.engines.Vectorize.to_geodataframe>`."""
-        return self.vectorize.to_geodataframe(*args, **kwargs)
+        return self.vector.to_geodataframe(*args, **kwargs)
 
     def contour(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.contour <pyramids.dataset.engines.Vectorize.contour>`."""
-        return self.vectorize.contour(*args, **kwargs)
+        return self.vector.contour(*args, **kwargs)
 
     def translate(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.translate <pyramids.dataset.engines.Vectorize.translate>`."""
-        return self.vectorize.translate(*args, **kwargs)
+        return self.vector.translate(*args, **kwargs)
 
     def cluster(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.cluster <pyramids.dataset.engines.Vectorize.cluster>`."""
-        return self.vectorize.cluster(*args, **kwargs)
+        return self.vector.cluster(*args, **kwargs)
 
     def to_polygons(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.to_polygons <pyramids.dataset.engines.Vectorize.to_polygons>`."""
-        return self.vectorize.to_polygons(*args, **kwargs)
+        return self.vector.to_polygons(*args, **kwargs)
 
     def cluster2(self, *args, **kwargs):
         """Deprecated alias for :meth:`to_polygons` — delegates to
         :meth:`Vectorize.cluster2 <pyramids.dataset.engines.Vectorize.cluster2>`."""
-        return self.vectorize.cluster2(*args, **kwargs)
+        return self.vector.cluster2(*args, **kwargs)
 
     def stats(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.stats <pyramids.dataset.engines.Analysis.stats>`."""
