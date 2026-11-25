@@ -256,7 +256,7 @@ def installed_platform_tag(distribution: str = "pyramids-core") -> str:
     installed = [
         found
         for found in importlib.metadata.distributions()
-        if (found.metadata["Name"] or "").replace("-", "_").lower() == wanted
+        if (found.metadata.get("Name") or "").replace("-", "_").lower() == wanted
     ]
     platforms = set()
     # More than one install of the same name -- a botched upgrade leaving two .dist-info trees --

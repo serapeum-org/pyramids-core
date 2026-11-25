@@ -579,8 +579,10 @@ class TestTheCommandLineRoutesToTheRightMode:
             label: Which incomplete invocation is under test.
             argv: The arguments after `--locked`.
         """
+        module = _load_gdal_pin()
+
         with pytest.raises(SystemExit) as excinfo:
-            _load_gdal_pin()._locked_main(argv)
+            module._locked_main(argv)
 
         assert "usage: gdal-pin.py --locked" in str(excinfo.value), (
             f"{label}: the refusal must say how the mode is called, got: {excinfo.value}"
