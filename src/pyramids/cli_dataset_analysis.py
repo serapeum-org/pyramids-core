@@ -303,9 +303,9 @@ def _cmd_where(args: argparse.Namespace) -> int:
     mask = eval_calc(args.cond, {"A": values})
     given, other = _parse_other(args.other)
     if given:
-        out = ds.where(mask, other, drop=args.drop)
+        out = ds.analysis.where(mask, other, drop=args.drop)
     else:
-        out = ds.where(mask, drop=args.drop)
+        out = ds.analysis.where(mask, drop=args.drop)
     out.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

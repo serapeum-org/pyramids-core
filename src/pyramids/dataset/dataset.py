@@ -1222,6 +1222,12 @@ class Dataset(RasterBase):
         `COG.read_part`; duplicating its `@overload` stubs here bought the facade
         nothing over this union and only tripped the duplication gate.
         """
+        warnings.warn(
+            "`ds.read_part` is deprecated and will be removed in a future release; use "
+            "`ds.cog.read_part`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # `*args`/`**kwargs` are `Any`, so the overloaded engine call resolves to
         # `Any`; cast back to the declared union to keep the facade type-safe.
         return cast(
@@ -1369,6 +1375,12 @@ class Dataset(RasterBase):
         used by the collaborator's back-reference would otherwise fail
         `result is ds` checks.
         """
+        warnings.warn(
+            "`ds.apply` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.apply`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         result = self.analysis.apply(*args, **kwargs)
         return self if result is None else result
 
@@ -1398,6 +1410,12 @@ class Dataset(RasterBase):
         Returns:
             Dataset: The combined raster, on this dataset's grid.
         """
+        warnings.warn(
+            "`ds.combine` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.combine`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.combine(
             other, func, band=band, no_data_value=no_data_value
         )
@@ -1424,6 +1442,12 @@ class Dataset(RasterBase):
             SyntaxError: ``expr`` is not a valid Python expression.
             AlignmentError: An operand does not share this dataset's grid.
         """
+        warnings.warn(
+            "`ds.calc` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.calc`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.calc(expr, *others, dtype=dtype)
 
     def fill_domain(self, *args, **kwargs):
@@ -1433,6 +1457,12 @@ class Dataset(RasterBase):
         the gaps alone -- the opposite of :meth:`fillna`. The collaborator returns
         `None` for `inplace=True`; see :meth:`apply` for the rationale.
         """
+        warnings.warn(
+            "`ds.fill_domain` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.fill_domain`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
 
@@ -1451,6 +1481,12 @@ class Dataset(RasterBase):
         """
         arr = np.array(self.io.read_array(), dtype="float64")
         if arr.ndim == 2:
+            warnings.warn(
+                "`ds.normalize` is deprecated and will be removed in a future release; use "
+                "`ds.analysis.normalize`.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             no_data = self.analysis._physical_no_data(0)
             if no_data is not None:
                 arr = np.where(is_no_data(arr, no_data), np.nan, arr)
@@ -1483,6 +1519,12 @@ class Dataset(RasterBase):
         :meth:`fill`, which writes to the cells that are data rather than deciding which
         ones stay data.
         """
+        warnings.warn(
+            "`ds.where` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.where`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.where(*args, **kwargs)
 
     def fillna(self, *args, **kwargs):
@@ -2638,6 +2680,12 @@ class Dataset(RasterBase):
         Returns:
             bool: `True` iff both rasters occupy the same pixel grid.
         """
+        warnings.warn(
+            "`ds.same_grid` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.same_grid`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.same_grid(other, compare_crs=compare_crs)
 
     def fill_gaps(self, *args, **kwargs):
@@ -2916,6 +2964,12 @@ class Dataset(RasterBase):
         passthrough. The per-arg narrowing lives on `Bands.checksum`; duplicating
         its `@overload` stubs here would only trip the duplication gate.
         """
+        warnings.warn(
+            "`ds.checksum` is deprecated and will be removed in a future release; use "
+            "`ds.bands.checksum`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.checksum(band)
 
     def change_no_data_value(self, *args, **kwargs):
@@ -2925,6 +2979,12 @@ class Dataset(RasterBase):
         facade substitutes `self` for identity preservation, matching
         :meth:`apply` and :meth:`fill`.
         """
+        warnings.warn(
+            "`ds.change_no_data_value` is deprecated and will be removed in a future release; use "
+            "`ds.bands.change_no_data_value`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         result = self.bands.change_no_data_value(*args, **kwargs)
         return self if result is None else result
 

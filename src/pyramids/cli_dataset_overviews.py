@@ -244,7 +244,7 @@ def _cmd_read_part(args: argparse.Namespace) -> int:
         kwargs["dst_width"] = args.dst_width
     if args.dst_height is not None:
         kwargs["dst_height"] = args.dst_height
-    array, geotransform = ds.read_part(tuple(args.bbox), **kwargs)
+    array, geotransform = ds.cog.read_part(tuple(args.bbox), **kwargs)
     _write_raster(
         array,
         geotransform,

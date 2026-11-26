@@ -386,7 +386,7 @@ def _cmd_checksum(args: argparse.Namespace) -> int:
     """
     ds = Dataset.read_file(args.file)
     with map_lookup_errors():
-        result = ds.checksum(band=args.band)
+        result = ds.bands.checksum(band=args.band)
     if args.band is None:
         checksums = [int(value) for value in cast("list[int]", result)]
         if args.json:
