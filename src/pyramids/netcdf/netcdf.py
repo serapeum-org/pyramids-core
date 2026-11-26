@@ -14623,6 +14623,12 @@ class NetCDF(Dataset):
 
     def set_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.set_variable <pyramids.netcdf.engines.variables.Variables.set_variable>`."""
+        warnings.warn(
+            "`nc.set_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.set`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._varops.set_variable(*args, **kwargs)
 
     def crop_variable(
@@ -14759,14 +14765,32 @@ class NetCDF(Dataset):
 
     def add_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.add_variable <pyramids.netcdf.engines.variables.Variables.add_variable>`."""
+        warnings.warn(
+            "`nc.add_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.add`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._varops.add_variable(*args, **kwargs)
 
     def remove_variable(self, *args, **kwargs):
         """Facade — :meth:`remove_variable <pyramids.netcdf.engines.variables.Variables.remove_variable>`."""
+        warnings.warn(
+            "`nc.remove_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.remove`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._varops.remove_variable(*args, **kwargs)
 
     def rename_variable(self, *args, **kwargs):
         """Facade — :meth:`rename_variable <pyramids.netcdf.engines.variables.Variables.rename_variable>`."""
+        warnings.warn(
+            "`nc.rename_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.rename`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._varops.rename_variable(*args, **kwargs)
 
     def to_xarray(
@@ -14841,6 +14865,12 @@ class NetCDF(Dataset):
 
     def subset(self, *args, **kwargs) -> NetCDF:
         """Facade — :meth:`Selection.subset <pyramids.netcdf.engines.selection.Selection.subset>`."""
+        warnings.warn(
+            "`nc.subset` is deprecated and will be removed in a future release; use "
+            "`nc.selection.subset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.selection.subset(*args, **kwargs)
 
     @staticmethod

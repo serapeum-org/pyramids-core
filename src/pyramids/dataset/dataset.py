@@ -1043,28 +1043,58 @@ class Dataset(RasterBase):
         self, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Analysis.focal_mean <pyramids.dataset.engines.Analysis.focal_mean>`."""
+        warnings.warn(
+            "`ds.focal_mean` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.focal_mean`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.focal_mean(radius=radius, chunks=chunks, band=band)
 
     def focal_std(
         self, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Analysis.focal_std <pyramids.dataset.engines.Analysis.focal_std>`."""
+        warnings.warn(
+            "`ds.focal_std` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.focal_std`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.focal_std(radius=radius, chunks=chunks, band=band)
 
     def focal_apply(
         self, func, radius: int = 1, *, chunks=None, band: int = 0
     ) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Analysis.focal_apply <pyramids.dataset.engines.Analysis.focal_apply>`."""
+        warnings.warn(
+            "`ds.focal_apply` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.focal_apply`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.focal_apply(func, radius=radius, chunks=chunks, band=band)
 
     def slope(
         self, *, chunks=None, band: int = 0, units: str = "degrees"
     ) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Terrain.slope <pyramids.dataset.engines.Terrain.slope>`."""
+        warnings.warn(
+            "`ds.slope` is deprecated and will be removed in a future release; use "
+            "`ds.terrain.slope`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.terrain.slope(chunks=chunks, band=band, units=units)
 
     def aspect(self, *, chunks=None, band: int = 0) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Terrain.aspect <pyramids.dataset.engines.Terrain.aspect>`."""
+        warnings.warn(
+            "`ds.aspect` is deprecated and will be removed in a future release; use "
+            "`ds.terrain.aspect`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.terrain.aspect(chunks=chunks, band=band)
 
     def hillshade(
@@ -1076,6 +1106,12 @@ class Dataset(RasterBase):
         band: int = 0,
     ) -> np.ndarray | da.Array:
         """Facade — delegates to :meth:`Terrain.hillshade <pyramids.dataset.engines.Terrain.hillshade>`."""
+        warnings.warn(
+            "`ds.hillshade` is deprecated and will be removed in a future release; use "
+            "`ds.terrain.hillshade`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.terrain.hillshade(
             azimuth=azimuth, altitude=altitude, chunks=chunks, band=band
         )
@@ -1712,6 +1748,12 @@ class Dataset(RasterBase):
 
     def plot_histogram(self, *args, **kwargs):
         """Facade — delegates to :meth:`Glyph.histogram <pyramids.dataset.engines.Glyph.histogram>`."""
+        warnings.warn(
+            "`ds.plot_histogram` is deprecated and will be removed in a future release; use "
+            "`ds.glyph.histogram`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.glyph.histogram(*args, **kwargs)
 
     def to_image(self, *args, **kwargs):
@@ -1726,6 +1768,12 @@ class Dataset(RasterBase):
 
     def plot_vector_field(self, *args, **kwargs):
         """Facade — delegates to :meth:`Glyph.vector_field <pyramids.dataset.engines.Glyph.vector_field>`."""
+        warnings.warn(
+            "`ds.plot_vector_field` is deprecated and will be removed in a future release; use "
+            "`ds.glyph.vector_field`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.glyph.vector_field(*args, **kwargs)
 
     def _resolve_plot_band(
@@ -2852,6 +2900,12 @@ class Dataset(RasterBase):
             ReadOnlyError: The dataset is opened read-only on-disk (writing the palette
                 would otherwise silently spill a PAM sidecar).
         """
+        warnings.warn(
+            "`ds.set_color_ramp` is deprecated and will be removed in a future release; use "
+            "`ds.glyph.set_color_ramp`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.glyph.set_color_ramp(
             band,
             start_value=start_value,
@@ -3180,6 +3234,12 @@ class Dataset(RasterBase):
             optionally `raw_values`. Indexed by `fc.index` for polygon zones, or by the class value
             (`index.name="class"`) for raster zones.
         """
+        warnings.warn(
+            "`ds.zonal_stats` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.zonal_stats`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.zonal_stats(
             zones,
             stats=stats,
@@ -3283,6 +3343,12 @@ class Dataset(RasterBase):
 
                 ```
         """
+        warnings.warn(
+            "`ds.to_zarr` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_zarr`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_zarr(
             store,
             compute=compute,
@@ -4534,6 +4600,12 @@ class Dataset(RasterBase):
 
                 ```
         """
+        warnings.warn(
+            "`ds.convert_units` is deprecated and will be removed in a future release; use "
+            "`ds.bands.convert_units`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.convert_units(target, band=band)
 
     @property
@@ -5131,6 +5203,12 @@ class Dataset(RasterBase):
             - pyramids.dataset.stac_options.StacExtensions: which extensions are stamped on.
             - DatasetCollection.from_stac: the inverse — Items back into a cube.
         """
+        warnings.warn(
+            "`ds.to_stac_item` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_stac_item`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_stac_item(
             item_id,
             asset_href=asset_href,
@@ -7389,6 +7467,12 @@ class Dataset(RasterBase):
 
               ```
         """
+        warnings.warn(
+            "`ds.to_dataframe` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_dataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_dataframe(bands=bands, dropna=dropna)
 
     @classmethod

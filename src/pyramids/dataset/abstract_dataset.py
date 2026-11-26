@@ -727,6 +727,12 @@ class RasterBase(ABC):
             rowcol: The inverse, mapping map coordinates to cell indices.
             transform: The affine-style geotransform object.
         """
+        warnings.warn(
+            "`ds.xy` is deprecated and will be removed in a future release; use "
+            "`ds.cell.xy`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cell.xy(rows, cols, center=center)
 
     def rowcol(
@@ -784,6 +790,12 @@ class RasterBase(ABC):
             xy: The inverse, mapping cell indices to map coordinates.
             transform: The affine-style geotransform object.
         """
+        warnings.warn(
+            "`ds.rowcol` is deprecated and will be removed in a future release; use "
+            "`ds.cell.rowcol`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cell.rowcol(x, y)
 
     @property
