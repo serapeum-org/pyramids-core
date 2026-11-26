@@ -2008,3 +2008,142 @@ class TestTheInstalledGdalExpectationIsResolved:
         assert leaked != baseline["exceptions"]["win_arm64"]["gdal"]["version"], (
             "win_amd64 resolved win_arm64's relaxed version, so the exception is not keyed by tag"
         )
+
+
+def _pull_request_trigger(workflow: dict) -> dict:
+    """The wheel workflow's `pull_request` trigger, however PyYAML parsed the `on:` key.
+
+    Args:
+        workflow: The parsed workflow.
+
+    Returns:
+        The trigger's mapping, or an empty one when it is absent. YAML 1.1 reads a bare `on` as the
+        boolean True, so both spellings are tried.
+    """
+    triggers = workflow.get("on") or workflow.get(True) or {}
+    return triggers.get("pull_request") or {}
+
+
+def _skipped_on_a_pull_request(jobs: dict, name: str) -> bool:
+    """Whether a job is skipped for a `pull_request` event, directly or through its `needs`.
+
+    Args:
+        jobs: The workflow's jobs.
+        name: The job to resolve.
+
+    Returns:
+        True when the job carries a `pull_request` exclusion, or when any job it needs is skipped --
+        GitHub skips a job whose dependency was skipped, which is what keeps the heavy test and
+        verify jobs out of the arm without each needing its own condition.
+    """
+    condition = " ".join(str(jobs[name].get("if", "")).split())
+    if "!= 'pull_request'" in condition:
+        return True
+    needs = jobs[name].get("needs") or []
+    needs = [needs] if isinstance(needs, str) else needs
+    return any(_skipped_on_a_pull_request(jobs, parent) for parent in needs)
+
+
+class TestTheNativeStackGuardRunsBeforeAMerge:
+    """A build-touching pull request must build one wheel and check it (#1649).
+
+    Until the `pull_request` trigger was enabled, neither half of this guard could run before a
+    merge: `ci/check-bundled-stack.py` needs a built wheel and `ci/verify-wheel.py` needs an
+    installed one, and nothing on a PR produced either. Both defects the baseline exists to catch
+    (#1620, #1632) were found by a manual `workflow_dispatch`, not by PR CI.
+
+    The arm is deliberately four jobs rather than the full matrix: a full run is 55 jobs and 434
+    job-minutes, while `build-linux-wheels` plus `verify-debian12` is about 25 on 1x-billed runners,
+    because the Linux legs restore the GDAL stack from cache.
+    """
+
+    def test_the_trigger_is_enabled_and_covers_the_build_inputs(self):
+        """The trigger must exist and fire for the files that change what a wheel bundles."""
+        trigger = _pull_request_trigger(
+            yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))
+        )
+
+        assert trigger, (
+            "bundle-pypi-wheels.yml has no pull_request trigger, so neither the bundled-stack "
+            "checker nor the installed GDAL assertion can run before a merge (#1649)"
+        )
+        paths = trigger.get("paths") or []
+        for required in (
+            "ci/**",
+            "pyproject.toml",
+            ".github/workflows/bundle-pypi-wheels.yml",
+        ):
+            assert required in paths, (
+                f"the pull_request paths filter omits {required!r}, so a PR changing it would not "
+                f"build a wheel: {paths}"
+            )
+
+    @pytest.mark.parametrize("job", ["build-linux-wheels", "verify-debian12"])
+    def test_the_two_jobs_that_carry_the_guard_run_on_a_pull_request(self, job):
+        """Excluding either one empties the arm while leaving the trigger looking enabled.
+
+        Args:
+            job: The job that must not be excluded from the pull-request arm.
+        """
+        jobs = yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+
+        assert not _skipped_on_a_pull_request(jobs, job), (
+            f"{job} is skipped on a pull request, so the native-stack guard would again only run "
+            "after a merge (#1649)"
+        )
+
+    def test_the_expensive_platforms_stay_out_of_the_arm(self):
+        """The arm must stay cheap, or it will be turned off again."""
+        jobs = yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+        heavy = [
+            "build-macos-wheels",
+            "build-windows-wheels",
+            "build-winarm64-wheels",
+            "build-musl-wheels",
+            "test-wheels",
+            "test-wheels-musl",
+            "verify-alpine",
+            "verify-winarm64",
+            "verify-macos-x86_64",
+        ]
+        running = [job for job in heavy if not _skipped_on_a_pull_request(jobs, job)]
+
+        assert not running, (
+            f"these jobs would run on every build-touching pull request, which is the cost that got "
+            f"the trigger disabled in the first place: {running}"
+        )
+
+    def test_the_fork_guard_survives_the_exclusion(self):
+        """Adding the pull-request clause must not weaken the workflow_run fork check."""
+        jobs = yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+        excluded = [
+            name
+            for name, job in jobs.items()
+            if "!= 'pull_request'" in " ".join(str(job.get("if", "")).split())
+        ]
+
+        assert excluded, "expected some jobs to carry a pull-request exclusion"
+        for name in excluded:
+            condition = " ".join(str(jobs[name]["if"]).split())
+            if "workflow_run" not in condition:
+                continue
+            assert "head_repository.full_name == github.repository" in condition, (
+                f"{name} lost its fork guard while gaining the pull-request exclusion"
+            )
+
+    def test_the_release_job_cannot_fire_on_a_pull_request(self):
+        """Publishing must stay bound to a release, whatever the pull-request arm does."""
+        condition = " ".join(
+            str(
+                yaml.safe_load(_WHEEL_WORKFLOW.read_text(encoding="utf-8"))["jobs"][
+                    "release"
+                ]["if"]
+            ).split()
+        )
+
+        assert "workflow_run" in condition and "dry_run_release" in condition, (
+            f"the release job must require a release event or an explicit dry run: {condition}"
+        )
+        assert "pull_request" not in condition, (
+            f"the release job must not reference pull_request at all: {condition}"
+        )
