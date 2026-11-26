@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8978,7 +8978,23 @@ Docker (for Linux) or the host OS (for macOS / Windows):</p>
 </tr>
 <tr>
 <td><code>ci/verify-wheel.py</code></td>
-<td>Post-install smoke test: drivers, JP2 round-trip, TLS /vsicurl</td>
+<td>Post-install: GDAL version, drivers, JP2, TLS</td>
+</tr>
+<tr>
+<td><code>ci/native-stack-baseline.toml</code></td>
+<td>The native stack every wheel must report</td>
+</tr>
+<tr>
+<td><code>ci/native_stack_baseline.py</code></td>
+<td>Reads + validates that baseline (shared)</td>
+</tr>
+<tr>
+<td><code>ci/check-bundled-stack.py</code></td>
+<td>Every repair step: bundled HDF5/PROJ/GEOS vs baseline</td>
+</tr>
+<tr>
+<td><code>ci/gdal-pin.py</code></td>
+<td>Prints the conda pins (<code>--locked</code> reads pixi.lock)</td>
 </tr>
 <tr>
 <td><code>ci/check-wheel-size.sh</code></td>
