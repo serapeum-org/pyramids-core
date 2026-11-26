@@ -6640,7 +6640,10 @@ class _Analysis(_Engine["Dataset"]):
         ``(-1, rows, cols)`` to match the eager ``read_array`` band flattening
         before ``band`` indexes it; only that band's chunks are computed.
         """
-        lazy = self._ds.io.read_array(chunks=chunks)
+        # NOT `io.read_array`: the `chunks=` lazy routing is `NetCDF.read_array`'s
+        # override (it builds the dask-backed variable read); the IO engine's read
+        # has no lazy backend hook and would raise OptionalPackageDoesNotExist.
+        lazy = self._ds.read_array(chunks=chunks)
         if not is_lazy(lazy):
             result = lazy if band is None else lazy[band]
         elif lazy.ndim > 2:

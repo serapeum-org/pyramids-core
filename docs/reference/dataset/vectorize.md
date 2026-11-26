@@ -4,13 +4,13 @@ Raster-to-vector conversion, clustering, and translate.
 
 ```mermaid
 flowchart LR
-    VE(("Vectorize<br/>ds.vectorize"))
+    VE(("Vector<br/>ds.vector"))
     VE --> TV["<b>raster → vector</b><br/>to_geodataframe · contour"]
     VE --> CL["<b>cluster</b><br/>cluster · to_polygons"]
     VE --> TR["<b>translate</b><br/>translate"]
 ```
 
-::: pyramids.dataset.engines._Vectorize
+::: pyramids.dataset.engines._Vector
     options:
         show_root_heading: true
         show_source: true
