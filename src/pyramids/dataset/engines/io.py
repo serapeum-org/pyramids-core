@@ -3917,7 +3917,7 @@ class _IO(_Engine["Dataset"]):
                 # between the copy and the tiling -- an allocation failure in
                 # `CreateCopy`, an unsupported `BuildOverviews` -- is cleaned up
                 # too.
-                source = None
+                del source
                 if staged is not None:
                     staged.Close()
                     staged = None

@@ -5401,18 +5401,21 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.io.to_stac_item(
-            item_id,
-            asset_href=asset_href,
-            datetime=datetime,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-            asset_key=asset_key,
-            asset_media_type=asset_media_type,
-            asset_roles=asset_roles,
-            bands=bands,
-            footprint=footprint,
-            extensions=extensions,
+        return cast(
+            "dict",
+            self.io.to_stac_item(
+                item_id,
+                asset_href=asset_href,
+                datetime=datetime,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                asset_key=asset_key,
+                asset_media_type=asset_media_type,
+                asset_roles=asset_roles,
+                bands=bands,
+                footprint=footprint,
+                extensions=extensions,
+            ),
         )
 
     @property

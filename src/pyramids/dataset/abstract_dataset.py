@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from pyramids.base._file_manager import ThreadLocalFileManager
+    from pyramids.dataset.dataset import Dataset
 
 from pyramids.feature import FeatureCollection
 
@@ -733,7 +734,9 @@ class RasterBase(ABC):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.cell.xy(rows, cols, center=center)
+        # `cell` is a Dataset accessor; this deprecated shim is only ever reached on a
+        # Dataset/NetCDF instance, so cast for the type checker.
+        return cast("Dataset", self).cell.xy(rows, cols, center=center)
 
     def rowcol(
         self,
@@ -796,7 +799,7 @@ class RasterBase(ABC):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.cell.rowcol(x, y)
+        return cast("Dataset", self).cell.rowcol(x, y)
 
     @property
     def top_left_corner(self):
