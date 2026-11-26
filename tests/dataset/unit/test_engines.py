@@ -147,14 +147,10 @@ class TestCollaboratorBase:
             "Proxy did not resolve rows attribute"
         )
 
-    def test_proxy_does_not_keep_dataset_alive(self):
-        """Strong-cycle safety: deleting the only Dataset ref must release it.
-
-        Test scenario:
-            A ``weakref.ref`` set up on the Dataset should expire after the
-            local Dataset variable is deleted, even while a collaborator
-            still holds the back-reference. If this fails, GDAL handles
-            leak and Windows file-unlink in tests intermittently fails.
+    def test_a_dataset_with_no_external_refs_is_collected(self):
+        """No stored ds<->engine cycle: the engine accessors are properties, so a Dataset
+        with no external reference (and no engine held) is collected promptly, releasing its
+        GDAL handle -- which keeps Windows file-unlink reliable.
         """
         arr = np.zeros((4, 4), dtype=np.float32)
         ds = Dataset.from_array(
@@ -162,16 +158,32 @@ class TestCollaboratorBase:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
         ref = weakref.ref(ds)
-        collab = _Engine(ds)
         del ds
         gc.collect()
         assert ref() is None, (
-            "Dataset was kept alive by collaborator's _ds back-reference; "
-            "the back-reference must use weakref.proxy"
+            "Dataset must be collected once no external reference remains; a stored engine "
+            "would create a cycle and delay GDAL handle release"
         )
-        # Referencing the proxy after the parent is gone must raise.
-        with pytest.raises(ReferenceError):
-            _ = collab._ds.epsg
+
+    def test_a_held_engine_keeps_its_dataset_alive(self):
+        """The engine holds a strong back-reference, so a chain on a temporary
+        (``Dataset.read_file(p).io.read_array()``) stays valid for the call; the Dataset is
+        released once the engine itself is dropped.
+        """
+        arr = np.zeros((4, 4), dtype=np.float32)
+        ds = Dataset.from_array(
+            arr=arr,
+            geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
+        )
+        ref = weakref.ref(ds)
+        engine = ds.io
+        del ds
+        gc.collect()
+        assert ref() is not None, "a held engine keeps its Dataset alive for the call"
+        assert engine._ds.epsg == 4326
+        del engine
+        gc.collect()
+        assert ref() is None, "dropping the engine releases the Dataset"
 
     def test_reduce_returns_placeholder_recipe(self, in_memory_dataset):
         """``__reduce__`` must return ``(_recreate_placeholder, ())``.
@@ -325,7 +337,7 @@ class TestFacadeDelegation:
         """
         sentinel = object()
         collab = getattr(in_memory_dataset, collab_attr)
-        mock = mocker.patch.object(collab, method_name, return_value=sentinel)
+        mock = mocker.patch.object(type(collab), method_name, return_value=sentinel)
 
         facade = getattr(in_memory_dataset, method_name)
         result = facade(1, 2, foo="bar")

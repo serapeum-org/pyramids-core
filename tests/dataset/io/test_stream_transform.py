@@ -130,7 +130,7 @@ class TestStreamTransform:
         source_windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds.io
+            if a and a[0]._ds is ds
         ]
         assert source_windows, "no reads of the source were recorded"
         assert all(w is not None for w in source_windows), (
@@ -284,7 +284,7 @@ class TestStreamReduce:
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds.io
+            if a and a[0]._ds is ds
         ]
         assert windows, "no reads of the source were recorded"
         assert all(w[0] == 0 and w[2] == 5 for w in windows), (
@@ -470,7 +470,7 @@ class TestStreamedConsumers:
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds.io
+            if a and a[0]._ds is ds
         ]
         assert windows, "extract recorded no source reads"
         assert all(w is not None and w[0] == 0 and w[2] == 5 for w in windows), (

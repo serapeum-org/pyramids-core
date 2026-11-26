@@ -10,8 +10,7 @@ the Dataset's logger through) fall back on.
 from __future__ import annotations
 
 import logging
-import weakref
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
     from pyramids.dataset.abstract_dataset import RasterBase
@@ -78,10 +77,12 @@ class _Engine(Generic[_DatasetT]):
     _ds: _DatasetT
 
     def __init__(self, ds: _DatasetT) -> None:
-        # `weakref.proxy` so the back-reference does not create a
-        # strong cycle with the parent Dataset. See class docstring.
-        # The proxy is transparent, so cast it back to the wrapped type.
-        self._ds = cast(_DatasetT, weakref.proxy(ds))
+        # Store the back-reference exactly as given. The core engine accessors are
+        # Dataset *properties* that pass ``self`` (a strong reference held only for the
+        # duration of a call, with no stored ``ds -> engine`` cycle), so a temporary like
+        # ``Dataset.read_file(p).io.read_array()`` stays alive for the call. Registered
+        # plugin accessors instead pass a ``weakref.proxy`` and so remain weak.
+        self._ds = ds
 
     def __reduce__(self) -> tuple[Any, tuple]:
         return (_recreate_placeholder, ())

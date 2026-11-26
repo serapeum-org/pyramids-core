@@ -1,5 +1,6 @@
 """`Dataset.calc` — string-expression band algebra (the Python side of `pyramids calc`)."""
 
+from pyramids.dataset.engines.analysis import _Analysis
 import numpy as np
 import pytest
 
@@ -92,7 +93,7 @@ class TestCalc:
         """`Dataset.calc` forwards to `Analysis.calc` unchanged."""
         ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         sentinel = object()
-        spy = mocker.patch.object(ds.analysis, "calc", return_value=sentinel)
+        spy = mocker.patch.object(_Analysis, "calc", return_value=sentinel)
         result = ds.calc("A + 1", dtype="int16")
         assert result is sentinel
         spy.assert_called_once_with("A + 1", dtype="int16")

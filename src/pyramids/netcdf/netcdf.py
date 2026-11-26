@@ -2628,16 +2628,25 @@ class NetCDF(Dataset):
         self._variable_attrs: dict[str, Any] = {}
         self._scale: float | None = None
         self._offset: float | None = None
-        # NetCDF-specific engine collaborators (issue #615, STR-1). Distinct
-        # attribute names from the eight inherited Dataset engines so they do
-        # not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin
-        # façade methods that delegate here (e.g. `nc.<method>()` ->
-        # `self.interop.<method>()`).
-        self.interop = _Interop(self)
-        # `varops` (not `variables`) because `variables` is an existing read-side
-        # property returning the lazy variable dict — the engine must not shadow it.
-        self._varops = _Variables(self)
-        self.selection = _Selection(self)
+        # NetCDF-specific engine accessors (interop / selection / the internal _varops)
+        # are properties below, like the inherited Dataset engines: fresh per access with
+        # a strong back-reference for the call, no stored cycle. `_varops` is internal and
+        # named so (not `variables`) because `variables` is the read-side property.
+
+    @property
+    def interop(self) -> _Interop:
+        """Interoperability engine: to/from xarray, dask, kerchunk, dict (``nc.interop``)."""
+        return _Interop(self)
+
+    @property
+    def selection(self) -> _Selection:
+        """Selection engine: label/index selection and the xarray-style along-dim ops."""
+        return _Selection(self)
+
+    @property
+    def _varops(self) -> _Variables:
+        """Internal variable-mutation engine (surfaced via ``nc.variables.add/remove/...``)."""
+        return _Variables(self)
 
     def close(self) -> None:
         """Release every GDAL handle this container holds, then close the base.

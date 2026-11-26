@@ -9,7 +9,6 @@ import re
 import tempfile
 import textwrap
 import warnings
-import weakref
 from collections.abc import Callable, Hashable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -728,7 +727,9 @@ class _CollectionEngine:
     __slots__ = ("_dc",)
 
     def __init__(self, collection: DatasetCollection) -> None:
-        self._dc = weakref.proxy(collection)
+        # Strong ref, held only for a call's duration; the dc.<engine> accessors are
+        # properties returning a fresh engine, so there is no stored dc <-> engine cycle.
+        self._dc = collection
 
 
 class _ColSpatial(_CollectionEngine):
@@ -1071,11 +1072,7 @@ class DatasetCollection:
         # When set (by from_zarr), the lazy `data` cube reads directly from this
         # resolved Zarr store instead of stacking per-file reads.
         self._zarr_store = zarr_store
-        self.spatial = _ColSpatial(self)
-        self.io = _ColIO(self)
-        self.glyph = _ColGlyph(self)
-        self.analysis = _ColAnalysis(self)
-        self.series = _ColSeries(self)
+        # The engine accessors (dc.spatial, dc.io, …) are properties, defined below.
         # Cached lazy list of per-timestep Datasets. Populated on
         # first access via the `datasets` property: from `datasets=`
         # (caller-provided), then `files=` (open each path), then a
@@ -1106,6 +1103,31 @@ class DatasetCollection:
         state["_datasets"] = None
         state["_handle_cache"] = {}
         return state
+
+    @property
+    def spatial(self) -> _ColSpatial:
+        """Stack-wide spatial engine: align/crop/to_crs each timestep (``dc.spatial``)."""
+        return _ColSpatial(self)
+
+    @property
+    def io(self) -> _ColIO:
+        """Stack I/O engine: to_file/to_zarr/to_cog_stack/to_netcdf/close (``dc.io``)."""
+        return _ColIO(self)
+
+    @property
+    def glyph(self) -> _ColGlyph:
+        """Stack visualization engine: plot/animate (``dc.glyph``)."""
+        return _ColGlyph(self)
+
+    @property
+    def analysis(self) -> _ColAnalysis:
+        """Stack transform engine: apply/merge (``dc.analysis``)."""
+        return _ColAnalysis(self)
+
+    @property
+    def series(self) -> _ColSeries:
+        """Time-axis engine: reductions and selectors over time (``dc.series``)."""
+        return _ColSeries(self)
 
     @property
     def datasets(self) -> list[Dataset]:

@@ -21,6 +21,7 @@ from pyramids.base._errors import AlignmentError, NoDataCollisionWarning
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.engines.analysis import _DERIVE_NO_DATA, _Analysis
+from pyramids.dataset.engines.io import _IO
 
 pytestmark = pytest.mark.core
 
@@ -679,7 +680,7 @@ class TestCombine:
         """
         left = _raster(np.full((2, 4, 4), 1.0, "float32"))
         right = _raster(np.full((3, 4, 4), 1.0, "float32"))
-        spy = mocker.spy(left.io, "read_array")
+        spy = mocker.spy(_IO, "read_array")
 
         with pytest.raises(ValueError, match="different number of bands"):
             left - right
@@ -1009,12 +1010,13 @@ class TestSingleBandBroadcast:
         """
         stack = _raster(np.ones((12, 4, 4), "float32"))
         mask = _raster(np.full((4, 4), 1.0, "float32"))
-        spy = mocker.spy(mask.io, "read_array")
+        spy = mocker.spy(_IO, "read_array")
 
         result = stack * mask
 
         assert result.band_count == 12
-        assert spy.call_count == 1, "the single band must be read once, not per band"
+        mask_reads = [c for c in spy.call_args_list if c.args and c.args[0]._ds is mask]
+        assert len(mask_reads) == 1, "the single band must be read once, not per band"
 
     def test_the_stretch_is_a_view_not_a_copy(self):
         """`_broadcast_band_axis` stretches with a view, so no memory is spent tiling.

@@ -330,7 +330,7 @@ class TestWindowedBboxCropFastPath:
         source_windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is dataset.io
+            if a and a[0]._ds is dataset
         ]
         assert source_windows == [[2, 2, 2, 2]], (
             f"source must be read once, windowed to the AOI; saw {source_windows}"

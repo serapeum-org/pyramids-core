@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from pyramids.dataset.engines.io import _IO
+from pyramids.dataset.engines.bands import _Bands
 from pyramids.base._errors import NoDataValueError, ReadOnlyError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
@@ -441,7 +443,7 @@ class TestSetNoDataValueMocked:
             "dataset opened in read-only mode."
         )
         with patch.object(
-            ds.bands, "_set_no_data_value_backend", side_effect=RuntimeError(err_msg)
+            _Bands, "_set_no_data_value_backend", side_effect=RuntimeError(err_msg)
         ):
             with pytest.raises(ReadOnlyError):
                 ds.bands._set_no_data_value([-1234.0])
@@ -466,7 +468,7 @@ class TestSetNoDataValueMocked:
             original(band, val)
 
         with patch.object(
-            ds.bands,
+            _Bands,
             "_set_no_data_value_backend",
             side_effect=side_effect,
         ):
@@ -492,7 +494,7 @@ class TestSetNoDataValueMocked:
             original(band, val)
 
         with patch.object(
-            ds.bands,
+            _Bands,
             "_set_no_data_value_backend",
             side_effect=side_effect,
         ):
@@ -577,11 +579,11 @@ class TestChangeNoDataValueTypeError:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        original_read = ds.io.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Return array that raises TypeError on assignment."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
 
             def raise_type_error(key, value):
@@ -591,7 +593,7 @@ class TestChangeNoDataValueTypeError:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds.io, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-9999.0)
 
@@ -711,11 +713,11 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.io.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment (mimic a bad dtype)."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
             mock_arr.__setitem__ = lambda key, value: (_ for _ in ()).throw(
                 TypeError("incompatible type")
@@ -723,7 +725,7 @@ class TestChangeNoDataValueStreaming:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds.io, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-12345.0)
 
@@ -792,11 +794,11 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.io.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment to force a mid-stream failure."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
             mock_arr.__setitem__ = lambda key, value: (_ for _ in ()).throw(
                 TypeError("incompatible type")
@@ -805,7 +807,7 @@ class TestChangeNoDataValueStreaming:
             return mock_arr
 
         out = tmp_path / "partial.tif"
-        with patch.object(ds.io, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
                 ds.change_no_data_value(-1.0, old_value=-9999.0, path=out)
         assert not out.exists(), "failed disk call must remove the partial file"

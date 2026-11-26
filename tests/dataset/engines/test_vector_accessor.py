@@ -42,4 +42,4 @@ def test_flat_to_polygons_matches_accessor(labelled: Dataset):
 def test_vectorize_alias_warns_and_returns_the_vector_engine(labelled: Dataset):
     with pytest.warns(DeprecationWarning, match="ds.vectorize.*use.*ds.vector"):
         alias = labelled.vectorize
-    assert alias is labelled.vector
+    assert isinstance(alias, _Vector) and alias._ds is labelled

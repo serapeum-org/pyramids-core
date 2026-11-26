@@ -8,6 +8,7 @@ Covers two changes:
   instead of a 2-D ndarray.
 """
 
+from pyramids.dataset.engines.io import _IO
 import warnings
 
 import numpy as np
@@ -146,7 +147,7 @@ class TestToRasterRenamedToToFile:
         """
         ds = _value_raster()
         out = str(tmp_path / "fwd.tif")
-        spy = mocker.patch.object(ds.io, "to_file", return_value="sentinel")
+        spy = mocker.patch.object(_IO, "to_file", return_value="sentinel")
         with pytest.warns(DeprecationWarning):
             result = ds.io.to_raster(
                 out,

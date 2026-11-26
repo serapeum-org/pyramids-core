@@ -890,22 +890,62 @@ class Dataset(RasterBase):
             src.GetRasterBand(i).GetUnitType() for i in range(1, self.band_count + 1)
         ]
 
-        # Each collaborator owns the bodies of one public-API family
-        # (io, spatial, bands, analysis, cell, vectorize, cog) and
-        # holds a `weakref.proxy(self)` back-reference. Dataset
-        # exposes facade methods that delegate to the collaborator,
-        # so both `ds.crop(mask)` and `ds.spatial.crop(mask)` are
-        # equivalent.
-        self.io = _IO(self)
-        self.spatial = _Spatial(self)
-        self.bands = _Bands(self)
-        self.analysis = _Analysis(self)
-        self.cell = _Cell(self)
-        self.vector = _Vector(self)
-        self.cog = _COG(self)
-        self.georef = _Georef(self)
-        self.terrain = _Terrain(self)
-        self.glyph = _Glyph(self)
+        # The engine accessors (ds.io, ds.spatial, …) are defined as properties below,
+        # not stored here: each returns a fresh engine holding a strong reference to this
+        # Dataset for the duration of a call. Storing them would create a ds <-> engine
+        # cycle that delays GDAL handle release; a property keeps no cycle, so refcounting
+        # frees the Dataset (and its handle) promptly, while the strong back-reference
+        # keeps `Dataset.read_file(p).io.read_array()` chains alive for the call.
+
+    @property
+    def io(self) -> _IO:
+        """I/O engine: read/write arrays, files, bytes, overviews, tiles (``ds.io``)."""
+        return _IO(self)
+
+    @property
+    def spatial(self) -> _Spatial:
+        """Spatial engine: crop, align, reproject, resample, warp (``ds.spatial``)."""
+        return _Spatial(self)
+
+    @property
+    def bands(self) -> _Bands:
+        """Bands engine: band add/select, metadata, units, scale/offset, palette (``ds.bands``)."""
+        return _Bands(self)
+
+    @property
+    def analysis(self) -> _Analysis:
+        """Analysis engine: stats, masks, value transforms, focal/zonal, resampling maths."""
+        return _Analysis(self)
+
+    @property
+    def cell(self) -> _Cell:
+        """Cell engine: cell geometry and pixel-index <-> map-coordinate conversions (``ds.cell``)."""
+        return _Cell(self)
+
+    @property
+    def vector(self) -> _Vector:
+        """Vector engine: raster-to-vector conversion -- polygons, contours, clusters (``ds.vector``)."""
+        return _Vector(self)
+
+    @property
+    def cog(self) -> _COG:
+        """COG engine: Cloud-Optimized GeoTIFF write/validate/inspect and decimated reads (``ds.cog``)."""
+        return _COG(self)
+
+    @property
+    def georef(self) -> _Georef:
+        """Georeferencing engine: GCPs, RPCs, geolocation arrays, orthorectify (``ds.georef``)."""
+        return _Georef(self)
+
+    @property
+    def terrain(self) -> _Terrain:
+        """Terrain engine: DEM derivatives -- slope, aspect, hillshade (``ds.terrain``)."""
+        return _Terrain(self)
+
+    @property
+    def glyph(self) -> _Glyph:
+        """Plotting engine (via cleopatra): plot, histogram, vector_field, animate (``ds.glyph``)."""
+        return _Glyph(self)
 
     @property
     def vectorize(self) -> _Vector:
@@ -1269,7 +1309,10 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.analysis.fill_domain(*args, **kwargs)
+        # The engine returns None for inplace=True; mirror the fill_domain facade and
+        # hand back self so `ds.fill(v, inplace=True)` returns the mutated dataset.
+        result = self.analysis.fill_domain(*args, **kwargs)
+        return self if result is None else result
 
     def where(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.where <pyramids.dataset.engines.Analysis.where>`.
