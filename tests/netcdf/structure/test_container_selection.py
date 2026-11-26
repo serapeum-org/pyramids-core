@@ -119,7 +119,7 @@ class TestTheAuxiliaryDropWarning:
         with pytest.warns(UserWarning) as caught:
             converted = container.convert_calendar("noleap")
 
-        message = str(caught[0].message)
+        message = str(_dom(caught).message)
         assert "convert_calendar()" in message, f"should name the member: {message}"
         assert "qc" in message, f"should name the auxiliary: {message}"
         assert "'time'" in message, f"should name the dimension: {message}"
@@ -172,8 +172,8 @@ class TestTheAuxiliaryDropWarning:
         with pytest.warns(UserWarning) as caught:
             squeezed = container.squeeze("time")
 
-        assert "squeeze()" in str(caught[0].message), (
-            f"should name squeeze: {caught[0].message}"
+        assert "squeeze()" in str(_dom(caught).message), (
+            f"should name squeeze: {_dom(caught).message}"
         )
         assert squeezed.get_variable("t")._band_dim_names == (), (
             "the axis should be gone from the layout"
@@ -919,3 +919,12 @@ class TestTheInventoryToleratesAnUntypedSpatialAxis:
         assert result.variable_names == ["v"], (
             f"the re-wrap must work without open options, got {result.variable_names}"
         )
+
+
+def _dom(ws):
+    """First recorded warning that is not the engine-accessor DeprecationWarning.
+
+    During the deprecation window a flat-facade read can emit a DeprecationWarning ahead
+    of the domain warning under test; skip it so provenance assertions hit the real one.
+    """
+    return next(w for w in ws if not issubclass(w.category, DeprecationWarning))

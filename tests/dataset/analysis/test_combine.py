@@ -666,7 +666,7 @@ class TestCombine:
         with pytest.warns(NoDataCollisionWarning) as recorded:
             left.combine(right, np.subtract, no_data_value=-1.0)
 
-        assert recorded[0].filename == __file__, "the warning must blame the caller"
+        assert _dom(recorded).filename == __file__, "the warning must blame the caller"
 
     def test_a_band_count_mismatch_is_refused_before_either_read(self, mocker):
         """Refusing on a header field must not pull gigabytes off disk first.
@@ -2221,3 +2221,12 @@ class TestTheRightIdentities:
         """`0 - ds` is not an identity and must keep computing."""
         result = 0 - _raster(np.full((2, 2), 3.0, "float32"))
         assert float(np.asarray(result.read_array()).mean()) == pytest.approx(-3.0)
+
+
+def _dom(ws):
+    """First recorded warning that is not the engine-accessor DeprecationWarning.
+
+    During the deprecation window a flat-facade read can emit a DeprecationWarning ahead
+    of the domain warning under test; skip it so provenance assertions hit the real one.
+    """
+    return next(w for w in ws if not issubclass(w.category, DeprecationWarning))

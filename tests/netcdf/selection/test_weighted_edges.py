@@ -783,14 +783,14 @@ class TestWeightedAuxiliaries:
         container, steps = self._era5()
         with pytest.warns(UserWarning) as caught:
             container.weighted(np.ones(steps), "valid_time")
-        assert caught[0].filename == __file__, caught[0].filename
+        assert _dom(caught).filename == __file__, _dom(caught).filename
 
     def test_a_variable_receivers_warning_names_the_callers_line(self):
         """A weighted container reached through `reduce`'s loop reports the caller too."""
         container, steps = self._era5()
         with pytest.warns(UserWarning) as caught:
             container.reduce("valid_time", "mean")
-        assert caught[0].filename == __file__, caught[0].filename
+        assert _dom(caught).filename == __file__, _dom(caught).filename
 
     def test_weighting_one_axis_drops_only_that_axis_auxiliary(self):
         """Weighting `x` leaves `lat` alone, so `lat_bnds` comes along and `lon_bnds` does not."""
@@ -1067,14 +1067,14 @@ class TestTheWarningNamesTheCallerOnEitherRoute:
         container, steps = self._era5()
         with pytest.warns(UserWarning) as caught:
             container.selection.weighted(np.ones(steps), "valid_time")
-        assert caught[0].filename == __file__, caught[0].filename
+        assert _dom(caught).filename == __file__, _dom(caught).filename
 
     def test_weighted_through_the_facade(self):
         """The facade route still names the caller, as it always did."""
         container, steps = self._era5()
         with pytest.warns(UserWarning) as caught:
             container.weighted(np.ones(steps), "valid_time")
-        assert caught[0].filename == __file__, caught[0].filename
+        assert _dom(caught).filename == __file__, _dom(caught).filename
 
     @pytest.mark.parametrize("member", ["reduce", "diff", "argmin"])
     def test_an_along_dimension_member_through_the_engine(self, member):
@@ -1088,7 +1088,7 @@ class TestTheWarningNamesTheCallerOnEitherRoute:
         arguments = ("valid_time", "mean") if member == "reduce" else ("valid_time",)
         with pytest.warns(UserWarning) as caught:
             call(*arguments)
-        assert caught[0].filename == __file__, caught[0].filename
+        assert _dom(caught).filename == __file__, _dom(caught).filename
 
     def test_the_warning_lands_on_the_innermost_frame_outside_the_package(self):
         """Two frames of the caller's own, and the warning names the one that made the call.
@@ -1102,8 +1102,8 @@ class TestTheWarningNamesTheCallerOnEitherRoute:
         container, steps = self._era5()
         with pytest.warns(UserWarning) as caught:
             line = _weighted_from_a_helper(container, steps)
-        assert caught[0].lineno == line, (
-            f"warned at {caught[0].lineno}, called at {line}"
+        assert _dom(caught).lineno == line, (
+            f"warned at {_dom(caught).lineno}, called at {line}"
         )
 
 
@@ -1226,3 +1226,12 @@ class TestWeightsThatAreNotWeights:
         ).get_variable("v")
         weights = _area_weights(variable)
         assert_allclose(weights.ravel(), [0.0, np.cos(np.deg2rad(89.0))], atol=1e-12)
+
+
+def _dom(ws):
+    """First recorded warning that is not the engine-accessor DeprecationWarning.
+
+    During the deprecation window a flat-facade read can emit a DeprecationWarning ahead
+    of the domain warning under test; skip it so provenance assertions hit the real one.
+    """
+    return next(w for w in ws if not issubclass(w.category, DeprecationWarning))

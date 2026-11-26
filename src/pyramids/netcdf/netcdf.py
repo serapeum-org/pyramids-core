@@ -5209,7 +5209,7 @@ class NetCDF(Dataset):
     def stats(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.stats`."""
         self._check_not_container("stats")
-        return super().stats(*args, **kwargs)
+        return self.analysis.stats(*args, **kwargs)
 
     def summary(
         self,
@@ -5294,12 +5294,12 @@ class NetCDF(Dataset):
     def write_array(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.write_array`."""
         self._check_not_container("write_array")
-        return super().write_array(*args, **kwargs)
+        return self.io.write_array(*args, **kwargs)
 
     def to_cog(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.to_cog`."""
         self._check_not_container("to_cog")
-        return super().to_cog(*args, **kwargs)
+        return self.cog.to_cog(*args, **kwargs)
 
     def to_geodataframe(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.to_geodataframe`."""
@@ -6654,7 +6654,7 @@ class NetCDF(Dataset):
         """
         scale, offset = self._effective_packing()
         if unpack and not _is_identity_packing(scale, offset):
-            raw = super().read_array(
+            raw = self.io.read_array(
                 band=band,
                 window=window,
                 masked=masked,
@@ -6664,7 +6664,7 @@ class NetCDF(Dataset):
             return cast(ArrayLike, apply_unpack(raw, scale, offset))
         return cast(
             ArrayLike,
-            super().read_array(
+            self.io.read_array(
                 band=band,
                 window=window,
                 masked=masked,
@@ -9019,7 +9019,7 @@ class NetCDF(Dataset):
             # to_crs warps the backing raster; a multidim view can't be window-read by GDAL >= 3.13,
             # so materialize it first (mirrors resample).
             self._materialize_md_view()
-            result = super().to_crs(
+            result = self.spatial.to_crs(
                 to_epsg=to_epsg,
                 method=method,
                 maintain_alignment=maintain_alignment,
@@ -9511,7 +9511,7 @@ class NetCDF(Dataset):
         else:
             # resample warps the backing raster; a multidim view can't be window-read by GDAL >= 3.13.
             self._materialize_md_view()
-            result = super().resample(
+            result = self.spatial.resample(
                 cell_size=cell_size,
                 method=method,
             )
@@ -13163,7 +13163,7 @@ class NetCDF(Dataset):
                 "variable first with .get_variable()."
             )
         else:
-            super().to_file(path, **kwargs)
+            self.io.to_file(path, **kwargs)
 
     def _write_netcdf(self, path: Path) -> None:
         """Write this dataset to a netCDF file, preserving the declared (or absent) convention.

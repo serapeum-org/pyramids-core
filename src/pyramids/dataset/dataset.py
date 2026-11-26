@@ -1082,14 +1082,32 @@ class Dataset(RasterBase):
 
     def get_cell_coords(self, *args, **kwargs):
         """Facade — delegates to :meth:`Cell.get_cell_coords <pyramids.dataset.engines.Cell.get_cell_coords>`."""
+        warnings.warn(
+            "`ds.get_cell_coords` is deprecated and will be removed in a future release; use "
+            "`ds.cell.get_cell_coords`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cell.get_cell_coords(*args, **kwargs)
 
     def cell_area(self, *args, **kwargs):
         """Facade — delegates to :meth:`Cell.cell_area <pyramids.dataset.engines.Cell.cell_area>`."""
+        warnings.warn(
+            "`ds.cell_area` is deprecated and will be removed in a future release; use "
+            "`ds.cell.cell_area`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cell.cell_area(*args, **kwargs)
 
     def nearest_cell(self, *args, **kwargs):
         """Facade — delegates to :meth:`Cell.nearest_cell <pyramids.dataset.engines.Cell.nearest_cell>`."""
+        warnings.warn(
+            "`ds.nearest_cell` is deprecated and will be removed in a future release; use "
+            "`ds.cell.nearest_cell`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cell.nearest_cell(*args, **kwargs)
 
     def map_to_array_coordinates(self, *args, **kwargs):
@@ -1104,6 +1122,12 @@ class Dataset(RasterBase):
 
     def to_cog(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.to_cog <pyramids.dataset.engines.COG.to_cog>`."""
+        warnings.warn(
+            "`ds.to_cog` is deprecated and will be removed in a future release; use "
+            "`ds.cog.to_cog`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.to_cog(*args, **kwargs)
 
     @property
@@ -1113,14 +1137,32 @@ class Dataset(RasterBase):
 
     def validate_cog(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.validate_cog <pyramids.dataset.engines.COG.validate_cog>`."""
+        warnings.warn(
+            "`ds.validate_cog` is deprecated and will be removed in a future release; use "
+            "`ds.cog.validate_cog`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.validate_cog(*args, **kwargs)
 
     def cog_info(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.info <pyramids.dataset.engines.COG.info>`."""
+        warnings.warn(
+            "`ds.cog_info` is deprecated and will be removed in a future release; use "
+            "`ds.cog.info`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.info(*args, **kwargs)
 
     def to_cog_bytes(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.to_cog_bytes <pyramids.dataset.engines.COG.to_cog_bytes>`."""
+        warnings.warn(
+            "`ds.to_cog_bytes` is deprecated and will be removed in a future release; use "
+            "`ds.cog.to_cog_bytes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.to_cog_bytes(*args, **kwargs)
 
     def read_part(
@@ -1148,55 +1190,133 @@ class Dataset(RasterBase):
 
     def preview(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.preview <pyramids.dataset.engines.COG.preview>`."""
+        warnings.warn(
+            "`ds.preview` is deprecated and will be removed in a future release; use "
+            "`ds.cog.preview`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.preview(*args, **kwargs)
 
     def point(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.point <pyramids.dataset.engines.COG.point>`."""
+        warnings.warn(
+            "`ds.point` is deprecated and will be removed in a future release; use "
+            "`ds.cog.point`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.point(*args, **kwargs)
 
     def read_tile(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.read_tile <pyramids.dataset.engines.COG.read_tile>`."""
+        warnings.warn(
+            "`ds.read_tile` is deprecated and will be removed in a future release; use "
+            "`ds.cog.read_tile`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.read_tile(*args, **kwargs)
 
     def to_geodataframe(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.to_geodataframe <pyramids.dataset.engines.Vectorize.to_geodataframe>`."""
+        warnings.warn(
+            "`ds.to_geodataframe` is deprecated and will be removed in a future release; use "
+            "`ds.vector.to_geodataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.to_geodataframe(*args, **kwargs)
 
     def contour(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.contour <pyramids.dataset.engines.Vectorize.contour>`."""
+        warnings.warn(
+            "`ds.contour` is deprecated and will be removed in a future release; use "
+            "`ds.vector.contour`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.contour(*args, **kwargs)
 
     def translate(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.translate <pyramids.dataset.engines.Vectorize.translate>`."""
+        warnings.warn(
+            "`ds.translate` is deprecated and will be removed in a future release; use "
+            "`ds.vector.translate`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.translate(*args, **kwargs)
 
     def cluster(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.cluster <pyramids.dataset.engines.Vectorize.cluster>`."""
+        warnings.warn(
+            "`ds.cluster` is deprecated and will be removed in a future release; use "
+            "`ds.vector.cluster`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.cluster(*args, **kwargs)
 
     def to_polygons(self, *args, **kwargs):
         """Facade — delegates to :meth:`Vectorize.to_polygons <pyramids.dataset.engines.Vectorize.to_polygons>`."""
+        warnings.warn(
+            "`ds.to_polygons` is deprecated and will be removed in a future release; use "
+            "`ds.vector.to_polygons`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.to_polygons(*args, **kwargs)
 
     def cluster2(self, *args, **kwargs):
         """Deprecated alias for :meth:`to_polygons` — delegates to
         :meth:`Vectorize.cluster2 <pyramids.dataset.engines.Vectorize.cluster2>`."""
+        warnings.warn(
+            "`ds.cluster2` is deprecated and will be removed in a future release; use "
+            "`ds.vector.cluster2`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.vector.cluster2(*args, **kwargs)
 
     def stats(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.stats <pyramids.dataset.engines.Analysis.stats>`."""
+        warnings.warn(
+            "`ds.stats` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.stats`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.stats(*args, **kwargs)
 
     def domain_area(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.domain_area <pyramids.dataset.engines.Analysis.domain_area>`."""
+        warnings.warn(
+            "`ds.domain_area` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.domain_area`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.domain_area(*args, **kwargs)
 
     def count_domain_cells(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.count_domain_cells <pyramids.dataset.engines.Analysis.count_domain_cells>`."""
+        warnings.warn(
+            "`ds.count_domain_cells` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.count_domain_cells`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.count_domain_cells(*args, **kwargs)
 
     def data_extent(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.data_extent <pyramids.dataset.engines.Analysis.data_extent>`."""
+        warnings.warn(
+            "`ds.data_extent` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.data_extent`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.data_extent(*args, **kwargs)
 
     def apply(self, *args, **kwargs):
@@ -1329,10 +1449,22 @@ class Dataset(RasterBase):
         Writes to the **gaps**, where :meth:`fill` writes to the cells that already hold
         data. One letter apart, opposite effects.
         """
+        warnings.warn(
+            "`ds.fillna` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.fillna`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.fillna(*args, **kwargs)
 
     def isnull(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.isnull <pyramids.dataset.engines.Analysis.isnull>`."""
+        warnings.warn(
+            "`ds.isnull` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.isnull`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.isnull(*args, **kwargs)
 
     def equals(self, *args, **kwargs):
@@ -1341,6 +1473,12 @@ class Dataset(RasterBase):
         Value equality, which :meth:`same_grid` does not provide: that says two rasters
         *could* be combined, this says they agree.
         """
+        warnings.warn(
+            "`ds.equals` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.equals`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.equals(*args, **kwargs)
 
     def identical(self, *args, **kwargs):
@@ -1348,58 +1486,142 @@ class Dataset(RasterBase):
 
         :meth:`equals` with the attributes read too.
         """
+        warnings.warn(
+            "`ds.identical` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.identical`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.identical(*args, **kwargs)
 
     def clip(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.clip <pyramids.dataset.engines.Analysis.clip>`."""
+        warnings.warn(
+            "`ds.clip` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.clip`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.clip(*args, **kwargs)
 
     def round(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.round <pyramids.dataset.engines.Analysis.round>`."""
+        warnings.warn(
+            "`ds.round` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.round`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.round(*args, **kwargs)
 
     def astype(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.astype <pyramids.dataset.engines.Analysis.astype>`."""
+        warnings.warn(
+            "`ds.astype` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.astype`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.astype(*args, **kwargs)
 
     def isin(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.isin <pyramids.dataset.engines.Analysis.isin>`."""
+        warnings.warn(
+            "`ds.isin` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.isin`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.isin(*args, **kwargs)
 
     def notnull(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.notnull <pyramids.dataset.engines.Analysis.notnull>`."""
+        warnings.warn(
+            "`ds.notnull` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.notnull`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.notnull(*args, **kwargs)
 
     def extract(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.extract <pyramids.dataset.engines.Analysis.extract>`."""
+        warnings.warn(
+            "`ds.extract` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.extract`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.extract(*args, **kwargs)
 
     def sample(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.sample <pyramids.dataset.engines.Analysis.sample>`."""
+        warnings.warn(
+            "`ds.sample` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.sample`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.sample(*args, **kwargs)
 
     def transect(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.transect <pyramids.dataset.engines.Analysis.transect>`."""
+        warnings.warn(
+            "`ds.transect` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.transect`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.transect(*args, **kwargs)
 
     def sieve(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.sieve <pyramids.dataset.engines.Analysis.sieve>`."""
+        warnings.warn(
+            "`ds.sieve` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.sieve`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.sieve(*args, **kwargs)
 
     def proximity(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.proximity <pyramids.dataset.engines.Analysis.proximity>`."""
+        warnings.warn(
+            "`ds.proximity` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.proximity`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.proximity(*args, **kwargs)
 
     def pan_sharpen(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.pan_sharpen <pyramids.dataset.engines.Analysis.pan_sharpen>`."""
+        warnings.warn(
+            "`ds.pan_sharpen` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.pan_sharpen`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.pan_sharpen(*args, **kwargs)
 
     def match_histogram(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.match_histogram <pyramids.dataset.engines.Analysis.match_histogram>`."""
+        warnings.warn(
+            "`ds.match_histogram` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.match_histogram`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.match_histogram(*args, **kwargs)
 
     def percentile_stretch(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.percentile_stretch <pyramids.dataset.engines.Analysis.percentile_stretch>`."""
+        warnings.warn(
+            "`ds.percentile_stretch` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.percentile_stretch`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.percentile_stretch(*args, **kwargs)
 
     def overlay(self, classes_map, band: int = 0, exclude_value=None):
@@ -1430,26 +1652,62 @@ class Dataset(RasterBase):
 
     def get_mask(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.get_mask <pyramids.dataset.engines.Analysis.get_mask>`."""
+        warnings.warn(
+            "`ds.get_mask` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.get_mask`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.get_mask(*args, **kwargs)
 
     def mask_flags(self, *args, **kwargs):
         """Facade — :meth:`Analysis.mask_flags <pyramids.dataset.engines.Analysis.mask_flags>`."""
+        warnings.warn(
+            "`ds.mask_flags` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.mask_flags`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.mask_flags(*args, **kwargs)
 
     def read_masks(self, *args, **kwargs):
         """Facade — :meth:`Analysis.read_masks <pyramids.dataset.engines.Analysis.read_masks>`."""
+        warnings.warn(
+            "`ds.read_masks` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.read_masks`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.read_masks(*args, **kwargs)
 
     def create_mask_band(self, *args, **kwargs):
         """Facade — :meth:`Analysis.create_mask_band <pyramids.dataset.engines.Analysis.create_mask_band>`."""
+        warnings.warn(
+            "`ds.create_mask_band` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.create_mask_band`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.create_mask_band(*args, **kwargs)
 
     def footprint(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.footprint <pyramids.dataset.engines.Analysis.footprint>`."""
+        warnings.warn(
+            "`ds.footprint` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.footprint`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.footprint(*args, **kwargs)
 
     def get_histogram(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.get_histogram <pyramids.dataset.engines.Analysis.get_histogram>`."""
+        warnings.warn(
+            "`ds.get_histogram` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.get_histogram`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.get_histogram(*args, **kwargs)
 
     def plot_histogram(self, *args, **kwargs):
@@ -1458,6 +1716,12 @@ class Dataset(RasterBase):
 
     def to_image(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.to_image <pyramids.dataset.engines.Analysis.to_image>`."""
+        warnings.warn(
+            "`ds.plot_histogram` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.to_image`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.analysis.to_image(*args, **kwargs)
 
     def plot_vector_field(self, *args, **kwargs):
@@ -2091,18 +2355,42 @@ class Dataset(RasterBase):
 
     def crop(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.crop <pyramids.dataset.engines.Spatial.crop>`."""
+        warnings.warn(
+            "`ds.crop` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.crop`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.crop(*args, **kwargs)
 
     def to_crs(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.to_crs <pyramids.dataset.engines.Spatial.to_crs>`."""
+        warnings.warn(
+            "`ds.to_crs` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.to_crs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.to_crs(*args, **kwargs)
 
     def set_gcps(self, *args, **kwargs):
         """Facade — delegates to :meth:`Georef.set_gcps <pyramids.dataset.engines.Georef.set_gcps>`."""
+        warnings.warn(
+            "`ds.set_gcps` is deprecated and will be removed in a future release; use "
+            "`ds.georef.set_gcps`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.set_gcps(*args, **kwargs)
 
     def georeference(self, *args, **kwargs):
         """Facade — :meth:`Georef.georeference <pyramids.dataset.engines.Georef.georeference>`."""
+        warnings.warn(
+            "`ds.georeference` is deprecated and will be removed in a future release; use "
+            "`ds.georef.georeference`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.georeference(*args, **kwargs)
 
     @property
@@ -2137,10 +2425,22 @@ class Dataset(RasterBase):
 
     def set_rpcs(self, *args, **kwargs):
         """Facade — :meth:`Georef.set_rpcs <pyramids.dataset.engines.Georef.set_rpcs>`."""
+        warnings.warn(
+            "`ds.set_rpcs` is deprecated and will be removed in a future release; use "
+            "`ds.georef.set_rpcs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.set_rpcs(*args, **kwargs)
 
     def orthorectify(self, *args, **kwargs):
         """Facade — :meth:`Georef.orthorectify <pyramids.dataset.engines.Georef.orthorectify>`."""
+        warnings.warn(
+            "`ds.orthorectify` is deprecated and will be removed in a future release; use "
+            "`ds.georef.orthorectify`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.orthorectify(*args, **kwargs)
 
     @property
@@ -2155,6 +2455,12 @@ class Dataset(RasterBase):
 
     def geolocate(self, *args, **kwargs):
         """Facade — :meth:`Georef.geolocate <pyramids.dataset.engines.Georef.geolocate>`."""
+        warnings.warn(
+            "`ds.geolocate` is deprecated and will be removed in a future release; use "
+            "`ds.georef.geolocate`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.geolocate(*args, **kwargs)
 
     def _geolocation_source(self) -> Dataset:
@@ -2168,22 +2474,52 @@ class Dataset(RasterBase):
 
     def warped_view(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.warped_view <pyramids.dataset.engines.Spatial.warped_view>`."""
+        warnings.warn(
+            "`ds.warped_view` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.warped_view`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.warped_view(*args, **kwargs)
 
     def set_crs(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.set_crs <pyramids.dataset.engines.Spatial.set_crs>`."""
+        warnings.warn(
+            "`ds.set_crs` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.set_crs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.set_crs(*args, **kwargs)
 
     def wrap_longitude(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.wrap_longitude <pyramids.dataset.engines.Spatial.wrap_longitude>`."""
+        warnings.warn(
+            "`ds.wrap_longitude` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.wrap_longitude`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.wrap_longitude(*args, **kwargs)
 
     def resample(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.resample <pyramids.dataset.engines.Spatial.resample>`."""
+        warnings.warn(
+            "`ds.resample` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.resample`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.resample(*args, **kwargs)
 
     def align(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.align <pyramids.dataset.engines.Spatial.align>`."""
+        warnings.warn(
+            "`ds.align` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.align`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.align(*args, **kwargs)
 
     def same_grid(self, other: Dataset, *, compare_crs: bool = True) -> bool:
@@ -2204,10 +2540,22 @@ class Dataset(RasterBase):
 
     def fill_gaps(self, *args, **kwargs):
         """Facade — delegates to :meth:`Spatial.fill_gaps <pyramids.dataset.engines.Spatial.fill_gaps>`."""
+        warnings.warn(
+            "`ds.fill_gaps` is deprecated and will be removed in a future release; use "
+            "`ds.spatial.fill_gaps`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.spatial.fill_gaps(*args, **kwargs)
 
     def read_array(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.read_array <pyramids.dataset.engines.IO.read_array>`."""
+        warnings.warn(
+            "`ds.read_array` is deprecated and will be removed in a future release; use "
+            "`ds.io.read_array`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.read_array(*args, **kwargs)
 
     @property
@@ -2244,18 +2592,42 @@ class Dataset(RasterBase):
 
     def read_windows(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.read_windows <pyramids.dataset.engines.IO.read_windows>`."""
+        warnings.warn(
+            "`ds.read_windows` is deprecated and will be removed in a future release; use "
+            "`ds.io.read_windows`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.read_windows(*args, **kwargs)
 
     def write_array(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.write_array <pyramids.dataset.engines.IO.write_array>`."""
+        warnings.warn(
+            "`ds.write_array` is deprecated and will be removed in a future release; use "
+            "`ds.io.write_array`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.write_array(*args, **kwargs)
 
     def to_file(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.to_file <pyramids.dataset.engines.IO.to_file>`."""
+        warnings.warn(
+            "`ds.to_file` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_file(*args, **kwargs)
 
     def to_bytes(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.to_bytes <pyramids.dataset.engines.IO.to_bytes>`."""
+        warnings.warn(
+            "`ds.to_bytes` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_bytes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_bytes(*args, **kwargs)
 
     def to_raster(self, *args, **kwargs):
@@ -2269,23 +2641,53 @@ class Dataset(RasterBase):
 
     def get_block_arrangement(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_block_arrangement <pyramids.dataset.engines.IO.get_block_arrangement>`."""
+        warnings.warn(
+            "`ds.get_block_arrangement` is deprecated and will be removed in a future release; use "
+            "`ds.io.get_block_arrangement`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.get_block_arrangement(*args, **kwargs)
 
     def get_tile(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_tile <pyramids.dataset.engines.IO.get_tile>`."""
+        warnings.warn(
+            "`ds.get_tile` is deprecated and will be removed in a future release; use "
+            "`ds.io.get_tile`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.get_tile(*args, **kwargs)
 
     def map_blocks(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.map_blocks <pyramids.dataset.engines.IO.map_blocks>`."""
+        warnings.warn(
+            "`ds.map_blocks` is deprecated and will be removed in a future release; use "
+            "`ds.io.map_blocks`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.map_blocks(*args, **kwargs)
 
     def to_xyz(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.to_xyz <pyramids.dataset.engines.IO.to_xyz>`."""
+        warnings.warn(
+            "`ds.to_xyz` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_xyz`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_xyz(*args, **kwargs)
 
     def to_terrain_rgb(self, *args, **kwargs):
         """Facade — delegates to
         :meth:`IO.to_terrain_rgb <pyramids.dataset.engines.IO.to_terrain_rgb>`."""
+        warnings.warn(
+            "`ds.to_terrain_rgb` is deprecated and will be removed in a future release; use "
+            "`ds.io.to_terrain_rgb`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.to_terrain_rgb(*args, **kwargs)
 
     @property
@@ -2295,22 +2697,52 @@ class Dataset(RasterBase):
 
     def create_overviews(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.create_overviews <pyramids.dataset.engines.IO.create_overviews>`."""
+        warnings.warn(
+            "`ds.create_overviews` is deprecated and will be removed in a future release; use "
+            "`ds.io.create_overviews`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.create_overviews(*args, **kwargs)
 
     def recreate_overviews(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.recreate_overviews <pyramids.dataset.engines.IO.recreate_overviews>`."""
+        warnings.warn(
+            "`ds.recreate_overviews` is deprecated and will be removed in a future release; use "
+            "`ds.io.recreate_overviews`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.recreate_overviews(*args, **kwargs)
 
     def get_overview(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_overview <pyramids.dataset.engines.IO.get_overview>`."""
+        warnings.warn(
+            "`ds.get_overview` is deprecated and will be removed in a future release; use "
+            "`ds.io.get_overview`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.get_overview(*args, **kwargs)
 
     def get_overview_dataset(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.get_overview_dataset <pyramids.dataset.engines.IO.get_overview_dataset>`."""
+        warnings.warn(
+            "`ds.get_overview_dataset` is deprecated and will be removed in a future release; use "
+            "`ds.io.get_overview_dataset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.get_overview_dataset(*args, **kwargs)
 
     def read_overview_array(self, *args, **kwargs):
         """Facade — delegates to :meth:`IO.read_overview_array <pyramids.dataset.engines.IO.read_overview_array>`."""
+        warnings.warn(
+            "`ds.read_overview_array` is deprecated and will be removed in a future release; use "
+            "`ds.io.read_overview_array`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.read_overview_array(*args, **kwargs)
 
     def _read_block(self, *args, **kwargs):
@@ -2319,22 +2751,52 @@ class Dataset(RasterBase):
 
     def get_attribute_table(self, *args, **kwargs):
         """Facade — delegates to :meth:`Bands.get_attribute_table <pyramids.dataset.engines.Bands.get_attribute_table>`."""
+        warnings.warn(
+            "`ds.get_attribute_table` is deprecated and will be removed in a future release; use "
+            "`ds.bands.get_attribute_table`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.get_attribute_table(*args, **kwargs)
 
     def set_attribute_table(self, *args, **kwargs):
         """Facade — delegates to :meth:`Bands.set_attribute_table <pyramids.dataset.engines.Bands.set_attribute_table>`."""
+        warnings.warn(
+            "`ds.set_attribute_table` is deprecated and will be removed in a future release; use "
+            "`ds.bands.set_attribute_table`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.set_attribute_table(*args, **kwargs)
 
     def add_band(self, *args, **kwargs):
         """Facade — delegates to :meth:`Bands.add_band <pyramids.dataset.engines.Bands.add_band>`."""
+        warnings.warn(
+            "`ds.add_band` is deprecated and will be removed in a future release; use "
+            "`ds.bands.add_band`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.add_band(*args, **kwargs)
 
     def get_band_by_color(self, *args, **kwargs):
         """Facade — delegates to :meth:`Bands.get_band_by_color <pyramids.dataset.engines.Bands.get_band_by_color>`."""
+        warnings.warn(
+            "`ds.get_band_by_color` is deprecated and will be removed in a future release; use "
+            "`ds.bands.get_band_by_color`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.get_band_by_color(*args, **kwargs)
 
     def select_bands(self, *args, **kwargs):
         """Facade — delegates to :meth:`Bands.select <pyramids.dataset.engines.Bands.select>`."""
+        warnings.warn(
+            "`ds.select_bands` is deprecated and will be removed in a future release; use "
+            "`ds.bands.select`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.select(*args, **kwargs)
 
     def checksum(self, band: int | None = None) -> list[int] | int:
