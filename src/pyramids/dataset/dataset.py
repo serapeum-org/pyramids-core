@@ -1169,6 +1169,12 @@ class Dataset(RasterBase):
     @property
     def is_cog(self) -> bool:
         """Facade — delegates to :attr:`COG.is_cog <pyramids.dataset.engines.COG.is_cog>`."""
+        warnings.warn(
+            "`ds.is_cog` is deprecated and will be removed in a future release; use "
+            "`ds.cog.is_cog`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.cog.is_cog
 
     def validate_cog(self, *args, **kwargs):
@@ -1904,7 +1910,7 @@ class Dataset(RasterBase):
         band 0. The downstream ``exclude_value`` nodata mask keys off the same
         band the render uses.
         """
-        band_colors = list(self.band_color.values())
+        band_colors = list(self.bands.band_color.values())
         has_rgb_interp = any(c in RGB_CHANNEL_INTERPS for c in band_colors)
         if not has_rgb_interp:
             resolved_rgb = rgb
@@ -2444,31 +2450,67 @@ class Dataset(RasterBase):
     @property
     def gcps(self):
         """Facade — :attr:`Georef.gcps <pyramids.dataset.engines.Georef.gcps>`."""
+        warnings.warn(
+            "`ds.gcps` is deprecated and will be removed in a future release; use "
+            "`ds.georef.gcps`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.gcps
 
     @property
     def gcp_count(self):
         """Facade — :attr:`Georef.gcp_count <pyramids.dataset.engines.Georef.gcp_count>`."""
+        warnings.warn(
+            "`ds.gcp_count` is deprecated and will be removed in a future release; use "
+            "`ds.georef.gcp_count`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.gcp_count
 
     @property
     def gcp_projection(self):
         """Facade — :attr:`Georef.gcp_projection <pyramids.dataset.engines.Georef.gcp_projection>`."""
+        warnings.warn(
+            "`ds.gcp_projection` is deprecated and will be removed in a future release; use "
+            "`ds.georef.gcp_projection`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.gcp_projection
 
     @property
     def has_gcps(self):
         """Facade — :attr:`Georef.has_gcps <pyramids.dataset.engines.Georef.has_gcps>`."""
+        warnings.warn(
+            "`ds.has_gcps` is deprecated and will be removed in a future release; use "
+            "`ds.georef.has_gcps`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.has_gcps
 
     @property
     def rpcs(self):
         """Facade — :attr:`Georef.rpcs <pyramids.dataset.engines.Georef.rpcs>`."""
+        warnings.warn(
+            "`ds.rpcs` is deprecated and will be removed in a future release; use "
+            "`ds.georef.rpcs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.rpcs
 
     @property
     def has_rpcs(self):
         """Facade — :attr:`Georef.has_rpcs <pyramids.dataset.engines.Georef.has_rpcs>`."""
+        warnings.warn(
+            "`ds.has_rpcs` is deprecated and will be removed in a future release; use "
+            "`ds.georef.has_rpcs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.has_rpcs
 
     def set_rpcs(self, *args, **kwargs):
@@ -2494,11 +2536,23 @@ class Dataset(RasterBase):
     @property
     def geolocation(self):
         """Facade — :attr:`Georef.geolocation <pyramids.dataset.engines.Georef.geolocation>`."""
+        warnings.warn(
+            "`ds.geolocation` is deprecated and will be removed in a future release; use "
+            "`ds.georef.geolocation`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.geolocation
 
     @property
     def has_geolocation(self):
         """Facade — :attr:`Georef.has_geolocation <pyramids.dataset.engines.Georef.has_geolocation>`."""
+        warnings.warn(
+            "`ds.has_geolocation` is deprecated and will be removed in a future release; use "
+            "`ds.georef.has_geolocation`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.georef.has_geolocation
 
     def geolocate(self, *args, **kwargs):
@@ -2741,6 +2795,12 @@ class Dataset(RasterBase):
     @property
     def overview_count(self):
         """Facade — delegates to :attr:`IO.overview_count <pyramids.dataset.engines.IO.overview_count>`."""
+        warnings.warn(
+            "`ds.overview_count` is deprecated and will be removed in a future release; use "
+            "`ds.io.overview_count`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.io.overview_count
 
     def create_overviews(self, *args, **kwargs):
@@ -2871,6 +2931,12 @@ class Dataset(RasterBase):
     @property
     def band_color(self):
         """Facade — delegates to :attr:`Bands.band_color <pyramids.dataset.engines.Bands.band_color>`."""
+        warnings.warn(
+            "`ds.band_color` is deprecated and will be removed in a future release; use "
+            "`ds.bands.band_color`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.band_color
 
     @band_color.setter
@@ -2881,6 +2947,12 @@ class Dataset(RasterBase):
             ReadOnlyError: The dataset is opened read-only on-disk (a bare
                 `SetColorInterpretation` would otherwise silently spill a PAM sidecar).
         """
+        warnings.warn(
+            "`ds.band_color` is deprecated and will be removed in a future release; use "
+            "`ds.bands.band_color`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._require_writable("set band colors")
         self.bands.band_color = values
 
@@ -2918,6 +2990,12 @@ class Dataset(RasterBase):
     @property
     def color_table(self):
         """Facade — delegates to :attr:`Bands.color_table <pyramids.dataset.engines.Bands.color_table>`."""
+        warnings.warn(
+            "`ds.color_table` is deprecated and will be removed in a future release; use "
+            "`ds.bands.color_table`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.color_table
 
     @color_table.setter
@@ -2928,6 +3006,12 @@ class Dataset(RasterBase):
             ReadOnlyError: The dataset is opened read-only on-disk (a bare
                 `SetColorTable` would otherwise silently spill a PAM sidecar).
         """
+        warnings.warn(
+            "`ds.color_table` is deprecated and will be removed in a future release; use "
+            "`ds.bands.color_table`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._require_writable("set the color table")
         self.bands.color_table = df
 
@@ -3421,10 +3505,10 @@ class Dataset(RasterBase):
             EPSG: {self.epsg}
             Number of Bands: {self.band_count}
             Band names: {self.band_names}
-            Band colors: {self.band_color}
-            Band units: {self.band_units}
-            Scale: {self.scale}
-            Offset: {self.offset}
+            Band colors: {self.bands.band_color}
+            Band units: {self.bands.band_units}
+            Scale: {self.bands.scale}
+            Offset: {self.bands.offset}
             Mask: {self.no_data_value[0]}
             Data type: {self.dtype[0]}
             File: {self.file_name}
@@ -4508,6 +4592,12 @@ class Dataset(RasterBase):
     @property
     def band_units(self) -> list[str]:
         """Facade — delegates to :attr:`Bands.band_units <pyramids.dataset.engines.Bands.band_units>`."""
+        warnings.warn(
+            "`ds.band_units` is deprecated and will be removed in a future release; use "
+            "`ds.bands.band_units`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.band_units
 
     @band_units.setter
@@ -4517,6 +4607,12 @@ class Dataset(RasterBase):
         Raises:
             ReadOnlyError: The dataset is opened read-only on-disk.
         """
+        warnings.warn(
+            "`ds.band_units` is deprecated and will be removed in a future release; use "
+            "`ds.bands.band_units`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bands.band_units = value
 
     def convert_units(self, target: str, band: int | None = None) -> Dataset:
@@ -4912,6 +5008,12 @@ class Dataset(RasterBase):
             list[dict[str, str]]: One mapping per band (0-based, band order); an empty
             ``dict`` for a band with no metadata.
         """
+        warnings.warn(
+            "`ds.band_metadata` is deprecated and will be removed in a future release; use "
+            "`ds.bands.metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.metadata
 
     @band_metadata.setter
@@ -4926,6 +5028,12 @@ class Dataset(RasterBase):
             ReadOnlyError: The dataset is a read-only on-disk file.
             ValueError: ``value`` does not carry exactly one mapping per band.
         """
+        warnings.warn(
+            "`ds.band_metadata` is deprecated and will be removed in a future release; use "
+            "`ds.bands.metadata`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bands.metadata = value
 
     @property
@@ -4937,7 +5045,7 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.band_metadata
+        return self.bands.metadata
 
     @band_meta_data.setter
     def band_meta_data(self, value: list[dict[str, str]]) -> None:
@@ -4948,7 +5056,7 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.band_metadata = value
+        self.bands.metadata = value
 
     @property
     def file_name(self) -> str:
@@ -4983,6 +5091,12 @@ class Dataset(RasterBase):
         Returns:
             list[float]: One factor per band; `1.0` where a band is not packed.
         """
+        warnings.warn(
+            "`ds.scale` is deprecated and will be removed in a future release; use "
+            "`ds.bands.scale`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.scale
 
     @scale.setter
@@ -4992,6 +5106,12 @@ class Dataset(RasterBase):
         Raises:
             ReadOnlyError: The dataset is opened read-only on-disk.
         """
+        warnings.warn(
+            "`ds.scale` is deprecated and will be removed in a future release; use "
+            "`ds.bands.scale`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bands.scale = value
 
     @property
@@ -5005,6 +5125,12 @@ class Dataset(RasterBase):
         Returns:
             list[float]: One offset per band; `0` where a band is not packed.
         """
+        warnings.warn(
+            "`ds.offset` is deprecated and will be removed in a future release; use "
+            "`ds.bands.offset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bands.offset
 
     @offset.setter
@@ -5014,6 +5140,12 @@ class Dataset(RasterBase):
         Raises:
             ReadOnlyError: The dataset is opened read-only on-disk.
         """
+        warnings.warn(
+            "`ds.offset` is deprecated and will be removed in a future release; use "
+            "`ds.bands.offset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bands.offset = value
 
     @property

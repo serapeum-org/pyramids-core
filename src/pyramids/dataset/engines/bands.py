@@ -100,8 +100,8 @@ class _Bands(_Engine["Dataset"]):
             )
 
         band_indices = range(ds.band_count) if band is None else [band]
-        source_units = list(ds.band_units)
-        new_units = list(ds.band_units)
+        source_units = list(self.band_units)
+        new_units = list(self.band_units)
 
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this per-band
         # unit conversion expects, not the dimension-preserving default (#1241).
