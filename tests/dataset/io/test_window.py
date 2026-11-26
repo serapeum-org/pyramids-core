@@ -219,7 +219,9 @@ class TestWindowedIO:
         w = Window(1, 2, 3, 2)
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
-            ramp_dataset.io.write_array(np.full((2, 3), 99.0, dtype="float32"), window=w)
+            ramp_dataset.io.write_array(
+                np.full((2, 3), 99.0, dtype="float32"), window=w
+            )
         np.testing.assert_array_equal(
             ramp_dataset.read_array(band=0, window=w),
             np.full((2, 3), 99.0, dtype="float32"),

@@ -67,9 +67,7 @@ class _Cell(_Engine["Dataset"]):
         ys = [float(value) for value in ys_arr]
         return (xs[0], ys[0]) if scalar else (xs, ys)
 
-    def rowcol(
-        self, x: np.typing.ArrayLike, y: np.typing.ArrayLike
-    ) -> tuple[Any, Any]:
+    def rowcol(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> tuple[Any, Any]:
         """Map map coordinates ``(x, y)`` to array indices ``(row, col)``.
 
         See :meth:`Dataset.rowcol` for the full contract.

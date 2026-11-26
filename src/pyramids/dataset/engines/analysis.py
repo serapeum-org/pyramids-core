@@ -69,14 +69,13 @@ from pyramids.dataset._plot_helpers import (
     render_array,
 )
 from pyramids.dataset.abstract_dataset import RasterBase
-from pyramids.dataset.window import Window
 from pyramids.dataset.ops._focal import focal_apply, focal_mean, focal_std
 from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
+from pyramids.dataset.window import Window
 from pyramids.feature import FeatureCollection
 
 if TYPE_CHECKING:
     import dask.array as da
-
     from cleopatra.basemap.geo import Basemap
     from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph
     from matplotlib.axes import Axes

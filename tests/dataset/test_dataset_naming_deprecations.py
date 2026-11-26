@@ -8,7 +8,6 @@ Covers two changes:
   instead of a 2-D ndarray.
 """
 
-from pyramids.dataset.engines.io import _IO
 import warnings
 
 import numpy as np
@@ -16,6 +15,7 @@ import pytest
 
 from pyramids.dataset import Dataset, GeoReference
 from pyramids.dataset.collection import DatasetCollection
+from pyramids.dataset.engines.io import _IO
 
 _GEO = dict(top_left_corner=(0, 2), cell_size=1.0, epsg=4326)
 

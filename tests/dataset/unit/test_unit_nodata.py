@@ -5,12 +5,12 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from pyramids.dataset.engines.io import _IO
-from pyramids.dataset.engines.bands import _Bands
 from pyramids.base._errors import NoDataValueError, ReadOnlyError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
+from pyramids.dataset.engines.bands import _Bands
+from pyramids.dataset.engines.io import _IO
 
 pytestmark = pytest.mark.core
 

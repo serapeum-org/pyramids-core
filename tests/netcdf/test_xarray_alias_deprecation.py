@@ -30,7 +30,9 @@ def nc() -> NetCDF:
         ("sizes", "dimension_sizes"),
     ],
 )
-def test_alias_warns_naming_the_canonical_member(nc: NetCDF, alias: str, canonical: str):
+def test_alias_warns_naming_the_canonical_member(
+    nc: NetCDF, alias: str, canonical: str
+):
     with pytest.warns(DeprecationWarning, match=rf"`{alias}`.*`{canonical}`"):
         getattr(nc, alias)
 

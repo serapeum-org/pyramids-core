@@ -1,12 +1,12 @@
 """`Dataset.calc` — string-expression band algebra (the Python side of `pyramids calc`)."""
 
-from pyramids.dataset.engines.analysis import _Analysis
 import numpy as np
 import pytest
 
 from pyramids.base._errors import AlignmentError
 from pyramids.dataset import Dataset, GeoReference
 from pyramids.dataset._calc import eval_calc
+from pyramids.dataset.engines.analysis import _Analysis
 
 REF = GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326)
 

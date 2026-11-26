@@ -43,7 +43,10 @@ def test_only_the_five_engines_are_exposed(cube: DatasetCollection):
         ("io", ("to_file", "to_zarr", "to_cog_stack", "to_netcdf", "close")),
         ("glyph", ("plot", "animate")),
         ("analysis", ("apply", "merge")),
-        ("series", ("mean", "std", "sum", "min", "max", "var", "first", "last", "groupby")),
+        (
+            "series",
+            ("mean", "std", "sum", "min", "max", "var", "first", "last", "groupby"),
+        ),
     ],
 )
 def test_engine_methods_are_callable(cube, engine, methods):

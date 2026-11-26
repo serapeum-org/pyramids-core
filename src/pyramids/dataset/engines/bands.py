@@ -21,8 +21,6 @@ from pandas import DataFrame
 
 from pyramids.base._domain import is_no_data
 from pyramids.base._errors import NoDataValueError, ReadOnlyError
-from pyramids.base.crs import crs_spec
-from pyramids.base.georeference import GeoReference
 from pyramids.base._utils import (
     color_name_to_gdal_constant,
     gdal_constant_to_color_name,
@@ -30,6 +28,8 @@ from pyramids.base._utils import (
     numpy_to_gdal_dtype,
     require_cleopatra,
 )
+from pyramids.base.crs import crs_spec
+from pyramids.base.georeference import GeoReference
 from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
 
 if TYPE_CHECKING:
