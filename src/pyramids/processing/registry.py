@@ -75,6 +75,7 @@ def catalog() -> Mapping[str, ToolMetadata]:
 _BUILTINS: tuple[ToolMetadata, ...] = (
     ToolMetadata(
         name="slope",
+        method="terrain.slope",
         input_type="Dataset",
         output_type="Array",
         description="Terrain slope from an elevation raster.",
@@ -92,6 +93,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="aspect",
+        method="terrain.aspect",
         input_type="Dataset",
         output_type="Array",
         description="Terrain aspect (compass direction of steepest descent).",
@@ -99,6 +101,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="hillshade",
+        method="terrain.hillshade",
         input_type="Dataset",
         output_type="Array",
         description="Shaded-relief raster from an elevation raster.",
@@ -110,6 +113,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="to_crs",
+        method="spatial.to_crs",
         input_type="Dataset",
         output_type="Dataset",
         description="Reproject a raster to a target EPSG.",
@@ -130,6 +134,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="resample",
+        method="spatial.resample",
         input_type="Dataset",
         output_type="Dataset",
         description="Resample a raster to a new cell size.",
@@ -186,13 +191,14 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
         input_type="Dataset",
         output_type="Dataset",
         description="Fill every domain cell with a constant value.",
-        method="fill_domain",
+        method="analysis.fill_domain",
         parameters=(
             Parameter("value", "Float", None, False, "Value to fill the domain with."),
         ),
     ),
     ToolMetadata(
         name="sieve",
+        method="analysis.sieve",
         input_type="Dataset",
         output_type="Dataset",
         description="Remove pixel clumps smaller than a threshold (speckle clean-up).",
@@ -208,6 +214,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="focal_mean",
+        method="analysis.focal_mean",
         input_type="Dataset",
         output_type="Array",
         description="Mean of each cell's neighbourhood (smoothing filter).",
@@ -218,6 +225,7 @@ _BUILTINS: tuple[ToolMetadata, ...] = (
     ),
     ToolMetadata(
         name="focal_std",
+        method="analysis.focal_std",
         input_type="Dataset",
         output_type="Array",
         description="Standard deviation of each cell's neighbourhood.",

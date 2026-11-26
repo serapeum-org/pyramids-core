@@ -136,7 +136,11 @@ def _apply(step: Step, obj: Any, tool: ToolMetadata) -> Any:
             f"tool {step.tool!r} expects a {tool.input_type}, but the current "
             f"pipeline object is a {actual}"
         )
-    method = getattr(obj, tool.method_name)
+    # `method_name` may be a dotted accessor path (e.g. "analysis.fill_domain") so the
+    # runner reaches the op through its engine, not the deprecated flat facade.
+    method = obj
+    for part in tool.method_name.split("."):
+        method = getattr(method, part)
     return method(**step.parameters)
 
 
