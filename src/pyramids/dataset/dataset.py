@@ -1060,7 +1060,7 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.nearest_cell(*args, **kwargs)
+        return self.cell.nearest_cell(*args, **kwargs)
 
     def to_cog(self, *args, **kwargs):
         """Facade — delegates to :meth:`COG.to_cog <pyramids.dataset.engines.COG.to_cog>`."""
@@ -1247,7 +1247,7 @@ class Dataset(RasterBase):
             numpy.ndarray: The raster's values rescaled to `0.0`-`1.0`, with
                 no-data cells returned as `NaN`.
         """
-        arr = np.array(self.read_array(), dtype="float64")
+        arr = np.array(self.io.read_array(), dtype="float64")
         if arr.ndim == 2:
             no_data = self.analysis._physical_no_data(0)
             if no_data is not None:
@@ -1269,7 +1269,7 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.fill_domain(*args, **kwargs)
+        return self.analysis.fill_domain(*args, **kwargs)
 
     def where(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.where <pyramids.dataset.engines.Analysis.where>`.
@@ -1372,7 +1372,7 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        gdf = self.zonal_stats(
+        gdf = self.analysis.zonal_stats(
             classes_map,
             stats=("count",),
             band=band,
@@ -1575,9 +1575,9 @@ class Dataset(RasterBase):
         when any channel cannot be identified from the tags.
         """
         candidate: list[int | None] = [
-            self.get_band_by_color("red"),
-            self.get_band_by_color("green"),
-            self.get_band_by_color("blue"),
+            self.bands.get_band_by_color("red"),
+            self.bands.get_band_by_color("green"),
+            self.bands.get_band_by_color("blue"),
         ]
         if None in candidate:
             warnings.warn(
@@ -3006,7 +3006,7 @@ class Dataset(RasterBase):
             # to differ, `ds - x` would decline an operand `ds.combine(x, ...)`
             # accepts. `cast` because `RasterBase` is the ABC the engine checks
             # while `combine` is typed for the concrete raster.
-            result = self.combine(cast("Dataset", other), op)
+            result = self.analysis.combine(cast("Dataset", other), op)
         elif isinstance(other, Real) and not isinstance(other, bool):
             scalar = _numeric_scalar(other)
             if _is_identity(op, scalar):
@@ -3906,7 +3906,7 @@ class Dataset(RasterBase):
             - Dataset.to_crs: Reproject the dataset to any projection.
             - Dataset.epsg: EPSG number of the dataset coordinate reference system.
         """
-        self.set_crs(value)
+        self.spatial.set_crs(value)
 
     @property
     def cell_size(self) -> float:

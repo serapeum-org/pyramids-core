@@ -100,15 +100,16 @@ class TestToRasterRenamedToToFile:
         )
 
     def test_to_file_does_not_warn(self, tmp_path):
-        """The canonical ``to_file`` must not emit a ``DeprecationWarning``.
+        """The canonical accessor ``io.to_file`` must not emit a ``DeprecationWarning``.
 
         Test scenario:
             With ``DeprecationWarning`` promoted to an error, ``to_file`` writes cleanly.
         """
         out = tmp_path / "clean.tif"
+        raster = _value_raster()
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
-            _value_raster().to_file(str(out))
+            raster.io.to_file(str(out))
         assert out.exists(), "to_file must write the raster without warning"
 
     def test_to_raster_round_trips_the_values(self, tmp_path):
