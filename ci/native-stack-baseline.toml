@@ -1,0 +1,86 @@
+# What every published wheel's bundled native stack must report.
+#
+# pyramids-core obtains that stack three different ways, and each route silently inherits its
+# upstream's defaults for anything not explicitly requested:
+#
+#   source build  ci/source-build/          manylinux, musllinux   (both arches)
+#   vcpkg         ci/vcpkg.json             win_arm64
+#   conda-forge   ci/setup-gdal-from-pixi   win_amd64, macOS       (both arches)
+#
+# That is how one release shipped HDF5 with thread-safety ON for three platforms and OFF for the
+# other two (#1620) while every version pin agreed, and it is why this file exists: the pins live in
+# three places, so something has to compare the *built artifact* against one declaration (#1627).
+#
+# Only libraries whose version can be read reliably out of the shipped binary belong here. GDAL
+# deliberately does not: a manylinux `libgdal` yields only a spurious "GDAL 3.6.0", macOS yields two
+# candidates, and the Windows DLLs carry no version in their filename. Its version is asserted from
+# the *installed* wheel instead, where `osgeo.gdal` can be asked directly -- by
+# ci/verify-wheel.py's `_check_gdal_version`, which runs in every job that installs a wheel. The
+# driver set is not declared here at all: that same file's `_check_driver_set` already asserts a
+# superset of it on every platform.
+#
+# ci/check-bundled-stack.py reads this file and runs in every repair step, on the repaired wheel.
+
+[libraries.hdf5]
+# Thread-safety is the property that has already regressed. HDF5's CMake default is OFF, so every
+# route that compiles its own HDF5 ships a non-threadsafe library unless it asks (#1620).
+threadsafety = "ON"
+# 2.2.0 is the newest upstream release and what the conda-forge route already ships; the source
+# build is pinned to the same tarball in ci/source-build/config.sh.
+version = "2.2.0"
+
+# PROJ and GEOS are matched exactly, like HDF5, because all three routes target the same values:
+# the source build pins them in ci/source-build/config.sh, vcpkg's pinned baseline carries exactly
+# those ports, and pixi.lock resolves them for every platform.
+#
+# An earlier revision used a floor plus a ceiling here, on the belief that no single value was
+# reachable. That was an artifact of one build: the macOS x86_64 cross-compile re-solved from
+# conda-forge instead of installing the lock, so osx-64 alone shipped proj 9.9.0 / geos 3.15.0
+# (#1632, fixed). With the routes aligned at the source, exact matching is both achievable and
+# strictly stronger -- it catches divergence in either direction, where a floor saw only a route
+# lagging and a major-version ceiling saw only a large jump.
+[libraries.proj]
+version = "9.8.1"
+
+[libraries.geos]
+version = "3.14.1"
+
+# The one property that cannot be read from a wheel's bytes, so it is asserted from the *installed*
+# package instead, by ci/verify-wheel.py in every smoke and verify job. GDAL's version lives in the
+# SONAME on Linux/macOS and nowhere in the Windows filename. The driver set is not declared here:
+# ci/verify-wheel.py's own _check_driver_set already asserts a superset of it on every platform.
+# This table is required, not optional: an absent, emptied or misspelled one is refused at load,
+# because it would compare nothing on the installed side while the file still looks complete.
+[installed.gdal]
+version = "3.13.3"
+
+# Platforms that cannot meet the baseline, each with its reason. An exception is a reviewed
+# decision, not a silent difference -- which is the whole point of the file, and why a missing
+# `reason` is refused at load.
+#
+# Keys are matched against the wheel's platform tag, the same namespace on both sides:
+# ci/check-bundled-stack.py reads it from the wheel's filename and ci/verify-wheel.py from the
+# installed wheel's .dist-info/WHEEL, and both map the placeholder `any` to "no platform", so a key
+# means the same thing whichever side resolves it. A key that is not a platform tag of a family this
+# project builds wheels for, arch suffix included, is refused at load as well: `winarm64`, bare
+# `win` and the conda subdir `osx-64` all look right and relax nothing, which would leave the
+# platform compared against the unrelaxed baseline and failing on a version it cannot reach.
+#
+# Which side applies an exception follows the property: a `[libraries]` library is relaxed in the
+# bundled check, `gdal` on the installed side. An exception may relax a *version*; it never waives
+# `threadsafety`, the property that already regressed once (#1620).
+[exceptions.win_arm64.gdal]
+version = "3.12.4"
+reason = """
+vcpkg's pinned builtin-baseline carries no gdal 3.13.x port -- its newest is 3.12.4
+(port-version 2) -- so this platform is a minor version behind by force, not by choice. Revisit
+when the vcpkg baseline is next bumped; see ci/vcpkg.json.
+"""
+
+[exceptions.win_arm64.hdf5]
+version = "2.1.1"
+reason = """
+vcpkg's pinned builtin-baseline carries no hdf5 2.2.x port -- its newest is 2.1.1 (port-version 1) --
+so this platform cannot reach the baseline version without moving the baseline itself. Revisit when
+the vcpkg baseline is next bumped; see ci/vcpkg.json.
+"""

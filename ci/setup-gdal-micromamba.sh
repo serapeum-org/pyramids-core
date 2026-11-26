@@ -2,7 +2,7 @@
 #
 # Install the wheel-build environment via micromamba for a cross-platform
 # target. Used by ci/setup-gdal-from-pixi.sh when cibuildwheel builds for
-# a target arch different from the host (currently: macos-14 / arm64 host
+# a target arch different from the host (currently: macos-15 / arm64 host
 # producing an osx-64 wheel because GitHub's macos-13 Intel runner queue
 # is unusable in practice).
 #
@@ -10,22 +10,34 @@
 # --platform flag on `pixi install`. micromamba ships a single static
 # binary that supports `--platform osx-64` natively.
 #
-# Why we re-resolve instead of using pixi.lock: pixi.lock has osx-64
-# entries (we added the platform), but pixi can't materialize them on
-# an osx-arm64 host. micromamba re-solves from conda-forge against the
-# same range pin declared in
-# [tool.pixi.feature.wheel-build.dependencies]. The trade-off is we
-# lose lock-file reproducibility on this one branch — acceptable scope
-# until GitHub's Intel runners come back.
+# Why micromamba re-solves: pixi.lock has osx-64 entries (we added the
+# platform), but pixi can't materialize them on an osx-arm64 host, so
+# micromamba solves from conda-forge against the range pins declared in
+# [tool.pixi.feature.gdal.dependencies].
+#
+# A range does not pin a solve, though, and that shipped a real defect:
+# re-resolving `gdal >=3.13.3,<3.13.4` here picked the newest matching
+# build (np2py315..._12), which links proj 9.9.0 and geos 3.15.0, while
+# every platform installed from pixi.lock got the _1 build with proj
+# 9.8.1 and geos 3.14.1. One release therefore shipped two different
+# native stacks under one version number, and only the osx-64 wheel was
+# affected -- the divergence ci/check-bundled-stack.py caught (#1632).
+#
+# So the three libraries the baseline asserts -- proj, geos, hdf5 -- are
+# pinned to exactly what pixi.lock resolves for this environment and
+# platform, read by ci/gdal-pin.py --locked. The gdal family keeps its
+# range: with proj and geos pinned the solver is steered to the matching
+# gdal build anyway, verified by a cross-platform dry-run solve for
+# osx-64.
 #
 # Inputs (must be exported by caller):
 #   BUILD_PREFIX     destination for the micromamba binary
 #   PIXI_ENV         path where the env will be created (kept as
 #                    .pixi/envs/wheel-build/ so downstream extraction
 #                    logic is identical to the pixi branch)
-#   TARGET_PLATFORM  conda platform tag for the wheel (currently only
+#   TARGET_PLATFORM  conda subdir for the wheel's target (currently only
 #                    "osx-64" is reached — the cross-compile target
-#                    for macos-14 / arm64 host)
+#                    for the macos-15 / arm64 host)
 set -euo pipefail
 
 : "${BUILD_PREFIX:?BUILD_PREFIX must be set}"
@@ -101,6 +113,32 @@ fi
     read -r LIBGDAL_JP2_SPEC; read -r SWIG_SPEC; } \
     < <(python3 "${GDAL_PIN}" gdal libgdal-netcdf libgdal-hdf4 libgdal-grib libgdal-jp2openjpeg swig)
 
+# The baseline-asserted libraries are pinned to the locked solve rather than a range, so this
+# branch materializes the same native stack as every lock-installed platform. gdal-pin.py raises
+# if any name is absent from pixi.lock for this environment/platform, so a typo cannot quietly
+# drop a pin and hand the choice back to the solver.
+{ read -r PROJ_SPEC; read -r GEOS_SPEC; read -r HDF5_SPEC; } \
+    < <(python3 "${GDAL_PIN}" --locked --platform "${TARGET_PLATFORM}" proj geos hdf5)
+
+# Assert the invariant rather than leave it to `set -e` firing on `read`'s EOF status, which is all
+# that protected this before and is stated nowhere in the code. Two harmless-looking rewrites would
+# reopen #1632 by leaving a spec empty -- piping through `head`, or adding `|| true` -- and an extra
+# line on the producer's stdout would shift all three assignments by one. Any of those used to
+# surface far from its cause, in micromamba's spec parser; the loop below stops the build here
+# instead, naming the spec that is not an exact `==<version>` pin from pixi.lock.
+for spec_name in PROJ_SPEC GEOS_SPEC HDF5_SPEC; do
+    spec_value="${!spec_name}"
+    case "${spec_value}" in
+        ==*) ;;
+        *)
+            echo "ERROR: ${spec_name}='${spec_value}' is not an exact pin from pixi.lock." >&2
+            echo "       ci/gdal-pin.py --locked must emit one '==<version>' line per package;" >&2
+            echo "       without it this build would install an unpinned native stack (#1632)." >&2
+            exit 1
+            ;;
+    esac
+done
+
 echo "--- Wheel-build pins (from pyproject.toml) ---"
 echo "  gdal${GDAL_SPEC}"
 echo "  libgdal-netcdf${LIBGDAL_NETCDF_SPEC}"
@@ -108,6 +146,10 @@ echo "  libgdal-hdf4${LIBGDAL_HDF4_SPEC}"
 echo "  libgdal-grib${LIBGDAL_GRIB_SPEC}"
 echo "  libgdal-jp2openjpeg${LIBGDAL_JP2_SPEC}"
 echo "  swig${SWIG_SPEC}"
+echo "--- Native-stack pins (from pixi.lock, ${TARGET_PLATFORM}) ---"
+echo "  proj${PROJ_SPEC}"
+echo "  geos${GEOS_SPEC}"
+echo "  hdf5${HDF5_SPEC}"
 
 echo "--- Creating ${TARGET_PLATFORM} env at ${PIXI_ENV} ---"
 "${MAMBA_BIN}" create -p "${PIXI_ENV}" \
@@ -119,6 +161,9 @@ echo "--- Creating ${TARGET_PLATFORM} env at ${PIXI_ENV} ---"
     "libgdal-hdf4${LIBGDAL_HDF4_SPEC}" \
     "libgdal-grib${LIBGDAL_GRIB_SPEC}" \
     "libgdal-jp2openjpeg${LIBGDAL_JP2_SPEC}" \
-    "swig${SWIG_SPEC}"
+    "swig${SWIG_SPEC}" \
+    "proj${PROJ_SPEC}" \
+    "geos${GEOS_SPEC}" \
+    "hdf5${HDF5_SPEC}"
 
 echo "=== setup-gdal-micromamba.sh complete ==="

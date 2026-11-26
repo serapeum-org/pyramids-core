@@ -131,8 +131,8 @@ define geos       3.14.1    3c20919cda9a505db07b5216baa980bacdaa0702da715b43f176
     "https://download.osgeo.org/geos/geos-3.14.1.tar.bz2"                                        geos-3.14.1.tar.bz2
 define libaec     1.1.6     a469be4d835127e358c4f97de74943a54fbcb870aaf03cd2303c1dcc9fd4af4b \
     "https://github.com/MathisRosenhauer/libaec/releases/download/v1.1.6/libaec-1.1.6.tar.gz"    libaec-1.1.6.tar.gz
-define hdf5       2.1.0     ce7f5515a95d588b8606c3fb50643f8b88ac52ffbbde9c63bb1edca6a256e964 \
-    "https://github.com/HDFGroup/hdf5/releases/download/2.1.0/hdf5-2.1.0.tar.gz"                 hdf5-2.1.0.tar.gz
+define hdf5       2.2.0     1a1ab8209b35586fbc1aa279ba76d102130b95badcb20ca329587219112d8c16 \
+    "https://github.com/HDFGroup/hdf5/releases/download/2.2.0/hdf5-2.2.0.tar.gz"                 hdf5-2.2.0.tar.gz
 define netcdf     4.10.0    ce160f9c1483b32d1ba8b7633d7984510259e4e439c48a218b95a023dc02fd4c \
     "https://github.com/Unidata/netcdf-c/archive/refs/tags/v4.10.0.tar.gz"                       netcdf-c-4.10.0.tar.gz
 define blosc      1.21.6    9fcd60301aae28f97f1301b735f966cc19e7c49b6b4321b839b4579a0c156f38 \

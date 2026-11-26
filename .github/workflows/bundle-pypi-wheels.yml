@@ -3,13 +3,25 @@ name: Bundle PyPI Wheels
 on:
   push:
     branches: [main]
-#   pull_request:
-#     branches: [main]
-#     paths:
-#       - "pyproject.toml"
-#       - "setup.py"
-#       - "ci/**"
-#       - ".github/workflows/bundle-pypi-wheels.yml"
+  # Build-touching pull requests, restricted to the cheap Linux jobs -- every heavy job carries a
+  # `github.event_name != 'pull_request'` exclusion below. Until this was enabled,
+  # ci/check-bundled-stack.py and the GDAL assertion in ci/verify-wheel.py could not run before a
+  # merge, because nothing built a wheel on a PR: both defects the baseline exists to catch (#1620,
+  # #1632) were found by a manual dispatch rather than by PR CI. A full run is 55 jobs / 434
+  # job-minutes; this arm measured ~92 on its first PR run (38m + 39m for the two Linux legs, plus
+  # verify-debian12), so ~79% cheaper rather than the ~25 first estimated from a dispatch run whose
+  # GDAL stack came from cache. Cache reads are scoped to the current ref plus the base branch, so a
+  # PR cannot see an entry written by a dispatch on the head branch; expect it to warm up once an
+  # equivalent entry exists on main. If the price is ever too high, dropping the aarch64 leg removes
+  # 39m and costs nothing for #1620-class defects, since both Linux legs share one build recipe
+  # (#1649).
+  pull_request:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "setup.py"
+      - "ci/**"
+      - ".github/workflows/bundle-pypi-wheels.yml"
   workflow_run:
     workflows: ["github-release"]
     types: [completed]
@@ -219,10 +231,13 @@ jobs:
     # release job's `{sdist,wheels-*}` gather, and the composition gate now
     # REQUIRES it. Storage note (#333 D1): this adds 8 fat wheels per release
     # against PyPI's 10 GB project cap — revisit if uploads start failing.
+    # Excluded from the pull-request arm (#1649): a Linux-only pre-merge check
+    # does not need this platform, and it is the expensive half of the matrix.
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository)
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -297,11 +312,11 @@ jobs:
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_SKIP: "*pp* cp31*t-*"
           # This override replaces the TOML repair command wholesale, so it must carry the
-          # #1620 thread-safety guard too or a musllinux regression ships unchecked.
+          # #1620/#1627 native-stack guard too or a musllinux regression ships unchecked.
           CIBW_REPAIR_WHEEL_COMMAND: >-
             LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
             auditwheel repair --plat ${{ matrix.plat }} -w {dest_dir} {wheel} &&
-            python ci/check-bundled-hdf5.py {dest_dir}
+            python ci/check-bundled-stack.py {dest_dir}
 
       # Gate on the stack cache having missed too — see the glibc job: a
       # compiled-stack HIT skips config.sh, leaving .srcbuild-distfiles empty,
@@ -336,10 +351,13 @@ jobs:
           retention-days: 3
 
   build-macos-wheels:
+    # Excluded from the pull-request arm (#1649): a Linux-only pre-merge check
+    # does not need this platform, and it is the expensive half of the matrix.
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository)
+      github.event.workflow_run.head_repository.full_name == github.repository))
     permissions:
       contents: read
     strategy:
@@ -381,10 +399,13 @@ jobs:
           retention-days: 3
 
   build-windows-wheels:
+    # Excluded from the pull-request arm (#1649): a Linux-only pre-merge check
+    # does not need this platform, and it is the expensive half of the matrix.
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository)
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: windows-2022
     permissions:
       contents: read
@@ -429,10 +450,13 @@ jobs:
   # the whole vector stack into the wheel per Python version. cp311 is
   # excluded — numpy and scipy ship no cp311 win_arm64 wheels.
   build-winarm64-wheels:
+    # Excluded from the pull-request arm (#1649): a Linux-only pre-merge check
+    # does not need this platform, and it is the expensive half of the matrix.
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository)
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: windows-11-arm
     permissions:
       contents: read
@@ -610,10 +634,13 @@ jobs:
     # state it here too: this job checks out `head_branch` and executes whatever
     # tests it finds there, so its fork safety should be self-evident rather than
     # inferred from the job graph.
+    # Excluded from the pull-request arm (#1649): a Linux-only pre-merge check
+    # does not need this platform, and it is the expensive half of the matrix.
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository)
+      github.event.workflow_run.head_repository.full_name == github.repository))
     permissions:
       contents: read
     timeout-minutes: 30
@@ -673,6 +700,9 @@ jobs:
   # docker's default seccomp blocks (identical requirement for every build
   # model; the uncontained test-wheels jobs never hit it).
   verify-debian12:
+    # Kept in the pull-request arm (#1649): the installed-side half of the native-stack guard.
+    # It is the one job on a PR that runs ci/verify-wheel.py, so it asserts the GDAL version and
+    # the driver set against ci/native-stack-baseline.toml.
     needs: build-linux-wheels
     runs-on: ubuntu-latest
     permissions:
@@ -713,6 +743,9 @@ jobs:
         run: pytest -vvv -o "pythonpath=" --timeout=60 --timeout-method=thread -m "core and not vfs and not slow" tests/
 
   verify-rocky9:
+    # Excluded from the pull-request arm: verify-debian12 already runs ci/verify-wheel.py against the same
+    # wheels-linux-x86_64 artifact, so on a pull request this would only repeat it (#1649).
+    if: github.event_name != 'pull_request'
     needs: build-linux-wheels
     runs-on: ubuntu-latest
     permissions:
@@ -756,6 +789,9 @@ jobs:
   # glibc 2.39 (the arm runner's own Ubuntu 24.04) and its 2.28-era
   # compatibility would rest on the toolchain argument alone.
   verify-rocky9-aarch64:
+    # Excluded from the pull-request arm: verify-debian12 already covers the installed side on a pull
+    # request; this leg exists for the aarch64 glibc matrix, which a pre-merge check can skip (#1649).
+    if: github.event_name != 'pull_request'
     needs: build-linux-wheels
     runs-on: ubuntu-24.04-arm
     permissions:
