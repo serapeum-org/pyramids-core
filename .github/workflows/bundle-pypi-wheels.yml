@@ -8,8 +8,13 @@ on:
   # ci/check-bundled-stack.py and the GDAL assertion in ci/verify-wheel.py could not run before a
   # merge, because nothing built a wheel on a PR: both defects the baseline exists to catch (#1620,
   # #1632) were found by a manual dispatch rather than by PR CI. A full run is 55 jobs / 434
-  # job-minutes; this arm is roughly 25, on 1x-billed runners, because the Linux legs restore the
-  # GDAL stack from cache (#1649).
+  # job-minutes; this arm measured ~92 on its first PR run (38m + 39m for the two Linux legs, plus
+  # verify-debian12), so ~79% cheaper rather than the ~25 first estimated from a dispatch run whose
+  # GDAL stack came from cache. Cache reads are scoped to the current ref plus the base branch, so a
+  # PR cannot see an entry written by a dispatch on the head branch; expect it to warm up once an
+  # equivalent entry exists on main. If the price is ever too high, dropping the aarch64 leg removes
+  # 39m and costs nothing for #1620-class defects, since both Linux legs share one build recipe
+  # (#1649).
   pull_request:
     branches: [main]
     paths:
