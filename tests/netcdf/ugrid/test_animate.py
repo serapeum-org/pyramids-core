@@ -243,4 +243,4 @@ class TestSingleBandRepeatedFrames:
     def test_the_read_really_is_two_dimensional(self):
         """The precondition the branch exists for."""
         raster = _raster(1)
-        assert np.asarray(raster.io.read_array(band=None)).ndim == 2
+        assert np.asarray(raster.read_array(band=None)).ndim == 2

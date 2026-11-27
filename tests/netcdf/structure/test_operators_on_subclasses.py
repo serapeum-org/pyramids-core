@@ -89,7 +89,7 @@ class TestOperatorsOnNetCDFVariables:
 
         assert np.asarray(variable.read_array()).mean() == pytest.approx(expected)
         np.testing.assert_allclose(
-            np.asarray(variable.io.read_array()), np.asarray(plain.io.read_array())
+            np.asarray(variable.read_array()), np.asarray(plain.read_array())
         )
 
     @pytest.mark.parametrize(

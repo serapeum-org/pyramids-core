@@ -631,7 +631,7 @@ class TestWhatMustNotChange:
         )
         result = plain * 2
         assert type(result) is Dataset
-        assert_array_equal(result.io.read_array(), np.full((2, NY, NX), 6.0))
+        assert_array_equal(result.read_array(), np.full((2, NY, NX), 6.0))
 
     def test_combining_one_band_skips_the_layout_check(self):
         """`band=0` combines two variables whose layouts disagree, without refusing.
@@ -1969,7 +1969,7 @@ class TestCombineLayoutSource:
         # `result` is a plain Dataset, whose read is the classic flattened `(bands, rows, cols)`;
         # compare against the labelled operand in the same flattened layout (`squeeze=True`, #1241).
         assert_array_equal(
-            result.io.read_array(), np.asarray(labelled.io.read_array(squeeze=True)) + 1
+            result.read_array(), np.asarray(labelled.io.read_array(squeeze=True)) + 1
         )
 
 
