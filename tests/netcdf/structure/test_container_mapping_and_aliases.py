@@ -1834,12 +1834,14 @@ class TestThePublicApiPageMatchesTheClass:
         page = (
             Path(__file__).parents[3] / "docs" / "reference" / "dataset" / "analysis.md"
         )
-        # A table row, not a passing mention: the row's leading cell and its trailing
-        # pipe, so replacing the row with prose elsewhere on the page still fails.
+        # A table row, not a passing mention: the row's leading cell (the canonical
+        # `ds.analysis.<member>` accessor form) and its trailing pipe, so replacing the
+        # row with prose elsewhere on the page still fails.
         rows = [
             line
             for line in page.read_text(encoding="utf-8").splitlines()
-            if line.startswith(f"| `ds.{member}") and line.rstrip().endswith("|")
+            if line.startswith(f"| `ds.analysis.{member}")
+            and line.rstrip().endswith("|")
         ]
         assert len(rows) == 1, (
             f"{member} needs exactly one row in the missing-data table of "
