@@ -59,7 +59,7 @@ def _cmd_mesh_to_file(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    mesh.to_file(args.output, driver=args.driver)
+    mesh.io.to_file(args.output, driver=args.driver)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -153,7 +153,7 @@ def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     bounds = tuple(args.bounds) if args.bounds else None
     with map_lookup_errors():
-        grid = mesh.to_dataset(
+        grid = mesh.io.to_dataset(
             args.var,
             args.cell_size,
             method=args.method,
@@ -177,7 +177,7 @@ def _cmd_mesh_to_zarr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    mesh.to_zarr(args.output)
+    mesh.io.to_zarr(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -226,7 +226,7 @@ def _cmd_mesh_to_bytes(args: argparse.Namespace) -> int:
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    payload = mesh.to_bytes()
+    payload = mesh.io.to_bytes()
     if args.output is not None:
         with open(args.output, "wb") as handle:
             handle.write(payload)
@@ -253,7 +253,7 @@ def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         moved = mesh.to_location(args.location, variable_name=args.var)
-    moved.to_file(args.output)
+    moved.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -270,7 +270,7 @@ def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     reprojected = mesh.spatial.to_crs(args.epsg)
-    reprojected.to_file(args.output)
+    reprojected.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -291,7 +291,7 @@ def _cmd_mesh_set_crs(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     mesh.spatial.set_crs(crs=args.crs, epsg=args.epsg)
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -313,14 +313,14 @@ def _cmd_mesh_burn(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     geometry = FeatureCollection.read_file(args.geometry)
     fill = float("nan") if args.fill is None else args.fill
-    burned = mesh.burn(
+    burned = mesh.io.burn(
         geometry,
         args.value,
         name=args.name,
         fill=fill,
         all_touched=args.all_touched,
     )
-    burned.to_file(args.output)
+    burned.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -340,7 +340,7 @@ def _cmd_mesh_regrid(args: argparse.Namespace) -> int:
     target = MeshDataset.read_file(args.target)
     with map_lookup_errors():
         regridded = mesh.regrid(target, method=args.method, variable_name=args.var)
-    regridded.to_file(args.output)
+    regridded.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -384,7 +384,7 @@ def _cmd_mesh_attach_data(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     attached = mesh.variables.attach_data(args.data, driver=args.driver, lazy=args.lazy)
-    attached.to_file(args.output)
+    attached.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -408,7 +408,7 @@ def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
     updated = mesh.variables.with_variable(
         args.name, values, location=args.location, nodata=args.nodata
     )
-    updated.to_file(args.output)
+    updated.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -427,7 +427,7 @@ def _cmd_mesh_rename_variable(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         renamed = mesh.variables.rename_variable(args.old, args.new)
-    renamed.to_file(args.output)
+    renamed.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

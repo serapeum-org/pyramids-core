@@ -58,7 +58,7 @@ def _apply(
     with map_lookup_errors():
         mesh = MeshDataset.read_file(args.file)
         result = transform(mesh)
-        result.to_file(args.output)
+        result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

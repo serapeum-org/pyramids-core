@@ -35,7 +35,7 @@ def _cmd_mesh_set_attr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    mesh.set_global_attribute(args.name, args.value).to_file(args.output)
+    mesh.set_global_attribute(args.name, args.value).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -54,7 +54,7 @@ def _cmd_mesh_del_attr(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    mesh.delete_global_attribute(args.name).to_file(args.output)
+    mesh.delete_global_attribute(args.name).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

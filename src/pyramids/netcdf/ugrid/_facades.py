@@ -23,15 +23,14 @@ import pandas as pd
 from pyramids.base._array_ops import nodata_mask
 from pyramids.netcdf.ugrid import analysis as _analysis
 from pyramids.netcdf.ugrid import graph as _graph
-from pyramids.netcdf.ugrid import interop_xarray as _interop
 from pyramids.netcdf.ugrid import regrid as _regrid
-from pyramids.netcdf.ugrid import vector_ops as _vector_ops
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+    from pyramids.netcdf.ugrid.engines.io import _MeshIO
     from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
     from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
@@ -219,6 +218,9 @@ class _MeshFacades:
 
         @property
         def selection(self) -> _MeshSelection: ...
+
+        @property
+        def io(self) -> _MeshIO: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -897,22 +899,14 @@ class _MeshFacades:
         Returns:
             MeshDataset: A new dataset carrying the burned variable.
         """
-        values = _vector_ops.burn(
-            self._mesh,  # type: ignore[attr-defined]
-            geometry,
-            value,
-            fill=fill,
-            all_touched=all_touched,
+        warnings.warn(
+            "`mesh.burn` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.burn`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        # Declare the fill as no-data only when it is NaN. A NaN fill means "untouched", so
-        # naming it is what makes an untouched face distinguishable once written. An explicit
-        # numeric fill is a value the caller chose, not a sentinel: `burn(geom, 1.0, fill=0.0)`
-        # is the 0/1 mask idiom, and declaring 0.0 as missing made `dropna` and every `skipna`
-        # reduction discard the unburned faces.
-        burned = np.asarray(values)
-        declared = float(fill) if np.isnan(fill) else None
-        return self.variables.with_variable(  # type: ignore[attr-defined]
-            name, burned, location="face", nodata=declared
+        return self.io.burn(  # type: ignore[attr-defined]
+            geometry, value, name=name, fill=fill, all_touched=all_touched
         )
 
     def rasterize_like(
@@ -945,15 +939,17 @@ class _MeshFacades:
             ValueError: An unknown ``method``, or the mesh declares an EPSG while
                 ``reference`` declares no CRS to reproject into.
         """
-        var = self._facade_variable("rasterize_like", variable_name)
-        return _regrid.rasterize_like(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
+        warnings.warn(
+            "`mesh.rasterize_like` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.rasterize_like`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.rasterize_like(  # type: ignore[attr-defined]
             reference,
-            location=var.location,
+            variable_name,
             method=method,
             nodata=nodata,
-            source_epsg=self.epsg,  # type: ignore[attr-defined]
             max_distance=max_distance,
         )
 
@@ -1055,14 +1051,13 @@ class _MeshFacades:
         Raises:
             OptionalPackageDoesNotExist: xarray or zarr is not installed.
         """
-        return _interop.to_zarr(
-            self._mesh,  # type: ignore[attr-defined]
-            self._data_variables,  # type: ignore[attr-defined]
-            store,
-            mesh_name=self.mesh_name,  # type: ignore[attr-defined]
-            crs_wkt=self.crs_wkt,  # type: ignore[attr-defined]
-            **kwargs,
+        warnings.warn(
+            "`mesh.to_zarr` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_zarr`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.io.to_zarr(store, **kwargs)  # type: ignore[attr-defined]
 
     def fillna(self, value: Any, variable_name: str | None = None) -> Any:
         """Replace missing values with *value*.

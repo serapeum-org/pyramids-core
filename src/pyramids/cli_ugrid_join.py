@@ -53,7 +53,7 @@ def _cmd_mesh_concat(args: argparse.Namespace) -> int:
     first, rest = _load_join_inputs(args.inputs)
     with map_lookup_errors():
         result = first.concat(rest)
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -71,7 +71,7 @@ def _cmd_mesh_merge(args: argparse.Namespace) -> int:
     first, rest = _load_join_inputs(args.inputs)
     with map_lookup_errors():
         result = first.merge(rest, compat=args.compat)
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

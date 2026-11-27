@@ -136,7 +136,7 @@ def _write(args: argparse.Namespace, result: MeshDataset) -> int:
     Returns:
         int: ``0`` on success.
     """
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

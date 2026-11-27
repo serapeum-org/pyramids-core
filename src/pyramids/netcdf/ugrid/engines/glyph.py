@@ -506,5 +506,5 @@ class _MeshGlyph(_MeshEngine):
             # ~512 px across the longer side: a readable thumbnail without making the caller
             # reason about a resolution in coordinate units they may not know.
             cell_size = max(xmax - xmin, ymax - ymin) / 512.0
-        grid = self._ds.to_dataset(var.name, cell_size, method=method)
+        grid = self._ds.io.to_dataset(var.name, cell_size, method=method)
         return grid.to_image(cmap=cmap)

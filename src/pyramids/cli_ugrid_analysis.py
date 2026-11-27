@@ -104,9 +104,9 @@ def _cmd_slope(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.terrain.slope(units=args.units, variable_name=args.var)
-    mesh.variables.with_variable("slope", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "slope", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -124,9 +124,9 @@ def _cmd_aspect(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.terrain.aspect(variable_name=args.var)
-    mesh.variables.with_variable("aspect", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "aspect", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -149,7 +149,7 @@ def _cmd_hillshade(args: argparse.Namespace) -> int:
         )
     mesh.variables.with_variable(
         "hillshade", np.asarray(values), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -170,7 +170,7 @@ def _cmd_focal_mean(args: argparse.Namespace) -> int:
         values = mesh.analysis.focal_mean(rings=args.rings, variable_name=args.var)
     mesh.variables.with_variable(
         "focal_mean", np.asarray(values), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -191,7 +191,7 @@ def _cmd_focal_std(args: argparse.Namespace) -> int:
         values = mesh.analysis.focal_std(rings=args.rings, variable_name=args.var)
     mesh.variables.with_variable(
         "focal_std", np.asarray(values), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -219,7 +219,7 @@ def _cmd_focal_reduce(args: argparse.Namespace) -> int:
         )
     mesh.variables.with_variable(
         f"focal_{args.reducer}", np.asarray(values), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -242,7 +242,7 @@ def _cmd_proximity(args: argparse.Namespace) -> int:
     distances = mesh.analysis.proximity(np.asarray(args.target_faces))
     mesh.variables.with_variable(
         "proximity", np.asarray(distances), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -261,7 +261,7 @@ def _cmd_sieve(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         result = mesh.analysis.sieve(args.threshold, variable_name=args.var)
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -280,7 +280,7 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         result = mesh.vector.cluster(args.lower, args.upper, variable_name=args.var)
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -301,7 +301,7 @@ def _cmd_binary_dilation(args: argparse.Namespace) -> int:
         result = mesh.topology.binary_dilation(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -322,7 +322,7 @@ def _cmd_binary_erosion(args: argparse.Namespace) -> int:
         result = mesh.topology.binary_erosion(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -998,7 +998,7 @@ def _cmd_polyfit(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         result = mesh.selection.polyfit(args.degree, variable_name=args.var)
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -1038,7 +1038,7 @@ def _cmd_curvefit(args: argparse.Namespace) -> int:
         result = mesh.selection.curvefit(
             model, p0=_parse_p0(args.p0), variable_name=args.var
         )
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

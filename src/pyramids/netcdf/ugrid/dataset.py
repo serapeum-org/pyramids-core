@@ -92,6 +92,7 @@ from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
 from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
 from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+from pyramids.netcdf.ugrid.engines.io import _MeshIO
 from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
 from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
 from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
@@ -569,6 +570,11 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         return _MeshSelection(self)
 
     @property
+    def io(self) -> _MeshIO:
+        """I/O engine: to_file, to_bytes, to_zarr, to_dataset, rasterize_like, burn (``mesh.io``)."""
+        return _MeshIO(self)
+
+    @property
     def variable_names(self) -> list[str]:
         """Names of all data variables, in insertion order.
 
@@ -962,28 +968,32 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         epsg: int | None = None,
         nodata: float = -9999.0,
     ) -> Dataset:
-        """Convert a mesh variable to a regular-grid Dataset.
+        """Facade -- delegates to :meth:`_MeshIO.to_dataset`."""
+        warnings.warn(
+            "`mesh.to_dataset` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_dataset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_dataset(
+            variable_name,
+            cell_size,
+            method=method,
+            bounds=bounds,
+            epsg=epsg,
+            nodata=nodata,
+        )
 
-        Interpolates mesh data onto a regular grid and returns a
-        standard pyramids Dataset. This is the bridge between
-        unstructured (UGRID) and structured (raster) worlds.
-
-        Args:
-            variable_name: Name of the data variable to rasterize.
-            cell_size: Target grid cell size in coordinate units.
-            method: Interpolation method ("nearest" or "linear").
-            bounds: Target (xmin, ymin, xmax, ymax). Defaults to mesh bounds.
-            epsg: Target EPSG code. Defaults to mesh CRS.
-            nodata: No-data value for the output raster.
-
-        Returns:
-            pyramids Dataset with the interpolated data.
-
-        Raises:
-            KeyError: No variable is named ``variable_name``.
-            ValueError: The variable exists but holds no data (nothing was loaded and it
-                carries no lazy loader), so there is nothing to interpolate.
-        """
+    def _to_dataset_impl(
+        self,
+        variable_name: str,
+        cell_size: float,
+        method: str = "nearest",
+        bounds: tuple[float, float, float, float] | None = None,
+        epsg: int | None = None,
+        nodata: float = -9999.0,
+    ) -> Dataset:
+        """Implementation of :meth:`_MeshIO.to_dataset`; see that method for the contract."""
         var = self[variable_name]
         data = var.data
         if data is None:
@@ -1251,33 +1261,19 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
     def to_file(
         self, path: str | Path, driver: str | None = None, **options: Any
     ) -> None:
-        """Write the dataset to a file.
+        """Facade -- delegates to :meth:`_MeshIO.to_file`."""
+        warnings.warn(
+            "`mesh.to_file` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_file(path, driver, **options)
 
-        Writes UGRID-compliant NetCDF by default: a topology variable, node coordinates,
-        connectivity arrays, face/edge centres, data variables, and global attributes following
-        the UGRID convention.
-
-        With ``driver``, writes through a registered third-party driver instead — 2DM, Selafin,
-        PLY and others are writable. The output format is never inferred from the suffix, so
-        ``to_file("mesh.slf")`` still writes NetCDF; name the driver to change that.
-
-        Args:
-            path: Output file path.
-            driver: Name of a registered **mesh** driver to write with, as declared by the
-                plugin providing it (see :func:`~pyramids.netcdf.ugrid.mesh_drivers`) — not a
-                GDAL driver short name, which is what ``driver`` means elsewhere in pyramids.
-                ``None`` (the default) writes UGRID NetCDF through the built-in writer, and
-                the output format is never inferred from ``path``'s suffix.
-            **options: Format-specific settings for the driver, passed through uninterpreted
-                (for example Selafin endianness, or PLY ascii versus binary). The built-in
-                writer takes none, so passing any without a ``driver`` raises ``TypeError``
-                rather than dropping them silently.
-
-        Raises:
-            DriverNotExistError: If ``driver`` names a driver that is not installed.
-            UnsupportedMeshFormatError: If the named driver cannot write a mesh.
-            TypeError: If ``options`` are given without a ``driver``.
-        """
+    def _to_file_impl(
+        self, path: str | Path, driver: str | None = None, **options: Any
+    ) -> None:
+        """Implementation of :meth:`_MeshIO.to_file`; see that method for the contract."""
         if driver is not None:
             self._write_through_driver(path, driver, options)
         elif options:
@@ -1289,20 +1285,17 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             self._write_ugrid_netcdf(Path(path))
 
     def to_bytes(self) -> bytes:
-        """Serialise the dataset to an in-memory UGRID NetCDF buffer.
+        """Facade -- delegates to :meth:`_MeshIO.to_bytes`."""
+        warnings.warn(
+            "`mesh.to_bytes` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_bytes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_bytes()
 
-        Writes through a temporary file because GDAL's NetCDF driver
-        does not support ``/vsimem/`` for multidimensional creation.
-
-        Returns:
-            bytes: The NetCDF file content, suitable for writing to
-                cloud storage or embedding in a response payload.
-
-        See Also:
-            to_file: Write directly to a file on disk.
-            read_file: Class method that reads from a file path or
-                byte buffer.
-        """
+    def _to_bytes_impl(self) -> bytes:
+        """Implementation of :meth:`_MeshIO.to_bytes`; see that method for the contract."""
         with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
             tmp_path = Path(tmp.name)
         try:
