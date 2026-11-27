@@ -993,7 +993,7 @@ def _cmd_polyfit(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.polyfit(args.degree, variable_name=args.var)
+        result = mesh.selection.polyfit(args.degree, variable_name=args.var)
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -1031,7 +1031,9 @@ def _cmd_curvefit(args: argparse.Namespace) -> int:
     model = CURVE_MODELS[args.model]
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.curvefit(model, p0=_parse_p0(args.p0), variable_name=args.var)
+        result = mesh.selection.curvefit(
+            model, p0=_parse_p0(args.p0), variable_name=args.var
+        )
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

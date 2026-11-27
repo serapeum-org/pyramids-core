@@ -374,4 +374,6 @@ class _MeshSpatial(_MeshEngine):
             ValueError: No variable has a time dimension, the coordinates are not date-like,
                 or ``how``/``q`` is invalid.
         """
-        return self._ds.reduce(how, skipna=skipna, q=q, groupby=freq)
+        # Call the selection engine, not the deprecated flat `reduce` facade, so a resample
+        # does not emit the `reduce` deprecation warning from inside `spatial.resample`.
+        return self._ds.selection.reduce(how, skipna=skipna, q=q, groupby=freq)

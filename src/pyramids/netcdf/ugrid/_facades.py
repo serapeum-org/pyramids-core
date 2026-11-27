@@ -34,6 +34,7 @@ from pyramids.netcdf.ugrid.messages import unknown_variable_message
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+    from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
     from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
     from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
@@ -214,6 +215,9 @@ class _MeshFacades:
 
         @property
         def spatial(self) -> _MeshSpatial: ...
+
+        @property
+        def selection(self) -> _MeshSelection: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -955,26 +959,19 @@ class _MeshFacades:
     def interp_time(
         self, new_times: Any, *, method: str = "linear", bounds: str = "nan"
     ) -> Any:
-        """Interpolate every temporal variable onto new time coordinates.
+        """Facade -- delegates to :meth:`_MeshSelection.interp_time`."""
+        warnings.warn(
+            "`mesh.interp_time` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.interp_time`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.interp_time(new_times, method=method, bounds=bounds)
 
-        Distinct from :meth:`interpolate_na`, which fills gaps on the existing axis: this
-        *relabels* the axis, resampling the series onto the times you ask for.
-
-        Args:
-            new_times: The time coordinates to interpolate onto.
-            method: ``"linear"`` or ``"nearest"``. Defaults to ``"linear"``. (Not every
-                ``scipy.interpolate.interp1d`` kind: the kernel accepts these two.)
-            bounds: What a label outside the existing axis answers -- ``"nan"`` for NaN, or
-                ``"clamp"`` to hold the first/last step's value. Defaults to ``"nan"``.
-
-        Returns:
-            MeshDataset: A new dataset on the requested time coordinates.
-
-        Raises:
-            ValueError: No variable has a time dimension; ``method`` is neither ``"linear"``
-                nor ``"nearest"``; ``bounds`` is neither ``"nan"`` nor ``"clamp"``; or the time
-                coordinates are not numeric.
-        """
+    def _interp_time_impl(
+        self, new_times: Any, *, method: str = "linear", bounds: str = "nan"
+    ) -> Any:
+        """Implementation of :meth:`_MeshSelection.interp_time`; see that method for the contract."""
         stamps = self._time_coords("interp_time")  # type: ignore[attr-defined]
         targets = list(np.atleast_1d(np.asarray(new_times)))
         # `new_times` goes through the same converter as the existing axis, so a date target
