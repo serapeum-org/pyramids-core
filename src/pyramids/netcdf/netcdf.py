@@ -6577,7 +6577,7 @@ class NetCDF(Dataset):
         Raises:
             ReadOnlyError: The variable is a read-only on-disk file.
         """
-        Dataset.offset.fset(self, value)  # type: ignore[attr-defined]
+        self.bands.offset = value
         if self._scale is not None or self._offset is not None:
             self._offset = float(value[0])
 
