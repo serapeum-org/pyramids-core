@@ -343,7 +343,7 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         dst: Dataset | None = None
         if mask is not None:
-            dst = self._ds.spatial.crop(mask, touch=True)
+            dst = self._ds.crop(mask, touch=True)
 
         if band is None:
             df = pd.DataFrame(
@@ -4926,7 +4926,7 @@ class _Analysis(_Engine["Dataset"]):
             DeprecationWarning,
             stacklevel=2,
         )
-        gdf = self._ds.analysis.zonal_stats(
+        gdf = self._ds.zonal_stats(
             classes_map,
             stats=("count",),
             band=band if band is not None else 0,

@@ -3853,7 +3853,7 @@ class _IO(_Engine["Dataset"]):
         source = (
             self._ds
             if self._ds.epsg == 3857
-            else self._ds.spatial.to_crs(3857, method=resampling)
+            else self._ds.to_crs(3857, method=resampling)
         )
         staged = None
         scratch_dir: str | None = None
