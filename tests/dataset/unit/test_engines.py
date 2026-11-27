@@ -476,6 +476,20 @@ class TestDatasetNormalizeFacade:
         assert float(np.nanmin(out)) == pytest.approx(0.0)
         assert float(np.nanmax(out)) == pytest.approx(1.0)
 
+    def test_the_facade_warns_on_a_multiband_raster_too(self):
+        """`ds.normalize()` emits its deprecation on multi-band input, not only single-band.
+
+        Test scenario:
+            The warning must fire unconditionally (it used to sit inside the single-band
+            branch), so a `-W error::DeprecationWarning` sweep catches every `ds.normalize()`.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.arange(18, dtype="float32").reshape(2, 3, 3)
+        ds = Dataset.from_array(arr=arr, geo_ref=geo)
+
+        with pytest.warns(DeprecationWarning, match="ds.normalize"):
+            ds.normalize()
+
     def test_nan_no_data_is_excluded_not_propagated(self):
         """A NaN no-data cell is excluded from the range, not spread to every cell.
 

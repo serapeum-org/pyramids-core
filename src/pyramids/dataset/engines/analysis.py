@@ -46,6 +46,7 @@ from pyramids.base._domain import (
     fits_dtype,
     free_no_data,
     is_nan_sentinel,
+    is_no_data,
     is_stored_no_data,
     occurs_in,
 )
@@ -115,9 +116,14 @@ _POINT_WINDOW_MAX_PIXELS = 8_000_000
 logger = logging.getLogger(__name__)
 
 # The pyramids package root, used to count past first-party frames when a warning
-# must blame the user. `__file__` is .../pyramids/dataset/engines/analysis.py.
-_PYRAMIDS_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# must blame the user. `__file__` is .../pyramids/dataset/engines/analysis.py. The trailing
+# separator stops a sibling like `.../pyramids_app/` from matching, and `normcase` makes the
+# test case-insensitive where the filesystem is (Windows drive-letter case).
+_PYRAMIDS_ROOT = (
+    os.path.normcase(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+    + os.sep
 )
 
 
@@ -135,9 +141,9 @@ def _caller_stacklevel() -> int:
     """
     frame: FrameType | None = sys._getframe(1)
     level = 1
-    while frame is not None and os.path.abspath(frame.f_code.co_filename).startswith(
-        _PYRAMIDS_ROOT
-    ):
+    while frame is not None and os.path.normcase(
+        os.path.abspath(frame.f_code.co_filename)
+    ).startswith(_PYRAMIDS_ROOT):
         frame = frame.f_back
         level += 1
     return level
@@ -5293,8 +5299,32 @@ class _Analysis(_Engine["Dataset"]):
 
         return gdf
 
+    def normalize(self) -> np.typing.NDArray:
+        """Rescale this raster's values into the `0.0`-`1.0` range, excluding no-data.
+
+        Reads the raster, masks each band's physical no-data to `NaN` first (so stored
+        sentinels neither pollute the global min/max nor appear as data, and stay `NaN`
+        in the result), then rescales against one global min/max across every band.
+
+        Returns:
+            np.ndarray: The values rescaled to `0.0`-`1.0`, with no-data cells as `NaN`.
+        """
+        arr = np.array(self._ds.io.read_array(), dtype="float64")
+        if arr.ndim == 2:
+            no_data = self._physical_no_data(0)
+            if no_data is not None:
+                arr = np.where(is_no_data(arr, no_data), np.nan, arr)
+        else:
+            for band in range(arr.shape[0]):
+                no_data = self._physical_no_data(band)
+                if no_data is not None:
+                    arr[band] = np.where(
+                        is_no_data(arr[band], no_data), np.nan, arr[band]
+                    )
+        return self._normalize_array(arr)
+
     @staticmethod
-    def normalize(array: np.ndarray) -> np.typing.NDArray:
+    def _normalize_array(array: np.ndarray) -> np.typing.NDArray:
         """Normalize a numpy array into the 0.0-1.0 range, ignoring NaNs.
 
         NaN cells are excluded from the min/max (via `np.nanmin` / `np.nanmax`)

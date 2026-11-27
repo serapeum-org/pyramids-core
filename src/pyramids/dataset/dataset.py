@@ -31,7 +31,7 @@ from pyramids.base._dataframe_grid import (
     reshape_to_grid,
     value_columns,
 )
-from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data, is_no_data
+from pyramids.base._domain import INHERIT_NO_DATA, inherit_no_data
 from pyramids.base._errors import (
     AlignmentError,
     ContainerRasterWarning,
@@ -1509,25 +1509,13 @@ class Dataset(RasterBase):
             numpy.ndarray: The raster's values rescaled to `0.0`-`1.0`, with
                 no-data cells returned as `NaN`.
         """
-        arr = np.array(self.io.read_array(), dtype="float64")
-        if arr.ndim == 2:
-            warnings.warn(
-                "`ds.normalize` is deprecated and will be removed in a future release; use "
-                "`ds.analysis.normalize`.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            no_data = self.analysis._physical_no_data(0)
-            if no_data is not None:
-                arr = np.where(is_no_data(arr, no_data), np.nan, arr)
-        else:
-            for band in range(arr.shape[0]):
-                no_data = self.analysis._physical_no_data(band)
-                if no_data is not None:
-                    arr[band] = np.where(
-                        is_no_data(arr[band], no_data), np.nan, arr[band]
-                    )
-        return self.analysis.normalize(arr)
+        warnings.warn(
+            "`ds.normalize` is deprecated and will be removed in a future release; use "
+            "`ds.analysis.normalize`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.normalize()
 
     def fill(self, *args, **kwargs):
         """Deprecated alias for :meth:`fill_domain`."""
