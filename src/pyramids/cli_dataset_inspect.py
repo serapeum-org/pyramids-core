@@ -85,7 +85,7 @@ def _cmd_stats(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    frame = ds.stats(band=args.band, approx_ok=not args.exact)
+    frame = ds.analysis.stats(band=args.band, approx_ok=not args.exact)
     records = [
         {
             "band": str(name),
@@ -119,7 +119,7 @@ def _cmd_histogram(args: argparse.Namespace) -> int:
     """
     ds = Dataset.read_file(args.file)
     with map_lookup_errors():
-        counts, ranges = ds.get_histogram(
+        counts, ranges = ds.analysis.get_histogram(
             band=args.band,
             bins=args.bins,
             min_value=args.min_value,
@@ -174,7 +174,7 @@ def _cmd_get_attribute_table(args: argparse.Namespace) -> int:
     """
     ds = Dataset.read_file(args.file)
     with map_lookup_errors():
-        frame = ds.get_attribute_table(band=args.band)
+        frame = ds.bands.get_attribute_table(band=args.band)
     records = None if frame is None else frame.to_dict(orient="records")
     if args.json:
         print(
@@ -205,7 +205,7 @@ def _cmd_set_attribute_table(args: argparse.Namespace) -> int:
     # into the file (a read-only open keeps it only for this process's lifetime).
     ds = Dataset.read_file(args.input, read_only=False)
     with map_lookup_errors():
-        ds.set_attribute_table(table, band=args.band)
+        ds.bands.set_attribute_table(table, band=args.band)
     ds.close()
     info_print(args, f"set attribute table on {args.input}")
     return 0
@@ -222,7 +222,7 @@ def _cmd_mask_flags(args: argparse.Namespace) -> int:
     """
     ds = Dataset.read_file(args.file)
     with map_lookup_errors():
-        flags = ds.mask_flags(band=args.band)
+        flags = ds.analysis.mask_flags(band=args.band)
     payload = {
         "band": args.band,
         "all_valid": flags.all_valid,
@@ -253,7 +253,7 @@ def _cmd_footprint(args: argparse.Namespace) -> int:
     """
     ds = Dataset.read_file(args.file)
     with map_lookup_errors():
-        gdf = ds.footprint(
+        gdf = ds.analysis.footprint(
             band=args.band,
             exclude_values=args.exclude_values,
             max_samples=args.max_samples,
@@ -297,7 +297,7 @@ def _cmd_cell_area(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    areas = ds.cell_area(unit=args.unit)
+    areas = ds.cell.cell_area(unit=args.unit)
     payload = {
         "unit": args.unit,
         "rows": ds.rows,
@@ -325,7 +325,7 @@ def _cmd_domain_area(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    area = ds.domain_area(band=args.band, unit=args.unit)
+    area = ds.analysis.domain_area(band=args.band, unit=args.unit)
     payload = {"band": args.band, "unit": args.unit, "area": float(area)}
     if args.json:
         print(json.dumps(json_sanitize(payload)))
@@ -344,7 +344,7 @@ def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    count = ds.count_domain_cells(band=args.band)
+    count = ds.analysis.count_domain_cells(band=args.band)
     if args.json:
         print(json.dumps({"band": args.band, "count": int(count)}))
     else:
@@ -363,7 +363,7 @@ def _cmd_same_grid(args: argparse.Namespace) -> int:
     """
     first = Dataset.read_file(args.a)
     second = Dataset.read_file(args.b)
-    same = bool(first.same_grid(second, compare_crs=not args.no_compare_crs))
+    same = bool(first.spatial.same_grid(second, compare_crs=not args.no_compare_crs))
     if args.json:
         print(json.dumps({"same_grid": same}))
     else:

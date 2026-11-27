@@ -1020,7 +1020,7 @@ class _Analysis(_Engine["Dataset"]):
             self._ds._update_inplace(dst_obj.raster)
             # The values are physical now, so the recipe is spent (rule 2).
             self._ds._spend_packing()
-            return None
+            return self._ds
         return dst_obj
 
     def _domain_read(self, band: int, **read_kwargs) -> tuple[Any, Any]:
@@ -1719,7 +1719,7 @@ class _Analysis(_Engine["Dataset"]):
             raise ValueError("calc supports at most 26 input rasters (bound A..Z).")
         template = self._ds
         for other in others:
-            if not template.same_grid(other, compare_crs=bool(other.crs)):
+            if not template.spatial.same_grid(other, compare_crs=bool(other.crs)):
                 raise AlignmentError(
                     "a calc operand does not share this dataset's grid; align the "
                     "inputs first (Dataset.align) and re-run."
@@ -2444,7 +2444,7 @@ class _Analysis(_Engine["Dataset"]):
             self._ds._update_inplace(dst.raster)
             # The fill wrote physical values, so the recipe is spent (rule 2).
             self._ds._spend_packing()
-            return None
+            return self._ds
         return dst
 
     def where(

@@ -3113,7 +3113,7 @@ class _IO(_Engine["Dataset"]):
                 result = self._repack(
                     result, out_scale, out_offset, out_dtype, sentinels
                 )
-            out.write_array(
+            out.io.write_array(
                 self._restore_gap(result, domain, sentinels),
                 band=band,
                 window=Window(xoff, yoff, xsize, ysize),
@@ -5063,9 +5063,9 @@ class _IO(_Engine["Dataset"]):
         scale = self._ds.bands.scale
         offset = self._ds.bands.offset
         overview.band_names = [band_names[index] for index in selection]
-        overview.band_units = [band_units[index] for index in selection]
-        overview.scale = [scale[index] for index in selection]
-        overview.offset = [offset[index] for index in selection]
+        overview.bands.band_units = [band_units[index] for index in selection]
+        overview.bands.scale = [scale[index] for index in selection]
+        overview.bands.offset = [offset[index] for index in selection]
         for position, index in enumerate(selection):
             source_band = self._ds._iloc(index)
             target_band = overview._iloc(position)

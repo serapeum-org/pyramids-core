@@ -159,7 +159,7 @@ def _cmd_mesh_to_dataset(args: argparse.Namespace) -> int:
             epsg=args.epsg,
             nodata=args.nodata,
         )
-    grid.to_file(args.output)
+    grid.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

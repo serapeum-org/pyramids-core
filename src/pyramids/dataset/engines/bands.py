@@ -137,7 +137,7 @@ class _Bands(_Engine["Dataset"]):
             no_data_value=list(no_data),
             geo_ref=GeoReference(geo=ds.geotransform, epsg=crs_spec(ds.epsg, ds.crs)),
         )
-        result.band_units = new_units
+        result.bands.band_units = new_units
         return result
 
     """Mixin providing band metadata, attribute table, and color table operations."""
@@ -596,7 +596,7 @@ class _Bands(_Engine["Dataset"]):
 
         if inplace:
             self._ds._update_inplace(src, self._ds.access)
-            return None
+            return self._ds
         else:
             return self._ds.__class__(src, self._ds.access)
 
@@ -2133,7 +2133,7 @@ class _Bands(_Engine["Dataset"]):
 
         if inplace:
             self._ds._update_inplace(new_dataset.raster)
-            return None
+            return self._ds
         return new_dataset
 
     def _swap_no_data_tiled(

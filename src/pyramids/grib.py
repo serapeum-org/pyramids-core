@@ -650,7 +650,7 @@ def grib_to_cog(
         )
         result = cast(
             Path,
-            dataset.to_cog(
+            dataset.cog.to_cog(
                 output,
                 compression=cog_profile,
                 bands=BandSelection(indexes=[band_index]),

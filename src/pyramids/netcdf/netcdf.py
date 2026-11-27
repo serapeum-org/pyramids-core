@@ -1769,7 +1769,7 @@ def _variable_summary(nc: NetCDF) -> str:
         bands += f" along {band_axis}"
     lines.append(bands)
 
-    units = _collapse_uniform(nc.band_units)
+    units = _collapse_uniform(nc.bands.band_units)
     if units:
         lines.append(f"  units   : {units}")
     dtype = _collapse_uniform(nc.dtype)
@@ -5284,12 +5284,12 @@ class NetCDF(Dataset):
     def slope(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.slope`."""
         self._check_not_container("slope")
-        return super().slope(*args, **kwargs)
+        return self.terrain.slope(*args, **kwargs)
 
     def hillshade(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.hillshade`."""
         self._check_not_container("hillshade")
-        return super().hillshade(*args, **kwargs)
+        return self.terrain.hillshade(*args, **kwargs)
 
     def write_array(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.write_array`."""
@@ -5304,17 +5304,17 @@ class NetCDF(Dataset):
     def to_geodataframe(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.to_geodataframe`."""
         self._check_not_container("to_geodataframe")
-        return super().to_geodataframe(*args, **kwargs)
+        return self.vector.to_geodataframe(*args, **kwargs)
 
     def zonal_stats(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.zonal_stats`."""
         self._check_not_container("zonal_stats")
-        return super().zonal_stats(*args, **kwargs)
+        return self.analysis.zonal_stats(*args, **kwargs)
 
     def sample(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.sample`."""
         self._check_not_container("sample")
-        return super().sample(*args, **kwargs)
+        return self.analysis.sample(*args, **kwargs)
 
     # NetCDF intentionally exposes a richer, variable/selector-oriented plot
     # signature than the band-oriented Dataset/RasterBase one; the override
@@ -6546,7 +6546,7 @@ class NetCDF(Dataset):
         Raises:
             ReadOnlyError: The variable is a read-only on-disk file.
         """
-        Dataset.scale.fset(self, value)  # type: ignore[attr-defined]
+        self.bands.scale = value
         if self._scale is not None or self._offset is not None:
             self._scale = float(value[0])
 
@@ -7329,7 +7329,7 @@ class NetCDF(Dataset):
                 # `result` is the private container the fan-out built; nothing else
                 # references its raster yet, so carry each aux var in place (copy=False)
                 # to avoid a full MEM copy per aux variable (#143).
-                result.add_variable(self, var_name, copy=False)
+                result.variables.add(self, var_name, copy=False)
             except (RuntimeError, TypeError, ValueError) as exc:
                 # `TypeError` too: a string array with a NULL entry reads back
                 # with `None` in it, and writing that list raises "sequence must
@@ -7972,7 +7972,7 @@ class NetCDF(Dataset):
                 # `result` is a private container built by this fan-out; nothing else
                 # references its raster yet, so mutate it in place (copy=False) to avoid
                 # an O(n^2) per-variable MEM copy on wide cubes (#143).
-                result.set_variable(var_name, ds, copy=False)
+                result.variables.set(var_name, ds, copy=False)
                 # `set_variable` carries `_variable_attrs` but not the packing
                 # slots, which GDAL keeps outside the attribute dictionary.
                 NetCDF._carry_variable_attrs(result, var_name, var)
@@ -8945,7 +8945,7 @@ class NetCDF(Dataset):
             # band dimensions this variable owns and the first did not — a `merge` of a
             # time cube with a level cube creates `level` here, and without this its CF
             # units would live only in memory and die at `to_file` (#1179).
-            result.set_variable(var_name, ds, copy=False, dim_attrs=dim_attrs)
+            result.variables.set(var_name, ds, copy=False, dim_attrs=dim_attrs)
         return result
 
     def to_crs(
@@ -9078,7 +9078,7 @@ class NetCDF(Dataset):
         # (arrayStartIdx), and a geostationary view carries a raw scan-angle geotransform. Materialize
         # first so the warp sees a plain MEM raster with the corrected geotransform.
         self._materialize_md_view()
-        pinned = super().warped_view(crs, method, cell_size=cell_size, bbox=bbox)
+        pinned = self.spatial.warped_view(crs, method, cell_size=cell_size, bbox=bbox)
         result = self._preserve_netcdf_metadata(pinned)
         # `Spatial.warped_view` builds the view through `self._ds.__class__`, so
         # `pinned` is already a NetCDF and `_preserve_netcdf_metadata` returns it
@@ -12693,7 +12693,7 @@ class NetCDF(Dataset):
 
               ```
         """
-        return super().combine(other, func, band=band, no_data_value=no_data_value)
+        return self.analysis.combine(other, func, band=band, no_data_value=no_data_value)
 
     def _combine_layout_source(
         self, other: Any, band: int | None
@@ -14651,7 +14651,7 @@ class NetCDF(Dataset):
         """
         var = self._require_raster_variable(variable_name)
         cropped = var.crop(mask, touch=touch)
-        self.set_variable(variable_name, cropped)
+        self.variables.set(variable_name, cropped)
         return self
 
     def reproject_variable(
@@ -14735,7 +14735,7 @@ class NetCDF(Dataset):
         carry_packing(reprojected.raster, materialized.raster)
         NetCDF._copy_band_dim_metadata(materialized, var)
         materialized._variable_attrs = var._variable_attrs
-        self.set_variable(variable_name, materialized)
+        self.variables.set(variable_name, materialized)
         return self
 
     def resample_variable(
@@ -14760,7 +14760,7 @@ class NetCDF(Dataset):
         """
         var = self._require_raster_variable(variable_name)
         resampled = var.resample(cell_size, method=method)
-        self.set_variable(variable_name, resampled)
+        self.variables.set(variable_name, resampled)
         return self
 
     def add_variable(self, *args, **kwargs):

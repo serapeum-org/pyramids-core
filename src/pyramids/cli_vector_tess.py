@@ -371,7 +371,7 @@ def _cmd_vector_interpolate_to_raster(args: argparse.Namespace) -> int:
             n_neighbors=args.n_neighbors,
             nodata=args.nodata,
         )
-    surface.to_file(args.output)
+    surface.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

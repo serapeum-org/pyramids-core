@@ -674,7 +674,7 @@ def _agree_on_one_sentinel(datasets: list[Dataset]) -> None:
         # read matched no sentinel (so the reconciliation silently did nothing) and
         # then rounded the physical values into the stored band, destroying the
         # counts of every packed timestep it touched.
-        arrays = [np.asarray(ds.read_array(band=band, unpack=False)) for ds in datasets]
+        arrays = [np.asarray(ds.io.read_array(band=band, unpack=False)) for ds in datasets]
         # Judged against real observations only: each step's own fill cells are
         # the thing being replaced, so counting them would rule out every
         # candidate already in use and force a needless third value.
@@ -695,7 +695,7 @@ def _agree_on_one_sentinel(datasets: list[Dataset]) -> None:
             )
         for dataset, array, fill in zip(datasets, arrays, fills, strict=True):
             array[is_stored_no_data(array, fill)] = agreed
-            dataset.write_array(array, band=band)
+            dataset.io.write_array(array, band=band)
             dataset.bands._change_no_data_value_attr(band, dtype.type(agreed))
 
 
@@ -3290,7 +3290,7 @@ class DatasetCollection:
         # __getitem__ stub returns Any for a general index.
         if isinstance(key, numbers.Integral):
             return cast(
-                np.typing.NDArray, self._dataset_at(int(key)).read_array(band=0)
+                np.typing.NDArray, self._dataset_at(int(key)).io.read_array(band=0)
             )
         return cast(np.typing.NDArray, self.values[key])
 
@@ -3344,7 +3344,7 @@ class DatasetCollection:
         iteration (e.g. ``next(iter(dc))``) reads a single file, not all N.
         """
         for i in range(self._time_length):
-            yield self._dataset_at(i).read_array(band=0)
+            yield self._dataset_at(i).io.read_array(band=0)
 
     def _stack_timesteps(
         self, datasets: list[Dataset], band: int | None = 0
@@ -3407,7 +3407,7 @@ class DatasetCollection:
             ):
                 empty_dtype = np.dtype("float64")
             return np.empty(shape, dtype=empty_dtype)
-        return np.stack([ds.read_array(band=band) for ds in datasets], axis=0)
+        return np.stack([ds.io.read_array(band=band) for ds in datasets], axis=0)
 
     def head(self, n: int = 5) -> np.typing.NDArray:
         """First ``n`` timestep arrays as a 3D numpy slice.
@@ -4122,7 +4122,7 @@ class DatasetCollection:
             # builds path[i] with `driver`'s extension, so `driver` is still honored there;
             # an explicit path list keeps its old per-path extension semantics (e.g. a
             # list of .asc paths writes ASCII even though the default driver is geotiff).
-            self.iloc(i).to_file(path[i], band=band, reopen=False)
+            self.iloc(i).io.to_file(path[i], band=band, reopen=False)
 
     def to_cog_stack(
         self,
@@ -4212,7 +4212,7 @@ class DatasetCollection:
                     f"{target} exists; pass overwrite=True to replace."
                 )
             slice_ds = self.iloc(i)
-            slice_ds.to_cog(target, **cog_kwargs)
+            slice_ds.cog.to_cog(target, **cog_kwargs)
             paths.append(target)
         return paths
 
@@ -4841,7 +4841,7 @@ class DatasetCollection:
         )
         values: dict[Any, list[float]] = {}
         for ds in self.datasets:
-            gdf = ds.zonal_stats(
+            gdf = ds.analysis.zonal_stats(
                 classes_map,
                 stats=("count",),
                 exclude_value=exclude_value,

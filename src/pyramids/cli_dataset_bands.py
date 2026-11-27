@@ -57,7 +57,7 @@ def _write_mask_raster(template: Dataset, mask: np.ndarray, output: str) -> None
             geo=template.geotransform, epsg=crs_spec(template.epsg, template.crs)
         ),
         no_data_value=None,
-    ).to_file(output)
+    ).io.to_file(output)
 
 
 def _cmd_add_band(args: argparse.Namespace) -> int:
@@ -73,9 +73,9 @@ def _cmd_add_band(args: argparse.Namespace) -> int:
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     source = Dataset.read_file(args.source)
-    array = np.asarray(source.read_array(band=args.source_band))
-    out = ds.add_band(array, unit=args.unit, inplace=False)
-    out.to_file(args.output)
+    array = np.asarray(source.io.read_array(band=args.source_band))
+    out = ds.bands.add_band(array, unit=args.unit, inplace=False)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -95,8 +95,8 @@ def _cmd_select_bands(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    out = ds.select_bands(list(args.bands))
-    out.to_file(args.output)
+    out = ds.bands.select(list(args.bands))
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -114,7 +114,7 @@ def _cmd_get_band_by_color(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file)
-    band = ds.get_band_by_color(args.color)
+    band = ds.bands.get_band_by_color(args.color)
     if args.json:
         print(json.dumps(json_sanitize({"color": args.color, "band": band})))
     else:
@@ -135,8 +135,8 @@ def _cmd_create_mask_band(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     working = Dataset.read_file(args.input).copy()
-    working.create_mask_band(per_dataset=not args.per_band)
-    working.to_file(args.output)
+    working.analysis.create_mask_band(per_dataset=not args.per_band)
+    working.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -158,7 +158,7 @@ def _cmd_read_masks(args: argparse.Namespace) -> int:
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     with map_lookup_errors():
-        mask = ds.read_masks(band=args.band)
+        mask = ds.analysis.read_masks(band=args.band)
     _write_mask_raster(ds, mask, args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -177,7 +177,7 @@ def _cmd_get_mask(args: argparse.Namespace) -> int:
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     with map_lookup_errors():
-        mask = ds.get_mask(band=args.band)
+        mask = ds.analysis.get_mask(band=args.band)
     _write_mask_raster(ds, mask, args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -200,7 +200,7 @@ def _cmd_set_color_ramp(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     working = Dataset.read_file(args.input).copy()
-    working.set_color_ramp(
+    working.glyph.set_color_ramp(
         band=args.band,
         start_value=args.start_value,
         end_value=args.end_value,
@@ -208,7 +208,7 @@ def _cmd_set_color_ramp(args: argparse.Namespace) -> int:
         end_color=args.end_color,
         colormap=args.colormap,
     )
-    working.to_file(args.output)
+    working.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -240,8 +240,8 @@ def _cmd_set_rpcs(args: argparse.Namespace) -> int:
             f"keys to values, not a {type(rpc).__name__}."
         )
     working = Dataset.read_file(args.input).copy()
-    working.set_rpcs(rpc)
-    working.to_file(args.output)
+    working.georef.set_rpcs(rpc)
+    working.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -265,10 +265,10 @@ def _cmd_geolocate(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    out = ds.geolocate(
+    out = ds.georef.geolocate(
         to_epsg=args.to_crs, method=args.resampling, cell_size=args.cell_size
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

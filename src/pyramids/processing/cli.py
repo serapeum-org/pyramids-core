@@ -129,7 +129,7 @@ def _cmd_apply(args: argparse.Namespace) -> int:
     params = _parse_set(tool, args.set)
     pipeline = Pipeline([(args.name, params)])  # schema-validates the parameters
     result = run(pipeline, [args.input], on_error="raise")
-    result.outputs[0].to_file(args.output)
+    result.outputs[0].io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

@@ -296,7 +296,7 @@ def _write_cog(
     cog_kwargs: dict[str, Any] = {"extra": creation_options}
     if tile_length is not None:
         cog_kwargs["layout"] = Layout(blocksize=tile_length)
-    ds.to_cog(path, **cog_kwargs)
+    ds.cog.to_cog(path, **cog_kwargs)
 
 
 @cache

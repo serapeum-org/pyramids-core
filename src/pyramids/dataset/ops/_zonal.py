@@ -168,7 +168,7 @@ def _label_geometries(
     label_ds.SetGeoTransform(ds.geotransform)
     label_ds.SetProjection(ds.raster.GetProjection())
     label_ds.GetRasterBand(1).WriteArray(shifted)
-    polygons = _Dataset(label_ds).to_polygons()
+    polygons = _Dataset(label_ds).vector.to_polygons()
     label_ds = None
 
     value_col = next(

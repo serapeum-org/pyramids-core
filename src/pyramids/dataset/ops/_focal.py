@@ -345,7 +345,7 @@ def focal_std(
     # read, computed ONCE (not per block, or each lazy block would subtract a different
     # constant); 0.0 when stats are unavailable, which is exactly the pre-shift behaviour.
     try:
-        shift = float(ds.stats(band=band, approx_ok=True)["mean"].iloc[0])
+        shift = float(ds.analysis.stats(band=band, approx_ok=True)["mean"].iloc[0])
     except Exception:  # nosec B110 - stats are an optimisation; 0.0 is a valid shift
         shift = 0.0
     if not np.isfinite(shift):

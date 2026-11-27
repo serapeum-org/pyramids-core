@@ -220,7 +220,7 @@ def _write(obj: Any, source: Any, out_dir: str, index: int) -> str:
         stem = "output"
     suffix = ".geojson" if _object_type(obj) == "FeatureCollection" else ".tif"
     path = os.path.join(out_dir, f"{stem}_{index}{suffix}")
-    obj.to_file(path)
+    obj.io.to_file(path)
     return path
 
 
