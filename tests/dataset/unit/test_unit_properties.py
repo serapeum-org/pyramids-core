@@ -346,9 +346,9 @@ class TestBandFamilyEngineFacades:
     def test_band_units_facade_matches_engine(self, multi_band_dataset):
         """Dataset.band_units delegates to Bands.band_units in both directions."""
         multi_band_dataset.bands.band_units = ["m", "kg", "s"]
-        assert (
-            multi_band_dataset.bands.band_units == multi_band_dataset.bands.band_units
-        ), "band_units facade and engine disagree"
+        assert multi_band_dataset.band_units == multi_band_dataset.bands.band_units, (
+            "band_units facade and engine disagree"
+        )
         multi_band_dataset.bands.band_units = ["a", "b", "c"]
         assert multi_band_dataset.bands.band_units == ["a", "b", "c"], (
             "setting via the engine is not visible on the facade"
@@ -358,10 +358,10 @@ class TestBandFamilyEngineFacades:
         """Dataset.scale/offset delegate to Bands.scale/offset."""
         multi_band_dataset.bands.scale = [0.1, 0.2, 0.3]
         multi_band_dataset.bands.offset = [1.0, 2.0, 3.0]
-        assert multi_band_dataset.bands.scale == multi_band_dataset.bands.scale, (
+        assert multi_band_dataset.scale == multi_band_dataset.bands.scale, (
             "scale facade and engine disagree"
         )
-        assert multi_band_dataset.bands.offset == multi_band_dataset.bands.offset, (
+        assert multi_band_dataset.offset == multi_band_dataset.bands.offset, (
             "offset facade and engine disagree"
         )
 

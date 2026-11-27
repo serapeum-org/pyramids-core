@@ -62,7 +62,7 @@ def test_match_histogram_facade_matches_engine(scene_pair: tuple[Dataset, Datase
     """The Dataset facade and the engine method produce identical pixels."""
     reference, target = scene_pair
     np.testing.assert_array_equal(
-        target.analysis.match_histogram(reference).io.read_array(),
+        target.match_histogram(reference).io.read_array(),
         target.analysis.match_histogram(reference).io.read_array(),
     )
 

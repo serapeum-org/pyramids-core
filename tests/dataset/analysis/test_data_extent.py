@@ -173,7 +173,7 @@ class TestBandSelectionAndTheFacade:
         values = np.full((4, 4), -9999.0, dtype="float32")
         values[1:3, 1:3] = 5.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.analysis.data_extent(), ds.analysis.data_extent())
+        assert np.array_equal(ds.data_extent(), ds.analysis.data_extent())
 
     def test_a_band_index_the_dataset_lacks_is_refused(self):
         """An out-of-range band raises `ValueError`, naming neither tuple nor index."""

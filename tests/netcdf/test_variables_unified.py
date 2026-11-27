@@ -30,7 +30,7 @@ def test_varops_alias_warns_and_returns_the_internal_engine(nc: NetCDF):
     with pytest.warns(DeprecationWarning, match=r"`nc.varops`.*`nc.variables`"):
         alias = nc.varops
     assert isinstance(alias, _Variables)
-    assert isinstance(alias, _Variables) and alias._ds is nc
+    assert alias._ds is nc
 
 
 def test_item_assignment_is_still_refused(nc: NetCDF):

@@ -295,7 +295,7 @@ class TestToBytes:
         Test scenario:
             The facade is a pure delegation of the engine method.
         """
-        assert ramp_dataset.io.to_bytes() == ramp_dataset.io.to_bytes(), (
+        assert ramp_dataset.to_bytes() == ramp_dataset.io.to_bytes(), (
             "facade and engine outputs differ"
         )
 

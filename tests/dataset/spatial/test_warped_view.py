@@ -185,7 +185,7 @@ class TestWarpedView:
 
     def test_facade_delegates(self, src_dataset):
         """Dataset.warped_view delegates to the spatial engine."""
-        via_facade = src_dataset.spatial.warped_view(3857)
+        via_facade = src_dataset.warped_view(3857)
         via_engine = src_dataset.spatial.warped_view(3857)
         np.testing.assert_allclose(
             via_facade.io.read_array(),

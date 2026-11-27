@@ -115,7 +115,7 @@ def test_pan_sharpen_resampling_changes_the_output(
 
 def test_pan_sharpen_facade_matches_engine(multispectral: Dataset, pan: Dataset):
     """The Dataset facade and the engine method produce identical pixels."""
-    via_facade = multispectral.analysis.pan_sharpen(pan).io.read_array()
+    via_facade = multispectral.pan_sharpen(pan).io.read_array()
     via_engine = multispectral.analysis.pan_sharpen(pan).io.read_array()
     np.testing.assert_array_equal(via_facade, via_engine)
 

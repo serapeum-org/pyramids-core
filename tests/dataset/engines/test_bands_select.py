@@ -67,7 +67,7 @@ class TestSelect:
 
     def test_facade_parity(self, rich):
         """`Dataset.select_bands` mirrors `Dataset.bands.select`."""
-        a = rich.bands.select([1, 2]).band_names
+        a = rich.select_bands([1, 2]).band_names
         b = rich.bands.select([1, 2]).band_names
         assert a == b == ["a", "b"]
 

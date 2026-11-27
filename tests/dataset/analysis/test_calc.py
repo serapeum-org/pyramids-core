@@ -94,7 +94,7 @@ class TestCalc:
         ds = _ds([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         sentinel = object()
         spy = mocker.patch.object(_Analysis, "calc", return_value=sentinel)
-        result = ds.analysis.calc("A + 1", dtype="int16")
+        result = ds.calc("A + 1", dtype="int16")
         assert result is sentinel
         spy.assert_called_once_with("A + 1", dtype="int16")
 

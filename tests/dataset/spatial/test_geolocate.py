@@ -101,10 +101,7 @@ class TestGeolocate:
     def test_facade_parity(self, tmp_path):
         """`ds.geolocate` mirrors `ds.georef.geolocate`."""
         ds = _make_geoloc_dataset(tmp_path)
-        assert (
-            ds.georef.geolocate(to_epsg=4326).epsg
-            == ds.georef.geolocate(to_epsg=4326).epsg
-        )
+        assert ds.geolocate(to_epsg=4326).epsg == ds.georef.geolocate(to_epsg=4326).epsg
 
     def test_no_domain_raises(self):
         """geolocate on a plain raster raises GeolocationArrayError."""

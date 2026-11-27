@@ -29,19 +29,19 @@ def test_accessor_is_a_terrain_engine(dem: Dataset):
 
 def test_slope_accessor_matches_flat_facade(dem: Dataset):
     np.testing.assert_array_equal(
-        np.asarray(dem.terrain.slope()), np.asarray(dem.terrain.slope())
+        np.asarray(dem.slope()), np.asarray(dem.terrain.slope())
     )
 
 
 def test_aspect_accessor_matches_flat_facade(dem: Dataset):
     np.testing.assert_array_equal(
-        np.asarray(dem.terrain.aspect()), np.asarray(dem.terrain.aspect())
+        np.asarray(dem.aspect()), np.asarray(dem.terrain.aspect())
     )
 
 
 def test_hillshade_accessor_matches_flat_facade(dem: Dataset):
     np.testing.assert_array_equal(
-        np.asarray(dem.terrain.hillshade(azimuth=300.0, altitude=40.0)),
+        np.asarray(dem.hillshade(azimuth=300.0, altitude=40.0)),
         np.asarray(dem.terrain.hillshade(azimuth=300.0, altitude=40.0)),
     )
 
