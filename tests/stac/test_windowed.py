@@ -15,6 +15,7 @@ from shapely.geometry import LineString, Point, Polygon
 
 from pyramids.base._errors import OutOfBoundsError, UnsupportedAssetError
 from pyramids.dataset import Dataset
+from pyramids.dataset.engines.cog import _COG
 from pyramids.stac import _windowed
 from pyramids.stac._windowed import (
     STAC_WINDOW_CRS,
@@ -104,7 +105,7 @@ def delegated(monkeypatch):
         return wrapper
 
     for name in ("read_part", "preview", "point"):
-        monkeypatch.setattr(Dataset, name, recorder(name, getattr(Dataset, name)))
+        monkeypatch.setattr(_COG, name, recorder(name, getattr(_COG, name)))
     return calls
 
 

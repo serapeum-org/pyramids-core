@@ -520,7 +520,7 @@ class _Bands(_Engine["Dataset"]):
             - Add the new band to the dataset inplace:
 
               ```python
-              >>> dataset.add_band(array, unit="m", attribute_table=None, inplace=True)
+              >>> _ = dataset.bands.add_band(array, unit="m", attribute_table=None, inplace=True)
               >>> print(dataset)  # doctest: +NORMALIZE_WHITESPACE
               <BLANKLINE>
                           Top Left Corner: (0.0, 0.0)
@@ -551,7 +551,7 @@ class _Bands(_Engine["Dataset"]):
               ...     "Color": ["#008000", "#0000FF", "#808080"],
               ... }
               >>> df = pd.DataFrame(data)
-              >>> dataset.add_band(array, unit="m", attribute_table=df, inplace=True)
+              >>> _ = dataset.bands.add_band(array, unit="m", attribute_table=df, inplace=True)
 
               ```
 
