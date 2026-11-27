@@ -124,7 +124,7 @@ def _cmd_mesh_to_dataframe(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     variables = args.variables if args.variables else None
     with map_lookup_errors():
-        df = mesh.to_dataframe(variables=variables, dropna=args.dropna)
+        df = mesh.interop.to_dataframe(variables=variables, dropna=args.dropna)
     if args.output.lower().endswith(".parquet"):
         with needs_parquet_extra():
             df.to_parquet(args.output)

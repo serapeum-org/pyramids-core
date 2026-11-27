@@ -168,7 +168,7 @@ class TestUnreadableVariable:
 
     def test_the_tidy_frame_skips_it_and_keeps_the_columns(self, unreadable):
         """With nothing readable to tabulate the frame is empty but still correctly shaped."""
-        frame = unreadable.to_dataframe()
+        frame = unreadable.interop.to_dataframe()
         assert len(frame) == 0
         assert list(frame.columns) == [
             "variable",
@@ -370,7 +370,7 @@ class TestLayerCoordinates:
 class TestToDataFrameCoordinates:
     def test_an_empty_selection_returns_the_column_skeleton(self, mesh):
         """Asking for no variables answers an empty frame with the documented columns."""
-        frame = mesh.to_dataframe(variables=[])
+        frame = mesh.interop.to_dataframe(variables=[])
         assert len(frame) == 0
         assert list(frame.columns) == [
             "variable",
@@ -385,7 +385,7 @@ class TestToDataFrameCoordinates:
     def test_an_edge_variable_without_edge_coordinates_gets_nan_coordinates(self, mesh):
         """A mesh with no edge centres cannot address edge rows, so their coordinates are NaN."""
         edgy = mesh.with_variable("e", np.array([1.0, 2.0, 3.0]), location="edge")
-        frame = edgy.to_dataframe(variables=["e"])
+        frame = edgy.interop.to_dataframe(variables=["e"])
         assert len(frame) == 3
         assert frame["x"].isna().all()
         assert frame["value"].tolist() == [1.0, 2.0, 3.0]

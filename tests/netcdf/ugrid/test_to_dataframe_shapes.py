@@ -46,19 +46,19 @@ def layered() -> MeshDataset:
 
 class TestNodeLocatedVariables:
     def test_the_coordinates_are_the_node_coordinates(self, node_variable):
-        frame = node_variable.to_dataframe()
+        frame = node_variable.interop.to_dataframe()
         assert frame["x"].tolist() == NODE_X.tolist()
         assert frame["y"].tolist() == NODE_Y.tolist()
 
     def test_there_is_one_row_per_node(self, node_variable):
-        assert len(node_variable.to_dataframe()) == 4
+        assert len(node_variable.interop.to_dataframe()) == 4
 
     def test_the_element_index_runs_over_the_nodes(self, node_variable):
-        assert node_variable.to_dataframe()["element"].tolist() == [0, 1, 2, 3]
+        assert node_variable.interop.to_dataframe()["element"].tolist() == [0, 1, 2, 3]
 
     def test_a_face_variable_still_uses_centroids(self):
         dataset = _dataset({"v": np.array([10.0, 20.0])}, {"v": "face"})
-        frame = dataset.to_dataframe()
+        frame = dataset.interop.to_dataframe()
         centre_x, centre_y = dataset.mesh.face_centroids
         assert frame["x"].tolist() == pytest.approx(list(centre_x))
         assert frame["y"].tolist() == pytest.approx(list(centre_y))
@@ -66,30 +66,30 @@ class TestNodeLocatedVariables:
 
 class TestLayeredVariables:
     def test_the_element_index_stays_within_the_faces(self, layered):
-        frame = layered.to_dataframe()
+        frame = layered.interop.to_dataframe()
         assert sorted(set(frame["element"].tolist())) == [0, 1]
 
     def test_a_layer_column_identifies_the_layer(self, layered):
-        frame = layered.to_dataframe()
+        frame = layered.interop.to_dataframe()
         assert sorted(set(frame["layer"].tolist())) == [0, 1, 2]
 
     def test_every_layer_element_pair_appears_once(self, layered):
-        frame = layered.to_dataframe()
+        frame = layered.interop.to_dataframe()
         pairs = sorted(zip(frame["layer"].tolist(), frame["element"].tolist()))
         assert pairs == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
 
     def test_the_values_follow_their_layer(self, layered):
-        frame = layered.to_dataframe()
+        frame = layered.interop.to_dataframe()
         row = frame[(frame["layer"] == 1) & (frame["element"] == 0)]
         assert row["value"].tolist() == [2.0]
 
     def test_the_coordinates_repeat_per_layer(self, layered):
-        frame = layered.to_dataframe()
+        frame = layered.interop.to_dataframe()
         assert frame["x"].notna().all()
 
     def test_an_unlayered_variable_has_no_layer_label(self):
         dataset = _dataset({"v": np.array([10.0, 20.0])}, {"v": "face"})
-        frame = dataset.to_dataframe()
+        frame = dataset.interop.to_dataframe()
         assert frame["layer"].isna().all()
 
 
@@ -97,11 +97,11 @@ class TestTemporalAndLayered:
     def test_both_axes_are_labelled(self):
         dataset = _dataset({"v": np.zeros((2, 3, 2))}, {"v": "face"})
         dataset["v"].dimensions = ("time", "mesh2d_nLayers", "mesh2d_nFaces")
-        frame = dataset.to_dataframe()
+        frame = dataset.interop.to_dataframe()
         assert len(frame) == 12
         assert sorted(set(frame["layer"].tolist())) == [0, 1, 2]
         assert sorted(set(frame["time"].tolist())) == [0, 1]
 
     def test_dropna_still_drops(self):
         dataset = _dataset({"v": np.array([np.nan, 20.0])}, {"v": "face"})
-        assert len(dataset.to_dataframe(dropna=True)) == 1
+        assert len(dataset.interop.to_dataframe(dropna=True)) == 1

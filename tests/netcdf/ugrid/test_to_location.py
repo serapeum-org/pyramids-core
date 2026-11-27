@@ -46,7 +46,7 @@ class TestDimensionNamesFollowTheLocation:
 
     def test_the_export_no_longer_conflicts(self, face_variable):
         pytest.importorskip("xarray")
-        exported = face_variable.to_location("node").to_xarray()
+        exported = face_variable.to_location("node").interop.to_xarray()
         assert exported["v"].shape == (4,)
 
     def test_remapping_to_edges_renames_too(self, face_variable):

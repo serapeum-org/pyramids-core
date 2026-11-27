@@ -88,7 +88,7 @@ class TestTidyFrameAxisCollisions:
             element reading wins, so there is no step axis to walk and the frame carries one
             row per face rather than per step.
         """
-        frame = self._with_dims(np.array([5.0, 6.0]), ("time",)).to_dataframe(
+        frame = self._with_dims(np.array([5.0, 6.0]), ("time",)).interop.to_dataframe(
             variables=["v"]
         )
 
@@ -98,9 +98,9 @@ class TestTidyFrameAxisCollisions:
 
     def test_a_layer_named_element_axis_is_read_as_elements(self):
         """The same collision for the layer axis."""
-        frame = self._with_dims(np.array([5.0, 6.0]), ("mesh2d_nLayers",)).to_dataframe(
-            variables=["v"]
-        )
+        frame = self._with_dims(
+            np.array([5.0, 6.0]), ("mesh2d_nLayers",)
+        ).interop.to_dataframe(variables=["v"])
 
         assert len(frame) == 2
         assert sorted(frame["element"].tolist()) == [0, 1]

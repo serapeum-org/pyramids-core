@@ -74,7 +74,6 @@ from pyramids.base._reductions import (
     window_positions,
 )
 from pyramids.base._summary import DEFAULT_METRICS, variable_summary
-from pyramids.base._utils import import_dask, require_optional
 from pyramids.base.crs import (
     crs_from_user_input,
     crs_spec,
@@ -106,6 +105,7 @@ from pyramids.netcdf.ugrid._drivers import (
 )
 from pyramids.netcdf.ugrid._facades import _axis_distances, _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
+from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
 from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
@@ -538,6 +538,11 @@ class MeshDataset(_MeshFacades):
     def terrain(self) -> _MeshTerrain:
         """Terrain engine: DEM derivatives -- slope, aspect, hillshade (``mesh.terrain``)."""
         return _MeshTerrain(self)
+
+    @property
+    def interop(self) -> _MeshInterop:
+        """Interop engine: ``to_xarray`` / ``to_dataframe`` / ``to_dask_dataframe`` (``mesh.interop``)."""
+        return _MeshInterop(self)
 
     @property
     def variable_names(self) -> list[str]:
@@ -3065,54 +3070,14 @@ class MeshDataset(_MeshFacades):
     def to_dataframe(
         self, variables: Sequence[str] | None = None, *, dropna: bool = False
     ) -> pd.DataFrame:
-        """A tidy frame of the mesh values, one row per element (and step).
-
-        The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.to_dataframe`, in the **tidy**
-        shape rather than the raster ``(y, x)`` MultiIndex one: an unstructured element has no
-        row/column address, so each row carries the element index, its centroid coordinates,
-        the time step where the variable has one, and the value.
-
-        Args:
-            variables: Which data variables to include. ``None`` (the default) takes them all.
-            dropna: Drop rows whose value is no-data. Defaults to False.
-
-        Returns:
-            pandas.DataFrame: Columns ``variable``, ``element``, ``x``, ``y``, ``layer``,
-            ``time`` and ``value``. ``element`` indexes the facet the variable sits on and
-            ``x``/``y`` are that facet's coordinates, so a node variable is addressed by node.
-            ``layer`` is the layer coordinate, or None for an unlayered variable, and ``time``
-            the step coordinate, or None for a static one.
-
-        Raises:
-            KeyError: A requested variable is not a data variable of this dataset.
-        """
-        names = list(self._data_variables) if variables is None else list(variables)
-        frames: list[pd.DataFrame] = []
-        for name in names:
-            if name not in self._data_variables:
-                raise KeyError(name)
-            var = self._data_variables[name]
-            if var.data is None:
-                continue
-            frames.extend(self._variable_frames(name, var))
-        if not frames:
-            # Match the populated frame's dtypes, so a caller that concatenates or
-            # dtype-checks sees one schema either way.
-            return pd.DataFrame(
-                {
-                    "variable": pd.Series(dtype="str"),
-                    "element": pd.Series(dtype="int64"),
-                    "x": pd.Series(dtype="float64"),
-                    "y": pd.Series(dtype="float64"),
-                    "layer": pd.Series(dtype="object"),
-                    "time": pd.Series(dtype="object"),
-                    "value": pd.Series(dtype="float64"),
-                }
-            )
-        frame = pd.concat(frames, ignore_index=True)
-        if dropna:
-            frame = frame[~frame["value"].isna()].reset_index(drop=True)
-        return frame
+        """Facade -- delegates to :meth:`_MeshInterop.to_dataframe`."""
+        warnings.warn(
+            "`mesh.to_dataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.interop.to_dataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.interop.to_dataframe(variables, dropna=dropna)
 
     def _variable_frames(self, name: str, var: MeshVariable) -> list[pd.DataFrame]:
         """One tidy block per (time step, layer) of a single variable.
@@ -5263,50 +5228,16 @@ class MeshDataset(_MeshFacades):
         dropna: bool = False,
         npartitions: int = 1,
     ) -> Any:
-        """Hand the mesh to dask in tidy form — the lazy sibling of :meth:`to_dataframe`.
-
-        The mesh's own frame is already tidy (one row per element and step), so this is the
-        same shape wrapped in a dask dataframe rather than a different layout.
-
-        **What is and is not deferred:** a mesh's values live in memory, not in a per-element
-        chunked store, so there is nothing to stream and the frame is built then partitioned.
-        The result is a real dask graph — it composes with the rest of a dask pipeline and
-        computes lazily from here on — but it does not reduce the peak memory of building it.
-        That is the same thing :meth:`NetCDF.to_dask_dataframe` does for a cube with no
-        on-disk store.
-
-        Args:
-            variables: Which data variables to include. ``None`` (default) takes them all.
-            dropna: Drop rows whose value is no-data. Defaults to False.
-            npartitions: How many partitions to split the frame into. Defaults to 1.
-
-        Returns:
-            dask.dataframe.DataFrame: The tidy frame as a dask dataframe.
-
-        Raises:
-            ImportError: dask (the ``lazy`` extra) or ``dask.dataframe`` (which needs pyarrow,
-                the ``parquet`` extra) is not installed.
-            ValueError: ``npartitions`` is below 1, or a named variable does not exist.
-
-        See Also:
-            to_dataframe: The eager pandas frame this wraps.
-        """
-        if npartitions < 1:
-            raise ValueError(
-                f"to_dask_dataframe() got npartitions={npartitions}; it must be at least 1."
-            )
-        import_dask("to_dask_dataframe() needs dask; install the `lazy` extra.")
-        # dask.dataframe (dask-expr) imports pyarrow, which ships in the `parquet` extra rather
-        # than `lazy`; guard it so a lazy-only install gets a hint, not a ModuleNotFoundError.
-        require_optional(
-            "dask.dataframe",
-            "to_dask_dataframe() needs dask.dataframe, which requires pyarrow — install the "
-            "`parquet` extra (e.g. `pip install pyramids-core[parquet]`).",
+        """Facade -- delegates to :meth:`_MeshInterop.to_dask_dataframe`."""
+        warnings.warn(
+            "`mesh.to_dask_dataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.interop.to_dask_dataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        import dask.dataframe as dd
-
-        frame = self.to_dataframe(variables, dropna=dropna)
-        return dd.from_pandas(frame, npartitions=npartitions)
+        return self.interop.to_dask_dataframe(
+            variables, dropna=dropna, npartitions=npartitions
+        )
 
     def ffill(self, *, limit: int | None = None, dim: str | None = None) -> MeshDataset:
         """Forward-fill gaps along time from the last valid step.

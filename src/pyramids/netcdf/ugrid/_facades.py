@@ -32,6 +32,7 @@ from pyramids.netcdf.ugrid import vector_ops as _vector_ops
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
     from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -190,6 +191,9 @@ class _MeshFacades:
 
         @property
         def terrain(self) -> _MeshTerrain: ...
+
+        @property
+        def interop(self) -> _MeshInterop: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -1024,29 +1028,14 @@ class _MeshFacades:
         )
 
     def to_xarray(self) -> Any:
-        """Hand the mesh and its variables to xarray, in the UGRID-CF encoding.
-
-        xarray is a **peer dependency**, imported only here (as the raster
-        :meth:`pyramids.netcdf.NetCDF.to_xarray` does), so nothing here imports it at module
-        scope. Note the parent ``pyramids.netcdf`` package does currently pull xarray and dask
-        at import time for unrelated reasons, so that cost is not avoided in practice yet.
-
-        Returns:
-            xarray.Dataset: The mesh's UGRID-CF variables plus the data variables.
-
-        Raises:
-            OptionalPackageDoesNotExist: xarray is not installed.
-        """
-        return _interop.to_xarray(
-            self._mesh,  # type: ignore[attr-defined]
-            self._data_variables,  # type: ignore[attr-defined]
-            # The dataset's own topology name, not the default: exporting a mesh called
-            # anything else wrote its topology as "mesh2d" while the data variables kept
-            # their own element dimension, leaving two unrelated dimensions in one file.
-            mesh_name=self.mesh_name,  # type: ignore[attr-defined]
-            crs_wkt=self.crs_wkt,  # type: ignore[attr-defined]
-            volume_topology=self._volume_topology,  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshInterop.to_xarray`."""
+        warnings.warn(
+            "`mesh.to_xarray` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.interop.to_xarray`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.interop.to_xarray()
 
     def to_zarr(self, store: Any, **kwargs: Any) -> Any:
         """Write the mesh and its variables to a zarr store, through xarray.

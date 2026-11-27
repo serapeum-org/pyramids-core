@@ -80,7 +80,7 @@ class TestCrsRoundTrip:
         # A MeshDataset keeps its CRS on the dataset, not on the Mesh2d, so the export has to
         # be handed the dataset's WKT or the CRS is silently lost.
         mesh = _square_mesh(epsg=3857)
-        back = MeshDataset.from_xarray(mesh.to_xarray())
+        back = MeshDataset.from_xarray(mesh.interop.to_xarray())
         assert back.epsg == 3857
 
     def test_a_mesh_without_a_crs_exports_none(self):

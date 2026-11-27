@@ -81,7 +81,7 @@ class TestTidyFrameAxisOrder:
         """A `(n_faces, time)` variable gives one row per element per step."""
         frame = _with_dimensions(
             np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), ("mesh2d_nFaces", "time")
-        ).to_dataframe()
+        ).interop.to_dataframe()
 
         assert len(frame) == 6, f"2 faces x 3 steps, got {len(frame)}"
         assert sorted(set(frame["element"].tolist())) == [0, 1], (
@@ -97,19 +97,19 @@ class TestTidyFrameAxisOrder:
         )
 
         with pytest.raises(ValueError, match="extra"):
-            dataset.to_dataframe()
+            dataset.interop.to_dataframe()
 
     def test_the_ordinary_temporal_shape_is_unchanged(self):
         frame = _with_dimensions(
             np.array([[1.0, 2.0], [3.0, 4.0]]), ("time", "mesh2d_nFaces")
-        ).to_dataframe()
+        ).interop.to_dataframe()
         assert len(frame) == 4
         assert sorted(set(frame["element"].tolist())) == [0, 1]
 
     def test_the_layered_shape_is_unchanged(self):
         frame = _with_dimensions(
             np.arange(6.0).reshape(3, 2), ("mesh2d_nLayers", "mesh2d_nFaces")
-        ).to_dataframe()
+        ).interop.to_dataframe()
         assert len(frame) == 6
         assert sorted(set(frame["layer"].tolist())) == [0, 1, 2]
 
@@ -310,7 +310,7 @@ class TestTidyFrameDtypes:
             face_node_connectivity=TRIANGLES,
             data={"c": np.array(["a", "b"], dtype=object)},
         )
-        assert labelled.to_dataframe()["value"].tolist() == ["a", "b"]
+        assert labelled.interop.to_dataframe()["value"].tolist() == ["a", "b"]
 
     def test_the_empty_frame_matches_the_populated_schema(self):
         dataset = MeshDataset.from_arrays(
@@ -319,8 +319,8 @@ class TestTidyFrameDtypes:
             face_node_connectivity=TRIANGLES,
             data={"v": np.array([10.0, 20.0])},
         )
-        empty = dataset.to_dataframe(variables=[])
-        populated = dataset.to_dataframe()
+        empty = dataset.interop.to_dataframe(variables=[])
+        populated = dataset.interop.to_dataframe()
         assert list(empty.columns) == list(populated.columns)
         assert [str(d) for d in empty.dtypes] == [str(d) for d in populated.dtypes]
 

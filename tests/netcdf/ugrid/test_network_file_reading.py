@@ -25,7 +25,7 @@ def one_dimensional_file(tmp_path):
         data={"d": np.array([1.0, 2.0])},
         data_locations={"d": "face"},
     )
-    dataset = mesh.to_xarray()
+    dataset = mesh.interop.to_xarray()
     dataset[mesh.mesh_name].attrs["topology_dimension"] = np.int32(1)
     path = tmp_path / "one_d.nc"
     dataset.to_netcdf(path)

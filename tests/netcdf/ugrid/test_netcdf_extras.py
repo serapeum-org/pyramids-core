@@ -38,7 +38,7 @@ def temporal() -> MeshDataset:
 
 class TestToDataFrame:
     def test_static_variable_is_one_row_per_face(self, mesh):
-        frame = mesh.to_dataframe()
+        frame = mesh.interop.to_dataframe()
         assert list(frame.columns) == [
             "variable",
             "element",
@@ -53,27 +53,27 @@ class TestToDataFrame:
         assert frame["element"].tolist() == [0, 1]
 
     def test_centroids_are_carried(self, mesh):
-        frame = mesh.to_dataframe()
+        frame = mesh.interop.to_dataframe()
         assert frame["x"].notna().all()
         assert frame["y"].notna().all()
 
     def test_temporal_variable_is_one_row_per_element_and_step(self, temporal):
-        frame = temporal.to_dataframe()
+        frame = temporal.interop.to_dataframe()
         assert len(frame) == 4
         assert sorted(set(frame["time"].tolist())) == [10.0, 20.0]
 
     def test_selecting_variables(self, mesh):
         two = mesh.with_variable("other", np.array([9.0, 9.0]), location="face")
-        frame = two.to_dataframe(variables=["other"])
+        frame = two.interop.to_dataframe(variables=["other"])
         assert set(frame["variable"]) == {"other"}
 
     def test_unknown_variable_raises(self, mesh):
         with pytest.raises(KeyError):
-            mesh.to_dataframe(variables=["nope"])
+            mesh.interop.to_dataframe(variables=["nope"])
 
     def test_dropna_removes_gaps(self, mesh):
         gappy = mesh.with_variable("g", np.array([1.0, np.nan]), location="face")
-        assert len(gappy.to_dataframe(variables=["g"], dropna=True)) == 1
+        assert len(gappy.interop.to_dataframe(variables=["g"], dropna=True)) == 1
 
 
 class TestCopy:

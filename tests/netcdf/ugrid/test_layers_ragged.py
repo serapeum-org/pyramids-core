@@ -219,7 +219,7 @@ class TestToDataFrame:
     """The tidy frame lays a ragged variable out one row per volume, no fabrication."""
 
     def test_one_row_per_volume_with_column_and_layer(self):
-        df = _volume_dataset().to_dataframe()
+        df = _volume_dataset().interop.to_dataframe()
         assert len(df) == 6
         assert df["element"].tolist() == [0, 0, 0, 1, 2, 2]
         assert df["layer"].tolist() == [0, 1, 2, 0, 0, 1]
