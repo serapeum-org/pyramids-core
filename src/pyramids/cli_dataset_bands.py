@@ -75,6 +75,7 @@ def _cmd_add_band(args: argparse.Namespace) -> int:
     source = Dataset.read_file(args.source)
     array = np.asarray(source.io.read_array(band=args.source_band))
     out = ds.bands.add_band(array, unit=args.unit, inplace=False)
+    assert out is not None  # inplace=False always returns the new dataset
     out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

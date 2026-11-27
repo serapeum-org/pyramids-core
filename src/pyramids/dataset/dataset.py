@@ -8212,6 +8212,9 @@ class Dataset(RasterBase):
                 # *stored* dtype -- an int16 stack of packed inputs losing everything
                 # after the point -- and leave the two branches disagreeing.
                 if align and not template.spatial.same_grid(ds_i):
+                    assert (
+                        grid_template is not None
+                    )  # set above whenever `align` is true
                     arr = ds_i.spatial.align(
                         grid_template, method=band_methods[band_i]
                     ).read_array(band=0, unpack=False)

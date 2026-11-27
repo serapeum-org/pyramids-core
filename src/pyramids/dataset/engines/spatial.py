@@ -2386,7 +2386,7 @@ class _Spatial(_Engine["Dataset"]):
             )
         if not self._check_alignment(mask):
             # first align the mask with the src raster
-            mask = mask.spatial.align(self._ds)
+            mask = cast("Dataset", mask).spatial.align(self._ds)
         # crop the src raster with the aligned mask
         dst_obj = self._crop_aligned(mask)
 

@@ -327,10 +327,13 @@ def read_item_part(
             ```
     """
     dataset = _open_windowed(item_or_asset, asset_key, signer, alternate)
-    return dataset.cog.read_part(
-        (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])),
-        bbox_crs=bbox_crs,
-        **read_options,
+    return cast(
+        "np.typing.NDArray | tuple[np.typing.NDArray, tuple[float, ...]]",
+        dataset.cog.read_part(
+            (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])),
+            bbox_crs=bbox_crs,
+            **read_options,
+        ),
     )
 
 
@@ -381,7 +384,9 @@ def read_item_preview(
     # The `Dataset` facades forward through `*args, **kwargs` and so erase to
     # `Any`; cast back to the engine's declared return rather than widening this
     # signature.
-    return cast("np.typing.NDArray", dataset.cog.preview(max_size=max_size, **read_options))
+    return cast(
+        "np.typing.NDArray", dataset.cog.preview(max_size=max_size, **read_options)
+    )
 
 
 def read_item_point(
