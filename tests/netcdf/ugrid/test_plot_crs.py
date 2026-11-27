@@ -44,12 +44,12 @@ class TestGlyphCarriesDatasetCRS:
 
     def test_plot_outline_sets_glyph_crs(self):
         """``plot_outline()`` returns a glyph whose ``crs`` equals the dataset epsg."""
-        glyph = _mesh(28992).plot_outline()
+        glyph = _mesh(28992).glyph.plot_outline()
         assert glyph.crs == 28992, f"expected glyph.crs==28992, got {glyph.crs!r}"
 
     def test_plot_sets_glyph_crs(self):
         """``plot(variable)`` returns a glyph whose ``crs`` equals the dataset epsg."""
-        glyph = _mesh(28992).plot("d")
+        glyph = _mesh(28992).glyph.plot("d")
         assert glyph.crs == 28992, f"expected glyph.crs==28992, got {glyph.crs!r}"
 
     def test_projected_crs_without_epsg_uses_wkt(self):
@@ -64,7 +64,7 @@ class TestGlyphCarriesDatasetCRS:
         assert ds.epsg is None, (
             "precondition: the custom CRS has no EPSG authority code"
         )
-        glyph = ds.plot_outline()
+        glyph = ds.glyph.plot_outline()
         assert glyph.crs == _CUSTOM_WKT, f"expected the CRS WKT, got {glyph.crs!r}"
 
     def test_no_crs_when_dataset_has_none(self):

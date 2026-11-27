@@ -32,6 +32,7 @@ from pyramids.netcdf.ugrid import vector_ops as _vector_ops
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
     from pyramids.netcdf.ugrid.engines.vector import _MeshVector
@@ -198,6 +199,9 @@ class _MeshFacades:
 
         @property
         def vector(self) -> _MeshVector: ...
+
+        @property
+        def glyph(self) -> _MeshGlyph: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -1459,28 +1463,16 @@ class _MeshFacades:
         ax: Any = None,
         **kwargs: Any,
     ) -> Any:
-        """Plot the distribution of a variable's values.
-
-        Delegates to cleopatra's ``HistogramGlyph``.
-
-        Args:
-            bins: Number of histogram bins.
-            variable_name: Variable to histogram (default: the only one).
-            ax: Existing matplotlib axes to draw into.
-            **kwargs: Forwarded to the glyph constructor.
-
-        Returns:
-            ``(fig, ax, hist)`` from ``HistogramGlyph.histogram``.
-
-        See Also:
-            contour: Spatial contour extraction from the same variable.
-
-        """
-        var = self._facade_variable("plot_histogram", variable_name)
-        result = _analysis.plot_histogram(
-            np.asarray(var.data), var.nodata, bins=bins, ax=ax, **kwargs
+        """Facade -- delegates to :meth:`_MeshGlyph.plot_histogram`."""
+        warnings.warn(
+            "`mesh.plot_histogram` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.plot_histogram`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.glyph.plot_histogram(
+            bins=bins, variable_name=variable_name, ax=ax, **kwargs
+        )
 
     def proximity(self, target_faces: Any) -> Any:
         """Graph distance from every face to the nearest target face.

@@ -36,7 +36,7 @@ class TestUgridDataset:
 
     @pytest.mark.plot
     def test_plot_outline(self, ug):
-        assert ug.plot_outline() is not None
+        assert ug.glyph.plot_outline() is not None
 
 
 class TestMesh2d:

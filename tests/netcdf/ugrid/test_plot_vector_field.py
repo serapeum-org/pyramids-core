@@ -119,7 +119,7 @@ class TestRendering:
         """
         from matplotlib.quiver import Quiver
 
-        fig, ax, im = velocity.plot_vector_field("ucx", "ucy")
+        fig, ax, im = velocity.glyph.plot_vector_field("ucx", "ucy")
         assert fig is not None, "a figure must come back even when no ax was supplied"
         assert ax is not None, "the axes the field was drawn on must come back"
         assert isinstance(im, Quiver), f"expected a Quiver, got {type(im).__name__}"
@@ -129,25 +129,25 @@ class TestRendering:
         """`kind="barbs"` picks the wind-barb renderer, as on the raster method."""
         from matplotlib.quiver import Barbs
 
-        _fig, _ax, im = velocity.plot_vector_field("ucx", "ucy", kind="barbs")
+        _fig, _ax, im = velocity.glyph.plot_vector_field("ucx", "ucy", kind="barbs")
         assert isinstance(im, Barbs), f"expected Barbs, got {type(im).__name__}"
 
     def test_thin_reduces_the_arrow_count(self, velocity):
         """`thin=n` draws every nth element, which is what keeps a large mesh legible."""
-        _fig, _ax, dense = velocity.plot_vector_field("ucx", "ucy")
-        _fig, _ax, thinned = velocity.plot_vector_field("ucx", "ucy", thin=2)
+        _fig, _ax, dense = velocity.glyph.plot_vector_field("ucx", "ucy")
+        _fig, _ax, thinned = velocity.glyph.plot_vector_field("ucx", "ucy", thin=2)
         assert thinned.N < dense.N, (
             f"thin=2 should drop arrows: {thinned.N} vs {dense.N}"
         )
 
     def test_the_default_title_names_both_components(self, velocity):
         """With no `title` the plot is labelled from the two variable names."""
-        _fig, ax, _im = velocity.plot_vector_field("ucx", "ucy")
+        _fig, ax, _im = velocity.glyph.plot_vector_field("ucx", "ucy")
         assert ax.get_title() == "ucx / ucy"
 
     def test_an_explicit_title_wins(self, velocity):
         """A caller's `title` is not overwritten by the default."""
-        _fig, ax, _im = velocity.plot_vector_field(
+        _fig, ax, _im = velocity.glyph.plot_vector_field(
             "ucx", "ucy", title="Depth-averaged velocity"
         )
         assert ax.get_title() == "Depth-averaged velocity"
@@ -158,7 +158,7 @@ class TestRendering:
             un=_variable("un", [1.0, 1.0, 0.0, 0.0], location="node"),
             vn=_variable("vn", [0.0, 0.0, 1.0, 1.0], location="node"),
         )
-        _fig, _ax, im = dataset.plot_vector_field("un", "vn")
+        _fig, _ax, im = dataset.glyph.plot_vector_field("un", "vn")
         assert im.N == 4, f"one arrow per node, got {im.N}"
 
     def test_colorbar_is_forwarded_when_set(self, velocity):
@@ -170,8 +170,12 @@ class TestRendering:
             `colorbar=True` carries an extra axes for the bar, the one with `colorbar=False`
             does not.
         """
-        with_bar, _ax, _im = velocity.plot_vector_field("ucx", "ucy", colorbar=True)
-        without_bar, _ax, _im = velocity.plot_vector_field("ucx", "ucy", colorbar=False)
+        with_bar, _ax, _im = velocity.glyph.plot_vector_field(
+            "ucx", "ucy", colorbar=True
+        )
+        without_bar, _ax, _im = velocity.glyph.plot_vector_field(
+            "ucx", "ucy", colorbar=False
+        )
         assert len(with_bar.axes) > len(without_bar.axes), (
             f"colorbar=True should add an axes: {len(with_bar.axes)} vs "
             f"{len(without_bar.axes)}"
@@ -186,7 +190,7 @@ class TestTimeStep:
     )
     def test_time_index_selects_a_step(self, temporal_velocity, step):
         """Each in-range step draws, which is the single-step contract `plot` applies."""
-        _fig, _ax, im = temporal_velocity.plot_vector_field(
+        _fig, _ax, im = temporal_velocity.glyph.plot_vector_field(
             "ucx", "ucy", time_index=step
         )
         assert im.N == 2, f"one arrow per face at step {step}, got {im.N}"
@@ -199,10 +203,10 @@ class TestTimeStep:
             handed must differ. Without this, a `time_index` that was accepted and ignored
             would pass every other test in this class.
         """
-        _fig, _ax, first = temporal_velocity.plot_vector_field(
+        _fig, _ax, first = temporal_velocity.glyph.plot_vector_field(
             "ucx", "ucy", time_index=0
         )
-        _fig, _ax, last = temporal_velocity.plot_vector_field(
+        _fig, _ax, last = temporal_velocity.glyph.plot_vector_field(
             "ucx", "ucy", time_index=2
         )
         assert not np.allclose(first.U, last.U), (
@@ -215,7 +219,7 @@ class TestTimeStep:
     def test_an_out_of_range_step_is_refused(self, temporal_velocity, step):
         """A step outside the time axis is named rather than left to numpy."""
         with pytest.raises(ValueError, match=r"time_index .* is outside"):
-            temporal_velocity.plot_vector_field("ucx", "ucy", time_index=step)
+            temporal_velocity.glyph.plot_vector_field("ucx", "ucy", time_index=step)
 
     def test_a_time_index_past_the_data_rank_is_named(self):
         """A declared time axis the data does not have is refused, not leaked (M4).
@@ -238,7 +242,7 @@ class TestTimeStep:
         other = _variable("uy", [0.0, 1.0])
         dataset = _dataset(ux=skewed, uy=other)
         with pytest.raises(ValueError) as caught:
-            dataset.plot_vector_field("ux", "uy")
+            dataset.glyph.plot_vector_field("ux", "uy")
         message = str(caught.value)
         assert "plot_vector_field" in message, (
             f"the refusal must be branded, got: {message}"
@@ -252,7 +256,7 @@ class TestRefusals:
     def test_an_unknown_variable_is_named(self, velocity):
         """A typo reports the available names, as the rest of the dataset API does."""
         with pytest.raises(KeyError, match="nope"):
-            velocity.plot_vector_field("nope", "ucy")
+            velocity.glyph.plot_vector_field("nope", "ucy")
 
     @pytest.mark.parametrize("role", ["u", "v"], ids=["u-component", "v-component"])
     def test_a_component_with_no_loaded_data_is_refused(self, role):
@@ -269,7 +273,7 @@ class TestRefusals:
         names = ("empty", "loaded") if role == "u" else ("loaded", "empty")
         dataset = _dataset(empty=empty, loaded=loaded)
         with pytest.raises(ValueError, match=f"{role} component 'empty' has no loaded"):
-            dataset.plot_vector_field(*names)
+            dataset.glyph.plot_vector_field(*names)
 
     def test_an_edge_located_component_is_refused_with_the_supported_locations(self):
         """D-Flow FM's `mesh2d_u1` is edge-located, and is named rather than mis-drawn.
@@ -284,7 +288,7 @@ class TestRefusals:
             ucy=_variable("ucy", [0.0, 1.0]),
         )
         with pytest.raises(ValueError) as caught:
-            dataset.plot_vector_field("u1", "ucy")
+            dataset.glyph.plot_vector_field("u1", "ucy")
         message = str(caught.value)
         assert "edge-located" in message
         assert "'face', 'node'" in message, (
@@ -298,7 +302,7 @@ class TestRefusals:
             ucy=_variable("ucy", [0.0, 1.0]),
         )
         with pytest.raises(ValueError, match="same place"):
-            dataset.plot_vector_field("un", "ucy")
+            dataset.glyph.plot_vector_field("un", "ucy")
 
     def test_components_of_different_element_counts_are_refused(self):
         """Matching locations but different element counts is still not a pair.
@@ -315,7 +319,7 @@ class TestRefusals:
             ucy=_variable("ucy", [0.0, 1.0]),
         )
         with pytest.raises(ValueError, match="the two components must match"):
-            dataset.plot_vector_field("ucx", "ucy")
+            dataset.glyph.plot_vector_field("ucx", "ucy")
 
     def test_missing_cleopatra_wins_over_a_colour_bar_typo(self, velocity, monkeypatch):
         """With both problems present, the more actionable error must win (round 2 M4).
@@ -339,7 +343,7 @@ class TestRefusals:
             lambda mesh, **kwargs: GlyphWithoutVectorField(),
         )
         with pytest.raises(OptionalPackageDoesNotExist):
-            velocity.plot_vector_field("ucx", "ucy", cbar_label="x")
+            velocity.glyph.plot_vector_field("ucx", "ucy", cbar_label="x")
 
 
 class TestNoDataAndShape:
@@ -375,7 +379,7 @@ class TestNoDataAndShape:
             nodata=-999.0,
         )
         dataset = _dataset(ux=dry, uy=wet)
-        _fig, _ax, im = dataset.plot_vector_field("ux", "uy")
+        _fig, _ax, im = dataset.glyph.plot_vector_field("ux", "uy")
         magnitudes = im.get_array()
         assert magnitudes.mask[1], (
             f"the dry face must be masked out of the colour mapping, got {magnitudes!r}"
@@ -403,7 +407,7 @@ class TestNoDataAndShape:
         dataset = _dataset(
             ux=component("ux", [1.0, -999.0]), uy=component("uy", [1.0, -999.0])
         )
-        _fig, _ax, im = dataset.plot_vector_field("ux", "uy")
+        _fig, _ax, im = dataset.glyph.plot_vector_field("ux", "uy")
         low, high = im.get_clim()
         assert high < 10.0, (
             f"the fill magnitude (1412.8) must not set the upper limit, got {high}"
@@ -436,7 +440,7 @@ class TestNoDataAndShape:
         )
         dataset = _dataset(ux=layered, uy=other)
         with pytest.raises(ValueError) as caught:
-            dataset.plot_vector_field("ux", "uy")
+            dataset.glyph.plot_vector_field("ux", "uy")
         message = str(caught.value)
         assert "plot_vector_field" in message, (
             f"the refusal must be branded by pyramids, got: {message}"
@@ -463,7 +467,7 @@ class TestNoDataAndShape:
         )
         dataset = _dataset(ux=text, uy=_variable("uy", [0.0, 1.0]))
         with pytest.raises(ValueError) as caught:
-            dataset.plot_vector_field("ux", "uy")
+            dataset.glyph.plot_vector_field("ux", "uy")
         message = str(caught.value)
         assert "not a single value per element" not in message, (
             f"a 1-D component does not have the wrong rank; got: {message}"
@@ -497,7 +501,7 @@ class TestCleopatraFloor:
             lambda mesh, **kwargs: GlyphWithoutVectorField(),
         )
         with pytest.raises(OptionalPackageDoesNotExist) as caught:
-            velocity.plot_vector_field("ucx", "ucy")
+            velocity.glyph.plot_vector_field("ucx", "ucy")
         message = str(caught.value)
         assert "0.44.0" in message, (
             f"the message must name the floor that provides it, got: {message}"

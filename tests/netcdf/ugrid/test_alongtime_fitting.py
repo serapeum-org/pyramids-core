@@ -825,8 +825,8 @@ class TestUnknownVariableMessageParity:
             lambda ds: ds.footprint(variable_name="nope"),
             lambda ds: ds.where(np.array([True, True]), variable_name="nope"),
             lambda ds: ds.apply(np.abs, variable_name="nope"),
-            lambda ds: ds.to_image(variable_name="nope"),
-            lambda ds: ds.animate(variable_name="nope"),
+            lambda ds: ds.glyph.to_image(variable_name="nope"),
+            lambda ds: ds.glyph.animate(variable_name="nope"),
         ],
         ids=[
             "polyfit",

@@ -139,7 +139,7 @@ class TestUnreadableVariable:
             (lambda d: d.summary(), "has no loaded data"),
             (lambda d: d.to_dataset("v", cell_size=0.5), "has no data loaded"),
             (lambda d: d.sample("v", 0.5, 0.5), "has no loaded data"),
-            (lambda d: d.plot("v"), "no loaded data to plot"),
+            (lambda d: d.glyph.plot("v"), "no loaded data to plot"),
             (lambda d: d.concat(d), "no loaded data to concat"),
         ],
         ids=[
@@ -519,9 +519,9 @@ class TestPlotDispatch:
     ):
         """The render helper receives step 0 of the variable and the caller's own title."""
         with patch(
-            "pyramids.netcdf.ugrid.dataset._mesh_render", return_value="sentinel"
+            "pyramids.netcdf.ugrid.engines.glyph._mesh_render", return_value="sentinel"
         ) as render:
-            assert temporal.plot("d", title="custom") == "sentinel"
+            assert temporal.glyph.plot("d", title="custom") == "sentinel"
         kwargs = render.call_args.kwargs
         assert kwargs["title"] == "custom"
         assert np.asarray(kwargs["data"]).tolist() == [1.0, 2.0]

@@ -59,7 +59,7 @@ class TestUgridAnimate:
     """The mesh had no animation at all before this."""
 
     def test_a_temporal_variable_animates(self):
-        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).animate()
+        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).glyph.animate()
         assert animation is not None
 
     def test_the_return_type_is_the_animation_itself(self):
@@ -67,11 +67,11 @@ class TestUgridAnimate:
         glyph, so `anim.save(...)` works directly here."""
         from matplotlib.animation import FuncAnimation
 
-        animation = _mesh([[1.0, 2.0], [3.0, 4.0]]).animate()
+        animation = _mesh([[1.0, 2.0], [3.0, 4.0]]).glyph.animate()
         assert isinstance(animation, FuncAnimation)
 
     def test_one_frame_per_time_step(self):
-        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).animate()
+        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).glyph.animate()
         assert animation._save_count == 3
 
     def test_it_saves_to_a_file(self):
@@ -79,20 +79,20 @@ class TestUgridAnimate:
         import tempfile
         from pathlib import Path
 
-        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).animate()
+        animation = _mesh([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).glyph.animate()
         out = Path(tempfile.mkdtemp()) / "mesh.gif"
         animation.save(str(out), writer="pillow")
         assert out.stat().st_size > 0
 
     def test_the_interval_is_forwarded(self):
-        animation = _mesh([[1.0, 2.0], [3.0, 4.0]]).animate(interval=50)
+        animation = _mesh([[1.0, 2.0], [3.0, 4.0]]).glyph.animate(interval=50)
         assert animation is not None
 
     def test_a_static_variable_is_refused(self):
         """One frame is not an animation; the message points at plot()."""
         subject = _mesh([1.0, 2.0])
         with pytest.raises(ValueError, match="plot()"):
-            subject.animate()
+            subject.glyph.animate()
 
     def test_a_layered_variable_is_refused_with_a_hint(self):
         """(time, layer, face) has no single value per element per frame."""
@@ -105,12 +105,12 @@ class TestUgridAnimate:
         )
         ds["d"].dimensions = ("time", "layer", "mesh2d_nFaces")
         with pytest.raises(ValueError, match="isel|collapse_layer"):
-            ds.animate()
+            ds.glyph.animate()
 
     def test_a_node_located_variable_animates(self):
         """The location is forwarded, so node data draws as node data."""
         values = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-        assert _mesh(values, location="node").animate() is not None
+        assert _mesh(values, location="node").glyph.animate() is not None
 
 
 class TestDatasetAnimate:

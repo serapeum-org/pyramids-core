@@ -200,7 +200,7 @@ def _cmd_mesh_to_image(args: argparse.Namespace) -> int:
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        image = mesh.to_image(
+        image = mesh.glyph.to_image(
             variable_name=args.var,
             cell_size=args.cell_size,
             cmap=args.cmap,

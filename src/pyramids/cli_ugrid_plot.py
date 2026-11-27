@@ -50,7 +50,7 @@ def _cmd_mesh_plot(args: argparse.Namespace) -> int:
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        glyph = mesh.plot(
+        glyph = mesh.glyph.plot(
             args.var, cmap=args.cmap, title=args.title, basemap=args.basemap
         )
     glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
@@ -71,7 +71,7 @@ def _cmd_mesh_plot_outline(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
-    glyph = mesh.plot_outline(basemap=args.basemap)
+    glyph = mesh.glyph.plot_outline(basemap=args.basemap)
     glyph.fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
     info_print(args, f"wrote {args.output}")
     return 0
@@ -94,7 +94,7 @@ def _cmd_mesh_plot_vector_field(args: argparse.Namespace) -> int:
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        fig, _ax, _im = mesh.plot_vector_field(
+        fig, _ax, _im = mesh.glyph.plot_vector_field(
             args.u,
             args.v,
             kind=args.kind,
@@ -120,7 +120,9 @@ def _cmd_mesh_plot_histogram(args: argparse.Namespace) -> int:
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        fig, _ax, _hist = mesh.plot_histogram(bins=args.bins, variable_name=args.var)
+        fig, _ax, _hist = mesh.glyph.plot_histogram(
+            bins=args.bins, variable_name=args.var
+        )
     fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
     info_print(args, f"wrote {args.output}")
     return 0
@@ -143,7 +145,7 @@ def _cmd_mesh_animate(args: argparse.Namespace) -> int:
     force_agg_backend()
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        anim = mesh.animate(variable_name=args.var, interval=args.interval)
+        anim = mesh.glyph.animate(variable_name=args.var, interval=args.interval)
     anim.save(args.output, dpi=args.dpi)
     info_print(args, f"wrote {args.output}")
     return 0

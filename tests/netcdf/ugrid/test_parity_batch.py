@@ -96,17 +96,17 @@ class TestToImage:
     pytestmark = pytest.mark.plot
 
     def test_it_returns_an_image_of_the_mesh(self):
-        image = _mesh([1.0, 5.0]).to_image()
+        image = _mesh([1.0, 5.0]).glyph.to_image()
         assert image.size[0] > 1
         assert image.size[1] > 1
 
     def test_the_default_resolution_is_about_512_px_on_the_long_side(self):
         """So a caller need not reason about a cell size in unknown coordinate units."""
-        image = _mesh([1.0, 5.0]).to_image()
+        image = _mesh([1.0, 5.0]).glyph.to_image()
         assert max(image.size) == pytest.approx(512, abs=2)
 
     def test_an_explicit_cell_size_sets_the_size(self):
-        image = _mesh([1.0, 5.0]).to_image(cell_size=0.1)
+        image = _mesh([1.0, 5.0]).glyph.to_image(cell_size=0.1)
         assert max(image.size) == pytest.approx(10, abs=1)
 
     def test_a_temporal_variable_is_refused_with_a_hint(self):
@@ -120,7 +120,7 @@ class TestToImage:
             epsg=32636,
         )
         with pytest.raises(ValueError, match="isel"):
-            ds.to_image()
+            ds.glyph.to_image()
 
 
 class TestOpenMfdataset:
