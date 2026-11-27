@@ -1153,7 +1153,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.isel(time=index)
+        return self.selection.isel(time=index)
 
     def sel_time_range(self, start: int, stop: int) -> MeshDataset:
         """Deprecated: use ``isel(time=slice(start, stop))``.
@@ -1175,7 +1175,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.isel(time=slice(start, stop))
+        return self.selection.isel(time=slice(start, stop))
 
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True
@@ -6578,7 +6578,7 @@ def _needs_mesh_error(
         f"{selected.long_name} files carry values but no mesh, so {target!r} cannot be "
         f"opened on its own. Read the mesh first, then attach these values to it:\n"
         f"    mesh = MeshDataset.read_file('<the mesh file>')\n"
-        f"    result = mesh.attach_data({target!r})"
+        f"    result = mesh.variables.attach_data({target!r})"
     )
 
 

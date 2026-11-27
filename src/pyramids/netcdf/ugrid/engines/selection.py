@@ -137,7 +137,7 @@ class _MeshSelection(_MeshEngine):
             raise ValueError("isel needs `time`, `element`, or both.")
         if element is not None:
             selected = self._ds._select_elements(element)
-            return selected if time is None else selected.isel(time)
+            return selected if time is None else selected.selection.isel(time)
         n = self._ds._time_length("isel")
         if isinstance(time, (int, np.integer)):
             return self._ds._collapse_to_step(int(time))
