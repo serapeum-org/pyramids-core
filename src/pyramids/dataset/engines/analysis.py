@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import logging
 import math
+import os
+import sys
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -110,6 +112,30 @@ _POINT_WINDOW_MAX_PIXELS = 8_000_000
 # callable raises and falls back to the source type, so the reason has to surface
 # somewhere.
 logger = logging.getLogger(__name__)
+
+# The pyramids package root, used to count past first-party frames when a warning
+# must blame the user. `__file__` is .../pyramids/dataset/engines/analysis.py.
+_PYRAMIDS_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _caller_stacklevel() -> int:
+    """Return the `stacklevel` that makes a warning blame the first non-pyramids frame.
+
+    `combine` reaches the collision warning through a different number of internal frames
+    depending on the entry point (`ds.analysis.combine` directly, or `nc.combine` which adds
+    the `NetCDF.combine` override frame), so a fixed `stacklevel` cannot serve both. Walking
+    out to the first frame whose file is outside the package lands on the caller for every
+    route.
+
+    Returns:
+        int: The `stacklevel` for `warnings.warn`, measured from its caller.
+    """
+    frame = sys._getframe(1)
+    level = 1
+    while frame is not None and os.path.abspath(frame.f_code.co_filename).startswith(_PYRAMIDS_ROOT):
+        frame = frame.f_back
+        level += 1
+    return level
 
 
 class _DeriveNoData:
@@ -2271,16 +2297,11 @@ class _Analysis(_Engine["Dataset"]):
                     "`func` computed, so those cells read back as gaps; pass a "
                     "`no_data_value=` the result cannot hold",
                     NoDataCollisionWarning,
-                    # 4 frames out is the caller of `ds.analysis.combine`: warn ->
-                    # _resolve_combined_no_data -> _Analysis._combine ->
-                    # _Analysis.combine -> user. The accessor is now the sole public
-                    # entry point, so it is the one the count must land on; the
-                    # deprecated `ds.combine` facade adds one frame and so reports
-                    # its own line instead, which is acceptable for a facade on its
-                    # way out. `_fold`'s callers never reach here: the operators
-                    # always let it derive its sentinel, and only an explicit one
-                    # can collide.
-                    stacklevel=4,
+                    # The number of internal frames between here and the user differs by
+                    # entry point: `ds.analysis.combine` is 4 out, while `nc.combine` routes
+                    # through the `NetCDF.combine` override and is 5. Walk out to the first
+                    # non-pyramids frame so the warning blames the caller on either route.
+                    stacklevel=_caller_stacklevel(),
                 )
         elif np.issubdtype(dtype, np.floating):
             sentinel = np.nan

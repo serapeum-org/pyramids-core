@@ -21,6 +21,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyramids.base._errors import NoDataCollisionWarning
 from pyramids.dataset import Dataset, GeoReference
 from pyramids.netcdf.netcdf import Container, NetCDF, Variable
 from pyramids.netcdf.ugrid import MeshDataset
@@ -397,3 +398,29 @@ class TestScalarOperandsOnSubclasses:
         assert isinstance(apply_operator(container, scalar), Container)
         if commutes:
             assert isinstance(apply_operator(scalar, container), Container)
+
+
+class TestNetCDFCombineWarningProvenance:
+    """`nc.combine`'s collision warning blames the caller, not the NetCDF override."""
+
+    def test_nc_combine_collision_warning_points_at_the_caller(self, tmp_path):
+        """The recorded warning's filename is this test file, not `netcdf.py`.
+
+        Args:
+            tmp_path: pytest temp directory.
+
+        Test scenario:
+            Two NetCDF variables combined with an explicit `no_data_value` the result also
+            computes raise `NoDataCollisionWarning`; routed through `NetCDF.combine` it must
+            still blame the caller, so a `-W` rule keyed on the user's module matches.
+        """
+        left = _variable(tmp_path, "a.nc", 3.0)
+        right = _variable(tmp_path, "b.nc", 4.0)
+
+        with pytest.warns(NoDataCollisionWarning) as recorded:
+            left.combine(right, np.subtract, no_data_value=-1.0)
+
+        collision = next(
+            w for w in recorded if issubclass(w.category, NoDataCollisionWarning)
+        )
+        assert collision.filename == __file__, "nc.combine must blame the caller"
