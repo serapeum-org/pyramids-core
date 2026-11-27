@@ -236,13 +236,13 @@ class TestTheStampSurvivesAnInPlaceUpdate:
             deriving one from its single coordinate — `(11.5, 1.0, 0, 58.5, 0, -1.0)`.
         """
         result = _weighted_source()
-        result.change_no_data_value(-8888.0)
+        result.bands.change_no_data_value(-8888.0)
         assert result.geotransform == EXTENT_CELL, f"read {result.geotransform!r}"
 
     def test_a_variable_taken_after_the_swap_is_stamped(self):
         """The stamp is still there to hand on, so `get_variable` answers the extent too."""
         result = _weighted_source()
-        result.change_no_data_value(-8888.0)
+        result.bands.change_no_data_value(-8888.0)
         assert result.get_variable("v").geotransform == EXTENT_CELL, (
             f"read {result.get_variable('v').geotransform!r}"
         )
@@ -250,7 +250,7 @@ class TestTheStampSurvivesAnInPlaceUpdate:
     def test_setting_the_crs_keeps_the_grid(self):
         """`set_crs` is the other in-place swap a weighted result is likely to meet."""
         result = _weighted_source()
-        result.set_crs(result.crs)
+        result.spatial.set_crs(result.crs)
         assert result.geotransform == EXTENT_CELL, f"read {result.geotransform!r}"
 
 
@@ -470,14 +470,14 @@ class TestTheStampedGridIsRestoredAfterARebuild:
     def test_a_raster_swap_keeps_the_cell_size(self):
         """`add_variable` copies and swaps the raster, which recomputes the width the same way."""
         result = _weighted_source()
-        result.add_variable(self._addable(), "w")
+        result.variables.add(self._addable(), "w")
         assert float(result.cell_size) == pytest.approx(4.0), float(result.cell_size)
         assert result.geotransform == EXTENT_CELL, f"read {result.geotransform!r}"
 
     def test_a_raster_swap_still_adds_the_variable(self):
         """The grid is kept without giving up what the swap was for."""
         result = _weighted_source()
-        result.add_variable(self._addable(), "w")
+        result.variables.add(self._addable(), "w")
         assert "w" in result.variable_names, result.variable_names
 
     def test_a_variable_taken_after_the_swap_agrees(self):

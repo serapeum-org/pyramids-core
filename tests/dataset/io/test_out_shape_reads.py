@@ -36,7 +36,7 @@ class TestOutShapeReads:
 
     def test_downsample_halves_shape(self, ramp_dataset):
         """out_shape=(32, 32) returns exactly that shape."""
-        result = ramp_dataset.read_array(band=0, out_shape=(32, 32))
+        result = ramp_dataset.io.read_array(band=0, out_shape=(32, 32))
         assert result.shape == (32, 32), f"unexpected shape {result.shape}"
 
     def test_constant_raster_survives_nearest(self):
@@ -45,7 +45,7 @@ class TestOutShapeReads:
             np.full((16, 16), 5.0, dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 16), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, out_shape=(8, 8))
+        result = ds.io.read_array(band=0, out_shape=(8, 8))
         assert np.isclose(result, 5.0).all(), "constant values must survive decimation"
 
     def test_average_differs_from_nearest_on_checkerboard(self):
@@ -60,8 +60,8 @@ class TestOutShapeReads:
             cb,
             geo_ref=GeoReference(top_left_corner=(0, 16), cell_size=1.0, epsg=4326),
         )
-        averaged = ds.read_array(band=0, out_shape=(8, 8), resampling="average")
-        nearest = ds.read_array(band=0, out_shape=(8, 8), resampling="nearest")
+        averaged = ds.io.read_array(band=0, out_shape=(8, 8), resampling="average")
+        nearest = ds.io.read_array(band=0, out_shape=(8, 8), resampling="nearest")
         assert np.allclose(averaged, 50.0), f"average of 0/100 must be 50: {averaged}"
         assert set(np.unique(nearest)) <= {
             0.0,
@@ -75,11 +75,11 @@ class TestOutShapeReads:
             A 32x32 window decimated to 16x16 equals decimating the
             equivalent slice — pinned by the window's top-left value.
         """
-        result = ramp_dataset.read_array(
+        result = ramp_dataset.io.read_array(
             band=0, window=Window(0, 0, 32, 32), out_shape=(16, 16)
         )
         assert result.shape == (16, 16), f"unexpected shape {result.shape}"
-        window_values = ramp_dataset.read_array(band=0)[:32, :32]
+        window_values = ramp_dataset.io.read_array(band=0)[:32, :32]
         assert result.min() >= window_values.min(), (
             "values leaked from outside the window"
         )
@@ -92,16 +92,16 @@ class TestOutShapeReads:
         )
         np.testing.assert_array_equal(
             result,
-            slice_ds.read_array(band=0, out_shape=(16, 16)),
+            slice_ds.io.read_array(band=0, out_shape=(16, 16)),
             err_msg="window+out_shape must equal decimating the same slice",
         )
 
     def test_list_window_matches_window_object(self, ramp_dataset):
         """The legacy x-first list window composes with out_shape too."""
-        via_object = ramp_dataset.read_array(
+        via_object = ramp_dataset.io.read_array(
             band=0, window=Window(0, 0, 32, 32), out_shape=(16, 16)
         )
-        via_list = ramp_dataset.read_array(
+        via_list = ramp_dataset.io.read_array(
             band=0, window=[0, 0, 32, 32], out_shape=(16, 16)
         )
         np.testing.assert_array_equal(
@@ -119,23 +119,23 @@ class TestOutShapeReads:
             quadrant. The decimated bbox read must equal decimating the
             native-resolution bbox read of the same area.
         """
-        via_bbox = ramp_dataset.read_array(
+        via_bbox = ramp_dataset.io.read_array(
             band=0, bbox=(0.0, 32.0, 32.0, 64.0), out_shape=(16, 16)
         )
-        native = ramp_dataset.read_array(band=0, bbox=(0.0, 32.0, 32.0, 64.0))
+        native = ramp_dataset.io.read_array(band=0, bbox=(0.0, 32.0, 32.0, 64.0))
         slice_ds = Dataset.from_array(
             native,
             geo_ref=GeoReference(top_left_corner=(0, 64), cell_size=1.0, epsg=4326),
         )
         np.testing.assert_array_equal(
             via_bbox,
-            slice_ds.read_array(band=0, out_shape=(16, 16)),
+            slice_ds.io.read_array(band=0, out_shape=(16, 16)),
             err_msg="bbox+out_shape must decimate the native bbox window",
         )
 
     def test_upsampling(self, ramp_dataset):
         """An out_shape larger than the source enlarges the array."""
-        result = ramp_dataset.read_array(band=0, out_shape=(128, 128))
+        result = ramp_dataset.io.read_array(band=0, out_shape=(128, 128))
         assert result.shape == (128, 128), f"unexpected shape {result.shape}"
 
     def test_multi_band_stacks(self):
@@ -145,7 +145,7 @@ class TestOutShapeReads:
             np.stack([base, base + 1.0]),
             geo_ref=GeoReference(top_left_corner=(0, 64), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(out_shape=(16, 16))
+        result = ds.io.read_array(out_shape=(16, 16))
         assert result.shape == (2, 16, 16), f"unexpected shape {result.shape}"
         np.testing.assert_array_equal(
             result[1] - result[0],
@@ -160,9 +160,9 @@ class TestOutShapeReads:
             np.stack([base, base + 1.0]),
             geo_ref=GeoReference(top_left_corner=(0, 64), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(window=Window(0, 0, 32, 32), out_shape=(8, 8))
+        result = ds.io.read_array(window=Window(0, 0, 32, 32), out_shape=(8, 8))
         assert result.shape == (2, 8, 8), f"unexpected shape {result.shape}"
-        single = ds.read_array(band=0, window=Window(0, 0, 32, 32), out_shape=(8, 8))
+        single = ds.io.read_array(band=0, window=Window(0, 0, 32, 32), out_shape=(8, 8))
         np.testing.assert_array_equal(
             result[0],
             single,
@@ -177,13 +177,13 @@ class TestOutShapeReads:
             resolution matches the overview's pixels (GDAL pulls from it).
         """
         path = str(tmp_path / "ovr.tif")
-        ramp_dataset.to_file(path)
+        ramp_dataset.io.to_file(path)
         writable = Dataset.read_file(path, read_only=False)
-        writable.create_overviews(overview_levels=[2])
+        writable.io.create_overviews(overview_levels=[2])
         writable = None
         ds = Dataset.read_file(path)
-        decimated = ds.read_array(band=0, out_shape=(32, 32))
-        overview = ds.get_overview(band=0, overview_index=0).ReadAsArray()
+        decimated = ds.io.read_array(band=0, out_shape=(32, 32))
+        overview = ds.io.get_overview(band=0, overview_index=0).ReadAsArray()
         np.testing.assert_array_equal(
             decimated,
             overview,
@@ -192,7 +192,7 @@ class TestOutShapeReads:
 
     def test_case_insensitive_resampling(self, ramp_dataset):
         """The resampling name is normalised before lookup."""
-        result = ramp_dataset.read_array(
+        result = ramp_dataset.io.read_array(
             band=0, out_shape=(32, 32), resampling=" Average "
         )
         assert result.shape == (32, 32), "normalised name must be accepted"
@@ -211,40 +211,40 @@ class TestOutShapeReads:
             bad_shape: The invalid shape under test.
         """
         with pytest.raises(ValueError, match="out_shape"):
-            ramp_dataset.read_array(band=0, out_shape=bad_shape)
+            ramp_dataset.io.read_array(band=0, out_shape=bad_shape)
 
     def test_short_list_window_rejected(self, ramp_dataset):
         """A bare window list of the wrong length raises ValueError."""
         with pytest.raises(ValueError, match="window"):
-            ramp_dataset.read_array(band=0, window=[0, 0, 32], out_shape=(16, 16))
+            ramp_dataset.io.read_array(band=0, window=[0, 0, 32], out_shape=(16, 16))
 
     def test_out_of_bounds_window_raises(self, ramp_dataset):
         """A window beyond the raster raises OutOfBoundsError, not GDAL's error."""
         window = Window(48, 48, 32, 32)
         with pytest.raises(OutOfBoundsError):
-            ramp_dataset.read_array(band=0, window=window, out_shape=(8, 8))
+            ramp_dataset.io.read_array(band=0, window=window, out_shape=(8, 8))
 
     def test_band_index_validated(self, ramp_dataset):
         """An out-of-range band raises the shared band-index ValueError."""
         with pytest.raises(ValueError, match="is out of range for a"):
-            ramp_dataset.read_array(band=3, out_shape=(8, 8))
+            ramp_dataset.io.read_array(band=3, out_shape=(8, 8))
 
     def test_unknown_resampling_rejected(self, ramp_dataset):
         """An unregistered algorithm raises ValueError listing the choices."""
         with pytest.raises(ValueError, match="unknown resampling"):
-            ramp_dataset.read_array(band=0, out_shape=(8, 8), resampling="sinc")
+            ramp_dataset.io.read_array(band=0, out_shape=(8, 8), resampling="sinc")
 
     def test_chunks_with_out_shape_rejected(self, ramp_dataset):
         """out_shape with chunks= raises NotImplementedError."""
         with pytest.raises(NotImplementedError, match="out_shape"):
-            ramp_dataset.read_array(band=0, chunks=8, out_shape=(8, 8))
+            ramp_dataset.io.read_array(band=0, chunks=8, out_shape=(8, 8))
 
     def test_resampling_without_out_shape_rejected(self, ramp_dataset):
         """A non-default resampling without out_shape raises, not silently ignored (L13)."""
         with pytest.raises(ValueError, match="only applies to out_shape"):
-            ramp_dataset.read_array(band=0, resampling="bilinear")
+            ramp_dataset.io.read_array(band=0, resampling="bilinear")
 
     def test_default_resolution_unchanged(self, ramp_dataset):
         """out_shape=None keeps the historical native-resolution read."""
-        result = ramp_dataset.read_array(band=0)
+        result = ramp_dataset.io.read_array(band=0)
         assert result.shape == (64, 64), "default read must stay native-resolution"

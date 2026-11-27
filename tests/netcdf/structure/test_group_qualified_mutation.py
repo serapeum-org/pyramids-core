@@ -58,7 +58,7 @@ class TestAQualifiedNameIsRefusedRatherThanFailingInGdal:
         group = qualified.rpartition("/")[0]
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable(qualified, "renamed_thing")
+            dataset.variables.rename(qualified, "renamed_thing")
 
         message = str(excinfo.value)
         assert group in message, f"the refusal must name the sub-group: {message}"
@@ -77,7 +77,7 @@ class TestAQualifiedNameIsRefusedRatherThanFailingInGdal:
         group = qualified.rpartition("/")[0]
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.remove_variable(qualified)
+            dataset.variables.remove(qualified)
 
         message = str(excinfo.value)
         assert group in message, f"the refusal must name the sub-group: {message}"
@@ -98,7 +98,7 @@ class TestAQualifiedNameIsRefusedRatherThanFailingInGdal:
         group, _, leaf = qualified.rpartition("/")
 
         view = dataset.get_group(group)
-        view.rename_variable(leaf, "renamed_thing")
+        view.variables.rename(leaf, "renamed_thing")
 
         assert "renamed_thing" in view.variable_names, (
             f"the recommended path did not rename: {view.variable_names}"
@@ -121,7 +121,7 @@ class TestAQualifiedNameIsRefusedRatherThanFailingInGdal:
         dataset = NetCDF.read_file(str(FLAT))
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable("tos", "grp/renamed")
+            dataset.variables.rename("tos", "grp/renamed")
 
         assert "grp/renamed" in str(excinfo.value), (
             f"the refusal must echo the rejected name: {excinfo.value}"
@@ -144,7 +144,7 @@ class TestAQualifiedNameIsRefusedRatherThanFailingInGdal:
         qualified = _qualified_name(dataset)
 
         with pytest.raises(ValueError):
-            dataset.rename_variable(qualified, "renamed_thing")
+            dataset.variables.rename(qualified, "renamed_thing")
 
         assert dataset.variable_names == before, "the refused rename changed the store"
         assert "renamed_thing" not in dataset._readable_variable_names(), (
@@ -166,7 +166,7 @@ class TestRemoveVariableReportsAMissingNameAsValueError:
         dataset = NetCDF.read_file(str(FLAT))
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.remove_variable("zzz_not_here")
+            dataset.variables.remove("zzz_not_here")
 
         assert "zzz_not_here" in str(excinfo.value), (
             f"the refusal must echo the name: {excinfo.value}"
@@ -187,7 +187,7 @@ class TestRemoveVariableReportsAMissingNameAsValueError:
             "the fixture no longer models a dimension coordinate"
         )
 
-        dataset.remove_variable("lat")
+        dataset.variables.remove("lat")
 
         arrays = dataset._working_group().GetMDArrayNames()
         assert "lat" not in arrays, f"the dimension coordinate survived: {arrays}"
@@ -219,7 +219,7 @@ class TestTheTwoMutatorsAgreeAboutWhatTheStoreHolds:
         )
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable("lat", "latitude")
+            dataset.variables.rename("lat", "latitude")
 
         message = str(excinfo.value)
         assert "not found" not in message, (
@@ -242,7 +242,7 @@ class TestTheTwoMutatorsAgreeAboutWhatTheStoreHolds:
         dataset = NetCDF.read_file(str(FLAT))
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable("lat", "latitude")
+            dataset.variables.rename("lat", "latitude")
 
         message = str(excinfo.value)
         assert "dimension coordinate" in message, (
@@ -268,7 +268,7 @@ class TestTheTwoMutatorsAgreeAboutWhatTheStoreHolds:
         dataset = NetCDF.read_file(str(FLAT))
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable("zzz_not_here", "whatever")
+            dataset.variables.rename("zzz_not_here", "whatever")
 
         message = str(excinfo.value)
         assert "not found" in message, f"a typo lost its message: {message}"
@@ -285,7 +285,7 @@ class TestTheTwoMutatorsAgreeAboutWhatTheStoreHolds:
         """
         dataset = NetCDF.read_file(str(FLAT))
 
-        dataset.rename_variable("lat_bnds", "lat_bounds")
+        dataset.variables.rename("lat_bnds", "lat_bounds")
 
         arrays = dataset._working_group().GetMDArrayNames()
         assert "lat_bounds" in arrays, f"the rename did not happen: {arrays}"

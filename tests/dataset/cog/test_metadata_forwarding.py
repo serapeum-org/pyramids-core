@@ -43,7 +43,7 @@ class TestMetadataForwarding:
         Test scenario:
             metadata={"SOURCE": "unit-test"} is readable on the reopened COG.
         """
-        out = byte_dataset.to_cog(
+        out = byte_dataset.cog.to_cog(
             tmp_path / "m.tif", tags=cog.Tags(metadata={"SOURCE": "unit-test"})
         )
         ds = gdal.Open(str(out))
@@ -62,7 +62,7 @@ class TestMetadataForwarding:
             The reopened COG has a colour table whose entry 1 is red.
         """
         cmap = {0: (0, 0, 0, 255), 1: (255, 0, 0, 255)}
-        out = byte_dataset.to_cog(tmp_path / "cm.tif", tags=cog.Tags(colormap=cmap))
+        out = byte_dataset.cog.to_cog(tmp_path / "cm.tif", tags=cog.Tags(colormap=cmap))
         ds = gdal.Open(str(out))
         ct = ds.GetRasterBand(1).GetColorTable()
         entry = ct.GetColorEntry(1) if ct is not None else None
@@ -80,7 +80,7 @@ class TestMetadataForwarding:
         Test scenario:
             band_tags={0: {"name": "class"}} appears on band 1 of the COG.
         """
-        out = byte_dataset.to_cog(
+        out = byte_dataset.cog.to_cog(
             tmp_path / "bt.tif", tags=cog.Tags(band_tags={0: {"name": "class"}})
         )
         ds = gdal.Open(str(out))
@@ -99,7 +99,7 @@ class TestMetadataForwarding:
             After writing with a colormap + metadata, the in-memory source still
             has no colour table and no stamped metadata item.
         """
-        byte_dataset.to_cog(
+        byte_dataset.cog.to_cog(
             tmp_path / "x.tif",
             tags=cog.Tags(
                 colormap={0: (1, 2, 3, 255)},
@@ -131,7 +131,7 @@ class TestMetadataForwarding:
         with pytest.raises(
             ValueError, match="colormap is only supported on Byte/UInt16"
         ) as exc_info:
-            ds.to_cog(tmp_path / "f_cmap.tif", tags=tags)
+            ds.cog.to_cog(tmp_path / "f_cmap.tif", tags=tags)
         message = str(exc_info.value)
         assert "bands=cog.BandSelection(out_dtype=" in message, (
             f"guidance must name the grouped API, got: {message}"
@@ -154,7 +154,7 @@ class TestMetadataForwarding:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.to_cog(
+        out = ds.cog.to_cog(
             tmp_path / "cast_cmap.tif",
             bands=cog.BandSelection(out_dtype="uint8"),
             tags=cog.Tags(colormap={0: (0, 0, 0, 255), 1: (255, 0, 0, 255)}),
@@ -175,7 +175,7 @@ class TestMetadataForwarding:
         Test scenario:
             colormap + band_tags + metadata together yield a valid COG.
         """
-        out = byte_dataset.to_cog(
+        out = byte_dataset.cog.to_cog(
             tmp_path / "v.tif",
             tags=cog.Tags(
                 colormap={0: (0, 0, 0, 255)},
@@ -183,4 +183,4 @@ class TestMetadataForwarding:
                 metadata={"SOURCE": "x"},
             ),
         )
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, "invalid COG"
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, "invalid COG"

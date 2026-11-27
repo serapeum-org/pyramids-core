@@ -54,7 +54,7 @@ class TestToTerrainRgbRoundtrip:
     def test_mapbox_roundtrip_within_interval(self, tmp_path):
         """Mapbox decode recovers each height to within one ``interval``."""
         dem = _dem_3857()
-        out = dem.to_terrain_rgb(tmp_path / "dem.png", tiles=False, encoding="mapbox")
+        out = dem.io.to_terrain_rgb(tmp_path / "dem.png", tiles=False, encoding="mapbox")
         count, (r, g, b) = _read_bands(out)
         assert count == 3, f"no-nodata source must yield 3-band RGB, got {count}"
         decoded = _decode_mapbox(
@@ -68,7 +68,7 @@ class TestToTerrainRgbRoundtrip:
     def test_terrarium_roundtrip_within_quantum(self, tmp_path):
         """Terrarium decode recovers each height to within 1/256 m."""
         dem = _dem_3857()
-        out = dem.to_terrain_rgb(tmp_path / "t.png", tiles=False, encoding="terrarium")
+        out = dem.io.to_terrain_rgb(tmp_path / "t.png", tiles=False, encoding="terrarium")
         _, (r, g, b) = _read_bands(out)
         decoded = (r.astype("int64") * 256 + g + b / 256.0) - 32768
         source = np.array([[0.0, 100.0], [2000.0, 8848.0]])
@@ -76,7 +76,7 @@ class TestToTerrainRgbRoundtrip:
 
     def test_encoding_is_case_insensitive(self, tmp_path):
         """``encoding`` is normalised, so upper-case names are accepted."""
-        out = _dem_3857().to_terrain_rgb(
+        out = _dem_3857().io.to_terrain_rgb(
             tmp_path / "u.png", tiles=False, encoding="MapBox"
         )
         assert out.exists(), "upper-case encoding name must be accepted"
@@ -93,7 +93,7 @@ class TestToTerrainRgbNoData:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=_GEO_3857, epsg=3857),
         )
-        out = dem.to_terrain_rgb(tmp_path / "n.png", tiles=False)
+        out = dem.io.to_terrain_rgb(tmp_path / "n.png", tiles=False)
         count, bands = _read_bands(out)
         assert count == 4, f"nodata source must yield 4-band RGBA, got {count}"
         alpha = bands[3]
@@ -102,7 +102,7 @@ class TestToTerrainRgbNoData:
 
     def test_no_nodata_yields_rgb(self, tmp_path):
         """A source without a nodata value yields a 3-band RGB raster."""
-        out = _dem_3857(no_data_value=None).to_terrain_rgb(
+        out = _dem_3857(no_data_value=None).io.to_terrain_rgb(
             tmp_path / "r.png", tiles=False
         )
         count, _ = _read_bands(out)
@@ -116,7 +116,7 @@ class TestToTerrainRgbNoData:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(10.0, 0.01, 0.0, 47.0, 0.0, -0.01), epsg=4326),
         )
-        out = dem.to_terrain_rgb(tmp_path / "rn.png", tiles=False)
+        out = dem.io.to_terrain_rgb(tmp_path / "rn.png", tiles=False)
         count, bands = _read_bands(out)
         assert count == 4, f"reprojected nodata source must be RGBA, got {count}"
         assert (bands[3] == 0).any(), "nodata cell must survive reprojection as alpha 0"
@@ -127,7 +127,7 @@ class TestToTerrainRgbOutputs:
 
     def test_geotiff_when_not_png(self, tmp_path):
         """A non-``.png`` suffix writes a GeoTIFF carrying the 3857 projection."""
-        out = _dem_3857().to_terrain_rgb(tmp_path / "dem.tif", tiles=False)
+        out = _dem_3857().io.to_terrain_rgb(tmp_path / "dem.tif", tiles=False)
         ds = gdal.Open(str(out))
         assert ds.GetDriver().ShortName == "GTiff", "non-png suffix must write GeoTIFF"
         assert "3857" in ds.GetProjection(), "output must be Web Mercator"
@@ -140,7 +140,7 @@ class TestToTerrainRgbOutputs:
             no_data_value=None,
             geo_ref=GeoReference(geo=(10.0, 0.01, 0.0, 47.0, 0.0, -0.01), epsg=4326),
         )
-        out = dem.to_terrain_rgb(tmp_path / "w.tif", tiles=False)
+        out = dem.io.to_terrain_rgb(tmp_path / "w.tif", tiles=False)
         assert "3857" in gdal.Open(str(out)).GetProjection(), "must reproject to 3857"
 
 
@@ -149,7 +149,7 @@ class TestToTerrainRgbTiles:
 
     def test_writes_xyz_layout(self, tmp_path):
         """``tiles=True`` writes valid 256x256 RGBA PNGs under ``{z}/{x}/{y}.png``."""
-        root = _dem_3857(no_data_value=None).to_terrain_rgb(
+        root = _dem_3857(no_data_value=None).io.to_terrain_rgb(
             tmp_path / "tiles", tiles=True, min_zoom=4, max_zoom=6
         )
         pngs = glob.glob(os.path.join(str(root), "**", "*.png"), recursive=True)
@@ -165,7 +165,7 @@ class TestToTerrainRgbTiles:
 
     def test_zoom_levels_span_min_to_max(self, tmp_path):
         """Every requested zoom level produces a directory."""
-        root = _dem_3857(no_data_value=None).to_terrain_rgb(
+        root = _dem_3857(no_data_value=None).io.to_terrain_rgb(
             tmp_path / "z", tiles=True, min_zoom=3, max_zoom=5
         )
         zooms = {int(d) for d in os.listdir(root) if d.isdigit()}
@@ -180,42 +180,42 @@ class TestToTerrainRgbErrors:
         dem = _dem_3857()
         out = tmp_path / "x.png"
         with pytest.raises(ValueError, match="encoding must be one of"):
-            dem.to_terrain_rgb(out, encoding="rainbow")
+            dem.io.to_terrain_rgb(out, encoding="rainbow")
 
     def test_invalid_resampling_raises(self, tmp_path):
         """An unknown resampling name raises ValueError."""
         dem = _dem_3857()
         out = tmp_path / "x.png"
         with pytest.raises(ValueError, match="does not exist|resampling"):
-            dem.to_terrain_rgb(out, resampling="bogus")
+            dem.io.to_terrain_rgb(out, resampling="bogus")
 
     def test_max_zoom_below_min_zoom_raises(self, tmp_path):
         """``max_zoom < min_zoom`` raises ValueError."""
         dem = _dem_3857(no_data_value=None)
         out = tmp_path / "t"
         with pytest.raises(ValueError, match="max_zoom"):
-            dem.to_terrain_rgb(out, tiles=True, min_zoom=8, max_zoom=4)
+            dem.io.to_terrain_rgb(out, tiles=True, min_zoom=8, max_zoom=4)
 
     def test_non_positive_interval_raises(self, tmp_path):
         """A non-positive mapbox ``interval`` raises instead of dividing by zero."""
         dem = _dem_3857()
         out = tmp_path / "x.png"
         with pytest.raises(ValueError, match="interval must be positive"):
-            dem.to_terrain_rgb(out, tiles=False, interval=0.0)
+            dem.io.to_terrain_rgb(out, tiles=False, interval=0.0)
 
     def test_negative_min_zoom_raises(self, tmp_path):
         """A negative ``min_zoom`` raises ValueError."""
         dem = _dem_3857(no_data_value=None)
         out = tmp_path / "t"
         with pytest.raises(ValueError, match="min_zoom must be >= 0"):
-            dem.to_terrain_rgb(out, tiles=True, min_zoom=-1)
+            dem.io.to_terrain_rgb(out, tiles=True, min_zoom=-1)
 
     def test_out_of_range_band_raises(self, tmp_path):
         """A band index past the source band count raises a clear ValueError."""
         dem = _dem_3857()
         out = tmp_path / "x.png"
         with pytest.raises(ValueError, match="is out of range for a"):
-            dem.to_terrain_rgb(out, tiles=False, band=5)
+            dem.io.to_terrain_rgb(out, tiles=False, band=5)
 
 
 class TestEncodeTerrainRgb:
@@ -334,7 +334,7 @@ class TestToTerrainRgbClamping:
             no_data_value=None,
             geo_ref=GeoReference(geo=_GEO_3857, epsg=3857),
         )
-        out = dem.to_terrain_rgb(tmp_path / "c.png", tiles=False)
+        out = dem.io.to_terrain_rgb(tmp_path / "c.png", tiles=False)
         _, (r, g, b) = _read_bands(out)
         assert (r[0, 0], g[0, 0], b[0, 0]) == (
             255,
@@ -386,7 +386,7 @@ class TestTilingSourcePreparation:
             arr=np.linspace(0.0, 8848.0, 600 * 600, dtype="float32").reshape(600, 600),
             geo_ref=GeoReference(top_left_corner=(0.0, 6.0), cell_size=0.01, epsg=4326),
         )
-        dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=5)
+        dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=5)
         assert len(seen) == 1, f"expected one tiling call, got {len(seen)}"
         assert seen[0][0] > 0, "the staged tiling source must carry overviews"
 
@@ -404,7 +404,7 @@ class TestTilingSourcePreparation:
             arr=np.linspace(0.0, 8848.0, 600 * 600, dtype="float32").reshape(600, 600),
             geo_ref=GeoReference(geo=_GEO_3857, epsg=3857),
         )
-        dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=5)
+        dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=5)
         assert len(seen) == 1, f"expected one tiling call, got {len(seen)}"
         assert seen[0][1] is not dem.raster, (
             "a source already in EPSG:3857 must still be staged, not read directly"
@@ -430,7 +430,7 @@ class TestTilingSourcePreparation:
 
         monkeypatch.setattr(_IO, "_terrain_rgb_single", spy)
         dem = _dem_3857()
-        dem.to_terrain_rgb(tmp_path / "dem.png", tiles=False)
+        dem.io.to_terrain_rgb(tmp_path / "dem.png", tiles=False)
         assert len(seen) == 1, f"expected one encode call, got {len(seen)}"
         assert seen[0].raster is dem.raster, (
             "the untiled path must hand the encoder the original raster handle"
@@ -510,7 +510,7 @@ class TestTilingScratchCleanup:
             would leak a full copy of the reprojected raster per call.
         """
         before = self._scratch_dirs()
-        dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
+        dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
         assert self._scratch_dirs() == before, (
             f"tiling left a staging directory behind: {self._scratch_dirs() - before}"
         )
@@ -532,7 +532,7 @@ class TestTilingScratchCleanup:
 
         monkeypatch.setattr(gdal.Dataset, "BuildOverviews", explode)
         with pytest.raises(RuntimeError, match="synthetic BuildOverviews failure"):
-            dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
+            dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
         assert self._scratch_dirs() == before, (
             f"a failed staging left {self._scratch_dirs() - before} behind"
         )
@@ -555,7 +555,7 @@ class TestTilingScratchCleanup:
             return path
 
         monkeypatch.setattr(_IO, "_terrain_rgb_tiles", spy)
-        dem.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
+        dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
         assert len(seen) == 1, f"expected one tiling call, got {len(seen)}"
         assert not seen[0].startswith("/vsimem"), (
             f"the staged source must not live in process memory, got {seen[0]!r}"

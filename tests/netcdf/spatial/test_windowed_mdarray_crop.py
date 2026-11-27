@@ -802,7 +802,7 @@ class TestCropUsesTheWindow:
 
         def _cropped():
             var = NetCDF.read_file(grid_path).get_variable("v")
-            var.apply(lambda values: values + 1000.0, inplace=True)
+            var.analysis.apply(lambda values: values + 1000.0, inplace=True)
             return np.asarray(var.crop(mask=mask, touch=True).read_array())
 
         fast = _cropped()

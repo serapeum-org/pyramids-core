@@ -172,8 +172,8 @@ class TestXY:
 
     def test_scalar_center_and_corner(self, unit_dataset):
         """Scalar input returns plain-float centre / corner coordinates."""
-        assert unit_dataset.xy(0, 0) == pytest.approx((0.5, 3.5)), "centre wrong"
-        assert unit_dataset.xy(0, 0, center=False) == pytest.approx((0.0, 4.0)), (
+        assert unit_dataset.cell.xy(0, 0) == pytest.approx((0.5, 3.5)), "centre wrong"
+        assert unit_dataset.cell.xy(0, 0, center=False) == pytest.approx((0.0, 4.0)), (
             "corner wrong"
         )
 
@@ -185,7 +185,7 @@ class TestXY:
             returned ``([x], [y])`` for 0-d inputs. ``xy(np.array(0), ...)`` must
             return the same scalars as ``xy(0, ...)``.
         """
-        x, y = unit_dataset.xy(np.array(0), np.array(0))
+        x, y = unit_dataset.cell.xy(np.array(0), np.array(0))
         assert (x, y) == pytest.approx((0.5, 3.5)), f"got {(x, y)}"
         assert np.ndim(x) == 0 and np.ndim(y) == 0, "0-d input must yield scalars"
 
@@ -201,7 +201,7 @@ class TestXY:
             rows: Row indices under test.
             cols: Column indices under test.
         """
-        xs, ys = unit_dataset.xy(rows, cols)
+        xs, ys = unit_dataset.cell.xy(rows, cols)
         assert xs == pytest.approx([0.5, 1.5]), f"xs wrong: {xs}"
         assert ys == pytest.approx([3.5, 2.5]), f"ys wrong: {ys}"
 
@@ -212,7 +212,7 @@ class TestXY:
             2.0-wide, 0.5-tall pixels anchored at (10, 8): cell (1, 2) centre
             is (10 + 2*2 + 1, 8 - 1*0.5 - 0.25) = (15.0, 7.25).
         """
-        assert rect_dataset.xy(1, 2) == pytest.approx((15.0, 7.25)), "rect centre wrong"
+        assert rect_dataset.cell.xy(1, 2) == pytest.approx((15.0, 7.25)), "rect centre wrong"
 
     def test_rotated_grid(self, rotated_dataset):
         """xy applies the rotation terms of a skewed geotransform.
@@ -221,7 +221,7 @@ class TestXY:
             geo = (100, 1, 0.2, 200, 0.1, -1): cell (row=1, col=2) centre is
             transform * (2.5, 1.5) = (100 + 2.5 + 0.3, 200 + 0.25 - 1.5).
         """
-        assert rotated_dataset.xy(1, 2) == pytest.approx((102.8, 198.75)), (
+        assert rotated_dataset.cell.xy(1, 2) == pytest.approx((102.8, 198.75)), (
             "rotated centre wrong"
         )
 
@@ -231,18 +231,18 @@ class TestRowCol:
 
     def test_scalar(self, unit_dataset):
         """Scalar input returns (row, col) ints."""
-        assert unit_dataset.rowcol(0.5, 3.5) == (0, 0), "top-left cell wrong"
-        assert unit_dataset.rowcol(2.5, 1.5) == (2, 2), "interior cell wrong"
+        assert unit_dataset.cell.rowcol(0.5, 3.5) == (0, 0), "top-left cell wrong"
+        assert unit_dataset.cell.rowcol(2.5, 1.5) == (2, 2), "interior cell wrong"
 
     def test_zero_d_array_input_is_scalar(self, unit_dataset):
         """0-d numpy array input returns scalar (row, col), not arrays (M3)."""
-        row, col = unit_dataset.rowcol(np.array(0.5), np.array(3.5))
+        row, col = unit_dataset.cell.rowcol(np.array(0.5), np.array(3.5))
         assert (row, col) == (0, 0), f"got {(row, col)}"
         assert np.ndim(row) == 0 and np.ndim(col) == 0, "0-d input must yield scalars"
 
     def test_vectorised(self, unit_dataset):
         """Sequence input returns row/col lists of ints, symmetric with xy (N2)."""
-        rows, cols = unit_dataset.rowcol([0.5, 2.5], [3.5, 1.5])
+        rows, cols = unit_dataset.cell.rowcol([0.5, 2.5], [3.5, 1.5])
         assert rows == [0, 2], f"rows wrong: {rows}"
         assert cols == [0, 2], f"cols wrong: {cols}"
         assert isinstance(rows, list) and isinstance(cols, list), (
@@ -254,7 +254,7 @@ class TestRowCol:
 
     def test_round_trip_through_xy(self, unit_dataset):
         """rowcol(xy(r, c)) returns (r, c) through cell centres."""
-        assert unit_dataset.rowcol(*unit_dataset.xy(3, 1)) == (
+        assert unit_dataset.cell.rowcol(*unit_dataset.cell.xy(3, 1)) == (
             3,
             1,
         ), "round-trip broken"
@@ -265,7 +265,7 @@ class TestRowCol:
         Test scenario:
             The centre computed by xy maps back to the same cell.
         """
-        assert rect_dataset.rowcol(*rect_dataset.xy(2, 1)) == (2, 1), "rect round-trip"
+        assert rect_dataset.cell.rowcol(*rect_dataset.cell.xy(2, 1)) == (2, 1), "rect round-trip"
 
     def test_rotated_grid(self, rotated_dataset):
         """rowcol inverts the full affine, including rotation terms.
@@ -275,13 +275,13 @@ class TestRowCol:
         """
         for row in range(4):
             for col in range(4):
-                back = rotated_dataset.rowcol(*rotated_dataset.xy(row, col))
+                back = rotated_dataset.cell.rowcol(*rotated_dataset.cell.xy(row, col))
                 assert back == (row, col), f"rotated round-trip broke at {(row, col)}"
 
     def test_parity_with_engine(self, unit_dataset):
         """rowcol matches nearest_cell on a square north-up grid."""
-        engine = unit_dataset.nearest_cell(DataFrame({"x": [2.5], "y": [1.5]}))
-        assert unit_dataset.rowcol(2.5, 1.5) == (
+        engine = unit_dataset.cell.nearest_cell(DataFrame({"x": [2.5], "y": [1.5]}))
+        assert unit_dataset.cell.rowcol(2.5, 1.5) == (
             int(engine[0, 0]),
             int(engine[0, 1]),
         ), "engine parity drift"

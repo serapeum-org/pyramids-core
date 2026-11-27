@@ -24,7 +24,7 @@ class TestSave:
         if save_raster_path.exists():
             save_raster_path.unlink()
         src = Dataset(src)
-        src.to_file(save_raster_path)
+        src.io.to_file(save_raster_path)
         assert Path(src.file_name) == save_raster_path
         assert save_raster_path.exists()
         src = None
@@ -39,7 +39,7 @@ class TestSave:
             ascii_file_save_to.unlink()
 
         src = Dataset(src)
-        src.to_file(ascii_file_save_to)
+        src.io.to_file(ascii_file_save_to)
         assert ascii_file_save_to.exists()
         ascii_file_save_to.unlink()
 
@@ -82,7 +82,7 @@ class TestToFileReopen:
         assert source.file_name == "", "precondition: a MEM dataset is path-less"
 
         out = tmp_path / "unmutated.tif"
-        source.to_file(out, reopen=False)
+        source.io.to_file(out, reopen=False)
 
         assert source.file_name == "", (
             f"reopen=False must not repoint the source; got {source.file_name!r}"
@@ -90,7 +90,7 @@ class TestToFileReopen:
         assert out.exists(), f"output file was not written: {out}"
         reloaded = Dataset.read_file(str(out))
         np.testing.assert_allclose(
-            reloaded.read_array(),
+            reloaded.io.read_array(),
             arr,
             err_msg="written pixels differ from the source array",
         )
@@ -104,7 +104,7 @@ class TestToFileReopen:
         """
         source = self._mem(np.arange(20, dtype="float32").reshape(4, 5))
         out = tmp_path / "swapped.tif"
-        source.to_file(out)
+        source.io.to_file(out)
         assert Path(source.file_name) == out, (
             f"default reopen=True should swap file_name to {out}, "
             f"got {source.file_name!r}"
@@ -120,20 +120,20 @@ class TestToFileReopen:
         """
         in_path = tmp_path / "in.tif"
         arr = np.arange(12, dtype="float32").reshape(3, 4)
-        self._mem(arr).to_file(in_path)  # anchor an on-disk source (reopen=True)
+        self._mem(arr).io.to_file(in_path)  # anchor an on-disk source (reopen=True)
 
         source = Dataset.read_file(str(in_path))
         assert Path(source.file_name) == in_path, "precondition: source is on-disk"
 
         out_path = tmp_path / "out.tif"
-        source.to_file(out_path, reopen=False)
+        source.io.to_file(out_path, reopen=False)
 
         assert Path(source.file_name) == in_path, (
             "reopen=False must leave an on-disk source pointing at its original "
             f"file; got {source.file_name!r}"
         )
         np.testing.assert_allclose(
-            Dataset.read_file(str(out_path)).read_array(),
+            Dataset.read_file(str(out_path)).io.read_array(),
             arr,
             err_msg="output content differs from the source",
         )
@@ -151,12 +151,12 @@ class TestToFileReopen:
         arr[10:20, 10:20] = 5.0
         out = tmp_path / "deflate.tif"
 
-        self._mem(arr).to_file(out, reopen=False)
+        self._mem(arr).io.to_file(out, reopen=False)
 
         info = gdal.Info(str(out))
         assert "COMPRESSION=DEFLATE" in info, "expected a DEFLATE-compressed GeoTIFF"
         np.testing.assert_allclose(
-            Dataset.read_file(str(out)).read_array(),
+            Dataset.read_file(str(out)).io.read_array(),
             arr,
             err_msg="reopen=False output did not round-trip through a fresh handle",
         )
@@ -171,9 +171,9 @@ class TestToFileReopen:
         arr = np.arange(3 * 4 * 5, dtype="float32").reshape(3, 4, 5)
         out = tmp_path / "multiband.tif"
 
-        self._mem(arr).to_file(out, reopen=False)
+        self._mem(arr).io.to_file(out, reopen=False)
 
-        reloaded = Dataset.read_file(str(out)).read_array()
+        reloaded = Dataset.read_file(str(out)).io.read_array()
         assert reloaded.shape == (3, 4, 5), f"unexpected shape {reloaded.shape}"
         np.testing.assert_allclose(
             reloaded, arr, err_msg="multiband content differs after reopen=False"
@@ -190,7 +190,7 @@ class TestToFileReopen:
         out = tmp_path / "grid.asc"
         source = self._mem(np.ones((3, 3), dtype="float32"))
 
-        source.to_file(out, driver="ascii", reopen=False)
+        source.io.to_file(out, driver="ascii", reopen=False)
 
         assert out.exists(), f"ASCII output was not written: {out}"
 
@@ -198,14 +198,14 @@ class TestToFileReopen:
 class TestNCtoGeoTIFF:
     def test_convert_0_360_to_180_180_longitude_new_dataset(self, noah: gdal.Dataset):
         dataset = Dataset(noah)
-        new_dataset = dataset.wrap_longitude()
+        new_dataset = dataset.spatial.wrap_longitude()
         lon = new_dataset.lon
         assert lon.max() < 180
         assert new_dataset.top_left_corner == (-180, 90)
 
     def test_convert_0_360_to_180_180_longitude_inplace(self, noah: gdal.Dataset):
         dataset = Dataset(noah)
-        dataset = dataset.wrap_longitude()
+        dataset = dataset.spatial.wrap_longitude()
         lon = dataset.lon
         assert lon.max() < 180
         assert dataset.top_left_corner == (-180, 90)
@@ -234,7 +234,7 @@ class TestDistributedRead:  # unittest.TestCase
     def test_get_block_arrangement_default(self, src: Dataset):
         dataset = Dataset(src)
         dataset.block_size = [[5, 5]]
-        df = dataset.get_block_arrangement()
+        df = dataset.io.get_block_arrangement()
 
         # Check if the DataFrame is correct
         expected_df = pd.DataFrame(
@@ -259,7 +259,7 @@ class TestDistributedRead:  # unittest.TestCase
 class TestHistogram:
     def test_get_histogram(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        hist, ranges = dataset.get_histogram(band=0)
+        hist, ranges = dataset.analysis.get_histogram(band=0)
         assert len(ranges) == 6
         assert hist == [75, 6, 0, 4, 2, 1]
 
@@ -275,7 +275,7 @@ def test_to_xyz():
         ),
     )
     # test with default parameters
-    df = dataset.to_xyz()
+    df = dataset.io.to_xyz()
     check_df = DataFrame(
         {
             "lon": [0.025, 0.075, 0.025, 0.075],
@@ -287,14 +287,14 @@ def test_to_xyz():
 
     pd.testing.assert_frame_equal(df, check_df)
     # test with one bands as integer
-    df = dataset.to_xyz(bands=0)
+    df = dataset.io.to_xyz(bands=0)
     pd.testing.assert_frame_equal(df, check_df.loc[:, ["lon", "lat", "Band_1"]])
 
     # test with one band as integer
-    df = dataset.to_xyz(bands=[1])
+    df = dataset.io.to_xyz(bands=[1])
     pd.testing.assert_frame_equal(df, check_df.loc[:, ["lon", "lat", "Band_2"]])
     with pytest.raises(ValueError):
-        dataset.to_xyz(bands="1")
+        dataset.io.to_xyz(bands="1")
 
 
 class TestTranslate:
@@ -309,7 +309,7 @@ class TestTranslate:
                 top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326
             ),
         )
-        dataset.scale = [0.1]
-        unscaled_dataset = dataset.translate(unscale=True)
-        unscaled_arr = unscaled_dataset.read_array()
+        dataset.bands.scale = [0.1]
+        unscaled_dataset = dataset.vector.translate(unscale=True)
+        unscaled_arr = unscaled_dataset.io.read_array()
         np.testing.assert_almost_equal(unscaled_arr, arr * 0.1)

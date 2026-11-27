@@ -199,9 +199,9 @@ class TestCallSitesUseTheSharedWording:
     @pytest.mark.parametrize(
         "call",
         [
-            lambda ds: ds.read_array(band=5),
-            lambda ds: ds.stats(band=5),
-            lambda ds: ds.contour(band=5, interval=10.0),
+            lambda ds: ds.io.read_array(band=5),
+            lambda ds: ds.analysis.stats(band=5),
+            lambda ds: ds.vector.contour(band=5, interval=10.0),
         ],
         ids=["read_array", "stats", "contour"],
     )
@@ -230,4 +230,4 @@ class TestCallSitesUseTheSharedWording:
             1 passed and failed later inside GDAL rather than here.
         """
         with pytest.raises(ValueError, match="is out of range for a 1-band dataset"):
-            single_band.band_color = {1: "red"}
+            single_band.bands.band_color = {1: "red"}

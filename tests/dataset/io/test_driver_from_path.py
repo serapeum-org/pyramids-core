@@ -99,7 +99,7 @@ class TestTranslateHonoursTheExtension:
         if gdal.GetDriverByName(driver) is None:
             pytest.skip(f"{driver} is not in this GDAL build")
         out = tmp_path / f"t.{extension}"
-        float_raster.translate(path=str(out))
+        float_raster.vector.translate(path=str(out))
         assert driver_of(out) == driver, (
             f"{out.name} should be {driver}, got {driver_of(out)}"
         )
@@ -117,12 +117,12 @@ class TestTranslateHonoursTheExtension:
             produce -- and PNG is the format the docstring names as an example.
         """
         out = tmp_path / "t.png"
-        byte_raster.translate(path=str(out))
+        byte_raster.vector.translate(path=str(out))
         assert driver_of(out) == "PNG", f"expected PNG, got {driver_of(out)}"
 
     def test_no_path_stays_in_memory(self, float_raster):
         """Omitting `path` keeps the result in the MEM driver."""
-        assert float_raster.translate().raster.GetDriver().ShortName == "MEM"
+        assert float_raster.vector.translate().raster.GetDriver().ShortName == "MEM"
 
 
 class TestMergeRastersHonoursTheExtension:
@@ -217,7 +217,7 @@ class TestCopyPathsHonourTheExtension:
             the file on close.
         """
         out = tmp_path / "nd.nc"
-        result = float_raster.change_no_data_value(
+        result = float_raster.bands.change_no_data_value(
             -1.0, float_raster.no_data_value[0], path=str(out)
         )
         result.close()
@@ -289,7 +289,7 @@ class TestToFileMatchesTheConstructors:
             because the constructors refused anything but `.tif`.
         """
         out = tmp_path / filename
-        float_raster.to_file(str(out))
+        float_raster.io.to_file(str(out))
         assert driver_of(out) == "GTiff", f"expected GTiff, got {driver_of(out)}"
 
     @pytest.mark.parametrize("driver", ["geotiff", "GTiff"])
@@ -310,7 +310,7 @@ class TestToFileMatchesTheConstructors:
             into crashing on the same argument.
         """
         out = tmp_path / f"{driver}.tif"
-        float_raster.to_file(str(out), driver=driver)
+        float_raster.io.to_file(str(out), driver=driver)
         assert driver_of(out) == "GTiff", f"expected GTiff, got {driver_of(out)}"
 
     def test_an_unknown_explicit_driver_raises(self, float_raster, tmp_path):
@@ -321,7 +321,7 @@ class TestToFileMatchesTheConstructors:
             tmp_path: Temporary directory fixture.
         """
         with pytest.raises(DriverNotExistError, match="not in the driver catalog"):
-            float_raster.to_file(str(tmp_path / "x.tif"), driver="NotADriver")
+            float_raster.io.to_file(str(tmp_path / "x.tif"), driver="NotADriver")
 
     def test_a_narrowing_dtype_warns(self, float_raster, tmp_path):
         """Writing float32 to PNG warns that the values will not survive.
@@ -602,7 +602,7 @@ class TestTheNarrowingWarningDoesNotCryWolf:
         out = tmp_path / "p.asc"
         Dataset.from_array(
             np.full((4, 4), 1 / 3, dtype="float64"), geo_ref=GEO_REF
-        ).to_file(str(out))
+        ).io.to_file(str(out))
         assert "0.3333333333333333" in out.read_text(), (
             "the ascii writer no longer keeps float64 precision"
         )
@@ -668,7 +668,7 @@ class TestForCopyIsNarrowerThanItLooks:
             strict gate refuses it up front with one that does.
         """
         with pytest.raises(FileFormatNotSupportedError):
-            byte_raster.change_no_data_value(2, 1, path=str(tmp_path / "n.png"))
+            byte_raster.bands.change_no_data_value(2, 1, path=str(tmp_path / "n.png"))
 
     @pytest.mark.parametrize("method", ["last", "min"])
     def test_merge_refuses_a_copy_only_format_for_every_method(self, tmp_path, method):
@@ -720,7 +720,7 @@ class TestForCopyIsNarrowerThanItLooks:
         byte_raster.copy(path=str(copied))
         assert copied.exists(), f"{copied} was not written"
         translated = tmp_path / f"t.{extension}"
-        byte_raster.translate(path=str(translated))
+        byte_raster.vector.translate(path=str(translated))
         assert translated.exists(), f"{translated} was not written"
 
 
@@ -768,7 +768,7 @@ class TestEveryWriterAgreesOnAReferenceOnlyFormat:
         """
         out = tmp_path / "nothing.vrt"
         with pytest.raises(FileFormatNotSupportedError):
-            float_raster.to_file(str(out))
+            float_raster.io.to_file(str(out))
         assert not out.exists(), f"{out} should not have been created"
 
 
@@ -797,7 +797,7 @@ class TestToFileLabelsAccessFromTheDriver:
             package's own guard.
         """
         out = tmp_path / f"a.{extension}"
-        byte_raster.to_file(str(out))
+        byte_raster.io.to_file(str(out))
         assert byte_raster.access == expected_access, (
             f".{extension} should report access={expected_access}, "
             f"got {byte_raster.access}"
@@ -812,9 +812,9 @@ class TestToFileLabelsAccessFromTheDriver:
             byte_raster: An 8-bit source.
             tmp_path: Temporary directory fixture.
         """
-        byte_raster.to_file(str(tmp_path / "ro.png"))
+        byte_raster.io.to_file(str(tmp_path / "ro.png"))
         with pytest.raises(ReadOnlyError):
-            byte_raster.write_array(np.zeros((4, 4), dtype="uint8"))
+            byte_raster.io.write_array(np.zeros((4, 4), dtype="uint8"))
 
     def test_the_dataset_is_repointed_at_the_written_file(self, byte_raster, tmp_path):
         """A copy-only write still repoints the dataset.
@@ -830,7 +830,7 @@ class TestToFileLabelsAccessFromTheDriver:
             skipped.
         """
         out = tmp_path / "repointed.png"
-        byte_raster.to_file(str(out))
+        byte_raster.io.to_file(str(out))
         assert byte_raster.raster.GetDriver().ShortName == "PNG"
         assert Path(byte_raster.file_name).name == out.name, (
             f"expected file_name to name {out.name}, got {byte_raster.file_name!r}"

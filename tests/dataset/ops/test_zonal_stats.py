@@ -28,7 +28,7 @@ def raster(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326),
     )
     path = str(tmp_path / "grid.tif")
-    ds.to_file(path)
+    ds.io.to_file(path)
     return Dataset.read_file(path)
 
 
@@ -48,7 +48,7 @@ def two_boxes():
 
 class TestRasterizeMean:
     def test_returns_geodataframe(self, raster, two_boxes):
-        result = raster.zonal_stats(two_boxes, stats=("mean",))
+        result = raster.analysis.zonal_stats(two_boxes, stats=("mean",))
         assert isinstance(result, gpd.GeoDataFrame)
         assert [column for column in result.columns if column != "geometry"] == ["mean"]
         assert "geometry" in result.columns
@@ -57,20 +57,20 @@ class TestRasterizeMean:
 
     def test_mean_of_box_zero_correct(self, raster, two_boxes):
         """Box 0 covers cells (0,0), (0,1), (1,0), (1,1) = values 0, 1, 10, 11."""
-        result = raster.zonal_stats(two_boxes, stats=("mean",))
+        result = raster.analysis.zonal_stats(two_boxes, stats=("mean",))
         first = result.iloc[0]["mean"]
         assert first == pytest.approx(np.mean([0, 1, 10, 11]))
 
     def test_mean_of_box_one_correct(self, raster, two_boxes):
         """Box 1 covers cells (0,2), (0,3), (1,2), (1,3) = 2, 3, 12, 13."""
-        result = raster.zonal_stats(two_boxes, stats=("mean",))
+        result = raster.analysis.zonal_stats(two_boxes, stats=("mean",))
         second = result.iloc[1]["mean"]
         assert second == pytest.approx(np.mean([2, 3, 12, 13]))
 
 
 class TestMultipleStats:
     def test_mean_sum_min_max(self, raster, two_boxes):
-        result = raster.zonal_stats(
+        result = raster.analysis.zonal_stats(
             two_boxes,
             stats=("mean", "sum", "min", "max"),
         )
@@ -90,7 +90,7 @@ class TestMultipleStats:
             exercises the ``if "count" in stats`` branch that is otherwise
             unreachable from the mean/sum-only paths.
         """
-        result = raster.zonal_stats(two_boxes, stats=("count",))
+        result = raster.analysis.zonal_stats(two_boxes, stats=("count",))
         stat_columns = [column for column in result.columns if column != "geometry"]
         assert stat_columns == ["count"], (
             f"Expected a single 'count' stat column, got {stat_columns}"
@@ -115,7 +115,7 @@ class TestMultipleStats:
             crs="EPSG:4326",
         )
         fc = FeatureCollection(off_raster)
-        result = raster.zonal_stats(fc, stats=("std",))
+        result = raster.analysis.zonal_stats(fc, stats=("std",))
         assert np.isnan(result.iloc[0]["std"]), (
             f"Empty cohort must yield NaN, got {result.iloc[0]['std']}"
         )
@@ -136,9 +136,9 @@ class TestMultipleStats:
             geo_ref=GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326),
         )
         path = str(tmp_path / "all_nodata.tif")
-        ds.to_file(path)
+        ds.io.to_file(path)
         nodata_raster = Dataset.read_file(path)
-        result = nodata_raster.zonal_stats(two_boxes, stats=("std",))
+        result = nodata_raster.analysis.zonal_stats(two_boxes, stats=("std",))
         assert np.isnan(result.iloc[0]["std"]), (
             f"All-NaN cohort must yield NaN, got {result.iloc[0]['std']}"
         )
@@ -147,11 +147,11 @@ class TestMultipleStats:
 class TestStatValidation:
     def test_unknown_stat_raises(self, raster, two_boxes):
         with pytest.raises(ValueError, match="unknown stat"):
-            raster.zonal_stats(two_boxes, stats=("bogus",))
+            raster.analysis.zonal_stats(two_boxes, stats=("bogus",))
 
     def test_unknown_method_raises(self, raster, two_boxes):
         with pytest.raises(ValueError, match="method"):
-            raster.zonal_stats(two_boxes, method="invalid")
+            raster.analysis.zonal_stats(two_boxes, method="invalid")
 
 
 class TestCrsEnforcement:
@@ -165,13 +165,13 @@ class TestCrsEnforcement:
         )
         fc = FeatureCollection(other_crs)
         with pytest.raises(ValueError, match="CRS"):
-            raster.zonal_stats(fc, stats=("mean",))
+            raster.analysis.zonal_stats(fc, stats=("mean",))
 
 
 class TestUnknownMethod:
     def test_unknown_method_raises_value_error(self, raster, two_boxes):
         """Unknown method names raise ``ValueError`` with a helpful message."""
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
-            raster.zonal_stats(two_boxes, method="exactextract")
+            raster.analysis.zonal_stats(two_boxes, method="exactextract")
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
-            raster.zonal_stats(two_boxes, method="typo")
+            raster.analysis.zonal_stats(two_boxes, method="typo")

@@ -72,7 +72,7 @@ class TestSample:
         Test scenario:
             Cell (0,0)=0 / (2,2)=12 on band 0; +25 on band 1.
         """
-        result = two_band.sample(inside_points)
+        result = two_band.analysis.sample(inside_points)
         assert result.shape == (2, 2), f"Expected (2, 2), got {result.shape}"
         assert result.tolist() == [
             [0.0, 12.0],
@@ -85,7 +85,7 @@ class TestSample:
         Test scenario:
             bands=0 yields the band-0 values as a 1-D array.
         """
-        result = two_band.sample(inside_points, bands=0)
+        result = two_band.analysis.sample(inside_points, bands=0)
         assert result.shape == (2,), f"Expected shape (2,), got {result.shape}"
         assert result.tolist() == [0.0, 12.0], f"Wrong values: {result.tolist()}"
 
@@ -95,7 +95,7 @@ class TestSample:
         Test scenario:
             bands=[1, 0] returns band 1 first, then band 0.
         """
-        result = two_band.sample(inside_points, bands=[1, 0])
+        result = two_band.analysis.sample(inside_points, bands=[1, 0])
         assert result.tolist() == [
             [25.0, 37.0],
             [0.0, 12.0],
@@ -107,7 +107,7 @@ class TestSample:
         Test scenario:
             The (100,100) point yields -9999 while the inside point is read.
         """
-        result = two_band.sample(mixed_points, bands=0)
+        result = two_band.analysis.sample(mixed_points, bands=0)
         assert result.tolist() == [12.0, -9999.0], f"Wrong values: {result.tolist()}"
 
     def test_out_of_bounds_snap(self, two_band, mixed_points):
@@ -116,7 +116,7 @@ class TestSample:
         Test scenario:
             (100,100) snaps to the top-right cell (0,4) = value 4.
         """
-        result = two_band.sample(mixed_points, bands=0, on_out_of_bounds="snap")
+        result = two_band.analysis.sample(mixed_points, bands=0, on_out_of_bounds="snap")
         assert result.tolist() == [12.0, 4.0], f"Wrong values: {result.tolist()}"
 
     def test_out_of_bounds_raise(self, two_band, mixed_points):
@@ -126,7 +126,7 @@ class TestSample:
             One of two points is outside, so the error reports 1 of 2.
         """
         with pytest.raises(OutOfBoundsError, match="1 of 2 points"):
-            two_band.sample(mixed_points, on_out_of_bounds="raise")
+            two_band.analysis.sample(mixed_points, on_out_of_bounds="raise")
 
     def test_masked_output(self, two_band, mixed_points):
         """masked=True returns a MaskedArray masking out-of-bounds points.
@@ -134,7 +134,7 @@ class TestSample:
         Test scenario:
             The outside point is masked; the inside value is preserved.
         """
-        result = two_band.sample(mixed_points, bands=0, masked=True)
+        result = two_band.analysis.sample(mixed_points, bands=0, masked=True)
         assert np.ma.isMaskedArray(result), "Expected a masked array"
         assert result.mask.tolist() == [
             False,
@@ -148,7 +148,7 @@ class TestSample:
         Test scenario:
             For 2 bands the outside column is masked in both rows.
         """
-        result = two_band.sample(mixed_points, masked=True)
+        result = two_band.analysis.sample(mixed_points, masked=True)
         assert result.shape == (2, 2), f"Expected (2, 2), got {result.shape}"
         assert result.mask.tolist() == [
             [False, True],
@@ -168,7 +168,7 @@ class TestSample:
             no_data_value=None,
             geo_ref=GeoReference(top_left_corner=(0, 5), cell_size=1.0, epsg=4326),
         )
-        result = ds.sample(mixed_points, bands=0)
+        result = ds.analysis.sample(mixed_points, bands=0)
         assert result.dtype == np.float64, f"Expected float64, got {result.dtype}"
         assert result[0] == pytest.approx(12.0), f"Inside value wrong: {result[0]}"
         assert np.isnan(result[1]), f"Outside point should be NaN, got {result[1]}"
@@ -181,7 +181,7 @@ class TestSample:
             equivalent point geometries.
         """
         df = pd.DataFrame({"x": [0.5, 2.5], "y": [4.5, 2.5]})
-        result = two_band.sample(df, bands=0)
+        result = two_band.analysis.sample(df, bands=0)
         assert result.tolist() == [0.0, 12.0], f"Wrong values: {result.tolist()}"
 
     def test_feature_collection_input(self, two_band, inside_points):
@@ -191,7 +191,7 @@ class TestSample:
             Wrapping the points in a FeatureCollection yields identical values.
         """
         fc = FeatureCollection(inside_points)
-        result = two_band.sample(fc, bands=0)
+        result = two_band.analysis.sample(fc, bands=0)
         assert result.tolist() == [0.0, 12.0], f"Wrong values: {result.tolist()}"
 
     def test_matches_extract_for_inbounds(self, two_band, inside_points):
@@ -200,8 +200,8 @@ class TestSample:
         Test scenario:
             For points inside the extent both APIs return the same band-0 values.
         """
-        sampled = two_band.sample(inside_points, bands=0)
-        extracted = two_band.extract(band=0, mask=inside_points)
+        sampled = two_band.analysis.sample(inside_points, bands=0)
+        extracted = two_band.analysis.extract(band=0, mask=inside_points)
         assert sampled.tolist() == extracted.tolist(), (
             f"sample {sampled.tolist()} != extract {extracted.tolist()}"
         )
@@ -212,7 +212,7 @@ class TestSample:
         Test scenario:
             bands=[] selects no bands.
         """
-        result = two_band.sample(inside_points, bands=[])
+        result = two_band.analysis.sample(inside_points, bands=[])
         assert result.shape == (0, 2), f"Expected (0, 2), got {result.shape}"
 
     def test_invalid_on_out_of_bounds_raises(self, two_band, inside_points):
@@ -222,7 +222,7 @@ class TestSample:
             'clamp' is not a recognised policy.
         """
         with pytest.raises(ValueError, match="on_out_of_bounds must be one of"):
-            two_band.sample(inside_points, on_out_of_bounds="clamp")
+            two_band.analysis.sample(inside_points, on_out_of_bounds="clamp")
 
     def test_band_out_of_range_raises(self, two_band, inside_points):
         """A band index beyond the raster raises ValueError.
@@ -231,7 +231,7 @@ class TestSample:
             band=9 on a 2-band raster is out of range.
         """
         with pytest.raises(ValueError, match="out of range"):
-            two_band.sample(inside_points, bands=9)
+            two_band.analysis.sample(inside_points, bands=9)
 
     def test_bad_points_type_raises(self, two_band):
         """A non-point input type raises TypeError.
@@ -240,7 +240,7 @@ class TestSample:
             A bare list is not a FeatureCollection / GeoDataFrame / DataFrame.
         """
         with pytest.raises(TypeError, match="must be a FeatureCollection"):
-            two_band.sample([(0.5, 4.5)], bands=0)
+            two_band.analysis.sample([(0.5, 4.5)], bands=0)
 
     def test_dataframe_without_xy_raises(self, two_band):
         """A DataFrame lacking x/y columns raises ValueError.
@@ -250,7 +250,7 @@ class TestSample:
         """
         df = pd.DataFrame({"lon": [0.5], "lat": [4.5]})
         with pytest.raises(ValueError, match="must have 'x' and 'y' columns"):
-            two_band.sample(df, bands=0)
+            two_band.analysis.sample(df, bands=0)
 
 
 class TestHistogramEdgesAndStatsPrecision:
@@ -283,7 +283,7 @@ class TestHistogramEdgesAndStatsPrecision:
             returned edges describing buckets `GetHistogram` never filled.
         """
         dataset = self._ramp()
-        _, ranges = dataset.get_histogram(band=0, bins=5, min_value=50, max_value=100)
+        _, ranges = dataset.analysis.get_histogram(band=0, bins=5, min_value=50, max_value=100)
         assert ranges[0][0] == pytest.approx(50.0), (
             f"first edge should be the requested min_value 50, got {ranges[0][0]}"
         )
@@ -294,7 +294,7 @@ class TestHistogramEdgesAndStatsPrecision:
     def test_default_range_still_spans_the_raster(self):
         """With no narrowing the edges still start at the raster minimum."""
         dataset = self._ramp()
-        _, ranges = dataset.get_histogram(band=0, bins=5)
+        _, ranges = dataset.analysis.get_histogram(band=0, bins=5)
         assert ranges[0][0] == pytest.approx(0.0), (
             f"the default range must start at the raster min, got {ranges[0][0]}"
         )
@@ -308,7 +308,7 @@ class TestHistogramEdgesAndStatsPrecision:
             way to ask for the exact values.
         """
         dataset = self._ramp()
-        exact = dataset.stats(approx_ok=False)
+        exact = dataset.analysis.stats(approx_ok=False)
         assert list(exact.columns) == ["min", "max", "mean", "std"], (
             f"unexpected columns: {list(exact.columns)}"
         )
@@ -364,7 +364,7 @@ class TestWindowedAndPerPointStrategiesAgree:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(gdal.Band, "ReadAsArray", counting_read)
-        wide.sample(_points([(0.5, 99.5), (99.5, 0.5)]))
+        wide.analysis.sample(_points([(0.5, 99.5), (99.5, 0.5)]))
         assert len(calls) == 2, (
             f"a sparse batch must issue one read per point, got {len(calls)}"
         )
@@ -387,7 +387,7 @@ class TestWindowedAndPerPointStrategiesAgree:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(gdal.Band, "ReadAsArray", counting_read)
-        wide.sample(_points([(10.5, 50.5), (11.5, 50.5), (10.5, 49.5), (11.5, 49.5)]))
+        wide.analysis.sample(_points([(10.5, 50.5), (11.5, 50.5), (10.5, 49.5), (11.5, 49.5)]))
         assert len(calls) == 1, (
             f"a dense batch must collapse into one windowed read, got {len(calls)}"
         )
@@ -405,11 +405,11 @@ class TestWindowedAndPerPointStrategiesAgree:
         points = _points(
             [(10.5, 50.5), (11.5, 50.5), (12.5, 50.5), (10.5, 49.5), (11.5, 49.5)]
         )
-        windowed = wide.sample(points)
+        windowed = wide.analysis.sample(points)
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(analysis, "_POINT_WINDOW_MIN_PIXELS", 0)
             patch.setattr(analysis, "_POINT_WINDOW_MAX_WASTE", 0)
-            per_point = wide.sample(points)
+            per_point = wide.analysis.sample(points)
         np.testing.assert_array_equal(windowed, per_point)
 
     def test_the_strategies_agree_on_an_out_of_bounds_mix(self, wide):
@@ -423,11 +423,11 @@ class TestWindowedAndPerPointStrategiesAgree:
         points = _points(
             [(10.5, 50.5), (-5.0, 50.5), (11.5, 50.5), (500.0, 50.5), (12.5, 50.5)]
         )
-        windowed = wide.sample(points)
+        windowed = wide.analysis.sample(points)
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(analysis, "_POINT_WINDOW_MIN_PIXELS", 0)
             patch.setattr(analysis, "_POINT_WINDOW_MAX_WASTE", 0)
-            per_point = wide.sample(points)
+            per_point = wide.analysis.sample(points)
         np.testing.assert_array_equal(windowed, per_point)
         assert windowed[0][1] == -9999.0 and windowed[0][3] == -9999.0, (
             f"out-of-bounds points must carry the fill value, got {windowed[0]}"
@@ -494,7 +494,7 @@ class TestStatsRecoveryPath:
             in. Honouring `approx_ok` here made the recovery a no-op.
         """
         self._force_the_recovery(monkeypatch)
-        stats = Dataset.read_file(sparse_on_disk).stats()
+        stats = Dataset.read_file(sparse_on_disk).analysis.stats()
         assert float(stats["min"].iloc[0]) == 1.0, (
             f"expected the true minimum 1.0, got {stats['min'].iloc[0]}"
         )
@@ -516,7 +516,7 @@ class TestStatsRecoveryPath:
         self._force_the_recovery(monkeypatch)
         dataset = Dataset.read_file(sparse_on_disk)
         np.testing.assert_array_equal(
-            dataset.stats(approx_ok=False).to_numpy(), dataset.stats().to_numpy()
+            dataset.analysis.stats(approx_ok=False).to_numpy(), dataset.analysis.stats().to_numpy()
         )
 
     def test_a_healthy_band_still_answers_from_the_estimate(self, two_band):
@@ -526,7 +526,7 @@ class TestStatsRecoveryPath:
             A band whose statistics GDAL can compute must not pay a full scan;
             the fallback is reached only when the estimate returns nothing.
         """
-        stats = two_band.stats()
+        stats = two_band.analysis.stats()
         assert len(stats) == 2, f"expected one row per band, got {len(stats)}"
         assert float(stats["min"].iloc[0]) == 0.0, (
             f"band 0 spans 0..24, got a minimum of {stats['min'].iloc[0]}"
@@ -556,10 +556,10 @@ class TestWindowedReadIsStripped:
             Compared against the same points read as one block.
         """
         points = _points([(x + 0.5, 99.5 - y) for y in range(6) for x in range(6)])
-        one_block = wide.sample(points)
+        one_block = wide.analysis.sample(points)
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(analysis, "_POINT_WINDOW_MAX_PIXELS", 12)
-            stripped = wide.sample(points)
+            stripped = wide.analysis.sample(points)
         np.testing.assert_array_equal(one_block, stripped)
 
     def test_a_dense_batch_keeps_windowing_past_the_ceiling(self, wide, monkeypatch):
@@ -581,7 +581,7 @@ class TestWindowedReadIsStripped:
         monkeypatch.setattr(gdal.Band, "ReadAsArray", counting_read)
         monkeypatch.setattr(analysis, "_POINT_WINDOW_MAX_PIXELS", 12)
         points = _points([(x + 0.5, 99.5 - y) for y in range(6) for x in range(6)])
-        wide.sample(points)
+        wide.analysis.sample(points)
         assert len(calls) < 36, (
             f"a dense batch must keep windowing in strips, got {len(calls)} reads "
             "for 36 points"

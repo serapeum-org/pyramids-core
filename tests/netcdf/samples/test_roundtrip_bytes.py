@@ -37,7 +37,7 @@ def test_to_bytes_single_variable(sample):
     """``to_bytes`` on an extracted 2-D variable returns non-empty bytes (GeoTIFF)."""
     nc = NetCDF.read_file(sample("cf__7v__1d3-2d3-3d1__y-asc.nc"))
     try:
-        payload = nc.get_variable("tos").to_bytes()
+        payload = nc.get_variable("tos").io.to_bytes()
         assert isinstance(payload, (bytes, bytearray)) and len(payload) > 0
     finally:
         nc.close()

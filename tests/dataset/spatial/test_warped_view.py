@@ -46,13 +46,13 @@ class TestWarpedView:
             4326 -> 3857: the view reports EPSG:3857 and a valid grid without
             any pixel having been read.
         """
-        view = src_dataset.warped_view(3857)
+        view = src_dataset.spatial.warped_view(3857)
         assert view.epsg == 3857, f"view CRS wrong: {view.epsg}"
         assert view.rows > 0 and view.columns > 0, "view grid must be resolved"
 
     def test_view_is_vrt_backed(self, src_dataset):
         """The view is backed by the VRT driver (lazy), not a materialised copy."""
-        view = src_dataset.warped_view(3857)
+        view = src_dataset.spatial.warped_view(3857)
         assert view.raster.GetDriver().ShortName == "VRT", (
             f"expected VRT backing, got {view.raster.GetDriver().ShortName}"
         )
@@ -63,11 +63,11 @@ class TestWarpedView:
         Test scenario:
             Same target CRS, nearest resampling on both paths.
         """
-        view = src_dataset.warped_view(3857)
-        eager = src_dataset.to_crs(3857)
+        view = src_dataset.spatial.warped_view(3857)
+        eager = src_dataset.spatial.to_crs(3857)
         np.testing.assert_allclose(
-            view.read_array(),
-            eager.read_array(),
+            view.io.read_array(),
+            eager.io.read_array(),
             err_msg="lazy view must equal the eager reprojection",
         )
 
@@ -77,9 +77,9 @@ class TestWarpedView:
         Test scenario:
             The window equals the same slice of the full warped array.
         """
-        view = src_dataset.warped_view(3857)
-        full = view.read_array(band=0)
-        window = view.read_array(band=0, window=[1, 1, 3, 3])
+        view = src_dataset.spatial.warped_view(3857)
+        full = view.io.read_array(band=0)
+        window = view.io.read_array(band=0, window=[1, 1, 3, 3])
         np.testing.assert_allclose(
             window,
             full[1:4, 1:4],
@@ -88,16 +88,16 @@ class TestWarpedView:
 
     def test_source_kept_alive(self, src_dataset):
         """Dropping the source does not break the view (reference pinned)."""
-        view = src_dataset.warped_view(3857)
+        view = src_dataset.spatial.warped_view(3857)
         rows, cols = view.rows, view.columns
         del src_dataset
         gc.collect()
-        arr = view.read_array()
+        arr = view.io.read_array()
         assert arr.shape == (rows, cols), "view must survive source deletion"
 
     def test_cell_size_honoured(self, src_dataset):
         """cell_size= sets the output pixel size on both axes."""
-        view = src_dataset.warped_view(4326, cell_size=0.05)
+        view = src_dataset.spatial.warped_view(4326, cell_size=0.05)
         assert view.cell_size == pytest.approx(0.05), (
             f"cell_size not applied: {view.cell_size}"
         )
@@ -109,7 +109,7 @@ class TestWarpedView:
             Same-CRS warp with a quarter-extent bbox produces a smaller grid
             whose bounds match the request.
         """
-        view = src_dataset.warped_view(4326, bbox=(0.0, 7.96, 0.04, 8.0))
+        view = src_dataset.spatial.warped_view(4326, bbox=(0.0, 7.96, 0.04, 8.0))
         assert view.columns == 4 and view.rows == 4, (
             f"bbox grid wrong: {view.rows}x{view.columns}"
         )
@@ -126,11 +126,11 @@ class TestWarpedView:
             through the pin), drop the original source, and read — the pin
             chain must keep the whole pipeline alive.
         """
-        chained = src_dataset.warped_view(3857).warped_view(4326)
+        chained = src_dataset.spatial.warped_view(3857).spatial.warped_view(4326)
         del src_dataset
         gc.collect()
         assert chained.epsg == 4326, f"chained view CRS wrong: {chained.epsg}"
-        assert chained.read_array().size > 0, "chained view must be readable"
+        assert chained.io.read_array().size > 0, "chained view must be readable"
 
     def test_no_authority_crs_uses_wkt_fallback(self, src_dataset):
         """A proj4 target with no authority code warps via the WKT fallback.
@@ -140,14 +140,14 @@ class TestWarpedView:
             form, so the dstSRS argument falls back to the exported WKT.
         """
         proj4 = "+proj=ortho +lat_0=39 +lon_0=-9 +datum=WGS84 +units=m +no_defs"
-        view = src_dataset.warped_view(proj4)
+        view = src_dataset.spatial.warped_view(proj4)
         sr = osr.SpatialReference(wkt=view.crs)
         assert sr.IsProjected() == 1, "ortho view must carry a projected CRS"
-        assert view.read_array().size > 0, "ortho view must be readable"
+        assert view.io.read_array().size > 0, "ortho view must be readable"
 
     def test_nodata_propagates_to_view(self, src_dataset):
         """The view inherits the source no-data value through the VRT."""
-        view = src_dataset.warped_view(3857)
+        view = src_dataset.spatial.warped_view(3857)
         assert view.no_data_value == pytest.approx(src_dataset.no_data_value), (
             f"nodata lost in the view: {view.no_data_value} "
             f"!= {src_dataset.no_data_value}"
@@ -156,17 +156,17 @@ class TestWarpedView:
     def test_invalid_crs_raises(self, src_dataset):
         """A string that is not a CRS raises CRSError before any warp."""
         with pytest.raises(CRSError, match="could not interpret"):
-            src_dataset.warped_view("not-a-crs")
+            src_dataset.spatial.warped_view("not-a-crs")
 
     def test_invalid_method_raises(self, src_dataset):
         """An unsupported resampling method raises ValueError listing names."""
         with pytest.raises(ValueError, match="does not exist"):
-            src_dataset.warped_view(3857, method="sinc")
+            src_dataset.spatial.warped_view(3857, method="sinc")
 
     def test_non_string_method_raises(self, src_dataset):
         """A non-string method raises TypeError."""
         with pytest.raises(TypeError, match="must be a string"):
-            src_dataset.warped_view(3857, method=1)
+            src_dataset.spatial.warped_view(3857, method=1)
 
     @pytest.mark.parametrize("bad_cell_size", [0, -0.05])
     def test_non_positive_cell_size_raises(self, src_dataset, bad_cell_size):
@@ -176,20 +176,20 @@ class TestWarpedView:
             bad_cell_size: A non-positive cell size under test.
         """
         with pytest.raises(ValueError, match="cell_size must be positive"):
-            src_dataset.warped_view(3857, cell_size=bad_cell_size)
+            src_dataset.spatial.warped_view(3857, cell_size=bad_cell_size)
 
     def test_inverted_bbox_raises(self, src_dataset):
         """An inverted bbox (min >= max) raises a clear ValueError (L7)."""
         with pytest.raises(ValueError, match="min_x < max_x"):
-            src_dataset.warped_view(4326, bbox=(0.04, 7.96, 0.0, 8.0))
+            src_dataset.spatial.warped_view(4326, bbox=(0.04, 7.96, 0.0, 8.0))
 
     def test_facade_delegates(self, src_dataset):
         """Dataset.warped_view delegates to the spatial engine."""
-        via_facade = src_dataset.warped_view(3857)
+        via_facade = src_dataset.spatial.warped_view(3857)
         via_engine = src_dataset.spatial.warped_view(3857)
         np.testing.assert_allclose(
-            via_facade.read_array(),
-            via_engine.read_array(),
+            via_facade.io.read_array(),
+            via_engine.io.read_array(),
             err_msg="facade and engine outputs differ",
         )
 

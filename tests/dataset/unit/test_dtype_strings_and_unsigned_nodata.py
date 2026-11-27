@@ -213,7 +213,7 @@ class TestTheSentinelOnThePublicProperty:
         values[:2] = 1
         dataset = Dataset.from_array(values, geo_ref=GEO, no_data_value=np.nan)
 
-        assert dataset.count_domain_cells() == 16
+        assert dataset.analysis.count_domain_cells() == 16
 
 
 class TestChangeNoDataValueToAnUnstorableSentinel:
@@ -248,7 +248,7 @@ class TestChangeNoDataValueToAnUnstorableSentinel:
         dataset = _raster(numpy_dtype)
 
         with pytest.raises(NoDataValueError):
-            dataset.change_no_data_value(None)
+            dataset.bands.change_no_data_value(None)
 
     def test_a_float_band_still_accepts_it(self):
         """The refusal is about storability, not about `None`.
@@ -260,7 +260,7 @@ class TestChangeNoDataValueToAnUnstorableSentinel:
         """
         dataset = _raster(np.float32)
 
-        dataset.change_no_data_value(None)
+        dataset.bands.change_no_data_value(None)
 
         assert dataset.no_data_value[0] == DEFAULT_NO_DATA_VALUE
 

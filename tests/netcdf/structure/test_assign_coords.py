@@ -38,7 +38,7 @@ def _make_multi_nc():
         variable_name="pressure",
         dims=ExtraDimensions(name="time", values=[0, 6, 12]),
     )
-    nc.set_variable("pressure", second.get_variable("pressure"))
+    nc.variables.set("pressure", second.get_variable("pressure"))
     return nc
 
 
@@ -98,7 +98,7 @@ class TestAssignCoordsHappyPath:
             variable_name="geoid",
             dims=ExtraDimensions(name="level", values=[0, 1]),
         )
-        cont.set_variable("geoid", level.get_variable("geoid"))
+        cont.variables.set("geoid", level.get_variable("geoid"))
         out = cont.assign_coords(time=[7, 8, 9])
         assert out.get_variable("temp")._band_dim_values_map["time"] == [7, 8, 9], (
             "temp restamped"

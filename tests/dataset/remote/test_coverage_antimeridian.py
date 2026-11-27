@@ -45,7 +45,7 @@ EAST = (-180.0, -10.0, -175.0, 10.0)
 
 def _arr(ds: Dataset) -> np.ndarray:
     """The dataset's single band as a 2-D array."""
-    return np.asarray(ds.read_array())
+    return np.asarray(ds.io.read_array())
 
 
 def _assert_is_concatenation(merged: Dataset, west: Dataset, east: Dataset) -> None:

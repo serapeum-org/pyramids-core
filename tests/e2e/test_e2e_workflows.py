@@ -84,11 +84,11 @@ class TestCreateCropExtract:
         mask_gdf = gpd.GeoDataFrame(geometry=[poly], crs=f"EPSG:{epsg}")
 
         # Step 3 - Crop
-        cropped = src.crop(mask_gdf)
+        cropped = src.spatial.crop(mask_gdf)
 
         # Step 4 - Verify
         assert cropped is not None, "crop should return a new Dataset"
-        cropped_arr = cropped.read_array()
+        cropped_arr = cropped.io.read_array()
         assert cropped_arr.shape[0] <= rows, "Cropped rows should be <= original"
         assert cropped_arr.shape[1] <= cols, "Cropped cols should be <= original"
         # The cropped area (top-left 5x5) should contain values 0-4, 20-24 etc.
@@ -191,7 +191,7 @@ class TestRasterizeRoundTrip:
 
         # Rasterize: use cell_size (no reference dataset)
         raster = Dataset.from_features(fc, cell_size=cell_size, column_name="burn_val")
-        arr = raster.read_array()
+        arr = raster.io.read_array()
 
         # Verify burned value
         burned = arr[np.isclose(arr, 7.0)]
@@ -215,7 +215,7 @@ class TestRasterizeRoundTrip:
                 fc, template=utm_template, column_name="class_id"
             )
 
-        arr = raster.read_array()
+        arr = raster.io.read_array()
         assert arr.shape == (10, 10), (
             f"shape should match the template, got {arr.shape}"
         )
@@ -241,7 +241,7 @@ class TestRasterizeRoundTrip:
                 fc, template=utm_template, column_name="class_id"
             )
 
-        assert not np.any(np.isclose(raster.read_array(), 42.0)), (
+        assert not np.any(np.isclose(raster.io.read_array(), 42.0)), (
             "a polygon outside the template burns nothing"
         )
 
@@ -357,7 +357,7 @@ class TestRasterizeRoundTrip:
                 fc, template=template, column_name="class_id"
             )
 
-        arr = raster.read_array()
+        arr = raster.io.read_array()
         assert arr.shape == (5, 5), "output should adopt the template grid"
         assert not np.any(np.isclose(arr, 7.0)), "no geometry burns nothing"
 
@@ -419,7 +419,7 @@ class TestRasterizeRoundTrip:
         assert (ox - x0) % cell == 0, "snapped x-origin must lie on the template grid"
         assert (y0 - oy) % cell == 0, "snapped y-origin must lie on the template grid"
         assert out.cell_size == cell, "snapped output keeps the template cell size"
-        assert np.any(np.isclose(out.read_array(), 42.0)), (
+        assert np.any(np.isclose(out.io.read_array(), 42.0)), (
             "the polygon should be burned"
         )
 
@@ -438,7 +438,7 @@ class TestRasterizeRoundTrip:
                 column_name="class_id",
             )
 
-        assert np.any(np.isclose(out.read_array(), 42.0)), (
+        assert np.any(np.isclose(out.io.read_array(), 42.0)), (
             "features beyond the footprint are still covered in snap mode"
         )
         assert not [w for w in caught if "template extent" in str(w.message)], (
@@ -561,7 +561,7 @@ class TestRasterizeRoundTrip:
         template = self._mem_template((0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
         out = self._snap(box(1.0, 1.0, 4.0, 4.0), template, epsg=4326)
 
-        assert np.any(np.isclose(out.read_array(), 42.0)), (
+        assert np.any(np.isclose(out.io.read_array(), 42.0)), (
             "a south-up template should still cover the feature"
         )
         ox, oy = out.top_left_corner
@@ -584,7 +584,7 @@ class TestRasterizeRoundTrip:
         assert out.columns == 1, (
             f"mid-cell point should give one column, got {out.columns}"
         )
-        assert np.any(np.isclose(out.read_array(), 42.0)), (
+        assert np.any(np.isclose(out.io.read_array(), 42.0)), (
             "the containing pixel must be burned"
         )
 
@@ -604,7 +604,7 @@ class TestRasterizeRoundTrip:
         assert ox + out.columns * out.cell_size >= x0 + 12 * cell, (
             "snap must extend past the template to cover the outside part of the feature"
         )
-        assert np.any(np.isclose(out.read_array(), 42.0)), (
+        assert np.any(np.isclose(out.io.read_array(), 42.0)), (
             "the straddling feature is burned"
         )
 
@@ -990,15 +990,15 @@ class TestReprojectAlignWorkflow:
         src = _make_dataset(
             rows=10, cols=10, epsg=32636, cell_size=1000.0, fill_value=5.0
         )
-        _ = src.read_array()
+        _ = src.io.read_array()
         original_epsg = src.epsg
         assert original_epsg == 32636, "Starting EPSG should be 32636"
 
-        reprojected = src.to_crs(to_epsg=4326)
+        reprojected = src.spatial.to_crs(to_epsg=4326)
         assert reprojected.epsg == 4326, (
             f"Reprojected EPSG should be 4326, got {reprojected.epsg}"
         )
-        repr_arr = reprojected.read_array()
+        repr_arr = reprojected.io.read_array()
         assert repr_arr.shape[0] > 0, "Reprojected raster should have rows"
         assert repr_arr.shape[1] > 0, "Reprojected raster should have cols"
 
@@ -1024,7 +1024,7 @@ class TestReprojectAlignWorkflow:
             fill_value=7.0,
         )
 
-        aligned = src.align(ref)
+        aligned = src.spatial.align(ref)
         assert aligned.rows == ref.rows, (
             f"Aligned rows should be {ref.rows}, got {aligned.rows}"
         )
@@ -1074,19 +1074,19 @@ class TestDatasetCollectionProcessingPipeline:
 
         assert md.head(3).shape == (3, rows, cols), "head(3) shape mismatch"
         assert md.tail(-2).shape == (2, rows, cols), "tail(-2) shape mismatch"
-        assert md.first().read_array(band=0).shape == (rows, cols), (
+        assert md.first().io.read_array(band=0).shape == (rows, cols), (
             "first() shape mismatch"
         )
-        assert md.last().read_array(band=0).shape == (rows, cols), (
+        assert md.last().io.read_array(band=0).shape == (rows, cols), (
             "last() shape mismatch"
         )
 
         # Verify first/last content
         np.testing.assert_array_equal(
-            md.first().read_array(band=0), values[0], err_msg="first() content mismatch"
+            md.first().io.read_array(band=0), values[0], err_msg="first() content mismatch"
         )
         np.testing.assert_array_equal(
-            md.last().read_array(band=0), values[-1], err_msg="last() content mismatch"
+            md.last().io.read_array(band=0), values[-1], err_msg="last() content mismatch"
         )
 
 
@@ -1158,7 +1158,7 @@ class TestClusterE2E:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        cluster_array, count, position, _ = src.cluster(1, 10)
+        cluster_array, count, position, _ = src.vector.cluster(1, 10)
 
         assert count == 3, f"Expected 2 clusters, got {count - 1}"
         assert len(position) == 8, f"Expected 8 cells clustered, got {len(position)}"
@@ -1171,11 +1171,11 @@ class TestClusterE2E:
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "cluster_result.tif"
         try:
-            result.to_file(path)
+            result.io.to_file(path)
             assert path.exists(), "Cluster GeoTIFF should be written"
 
             reloaded = Dataset.read_file(path)
-            reloaded_arr = reloaded.read_array()
+            reloaded_arr = reloaded.io.read_array()
             np.testing.assert_array_equal(
                 reloaded_arr,
                 cluster_array,
@@ -1202,9 +1202,9 @@ class TestClusterE2E:
 
         crop_poly = box(-0.5, -5.5, 6.5, 0.5)
         crop_mask = gpd.GeoDataFrame(geometry=[crop_poly], crs="EPSG:4326")
-        cropped = src.crop(crop_mask)
+        cropped = src.spatial.crop(crop_mask)
 
-        _, count, _, values = cropped.cluster(5, 10)
+        _, count, _, values = cropped.vector.cluster(5, 10)
 
         assert count == 2, f"Expected 1 cluster in cropped region, got {count - 1}"
         for v in values:
@@ -1227,10 +1227,10 @@ class TestClusterE2E:
             ),
         )
 
-        _, count_orig, _, _ = src.cluster(4, 6)
+        _, count_orig, _, _ = src.vector.cluster(4, 6)
 
-        reprojected = src.to_crs(to_epsg=32636)
-        _, count_reproj, _, _ = reprojected.cluster(4, 6)
+        reprojected = src.spatial.to_crs(to_epsg=32636)
+        _, count_reproj, _, _ = reprojected.vector.cluster(4, 6)
 
         assert count_reproj >= 1, "Reprojected dataset should have at least 1 cluster"
         assert abs(count_reproj - count_orig) <= count_orig, (
@@ -1259,13 +1259,13 @@ class TestClusterE2E:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
 
-        cluster_array, _, _, _ = src.cluster(4, 6)
+        cluster_array, _, _, _ = src.vector.cluster(4, 6)
 
         cluster_ds = Dataset.from_array(
             cluster_array.astype(np.float32),
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        gdf = cluster_ds.to_polygons()
+        gdf = cluster_ds.vector.to_polygons()
 
         assert isinstance(gdf, gpd.GeoDataFrame), (
             f"Expected GeoDataFrame, got {type(gdf)}"
@@ -1289,7 +1289,7 @@ class TestClusterE2E:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.01, epsg=4326),
         )
 
-        cluster_array, count, position, _ = src.cluster(1, 10)
+        cluster_array, count, position, _ = src.vector.cluster(1, 10)
 
         assert count == 2, f"Expected 1 cluster, got {count - 1}"
         assert len(position) == 90000, f"Expected 90000 cells, got {len(position)}"
@@ -1312,18 +1312,18 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = src.apply(np.square)
+        result = src.analysis.apply(np.square)
         expected = np.array([[4.0, 9.0], [16.0, 25.0]], dtype=np.float32)
 
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "apply_result.tif"
         try:
-            result.to_file(path)
+            result.io.to_file(path)
             assert path.exists(), "GeoTIFF should be written"
 
             reloaded = Dataset.read_file(path)
             np.testing.assert_array_almost_equal(
-                reloaded.read_array(),
+                reloaded.io.read_array(),
                 expected,
                 decimal=2,
                 err_msg="Squared values should survive disk round-trip",
@@ -1344,13 +1344,13 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        doubled = src.apply(lambda x: x * 2)
+        doubled = src.analysis.apply(lambda x: x * 2)
 
         crop_poly = box(0.5, -4.5, 4.5, -0.5)
         crop_mask = gpd.GeoDataFrame(geometry=[crop_poly], crs="EPSG:4326")
-        cropped = doubled.crop(crop_mask)
+        cropped = doubled.spatial.crop(crop_mask)
 
-        cropped_arr = cropped.read_array()
+        cropped_arr = cropped.io.read_array()
         nodata = cropped.no_data_value[0]
         domain_vals = cropped_arr[~np.isclose(cropped_arr, nodata, rtol=0.001)]
         assert len(domain_vals) > 0, "Cropped result should have domain cells"
@@ -1371,9 +1371,9 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        step1 = src.apply(lambda x: x + 3)
-        step2 = step1.apply(lambda x: x * 10)
-        result_arr = step2.read_array()
+        step1 = src.analysis.apply(lambda x: x + 3)
+        step2 = step1.analysis.apply(lambda x: x * 10)
+        result_arr = step2.io.read_array()
         assert np.allclose(result_arr, 50.0), (
             f"Expected all cells to be 50.0 after chaining, got {result_arr}"
         )
@@ -1404,8 +1404,8 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = src.apply(classify)
-        result_arr = result.read_array()
+        result = src.analysis.apply(classify)
+        result_arr = result.io.read_array()
         expected = np.array(
             [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             dtype=np.float32,
@@ -1429,14 +1429,14 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = src.apply(lambda x: x + 5)
+        result = src.analysis.apply(lambda x: x + 5)
 
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "apply_nodata.tif"
         try:
-            result.to_file(path)
+            result.io.to_file(path)
             reloaded = Dataset.read_file(path)
-            reloaded_arr = reloaded.read_array()
+            reloaded_arr = reloaded.io.read_array()
             assert np.isclose(reloaded_arr[0, 0], 15.0), (
                 f"Domain cell should be 15.0, got {reloaded_arr[0, 0]}"
             )
@@ -1466,16 +1466,16 @@ class TestApplyE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        src.apply(lambda x: x / 3, inplace=True)
+        src.analysis.apply(lambda x: x / 3, inplace=True)
 
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "apply_inplace.tif"
         try:
-            src.to_file(path)
+            src.io.to_file(path)
             reloaded = Dataset.read_file(path)
             expected = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
             np.testing.assert_array_almost_equal(
-                reloaded.read_array(),
+                reloaded.io.read_array(),
                 expected,
                 decimal=2,
                 err_msg="Inplace apply should be reflected after save/reload",
@@ -1501,7 +1501,7 @@ class TestToFeatureCollectionE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        gdf = src.to_geodataframe(geometry="point")
+        gdf = src.vector.to_geodataframe(geometry="point")
 
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "test_fc.geojson"
@@ -1534,8 +1534,8 @@ class TestToFeatureCollectionE2E:
         )
         poly = box(1.5, -3.5, 4.5, -0.5)
         mask = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
-        cropped = src.crop(mask)
-        df = cropped.to_geodataframe()
+        cropped = src.spatial.crop(mask)
+        df = cropped.vector.to_geodataframe()
 
         assert isinstance(df, pd.DataFrame), f"Expected DataFrame, got {type(df)}"
         assert len(df) < 100, (
@@ -1556,8 +1556,8 @@ class TestToFeatureCollectionE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        transformed = src.apply(lambda x: x * 10)
-        df = transformed.to_geodataframe()
+        transformed = src.analysis.apply(lambda x: x * 10)
+        df = transformed.vector.to_geodataframe()
 
         assert len(df) == 6, f"Expected 6 rows, got {len(df)}"
         assert all(v % 10 == 0 for v in df.iloc[:, 0]), (
@@ -1577,7 +1577,7 @@ class TestToFeatureCollectionE2E:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        gdf = src.to_geodataframe(geometry="polygon")
+        gdf = src.vector.to_geodataframe(geometry="polygon")
 
         assert isinstance(gdf, gpd.GeoDataFrame), (
             f"Expected GeoDataFrame, got {type(gdf)}"
@@ -1612,12 +1612,12 @@ class TestContextManagerE2E:
                 ),
             )
             with ds:
-                ds.to_file(path)
+                ds.io.to_file(path)
             assert ds._raster is None, "Dataset should be closed after with block"
 
             reloaded = Dataset.read_file(path)
             np.testing.assert_array_almost_equal(
-                reloaded.read_array(),
+                reloaded.io.read_array(),
                 arr,
                 decimal=2,
                 err_msg="Reloaded values should match original",
@@ -1644,13 +1644,13 @@ class TestContextManagerE2E:
                 ),
             )
             with ds:
-                result = ds.apply(lambda x: x * 2)
-                result.to_file(path)
+                result = ds.analysis.apply(lambda x: x * 2)
+                result.io.to_file(path)
 
             reloaded = Dataset.read_file(path)
             expected = np.array([[4.0, 8.0], [12.0, 16.0]], dtype=np.float32)
             np.testing.assert_array_almost_equal(
-                reloaded.read_array(),
+                reloaded.io.read_array(),
                 expected,
                 decimal=2,
                 err_msg="Applied values should be doubled",
@@ -1685,7 +1685,7 @@ class TestContextManagerE2E:
                     top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326
                 ),
             )
-            ds2.to_file(path)
+            ds2.io.to_file(path)
             assert path.exists(), "Should be able to write after exception cleanup"
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -1705,16 +1705,16 @@ class TestGeoTiffRoundTrip:
             cell_size=0.1,
             top_left=(10.0, 50.0),
         )
-        arr_original = src.read_array()
+        arr_original = src.io.read_array()
 
         tmp_dir = Path(tempfile.mkdtemp())
         path = tmp_dir / "test_raster.tif"
         try:
-            src.to_file(path)
+            src.io.to_file(path)
             assert path.exists(), "GeoTIFF should be written"
 
             reloaded = Dataset.read_file(path)
-            arr_reloaded = reloaded.read_array()
+            arr_reloaded = reloaded.io.read_array()
             assert arr_reloaded.shape == (
                 rows,
                 cols,

@@ -207,7 +207,7 @@ class TestASiteThatUnlinksAlsoUnregisters:
         before = len(_artifacts._VSIMEM_PATHS)
 
         for _ in range(5):
-            ds.to_cog_bytes()
+            ds.cog.to_cog_bytes()
 
         assert len(_artifacts._VSIMEM_PATHS) == before, (
             f"entries left behind: {_artifacts._VSIMEM_PATHS[before:]}"
@@ -241,7 +241,7 @@ class TestASiteThatUnlinksAlsoUnregisters:
             harvester grows the registry with every coverage it pulls.
         """
         source = tmp_path / "coverage.tif"
-        _small_raster().to_file(str(source))
+        _small_raster().io.to_file(str(source))
         payload = source.read_bytes()
         before = len(_artifacts._VSIMEM_PATHS)
 

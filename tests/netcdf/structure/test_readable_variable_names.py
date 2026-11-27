@@ -132,7 +132,7 @@ class TestTheStoreIsWalkedOncePerAnswer:
         before = dataset._readable_variable_names()
         assert "lat_bnds" in before, "fixture no longer carries the bounds array"
 
-        dataset.rename_variable("lat_bnds", "lat_bounds")
+        dataset.variables.rename("lat_bnds", "lat_bounds")
 
         after = dataset._readable_variable_names()
         assert "lat_bounds" in after, f"the rename is not visible: {after}"

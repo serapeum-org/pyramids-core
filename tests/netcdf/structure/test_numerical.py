@@ -713,7 +713,7 @@ class TestAContainerOfSeveralVariables:
         """
         cube = _cube([0.0, 10.0, 30.0])
         donor = _cube([0.0, 20.0, 60.0], name="u")
-        cube.set_variable("u", donor.get_variable("u"))
+        cube.variables.set("u", donor.get_variable("u"))
 
         result = cube.differentiate("level")
 
@@ -729,7 +729,7 @@ class TestAContainerOfSeveralVariables:
         """
         cube = _cube([2.0, 2.0, 2.0], stamps=[0.0, 1.0, 3.0])
         donor = _cube([4.0, 4.0, 4.0], stamps=[0.0, 1.0, 3.0], name="u")
-        cube.set_variable("u", donor.get_variable("u"))
+        cube.variables.set("u", donor.get_variable("u"))
 
         result = cube.integrate("level")
 

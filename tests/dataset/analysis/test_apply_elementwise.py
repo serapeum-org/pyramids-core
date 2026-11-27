@@ -40,8 +40,8 @@ class TestApplyElementwise:
                 top_left_corner=(0.0, 15.0), cell_size=0.05, epsg=4326
             ),
         )
-        streamed = ds.apply(func, elementwise=True).read_array()
-        whole = ds.apply(func, elementwise=False).read_array()
+        streamed = ds.analysis.apply(func, elementwise=True).io.read_array()
+        whole = ds.analysis.apply(func, elementwise=False).io.read_array()
         np.testing.assert_array_equal(
             streamed, whole, err_msg="Streamed apply must match the whole-array apply"
         )
@@ -63,8 +63,8 @@ class TestApplyElementwise:
                 top_left_corner=(0.0, 15.0), cell_size=0.05, epsg=4326
             ),
         )
-        streamed = ds.apply(lambda v: v * 2, elementwise=True).read_array()
-        whole = ds.apply(lambda v: v * 2, elementwise=False).read_array()
+        streamed = ds.analysis.apply(lambda v: v * 2, elementwise=True).io.read_array()
+        whole = ds.analysis.apply(lambda v: v * 2, elementwise=False).io.read_array()
         np.testing.assert_array_equal(
             streamed, whole, err_msg="No-data layout and domain map must match"
         )
@@ -89,8 +89,8 @@ class TestApplyElementwise:
                 top_left_corner=(0.0, 15.0), cell_size=0.05, epsg=4326
             ),
         )
-        streamed = ds.apply(np.abs, band=1, elementwise=True).read_array()
-        whole = ds.apply(np.abs, band=1, elementwise=False).read_array()
+        streamed = ds.analysis.apply(np.abs, band=1, elementwise=True).io.read_array()
+        whole = ds.analysis.apply(np.abs, band=1, elementwise=False).io.read_array()
         assert streamed.shape == (300, 300), (
             f"Expected single band, got {streamed.shape}"
         )
@@ -111,10 +111,10 @@ class TestApplyElementwise:
                 top_left_corner=(0.0, 15.0), cell_size=0.05, epsg=4326
             ),
         )
-        result = ds.apply(lambda v: v * 2, inplace=True, elementwise=True)
+        result = ds.analysis.apply(lambda v: v * 2, inplace=True, elementwise=True)
         assert result is ds, "inplace streaming apply should return self"
         np.testing.assert_array_equal(
-            ds.read_array(), arr * 2, err_msg="In-place streamed result must be doubled"
+            ds.io.read_array(), arr * 2, err_msg="In-place streamed result must be doubled"
         )
 
     def test_all_nodata_tile_with_vectorize_fallback_func(self):
@@ -135,8 +135,8 @@ class TestApplyElementwise:
             ),
         )
         func = lambda v: 1.0 if v > 5 else 0.0  # noqa: E731 - forces vectorize fallback
-        streamed = ds.apply(func, elementwise=True).read_array()
-        whole = ds.apply(func, elementwise=False).read_array()
+        streamed = ds.analysis.apply(func, elementwise=True).io.read_array()
+        whole = ds.analysis.apply(func, elementwise=False).io.read_array()
         np.testing.assert_array_equal(
             streamed,
             whole,

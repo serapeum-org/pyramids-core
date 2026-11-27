@@ -158,9 +158,9 @@ def _half_packed(scale=None, offset=None):
         array, geo_ref=GeoReference(top_left_corner=(0, 1), cell_size=1.0, epsg=4326)
     )
     if scale is not None:
-        ds.scale = [scale]
+        ds.bands.scale = [scale]
     if offset is not None:
-        ds.offset = [offset]
+        ds.bands.offset = [offset]
     return ds
 
 
@@ -175,8 +175,8 @@ class TestUnpackScaleOnly:
             as "no shift", not as an unset value that skips the transform entirely.
         """
         ds = _half_packed(scale=0.01)
-        raw = ds.read_array(band=0, unpack=False)
-        unpacked = ds.read_array(band=0)
+        raw = ds.io.read_array(band=0, unpack=False)
+        unpacked = ds.io.read_array(band=0)
         assert_allclose(
             unpacked,
             raw.astype(np.float64) * 0.01,
@@ -196,8 +196,8 @@ class TestUnpackOffsetOnly:
             "no factor", not as zero.
         """
         ds = _half_packed(offset=1.5)
-        raw = ds.read_array(band=0, unpack=False)
-        unpacked = ds.read_array(band=0)
+        raw = ds.io.read_array(band=0, unpack=False)
+        unpacked = ds.io.read_array(band=0)
         assert_allclose(
             unpacked,
             raw.astype(np.float64) + 1.5,

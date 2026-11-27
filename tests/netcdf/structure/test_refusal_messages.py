@@ -80,7 +80,7 @@ class TestTheRefusalNamesWhatTheGateAccepts:
         readable = dataset._readable_variable_names()
 
         with pytest.raises(ValueError) as excinfo:
-            dataset.rename_variable(ABSENT, "whatever")
+            dataset.variables.rename(ABSENT, "whatever")
 
         message = str(excinfo.value)
         missing = [name for name in readable if name not in message]

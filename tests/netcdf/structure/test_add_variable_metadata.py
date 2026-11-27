@@ -84,7 +84,7 @@ class TestAddVariableFileBacked:
         _write_simple_nc(tmp_path / "dst.nc")
         src = NetCDF.read_file(str(tmp_path / "packed.nc"))
         dst = NetCDF.read_file(str(tmp_path / "dst.nc"))
-        dst.add_variable(src, "rh")
+        dst.variables.add(src, "rh")
         assert "rh" in dst.variable_names, f"variable not copied: {dst.variable_names}"
         assert "tas" in dst.variable_names, (
             f"existing variable lost: {dst.variable_names}"
@@ -96,7 +96,7 @@ class TestAddVariableFileBacked:
         _write_simple_nc(tmp_path / "dst.nc")
         src = NetCDF.read_file(str(tmp_path / "packed.nc"))
         dst = NetCDF.read_file(str(tmp_path / "dst.nc"))
-        dst.add_variable(src, "rh")
+        dst.variables.add(src, "rh")
         _packed(dst.refresh_metadata().variables["rh"])
 
     def test_survives_disk_round_trip(self, tmp_path):
@@ -105,7 +105,7 @@ class TestAddVariableFileBacked:
         _write_simple_nc(tmp_path / "dst.nc")
         src = NetCDF.read_file(str(tmp_path / "packed.nc"))
         dst = NetCDF.read_file(str(tmp_path / "dst.nc"))
-        dst.add_variable(src, "rh")
+        dst.variables.add(src, "rh")
         dst.to_file(str(tmp_path / "out.nc"))
         reloaded = NetCDF.read_file(str(tmp_path / "out.nc"))
         _packed(reloaded.refresh_metadata().variables["rh"])
@@ -136,7 +136,7 @@ class TestAddVariableRefusesANameItCannotResolve:
         dst = NetCDF.read_file(str(tmp_path / "dst.nc"))
 
         with pytest.raises(ValueError) as excinfo:
-            dst.add_variable(src, "zzz_not_here")
+            dst.variables.add(src, "zzz_not_here")
 
         message = str(excinfo.value)
         assert "zzz_not_here" in message, f"the refusal must echo the name: {message}"
@@ -160,7 +160,7 @@ class TestAddVariableRefusesANameItCannotResolve:
         before = list(dst.variable_names)
 
         with pytest.raises(ValueError):
-            dst.add_variable(src, "zzz_not_here")
+            dst.variables.add(src, "zzz_not_here")
 
         assert dst.variable_names == before, (
             f"the refused copy changed the container: {dst.variable_names}"
@@ -194,7 +194,7 @@ class TestRenameVariableFileBacked:
         """Renaming a packed variable on a file-backed container should not crash or strip metadata."""
         _write_packed_nc(tmp_path / "packed.nc")
         nc = NetCDF.read_file(str(tmp_path / "packed.nc"))
-        nc.rename_variable("rh", "relhum")
+        nc.variables.rename("rh", "relhum")
         assert "rh" not in nc.variable_names, f"old name remains: {nc.variable_names}"
         assert "relhum" in nc.variable_names, f"new name missing: {nc.variable_names}"
         _packed(nc.refresh_metadata().variables["relhum"])

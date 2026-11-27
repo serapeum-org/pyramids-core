@@ -471,7 +471,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert float(np.nanmin(out)) == pytest.approx(0.0)
         assert float(np.nanmax(out)) == pytest.approx(1.0)
@@ -488,7 +488,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, np.nan]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=np.nan)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert np.isnan(out[1, 1]), "the no-data cell must stay NaN"
         np.testing.assert_allclose(
@@ -507,7 +507,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, -9999.0]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=-9999.0)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert np.isnan(out[1, 1]), "the no-data cell must be excluded (NaN)"
         np.testing.assert_allclose(
@@ -527,7 +527,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=None)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert not np.isnan(out).any(), "no cell should be NaN without a sentinel"
         assert float(np.min(out)) == pytest.approx(0.0)
@@ -602,7 +602,7 @@ class TestDatasetNormalizeFacade:
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            out = ds.normalize()
+            out = ds.analysis.normalize()
 
         assert np.isnan(out).all()
 
@@ -620,7 +620,7 @@ class TestDatasetNormalizeFacade:
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            out = ds.normalize()
+            out = ds.analysis.normalize()
 
         assert np.array_equal(out, np.zeros((2, 2)))
 
@@ -751,7 +751,7 @@ class TestIsReadOnlyError:
         Dataset.from_array(
             np.zeros((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         # `read_only` has to stay bound: a gdal.Band does not keep its dataset
         # alive, so chaining the two calls invalidates the band immediately.
         read_only = gdal.Open(str(path), gdal.GA_ReadOnly)

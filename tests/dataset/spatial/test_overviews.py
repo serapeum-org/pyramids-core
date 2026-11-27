@@ -215,10 +215,10 @@ def _refuse_to_resolve(self, *args) -> gdal.Band:
 
 def test_create_overviews(era5_image: gdal.Dataset, clean_overview_after_test):
     dataset = Dataset(era5_image)
-    dataset.create_overviews()
+    dataset.io.create_overviews()
     assert dataset.raster.GetRasterBand(1).GetOverviewCount() == 2
     # test the overview_number property
-    assert dataset.overview_count == [2] * dataset.band_count
+    assert dataset.io.overview_count == [2] * dataset.band_count
     assert Path(f"{dataset.file_name}.ovr").exists()
 
 
@@ -226,12 +226,12 @@ def test_get_overview(era5_image: gdal.Dataset, clean_overview_after_test):
     dataset = Dataset(era5_image)
     band = 0
     overview_index = 0
-    dataset.create_overviews()
-    ovr = dataset.get_overview(band, overview_index)
+    dataset.io.create_overviews()
+    ovr = dataset.io.get_overview(band, overview_index)
     assert isinstance(ovr, gdal.Band)
 
     with pytest.raises(ValueError):
-        dataset.get_overview(band, 5)
+        dataset.io.get_overview(band, 5)
 
 
 # The exact stranding -- levels dropped, a file named `.ovr` left in the working directory
@@ -263,7 +263,7 @@ def pathless_level(tmp_path, monkeypatch):
     dataset = Dataset.read_file(source)
     level = None
     try:
-        level = dataset.get_overview_dataset(overview_index=0)
+        level = dataset.io.get_overview_dataset(overview_index=0)
         yield level, dataset
     finally:
         if level is not None:
@@ -306,12 +306,12 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         level = None
         try:
-            level = dataset.get_overview_dataset(overview_index=0)
+            level = dataset.io.get_overview_dataset(overview_index=0)
             assert level.driver_type == "vrt", "precondition: the level is a VRT"
-            before = list(level.overview_count)
+            before = list(level.io.overview_count)
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                level.create_overviews(overview_levels=[2])
-            assert level.overview_count == before, (
+                level.io.create_overviews(overview_levels=[2])
+            assert level.io.overview_count == before, (
                 f"the refusal must not drop the levels, {before} -> {level.overview_count}"
             )
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
@@ -333,8 +333,8 @@ class TestCreateOverviewsPathlessGuard:
             geo_ref=GeoReference(top_left_corner=(0.0, 64.0), cell_size=1.0, epsg=4326),
         )
         try:
-            dataset.create_overviews(overview_levels=[2])
-            assert dataset.overview_count == [1], (
+            dataset.io.create_overviews(overview_levels=[2])
+            assert dataset.io.overview_count == [1], (
                 f"a MEM raster should still build, got {dataset.overview_count}"
             )
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
@@ -360,11 +360,11 @@ class TestCreateOverviewsPathlessGuard:
             view = getattr(dataset, method)(3857)
             assert view.driver_type == "vrt", "precondition: the warped view is a VRT"
             assert not view.raster.GetDescription(), "precondition: it has no path"
-            view.create_overviews("average", overview_levels=[2])
-            assert all(count > 0 for count in view.overview_count), (
+            view.io.create_overviews("average", overview_levels=[2])
+            assert all(count > 0 for count in view.io.overview_count), (
                 f"a warped VRT should still build, got {view.overview_count}"
             )
-            level = view.read_overview_array(band=0, overview_index=0)
+            level = view.io.read_overview_array(band=0, overview_index=0)
             assert level.size > 0, "the built level must carry pixels"
             assert np.isfinite(level).any(), "the built level must carry readable data"
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
@@ -398,8 +398,8 @@ class TestCreateOverviewsPathlessGuard:
             assert not view.raster.GetDescription(), (
                 "precondition: the view has no path"
             )
-            view.create_overviews(overview_levels=[2])
-            assert all(count > 0 for count in view.overview_count), (
+            view.io.create_overviews(overview_levels=[2])
+            assert all(count > 0 for count in view.io.overview_count), (
                 f"a NetCDF variable view should still build, got {view.overview_count}"
             )
             if _GDAL_WRITES_EXTERNAL_NETCDF_OVR:
@@ -425,9 +425,9 @@ class TestCreateOverviewsPathlessGuard:
         """
         level, parent = pathless_level
         with pytest.raises(OverviewTargetError):
-            level.create_overviews(overview_levels=[2])
+            level.io.create_overviews(overview_levels=[2])
         with pytest.raises(ValueError) as excinfo:
-            parent.create_overviews(overview_levels=[3])
+            parent.io.create_overviews(overview_levels=[3])
         assert not isinstance(excinfo.value, OverviewTargetError), (
             "a bad level is an argument error, not an unusable target"
         )
@@ -446,8 +446,8 @@ class TestCreateOverviewsPathlessGuard:
         gdal.Translate(vsi_path, str(source), format="VRT").FlushCache()
         dataset = Dataset.read_file(vsi_path)
         try:
-            dataset.create_overviews(overview_levels=[2])
-            assert all(count > 0 for count in dataset.overview_count), (
+            dataset.io.create_overviews(overview_levels=[2])
+            assert all(count > 0 for count in dataset.io.overview_count), (
                 f"a /vsimem/ VRT should still build, got {dataset.overview_count}"
             )
             assert gdal.VSIStatL(f"{vsi_path}.ovr") is not None, (
@@ -471,7 +471,7 @@ class TestCreateOverviewsPathlessGuard:
         """
         level, _ = pathless_level
         with pytest.raises(OverviewTargetError, match="nowhere to go") as excinfo:
-            level.recreate_overviews()
+            level.io.recreate_overviews()
         assert not isinstance(excinfo.value, ReadOnlyError), (
             "the access mode is not the blocker; a pathless handle cannot be reopened"
         )
@@ -509,7 +509,7 @@ class TestCreateOverviewsPathlessGuard:
                 "precondition: the index-space view is VRT-wrapped"
             )
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                view.create_overviews(overview_levels=[2])
+                view.io.create_overviews(overview_levels=[2])
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
         finally:
             view.close()
@@ -535,7 +535,7 @@ class TestCreateOverviewsPathlessGuard:
                 "precondition: the description is the XML document"
             )
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                dataset.create_overviews(overview_levels=[2])
+                dataset.io.create_overviews(overview_levels=[2])
         finally:
             dataset.close()
 
@@ -552,11 +552,11 @@ class TestCreateOverviewsPathlessGuard:
         gdal.Translate(str(vrt_path), str(source), format="VRT").FlushCache()
         dataset = Dataset.read_file(str(vrt_path))
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
             assert (tmp_path / "with_path.vrt.ovr").exists(), (
                 "the sidecar must be named after the VRT, which is the point of the case"
             )
-            assert dataset.overview_count == [1, 1, 1], (
+            assert dataset.io.overview_count == [1, 1, 1], (
                 f"a path-ful VRT should still build, got {dataset.overview_count}"
             )
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
@@ -583,13 +583,13 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         level = None
         try:
-            level = dataset.get_overview_dataset(overview_index=0)
-            before = list(level.overview_count)
+            level = dataset.io.get_overview_dataset(overview_index=0)
+            before = list(level.io.overview_count)
             assert before == [1, 1, 1], (
                 f"precondition: every band exposes one overview, {before}"
             )
             level.raster.BuildOverviews("nearest", [2])
-            assert level.overview_count == [0, 0, 0], (
+            assert level.io.overview_count == [0, 0, 0], (
                 "GDAL no longer strands a pathless VRT's levels — the guard may be obsolete"
             )
             assert (tmp_path / ".ovr").exists(), (
@@ -613,7 +613,7 @@ class TestCreateOverviewsPathlessGuard:
         monkeypatch.chdir(tmp_path)
         source = _overviewed_raster(tmp_path, "nested_warp_src.tif")
         dataset = Dataset.read_file(source)
-        warped = dataset.to_crs(3857)
+        warped = dataset.spatial.to_crs(3857)
         wrapper = Dataset(gdal.BuildVRT("", [warped.raster]))
         try:
             xml = wrapper.raster.GetMetadata("xml:VRT")[0]
@@ -625,7 +625,7 @@ class TestCreateOverviewsPathlessGuard:
                 "precondition: the warped source is serialised inside the document"
             )
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                wrapper.create_overviews(overview_levels=[2])
+                wrapper.io.create_overviews(overview_levels=[2])
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
         finally:
             wrapper.close()
@@ -645,13 +645,13 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         level = None
         try:
-            level = dataset.get_overview_dataset(overview_index=0)
+            level = dataset.io.get_overview_dataset(overview_index=0)
             level.raster.SetDescription("   ")
             assert level.raster.GetDescription() == "   ", (
                 "precondition: the description holds blanks, not a path"
             )
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                level.create_overviews(overview_levels=[2])
+                level.io.create_overviews(overview_levels=[2])
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
         finally:
             if level is not None:
@@ -722,7 +722,7 @@ class TestCreateOverviewsPathlessGuard:
         """
         level, _ = pathless_level
         with pytest.raises(OverviewTargetError, match="nowhere to go"):
-            level.create_overviews(**kwargs)
+            level.io.create_overviews(**kwargs)
         assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
 
     @pytest.mark.parametrize(
@@ -764,7 +764,7 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         level = None
         try:
-            level = dataset.get_overview_dataset(overview_index=0)
+            level = dataset.io.get_overview_dataset(overview_index=0)
             caught = None
             try:
                 getattr(level, method)()
@@ -793,7 +793,7 @@ class TestCreateOverviewsPathlessGuard:
         """
         level, _ = pathless_level
         with pytest.raises(OverviewTargetError, match="nowhere to go"):
-            level.recreate_overviews(resampling_method="NOPE")
+            level.io.recreate_overviews(resampling_method="NOPE")
         assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
 
     def test_recreate_argument_error_on_a_usable_target_stays_an_argument_error(
@@ -811,7 +811,7 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         try:
             with pytest.raises(ValueError, match="resampling_method") as excinfo:
-                dataset.recreate_overviews(resampling_method="NOPE")
+                dataset.io.recreate_overviews(resampling_method="NOPE")
             assert not isinstance(excinfo.value, OverviewTargetError), (
                 "a bad method is worth retrying with a different one, not an "
                 "unusable target"
@@ -834,8 +834,8 @@ class TestCreateOverviewsPathlessGuard:
         gdal.Translate(str(vrt_path), source, format="VRT").FlushCache()
         dataset = Dataset.read_file(str(vrt_path))
         try:
-            dataset.create_overviews(overview_levels=[2])
-            assert dataset.overview_count == [1, 1], (
+            dataset.io.create_overviews(overview_levels=[2])
+            assert dataset.io.overview_count == [1, 1], (
                 f"precondition: the VRT owns one level per band, {dataset.overview_count}"
             )
             with warnings.catch_warnings(record=True) as recorded:
@@ -844,7 +844,7 @@ class TestCreateOverviewsPathlessGuard:
             assert not [w for w in recorded if issubclass(w.category, UserWarning)], (
                 f"the path-ful VRT should regenerate silently, got {recorded}"
             )
-            assert dataset.overview_count == [1, 1], (
+            assert dataset.io.overview_count == [1, 1], (
                 f"regeneration must keep the levels, got {dataset.overview_count}"
             )
             assert (tmp_path / "recreate_with_path.vrt.ovr").exists(), (
@@ -880,7 +880,7 @@ class TestCreateOverviewsPathlessGuard:
         monkeypatch.setattr(gdal, "RegenerateOverviews", refuse)
         try:
             with pytest.raises(ReadOnlyError, match="read-only"):
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
         finally:
             dataset.close()
 
@@ -900,8 +900,8 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source)
         view = None
         try:
-            view = dataset.to_crs(3857)
-            view.create_overviews("average", overview_levels=[2])
+            view = dataset.spatial.to_crs(3857)
+            view.io.create_overviews("average", overview_levels=[2])
 
             def refuse(band, overviews, method):
                 gdal.ErrorReset()
@@ -912,7 +912,7 @@ class TestCreateOverviewsPathlessGuard:
 
             monkeypatch.setattr(gdal, "RegenerateOverviews", refuse)
             with pytest.raises(OverviewTargetError, match="belong to a VRT"):
-                view.recreate_overviews("average")
+                view.io.recreate_overviews("average")
         finally:
             if view is not None:
                 view.close()
@@ -934,17 +934,17 @@ class TestCreateOverviewsPathlessGuard:
         gdal.Translate(str(vrt_path), str(source), format="VRT").FlushCache()
         writable = Dataset.read_file(str(vrt_path), read_only=False)
         try:
-            writable.create_overviews("average", overview_levels=[2])
+            writable.io.create_overviews("average", overview_levels=[2])
         finally:
             writable.close()
         dataset = Dataset.read_file(str(vrt_path), read_only=True)
         try:
             assert dataset.driver_type == "vrt", "precondition: the handle is a VRT"
-            assert all(count > 0 for count in dataset.overview_count), (
+            assert all(count > 0 for count in dataset.io.overview_count), (
                 f"precondition: the sidecar levels are visible, {dataset.overview_count}"
             )
             with pytest.raises(ReadOnlyError, match="read-only"):
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
         finally:
             dataset.close()
 
@@ -976,11 +976,11 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(str(source))
         rolled = None
         try:
-            rolled = dataset.wrap_longitude()
+            rolled = dataset.spatial.wrap_longitude()
             assert rolled.driver_type == "vrt", "precondition: the roll is a VRT"
             assert not rolled.raster.GetDescription(), "precondition: it has no path"
             with pytest.raises(OverviewTargetError, match="nowhere to go"):
-                rolled.create_overviews(overview_levels=[2])
+                rolled.io.create_overviews(overview_levels=[2])
             assert not (tmp_path / ".ovr").exists(), "a stray '.ovr' was written"
         finally:
             if rolled is not None:
@@ -1003,10 +1003,10 @@ class TestCreateOverviewsPathlessGuard:
         levels = {}
         for method in ("average", "nearest"):
             parent = Dataset.read_file(source)
-            view = parent.to_crs(3857)
+            view = parent.spatial.to_crs(3857)
             try:
-                view.create_overviews(method, overview_levels=[2])
-                levels[method] = view.read_overview_array(
+                view.io.create_overviews(method, overview_levels=[2])
+                levels[method] = view.io.read_overview_array(
                     band=0, overview_index=0
                 ).copy()
             finally:
@@ -1036,14 +1036,14 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(str(vrt_path), read_only=False)
         try:
             assert dataset._access == "write", "precondition: already opened writable"
-            assert all(count > 0 for count in dataset.overview_count), (
+            assert all(count > 0 for count in dataset.io.overview_count), (
                 f"precondition: the inherited levels are visible, {dataset.overview_count}"
             )
             assert not (tmp_path / "inherit.vrt.ovr").exists(), (
                 "precondition: the levels are inherited, not owned by a sidecar"
             )
             with pytest.raises(OverviewTargetError, match="belong to a VRT") as excinfo:
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             assert not isinstance(excinfo.value, ReadOnlyError), (
                 "the access mode is not the blocker; the handle is already writable"
             )
@@ -1067,11 +1067,11 @@ class TestCreateOverviewsPathlessGuard:
         source = _overviewed_raster(tmp_path, "internal_ro.tif")
         dataset = Dataset.read_file(source, read_only=True)
         try:
-            assert all(count > 0 for count in dataset.overview_count), (
+            assert all(count > 0 for count in dataset.io.overview_count), (
                 f"precondition: the internal levels are visible, {dataset.overview_count}"
             )
             with pytest.raises(ReadOnlyError, match="read-only") as excinfo:
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             assert not isinstance(excinfo.value, OverviewTargetError), (
                 "a stored level in a read-only handle is fixable by reopening"
             )
@@ -1095,7 +1095,7 @@ class TestCreateOverviewsPathlessGuard:
         vrt_path = _mixed_ownership_vrt(tmp_path)
         dataset = Dataset.read_file(vrt_path, read_only=True)
         try:
-            assert dataset.overview_count == [1, 1], (
+            assert dataset.io.overview_count == [1, 1], (
                 f"precondition: both bands carry a level, {dataset.overview_count}"
             )
             assert _level_owner_driver(dataset._iloc(0)) == "GTiff", (
@@ -1105,7 +1105,7 @@ class TestCreateOverviewsPathlessGuard:
                 "precondition: band 1's level is computed by the VRT"
             )
             with pytest.raises(ReadOnlyError, match="band 0") as excinfo:
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             assert not isinstance(excinfo.value, OverviewTargetError), (
                 "band 0's own level is stored, so its sibling must not decide for it"
             )
@@ -1133,7 +1133,7 @@ class TestCreateOverviewsPathlessGuard:
             with pytest.raises(
                 OverviewTargetError, match="already open for writing"
             ) as excinfo:
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             assert not isinstance(excinfo.value, ReadOnlyError), (
                 "a writable handle cannot be fixed by reopening it writable"
             )
@@ -1167,7 +1167,7 @@ class TestCreateOverviewsPathlessGuard:
         monkeypatch.setattr(gdal.Band, "GetOverview", _refuse_to_resolve)
         try:
             with pytest.raises(expected) as excinfo:
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             assert type(excinfo.value) is expected, (
                 f"expected exactly {expected.__name__}, got {type(excinfo.value).__name__}"
             )
@@ -1199,7 +1199,7 @@ class TestCreateOverviewsPathlessGuard:
         gdal.Translate(str(vrt_path), str(source), format="VRT").FlushCache()
         writable = Dataset.read_file(str(vrt_path), read_only=False)
         try:
-            writable.create_overviews("average", overview_levels=[2])
+            writable.io.create_overviews("average", overview_levels=[2])
         finally:
             writable.close()
         serialise = MagicMock(return_value=False)
@@ -1210,7 +1210,7 @@ class TestCreateOverviewsPathlessGuard:
                 "precondition: the levels are stored in the sidecar the VRT owns"
             )
             with pytest.raises(ReadOnlyError, match="read-only"):
-                dataset.recreate_overviews("average")
+                dataset.io.recreate_overviews("average")
             serialise.assert_not_called()
         finally:
             dataset.close()
@@ -1233,13 +1233,13 @@ class TestCreateOverviewsPathlessGuard:
         dataset = Dataset.read_file(source, read_only=parent_read_only)
         view = None
         try:
-            view = dataset.to_crs(3857)
-            view.create_overviews("average", overview_levels=[2])
-            assert all(count > 0 for count in view.overview_count), (
+            view = dataset.spatial.to_crs(3857)
+            view.io.create_overviews("average", overview_levels=[2])
+            assert all(count > 0 for count in view.io.overview_count), (
                 f"precondition: the warped view holds levels, {view.overview_count}"
             )
             with pytest.raises(OverviewTargetError, match="belong to a VRT") as excinfo:
-                view.recreate_overviews("average")
+                view.io.recreate_overviews("average")
             assert not isinstance(excinfo.value, ReadOnlyError), (
                 f"the access mode is not the blocker (parent read_only={parent_read_only})"
             )
@@ -1271,12 +1271,12 @@ class TestCreateOverviewsPathlessGuard:
         )
         view = None
         try:
-            view = dataset.warped_view(3857)
-            assert view.overview_count == [0], (
+            view = dataset.spatial.warped_view(3857)
+            assert view.io.overview_count == [0], (
                 f"precondition: the view has no levels, {view.overview_count}"
             )
             with pytest.warns(UserWarning, match=r"call create_overviews\(\) first"):
-                view.recreate_overviews()
+                view.io.recreate_overviews()
         finally:
             if view is not None:
                 view.close()
@@ -1296,7 +1296,7 @@ class TestCreateOverviewsPathlessGuard:
         source = _plain_raster(tmp_path, "pathless_empty_src.tif")
         wrapper = Dataset(gdal.BuildVRT("", [source]))
         try:
-            assert wrapper.overview_count == [0, 0], (
+            assert wrapper.io.overview_count == [0, 0], (
                 f"precondition: nothing to regenerate, {wrapper.overview_count}"
             )
             with warnings.catch_warnings(record=True) as recorded:
@@ -1383,9 +1383,9 @@ class TestCreateOverviewsPathlessGuard:
                 f"precondition: the description outruns the quote, {len(description)}"
             )
             with pytest.raises(OverviewTargetError) as build:
-                dataset.create_overviews(overview_levels=[2])
+                dataset.io.create_overviews(overview_levels=[2])
             with pytest.raises(OverviewTargetError) as regenerate:
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
             built, regenerated = str(build.value), str(regenerate.value)
             assert f"Description: {description[:_DESCRIPTION_EXCERPT]!r}" in built, (
                 f"the refusal must quote the description that caused it, got: {built}"
@@ -1602,7 +1602,7 @@ class TestReCreateOverviews:
     ):
         """Test recreating overviews for a dataset with internal overviews"""
         dataset = Dataset(era5_image_internal_overviews_read_only_false)
-        dataset.recreate_overviews(resampling_method="average")
+        dataset.io.recreate_overviews(resampling_method="average")
 
     def test_recreate_overviews_external(
         self,
@@ -1611,8 +1611,8 @@ class TestReCreateOverviews:
     ):
         """Test recreating overviews for a dataset with external overviews"""
         dataset = Dataset(era5_image)
-        dataset.create_overviews(overview_levels=[2])
-        dataset.recreate_overviews(resampling_method="average")
+        dataset.io.create_overviews(overview_levels=[2])
+        dataset.io.recreate_overviews(resampling_method="average")
 
 
 class TestRecreateOverviewsContract:
@@ -1634,9 +1634,9 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_raster_path, tmp_path / "no_ovr.tif")
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
-            assert not any(dataset.overview_count), "fixture must start with none"
+            assert not any(dataset.io.overview_count), "fixture must start with none"
             with pytest.warns(UserWarning, match=r"call create_overviews\(\) first"):
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1654,7 +1654,7 @@ class TestRecreateOverviewsContract:
         dataset = Dataset.read_file(str(work), read_only=True)
         try:
             with pytest.warns(UserWarning, match=r"call create_overviews\(\) first"):
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1670,9 +1670,9 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_internal_overviews_path, tmp_path / "ro_internal.tif")
         dataset = Dataset.read_file(str(work), read_only=True)
         try:
-            assert any(dataset.overview_count), "fixture must carry internal overviews"
+            assert any(dataset.io.overview_count), "fixture must carry internal overviews"
             with pytest.raises(ReadOnlyError, match="opened read-only"):
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1722,14 +1722,14 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_raster_path, tmp_path / "gdal_failure.tif")
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
 
             def raise_runtime_error(*args, **kwargs):
                 raise RuntimeError(gdal_message)
 
             monkeypatch.setattr(gdal, "RegenerateOverviews", raise_runtime_error)
             with pytest.raises(expected_error) as excinfo:
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
             assert type(excinfo.value) is expected_error, (
                 f"expected exactly {expected_error.__name__}, got {type(excinfo.value).__name__}"
             )
@@ -1759,12 +1759,12 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_raster_path, tmp_path / "status_failure.tif")
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
             monkeypatch.setattr(
                 gdal, "RegenerateOverviews", lambda *args, **kwargs: gdal.CE_Failure
             )
             with pytest.raises(RuntimeError) as excinfo:
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
             assert type(excinfo.value) is RuntimeError, (
                 f"a failing status must not be relabelled, got {type(excinfo.value).__name__}"
             )
@@ -1788,14 +1788,14 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_raster_path, tmp_path / "noted_failure.tif")
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
 
             def raise_runtime_error(*args, **kwargs):
                 raise RuntimeError("Failed to write overview block: disk full")
 
             monkeypatch.setattr(gdal, "RegenerateOverviews", raise_runtime_error)
             with pytest.raises(RuntimeError) as excinfo:
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
             notes = getattr(excinfo.value, "__notes__", [])
             assert any("overviews of band 0" in note for note in notes), (
                 f"the note must name the band, got {notes}"
@@ -1829,7 +1829,7 @@ class TestRecreateOverviewsContract:
 
             monkeypatch.setattr(gdal, "RegenerateOverviews", record)
             with pytest.warns(UserWarning, match=r"call create_overviews\(\) first"):
-                dataset.recreate_overviews(resampling_method="average")
+                dataset.io.recreate_overviews(resampling_method="average")
             assert calls == [(1, "average")], (
                 "band 0's levels should regenerate in one batched call and the empty "
                 f"band be skipped, got {calls}"
@@ -1848,11 +1848,11 @@ class TestRecreateOverviewsContract:
         """
         dataset = Dataset(gdal.GetDriverByName("MEM").Create("", 4, 4, 0))
         try:
-            assert dataset.overview_count == [], (
+            assert dataset.io.overview_count == [], (
                 f"fixture must have no bands, got {dataset.overview_count}"
             )
             with pytest.warns(UserWarning, match="no bands"):
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1870,14 +1870,14 @@ class TestRecreateOverviewsContract:
         """
         dataset = Dataset.read_file(_mixed_overview_vrt(tmp_path), read_only=True)
         try:
-            assert dataset.overview_count == [1, 0], (
+            assert dataset.io.overview_count == [1, 0], (
                 f"fixture must produce mixed counts, got {dataset.overview_count}"
             )
             with pytest.warns(
                 UserWarning, match=r"Bands 1 \(0-based\) have no overviews"
             ):
                 with contextlib.suppress(ReadOnlyError):
-                    dataset.recreate_overviews()
+                    dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1895,7 +1895,7 @@ class TestRecreateOverviewsContract:
         )
         try:
             with pytest.warns(UserWarning, match=r"call create_overviews\(\) first"):
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
         finally:
             dataset.close()
 
@@ -1914,7 +1914,7 @@ class TestRecreateOverviewsContract:
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
             with pytest.warns(UserWarning) as recorded:
-                dataset.recreate_overviews()
+                dataset.io.recreate_overviews()
             assert Path(recorded[0].filename).name == Path(__file__).name, (
                 f"warning blamed {recorded[0].filename}, expected this test file"
             )
@@ -1956,7 +1956,7 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_raster_path, tmp_path / "happy.tif")
         dataset = Dataset.read_file(str(work), read_only=False)
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
             with warnings.catch_warnings(record=True) as recorded:
                 warnings.simplefilter("always")
                 dataset.recreate_overviews()
@@ -1998,7 +1998,7 @@ class TestRecreateOverviewsBatching:
                 return gdal.CE_None
 
             monkeypatch.setattr(gdal, "RegenerateOverviews", record)
-            dataset.recreate_overviews(resampling_method="average")
+            dataset.io.recreate_overviews(resampling_method="average")
             expected = [(1, 3, "average"), (2, 3, "average"), (3, 3, "average")]
             assert calls == expected, (
                 f"each band's three levels should go out in one call per band, got {calls}"
@@ -2022,15 +2022,15 @@ class TestRecreateOverviewsBatching:
         path = _raster_with_overviews(tmp_path, "values.tif", grids, [2, 4], "NEAREST")
         dataset = Dataset.read_file(path, read_only=False)
         try:
-            before = dataset.read_overview_array(band=0, overview_index=0)
+            before = dataset.io.read_overview_array(band=0, overview_index=0)
             assert not np.allclose(before, _block_mean(grids[0], 2)), (
                 "the NEAREST-built level must start out different from the average, "
                 "otherwise regenerating it would prove nothing"
             )
-            dataset.recreate_overviews(resampling_method="average")
+            dataset.io.recreate_overviews(resampling_method="average")
             for index, grid in enumerate(grids):
                 for level, factor in enumerate((2, 4)):
-                    actual = dataset.read_overview_array(
+                    actual = dataset.io.read_overview_array(
                         band=index, overview_index=level
                     )
                     np.testing.assert_allclose(
@@ -2092,7 +2092,7 @@ class TestRecreateOverviewsBatching:
         )
         dataset = Dataset.read_file(str(vrt), read_only=True)
         try:
-            assert dataset.overview_count == [2, 1], (
+            assert dataset.io.overview_count == [2, 1], (
                 f"fixture must give the bands different counts, got {dataset.overview_count}"
             )
             batches = []
@@ -2103,7 +2103,7 @@ class TestRecreateOverviewsBatching:
                     batches.append(len(overviews)) or gdal.CE_None
                 ),
             )
-            dataset.recreate_overviews(resampling_method="average")
+            dataset.io.recreate_overviews(resampling_method="average")
             assert batches == [2, 1], (
                 f"each band must be batched with its own level count, got {batches}"
             )
@@ -2123,11 +2123,11 @@ class TestRecreateOverviewsBatching:
         path = _raster_with_overviews(tmp_path, "ro_batch.tif", [values], [2, 4, 8])
         dataset = Dataset.read_file(path, read_only=True)
         try:
-            assert dataset.overview_count == [3], (
+            assert dataset.io.overview_count == [3], (
                 f"fixture must carry three levels, got {dataset.overview_count}"
             )
             with pytest.raises(ReadOnlyError, match="overviews of band 0") as excinfo:
-                dataset.recreate_overviews(resampling_method="average")
+                dataset.io.recreate_overviews(resampling_method="average")
             assert isinstance(excinfo.value.__cause__, RuntimeError), (
                 "the original GDAL error must stay chained"
             )
@@ -2156,13 +2156,13 @@ class TestRecreateOverviewsBatching:
 
         dataset = Dataset.read_file(regenerated, read_only=False)
         try:
-            dataset.recreate_overviews(resampling_method="average")
-            after = np.asarray(dataset.get_overview(0, 1).ReadAsArray())
+            dataset.io.recreate_overviews(resampling_method="average")
+            after = np.asarray(dataset.io.get_overview(0, 1).ReadAsArray())
         finally:
             dataset.close()
         reference = Dataset.read_file(built)
         try:
-            expected = np.asarray(reference.get_overview(0, 1).ReadAsArray())
+            expected = np.asarray(reference.io.get_overview(0, 1).ReadAsArray())
         finally:
             reference.close()
         np.testing.assert_allclose(
@@ -2195,9 +2195,9 @@ class TestRecreateOverviewsBatching:
 
         dataset = Dataset.read_file(path, read_only=False)
         try:
-            dataset.recreate_overviews(resampling_method="average")
-            level_0 = np.asarray(dataset.get_overview(0, 0).ReadAsArray())
-            level_1 = np.asarray(dataset.get_overview(0, 1).ReadAsArray())
+            dataset.io.recreate_overviews(resampling_method="average")
+            level_0 = np.asarray(dataset.io.get_overview(0, 0).ReadAsArray())
+            level_1 = np.asarray(dataset.io.get_overview(0, 1).ReadAsArray())
             cascaded = float(level_0[:2, :2].mean())
             assert float(level_1.ravel()[0]) == pytest.approx(cascaded, rel=1e-6), (
                 f"level 1 should decimate level 0 ({cascaded}), got {level_1.ravel()[0]}"
@@ -2228,7 +2228,7 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         overview = None
         try:
-            overview = dataset.get_overview_dataset(overview_index=0)
+            overview = dataset.io.get_overview_dataset(overview_index=0)
             assert (overview.rows, overview.columns) == (32, 32), (
                 f"expected 32x32, got {(overview.rows, overview.columns)}"
             )
@@ -2256,7 +2256,7 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         overview = None
         try:
-            overview = dataset.get_overview_dataset(overview_index=1)
+            overview = dataset.io.get_overview_dataset(overview_index=1)
             assert (overview.rows, overview.columns) == (16, 16), (
                 f"expected 16x16, got {(overview.rows, overview.columns)}"
             )
@@ -2277,11 +2277,11 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         overview = None
         try:
-            overview = dataset.get_overview_dataset(band=1, overview_index=0)
+            overview = dataset.io.get_overview_dataset(band=1, overview_index=0)
             assert overview.band_count == 1, (
                 f"expected 1 band, got {overview.band_count}"
             )
-            values = np.asarray(overview.read_array(band=0))
+            values = np.asarray(overview.io.read_array(band=0))
             assert np.allclose(values, 2.0), (
                 f"expected band 1's constant 2.0, got {values[0, 0]}"
             )
@@ -2302,7 +2302,7 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         overview = None
         try:
-            overview = dataset.get_overview_dataset(overview_index=0)
+            overview = dataset.io.get_overview_dataset(overview_index=0)
             assert overview.driver_type == "vrt", (
                 f"file-backed level should be a lazy VRT, got {overview.driver_type}"
             )
@@ -2325,10 +2325,10 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path, "gradient.tif"))
         overview = None
         try:
-            overview = dataset.get_overview_dataset(band=0, overview_index=1)
-            expected = dataset.read_overview_array(band=0, overview_index=1)
+            overview = dataset.io.get_overview_dataset(band=0, overview_index=1)
+            expected = dataset.io.read_overview_array(band=0, overview_index=1)
             np.testing.assert_array_equal(
-                np.asarray(overview.read_array(band=0)),
+                np.asarray(overview.io.read_array(band=0)),
                 expected,
                 err_msg="the plain read must return the level's own pixels",
             )
@@ -2336,7 +2336,7 @@ class TestGetOverviewDataset:
                 f"the lazy level must carry no path, got {overview.file_name!r}"
             )
             with pytest.raises(ValueError, match="reopenable path"):
-                overview.read_array(band=0, threadsafe=True)
+                overview.io.read_array(band=0, threadsafe=True)
             with pytest.raises(TypeError, match="no on-disk path"):
                 pickle.dumps(overview)
         finally:
@@ -2369,7 +2369,7 @@ class TestGetOverviewDataset:
 
             monkeypatch.setattr(io_module, "is_network_backed", lambda path: True)
             with pytest.warns(UserWarning, match="cloud credentials"):
-                with_env = dataset.get_overview_dataset()
+                with_env = dataset.io.get_overview_dataset()
 
             dataset.attach_gdal_env(None)
             with warnings.catch_warnings(record=True) as recorded:
@@ -2418,8 +2418,8 @@ class TestGetOverviewDataset:
         dataset = Dataset.from_bytes(Path(real).read_bytes(), name="dem.tif")
         overview = None
         try:
-            overview = dataset.get_overview_dataset()
-            value = float(np.asarray(overview.read_array(band=0))[0, 0])
+            overview = dataset.io.get_overview_dataset()
+            value = float(np.asarray(overview.io.read_array(band=0))[0, 0])
             assert value == pytest.approx(111.0), (
                 f"expected the payload's own value 111.0, got {value} "
                 "(999.0 means the decoy dem.tif in the CWD was read)"
@@ -2447,7 +2447,7 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(path, read_only=False)
         overview = None
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
             gdal.Unlink(path)
             swap = gdal.GetDriverByName("GTiff").Create(
                 path, 16, 16, 1, gdal.GDT_Float32
@@ -2459,7 +2459,7 @@ class TestGetOverviewDataset:
             assert dataset.io._reopenable_source() is None, (
                 "a name that reopens to another grid is not an identity"
             )
-            overview = dataset.get_overview_dataset()
+            overview = dataset.io.get_overview_dataset()
             assert overview.driver_type == "memory", (
                 f"the level should be materialised, got driver {overview.driver_type}"
             )
@@ -2467,7 +2467,7 @@ class TestGetOverviewDataset:
                 f"expected the parent's own level, got "
                 f"{(overview.rows, overview.columns)}"
             )
-            value = float(np.asarray(overview.read_array(band=0))[0, 0])
+            value = float(np.asarray(overview.io.read_array(band=0))[0, 0])
             assert value == pytest.approx(7.0), (
                 f"expected the parent's own value 7.0, got {value} "
                 "(99.0 means the impostor at the same /vsimem/ name was described)"
@@ -2498,7 +2498,7 @@ class TestGetOverviewDataset:
         overview = None
         try:
             assert dataset.no_data_value[1] is None, "precondition: band 1 has none"
-            overview = dataset.get_overview_dataset()
+            overview = dataset.io.get_overview_dataset()
             assert overview.no_data_value[0] == pytest.approx(-9999.0), (
                 f"band 0 should keep its no-data, got {overview.no_data_value[0]}"
             )
@@ -2527,8 +2527,8 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(path, read_only=False)
         overview = None
         try:
-            dataset.create_overviews(overview_levels=[2])
-            overview = dataset.get_overview_dataset(overview_index=0)
+            dataset.io.create_overviews(overview_levels=[2])
+            overview = dataset.io.get_overview_dataset(overview_index=0)
             assert overview.driver_type == "vrt", (
                 f"/vsimem/ should stay lazy, got driver {overview.driver_type}"
             )
@@ -2559,11 +2559,11 @@ class TestGetOverviewDataset:
 
         on_disk = Dataset.read_file(path)
         in_memory = Dataset.from_array(arr, geo_ref=GeoReference(geo=geo, epsg=4326))
-        in_memory.create_overviews(overview_levels=[2])
+        in_memory.io.create_overviews(overview_levels=[2])
         lazy_level = memory_level = None
         try:
-            lazy_level = on_disk.get_overview_dataset(overview_index=0)
-            memory_level = in_memory.get_overview_dataset(overview_index=0)
+            lazy_level = on_disk.io.get_overview_dataset(overview_index=0)
+            memory_level = in_memory.io.get_overview_dataset(overview_index=0)
             np.testing.assert_allclose(
                 np.asarray(memory_level.geotransform),
                 np.asarray(lazy_level.geotransform),
@@ -2594,8 +2594,8 @@ class TestGetOverviewDataset:
         )
         overview = None
         try:
-            dataset.create_overviews(overview_levels=[2])
-            overview = dataset.get_overview_dataset()
+            dataset.io.create_overviews(overview_levels=[2])
+            overview = dataset.io.get_overview_dataset()
             assert all(value is None for value in overview.no_data_value), (
                 f"no-data should stay absent, got {overview.no_data_value}"
             )
@@ -2624,13 +2624,13 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(path)
         overview = single = None
         try:
-            overview = dataset.get_overview_dataset()
+            overview = dataset.io.get_overview_dataset()
             assert overview.band_names == ["red", "green", "nir"], (
                 f"band names lost: {overview.band_names}"
             )
-            assert overview.scale == [0.5, 0.5, 0.5], f"scale lost: {overview.scale}"
-            assert overview.offset == [3.0, 3.0, 3.0], f"offset lost: {overview.offset}"
-            single = dataset.get_overview_dataset(band=2)
+            assert overview.bands.scale == [0.5, 0.5, 0.5], f"scale lost: {overview.bands.scale}"
+            assert overview.bands.offset == [3.0, 3.0, 3.0], f"offset lost: {overview.bands.offset}"
+            single = dataset.io.get_overview_dataset(band=2)
             assert single.band_names == ["nir"], (
                 f"a band subset should keep that band's name, got {single.band_names}"
             )
@@ -2672,15 +2672,15 @@ class TestGetOverviewDataset:
         memory_parent = Dataset(in_memory)
         levels = {}
         try:
-            levels["lazy"] = lazy_parent.get_overview_dataset()
-            levels["materialised"] = memory_parent.get_overview_dataset()
+            levels["lazy"] = lazy_parent.io.get_overview_dataset()
+            levels["materialised"] = memory_parent.io.get_overview_dataset()
             for tag, level in levels.items():
-                assert level.band_color == {0: "palette_index"}, (
+                assert level.bands.band_color == {0: "palette_index"}, (
                     f"{tag} level lost its colour interpretation: {level.band_color}"
                 )
                 # GTiff pads its palette out to 256 entries and MEM does not, so compare
                 # the two the parent actually declared.
-                entries = level.color_table[["red", "green", "blue", "alpha"]]
+                entries = level.bands.color_table[["red", "green", "blue", "alpha"]]
                 assert entries.values.tolist()[:2] == [
                     [10, 20, 30, 255],
                     [200, 100, 50, 255],
@@ -2711,14 +2711,14 @@ class TestGetOverviewDataset:
         )
         described_level = bare_level = None
         try:
-            described.create_overviews(overview_levels=[2])
-            bare.create_overviews(overview_levels=[2])
-            described_level = described.get_overview_dataset()
+            described.io.create_overviews(overview_levels=[2])
+            bare.io.create_overviews(overview_levels=[2])
+            described_level = described.io.get_overview_dataset()
             expected = {"units": "K", "source": "reanalysis"}
             assert described_level.meta_data == expected, (
                 f"dataset metadata lost: {described_level.meta_data}"
             )
-            bare_level = bare.get_overview_dataset()
+            bare_level = bare.io.get_overview_dataset()
             assert bare_level.meta_data == {}, (
                 f"a metadata-less parent must not gain any: {bare_level.meta_data}"
             )
@@ -2748,9 +2748,9 @@ class TestGetOverviewDataset:
         )
         overview = None
         try:
-            dataset.create_overviews(overview_levels=[2])
+            dataset.io.create_overviews(overview_levels=[2])
             assert dataset.epsg is None, "precondition: this CRS has no EPSG code"
-            overview = dataset.get_overview_dataset()
+            overview = dataset.io.get_overview_dataset()
             assert overview.crs, "the level lost its CRS entirely"
             assert "geos" in overview.crs.lower(), (
                 f"expected the parent's geostationary projection, got {overview.crs[:60]}"
@@ -2771,11 +2771,11 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         try:
             with pytest.raises(ValueError, match="out of range"):
-                dataset.get_overview_dataset(band=9)
+                dataset.io.get_overview_dataset(band=9)
             with pytest.raises(ValueError, match="out of range"):
-                dataset.get_overview_dataset(band=-1)
+                dataset.io.get_overview_dataset(band=-1)
             with pytest.raises(ValueError, match="must not be negative"):
-                dataset.get_overview_dataset(overview_index=-1)
+                dataset.io.get_overview_dataset(overview_index=-1)
         finally:
             dataset.close()
 
@@ -2791,12 +2791,12 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_mixed_overview_vrt(tmp_path))
         overview = None
         try:
-            assert dataset.overview_count == [1, 0], (
+            assert dataset.io.overview_count == [1, 0], (
                 f"fixture must produce mixed counts, got {dataset.overview_count}"
             )
             with pytest.raises(ValueError, match="no overviews"):
-                dataset.get_overview_dataset()
-            overview = dataset.get_overview_dataset(band=0)
+                dataset.io.get_overview_dataset()
+            overview = dataset.io.get_overview_dataset(band=0)
             assert overview.band_count == 1, "the populated band should still work"
         finally:
             if overview is not None:
@@ -2813,7 +2813,7 @@ class TestGetOverviewDataset:
         dataset = Dataset(gdal.GetDriverByName("MEM").Create("", 4, 4, 0))
         try:
             with pytest.raises(ValueError, match="no bands"):
-                dataset.get_overview_dataset()
+                dataset.io.get_overview_dataset()
         finally:
             dataset.close()
 
@@ -2836,14 +2836,14 @@ class TestGetOverviewDataset:
         )
         overview = None
         try:
-            dataset.create_overviews(overview_levels=[2, 4])
-            overview = dataset.get_overview_dataset(band=1, overview_index=1)
+            dataset.io.create_overviews(overview_levels=[2, 4])
+            overview = dataset.io.get_overview_dataset(band=1, overview_index=1)
             assert (overview.rows, overview.columns) == (16, 16), (
                 f"expected 16x16, got {(overview.rows, overview.columns)}"
             )
             assert overview.cell_size == 2.0, f"cell size {overview.cell_size} != 2.0"
             assert overview.epsg == 4326, f"epsg {overview.epsg} != 4326"
-            assert np.allclose(np.asarray(overview.read_array(band=0)), 2.0), (
+            assert np.allclose(np.asarray(overview.io.read_array(band=0)), 2.0), (
                 "the fallback must read the requested band, not band 0"
             )
         finally:
@@ -2862,8 +2862,8 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         out = str(tmp_path / "level0.tif")
         try:
-            level = dataset.get_overview_dataset(overview_index=0)
-            level.to_file(out)
+            level = dataset.io.get_overview_dataset(overview_index=0)
+            level.io.to_file(out)
             level.close()
         finally:
             dataset.close()
@@ -2889,7 +2889,7 @@ class TestGetOverviewDataset:
         )
         try:
             with pytest.raises(ValueError, match="no overviews"):
-                dataset.get_overview_dataset()
+                dataset.io.get_overview_dataset()
         finally:
             dataset.close()
 
@@ -2902,7 +2902,7 @@ class TestGetOverviewDataset:
         dataset = Dataset.read_file(_overviewed_raster(tmp_path))
         try:
             with pytest.raises(ValueError, match="should be less than"):
-                dataset.get_overview_dataset(overview_index=9)
+                dataset.io.get_overview_dataset(overview_index=9)
         finally:
             dataset.close()
 
@@ -2911,11 +2911,11 @@ class TestReadOverviewArray:
     def test_single_band_valid_overview(self, rhine_raster):
         dataset = Dataset(rhine_raster)
         # Test with single-band dataset and valid overview
-        arr = dataset.read_overview_array(band=0, overview_index=0)
+        arr = dataset.io.read_overview_array(band=0, overview_index=0)
         assert isinstance(arr, np.ndarray)
         assert arr.shape == (63, 47)
         # test if the band is None
-        arr = dataset.read_overview_array(band=None, overview_index=0)
+        arr = dataset.io.read_overview_array(band=None, overview_index=0)
         assert isinstance(arr, np.ndarray)
 
     def test_multi_band_all_valid_overview(
@@ -2923,7 +2923,7 @@ class TestReadOverviewArray:
     ):
         dataset = Dataset(era5_image_internal_overviews_read_only_true)
         # Test with all bands in a multi-band dataset
-        arr = dataset.read_overview_array(band=None, overview_index=0)
+        arr = dataset.io.read_overview_array(band=None, overview_index=0)
         assert isinstance(arr, np.ndarray)
         assert arr.shape[0] == dataset.band_count
         assert arr.shape[1] == 2
@@ -2935,7 +2935,7 @@ class TestReadOverviewArray:
         dataset = Dataset(modis_surf_temp)
         # Assuming band 0 has no overviews
         with pytest.raises(ValueError):
-            dataset.read_overview_array(band=None, overview_index=0)
+            dataset.io.read_overview_array(band=None, overview_index=0)
 
         with pytest.raises(ValueError):
-            dataset.read_overview_array(band=0, overview_index=0)
+            dataset.io.read_overview_array(band=0, overview_index=0)

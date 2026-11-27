@@ -21,7 +21,7 @@ class TestFootprint:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.footprint()
+        result = ds.analysis.footprint()
         assert result is not None, "footprint should return a GeoDataFrame"
 
     def test_footprint_all_nodata(self):
@@ -33,7 +33,7 @@ class TestFootprint:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.footprint()
+        result = ds.analysis.footprint()
         assert result is None, "footprint on all-nodata raster should return None"
 
     def test_footprint_all_nodata_returns_none(self):
@@ -45,7 +45,7 @@ class TestFootprint:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.footprint()
+        result = ds.analysis.footprint()
         assert result is None, "All-nodata footprint should return None"
 
     def test_footprint_none_nodata_covers_non_nan(self):
@@ -57,7 +57,7 @@ class TestFootprint:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
         ds._no_data_value = [None]
-        result = ds.footprint()
+        result = ds.analysis.footprint()
         assert result is not None and len(result) > 0, (
             "footprint should cover the non-NaN cells"
         )
@@ -74,7 +74,7 @@ class TestFootprint:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.footprint(band=0)
+        result = ds.analysis.footprint(band=0)
         assert result is not None and len(result) > 0, (
             "footprint should return polygons"
         )
@@ -98,7 +98,7 @@ class TestFootprint:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.footprint(band=1)
+        result = ds.analysis.footprint(band=1)
         assert result is not None and len(result) > 0, (
             "band-1 footprint should return polygons"
         )
@@ -124,7 +124,7 @@ class TestBandToPolygon:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.vectorize._band_to_polygon(0, "class")
+        gdf = ds.vector._band_to_polygon(0, "class")
         assert gdf is not None, "_band_to_polygon should return GeoDataFrame"
         assert len(gdf) > 0, "Should have polygon features"
 
@@ -134,13 +134,13 @@ class TestToFeatureCollection:
 
     def test_to_geodataframe_basic(self, single_band_dataset):
         """to_geodataframe should return a DataFrame."""
-        df = single_band_dataset.to_geodataframe()
+        df = single_band_dataset.vector.to_geodataframe()
         assert isinstance(df, pd.DataFrame), "Should return a DataFrame"
         assert len(df) > 0, "Should have rows"
 
     def test_to_geodataframe_multi_band(self, multi_band_dataset):
         """to_geodataframe on multi-band returns multi-column df."""
-        df = multi_band_dataset.to_geodataframe()
+        df = multi_band_dataset.vector.to_geodataframe()
         assert isinstance(df, pd.DataFrame), "Should return DataFrame"
         assert df.shape[1] >= 3, "Should have at least 3 columns for 3 bands"
 
@@ -152,9 +152,9 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        full_vals = sorted(ds.to_geodataframe(tile=False).iloc[:, 0].tolist())
+        full_vals = sorted(ds.vector.to_geodataframe(tile=False).iloc[:, 0].tolist())
         tiled_vals = sorted(
-            ds.to_geodataframe(tile=True, tile_size=2).iloc[:, 0].tolist()
+            ds.vector.to_geodataframe(tile=True, tile_size=2).iloc[:, 0].tolist()
         )
         assert full_vals == tiled_vals, (
             "tiled and non-tiled should extract the same values"
@@ -173,7 +173,7 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_geodataframe()
+        df = ds.vector.to_geodataframe()
         assert isinstance(df, pd.DataFrame), f"Expected DataFrame, got {type(df)}"
         assert len(df) == 0, f"Expected 0 rows for all-nodata, got {len(df)}"
 
@@ -190,7 +190,7 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        df = ds.to_geodataframe()
+        df = ds.vector.to_geodataframe()
         assert len(df) == 1, f"Expected 1 row, got {len(df)}"
         assert df.iloc[0, 0] == pytest.approx(42.0), (
             f"Expected value 42.0, got {df.iloc[0, 0]}"
@@ -203,7 +203,7 @@ class TestToFeatureCollection:
             The resulting DataFrame columns should be the same as
             dataset.band_names.
         """
-        df = multi_band_dataset.to_geodataframe()
+        df = multi_band_dataset.vector.to_geodataframe()
         expected_names = multi_band_dataset.band_names
         value_cols = list(df.drop(columns="geometry").columns)
         assert value_cols == expected_names, (
@@ -224,7 +224,7 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_geodataframe(geometry="point")
+        gdf = ds.vector.to_geodataframe(geometry="point")
         assert isinstance(gdf, gpd.GeoDataFrame), (
             f"Expected GeoDataFrame, got {type(gdf)}"
         )
@@ -246,7 +246,7 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_geodataframe(geometry="polygon")
+        gdf = ds.vector.to_geodataframe(geometry="polygon")
         assert isinstance(gdf, gpd.GeoDataFrame), (
             f"Expected GeoDataFrame, got {type(gdf)}"
         )
@@ -264,10 +264,10 @@ class TestToFeatureCollection:
         import geopandas as gpd
         from shapely.geometry import box
 
-        full_df = single_band_dataset.to_geodataframe()
+        full_df = single_band_dataset.vector.to_geodataframe()
         poly = box(0.0, -0.10, 0.10, 0.0)
         mask = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
-        gdf = single_band_dataset.to_geodataframe(mask=mask, geometry="point")
+        gdf = single_band_dataset.vector.to_geodataframe(mask=mask, geometry="point")
         assert isinstance(gdf, gpd.GeoDataFrame), (
             f"Expected GeoDataFrame, got {type(gdf)}"
         )
@@ -289,7 +289,7 @@ class TestToFeatureCollection:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_geodataframe()
+        df = ds.vector.to_geodataframe()
         assert len(df) == 4, f"Expected 4 domain cells, got {len(df)}"
         assert not df.isnull().any().any(), "No NaN values should remain in the output"
 
@@ -305,7 +305,7 @@ class TestToFeatureCollectionTile:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_geodataframe(tile=True, tile_size=4)
+        df = ds.vector.to_geodataframe(tile=True, tile_size=4)
         assert isinstance(df, pd.DataFrame), "Should return a DataFrame"
         assert len(df) > 0, "Should have rows"
 
@@ -330,8 +330,8 @@ class TestToFeatureCollectionTile:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df_full = ds.to_geodataframe(tile=False)
-        df_tiled = ds.to_geodataframe(tile=True, tile_size=2)
+        df_full = ds.vector.to_geodataframe(tile=False)
+        df_tiled = ds.vector.to_geodataframe(tile=True, tile_size=2)
 
         assert len(df_tiled) == len(df_full), (
             f"Tiled ({len(df_tiled)}) should have same row count as "
@@ -354,7 +354,7 @@ class TestToFeatureCollectionTile:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_geodataframe(tile=True, tile_size=2)
+        df = ds.vector.to_geodataframe(tile=True, tile_size=2)
         assert isinstance(df, pd.DataFrame), f"Expected DataFrame, got {type(df)}"
         assert len(df) == 0, f"Expected 0 rows for all-nodata, got {len(df)}"
         value_cols = list(df.drop(columns="geometry").columns)
@@ -373,7 +373,7 @@ class TestToFeatureCollectionWithMask:
 
         poly = box(0.0, -0.10, 0.10, 0.0)
         gdf = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
-        df = single_band_dataset.to_geodataframe(mask=gdf)
+        df = single_band_dataset.vector.to_geodataframe(mask=gdf)
         assert isinstance(df, pd.DataFrame), "Should return a DataFrame"
 
     def test_to_geodataframe_none_nodata(self):
@@ -385,7 +385,7 @@ class TestToFeatureCollectionWithMask:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds._no_data_value = [None]
-        df = ds.to_geodataframe()
+        df = ds.vector.to_geodataframe()
         assert isinstance(df, pd.DataFrame), (
             "Should return DataFrame even with None nodata"
         )
@@ -398,6 +398,6 @@ class TestToFeatureCollectionWithMask:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_geodataframe(tile=True, tile_size=4)
+        df = ds.vector.to_geodataframe(tile=True, tile_size=4)
         assert isinstance(df, pd.DataFrame), "Should return DataFrame"
         assert df.shape[1] >= 2, "Should have columns for multi-band"

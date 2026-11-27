@@ -24,7 +24,7 @@ def ro_dataset(tmp_path):
 
 
 _METADATA_SETTERS = [
-    pytest.param(lambda ds: ds.set_crs(epsg=3857), id="set_crs"),
+    pytest.param(lambda ds: ds.spatial.set_crs(epsg=3857), id="set_crs"),
     pytest.param(lambda ds: setattr(ds, "epsg", 3857), id="epsg"),
     pytest.param(lambda ds: setattr(ds, "crs", ds.crs), id="crs"),
     pytest.param(lambda ds: setattr(ds, "meta_data", {"k": "v"}), id="meta_data"),
@@ -82,7 +82,7 @@ class TestReadOnlyMetadataSetters:
             np.ones((3, 3), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
         )
-        ds = Dataset.from_bytes(src.to_bytes())
+        ds = Dataset.from_bytes(src.io.to_bytes())
         assert ds.file_name.startswith("/vsimem/"), "expected a /vsimem-backed raster"
         ds.epsg = 3857
         assert ds.epsg == 3857, "/vsimem raster should accept the epsg setter"
@@ -91,7 +91,7 @@ class TestReadOnlyMetadataSetters:
         """set_crs() with neither crs nor epsg raises ValueError before the read-only guard."""
         ds, _ = ro_dataset
         with pytest.raises(ValueError, match="Either crs or epsg") as exc:
-            ds.set_crs()
+            ds.spatial.set_crs()
         assert not isinstance(exc.value, ReadOnlyError), (
             "the neither-crs-nor-epsg ValueError must take precedence over the read-only guard"
         )

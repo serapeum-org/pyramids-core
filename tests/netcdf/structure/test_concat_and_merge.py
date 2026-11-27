@@ -188,7 +188,7 @@ class TestConcatRoundTrip:
             ],
             "time",
         )
-        assert joined.get_variable("t").equals(whole.get_variable("t"))
+        assert joined.get_variable("t").analysis.equals(whole.get_variable("t"))
 
     def test_three_parts_join_in_order(self):
         """More than two cubes join left to right."""
@@ -699,7 +699,7 @@ class TestTheReceivers:
     def test_merge_takes_a_dataset_backed_variable(self):
         """A plain raster set into a container merges like any other variable."""
         container = _cube(np.ones((2, 2, 2)), [0.0, 6.0], name="rain")
-        container.set_variable(
+        container.variables.set(
             "dem", Dataset.from_array(np.zeros((2, 2)), geo_ref=GEO, no_data_value=NDV)
         )
         merged = NetCDF.merge([container])
@@ -741,7 +741,7 @@ class TestJoiningCubesThatMarkGapsDifferently:
         first = self._cube_with([1.0, -9999.0], [0.0, 6.0], -9999.0)
         second = self._cube_with([-1.0, 4.0], [12.0, 18.0], -1.0)
         joined = NetCDF.concat([first, second], "time").get_variable("t")
-        flags = np.asarray(joined.isnull().read_array()).ravel().tolist()
+        flags = np.asarray(joined.analysis.isnull().read_array()).ravel().tolist()
         assert flags == [0, 1, 1, 0]
 
     def test_the_values_that_are_data_are_unchanged(self):
@@ -785,7 +785,7 @@ class TestJoiningCubesThatMarkGapsDifferently:
             dims=ExtraDimensions(name="time", values=[12.0, 18.0]),
         )
         joined = NetCDF.concat([first, second], "time").get_variable("t")
-        assert np.asarray(joined.isnull().read_array()).ravel().tolist() == [0, 1, 0, 0]
+        assert np.asarray(joined.analysis.isnull().read_array()).ravel().tolist() == [0, 1, 0, 0]
 
     def test_two_cubes_that_both_mark_gaps_with_nan_agree(self):
         """Two NaN sentinels mean the same thing, so the join rewrites nothing.

@@ -60,7 +60,7 @@ class TestToCogPreprocess:
         Test scenario:
             indexes=[0] keeps a single band; the COG has 1 band.
         """
-        out = multiband_float.to_cog(
+        out = multiband_float.cog.to_cog(
             tmp_path / "one.tif", bands=cog.BandSelection(indexes=[0])
         )
         ds = _open(out)
@@ -78,7 +78,7 @@ class TestToCogPreprocess:
             indexes=[2, 0] yields a 2-band COG whose band 1 == old band 2 (value
             2) and band 2 == old band 0 (value 0).
         """
-        out = multiband_float.to_cog(
+        out = multiband_float.cog.to_cog(
             tmp_path / "reorder.tif", bands=cog.BandSelection(indexes=[2, 0])
         )
         ds = _open(out)
@@ -99,7 +99,7 @@ class TestToCogPreprocess:
             (the integer predictor), proving the predictor is resolved from the
             post-cast dtype, not the float source.
         """
-        out = multiband_float.to_cog(
+        out = multiband_float.cog.to_cog(
             tmp_path / "cast.tif",
             bands=cog.BandSelection(indexes=[0], out_dtype="int16"),
         )
@@ -121,7 +121,7 @@ class TestToCogPreprocess:
         Test scenario:
             nodata=-1 is written to band 1 of the COG.
         """
-        out = multiband_float.to_cog(
+        out = multiband_float.cog.to_cog(
             tmp_path / "nd.tif", bands=cog.BandSelection(indexes=[0], nodata=-1.0)
         )
         ds = _open(out)
@@ -139,7 +139,7 @@ class TestToCogPreprocess:
         Test scenario:
             A plain to_cog keeps all 4 bands and the float predictor (3).
         """
-        out = multiband_float.to_cog(tmp_path / "all.tif")
+        out = multiband_float.cog.to_cog(tmp_path / "all.tif")
         ds = _open(out)
         assert ds.RasterCount == 4, f"expected 4 bands, got {ds.RasterCount}"
         pred = ds.GetMetadataItem("PREDICTOR", "IMAGE_STRUCTURE")
@@ -156,8 +156,8 @@ class TestToCogPreprocess:
         Test scenario:
             Subset + cast + nodata together yield a valid COG.
         """
-        out = multiband_float.to_cog(
+        out = multiband_float.cog.to_cog(
             tmp_path / "combo.tif",
             bands=cog.BandSelection(indexes=[1, 0], out_dtype="int16", nodata=0),
         )
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, "combo COG invalid"
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, "combo COG invalid"

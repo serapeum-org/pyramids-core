@@ -22,7 +22,7 @@ def disk_raster(tmp_path) -> Dataset:
     Dataset.from_array(
         np.arange(64, dtype="float32").reshape(8, 8),
         geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0),
-    ).to_file(path)
+    ).io.to_file(path)
     return Dataset.read_file(path)
 
 
@@ -46,9 +46,9 @@ class TestReadWindows:
         Test scenario:
             read_windows(...) matches [read_array(window=w) for w] in order.
         """
-        parallel = disk_raster.read_windows(quad_windows)
+        parallel = disk_raster.io.read_windows(quad_windows)
         sequential = [
-            np.asarray(disk_raster.read_array(window=w)) for w in quad_windows
+            np.asarray(disk_raster.io.read_array(window=w)) for w in quad_windows
         ]
         assert len(parallel) == len(quad_windows)
         for got, expected in zip(parallel, sequential):
@@ -60,8 +60,8 @@ class TestReadWindows:
         Test scenario:
             A single worker reads identically (no concurrency bug masking).
         """
-        single = disk_raster.read_windows(quad_windows, threads=1)
-        pooled = disk_raster.read_windows(quad_windows, threads=4)
+        single = disk_raster.io.read_windows(quad_windows, threads=1)
+        pooled = disk_raster.io.read_windows(quad_windows, threads=4)
         for one, many in zip(single, pooled):
             assert np.array_equal(one, many)
 
@@ -71,7 +71,7 @@ class TestReadWindows:
         Test scenario:
             Four 4x4 windows -> four (4, 4) arrays.
         """
-        blocks = disk_raster.read_windows(quad_windows)
+        blocks = disk_raster.io.read_windows(quad_windows)
         assert [b.shape for b in blocks] == [(4, 4)] * 4
 
     def test_mem_dataset_rejected_up_front(self, quad_windows):
@@ -85,4 +85,4 @@ class TestReadWindows:
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0),
         )
         with pytest.raises(ValueError, match="path-backed"):
-            mem.read_windows(quad_windows)
+            mem.io.read_windows(quad_windows)

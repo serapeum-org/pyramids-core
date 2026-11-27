@@ -56,7 +56,7 @@ class TestFromStacPublicSurface:
         cube = DatasetCollection.from_stac(
             [packed_item], asset="data", read=AssetRead(rescale=True)
         )
-        values = cube.iloc(0).read_array()
+        values = cube.iloc(0).io.read_array()
         finite = values[np.isfinite(values)]
         assert finite.max() == pytest.approx(3.0), (
             f"expected physical max 3.0 from scale 0.01, got {finite.max()}"
@@ -73,7 +73,7 @@ class TestFromStacPublicSurface:
             caller's values would shift by the scale factor.
         """
         cube = DatasetCollection.from_stac([packed_item], asset="data")
-        values = cube.iloc(0).read_array()
+        values = cube.iloc(0).io.read_array()
         finite = values[np.isfinite(values)]
         assert finite.max() == pytest.approx(300.0), (
             f"expected stored max 300, got {finite.max()}"
@@ -240,12 +240,12 @@ class TestStackBandsResampling:
         Dataset.from_array(
             np.zeros((8, 8), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=0.5, epsg=4326),
-        ).to_file(str(fine))
+        ).io.to_file(str(fine))
         gradient = np.arange(16, dtype="float32").reshape(4, 4)
         Dataset.from_array(
             gradient,
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-        ).to_file(str(coarse))
+        ).io.to_file(str(coarse))
         return str(fine), str(coarse)
 
     def test_resampling_changes_the_aligned_band(self, tmp_path):
@@ -266,10 +266,10 @@ class TestStackBandsResampling:
         fine, coarse = self._mismatched_pair(tmp_path)
         nearest = stack_bands(
             [fine, coarse], align=True, resampling="nearest"
-        ).read_array(band=1)
+        ).io.read_array(band=1)
         bilinear = stack_bands(
             [fine, coarse], align=True, resampling="bilinear"
-        ).read_array(band=1)
+        ).io.read_array(band=1)
         assert not np.allclose(nearest, bilinear), (
             "resampling='bilinear' produced the same pixels as 'nearest', so the "
             "kwarg never reached the alignment that honours it"
@@ -299,10 +299,10 @@ class TestStackBandsResampling:
         fine, coarse = self._mismatched_pair(tmp_path)
         through_alias = stack_bands(
             [fine, coarse], align=True, resampling="bilinear"
-        ).read_array(band=1)
+        ).io.read_array(band=1)
         through_method = Dataset.from_band_files(
             [fine, coarse], align=True, resampling="bilinear"
-        ).read_array(band=1)
+        ).io.read_array(band=1)
         assert np.array_equal(through_alias, through_method), (
             "the alias and the method disagree on resampling='bilinear', so one of "
             "them is not using the method the caller named"
@@ -324,11 +324,11 @@ class TestStackBandsResampling:
         fine, coarse = self._mismatched_pair(tmp_path)
         mapped = stack_bands(
             [fine, coarse], align=True, resampling={"coarse": "bilinear"}
-        ).read_array(band=1)
+        ).io.read_array(band=1)
         through_method = Dataset.from_band_files(
             [fine, coarse], align=True, resampling={"coarse": "bilinear"}
-        ).read_array(band=1)
-        default = stack_bands([fine, coarse], align=True).read_array(band=1)
+        ).io.read_array(band=1)
+        default = stack_bands([fine, coarse], align=True).io.read_array(band=1)
         assert np.array_equal(mapped, through_method), (
             "the alias and the method disagree on the per-band mapping, so the "
             "mapping is not reaching from_band_files"
@@ -359,7 +359,7 @@ class TestStackBandsResampling:
                 geo_ref=GeoReference(
                     top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(str(path))
+            ).io.to_file(str(path))
             paths.append(str(path))
 
         with pytest.raises(ValueError, match="resampling only applies"):
@@ -416,7 +416,7 @@ class TestErrorsAsNodataContractWording:
             np.ones((2, 2), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         opened = Dataset.read_file(path)
         assert opened is not None, (
             "the fixture must open, which is exactly why the option cannot catch a "

@@ -222,7 +222,7 @@ class TestSetVariableAttributes:
         """
         nc = make_2d_nc()
         ds = _make_dataset_2d()
-        nc.set_variable(
+        nc.variables.set(
             "pressure",
             ds,
             attrs={"scale_factor": 1.5},
@@ -241,7 +241,7 @@ class TestSetVariableAttributes:
         """
         nc = make_2d_nc()
         ds = _make_dataset_2d()
-        nc.set_variable(
+        nc.variables.set(
             "pressure",
             ds,
             attrs={"flag": 42},
@@ -259,7 +259,7 @@ class TestSetVariableAttributes:
         """
         nc = make_2d_nc()
         ds = _make_dataset_2d()
-        nc.set_variable(
+        nc.variables.set(
             "pressure",
             ds,
             attrs={"metadata": [1, 2, 3]},
@@ -275,7 +275,7 @@ class TestSetVariableAttributes:
         """
         nc = make_2d_nc()
         ds = _make_dataset_2d()
-        nc.set_variable(
+        nc.variables.set(
             "wind",
             ds,
             attrs={"units": "m/s"},
@@ -293,7 +293,7 @@ class TestSetVariableAttributes:
         nc = make_2d_nc()
         ds = _make_dataset_2d()
         # The normal path should set no data without error
-        nc.set_variable("with_nodata", ds)
+        nc.variables.set("with_nodata", ds)
         rg = nc._raster.GetRootGroup()
         md_arr = rg.OpenMDArray("with_nodata")
         assert md_arr is not None, "Variable should exist"
@@ -306,11 +306,11 @@ class TestSetVariableAttributes:
         nc = make_2d_nc()
         ds1 = _make_dataset_2d()
         ds2 = _make_dataset_2d(rows=10, cols=12)
-        nc.set_variable("replace_me", ds1)
+        nc.variables.set("replace_me", ds1)
         assert "replace_me" in nc.variable_names, (
             "Variable should exist before replacement"
         )
-        nc.set_variable("replace_me", ds2)
+        nc.variables.set("replace_me", ds2)
         assert "replace_me" in nc.variable_names, (
             "Variable should still exist after replacement"
         )
@@ -322,7 +322,7 @@ class TestSetVariableAttributes:
         """
         nc = make_2d_nc()
         ds = _make_dataset_3d(bands=2, rows=10, cols=12)
-        nc.set_variable("multi_band", ds)
+        nc.variables.set("multi_band", ds)
         rg = nc._raster.GetRootGroup()
         md_arr = rg.OpenMDArray("multi_band")
         dims = md_arr.GetDimensions()
@@ -340,7 +340,7 @@ class TestSetVariableAttributes:
         nc = make_2d_nc()
         ds = _make_dataset_2d()
         # This should not raise even if CreateAttribute fails internally
-        nc.set_variable(
+        nc.variables.set(
             "safe_var",
             ds,
             attrs={"units": "K", "count": 5, "ratio": 3.14, "complex": [1, 2]},
@@ -360,7 +360,7 @@ class TestSetVariableAttributes:
         )
         ds = _make_dataset_2d()
         with pytest.raises(ValueError, match="set_variable requires"):
-            nc.set_variable("new_var", ds)
+            nc.variables.set("new_var", ds)
 
 
 class TestAddVariable:
@@ -373,7 +373,7 @@ class TestAddVariable:
         """
         nc = _make_3d_nc(variable_name="temp")
         nc2 = _make_3d_nc(variable_name="precip")
-        nc.add_variable(nc2, variable_name="precip")
+        nc.variables.add(nc2, variable_name="precip")
         assert "precip" in nc.variable_names, (
             f"Expected 'precip' in {nc.variable_names}"
         )
@@ -393,7 +393,7 @@ class TestAddVariable:
         mock_rg.OpenMDArray = MagicMock(return_value=None)
         ds._raster = MagicMock()
         ds._raster.GetRootGroup.return_value = mock_rg
-        nc.add_variable(ds)
+        nc.variables.add(ds)
         # Variable names should not change since names_to_copy is empty
         assert nc.variable_names == original_names, (
             f"Variable names should not change, got {nc.variable_names}"
@@ -411,7 +411,7 @@ class TestAddVariable:
         other = make_2d_nc(variable_name="rain")
         with patch.object(type(nc), "_working_group", return_value=None):
             with pytest.raises(ValueError, match="multidimensional container"):
-                nc.add_variable(other)
+                nc.variables.add(other)
 
 
 class TestRemoveVariable:
@@ -435,7 +435,7 @@ class TestRemoveVariable:
         assert "temp" in file_nc.variable_names, (
             "Variable 'temp' should exist before removal"
         )
-        file_nc.remove_variable("temp")
+        file_nc.variables.remove("temp")
         assert "temp" not in file_nc.variable_names, "Variable 'temp' should be removed"
 
     def test_remove_variable_in_memory(self):
@@ -446,7 +446,7 @@ class TestRemoveVariable:
         """
         nc = _make_3d_nc(variable_name="temp")
         assert "temp" in nc.variable_names, "Variable should exist before removal"
-        nc.remove_variable("temp")
+        nc.variables.remove("temp")
         assert "temp" not in nc.variable_names, (
             "Variable should be removed from in-memory dataset"
         )
@@ -462,7 +462,7 @@ class TestRemoveVariable:
         nc = _make_3d_nc(variable_name="temp")
         held = nc._raster
         assert "temp" in held.GetRootGroup().GetMDArrayNames()
-        nc.remove_variable("temp")
+        nc.variables.remove("temp")
         assert "temp" in held.GetRootGroup().GetMDArrayNames(), (
             "held raster must keep 'temp' — remove must not mutate it in place"
         )
@@ -480,7 +480,7 @@ class TestRemoveVariable:
         out = str(tmp_path / "on_disk.nc")
         nc.to_file(out)
         file_nc = NetCDF.read_file(out, read_only=False, open_as_multi_dimensional=True)
-        file_nc.remove_variable("temp")
+        file_nc.variables.remove("temp")
         reopened = NetCDF.read_file(out, open_as_multi_dimensional=True)
         assert "temp" in reopened.variable_names, (
             "on-disk file must be unchanged — remove must not write to it"
@@ -495,8 +495,8 @@ class TestRemoveVariable:
         """
         nc = make_2d_nc(variable_name="elevation")
         keep = nc._raster.GetRootGroup().OpenMDArray("elevation").ReadAsArray().copy()
-        nc.add_variable(make_2d_nc(variable_name="rain"))
-        nc.remove_variable("rain")
+        nc.variables.add(make_2d_nc(variable_name="rain"))
+        nc.variables.remove("rain")
         assert nc.variable_names == ["elevation"], (
             f"survivor list changed: {nc.variable_names}"
         )
@@ -528,7 +528,7 @@ class TestMutationSharedRaster:
         nc = make_2d_nc(variable_name="elevation")
         held = nc._raster
         before = self._names(held)
-        nc.set_variable("added", _make_dataset_2d())
+        nc.variables.set("added", _make_dataset_2d())
         assert self._names(held) == before, "held raster must not gain the new variable"
         assert "added" in nc.variable_names, "container must gain the new variable"
 
@@ -541,7 +541,7 @@ class TestMutationSharedRaster:
         """
         nc = make_2d_nc(variable_name="elevation")
         held = nc._raster
-        nc.set_variable("added", _make_dataset_2d(), copy=False)
+        nc.variables.set("added", _make_dataset_2d(), copy=False)
         assert "added" in self._names(held), "copy=False must mutate the held raster"
         assert "added" in nc.variable_names, "container must gain the new variable"
 
@@ -554,7 +554,7 @@ class TestMutationSharedRaster:
         """
         nc = make_2d_nc(variable_name="elevation")
         held = nc._raster
-        nc.rename_variable("elevation", "renamed")
+        nc.variables.rename("elevation", "renamed")
         assert "elevation" in self._names(held), "held raster must keep the old name"
         assert "renamed" not in self._names(held), (
             "held raster must not gain the new name"
@@ -571,7 +571,7 @@ class TestMutationSharedRaster:
         nc = make_2d_nc(variable_name="elevation")
         held = nc._raster
         before = self._names(held)
-        nc.add_variable(make_2d_nc(variable_name="rain"))
+        nc.variables.add(make_2d_nc(variable_name="rain"))
         assert self._names(held) == before, (
             "held raster must not gain the added variable"
         )
@@ -586,7 +586,7 @@ class TestMutationSharedRaster:
         """
         nc = make_2d_nc(variable_name="elevation")
         held = nc._raster
-        nc.add_variable(make_2d_nc(variable_name="rain"), copy=False)
+        nc.variables.add(make_2d_nc(variable_name="rain"), copy=False)
         assert "rain" in self._names(held), "copy=False must mutate the held raster"
         assert "rain" in nc.variable_names, "container must gain the added variable"
 
@@ -600,8 +600,8 @@ class TestMutationSharedRaster:
         nc = make_2d_nc(variable_name="elevation")
         keep = nc._raster.GetRootGroup().OpenMDArray("elevation").ReadAsArray().copy()
         ds = _make_dataset_2d()
-        written = ds.read_array()
-        nc.set_variable("added", ds)
+        written = ds.io.read_array()
+        nc.variables.set("added", ds)
         rg = nc._raster.GetRootGroup()
         np.testing.assert_array_equal(rg.OpenMDArray("added").ReadAsArray(), written)
         np.testing.assert_array_equal(rg.OpenMDArray("elevation").ReadAsArray(), keep)
@@ -622,7 +622,7 @@ class TestMutationFileBacked:
         out = str(tmp_path / "set_disk.nc")
         nc.to_file(out)
         file_nc = NetCDF.read_file(out, read_only=False, open_as_multi_dimensional=True)
-        file_nc.set_variable("added", _make_dataset_2d())
+        file_nc.variables.set("added", _make_dataset_2d())
         assert "added" in file_nc.variable_names, "container should gain the variable"
         reopened = NetCDF.read_file(out, open_as_multi_dimensional=True)
         assert "added" not in reopened.variable_names, (
@@ -641,7 +641,7 @@ class TestMutationFileBacked:
         out = str(tmp_path / "set_disk_cf.nc")
         nc.to_file(out)
         file_nc = NetCDF.read_file(out, read_only=False, open_as_multi_dimensional=True)
-        file_nc.set_variable("added", _make_dataset_2d(), copy=False)
+        file_nc.variables.set("added", _make_dataset_2d(), copy=False)
         assert "added" in file_nc.variable_names, "container should gain the variable"
         reopened = NetCDF.read_file(out, open_as_multi_dimensional=True)
         assert "added" not in reopened.variable_names, (
@@ -659,7 +659,7 @@ class TestMutationFileBacked:
         out = str(tmp_path / "add_disk.nc")
         nc.to_file(out)
         file_nc = NetCDF.read_file(out, read_only=False, open_as_multi_dimensional=True)
-        file_nc.add_variable(make_2d_nc(variable_name="rain"))
+        file_nc.variables.add(make_2d_nc(variable_name="rain"))
         assert "rain" in file_nc.variable_names, "container should gain the variable"
         reopened = NetCDF.read_file(out, open_as_multi_dimensional=True)
         assert "rain" not in reopened.variable_names, (
@@ -677,7 +677,7 @@ class TestMutationFileBacked:
         out = str(tmp_path / "rename_disk.nc")
         nc.to_file(out)
         file_nc = NetCDF.read_file(out, read_only=False, open_as_multi_dimensional=True)
-        file_nc.rename_variable("temp", "temp2")
+        file_nc.variables.rename("temp", "temp2")
         assert "temp2" in file_nc.variable_names, "container should show the new name"
         reopened = NetCDF.read_file(out, open_as_multi_dimensional=True)
         assert "temp" in reopened.variable_names, (
@@ -701,7 +701,7 @@ class TestSetVariableAttrWriteException:
         # Using object() as attr value forces str() conversion in the
         # else branch. The Write may or may not fail, but the test
         # verifies no exception escapes.
-        nc.set_variable(
+        nc.variables.set(
             "fail_attr_var",
             ds,
             attrs={"key": object()},
@@ -725,7 +725,7 @@ class TestSetVariableNoDataException:
         # Set a no_data_value that can't be converted to float
         ds._no_data_value = ["not_a_number"]
         # This should not raise - the exception is silenced
-        nc.set_variable("tricky_var", ds)
+        nc.variables.set("tricky_var", ds)
         rg = nc._raster.GetRootGroup()
         md_arr = rg.OpenMDArray("tricky_var")
         assert md_arr is not None, "Variable should still be created"
@@ -751,7 +751,7 @@ class TestSetVariableAttrException:
         monkeypatch.setattr(gdal.MDArray, "CreateAttribute", boom)
 
         # Must NOT raise despite every attribute write failing.
-        nc.set_variable("attr_err_var", ds, attrs={"units": "K", "flag": 1})
+        nc.variables.set("attr_err_var", ds, attrs={"units": "K", "flag": 1})
 
         rg = nc._raster.GetRootGroup()
         md_arr = rg.OpenMDArray("attr_err_var")

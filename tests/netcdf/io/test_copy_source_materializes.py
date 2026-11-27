@@ -187,7 +187,7 @@ class TestWritingAReversedView:
         expected = source_array(fixture, variable)
         destination = tmp_path / "sentinel.nc"
 
-        changed = open_flipped(fixture, variable).change_no_data_value(
+        changed = open_flipped(fixture, variable).bands.change_no_data_value(
             -9999.0, path=destination
         )
 

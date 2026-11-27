@@ -74,19 +74,19 @@ class TestWarpPathKeepsCategories:
 
     def test_to_crs_keeps_category_names(self, classified):
         """`to_crs` reprojects and keeps the per-band category names."""
-        result = classified.to_crs(4326)
+        result = classified.spatial.to_crs(4326)
         assert _cats(result) == LABELS, f"to_crs dropped categories: {_cats(result)}"
 
     def test_warped_view_keeps_category_names(self, classified):
         """`warped_view` keeps the per-band category names."""
-        result = classified.warped_view(4326)
+        result = classified.spatial.warped_view(4326)
         assert _cats(result) == LABELS, (
             f"warped_view dropped categories: {_cats(result)}"
         )
 
     def test_to_crs_still_keeps_dataset_and_band_metadata(self, classified):
         """The warp path keeps band + dataset metadata (unchanged behaviour)."""
-        result = classified.to_crs(4326)
+        result = classified.spatial.to_crs(4326)
         band_md = result.raster.GetRasterBand(1).GetMetadataItem("WAVELENGTH")
         ds_md = result.raster.GetMetadataItem("PROCESSING_BASELINE")
         assert band_md == "560", f"band metadata not kept: {band_md}"
@@ -98,12 +98,12 @@ class TestAlignKeepsAllMetadata:
 
     def test_align_keeps_category_names(self, classified):
         """`align` onto the same grid keeps the per-band category names."""
-        result = classified.align(classified)
+        result = classified.spatial.align(classified)
         assert _cats(result) == LABELS, f"align dropped categories: {_cats(result)}"
 
     def test_align_keeps_rat(self, classified):
         """`align` keeps the band's raster attribute table."""
-        result = classified.align(classified)
+        result = classified.spatial.align(classified)
         rat = result.raster.GetRasterBand(1).GetDefaultRAT()
         assert rat is not None, "align dropped the RAT"
         assert rat.GetRowCount() == len(LABELS), (
@@ -112,7 +112,7 @@ class TestAlignKeepsAllMetadata:
 
     def test_align_keeps_band_and_dataset_metadata(self, classified):
         """`align` keeps band metadata and dataset metadata."""
-        result = classified.align(classified)
+        result = classified.spatial.align(classified)
         band_md = result.raster.GetRasterBand(1).GetMetadataItem("WAVELENGTH")
         ds_md = result.raster.GetMetadataItem("PROCESSING_BASELINE")
         assert band_md == "560", f"align dropped band metadata: {band_md}"
@@ -126,8 +126,8 @@ class TestAlignKeepsAllMetadata:
             `to_crs` first; the legend must survive both that warp and the
             subsequent `ReprojectImage` rebuild.
         """
-        ref = classified.to_crs(4326)
-        result = classified.align(ref)
+        ref = classified.spatial.to_crs(4326)
+        result = classified.spatial.align(ref)
         assert _cats(result) == LABELS, (
             f"cross-CRS align dropped categories: {_cats(result)}"
         )

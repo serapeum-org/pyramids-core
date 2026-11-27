@@ -240,7 +240,7 @@ class TestReducePassthrough:
         static_ds = Dataset.from_array(
             static_arr, geo_ref=GeoReference(geo=_GEO, epsg=4326)
         )
-        nc.set_variable("static", static_ds)
+        nc.variables.set("static", static_ds)
 
         result = nc.reduce("time", "mean")
         assert "static" in result.variable_names, "static variable was dropped"
@@ -295,7 +295,7 @@ class TestReduceErrors:
             `groupby` would itself fail, and must not be what the caller hears about.
         """
         nc = _make_time_nc(np.ones((2, 2, 2), dtype="float32"), [0, 1])
-        nc.remove_variable("v")
+        nc.variables.remove("v")
         with pytest.raises(ValueError, match="Cannot reduce an empty container"):
             nc.reduce("time", "mean", groupby="1MS")
 
@@ -425,7 +425,7 @@ class TestReduceMultiBandDim:
             variable_name="v2",
             dims=ExtraDimensions(dims=extra),
         )
-        nc.set_variable("v2", v2.get_variable("v2"))
+        nc.variables.set("v2", v2.get_variable("v2"))
         return nc, a1, a2
 
     def test_second_variable_with_two_remaining_band_dims(self):

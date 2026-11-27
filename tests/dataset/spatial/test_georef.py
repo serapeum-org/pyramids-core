@@ -126,10 +126,10 @@ class TestReadGCPs:
         Test scenario:
             Fresh dataset: gcp_count 0, gcps [], gcp_projection None, has_gcps False.
         """
-        assert writable_dataset.gcp_count == 0
-        assert writable_dataset.gcps == []
-        assert writable_dataset.gcp_projection is None
-        assert writable_dataset.has_gcps is False
+        assert writable_dataset.georef.gcp_count == 0
+        assert writable_dataset.georef.gcps == []
+        assert writable_dataset.georef.gcp_projection is None
+        assert writable_dataset.georef.has_gcps is False
 
     def test_reads_attached_gcps(self, writable_dataset, corner_gcps):
         """After set_gcps the read properties return the points and CRS.
@@ -138,11 +138,11 @@ class TestReadGCPs:
             4 corner points attached -> count 4, has_gcps True, projection mentions
             4326, and the first point's pixel/map coords match the input.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        assert writable_dataset.gcp_count == 4
-        assert writable_dataset.has_gcps is True
-        assert "4326" in writable_dataset.gcp_projection
-        first = writable_dataset.gcps[0]
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        assert writable_dataset.georef.gcp_count == 4
+        assert writable_dataset.georef.has_gcps is True
+        assert "4326" in writable_dataset.georef.gcp_projection
+        first = writable_dataset.georef.gcps[0]
         assert (first.col, first.row, first.x, first.y) == (0.0, 0.0, 10.0, 50.0)
 
     def test_round_trip_preserves_points(self, writable_dataset, corner_gcps):
@@ -151,8 +151,8 @@ class TestReadGCPs:
         Test scenario:
             set_gcps then gcps returns equal GroundControlPoint records.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        assert writable_dataset.gcps == corner_gcps
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        assert writable_dataset.georef.gcps == corner_gcps
 
 
 class TestReadRPC:
@@ -164,8 +164,8 @@ class TestReadRPC:
         Test scenario:
             Fresh dataset: rpcs is None, has_rpcs is False.
         """
-        assert writable_dataset.rpcs is None
-        assert writable_dataset.has_rpcs is False
+        assert writable_dataset.georef.rpcs is None
+        assert writable_dataset.georef.has_rpcs is False
 
     def test_reads_rpc_metadata(self, writable_dataset):
         """rpcs returns the RPC domain set on the underlying raster.
@@ -175,8 +175,8 @@ class TestReadRPC:
             has_rpcs is True.
         """
         writable_dataset.raster.SetMetadata(RPC_SAMPLE, "RPC")
-        assert writable_dataset.has_rpcs is True
-        assert writable_dataset.rpcs["HEIGHT_OFF"] == "100"
+        assert writable_dataset.georef.has_rpcs is True
+        assert writable_dataset.georef.rpcs["HEIGHT_OFF"] == "100"
 
 
 class TestSetRPC:
@@ -188,9 +188,9 @@ class TestSetRPC:
         Test scenario:
             A complete RPC dict set then read returns equal values.
         """
-        writable_dataset.set_rpcs(RPC_SAMPLE)
-        assert writable_dataset.rpcs["HEIGHT_OFF"] == "100"
-        assert writable_dataset.rpcs["LINE_DEN_COEFF"].split()[0] == "1"
+        writable_dataset.georef.set_rpcs(RPC_SAMPLE)
+        assert writable_dataset.georef.rpcs["HEIGHT_OFF"] == "100"
+        assert writable_dataset.georef.rpcs["LINE_DEN_COEFF"].split()[0] == "1"
 
     def test_stringifies_numeric_values(self, writable_dataset):
         """Numeric RPC values are stringified before writing.
@@ -200,8 +200,8 @@ class TestSetRPC:
         """
         rpc = dict(RPC_SAMPLE)
         rpc["HEIGHT_OFF"] = 123.5
-        writable_dataset.set_rpcs(rpc)
-        assert writable_dataset.rpcs["HEIGHT_OFF"] == "123.5"
+        writable_dataset.georef.set_rpcs(rpc)
+        assert writable_dataset.georef.rpcs["HEIGHT_OFF"] == "123.5"
 
     def test_missing_keys_raise(self, writable_dataset):
         """A dict missing required keys is rejected, listing them.
@@ -212,7 +212,7 @@ class TestSetRPC:
         rpc = dict(RPC_SAMPLE)
         del rpc["HEIGHT_OFF"]
         with pytest.raises(ValueError, match="HEIGHT_OFF"):
-            writable_dataset.set_rpcs(rpc)
+            writable_dataset.georef.set_rpcs(rpc)
 
     def test_read_only_raises(self, tmp_path):
         """A read-only dataset rejects set_rpcs.
@@ -224,10 +224,10 @@ class TestSetRPC:
         Dataset.from_array(
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         ds = Dataset.read_file(str(path), read_only=True)
         with pytest.raises(ReadOnlyError):
-            ds.set_rpcs(RPC_SAMPLE)
+            ds.georef.set_rpcs(RPC_SAMPLE)
 
 
 class TestOrthorectify:
@@ -250,7 +250,7 @@ class TestOrthorectify:
             A dataset with no RPC raises ValueError mentioning RPC.
         """
         with pytest.raises(ValueError, match="no RPC"):
-            writable_dataset.orthorectify(rpc_height=100)
+            writable_dataset.georef.orthorectify(rpc_height=100)
 
     def test_constant_height_produces_map_grid(self, rpc_dataset):
         """A constant-height ortho yields a finite, map-projected raster.
@@ -259,7 +259,7 @@ class TestOrthorectify:
             rpc_height at HEIGHT_OFF -> non-empty raster with a real EPSG and a
             finite bbox bracketing the RPC extent.
         """
-        out = rpc_dataset.orthorectify(rpc_height=100)
+        out = rpc_dataset.georef.orthorectify(rpc_height=100)
         assert out.columns > 0 and out.rows > 0
         assert out.epsg == 4326
         xmin, ymin, xmax, ymax = out.bbox
@@ -274,7 +274,7 @@ class TestOrthorectify:
         import logging as _logging
 
         with caplog.at_level(_logging.WARNING):
-            out = rpc_dataset.orthorectify()
+            out = rpc_dataset.georef.orthorectify()
         assert out.columns > 0
         assert any("height 0" in record.message for record in caplog.records)
 
@@ -300,7 +300,7 @@ class TestOrthorectify:
         Dataset.from_array(
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(str(dem_path))
+        ).io.to_file(str(dem_path))
         resolved = _Georef._resolve_dem_path(Dataset.read_file(str(dem_path)))
         assert resolved.endswith("dem.tif")
 
@@ -327,7 +327,7 @@ class TestWarpFromGCPs:
             A dataset with no GCPs raises ValueError mentioning GCPs.
         """
         with pytest.raises(ValueError, match="no GCPs"):
-            writable_dataset.georeference()
+            writable_dataset.georef.georeference()
 
     def test_polynomial_warp_into_gcp_crs(self, writable_dataset, corner_gcps):
         """Default warp lands in the GCP CRS and brackets the GCP extent.
@@ -335,8 +335,8 @@ class TestWarpFromGCPs:
         Test scenario:
             4 corner GCPs (10-11E, 49-50N) -> epsg 4326 and bbox covers that box.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        out = writable_dataset.georeference()
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        out = writable_dataset.georef.georeference()
         assert out.epsg == 4326
         xmin, ymin, xmax, ymax = out.bbox
         assert xmin <= 10.0 + 1e-6 and xmax >= 11.0 - 1e-6
@@ -348,8 +348,8 @@ class TestWarpFromGCPs:
         Test scenario:
             transform="tps" warps into the GCP CRS without error.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        out = writable_dataset.georeference(transform="tps")
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        out = writable_dataset.georef.georeference(transform="tps")
         assert out.epsg == 4326
 
     def test_reproject_in_same_pass(self, writable_dataset, corner_gcps):
@@ -358,8 +358,8 @@ class TestWarpFromGCPs:
         Test scenario:
             georeference(to_epsg=3857) yields a Web-Mercator raster.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        out = writable_dataset.georeference(to_epsg=3857)
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        out = writable_dataset.georef.georeference(to_epsg=3857)
         assert out.epsg == 3857
 
     def test_lazy_equals_eager(self, writable_dataset, corner_gcps):
@@ -368,11 +368,11 @@ class TestWarpFromGCPs:
         Test scenario:
             lazy=True and lazy=False produce allclose arrays.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
-        eager = writable_dataset.georeference(lazy=False)
-        lazy = writable_dataset.georeference(lazy=True)
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
+        eager = writable_dataset.georef.georeference(lazy=False)
+        lazy = writable_dataset.georef.georeference(lazy=True)
         assert np.allclose(
-            np.asarray(eager.read_array()), np.asarray(lazy.read_array())
+            np.asarray(eager.io.read_array()), np.asarray(lazy.io.read_array())
         )
 
     def test_invalid_transform_raises(self, writable_dataset, corner_gcps):
@@ -381,9 +381,9 @@ class TestWarpFromGCPs:
         Test scenario:
             transform="bogus" raises ValueError.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
         with pytest.raises(ValueError, match="polynomial.*tps|transform must"):
-            writable_dataset.georeference(transform="bogus")
+            writable_dataset.georef.georeference(transform="bogus")
 
     def test_invalid_order_raises(self, writable_dataset, corner_gcps):
         """A polynomial order outside 1-3 is rejected.
@@ -391,9 +391,9 @@ class TestWarpFromGCPs:
         Test scenario:
             order=7 raises ValueError.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
         with pytest.raises(ValueError, match="order must"):
-            writable_dataset.georeference(order=7)
+            writable_dataset.georef.georeference(order=7)
 
 
 class TestSetGCPs:
@@ -406,7 +406,7 @@ class TestSetGCPs:
             After set_gcps the underlying GDAL dataset reports 4 GCPs and a
             4326 projection.
         """
-        writable_dataset.set_gcps(corner_gcps, 4326)
+        writable_dataset.georef.set_gcps(corner_gcps, 4326)
         raster = writable_dataset.raster
         assert raster.GetGCPCount() == 4
         assert "4326" in raster.GetGCPProjection()
@@ -418,7 +418,7 @@ class TestSetGCPs:
             set_gcps([], 4326) raises ValueError.
         """
         with pytest.raises(ValueError, match="at least one"):
-            writable_dataset.set_gcps([], 4326)
+            writable_dataset.georef.set_gcps([], 4326)
 
     def test_read_only_raises(self, corner_gcps, tmp_path):
         """A read-only dataset rejects set_gcps.
@@ -430,10 +430,10 @@ class TestSetGCPs:
         Dataset.from_array(
             np.ones((8, 8), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         ds = Dataset.read_file(str(path), read_only=True)
         with pytest.raises(ReadOnlyError):
-            ds.set_gcps(corner_gcps, 4326)
+            ds.georef.set_gcps(corner_gcps, 4326)
 
 
 class TestStagedDemLifetime:
@@ -508,7 +508,7 @@ class TestStagedDemLifetime:
                 geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
             ),
         )
-        rpc_dataset.orthorectify(dem=mem_dem)
+        rpc_dataset.georef.orthorectify(dem=mem_dem)
         assert self._vsimem_dems() == before, (
             "the eager path must unlink the DEM it staged; leftover: "
             f"{self._vsimem_dems() - before}"
@@ -531,7 +531,7 @@ class TestStagedDemLifetime:
 
         self._stub_warp(monkeypatch, explode)
         with pytest.raises(RuntimeError, match="synthetic warp failure"):
-            rpc_dataset.orthorectify(dem=mem_dem)
+            rpc_dataset.georef.orthorectify(dem=mem_dem)
         assert self._vsimem_dems() == before, (
             "the error path must unlink the DEM it staged; leftover: "
             f"{self._vsimem_dems() - before}"
@@ -557,7 +557,7 @@ class TestStagedDemLifetime:
 
         self._stub_warp(monkeypatch, explode)
         with pytest.raises(RuntimeError, match="synthetic warp failure"):
-            rpc_dataset.orthorectify(dem=mem_dem)
+            rpc_dataset.georef.orthorectify(dem=mem_dem)
 
     def test_the_lazy_path_keeps_the_dem_while_the_handle_lives(
         self, rpc_dataset, mem_dem, monkeypatch
@@ -578,7 +578,7 @@ class TestStagedDemLifetime:
                 geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
             ),
         )
-        view = rpc_dataset.orthorectify(dem=mem_dem, lazy=True)
+        view = rpc_dataset.georef.orthorectify(dem=mem_dem, lazy=True)
         staged = self._vsimem_dems() - before
         assert len(staged) == 1, f"expected one staged DEM, got {staged}"
         handle = view.raster
@@ -622,7 +622,7 @@ class TestStagedDemLifetime:
         )
 
         for _ in range(3):
-            rpc_dataset.orthorectify(dem=mem_dem)
+            rpc_dataset.georef.orthorectify(dem=mem_dem)
 
         assert len(_artifacts._VSIMEM_PATHS) == before, (
             f"entries left behind: {_artifacts._VSIMEM_PATHS[before:]}"
@@ -649,7 +649,7 @@ class TestStagedDemLifetime:
 
         self._stub_warp(monkeypatch, explode)
         with pytest.raises(RuntimeError, match="synthetic warp failure"):
-            rpc_dataset.orthorectify(dem=mem_dem)
+            rpc_dataset.georef.orthorectify(dem=mem_dem)
 
         assert len(_artifacts._VSIMEM_PATHS) == before, (
             f"entries left behind: {_artifacts._VSIMEM_PATHS[before:]}"
@@ -667,7 +667,7 @@ class TestStagedDemLifetime:
         """
         before = self._vsimem_dems()
         with pytest.raises(CRSError, match="could not interpret"):
-            rpc_dataset.orthorectify(dem=mem_dem, to_epsg="definitely-not-a-crs")
+            rpc_dataset.georef.orthorectify(dem=mem_dem, to_epsg="definitely-not-a-crs")
         assert self._vsimem_dems() == before, (
             "a CRS failure must not strand a staged DEM; leftover: "
             f"{self._vsimem_dems() - before}"
@@ -682,7 +682,7 @@ class TestStagedDemLifetime:
         """
         before = self._vsimem_dems()
         with pytest.raises(ValueError, match="does not exist"):
-            rpc_dataset.orthorectify(dem=mem_dem, method="not-a-resampling")
+            rpc_dataset.georef.orthorectify(dem=mem_dem, method="not-a-resampling")
         assert self._vsimem_dems() == before, (
             "a resampling failure must not strand a staged DEM; leftover: "
             f"{self._vsimem_dems() - before}"
@@ -699,8 +699,8 @@ class TestStagedDemLifetime:
         Dataset.from_array(
             np.full((8, 8), 100.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0),
-        ).to_file(str(dem_path))
+        ).io.to_file(str(dem_path))
         dem_argument = str(dem_path)
         with pytest.raises(CRSError, match="could not interpret"):
-            rpc_dataset.orthorectify(dem=dem_argument, to_epsg="not-a-crs")
+            rpc_dataset.georef.orthorectify(dem=dem_argument, to_epsg="not-a-crs")
         assert dem_path.exists(), "a caller-supplied DEM must never be removed"

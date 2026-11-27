@@ -46,8 +46,8 @@ class TestBoundlessReads:
             Window(-2, -2, 4, 4): rows/cols 0-1 are fill, the 2x2 inside part
             equals the raster's top-left corner.
         """
-        arr = ramp_dataset.read_array(band=0)
-        result = ramp_dataset.read_array(
+        arr = ramp_dataset.io.read_array(band=0)
+        result = ramp_dataset.io.read_array(
             band=0, window=Window(-2, -2, 4, 4), boundless=True
         )
         assert result.shape == (4, 4), f"shape must stay (4, 4), got {result.shape}"
@@ -59,8 +59,8 @@ class TestBoundlessReads:
 
     def test_bottom_right_edge_hangoff(self, ramp_dataset):
         """A window past the bottom-right is filled beyond the data."""
-        arr = ramp_dataset.read_array(band=0)
-        result = ramp_dataset.read_array(
+        arr = ramp_dataset.io.read_array(band=0)
+        result = ramp_dataset.io.read_array(
             band=0, window=Window(4, 4, 4, 4), boundless=True
         )
         np.testing.assert_array_equal(
@@ -71,14 +71,14 @@ class TestBoundlessReads:
 
     def test_fully_outside_window_is_all_fill(self, ramp_dataset):
         """A window with no raster overlap returns pure fill."""
-        result = ramp_dataset.read_array(
+        result = ramp_dataset.io.read_array(
             band=0, window=Window(10, 10, 2, 2), boundless=True
         )
         assert np.isclose(result, -9999.0).all(), "disjoint window must be all fill"
 
     def test_explicit_fill_value_wins(self, ramp_dataset):
         """fill_value= overrides the band's no-data value."""
-        result = ramp_dataset.read_array(
+        result = ramp_dataset.io.read_array(
             band=0, window=Window(-1, -1, 3, 3), boundless=True, fill_value=7.0
         )
         assert np.isclose(result[0, :], 7.0).all(), "explicit fill must win over nodata"
@@ -91,7 +91,7 @@ class TestBoundlessReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(window=Window(-1, -1, 3, 3), boundless=True)
+        result = ds.io.read_array(window=Window(-1, -1, 3, 3), boundless=True)
         assert result.shape == (2, 3, 3), f"3-D shape wrong: {result.shape}"
         assert result[0, 1, 1] == pytest.approx(base[0, 0]), "band-0 inside value wrong"
         assert result[1, 1, 1] == pytest.approx(base[0, 0] + 100.0), (
@@ -101,10 +101,10 @@ class TestBoundlessReads:
 
     def test_legacy_list_window_form(self, ramp_dataset):
         """The x-first list window form works boundlessly too."""
-        via_list = ramp_dataset.read_array(
+        via_list = ramp_dataset.io.read_array(
             band=0, window=[-2, -2, 4, 4], boundless=True
         )
-        via_window = ramp_dataset.read_array(
+        via_window = ramp_dataset.io.read_array(
             band=0, window=Window(-2, -2, 4, 4), boundless=True
         )
         np.testing.assert_array_equal(
@@ -115,31 +115,31 @@ class TestBoundlessReads:
         """boundless=True on an in-bounds window equals the normal read."""
         window = Window(1, 1, 3, 3)
         np.testing.assert_array_equal(
-            ramp_dataset.read_array(band=0, window=window, boundless=True),
-            ramp_dataset.read_array(band=0, window=window),
+            ramp_dataset.io.read_array(band=0, window=window, boundless=True),
+            ramp_dataset.io.read_array(band=0, window=window),
             err_msg="in-bounds boundless read must be identical",
         )
 
     def test_default_out_of_range_still_raises(self, ramp_dataset):
         """Without boundless=True, an out-of-range window keeps raising."""
         with pytest.raises(OutOfBoundsError):
-            ramp_dataset.read_array(band=0, window=[4, 4, 4, 4])
+            ramp_dataset.io.read_array(band=0, window=[4, 4, 4, 4])
 
     def test_boundless_without_window_rejected(self, ramp_dataset):
         """boundless=True without a window raises a clear ValueError."""
         with pytest.raises(ValueError, match="requires a window"):
-            ramp_dataset.read_array(band=0, boundless=True)
+            ramp_dataset.io.read_array(band=0, boundless=True)
 
     def test_geometry_window_rejected(self, ramp_dataset):
         """A GeoDataFrame window with boundless=True is rejected."""
         gdf = gpd.GeoDataFrame(geometry=[box(1.0, 1.0, 3.0, 3.0)], crs=4326)
         with pytest.raises(ValueError, match="pixel window"):
-            ramp_dataset.read_array(band=0, window=gdf, boundless=True)
+            ramp_dataset.io.read_array(band=0, window=gdf, boundless=True)
 
     def test_bbox_with_boundless_rejected(self, ramp_dataset):
         """A bbox (a geometry window internally) with boundless=True is rejected."""
         with pytest.raises(ValueError, match="pixel window"):
-            ramp_dataset.read_array(band=0, bbox=(1.0, 1.0, 3.0, 3.0), boundless=True)
+            ramp_dataset.io.read_array(band=0, bbox=(1.0, 1.0, 3.0, 3.0), boundless=True)
 
     def test_dtype_zero_fallback_without_nodata(self):
         """No fill_value and no band nodata falls back to the dtype's zero."""
@@ -149,7 +149,7 @@ class TestBoundlessReads:
             no_data_value=None,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, window=Window(-1, -1, 3, 3), boundless=True)
+        result = ds.io.read_array(band=0, window=Window(-1, -1, 3, 3), boundless=True)
         assert result.dtype == np.uint8, f"band dtype must be kept, got {result.dtype}"
         assert (result[0, :] == 0).all(), "outside row must fall back to dtype zero"
         np.testing.assert_array_equal(
@@ -179,7 +179,7 @@ class TestBoundlessReads:
         assert float(ds.no_data_value[0]) == -9999.0, (
             "test precondition: GDAL must preserve the out-of-range Byte nodata"
         )
-        result = ds.read_array(band=0, window=Window(-1, -1, 3, 3), boundless=True)
+        result = ds.io.read_array(band=0, window=Window(-1, -1, 3, 3), boundless=True)
         assert result.dtype == np.uint8, f"band dtype must be kept, got {result.dtype}"
         assert (result[0, :] == 0).all(), "outside row must fall back to dtype zero"
         assert not np.any(result == 241), "must not contain the wrapped -9999 fill"
@@ -195,7 +195,7 @@ class TestBoundlessReads:
         window = Window(-1, -1, 3, 3)
         for bad_fill in (-9999.0, -9999, 0.5, float("nan")):
             with pytest.raises(ValueError, match="not representable"):
-                ds.read_array(
+                ds.io.read_array(
                     band=0,
                     window=window,
                     boundless=True,
@@ -213,7 +213,7 @@ class TestBoundlessReads:
         window = Window(-1, -1, 3, 3)
         nan_fill = float("nan")
         with pytest.raises(ValueError, match="floating-point band"):
-            ds.read_array(
+            ds.io.read_array(
                 band=0,
                 window=window,
                 boundless=True,
@@ -222,7 +222,7 @@ class TestBoundlessReads:
 
     def test_nan_fill_value_on_float_band(self, ramp_dataset):
         """NaN is a valid explicit fill for a float band."""
-        result = ramp_dataset.read_array(
+        result = ramp_dataset.io.read_array(
             band=0,
             window=Window(-1, -1, 3, 3),
             boundless=True,
@@ -233,16 +233,16 @@ class TestBoundlessReads:
 
     def test_single_band_dataset_band_none_is_2d(self, ramp_dataset):
         """band=None on a single-band dataset returns a 2-D filled plane."""
-        result = ramp_dataset.read_array(window=Window(-1, -1, 3, 3), boundless=True)
+        result = ramp_dataset.io.read_array(window=Window(-1, -1, 3, 3), boundless=True)
         assert result.shape == (3, 3), f"single band must stay 2-D, got {result.shape}"
         assert np.isclose(result[0, :], -9999.0).all(), "outside row must be fill"
 
     def test_fill_value_without_boundless_rejected(self, ramp_dataset):
         """fill_value without boundless=True raises instead of being ignored."""
         with pytest.raises(ValueError, match="boundless"):
-            ramp_dataset.read_array(band=0, window=[1, 1, 3, 3], fill_value=7.0)
+            ramp_dataset.io.read_array(band=0, window=[1, 1, 3, 3], fill_value=7.0)
 
     def test_boundless_with_chunks_rejected(self, ramp_dataset):
         """boundless=True with chunks raises instead of being ignored."""
         with pytest.raises(ValueError, match="not supported"):
-            ramp_dataset.read_array(band=0, chunks="auto", boundless=True)
+            ramp_dataset.io.read_array(band=0, chunks="auto", boundless=True)

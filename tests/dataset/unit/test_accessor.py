@@ -265,7 +265,7 @@ class TestAccessorLifecycle:
         Dataset.from_array(
             np.zeros((2, 2), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         ds = Dataset.read_file(str(path))
         _ = ds.summary11
         restored = pickle.loads(pickle.dumps(ds))

@@ -52,13 +52,13 @@ class TestToDataframeShape:
 
     def test_index_names_and_single_values_column(self):
         """The frame is a `(band, y, x)` MultiIndex with one `values` column."""
-        df = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe()
+        df = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe()
         assert list(df.index.names) == ["band", "y", "x"]
         assert list(df.columns) == ["values"]
 
     def test_the_band_level_is_kept_for_a_one_band_raster(self):
         """A single-band raster still carries the `band` level, value `0`."""
-        df = _raster(np.array([[1.0, 2.0], [3.0, 4.0]])).to_dataframe()
+        df = _raster(np.array([[1.0, 2.0], [3.0, 4.0]])).io.to_dataframe()
         assert list(df.index.names) == ["band", "y", "x"]
         assert df.index.get_level_values("band").unique().tolist() == [0]
 
@@ -66,12 +66,12 @@ class TestToDataframeShape:
         """Whatever the raster's dtype, the `values` column is `float64`."""
         df = _raster(
             np.arange(4, dtype="int32").reshape(2, 2), no_data_value=None
-        ).to_dataframe()
+        ).io.to_dataframe()
         assert df["values"].dtype == np.float64
 
     def test_layout_is_north_up_row_major(self):
         """Values are laid out band, then y descending, then x ascending."""
-        df = _raster(np.array([[1.0, 2.0], [3.0, 4.0]])).to_dataframe()
+        df = _raster(np.array([[1.0, 2.0], [3.0, 4.0]])).io.to_dataframe()
         assert df["values"].tolist() == [1.0, 2.0, 3.0, 4.0]
         assert df.index.get_level_values("y").tolist() == [1.5, 1.5, 0.5, 0.5]
         assert df.index.get_level_values("x").tolist() == [0.5, 1.5, 0.5, 1.5]
@@ -79,22 +79,22 @@ class TestToDataframeShape:
     def test_nodata_cells_become_nan(self):
         """A cell holding the sentinel is reported as `NaN`, not the sentinel."""
         arr = np.array([[-9999.0, 2.0], [3.0, 4.0]])
-        df = _raster(arr).to_dataframe()
+        df = _raster(arr).io.to_dataframe()
         assert bool(np.isnan(df["values"].iloc[0]))
         assert df["values"].iloc[1:].tolist() == [2.0, 3.0, 4.0]
 
     def test_a_nan_sentinel_reads_gaps_without_extra_masking(self):
         """A raster whose nodata is `NaN` keeps its gaps as `NaN` (no sentinel to swap)."""
         arr = np.array([[np.nan, 2.0], [3.0, 4.0]])
-        df = _raster(arr, no_data_value=np.nan).to_dataframe()
+        df = _raster(arr, no_data_value=np.nan).io.to_dataframe()
         assert bool(np.isnan(df["values"].iloc[0]))
         assert df["values"].iloc[1:].tolist() == [2.0, 3.0, 4.0]
 
     def test_dropna_omits_the_nodata_rows(self):
         """``dropna=True`` drops the rows whose ``values`` is ``NaN`` (a nodata cell)."""
         ds = _raster(np.array([[-9999.0, 2.0], [3.0, 4.0]]))
-        assert ds.to_dataframe().shape == (4, 1)
-        dropped = ds.to_dataframe(dropna=True)
+        assert ds.io.to_dataframe().shape == (4, 1)
+        dropped = ds.io.to_dataframe(dropna=True)
         assert dropped.shape == (3, 1)
         assert not dropped["values"].isna().any()
         assert dropped["values"].tolist() == [2.0, 3.0, 4.0]
@@ -103,7 +103,7 @@ class TestToDataframeShape:
         """`df["values"].unstack("band")` is the one-column-per-band view."""
         wide = (
             _raster(np.arange(8.0).reshape(2, 2, 2))
-            .to_dataframe()["values"]
+            .io.to_dataframe()["values"]
             .unstack("band")
         )
         assert list(wide.columns) == [0, 1]
@@ -115,32 +115,32 @@ class TestBandSelector:
 
     def test_a_single_int_selects_one_band(self):
         """`bands=1` keeps only that band, still under the `band` level."""
-        df = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe(bands=1)
+        df = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe(bands=1)
         assert df.index.get_level_values("band").unique().tolist() == [1]
         assert df["values"].tolist() == [4.0, 5.0, 6.0, 7.0]
 
     def test_a_sequence_selects_and_orders(self):
         """A sequence of indices takes those bands in the given order."""
-        df = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe(bands=[1, 0])
+        df = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe(bands=[1, 0])
         assert df.index.get_level_values("band").unique().tolist() == [1, 0]
 
     def test_an_out_of_range_band_is_refused(self):
         """A band index beyond the raster raises naming the offending index."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
         with pytest.raises(ValueError, match="out of range"):
-            ds.to_dataframe(bands=5)
+            ds.io.to_dataframe(bands=5)
 
     def test_an_empty_band_selection_is_refused(self):
         """An empty ``bands=`` selection has nothing to put in rows, so it raises."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
         with pytest.raises(ValueError, match="empty bands"):
-            ds.to_dataframe(bands=[])
+            ds.io.to_dataframe(bands=[])
 
     def test_a_boolean_band_selection_is_refused(self):
         """A boolean is a type mistake, not a band index (``bool`` subclasses ``int``), so it raises."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
         with pytest.raises(TypeError, match="boolean"):
-            ds.to_dataframe(bands=True)
+            ds.io.to_dataframe(bands=True)
 
 
 class TestRoundTripReproducesTheRaster:
@@ -149,27 +149,27 @@ class TestRoundTripReproducesTheRaster:
     def test_a_multi_band_raster_round_trips(self):
         """Values, band count, geotransform and CRS all come back."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        back = Dataset.from_dataframe(ds.to_dataframe(), crs=ds.epsg)
+        back = Dataset.from_dataframe(ds.io.to_dataframe(), crs=ds.epsg)
         assert back.band_count == 2
-        assert_array_equal(back.read_array(), ds.read_array())
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
         assert_allclose(back.geotransform, GEO_CUBE)
         assert back.epsg == 4326
 
     def test_a_single_band_raster_round_trips(self):
         """A one-band raster rebuilds a one-band raster with the same grid."""
         ds = _raster(np.arange(6.0).reshape(2, 3), geo=GEO_2D)
-        back = Dataset.from_dataframe(ds.to_dataframe(), crs=4326)
+        back = Dataset.from_dataframe(ds.io.to_dataframe(), crs=4326)
         assert back.band_count == 1
-        assert_array_equal(back.read_array(), ds.read_array())
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
         assert_allclose(back.geotransform, GEO_2D)
 
     def test_a_two_level_frame_builds_a_single_band_raster(self):
         """A plain `(y, x)` frame with no band level rebuilds a single-band raster."""
         ds = _raster(np.arange(6.0).reshape(2, 3), geo=GEO_2D)
-        flat = ds.to_dataframe().droplevel("band")
+        flat = ds.io.to_dataframe().droplevel("band")
         back = Dataset.from_dataframe(flat, crs=4326)
         assert back.band_count == 1
-        assert_array_equal(back.read_array(), ds.read_array())
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
 
     def test_a_written_raster_round_trips(self, tmp_path):
         """With `path=`, the raster is written to a GeoTIFF and read back.
@@ -179,10 +179,10 @@ class TestRoundTripReproducesTheRaster:
         """
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
         out = tmp_path / "from_df.tif"
-        back = Dataset.from_dataframe(ds.to_dataframe(), crs=ds.epsg, path=str(out))
+        back = Dataset.from_dataframe(ds.io.to_dataframe(), crs=ds.epsg, path=str(out))
         assert out.exists()
         assert back.band_count == 2
-        assert_array_equal(back.read_array(), ds.read_array())
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
 
 
 class TestSingleCellAxisIsNotRoundTrippable:
@@ -196,7 +196,7 @@ class TestSingleCellAxisIsNotRoundTrippable:
     def test_a_single_column_raster_refuses_on_the_way_back(self):
         """A 1-column raster tabulates, then ``from_dataframe`` refuses its single-cell x axis."""
         ds = _raster(np.arange(2.0).reshape(2, 1))
-        df = ds.to_dataframe()
+        df = ds.io.to_dataframe()
         assert df.shape == (2, 1)
         with pytest.raises(ValueError, match="single x coordinate"):
             Dataset.from_dataframe(df, crs=4326)
@@ -204,7 +204,7 @@ class TestSingleCellAxisIsNotRoundTrippable:
     def test_a_single_row_raster_refuses_on_the_way_back(self):
         """A 1-row raster tabulates, then ``from_dataframe`` refuses its single-cell y axis."""
         ds = _raster(np.arange(2.0).reshape(1, 2))
-        df = ds.to_dataframe()
+        df = ds.io.to_dataframe()
         assert df.shape == (2, 1)
         with pytest.raises(ValueError, match="single y coordinate"):
             Dataset.from_dataframe(df, crs=4326)
@@ -216,12 +216,12 @@ class TestOrientationIsAlwaysNorthUp:
     def test_a_south_first_frame_rebuilds_the_same_raster(self):
         """Sorting the frame's rows y-ascending does not flip the rebuilt raster."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        frame = ds.to_dataframe()
+        frame = ds.io.to_dataframe()
         shuffled = frame.sort_index(level="y", ascending=True)
-        north_up = Dataset.from_dataframe(frame, crs=4326).read_array()
-        from_shuffled = Dataset.from_dataframe(shuffled, crs=4326).read_array()
+        north_up = Dataset.from_dataframe(frame, crs=4326).io.read_array()
+        from_shuffled = Dataset.from_dataframe(shuffled, crs=4326).io.read_array()
         assert_array_equal(north_up, from_shuffled)
-        assert_array_equal(north_up, ds.read_array())
+        assert_array_equal(north_up, ds.io.read_array())
 
 
 class TestGapsSurviveTheRoundTrip:
@@ -230,17 +230,17 @@ class TestGapsSurviveTheRoundTrip:
     def test_a_nan_cell_reads_back_as_a_gap(self):
         """A `NaN` value rebuilds a raster whose gap is `NaN` in `to_dataframe`."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        frame = ds.to_dataframe()
+        frame = ds.io.to_dataframe()
         frame.iloc[0] = np.nan
         back = Dataset.from_dataframe(frame, crs=4326)
-        assert np.isnan(back.to_dataframe()["values"].to_numpy()).sum() == 1
+        assert np.isnan(back.io.to_dataframe()["values"].to_numpy()).sum() == 1
 
     def test_a_missing_row_becomes_a_gap(self):
         """A cell absent from the frame is reindexed in as a `NaN` gap, not an error."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        frame = ds.to_dataframe().iloc[1:]
+        frame = ds.io.to_dataframe().iloc[1:]
         back = Dataset.from_dataframe(frame, crs=4326)
-        assert np.isnan(back.to_dataframe()["values"].to_numpy()).sum() == 1
+        assert np.isnan(back.io.to_dataframe()["values"].to_numpy()).sum() == 1
 
 
 class TestNodataFillsWithNaNByDefault:
@@ -253,22 +253,22 @@ class TestNodataFillsWithNaNByDefault:
         )
         frame = pd.DataFrame({"values": [-9999.0, 2.0, 3.0, 4.0]}, index=idx)
         back = Dataset.from_dataframe(frame, crs=4326)
-        values = back.to_dataframe()["values"]
+        values = back.io.to_dataframe()["values"]
         assert not np.isnan(values.iloc[0]), "a real -9999.0 must not become a gap"
         assert values.iloc[0] == -9999.0
 
     def test_a_float_raster_with_nan_gaps_round_trips_losslessly(self):
         """A float raster whose gaps are ``NaN`` comes back cell-for-cell identical."""
         ds = _raster(np.array([[np.nan, 2.0], [3.0, 4.0]]), no_data_value=np.nan)
-        back = Dataset.from_dataframe(ds.to_dataframe(), crs=ds.epsg)
-        assert_array_equal(back.read_array(), ds.read_array())
+        back = Dataset.from_dataframe(ds.io.to_dataframe(), crs=ds.epsg)
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
 
     def test_a_non_default_sentinel_returns_as_nan_but_can_be_restored(self):
         """A ``255``-nodata gap returns as ``NaN`` by default, or as ``255`` when asked."""
         ds = _raster(np.array([[255.0, 2.0], [3.0, 4.0]]), no_data_value=255.0)
-        frame = ds.to_dataframe()
+        frame = ds.io.to_dataframe()
         default_back = Dataset.from_dataframe(frame, crs=ds.epsg)
-        assert np.isnan(default_back.to_dataframe()["values"].iloc[0])
+        assert np.isnan(default_back.io.to_dataframe()["values"].iloc[0])
         restored = Dataset.from_dataframe(frame, crs=ds.epsg, no_data_value=255.0)
         assert restored.no_data_value[0] == 255.0
 
@@ -279,22 +279,22 @@ class TestGeoreferencingRules:
     def test_crs_none_leaves_the_crs_unset(self):
         """A DataFrame carries no CRS, so `crs=None` builds a raster with no EPSG."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        back = Dataset.from_dataframe(ds.to_dataframe())
+        back = Dataset.from_dataframe(ds.io.to_dataframe())
         assert back.epsg in (None, 0)
 
     def test_crs_given_sets_the_crs(self):
         """An explicit `crs=` is applied to the result."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        back = Dataset.from_dataframe(ds.to_dataframe(), crs=3857)
+        back = Dataset.from_dataframe(ds.io.to_dataframe(), crs=3857)
         assert back.epsg == 3857
 
     def test_named_axes_select_non_default_levels(self):
         """`x=` / `y=` name the grid levels when they are not the innermost two."""
         ds = _raster(np.arange(8.0).reshape(2, 2, 2))
-        reordered = ds.to_dataframe().reorder_levels(["y", "x", "band"])
+        reordered = ds.io.to_dataframe().reorder_levels(["y", "x", "band"])
         back = Dataset.from_dataframe(reordered, crs=4326, x="x", y="y")
         assert back.band_count == 2
-        assert_array_equal(back.read_array(), ds.read_array())
+        assert_array_equal(back.io.read_array(), ds.io.read_array())
 
 
 class TestFromDataframeRefusals:
@@ -302,7 +302,7 @@ class TestFromDataframeRefusals:
 
     def test_a_multi_column_frame_points_at_netcdf(self):
         """More than one value column is a cube's job, so it raises pointing at NetCDF."""
-        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe()
+        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe()
         frame["extra"] = frame["values"]
         with pytest.raises(
             ValueError, match="single value column.*NetCDF.from_dataframe"
@@ -360,13 +360,13 @@ class TestFromDataframeRefusals:
 
     def test_a_missing_named_axis_is_refused(self):
         """`x=` naming a level the index does not have raises."""
-        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe()
+        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe()
         with pytest.raises(ValueError, match="not an\\s+index level"):
             Dataset.from_dataframe(frame, x="lon")
 
     def test_x_and_y_naming_the_same_level_is_refused(self):
         """Pointing both the y and x axes at one level collapses the grid, so it raises."""
-        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).to_dataframe()
+        frame = _raster(np.arange(8.0).reshape(2, 2, 2)).io.to_dataframe()
         with pytest.raises(ValueError, match="both the y and x axes"):
             Dataset.from_dataframe(frame, x="y", y="y")
 

@@ -151,7 +151,7 @@ class TestSetVariableCreatesATextBandDimension:
         raster = Dataset.from_array(
             np.arange(3 * 3 * 4, dtype="float32").reshape(3, 3, 4), geo_ref=geo
         )
-        base.set_variable(
+        base.variables.set(
             "SM", raster, band_dim_name="Time", band_dim_values=TIME_STAMPS
         )
         assert _carried_time(base.get_variable("SM")) == TIME_STAMPS
@@ -173,7 +173,7 @@ class TestSetVariableCreatesATextBandDimension:
         raster = Dataset.from_array(
             np.arange(3 * 3 * 4, dtype="float32").reshape(3, 3, 4), geo_ref=geo
         )
-        base.set_variable(
+        base.variables.set(
             "SM", raster, band_dim_name="level", band_dim_values=[1.0, 2.0, 3.0]
         )
         carried = [
@@ -201,7 +201,7 @@ class TestSetVariableCreatesATextBandDimension:
             np.arange(3 * 3 * 4, dtype="float32").reshape(3, 3, 4), geo_ref=geo
         )
         stamps = np.array(TIME_STAMPS, dtype=object)
-        base.set_variable("SM", raster, band_dim_name="Time", band_dim_values=stamps)
+        base.variables.set("SM", raster, band_dim_name="Time", band_dim_values=stamps)
         assert _carried_time(base.get_variable("SM")) == TIME_STAMPS
 
     def test_an_integer_band_axis_keeps_its_integer_type(self):
@@ -222,7 +222,7 @@ class TestSetVariableCreatesATextBandDimension:
         raster = Dataset.from_array(
             np.arange(3 * 3 * 4, dtype="float32").reshape(3, 3, 4), geo_ref=geo
         )
-        base.set_variable(
+        base.variables.set(
             "SM", raster, band_dim_name="level", band_dim_values=[1, 2, 3]
         )
         carried = list(base.get_variable("SM")._band_dim_values_map["level"])
@@ -247,7 +247,7 @@ class TestSetVariableCreatesATextBandDimension:
         raster = Dataset.from_array(
             np.arange(3 * 3 * 4, dtype="float32").reshape(3, 3, 4), geo_ref=geo
         )
-        base.set_variable("SM", raster, band_dim_name="level", band_dim_values=None)
+        base.variables.set("SM", raster, band_dim_name="level", band_dim_values=None)
         carried = list(base.get_variable("SM")._band_dim_values_map["level"])
         assert carried == [0, 1, 2]
         assert all(isinstance(one, (int, np.integer)) for one in carried), carried
@@ -273,7 +273,7 @@ class TestSetVariableCreatesATextBandDimension:
         )
         gappy = np.array([TIME_STAMPS[0], None, TIME_STAMPS[2]], dtype=object)
         with pytest.raises(ValueError, match="mixes text with non-text") as caught:
-            base.set_variable("SM", raster, band_dim_name="Time", band_dim_values=gappy)
+            base.variables.set("SM", raster, band_dim_name="Time", band_dim_values=gappy)
         assert "could not convert string to float" not in str(caught.value)
 
 

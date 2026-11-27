@@ -390,7 +390,7 @@ class TestReadItemPart:
         """The item-level window equals the same `Dataset.read_part` call."""
         bbox = (2.0, 6.0, 5.0, 9.0)
         window = read_item_part(item, "data", bbox)
-        expected = Dataset.read_file(raster_path).read_part(bbox, bbox_crs=4326)
+        expected = Dataset.read_file(raster_path).cog.read_part(bbox, bbox_crs=4326)
         assert np.array_equal(window, expected), f"window differs: {window}"
 
     def test_reads_the_requested_cells(self, item):
@@ -494,7 +494,7 @@ class TestReadItemPreview:
     def test_matches_the_dataset_level_preview(self, item, raster_path):
         """The thumbnail equals the same `Dataset.preview` call."""
         thumb = read_item_preview(item, "data", max_size=5)
-        expected = Dataset.read_file(raster_path).preview(max_size=5)
+        expected = Dataset.read_file(raster_path).cog.preview(max_size=5)
         assert np.array_equal(thumb, expected), f"preview differs: {thumb}"
 
     def test_max_size_bounds_the_long_edge(self, item):
@@ -515,7 +515,7 @@ class TestReadItemPoint:
     def test_matches_the_dataset_level_sample(self, item, raster_path):
         """The sample equals the same `Dataset.point` call."""
         sampled = read_item_point(item, "data", (2.5, 7.5))
-        expected = Dataset.read_file(raster_path).point(2.5, 7.5, point_crs=4326)
+        expected = Dataset.read_file(raster_path).cog.point(2.5, 7.5, point_crs=4326)
         assert np.array_equal(sampled, expected), f"sample differs: {sampled}"
 
     def test_samples_the_covering_cell(self, item):

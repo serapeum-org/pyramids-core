@@ -419,7 +419,7 @@ class TestTransposeOrderHelper:
     def test_empty_container_is_refused(self):
         """A container with no data variables cannot be transposed."""
         container = _grid(2, 1, 2)
-        container.remove_variable("t")
+        container.variables.remove("t")
         with pytest.raises(ValueError, match="Cannot transpose an empty container"):
             container.transpose()
 

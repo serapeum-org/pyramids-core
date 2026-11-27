@@ -53,10 +53,10 @@ class TestIsCogCheap:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.to_cog(tmp_path / "c.tif")
+        out = ds.cog.to_cog(tmp_path / "c.tif")
         reopened = Dataset.read_file(str(out))
-        assert reopened.is_cog is True, "real COG should be is_cog True"
-        assert reopened.validate_cog().is_valid is True, "validator should agree"
+        assert reopened.cog.is_cog is True, "real COG should be is_cog True"
+        assert reopened.cog.validate_cog().is_valid is True, "validator should agree"
 
     def test_small_cog_true(self, tmp_path):
         """A small COG (single tile, no overviews) is recognised.
@@ -71,8 +71,8 @@ class TestIsCogCheap:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.to_cog(tmp_path / "s.tif")
-        assert Dataset.read_file(str(out)).is_cog is True, "small COG should be True"
+        out = ds.cog.to_cog(tmp_path / "s.tif")
+        assert Dataset.read_file(str(out)).cog.is_cog is True, "small COG should be True"
 
     def test_large_stripped_plain_false(self, tmp_path):
         """A large stripped plain GeoTIFF is rejected.
@@ -84,7 +84,7 @@ class TestIsCogCheap:
             A 600x600 stripped GTiff -> is_cog False (block is (W, small)).
         """
         path = _make(np.ones((600, 600), dtype="float32"), tmp_path / "plain.tif")
-        assert Dataset.read_file(path).is_cog is False, "stripped plain must be False"
+        assert Dataset.read_file(path).cog.is_cog is False, "stripped plain must be False"
 
     def test_external_overviews_false(self, tmp_path):
         """A GeoTIFF with an external .ovr sidecar is rejected.
@@ -99,4 +99,4 @@ class TestIsCogCheap:
         ds = gdal.Open(path, gdal.GA_ReadOnly)
         ds.BuildOverviews("NEAREST", [2, 4])
         ds = None
-        assert Dataset.read_file(path).is_cog is False, "external .ovr must be False"
+        assert Dataset.read_file(path).cog.is_cog is False, "external .ovr must be False"

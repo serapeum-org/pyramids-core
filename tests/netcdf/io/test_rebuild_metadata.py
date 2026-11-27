@@ -165,7 +165,7 @@ class TestARebuildKeepsTheSpatialAxisNames:
         assert tuple(back.geotransform) == tuple(source), (
             f"the written file lost its georeference: {tuple(back.geotransform)}"
         )
-        assert back.xy(0, 0) == (0.0, 90.0), back.xy(0, 0)
+        assert back.cell.xy(0, 0) == (0.0, 90.0), back.cell.xy(0, 0)
 
     @pytest.mark.parametrize(
         "names",
@@ -362,7 +362,7 @@ class TestSetVariableReusesTheStoresAxes:
         store = _store()
         variable = store.get_variable(store.variable_names[0])
         plane = np.asarray(variable.read_array())[0]
-        store.set_variable(
+        store.variables.set(
             "added",
             Dataset.from_array(
                 plane,
@@ -379,7 +379,7 @@ class TestSetVariableReusesTheStoresAxes:
         store = _store()
         variable = store.get_variable(store.variable_names[0])
         plane = np.asarray(variable.read_array())[0]
-        store.set_variable(
+        store.variables.set(
             "added",
             Dataset.from_array(
                 plane,
@@ -404,7 +404,7 @@ class TestSetVariableReusesTheStoresAxes:
             ),
             no_data_value=variable.no_data_value[0],
         )
-        store.set_variable("coarser", coarser)
+        store.variables.set("coarser", coarser)
         added = list(store.get_variable("coarser").dimension_names or [])
         assert len(added) == 2, added
         assert added != ["latitude", "longitude"], (
@@ -460,7 +460,7 @@ class TestReuseOnRealisticGrids:
         """
         container = self._container(step, dtype)
         variable = container.get_variable("t")
-        container.set_variable(
+        container.variables.set(
             "added",
             Dataset.from_array(
                 np.asarray(variable.read_array()),
@@ -478,7 +478,7 @@ class TestReuseOnRealisticGrids:
         container = self._container(0.1, "float64")
         variable = container.get_variable("t")
         shifted = GeoReference(geo=(3.5, 0.1, 0.0, 50.0, 0.0, -0.1), epsg=variable.epsg)
-        container.set_variable(
+        container.variables.set(
             "shifted",
             Dataset.from_array(
                 np.asarray(variable.read_array()),
@@ -585,7 +585,7 @@ class TestReuseOnAFloat32CoordinateGrid:
         """
         store = self._store(tmp_path)
         var = store.get_variable("t")
-        store.set_variable(
+        store.variables.set(
             "added",
             Dataset.from_array(
                 np.asarray(var.read_array()),
@@ -619,7 +619,7 @@ class TestTheSpatialPairIsDecidedTogether:
         variable = store.get_variable("temperature")
         # #1241: squeeze to the classic flattened layout so [0] yields a 2-D plane, not a 3-D slab.
         plane = np.asarray(variable.read_array(squeeze=True))[0]
-        store.set_variable(
+        store.variables.set(
             "added",
             Dataset.from_array(
                 plane,

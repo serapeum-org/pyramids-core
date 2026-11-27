@@ -55,7 +55,7 @@ def _dated_projected_nc(
             arr,
             no_data_value=nodata,
             geo_ref=GeoReference(geo=(ox, cell, 0.0, oy, 0.0, -cell), epsg=4647),
-        ).to_file(path)
+        ).io.to_file(path)
         paths.append(path)
     out = tmp_path / "anim.nc"
     DatasetCollection.from_files(paths).to_netcdf(

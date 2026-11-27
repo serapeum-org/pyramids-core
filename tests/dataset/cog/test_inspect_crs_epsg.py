@@ -27,7 +27,7 @@ def write_cog(path: Path, srs_setter) -> str:
     Dataset.from_array(
         np.arange(64, dtype="float32").reshape(8, 8),
         geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=4326),
-    ).to_file(source)
+    ).io.to_file(source)
 
     handle = gdal.Open(source, gdal.GA_Update)
     srs = osr.SpatialReference()

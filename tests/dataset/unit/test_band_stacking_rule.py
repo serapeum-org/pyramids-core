@@ -112,8 +112,8 @@ class TestBothReadPathsAgree:
         """
         full = [0, 0, raster.columns, raster.rows]
 
-        unwindowed = np.asarray(raster.read_array())
-        windowed = np.asarray(raster.read_array(window=full))
+        unwindowed = np.asarray(raster.io.read_array())
+        windowed = np.asarray(raster.io.read_array(window=full))
 
         assert np.array_equal(unwindowed, windowed)
 
@@ -124,7 +124,7 @@ class TestBothReadPathsAgree:
             Shape assertions alone cannot catch a mis-ordered stack, so the
             fixture makes each band's values name its index.
         """
-        stacked = np.asarray(raster.read_array())
+        stacked = np.asarray(raster.io.read_array())
 
         assert [float(stacked[i, 0, 0]) for i in range(3)] == [0.0, 1.0, 2.0]
 
@@ -135,9 +135,9 @@ class TestBothReadPathsAgree:
             `read_array(band=1)` and `read_array()[1]` are the same request,
             and the helper is what keeps the squeeze consistent between them.
         """
-        stacked = np.asarray(raster.read_array())
+        stacked = np.asarray(raster.io.read_array())
 
         for index in range(3):
-            single = np.asarray(raster.read_array(band=index))
+            single = np.asarray(raster.io.read_array(band=index))
             assert single.shape == (4, 5)
             assert np.array_equal(single, stacked[index])

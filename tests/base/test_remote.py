@@ -572,14 +572,14 @@ class TestHttpCogRead:
         url = f"{http_server}/valid.tif"
         ds = Dataset.read_file(url)
         # is_cog works over VSI paths too
-        assert ds.is_cog is True
+        assert ds.cog.is_cog is True
 
     def test_read_cog_over_http_array_matches(self, http_server):
         from pyramids.dataset import Dataset
 
         url = f"{http_server}/valid.tif"
         ds = Dataset.read_file(url)
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         expected = np.arange(256 * 256, dtype=np.float32).reshape(256, 256)
         assert np.array_equal(arr, expected)
 
@@ -609,7 +609,7 @@ class TestHttpCogRead:
         # engine, not the deprecated Dataset.read_array facade; the engine's `self`
         # carries the dataset as `._ds`.
         spy = mocker.spy(_IO, "read_array")
-        remote = remote_ds.crop(bbox=bbox)
+        remote = remote_ds.spatial.crop(bbox=bbox)
         source_windows = [
             kw["window"]
             for a, kw in spy.call_args_list
@@ -619,14 +619,14 @@ class TestHttpCogRead:
             f"remote source must be read once, windowed to the AOI; saw {source_windows}"
         )
 
-        local = Dataset.read_file(str(http_cog_dir / "valid.tif")).crop(bbox=bbox)
+        local = Dataset.read_file(str(http_cog_dir / "valid.tif")).spatial.crop(bbox=bbox)
         assert remote.shape == local.shape, (
             f"remote crop shape {remote.shape} != local {local.shape}"
         )
         assert remote.geotransform == local.geotransform, (
             "remote crop geotransform differs from the local crop"
         )
-        assert np.array_equal(remote.read_array(), local.read_array()), (
+        assert np.array_equal(remote.io.read_array(), local.io.read_array()), (
             "remote crop pixels differ from the local crop"
         )
 

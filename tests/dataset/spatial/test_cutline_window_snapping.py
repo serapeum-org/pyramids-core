@@ -190,8 +190,8 @@ class TestTheWindowDoesNotChangeTheCrop:
             crs=raster.crs,
         )
 
-        windowed = raster.crop(cutline, touch=True)
-        unwindowed = raster.crop(cutline, touch=False)
+        windowed = raster.spatial.crop(cutline, touch=True)
+        unwindowed = raster.spatial.crop(cutline, touch=False)
 
         assert windowed.bounds.total_bounds == pytest.approx(
             unwindowed.bounds.total_bounds, abs=1e-9
@@ -263,6 +263,6 @@ class TestDegenerateCutlinesDeclineTheOptimisation:
         )
 
         with pytest.raises(RuntimeError, match="Cutline"):
-            raster.crop(cutline, touch=True)
+            raster.spatial.crop(cutline, touch=True)
         with pytest.raises(RuntimeError, match="Cutline"):
-            raster.crop(cutline, touch=False)
+            raster.spatial.crop(cutline, touch=False)

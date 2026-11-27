@@ -47,22 +47,22 @@ class TestCanonicalRoundtrip:
 
     def test_array_equality_float(self, float_dataset_128, tmp_path):
         ds = float_dataset_128
-        out = ds.to_cog(tmp_path / "rt.tif")
+        out = ds.cog.to_cog(tmp_path / "rt.tif")
         reopened = Dataset.read_file(out)
-        assert reopened.is_cog is True
-        assert np.array_equal(ds.read_array(), reopened.read_array())
+        assert reopened.cog.is_cog is True
+        assert np.array_equal(ds.io.read_array(), reopened.io.read_array())
         reopened.close()
 
     def test_preserves_crs(self, float_dataset_128, tmp_path):
         ds = float_dataset_128
-        out = ds.to_cog(tmp_path / "rt.tif")
+        out = ds.cog.to_cog(tmp_path / "rt.tif")
         reopened = Dataset.read_file(out)
         assert reopened.epsg == 4326
         reopened.close()
 
     def test_preserves_dimensions(self, float_dataset_128, tmp_path):
         ds = float_dataset_128
-        out = ds.to_cog(tmp_path / "rt.tif")
+        out = ds.cog.to_cog(tmp_path / "rt.tif")
         reopened = Dataset.read_file(out)
         assert reopened.rows == 128
         assert reopened.columns == 128
@@ -71,16 +71,16 @@ class TestCanonicalRoundtrip:
 
 class TestMultiBandRoundtrip:
     def test_band_count_preserved(self, multiband_dataset, tmp_path):
-        out = multiband_dataset.to_cog(tmp_path / "mb.tif")
+        out = multiband_dataset.cog.to_cog(tmp_path / "mb.tif")
         reopened = Dataset.read_file(out)
         assert reopened.band_count == 3
         reopened.close()
 
     def test_per_band_array_equality(self, multiband_dataset, tmp_path):
-        out = multiband_dataset.to_cog(tmp_path / "mb.tif")
+        out = multiband_dataset.cog.to_cog(tmp_path / "mb.tif")
         reopened = Dataset.read_file(out)
-        orig = multiband_dataset.read_array()
-        got = reopened.read_array()
+        orig = multiband_dataset.io.read_array()
+        got = reopened.io.read_array()
         assert orig.shape == got.shape
         assert np.allclose(orig, got)
         reopened.close()
@@ -89,25 +89,25 @@ class TestMultiBandRoundtrip:
 class TestEveryCompression:
     @pytest.mark.parametrize("method", ["DEFLATE", "LZW", "ZSTD", "NONE", "LERC"])
     def test_round_trip(self, float_dataset_128, tmp_path, method):
-        out = float_dataset_128.to_cog(
+        out = float_dataset_128.cog.to_cog(
             tmp_path / f"{method}.tif", compression=cog.Compression(compress=method)
         )
         reopened = Dataset.read_file(out)
-        reopened_arr = reopened.read_array()
+        reopened_arr = reopened.io.read_array()
         if method == "LERC":
             # Default LERC max_z_error=0 -> near-lossless
-            assert np.allclose(float_dataset_128.read_array(), reopened_arr, atol=1e-3)
+            assert np.allclose(float_dataset_128.io.read_array(), reopened_arr, atol=1e-3)
         elif method in {"WEBP", "JPEG"}:
             # Lossy — only compare shape
             assert reopened_arr.shape == float_dataset_128.read_array().shape
         else:
-            assert np.array_equal(float_dataset_128.read_array(), reopened_arr)
+            assert np.array_equal(float_dataset_128.io.read_array(), reopened_arr)
         reopened.close()
 
 
 class TestLercTolerance:
     def test_lerc_with_max_z_error(self, float_dataset_128, tmp_path):
-        out = float_dataset_128.to_cog(
+        out = float_dataset_128.cog.to_cog(
             tmp_path / "lerc.tif",
             compression=cog.Compression(compress="LERC"),
             extra={"MAX_Z_ERROR": 0.5},
@@ -115,8 +115,8 @@ class TestLercTolerance:
         reopened = Dataset.read_file(out)
         # With MAX_Z_ERROR=0.5, round-trip error must be <= 0.5 per pixel
         diff = np.abs(
-            float_dataset_128.read_array().astype(np.float64)
-            - reopened.read_array().astype(np.float64)
+            float_dataset_128.io.read_array().astype(np.float64)
+            - reopened.io.read_array().astype(np.float64)
         )
         assert diff.max() <= 0.5
         reopened.close()
@@ -124,17 +124,17 @@ class TestLercTolerance:
 
 class TestWebOptimized:
     def test_google_maps_compatible_is_web_mercator(self, float_dataset_128, tmp_path):
-        out = float_dataset_128.to_cog(
+        out = float_dataset_128.cog.to_cog(
             tmp_path / "web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
         )
         reopened = Dataset.read_file(out)
         assert reopened.epsg == 3857
-        assert reopened.is_cog is True
+        assert reopened.cog.is_cog is True
         reopened.close()
 
     def test_google_maps_with_blocksize_256(self, float_dataset_128, tmp_path):
         """GoogleMapsCompatible + explicit blocksize=256 honored."""
-        out = float_dataset_128.to_cog(
+        out = float_dataset_128.cog.to_cog(
             tmp_path / "web.tif",
             tiling=cog.Tiling(scheme="GoogleMapsCompatible"),
             layout=cog.Layout(blocksize=256),
@@ -147,10 +147,10 @@ class TestWebOptimized:
 
 class TestValidatorAgreesWithIsCog:
     def test_cog_both_agree_true(self, float_dataset_128, tmp_path):
-        out = float_dataset_128.to_cog(tmp_path / "x.tif")
+        out = float_dataset_128.cog.to_cog(tmp_path / "x.tif")
         reopened = Dataset.read_file(out)
-        report = reopened.validate_cog()
-        assert reopened.is_cog == report.is_valid == True
+        report = reopened.cog.validate_cog()
+        assert reopened.cog.is_cog == report.is_valid == True
         reopened.close()
 
     def test_gtiff_both_agree_false(self, float_dataset_128, tmp_path):
@@ -164,10 +164,10 @@ class TestValidatorAgreesWithIsCog:
             ),
         )
         out = tmp_path / "plain.tif"
-        ds.to_file(out)  # default GTiff
+        ds.io.to_file(out)  # default GTiff
         reopened = Dataset.read_file(out)
-        report = reopened.validate_cog()
-        assert reopened.is_cog == report.is_valid == False
+        report = reopened.cog.validate_cog()
+        assert reopened.cog.is_cog == report.is_valid == False
         reopened.close()
 
 
@@ -182,7 +182,7 @@ class TestNoDataPreservation:
                 top_left_corner=(0.0, 0.0), cell_size=0.001, epsg=4326
             ),
         )
-        out = ds.to_cog(tmp_path / "nd.tif")
+        out = ds.cog.to_cog(tmp_path / "nd.tif")
         reopened = Dataset.read_file(out)
         assert reopened.no_data_value[0] == pytest.approx(-1.0)
         reopened.close()
@@ -190,13 +190,13 @@ class TestNoDataPreservation:
 
 class TestPipelineWithReadFile:
     def test_reopen_via_path_string(self, float_dataset_128, tmp_path):
-        out = float_dataset_128.to_cog(tmp_path / "x.tif")
+        out = float_dataset_128.cog.to_cog(tmp_path / "x.tif")
         reopened = Dataset.read_file(str(out))
-        assert reopened.is_cog is True
+        assert reopened.cog.is_cog is True
         reopened.close()
 
     def test_reopen_via_path_object(self, float_dataset_128, tmp_path):
-        out = float_dataset_128.to_cog(tmp_path / "x.tif")
+        out = float_dataset_128.cog.to_cog(tmp_path / "x.tif")
         reopened = Dataset.read_file(out)
-        assert reopened.is_cog is True
+        assert reopened.cog.is_cog is True
         reopened.close()

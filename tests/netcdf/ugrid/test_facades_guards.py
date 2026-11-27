@@ -84,7 +84,7 @@ class TestRasterFacade:
         reference = grid.to_dataset("v", cell_size=0.5, method="nearest")
         out = grid.rasterize_like(reference, "v")
         assert tuple(out.geotransform) == tuple(reference.geotransform)
-        np.testing.assert_array_equal(out.read_array(), reference.read_array())
+        np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
 
 class TestInterpTimeCarriesStaticVariables:

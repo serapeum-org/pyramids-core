@@ -57,8 +57,8 @@ def test_engine_methods_are_callable(cube, engine, methods):
 
 def test_series_first_matches_the_flat_method(cube: DatasetCollection):
     np.testing.assert_array_equal(
-        np.asarray(cube.series.first().read_array()),
-        np.asarray(cube.first().read_array()),
+        np.asarray(cube.series.first().io.read_array()),
+        np.asarray(cube.first().io.read_array()),
     )
 
 

@@ -55,7 +55,7 @@ class TestToCogBytes:
             The returned blob is non-empty and begins with a TIFF magic marker
             (``II`` little-endian or ``MM`` big-endian).
         """
-        blob = float_dataset.to_cog_bytes()
+        blob = float_dataset.cog.to_cog_bytes()
         assert isinstance(blob, bytes), f"expected bytes, got {type(blob)}"
         assert len(blob) > 0, "COG bytes must be non-empty"
         assert blob[:2] in (b"II", b"MM"), f"not a TIFF: leading bytes {blob[:2]!r}"
@@ -70,10 +70,10 @@ class TestToCogBytes:
         Test scenario:
             Persisting the in-memory blob to a file yields a valid COG.
         """
-        blob = float_dataset.to_cog_bytes()
+        blob = float_dataset.cog.to_cog_bytes()
         out = tmp_path / "roundtrip.tif"
         out.write_bytes(blob)
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, (
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
             "round-tripped COG bytes must validate"
         )
 
@@ -88,7 +88,7 @@ class TestToCogBytes:
             Passing compression=Compression(compress="ZSTD") produces a COG whose
             IMAGE_STRUCTURE compression is ZSTD.
         """
-        blob = float_dataset.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
+        blob = float_dataset.cog.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
         out = tmp_path / "zstd.tif"
         out.write_bytes(blob)
         ds = gdal.Open(str(out))
@@ -107,7 +107,7 @@ class TestToCogBytes:
             temporary file).
         """
         before = set(_vsimem_entries())
-        float_dataset.to_cog_bytes()
+        float_dataset.cog.to_cog_bytes()
         after = set(_vsimem_entries())
         assert after == before, f"leaked /vsimem/ entries: {after - before}"
 
@@ -122,13 +122,13 @@ class TestToCogBytes:
             The blob and a direct to_cog(path) agree on compression, predictor,
             and overview count.
         """
-        disk = float_dataset.to_cog(tmp_path / "disk.tif")
-        blob = float_dataset.to_cog_bytes()
+        disk = float_dataset.cog.to_cog(tmp_path / "disk.tif")
+        blob = float_dataset.cog.to_cog_bytes()
         mem_path = tmp_path / "mem.tif"
         mem_path.write_bytes(blob)
 
-        info_disk = Dataset.read_file(str(disk)).cog_info()
-        info_mem = Dataset.read_file(str(mem_path)).cog_info()
+        info_disk = Dataset.read_file(str(disk)).cog.info()
+        info_mem = Dataset.read_file(str(mem_path)).cog.info()
         assert info_mem.compression == info_disk.compression, "compression mismatch"
         assert info_mem.predictor == info_disk.predictor, "predictor mismatch"
         assert info_mem.overview_count == info_disk.overview_count, (

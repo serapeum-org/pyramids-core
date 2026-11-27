@@ -132,7 +132,7 @@ class TestPlotPhase3CrossCutting:
             regression where the engine and helper diverge on how the
             data array is reshaped.
         """
-        arr = random_single_band_for_plot.read_array(band=0)
+        arr = random_single_band_for_plot.io.read_array(band=0)
         bbox = random_single_band_for_plot.bbox
         helper_glyph = render_array(
             arr=arr,

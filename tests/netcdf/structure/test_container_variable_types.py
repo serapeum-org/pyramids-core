@@ -129,7 +129,7 @@ class TestVariableRouting:
         Test scenario:
             A windowed variable subset is a raster, so it is a Variable.
         """
-        sub = container.subset("values", time=0)
+        sub = container.selection.subset("values", time=0)
         assert isinstance(sub, Variable), f"subset returned {type(sub)}"
 
 

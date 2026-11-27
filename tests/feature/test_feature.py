@@ -175,7 +175,7 @@ class TestToDataset:
             assert src.geotransform[0] == xmin
             assert src.geotransform[3] == ymax
             assert src.cell_size == 4000
-            arr = src.read_array()
+            arr = src.io.read_array()
             values = arr[~np.isclose(arr, src.no_data_value[0])]
             assert values.shape[0] == 16
             assert values.mean() == vector["fid"].values[0]
@@ -194,7 +194,7 @@ class TestToDataset:
             )
             assert src.epsg == polygon_corner_coello_gdf.crs.to_epsg()
 
-            arr = src.read_array()
+            arr = src.io.read_array()
             values = arr[~np.isclose(arr, src.no_data_value[0])]
             assert values.shape[0] == 16
             assert values.mean() == 2
@@ -211,7 +211,7 @@ class TestToDataset:
             src = Dataset.from_features(
                 vector, template=dataset, column_name=["column_2", "column_3"]
             )
-            arr = src.read_array()
+            arr = src.io.read_array()
             assert arr.shape == (2, 13, 14)
             band_1_values = arr[0, ~np.isclose(arr[0, :, :], src.no_data_value[0])]
             band_2_values = arr[1, ~np.isclose(arr[1, :, :], src.no_data_value[1])]
@@ -230,7 +230,7 @@ class TestToDataset:
             vector = FeatureCollection(polygon_corner_coello_gdf)
             src = Dataset.from_features(vector, template=dataset, column_name=None)
 
-            arr = src.read_array()
+            arr = src.io.read_array()
             assert arr.shape == (3, 13, 14)
 
     class TestCellSize:
@@ -244,14 +244,14 @@ class TestToDataset:
                 vector, cell_size=required_cell_size, column_name=None
             )
             assert src.cell_size == required_cell_size
-            arr = src.read_array()
+            arr = src.io.read_array()
             assert arr.shape == (3, 2, 2)
 
         def test_one_column(self, polygon_corner_coello_gdf: GeoDataFrame):
             vector = FeatureCollection(polygon_corner_coello_gdf)
             src = Dataset.from_features(vector, cell_size=200)
             assert src.cell_size == 200
-            arr = src.read_array()
+            arr = src.io.read_array()
             values = arr[np.isclose(arr[:, :], 1.0)]
             assert values.shape[0] == 6400
 
@@ -261,7 +261,7 @@ class TestToDataset:
             src = Dataset.from_features(
                 vector, cell_size=required_cell_size, column_name=None
             )
-            arr = src.read_array()
+            arr = src.io.read_array()
             assert arr.shape == (3, 13, 13)
 
 

@@ -33,7 +33,7 @@ def two_asset_item(tmp_path):
         Dataset.from_array(
             np.full((2, 2), value, dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         paths[name] = path
     return {
         "type": "Feature",
@@ -413,7 +413,7 @@ class TestReducedGroupRepresentative:
                 fusion=fusion,
                 provenance=provenance,
             )
-        pixels = float(np.asarray(collection.iloc(0).read_array())[0, 0])
+        pixels = float(np.asarray(collection.iloc(0).io.read_array())[0, 0])
         assert pixels == pytest.approx(1.5), (
             f"method='mean' must average the group's 1.0 and 2.0, got {pixels}"
         )

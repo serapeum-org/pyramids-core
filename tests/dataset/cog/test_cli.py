@@ -31,7 +31,7 @@ def source_tif(tmp_path) -> str:
     arr = (np.random.default_rng(7).random((600, 600)) * 100).astype("float32")
     ds = Dataset.from_array(arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326))
     path = tmp_path / "src.tif"
-    ds.to_file(path)
+    ds.io.to_file(path)
     return str(path)
 
 
@@ -46,7 +46,7 @@ def cog_tif(tmp_path, source_tif) -> str:
     Returns:
         str: Path to the COG.
     """
-    out = Dataset.read_file(source_tif).to_cog(tmp_path / "cog.tif")
+    out = Dataset.read_file(source_tif).cog.to_cog(tmp_path / "cog.tif")
     return str(out)
 
 

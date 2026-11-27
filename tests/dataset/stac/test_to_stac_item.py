@@ -91,7 +91,7 @@ class TestToStacItem:
         Test scenario:
             type/id/geometry/bbox/properties/assets/stac_extensions present.
         """
-        item = wgs84_dataset.to_stac_item("scene-1", asset_href="s3://b/s.tif")
+        item = wgs84_dataset.io.to_stac_item("scene-1", asset_href="s3://b/s.tif")
         assert item["type"] == "Feature", f"expected a Feature, got {item['type']}"
         assert item["id"] == "scene-1", f"id mismatch: {item['id']}"
         assert "data" in item["assets"], "default asset key 'data' missing"
@@ -103,7 +103,7 @@ class TestToStacItem:
         Test scenario:
             proj:code/epsg/shape/transform/bbox reflect a 4x4 EPSG:4326 grid.
         """
-        props = wgs84_dataset.to_stac_item("x", asset_href="s.tif")["properties"]
+        props = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")["properties"]
         assert props["proj:epsg"] == 4326, f"proj:epsg: {props['proj:epsg']}"
         assert props["proj:code"] == "EPSG:4326", f"proj:code: {props['proj:code']}"
         assert props["proj:shape"] == [4, 4], f"proj:shape: {props['proj:shape']}"
@@ -119,7 +119,7 @@ class TestToStacItem:
         Test scenario:
             One float32 band with nodata -9999.
         """
-        asset = wgs84_dataset.to_stac_item("x", asset_href="s.tif")["assets"]["data"]
+        asset = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"]
         bands = asset["raster:bands"]
         assert len(bands) == 1, f"expected 1 band, got {len(bands)}"
         assert bands[0]["nodata"] == -9999.0, f"nodata: {bands[0]}"
@@ -133,7 +133,7 @@ class TestToStacItem:
         Test scenario:
             top-left (0, 4), 4x4 at cell 1 -> [0, 0, 4, 4].
         """
-        item = wgs84_dataset.to_stac_item("x", asset_href="s.tif")
+        item = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")
         assert item["bbox"] == [0.0, 0.0, 4.0, 4.0], f"bbox: {item['bbox']}"
 
     def test_reprojects_utm_footprint_to_4326(self):
@@ -148,7 +148,7 @@ class TestToStacItem:
                 top_left_corner=(500000.0, 5300000.0), cell_size=10.0, epsg=32633
             ),
         )
-        item = ds.to_stac_item("x", asset_href="s.tif")
+        item = ds.io.to_stac_item("x", asset_href="s.tif")
         w, s, e, n = item["bbox"]
         assert -180 <= w <= 180, f"west lon out of range: {item['bbox']}"
         assert -180 <= e <= 180, f"east lon out of range: {item['bbox']}"
@@ -164,7 +164,7 @@ class TestToStacItem:
         Test scenario:
             A COG media type and default roles land on the asset.
         """
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", asset_media_type="image/tiff; application=geotiff"
         )
         asset = item["assets"]["data"]
@@ -182,7 +182,7 @@ class TestToStacItem:
         import datetime as dt
 
         when = dt.datetime(2023, 6, 1, 12, 0, 0)
-        item = wgs84_dataset.to_stac_item("x", asset_href="s.tif", datetime=when)
+        item = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif", datetime=when)
         assert item["properties"]["datetime"] == when.isoformat(), (
             f"a datetime must be serialised as {when.isoformat()!r}, got "
             f"{item['properties']['datetime']!r}"
@@ -194,7 +194,7 @@ class TestToStacItem:
         Test scenario:
             No proj:* keys and the projection schema is absent.
         """
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", extensions=StacExtensions(with_proj=False)
         )
         assert not any(k.startswith("proj:") for k in item["properties"]), (
@@ -243,8 +243,8 @@ class TestToStacItem:
             from_stac; the collection reads back the same grid.
         """
         p = str(tmp_path / "scene.tif")
-        wgs84_dataset.to_file(p)
-        item = wgs84_dataset.to_stac_item(
+        wgs84_dataset.io.to_file(p)
+        item = wgs84_dataset.io.to_stac_item(
             "scene-1", asset_href=p, datetime="2023-06-01T00:00:00Z"
         )
         coll = DatasetCollection.from_stac([item], asset="data")
@@ -265,7 +265,7 @@ class TestToStacItemDatetime:
             No datetime / range -> properties.datetime is a non-null ISO string
             (rio-stac behaviour), never a null that would be STAC-invalid.
         """
-        item = wgs84_dataset.to_stac_item("x", asset_href="s.tif")
+        item = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")
         when = item["properties"]["datetime"]
         assert when is not None, "datetime must not be null without a start/end range"
         assert when.startswith("20"), f"expected an ISO timestamp, got {when!r}"
@@ -276,7 +276,7 @@ class TestToStacItemDatetime:
         Test scenario:
             The STAC-valid null-datetime form: datetime null, start/end present.
         """
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x",
             asset_href="s.tif",
             datetime=None,
@@ -298,7 +298,7 @@ class TestToStacItemDatetime:
         """
         import datetime as dt
 
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x",
             asset_href="s.tif",
             datetime=None,
@@ -321,7 +321,7 @@ class TestToStacItemBandMetadata:
             The default item's raster:bands entry has no statistics, histogram,
             scale or offset, and no eo extension is advertised.
         """
-        item = wgs84_dataset.to_stac_item("x", asset_href="s.tif")
+        item = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")
         band = item["assets"]["data"]["raster:bands"][0]
         assert set(band) == {"data_type", "nodata"}, f"extra band keys: {band}"
         assert band["nodata"] == -9999.0, f"nodata changed: {band}"
@@ -337,7 +337,7 @@ class TestToStacItemBandMetadata:
             An all-ones band yields minimum/maximum/mean 1.0 and stddev 0.0
             under the schema's key spellings.
         """
-        band = wgs84_dataset.to_stac_item(
+        band = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", bands=BandMetadata(with_stats=True)
         )["assets"]["data"]["raster:bands"][0]
         stats = band["statistics"]
@@ -362,7 +362,7 @@ class TestToStacItemBandMetadata:
             `_band_statistics` makes (so comparing against it asserts the
             function equals itself).
         """
-        stats = ramp_dataset.to_stac_item(
+        stats = ramp_dataset.io.to_stac_item(
             "x",
             asset_href="s.tif",
             bands=BandMetadata(with_stats=True, stats_approx_ok=False),
@@ -406,7 +406,7 @@ class TestToStacItemBandMetadata:
         Test scenario:
             A 0..15 ramp bucketed into 5 bins reports 5 buckets and count 5.
         """
-        band = ramp_dataset.to_stac_item(
+        band = ramp_dataset.io.to_stac_item(
             "x",
             asset_href="s.tif",
             bands=BandMetadata(with_histogram=True, histogram_bins=5),
@@ -448,7 +448,7 @@ class TestToStacItemBandMetadata:
         Test scenario:
             A single-band dataset yields [{"name": "Band_1"}].
         """
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", bands=BandMetadata(with_eo=True)
         )
         assert item["assets"]["data"]["eo:bands"] == [{"name": "Band_1"}], (
@@ -466,14 +466,14 @@ class TestToStacItemBandMetadata:
             An unpacked band emits neither; after setting scale 0.01 /
             offset 5.0 both are emitted as floats.
         """
-        band = ramp_dataset.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = ramp_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert "scale" not in band, f"an unpacked band must emit no scale: {band}"
         assert "offset" not in band, f"an unpacked band must emit no offset: {band}"
-        ramp_dataset.scale = [0.01]
-        ramp_dataset.offset = [5.0]
-        packed = ramp_dataset.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        ramp_dataset.bands.scale = [0.01]
+        ramp_dataset.bands.offset = [5.0]
+        packed = ramp_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert packed["scale"] == 0.01, f"scale: {packed}"
@@ -487,7 +487,7 @@ class TestToStacItemBandMetadata:
             emitted JSON stays valid.
         """
         ds = _wgs84_from_array(np.ones((4, 4), dtype="float32"), nodata=np.nan)
-        band = ds.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = ds.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert band["nodata"] == "nan", f"nodata: {band}"
@@ -500,7 +500,7 @@ class TestToStacItemBandMetadata:
             the string form.
         """
         ds = _wgs84_from_array(np.ones((4, 4), dtype="float32"), nodata=np.inf)
-        band = ds.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = ds.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert band["nodata"] == "inf", f"nodata: {band}"
@@ -512,7 +512,7 @@ class TestToStacItemBandMetadata:
             The negative infinity must not collapse onto "inf".
         """
         ds = _wgs84_from_array(np.ones((4, 4), dtype="float32"), nodata=-np.inf)
-        band = ds.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = ds.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert band["nodata"] == "-inf", f"nodata: {band}"
@@ -523,7 +523,7 @@ class TestToStacItemBandMetadata:
         Test scenario:
             The asset carries eo:bands and no raster:bands.
         """
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x",
             asset_href="s.tif",
             bands=BandMetadata(with_eo=True, with_stats=True),
@@ -544,7 +544,7 @@ class TestToStacItemDataFootprint:
             A dataset with only a valid corner still reports the grid bbox and
             a single Polygon when footprint is left at its default.
         """
-        item = corner_dataset.to_stac_item("x", asset_href="s.tif")
+        item = corner_dataset.io.to_stac_item("x", asset_href="s.tif")
         assert item["bbox"] == [0.0, 0.0, 4.0, 4.0], f"bbox: {item['bbox']}"
         assert item["geometry"]["type"] == "Polygon", (
             "a footprint that does not cross the seam stays a single Polygon, got "
@@ -558,10 +558,10 @@ class TestToStacItemDataFootprint:
             Only the top-left 2x2 of a 4x4 grid is valid, so the data geometry
             is smaller than the bbox geometry and the bbox shrinks to it.
         """
-        data_item = corner_dataset.to_stac_item(
+        data_item = corner_dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
-        bbox_item = corner_dataset.to_stac_item("x", asset_href="s.tif")
+        bbox_item = corner_dataset.io.to_stac_item("x", asset_href="s.tif")
         data_area = shape(data_item["geometry"]).area
         bbox_area = shape(bbox_item["geometry"]).area
         assert data_area < bbox_area, (
@@ -600,7 +600,7 @@ class TestToStacItemDataFootprint:
         array[:2, :2] = 1.0
         array[4:, 4:] = 1.0
         ds = _wgs84_from_array(array, top_left=(0.0, 6.0))
-        item = ds.to_stac_item(
+        item = ds.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
         geom = shape(item["geometry"])
@@ -621,11 +621,11 @@ class TestToStacItemDataFootprint:
             ),
         )
         data_geom = shape(
-            ds.to_stac_item("x", asset_href="s.tif", footprint=Footprint(mode="data"))[
+            ds.io.to_stac_item("x", asset_href="s.tif", footprint=Footprint(mode="data"))[
                 "geometry"
             ]
         )
-        bbox_geom = shape(ds.to_stac_item("x", asset_href="s.tif")["geometry"])
+        bbox_geom = shape(ds.io.to_stac_item("x", asset_href="s.tif")["geometry"])
         assert data_geom.intersection(bbox_geom).area > 0, (
             "the data footprint must overlap the bbox footprint"
         )
@@ -646,10 +646,10 @@ class TestToStacItemDataFootprint:
                 top_left_corner=(500000.0, 5300000.0), cell_size=10.0, epsg=32633
             ),
         )
-        plain = ds.to_stac_item(
+        plain = ds.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
-        dense = ds.to_stac_item(
+        dense = ds.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data", densify=10.0)
         )
         plain_ring = plain["geometry"]["coordinates"][0]
@@ -669,10 +669,10 @@ class TestToStacItemDataFootprint:
         for row in range(6):
             array[row, : row + 1] = 1.0
         ds = _wgs84_from_array(array, top_left=(0.0, 6.0))
-        exact = ds.to_stac_item(
+        exact = ds.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
-        simple = ds.to_stac_item(
+        simple = ds.io.to_stac_item(
             "x",
             asset_href="s.tif",
             footprint=Footprint(mode="data", simplify_tolerance=1.0),
@@ -689,7 +689,7 @@ class TestToStacItemDataFootprint:
         Test scenario:
             A decimated mask read yields a non-empty polygonal geometry.
         """
-        item = corner_dataset.to_stac_item(
+        item = corner_dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data", max_samples=4)
         )
         geom = shape(item["geometry"])
@@ -743,8 +743,8 @@ class TestToStacItemDataFootprint:
             collection from it.
         """
         path = str(tmp_path / "corner.tif")
-        corner_dataset.to_file(path)
-        item = corner_dataset.to_stac_item(
+        corner_dataset.io.to_file(path)
+        item = corner_dataset.io.to_stac_item(
             "scene-1",
             asset_href=path,
             datetime="2023-06-01T00:00:00Z",
@@ -764,7 +764,7 @@ class TestToStacItemAntimeridian:
             A grid spanning 178 -> 186 yields two polygons and a west > east
             bbox.
         """
-        item = antimeridian_dataset.to_stac_item(
+        item = antimeridian_dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
         geom = shape(item["geometry"])
@@ -782,7 +782,7 @@ class TestToStacItemAntimeridian:
             The same crossing grid in the default footprint mode also yields a
             MultiPolygon and a west > east bbox.
         """
-        item = antimeridian_dataset.to_stac_item("x", asset_href="s.tif")
+        item = antimeridian_dataset.io.to_stac_item("x", asset_href="s.tif")
         geom = shape(item["geometry"])
         assert geom.geom_type == "MultiPolygon", f"geom type: {geom.geom_type}"
         west, _, east, _ = item["bbox"]
@@ -794,7 +794,7 @@ class TestToStacItemAntimeridian:
         Test scenario:
             No vertex of the split geometry falls outside [-180, 180].
         """
-        item = antimeridian_dataset.to_stac_item(
+        item = antimeridian_dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
         lons = [
@@ -813,7 +813,7 @@ class TestToStacItemAntimeridian:
             Polygon with a normal west < east bbox is emitted.
         """
         ds = _wgs84_from_array(np.ones((2, 4), dtype="float32"), top_left=(181.0, 1.0))
-        item = ds.to_stac_item(
+        item = ds.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
         geom = shape(item["geometry"])
@@ -828,7 +828,7 @@ class TestToStacItemAntimeridian:
             Both footprint modes keep a single Polygon and a west <= east bbox.
         """
         for mode in ("bbox", "data"):
-            item = wgs84_dataset.to_stac_item(
+            item = wgs84_dataset.io.to_stac_item(
                 "x", asset_href="s.tif", footprint=Footprint(mode=mode)
             )
             geom = shape(item["geometry"])
@@ -874,7 +874,7 @@ class TestToStacItemAntimeridian:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(-100.0, 100.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
         )
-        item = ds.to_stac_item("x", asset_href="s.tif")
+        item = ds.io.to_stac_item("x", asset_href="s.tif")
         geom = shape(item["geometry"])
         assert geom.geom_type == "Polygon", f"geom type: {geom.geom_type}"
         west, _, east, _ = item["bbox"]
@@ -894,7 +894,7 @@ class TestToStacItemAntimeridian:
                 top_left_corner=(-170.0, 10.0), cell_size=10.0, epsg=4326
             ),
         )
-        item = ds.to_stac_item("x", asset_href="s.tif")
+        item = ds.io.to_stac_item("x", asset_href="s.tif")
         assert item["geometry"]["type"] == "Polygon", (
             "a footprint that does not cross the seam stays a single Polygon, got "
             f"{item['geometry']['type']}"
@@ -916,7 +916,7 @@ class TestToStacItemAntimeridian:
                 top_left_corner=(700000.0, 300000.0), cell_size=5000.0, epsg=32660
             ),
         )
-        item = ds.to_stac_item("x", asset_href="s.tif")
+        item = ds.io.to_stac_item("x", asset_href="s.tif")
         west, _, east, _ = item["bbox"]
         assert item["geometry"]["type"] == "MultiPolygon", (
             f"a straddling scene must be split into parts, got {item['geometry']['type']}"
@@ -1008,10 +1008,10 @@ class TestDataFootprintSeamDiscriminator:
             scene is the ordinary 30-degree strip bbox mode gets right.
         """
         dataset = self._partial_4326(-20.0, 60.0, -20.0, 10.0)
-        item = dataset.to_stac_item(
+        item = dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
-        bbox_item = dataset.to_stac_item(
+        bbox_item = dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="bbox")
         )
         assert bbox_item["bbox"] == [-20.0, 0.0, 60.0, 10.0], (
@@ -1044,7 +1044,7 @@ class TestDataFootprintSeamDiscriminator:
             357-degree Polygon was published for a 2.7-degree scene.
         """
         dataset = self._partial_projected()
-        item = dataset.to_stac_item(
+        item = dataset.io.to_stac_item(
             "x", asset_href="s.tif", footprint=Footprint(mode="data")
         )
         geom = shape(item["geometry"])
@@ -1086,7 +1086,7 @@ class TestDataFootprintSeamDiscriminator:
         dataset = _wgs84_from_array(np.full((4, 4), -9999.0, dtype="float32"))
         footprint = Footprint(mode="data")
         with pytest.warns(RuntimeWarning, match="no valid pixels"):
-            item = dataset.to_stac_item("x", asset_href="s.tif", footprint=footprint)
+            item = dataset.io.to_stac_item("x", asset_href="s.tif", footprint=footprint)
         assert item["geometry"]["type"] == "Polygon", (
             f"the bbox fallback must not be split, got {item['geometry']['type']}"
         )
@@ -1233,7 +1233,7 @@ class TestPolarBboxLimitation:
             five points and the bbox is the native extent.
         """
         dataset = _wgs84_from_array(np.ones((4, 4), dtype="float32"))
-        item = dataset.to_stac_item("x", asset_href="s.tif")
+        item = dataset.io.to_stac_item("x", asset_href="s.tif")
         ring = item["geometry"]["coordinates"][0]
         assert len(ring) == 5, (
             f"a lon/lat bbox ring must stay a closed rectangle, got {len(ring)} points"
@@ -1303,9 +1303,9 @@ class TestDefaultPayloadChanges:
             no_data_value=0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        source.scale = [0.01]
-        source.to_file(path)
-        band = Dataset.read_file(path).to_stac_item("x", asset_href="s.tif")["assets"][
+        source.bands.scale = [0.01]
+        source.io.to_file(path)
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
             "data"
         ]["raster:bands"][0]
         assert band["scale"] == 0.01, (
@@ -1318,7 +1318,7 @@ class TestDefaultPayloadChanges:
         Test scenario:
             The default 4x4 float raster declares neither scale nor offset.
         """
-        band = wgs84_dataset.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert set(band) == {"data_type", "nodata"}, (
@@ -1335,7 +1335,7 @@ class TestDefaultPayloadChanges:
             `float(band["nodata"])` still works.
         """
         ds = _wgs84_from_array(np.ones((4, 4), dtype="float32"), nodata=np.nan)
-        band = ds.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
+        band = ds.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
             "raster:bands"
         ][0]
         assert band["nodata"] == "nan", (
@@ -1366,9 +1366,9 @@ class TestPackingFieldsAreMeaningful:
             no_data_value=0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        source.scale = [0.0]
-        source.to_file(path)
-        band = Dataset.read_file(path).to_stac_item("x", asset_href="s.tif")["assets"][
+        source.bands.scale = [0.0]
+        source.io.to_file(path)
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
             "data"
         ]["raster:bands"][0]
         assert "scale" not in band, (
@@ -1388,9 +1388,9 @@ class TestPackingFieldsAreMeaningful:
             no_data_value=0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        source.scale = [0.01]
-        source.to_file(path)
-        band = Dataset.read_file(path).to_stac_item("x", asset_href="s.tif")["assets"][
+        source.bands.scale = [0.01]
+        source.io.to_file(path)
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
             "data"
         ]["raster:bands"][0]
         assert band["scale"] == 0.01, f"a real scale must survive the guard, got {band}"
@@ -1423,7 +1423,7 @@ class TestWarningCategories:
         )
         footprint = Footprint(mode="data")
         with pytest.warns(RuntimeWarning, match="footprint='data' needs an EPSG code"):
-            item = ds.to_stac_item("x", asset_href="s.tif", footprint=footprint)
+            item = ds.io.to_stac_item("x", asset_href="s.tif", footprint=footprint)
         assert item["bbox"] == [-180.0, -90.0, 180.0, 90.0], (
             f"the declined footprint falls back to the world extent, got {item['bbox']}"
         )
@@ -1436,7 +1436,7 @@ class TestWarningCategories:
         """
         footprint = Footprint(mode="data")
         with pytest.warns(RuntimeWarning, match="found no valid pixels"):
-            all_nodata_dataset.to_stac_item(
+            all_nodata_dataset.io.to_stac_item(
                 "x", asset_href="s.tif", footprint=footprint
             )
 
@@ -1448,7 +1448,7 @@ class TestWarningCategories:
         """
         bands = BandMetadata(with_stats=True)
         with pytest.warns(RuntimeWarning, match="omitting raster statistics"):
-            all_nodata_dataset.to_stac_item("x", asset_href="s.tif", bands=bands)
+            all_nodata_dataset.io.to_stac_item("x", asset_href="s.tif", bands=bands)
 
     def test_missing_histogram_warns_with_a_category(self, wgs84_dataset):
         """The omitted-histogram warning carries RuntimeWarning.
@@ -1458,7 +1458,7 @@ class TestWarningCategories:
         """
         bands = BandMetadata(with_histogram=True)
         with pytest.warns(RuntimeWarning, match="omitting the raster histogram"):
-            wgs84_dataset.to_stac_item("x", asset_href="s.tif", bands=bands)
+            wgs84_dataset.io.to_stac_item("x", asset_href="s.tif", bands=bands)
 
     def test_world_extent_fallback_warns_with_a_category(self):
         """The CRS-less world-extent fallback carries RuntimeWarning too.
@@ -1499,7 +1499,7 @@ class TestTheMethodForwardsEveryKeyword:
 
     def test_asset_roles_reaches_the_asset(self, wgs84_dataset):
         """A caller's roles land on the emitted asset."""
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", asset_roles=["data", "reflectance"]
         )
         assert item["assets"]["data"]["roles"] == ["data", "reflectance"], (
@@ -1508,7 +1508,7 @@ class TestTheMethodForwardsEveryKeyword:
 
     def test_the_method_default_matches_the_free_function(self, wgs84_dataset):
         """Omitting it keeps the documented `["data"]`, so the fix is additive."""
-        through_method = wgs84_dataset.to_stac_item("x", asset_href="s.tif")
+        through_method = wgs84_dataset.io.to_stac_item("x", asset_href="s.tif")
         direct = to_stac_item(wgs84_dataset, "x", asset_href="s.tif")
         assert (
             through_method["assets"]["data"]["roles"]
@@ -1522,7 +1522,7 @@ class TestTheMethodForwardsEveryKeyword:
 
     def test_a_single_role_tuple_is_accepted(self, wgs84_dataset):
         """The parameter is a `Sequence`, so a tuple works like a list."""
-        item = wgs84_dataset.to_stac_item(
+        item = wgs84_dataset.io.to_stac_item(
             "x", asset_href="s.tif", asset_roles=("overview",)
         )
         assert item["assets"]["data"]["roles"] == ["overview"], (

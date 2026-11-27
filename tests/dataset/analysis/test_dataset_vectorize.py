@@ -33,7 +33,7 @@ class TestToGeodataframeNewParams:
     @pytest.mark.parametrize("values", [True, False])
     def test_returns_a_feature_collection(self, values):
         """to_geodataframe returns a FeatureCollection (still a GeoDataFrame), both modes."""
-        fc = self._raster().to_geodataframe(geometry="point", values=values)
+        fc = self._raster().vector.to_geodataframe(geometry="point", values=values)
         assert isinstance(fc, FeatureCollection), (
             f"expected FeatureCollection, got {type(fc)}"
         )
@@ -46,27 +46,27 @@ class TestToGeodataframeNewParams:
         """Only 'point'/'polygon' are valid; anything else raises naming the value."""
         ds = self._raster()
         with pytest.raises(ValueError, match="expected 'point' or 'polygon'"):
-            ds.to_geodataframe(geometry=geometry, values=False)
+            ds.vector.to_geodataframe(geometry=geometry, values=False)
 
     @pytest.mark.parametrize("geometry", ["point", "polygon"])
     def test_an_unknown_location_is_refused(self, geometry):
         """A garbage location raises for both point and polygon, not silently ignored."""
         ds = self._raster()
         with pytest.raises(ValueError, match="expected 'center' or 'corner'"):
-            ds.to_geodataframe(geometry=geometry, location="garbage", values=False)
+            ds.vector.to_geodataframe(geometry=geometry, location="garbage", values=False)
 
     def test_crs_overrides_the_labelled_crs_geometry_only(self):
         """`crs=` relabels the geometry-only frame and warns it does not reproject."""
         ds = self._raster()
         with pytest.warns(UserWarning, match="relabels the CRS without reprojecting"):
-            gdf = ds.to_geodataframe(geometry="point", values=False, crs=3857)
+            gdf = ds.vector.to_geodataframe(geometry="point", values=False, crs=3857)
         assert gdf.crs.to_epsg() == 3857, f"expected EPSG:3857, got {gdf.crs}"
 
     def test_crs_overrides_the_labelled_crs_with_values(self):
         """`crs=` also relabels the values+geometry frame, with the same warning."""
         ds = self._raster()
         with pytest.warns(UserWarning, match="relabels the CRS without reprojecting"):
-            gdf = ds.to_geodataframe(geometry="point", values=True, crs=3857)
+            gdf = ds.vector.to_geodataframe(geometry="point", values=True, crs=3857)
         assert gdf.crs.to_epsg() == 3857, f"expected EPSG:3857, got {gdf.crs}"
 
     def test_crs_same_as_raster_does_not_warn(self, recwarn):
@@ -81,14 +81,14 @@ class TestToGeodataframeNewParams:
         """The value path always drops gaps, so values=True + dropna=False is a contradiction."""
         ds = self._raster()
         with pytest.raises(ValueError, match="always drops no-data"):
-            ds.to_geodataframe(geometry="point", values=True, dropna=False)
+            ds.vector.to_geodataframe(geometry="point", values=True, dropna=False)
 
     @pytest.mark.parametrize("dropna", [0, 0.0, []])
     def test_values_true_with_falsy_dropna_is_refused(self, dropna):
         """Any falsy-but-not-None dropna with values=True is refused, like dropna=False."""
         ds = self._raster()
         with pytest.raises(ValueError, match="always drops no-data"):
-            ds.to_geodataframe(geometry="point", values=True, dropna=dropna)
+            ds.vector.to_geodataframe(geometry="point", values=True, dropna=dropna)
 
     def test_mask_shape_is_honoured_on_the_geometry_only_path(self):
         """A non-rectangular mask selects the same cells for values=False and values=True."""
@@ -97,8 +97,8 @@ class TestToGeodataframeNewParams:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 3.0, 0.0, -1.0), epsg=4326),
         )
         tri = gpd.GeoDataFrame(geometry=[Polygon([(0, 0), (3, 0), (0, 3)])], crs=4326)
-        geom_only = ds.to_geodataframe(geometry="polygon", values=False, mask=tri)
-        with_values = ds.to_geodataframe(geometry="polygon", values=True, mask=tri)
+        geom_only = ds.vector.to_geodataframe(geometry="polygon", values=False, mask=tri)
+        with_values = ds.vector.to_geodataframe(geometry="polygon", values=True, mask=tri)
         assert len(geom_only) == len(with_values), (
             f"geometry-only ({len(geom_only)}) must match values path ({len(with_values)})"
         )
@@ -114,7 +114,7 @@ class TestToGeodataframeNewParams:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
             no_data_value=-9999.0,
         )
-        gdf = ds.to_geodataframe(geometry="point", values=True)
+        gdf = ds.vector.to_geodataframe(geometry="point", values=True)
         assert len(gdf) == 4, f"band 0 is all valid, so 4 cells survive, got {len(gdf)}"
         assert gdf["Band_2"].isna().sum() == 1, "the band-1 gap cell keeps a NaN value"
 
@@ -126,8 +126,8 @@ class TestToGeodataframeNewParams:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
             no_data_value=-9999.0,
         )
-        untiled = ds.to_geodataframe(geometry="point", values=True, tile=False)
-        tiled = ds.to_geodataframe(
+        untiled = ds.vector.to_geodataframe(geometry="point", values=True, tile=False)
+        tiled = ds.vector.to_geodataframe(
             geometry="point", values=True, tile=True, tile_size=1
         )
         assert len(untiled) == len(tiled) == 4, f"{len(untiled)} vs {len(tiled)}"
@@ -147,7 +147,7 @@ class TestToFeatureCollection:
                 top_left_corner=top_left_corner, cell_size=cell_size, epsg=4326
             ),
         )
-        df = dataset.to_geodataframe(tile=True, tile_size=1, geometry="point")
+        df = dataset.vector.to_geodataframe(tile=True, tile_size=1, geometry="point")
         # compare extracted data with original data from arr
         np.testing.assert_array_equal(
             df.loc[:, "Band_1"].values, arr.reshape(df.shape[0])
@@ -166,7 +166,7 @@ class TestToFeatureCollection:
             raster_to_df_arr: array for comparison
             """
             src = Dataset(raster_1band_coello_gdal_dataset)
-            gdf = src.to_geodataframe(geometry="Point")
+            gdf = src.vector.to_geodataframe(geometry="Point")
             assert isinstance(gdf, GeoDataFrame)
             rows, cols = raster_to_df_arr.shape
             # get values and reshape arrays for comparison
@@ -182,7 +182,7 @@ class TestToFeatureCollection:
         ):
             """the input raster is given as a string path on disk."""
             dataset = Dataset(era5_image)
-            gdf = dataset.to_geodataframe(geometry="Point")
+            gdf = dataset.vector.to_geodataframe(geometry="Point")
             assert isinstance(gdf, GeoDataFrame)
             assert gdf.equals(era5_image_gdf), (
                 "the extracted values in the dataframe does not equa the real "
@@ -201,7 +201,7 @@ class TestToFeatureCollection:
             raster_to_df_arr: array for comparison
             """
             dataset = Dataset(raster_to_df_dataset_with_cropped_cell)
-            gdf = dataset.to_geodataframe(geometry="Point")
+            gdf = dataset.vector.to_geodataframe(geometry="Point")
             assert isinstance(gdf, GeoDataFrame)
             # rows, cols = raster_to_df_arr.shape
             # get values and reshape arrays for comparison
@@ -235,11 +235,11 @@ class TestToFeatureCollection:
             rasterized_mask_values: array for comparison
             """
             dataset = Dataset(raster_1band_coello_gdal_dataset)
-            gdf = dataset.to_geodataframe(
+            gdf = dataset.vector.to_geodataframe(
                 mask=polygon_corner_coello_gdf, geometry="Point", touch=False
             )
 
-            poly_gdf = dataset.to_geodataframe(
+            poly_gdf = dataset.vector.to_geodataframe(
                 mask=polygon_corner_coello_gdf, geometry="Polygon", touch=False
             )
             assert isinstance(gdf, GeoDataFrame)
@@ -267,10 +267,10 @@ class TestToFeatureCollection:
             rasterized_mask_values: array for comparison
             """
             dataset = Dataset(raster_1band_coello_gdal_dataset)
-            gdf = dataset.to_geodataframe(
+            gdf = dataset.vector.to_geodataframe(
                 mask=coello_irregular_polygon_gdf, geometry="Point", touch=False
             )
-            poly_gdf = dataset.to_geodataframe(
+            poly_gdf = dataset.vector.to_geodataframe(
                 mask=coello_irregular_polygon_gdf, geometry="Polygon", touch=False
             )
             assert isinstance(gdf, GeoDataFrame)
@@ -298,7 +298,7 @@ class TestExtract:
         src_no_data_value: float,
     ):
         src = Dataset(src)
-        values = src.extract(exclude_value=0)
+        values = src.analysis.extract(exclude_value=0)
         extracted_values = [
             1.0,
             2.0,
@@ -356,7 +356,7 @@ class TestExtract:
         src_no_data_value: float,
     ):
         src = Dataset(sentinel_raster)
-        values = src.extract()
+        values = src.analysis.extract()
         arr = sentinel_raster.ReadAsArray()
         arr = arr.reshape((arr.shape[0], arr.shape[1] * arr.shape[2]))
         assert np.array_equal(arr, values)
@@ -384,7 +384,7 @@ class TestExtract:
         indices = np.array([[1, 1], [3, 1], [3, 3], [1, 3]])
         arr_extracted_values = arr[:, indices[:, 0], indices[:, 1]]
 
-        values = dataset.extract(mask=points)
+        values = dataset.analysis.extract(mask=points)
         np.testing.assert_array_equal(values, arr_extracted_values)
 
     def test_xy_from_array_indices(self):
@@ -399,7 +399,7 @@ class TestExtract:
         )
         tile_xoff = [0, 0, 0, 6, 6, 6, 12, 12, 12]
         tile_yoff = [0, 6, 12, 0, 6, 12, 0, 6, 12]
-        x_coords, y_coords = dataset.xy(
+        x_coords, y_coords = dataset.cell.xy(
             tile_yoff,
             tile_xoff,
             center=False,
@@ -456,7 +456,7 @@ class TestExtract:
         coello_gauges: GeoDataFrame,
     ):
         src = Dataset(src)
-        values = src.extract(exclude_value=0, mask=coello_gauges)
+        values = src.analysis.extract(exclude_value=0, mask=coello_gauges)
         assert len(values) == len(coello_gauges)
         assert np.array_equal(values, [4, 6, 1, 5, 49, 88])
 
@@ -471,7 +471,7 @@ class TestExtract:
             geometry=[Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])], crs=ds.epsg
         )
         with pytest.raises(ValueError, match="Point geometries"):
-            ds.extract(mask=polys)
+            ds.analysis.extract(mask=polys)
 
     def test_extract_with_multipoint_mask_raises(self, src: gdal.Dataset):
         """MultiPoint masks are rejected — downstream coordinate mapping reads
@@ -481,7 +481,7 @@ class TestExtract:
             geometry=[MultiPoint([(0.0, 0.0), (1.0, 1.0)])], crs=ds.epsg
         )
         with pytest.raises(ValueError, match="Point geometries"):
-            ds.extract(mask=mask)
+            ds.analysis.extract(mask=mask)
 
     def test_extract_with_missing_geometry_raises_cleanly(self, src: gdal.Dataset):
         """A mask holding missing geometries (geom_type nan) must raise the
@@ -489,14 +489,14 @@ class TestExtract:
         ds = Dataset(src)
         mask = gpd.GeoDataFrame(geometry=[Point(0.0, 0.0), None], crs=ds.epsg)
         with pytest.raises(ValueError, match="Point geometries"):
-            ds.extract(mask=mask)
+            ds.analysis.extract(mask=mask)
 
 
 class TestFootPrint:
     @pytest.mark.fast
     def test_raster_full_of_data(self, test_image: Dataset):
         dataset = Dataset(test_image)
-        extent = dataset.footprint()
+        extent = dataset.analysis.footprint()
         # extent.to_file("tests/data/extent1.geojson")
         # extent column should have one class only
         assert len(set(extent[dataset.band_names[0]])) == 1
@@ -506,7 +506,7 @@ class TestFootPrint:
     @pytest.mark.fast
     def test_max_depth_raster(self, footprint_test: Dataset, replace_values: List):
         dataset = Dataset(footprint_test)
-        extent = dataset.footprint(exclude_values=replace_values)
+        extent = dataset.analysis.footprint(exclude_values=replace_values)
 
         # extent column should have one class only
         assert len(set(extent[dataset.band_names[0]])) == 1
@@ -518,7 +518,7 @@ class TestFootPrint:
         self, test_image: gdal.Dataset, nan_raster: str
     ):
         dataset = Dataset(nan_raster)
-        extent = dataset.footprint()
+        extent = dataset.analysis.footprint()
         assert extent is None
 
     @pytest.mark.fast
@@ -527,7 +527,7 @@ class TestFootPrint:
     ):
         dataset = Dataset(modis_surf_temp)
         # modis no_data_value in the gdal object is different than the array
-        extent = dataset.footprint(exclude_values=replace_values)
+        extent = dataset.analysis.footprint(exclude_values=replace_values)
         # extent column should have one class only
         assert len(set(extent[dataset.band_names[0]])) == 1
         # the class should be 2
@@ -538,7 +538,7 @@ class TestFootPrint:
         self, era5_image: gdal.Dataset, replace_values: List
     ):
         dataset = Dataset(era5_image)
-        extent = dataset.footprint(exclude_values=replace_values)
+        extent = dataset.analysis.footprint(exclude_values=replace_values)
         # extent column should have one class only
         assert len(set(extent[dataset.band_names[0]])) == 1
         # the class should be 2
@@ -559,7 +559,7 @@ class TestFootPrint:
                 top_left_corner=(0.0, 200.0), cell_size=1.0, epsg=3857
             ),
         )
-        extent = ds.footprint(exclude_values=[0])
+        extent = ds.analysis.footprint(exclude_values=[0])
         assert extent is not None, "A covered block must yield a footprint"
         assert float(extent.geometry.area.sum()) == pytest.approx(100 * 100), (
             "Exact footprint area must equal the covered block area"
@@ -580,7 +580,7 @@ class TestFootPrint:
                 top_left_corner=(0.0, 200.0), cell_size=1.0, epsg=3857
             ),
         )
-        approx = ds.footprint(exclude_values=[0], max_samples=400)
+        approx = ds.analysis.footprint(exclude_values=[0], max_samples=400)
         assert approx is not None, "Decimated footprint must still be produced"
         minx, miny, maxx, maxy = approx.total_bounds
         # The covered block spans x 60..160, y 50..150; decimation (~10-unit cells)
@@ -612,7 +612,7 @@ class TestFootPrint:
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=3857),
         )
         with pytest.raises(ValueError, match="max_samples must be a positive integer"):
-            ds.footprint(max_samples=bad)
+            ds.analysis.footprint(max_samples=bad)
 
     def test_max_samples_preserves_extent_on_rotated_non_square_raster(self):
         """Decimated footprint keeps the exact extent on a rotated, non-square-cell raster.
@@ -629,8 +629,8 @@ class TestFootPrint:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=geotransform, epsg=3857),
         )
-        exact = ds.footprint()
-        approx = ds.footprint(max_samples=400)
+        exact = ds.analysis.footprint()
+        approx = ds.analysis.footprint(max_samples=400)
         assert exact is not None, "exact footprint must exist"
         assert approx is not None, "decimated footprint must exist"
         np.testing.assert_allclose(
@@ -684,8 +684,8 @@ class TestToFeatureCollectionMaskTiling:
             non-tiled branch produced 16 — and the geometry attached afterwards
             came from the cropped extent, so values and geometry disagreed.
         """
-        tiled = masked_dataset.to_geodataframe(mask=box_mask, tile=True, tile_size=4)
-        untiled = masked_dataset.to_geodataframe(mask=box_mask, tile=False)
+        tiled = masked_dataset.vector.to_geodataframe(mask=box_mask, tile=True, tile_size=4)
+        untiled = masked_dataset.vector.to_geodataframe(mask=box_mask, tile=False)
         assert len(tiled) == len(untiled), (
             f"tiled returned {len(tiled)} rows, non-tiled {len(untiled)}; the mask "
             "must apply to both paths"
@@ -704,7 +704,7 @@ class TestToFeatureCollectionMaskTiling:
             through the (possibly uncropped) source must not start dropping
             cells when no mask was given.
         """
-        tiled = masked_dataset.to_geodataframe(tile=True, tile_size=4)
+        tiled = masked_dataset.vector.to_geodataframe(tile=True, tile_size=4)
         assert len(tiled) == 100, f"expected all 100 cells, got {len(tiled)}"
 
 
@@ -821,8 +821,8 @@ class TestTiledRowOrder:
             each tile -- against the untiled path's row-major, so the two
             frames held the same values in a different order.
         """
-        untiled = uneven.to_geodataframe(tile=False)
-        tiled = uneven.to_geodataframe(tile=True, tile_size=8)
+        untiled = uneven.vector.to_geodataframe(tile=False)
+        tiled = uneven.vector.to_geodataframe(tile=True, tile_size=8)
         pd.testing.assert_frame_equal(
             untiled.reset_index(drop=True), tiled.reset_index(drop=True)
         )
@@ -835,8 +835,8 @@ class TestTiledRowOrder:
             the geometry is built row-major, so tile-major values landed on the
             wrong cells whenever the raster spanned more than one tile.
         """
-        untiled = uneven.to_geodataframe(tile=False, geometry="point")
-        tiled = uneven.to_geodataframe(tile=True, tile_size=8, geometry="point")
+        untiled = uneven.vector.to_geodataframe(tile=False, geometry="point")
+        tiled = uneven.vector.to_geodataframe(tile=True, tile_size=8, geometry="point")
         assert untiled.geometry.equals(tiled.geometry), (
             "the same cell must carry the same point on both paths"
         )
@@ -847,15 +847,15 @@ class TestTiledRowOrder:
 
     def test_a_single_tile_covering_the_raster_is_unchanged(self, uneven):
         """A tile larger than the raster is the untiled path by another name."""
-        untiled = uneven.to_geodataframe(tile=False)
-        one_tile = uneven.to_geodataframe(tile=True, tile_size=512)
+        untiled = uneven.vector.to_geodataframe(tile=False)
+        one_tile = uneven.vector.to_geodataframe(tile=True, tile_size=512)
         pd.testing.assert_frame_equal(
             untiled.reset_index(drop=True), one_tile.reset_index(drop=True)
         )
 
     def test_no_data_cells_are_dropped_on_both_paths(self, uneven):
         """The two no-data cells are absent from both frames."""
-        tiled = uneven.to_geodataframe(tile=True, tile_size=8)
+        tiled = uneven.vector.to_geodataframe(tile=True, tile_size=8)
         assert len(tiled) == 37 * 53 - 2, (
             f"expected the two no-data cells dropped, got {len(tiled)} rows"
         )
@@ -872,7 +872,7 @@ class TestTiledRowOrder:
         """
         full_spy = mocker.spy(_Vector, "_extract_values_full")
         tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
-        uneven.to_geodataframe()
+        uneven.vector.to_geodataframe()
         assert full_spy.call_count == 1, "small raster should read the whole array"
         assert tiled_spy.call_count == 0, "small raster should not tile"
 
@@ -888,9 +888,9 @@ class TestTiledRowOrder:
         """
         monkeypatch.setattr("pyramids.dataset.engines.vectorize._AUTO_TILE_BYTES", 1)
         tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
-        auto = uneven.to_geodataframe(tile_size=8)
+        auto = uneven.vector.to_geodataframe(tile_size=8)
         assert tiled_spy.call_count == 1, "large raster should tile"
-        untiled = uneven.to_geodataframe(tile=False)
+        untiled = uneven.vector.to_geodataframe(tile=False)
         pd.testing.assert_frame_equal(
             auto.reset_index(drop=True), untiled.reset_index(drop=True)
         )
@@ -907,6 +907,6 @@ class TestTiledRowOrder:
         monkeypatch.setattr("pyramids.dataset.engines.vectorize._AUTO_TILE_BYTES", 1)
         full_spy = mocker.spy(_Vector, "_extract_values_full")
         tiled_spy = mocker.spy(_Vector, "_extract_values_tiled")
-        uneven.to_geodataframe(tile=False)
+        uneven.vector.to_geodataframe(tile=False)
         assert full_spy.call_count == 1, "explicit tile=False must read the whole array"
         assert tiled_spy.call_count == 0, "explicit tile=False must not tile"

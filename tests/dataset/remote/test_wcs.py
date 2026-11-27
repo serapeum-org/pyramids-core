@@ -472,7 +472,7 @@ class TestDriverFullCycle:
                 bbox=(2.0, 2.0, 4.0, 4.0),
                 version="2.0.1",
             )
-            arr = ds.read_array()
+            arr = ds.io.read_array()
             assert arr.shape == (20, 20)
             assert arr[0, 0] == 0 and arr[1, 1] == 2  # synthetic (row+col) pattern
 

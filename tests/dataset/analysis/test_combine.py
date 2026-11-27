@@ -54,14 +54,14 @@ class TestCombine:
         surface = _raster(np.full((20, 20), 30.0, "float32"))
         bare = _raster(np.full((20, 20), 22.0, "float32"))
 
-        canopy = surface.combine(bare, lambda a, b: a - b)
+        canopy = surface.analysis.combine(bare, lambda a, b: a - b)
 
         assert isinstance(canopy, Dataset), (
             "combine must return a Dataset, not an array"
         )
         assert canopy.geotransform == surface.geotransform, "the grid must be preserved"
         assert canopy.epsg == surface.epsg, "the CRS must be preserved"
-        assert np.allclose(np.asarray(canopy.read_array()), 8.0)
+        assert np.allclose(np.asarray(canopy.io.read_array()), 8.0)
 
     @pytest.mark.parametrize(
         ("apply_operator", "expected"),
@@ -90,7 +90,7 @@ class TestCombine:
         result = apply_operator(surface, bare)
 
         assert isinstance(result, Dataset), "an operator must return a Dataset"
-        assert np.allclose(np.asarray(result.read_array()), expected)
+        assert np.allclose(np.asarray(result.io.read_array()), expected)
 
     def test_a_no_data_cell_on_either_side_stays_no_data(self):
         """The result's domain is the intersection of the operands' domains.
@@ -104,7 +104,7 @@ class TestCombine:
         right = np.full((4, 4), 4.0, "float32")
         right[1, 1] = -9999.0
 
-        result = np.asarray((_raster(left) - _raster(right)).read_array())
+        result = np.asarray((_raster(left) - _raster(right)).io.read_array())
 
         assert np.isnan(result[0, 0]), "a left-hand no-data cell must stay no-data"
         assert np.isnan(result[1, 1]), "a right-hand no-data cell must stay no-data"
@@ -134,7 +134,7 @@ class TestCombine:
             np.full((4, 4), 40, "int32")
         )
 
-        assert np.asarray(difference.read_array()).dtype == np.int32
+        assert np.asarray(difference.io.read_array()).dtype == np.int32
         assert difference.no_data_value[0] is None, "nothing was masked to mark"
 
     def test_an_integer_result_that_masked_something_inherits_a_sentinel(self):
@@ -150,8 +150,8 @@ class TestCombine:
         difference = _raster(left) - _raster(np.full((4, 4), 40, "int32"))
 
         assert difference.no_data_value[0] == -9999
-        assert np.asarray(difference.read_array())[0, 0] == -9999
-        assert np.asarray(difference.read_array())[1, 1] == 60
+        assert np.asarray(difference.io.read_array())[0, 0] == -9999
+        assert np.asarray(difference.io.read_array())[1, 1] == 60
 
     @pytest.mark.parametrize(
         ("dtype", "left_value", "right_value", "sentinel", "expected"),
@@ -188,7 +188,7 @@ class TestCombine:
         result = left + right if dtype == "uint8" else left - right
 
         assert result.no_data_value[0] is None, "no cell is a gap, so none is marked"
-        assert (np.asarray(result.read_array()) == expected).all()
+        assert (np.asarray(result.io.read_array()) == expected).all()
 
     def test_a_colliding_explicit_sentinel_warns(self):
         """An explicit `no_data_value=` is honoured, but not silently.
@@ -201,7 +201,7 @@ class TestCombine:
         right = _raster(np.full((4, 4), 4.0, "float32"))
 
         with pytest.warns(NoDataCollisionWarning, match="also a value"):
-            result = left.combine(right, np.subtract, no_data_value=-1.0)
+            result = left.analysis.combine(right, np.subtract, no_data_value=-1.0)
 
         assert result.no_data_value[0] == -1.0
 
@@ -220,8 +220,8 @@ class TestCombine:
             np.full((4, 4), 2.0, "float32"), geo_ref=GEO_REF, no_data_value=None
         )
 
-        result = masked.combine(right, lambda a, b: (a - b).astype("int32"))
-        array = np.asarray(result.read_array())
+        result = masked.analysis.combine(right, lambda a, b: (a - b).astype("int32"))
+        array = np.asarray(result.io.read_array())
 
         assert result.no_data_value[0] is not None, "the gap needs a marker"
         assert array[0, 0] == result.no_data_value[0], "the gap carries it"
@@ -241,10 +241,10 @@ class TestCombine:
             np.full((4, 4), 1.0, "float32"), geo_ref=GEO_REF, no_data_value=np.nan
         )
 
-        result = left.combine(right, lambda a, b: (a > b).astype("int16"))
+        result = left.analysis.combine(right, lambda a, b: (a > b).astype("int16"))
 
-        assert np.asarray(result.read_array()).dtype == np.int16
-        assert (np.asarray(result.read_array()) == 1).all()
+        assert np.asarray(result.io.read_array()).dtype == np.int16
+        assert (np.asarray(result.io.read_array()) == 1).all()
 
     def test_a_band_whose_sentinel_is_unusable_falls_through_to_one_that_fits(self):
         """Inheritance scans every band of both operands, not band 0 alone.
@@ -268,8 +268,8 @@ class TestCombine:
         result = operand - right
 
         assert result.no_data_value[0] == -9999
-        assert np.asarray(result.read_array())[1, 0, 0] == -9999
-        assert np.asarray(result.read_array())[0, 0, 0] == 7
+        assert np.asarray(result.io.read_array())[1, 0, 0] == -9999
+        assert np.asarray(result.io.read_array())[0, 0, 0] == 7
 
     def test_explicit_no_data_value_is_used_as_given(self):
         """`no_data_value=` overrides the derived sentinel.
@@ -280,12 +280,12 @@ class TestCombine:
         left = np.full((4, 4), 10.0, "float32")
         left[0, 0] = -9999.0
 
-        result = _raster(left).combine(
+        result = _raster(left).analysis.combine(
             _raster(np.full((4, 4), 1.0, "float32")), np.subtract, no_data_value=-1.0
         )
 
         assert result.no_data_value[0] == -1.0
-        assert np.asarray(result.read_array())[0, 0] == -1.0
+        assert np.asarray(result.io.read_array())[0, 0] == -1.0
 
     def test_no_data_value_none_hands_every_cell_to_func(self):
         """`no_data_value=None` switches off masking and declares no sentinel.
@@ -297,12 +297,12 @@ class TestCombine:
         left = np.full((4, 4), 10.0, "float32")
         left[0, 0] = -9999.0
 
-        result = _raster(left).combine(
+        result = _raster(left).analysis.combine(
             _raster(np.full((4, 4), 1.0, "float32")), np.subtract, no_data_value=None
         )
 
         assert result.no_data_value[0] is None, "no sentinel is declared"
-        assert np.asarray(result.read_array())[0, 0] == pytest.approx(-10000.0)
+        assert np.asarray(result.io.read_array())[0, 0] == pytest.approx(-10000.0)
 
     def test_a_predicate_is_stored_as_byte_with_a_free_sentinel(self):
         """GDAL has no boolean band, so a comparison lands in Byte with 255 spare.
@@ -310,11 +310,11 @@ class TestCombine:
         Test scenario:
             `a > b` on two float rasters gives a uint8 band of ones declaring 255.
         """
-        result = _raster(np.full((5, 5), 30.0, "float32")).combine(
+        result = _raster(np.full((5, 5), 30.0, "float32")).analysis.combine(
             _raster(np.full((5, 5), 22.0, "float32")), lambda a, b: a > b
         )
 
-        array = np.asarray(result.read_array())
+        array = np.asarray(result.io.read_array())
         assert array.dtype == np.uint8, "a boolean result is stored as Byte"
         assert result.no_data_value[0] == 255, "255 cannot collide with 0/1"
         assert (array == 1).all()
@@ -331,7 +331,7 @@ class TestCombine:
         result = left - right
 
         assert result.shape == (3, 5, 5), "the band count must be preserved"
-        assert (np.asarray(result.read_array()) == 7).all()
+        assert (np.asarray(result.io.read_array()) == 7).all()
 
     def test_band_selects_one_band_from_each_operand(self):
         """`band=` narrows both operands to that band and returns a single-band raster.
@@ -344,10 +344,10 @@ class TestCombine:
         )
         right = _raster(np.full((3, 5, 5), 1, "int16"))
 
-        result = left.combine(right, np.subtract, band=1)
+        result = left.analysis.combine(right, np.subtract, band=1)
 
         assert result.shape == (1, 5, 5), "a band selection yields one band"
-        assert (np.asarray(result.read_array()) == 1).all()
+        assert (np.asarray(result.io.read_array()) == 1).all()
 
     def test_mismatched_band_counts_are_refused(self):
         """Combining every band needs band counts that agree or broadcast.
@@ -388,10 +388,10 @@ class TestCombine:
             geo_ref=GeoReference(top_left_corner=(0.0, 5.0), cell_size=0.5, epsg=4326),
         )
 
-        result = left - coarse.align(left)
+        result = left - coarse.spatial.align(left)
 
         assert result.shape == left.shape
-        assert np.allclose(np.asarray(result.read_array()), 6.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 6.0)
 
     def test_a_scalar_operand_is_combined(self):
         """A scalar takes the same route as a raster operand (#1136).
@@ -404,7 +404,7 @@ class TestCombine:
             and is still the tool to reach for when that is what you want.
         """
         result = _raster(np.full((4, 4), 5.0, "float32")) - 2
-        assert np.allclose(np.asarray(result.read_array()), 3.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 3.0)
 
     def test_a_boolean_operand_is_still_declined(self):
         """`True` is a `Real` equal to `1`, and `ds * True` reads as a caller's bug."""
@@ -426,7 +426,7 @@ class TestCombine:
         not_a_raster = np.zeros((4, 4))
 
         with pytest.raises(TypeError, match=r"`other` must be a Dataset, got ndarray"):
-            left.combine(not_a_raster, np.subtract)
+            left.analysis.combine(not_a_raster, np.subtract)
 
     def test_a_non_callable_func_is_refused(self):
         """The second argument has to be callable.
@@ -438,7 +438,7 @@ class TestCombine:
         right = _raster(np.zeros((4, 4), "float32"))
 
         with pytest.raises(TypeError, match=r"`func` must be callable, got str"):
-            left.combine(right, "nope")
+            left.analysis.combine(right, "nope")
 
     def test_a_scalar_callable_is_lifted_with_vectorize(self):
         """A two-scalar `func` works, mirroring `apply`'s fallback.
@@ -446,11 +446,11 @@ class TestCombine:
         Test scenario:
             `math.hypot`, which rejects arrays, still combines cell by cell.
         """
-        result = _raster(np.full((4, 4), 3.0, "float32")).combine(
+        result = _raster(np.full((4, 4), 3.0, "float32")).analysis.combine(
             _raster(np.full((4, 4), 4.0, "float32")), math.hypot
         )
 
-        assert np.allclose(np.asarray(result.read_array()), 5.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 5.0)
 
     def test_operands_without_a_sentinel_give_a_result_without_one(self):
         """A raster that declares no no-data value has a full domain; so does the result.
@@ -469,7 +469,7 @@ class TestCombine:
         result = left - right
 
         assert result.no_data_value[0] is None, "no operand had a sentinel to inherit"
-        assert (np.asarray(result.read_array()) == 6).all()
+        assert (np.asarray(result.io.read_array()) == 6).all()
 
     def test_a_sentinel_is_inherited_from_whichever_operand_has_one(self):
         """The right operand supplies the sentinel when the left declares none.
@@ -489,8 +489,8 @@ class TestCombine:
         result = left - right
 
         assert result.no_data_value[0] == -9999, "the right operand's sentinel is used"
-        assert np.asarray(result.read_array())[0, 0] == -9999
-        assert np.asarray(result.read_array())[1, 1] == 6
+        assert np.asarray(result.io.read_array())[0, 0] == -9999
+        assert np.asarray(result.io.read_array())[1, 1] == 6
 
     def test_a_sentinel_that_cannot_be_stored_is_refused(self):
         """An unusable `no_data_value=` is named rather than silently coerced.
@@ -503,7 +503,7 @@ class TestCombine:
         right = _raster(np.full((4, 4), 4, "int32"))
 
         with pytest.raises(ValueError, match="cannot be stored in the int32"):
-            left.combine(right, np.subtract, no_data_value="abc")
+            left.analysis.combine(right, np.subtract, no_data_value="abc")
 
     def test_two_fully_masked_operands_survive_a_scalar_callable(self):
         """An all-no-data pair is the normal state of, say, an ocean tile.
@@ -515,9 +515,9 @@ class TestCombine:
         """
         empty = np.full((4, 4), -9999.0, "float32")
 
-        result = _raster(empty).combine(_raster(empty), math.hypot)
+        result = _raster(empty).analysis.combine(_raster(empty), math.hypot)
 
-        assert np.isnan(np.asarray(result.read_array())).all(), "every cell is a gap"
+        assert np.isnan(np.asarray(result.io.read_array())).all(), "every cell is a gap"
 
     def test_a_func_returning_the_wrong_number_of_values_is_named(self):
         """A short result names `func` rather than surfacing a numpy mask message.
@@ -530,7 +530,7 @@ class TestCombine:
         right = _raster(np.full((4, 4), 2.0, "float32"))
 
         with pytest.raises(ValueError, match=r"shape \(2,\) for 16 cells"):
-            left.combine(right, lambda a, b: np.array([1.0, 2.0]))
+            left.analysis.combine(right, lambda a, b: np.array([1.0, 2.0]))
 
     def test_band_names_travel_with_the_result(self):
         """Band identity is half the reason to keep the operation inside the Dataset.
@@ -544,7 +544,7 @@ class TestCombine:
         right = _raster(np.full((2, 4, 4), 1.0, "float32"))
 
         assert (left - right).band_names == ["red", "nir"]
-        assert left.combine(right, np.subtract, band=1).band_names == ["nir"]
+        assert left.analysis.combine(right, np.subtract, band=1).band_names == ["nir"]
 
     def test_read_only_operands_combine_into_a_writable_result(self, tmp_path):
         """`combine` only reads, so a read-only source is not a barrier.
@@ -558,14 +558,14 @@ class TestCombine:
         """
         left_path = str(tmp_path / "a.tif")
         right_path = str(tmp_path / "b.tif")
-        _raster(np.full((4, 4), 10.0, "float32")).to_file(left_path)
-        _raster(np.full((4, 4), 4.0, "float32")).to_file(right_path)
+        _raster(np.full((4, 4), 10.0, "float32")).io.to_file(left_path)
+        _raster(np.full((4, 4), 4.0, "float32")).io.to_file(right_path)
         left = Dataset.read_file(left_path)
 
         result = left - Dataset.read_file(right_path)
 
         assert left.access == "read_only", "premise: the operands are read-only"
-        assert np.allclose(np.asarray(result.read_array()), 6.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 6.0)
         assert result.access == "write", "the result is a fresh in-memory raster"
 
     def test_an_out_of_range_band_is_refused(self):
@@ -577,7 +577,7 @@ class TestCombine:
         one = _raster(np.full((4, 4), 1.0, "float32"))
 
         with pytest.raises(ValueError, match="out of range for a 1-band dataset"):
-            one.combine(one, np.subtract, band=7)
+            one.analysis.combine(one, np.subtract, band=7)
 
     def test_a_computed_nan_is_a_gap_on_a_floating_result(self):
         """A float result declares NaN whether or not `func` produced one.
@@ -598,8 +598,8 @@ class TestCombine:
         ndvi = (left - right) / (left + right)
 
         assert np.isnan(ndvi.no_data_value[0]), "a float result always declares NaN"
-        assert np.isnan(np.asarray(ndvi.read_array())[0, 0]), "0/0 has no value"
-        assert ndvi.count_domain_cells() == 8, "the undefined cell leaves the domain"
+        assert np.isnan(np.asarray(ndvi.io.read_array())[0, 0]), "0/0 has no value"
+        assert ndvi.analysis.count_domain_cells() == 8, "the undefined cell leaves the domain"
 
     def test_an_all_masked_pair_agrees_on_dtype_whichever_way_func_is_spelled(self):
         """The empty-domain path must not depend on how the caller wrote `func`.
@@ -612,7 +612,7 @@ class TestCombine:
         """
         empty = np.full((4, 4), -9999, "int32")
 
-        scalar_style = _raster(empty).combine(_raster(empty), math.hypot)
+        scalar_style = _raster(empty).analysis.combine(_raster(empty), math.hypot)
         ufunc_style = _raster(empty) - _raster(empty)
 
         assert scalar_style.dtype == ufunc_style.dtype, "the band type must agree"
@@ -629,7 +629,7 @@ class TestCombine:
         right = _raster(np.full((4, 4), 2.0, "float32"))
 
         with pytest.raises(ValueError, match=r"shape \(16, 1\) for 16 cells"):
-            left.combine(right, lambda a, b: (a - b).reshape(-1, 1))
+            left.analysis.combine(right, lambda a, b: (a - b).reshape(-1, 1))
 
     def test_an_unsigned_result_prefers_its_max_over_zero(self):
         """`0` is a value an unsigned band will hold; the dtype's max is not.
@@ -649,8 +649,8 @@ class TestCombine:
         result = masked + right
 
         assert result.no_data_value[0] == 255, "the free extreme, not 0"
-        assert np.asarray(result.read_array())[0, 0] == 255, "the gap carries it"
-        assert np.asarray(result.read_array())[1, 1] == 100, "data is untouched"
+        assert np.asarray(result.io.read_array())[0, 0] == 255, "the gap carries it"
+        assert np.asarray(result.io.read_array())[1, 1] == 100, "data is untouched"
 
     def test_the_collision_warning_points_at_the_caller(self):
         """A `-W` rule or filter keyed on the user's module has to match.
@@ -664,7 +664,7 @@ class TestCombine:
         right = _raster(np.full((4, 4), 4.0, "float32"))
 
         with pytest.warns(NoDataCollisionWarning) as recorded:
-            left.combine(right, np.subtract, no_data_value=-1.0)
+            left.analysis.combine(right, np.subtract, no_data_value=-1.0)
 
         assert _dom(recorded).filename == __file__, "the warning must blame the caller"
 
@@ -698,8 +698,8 @@ class TestCombine:
         left = _raster(np.full((4, 4), 3.0, "float32"))
         right = _raster(np.full((4, 4), 1.0, "float32"))
 
-        as_python = left.combine(right, np.subtract, no_data_value=0.1)
-        as_numpy = left.combine(right, np.subtract, no_data_value=np.float64(0.1))
+        as_python = left.analysis.combine(right, np.subtract, no_data_value=0.1)
+        as_numpy = left.analysis.combine(right, np.subtract, no_data_value=np.float64(0.1))
 
         assert as_python.no_data_value[0] == pytest.approx(as_numpy.no_data_value[0])
 
@@ -713,13 +713,13 @@ class TestCombine:
         left = np.full((4, 4), 10, "int32")
         left[0, 0] = -9999
 
-        result = _raster(left).combine(
+        result = _raster(left).analysis.combine(
             _raster(np.full((4, 4), 4, "int32")), np.subtract, no_data_value=None
         )
 
         assert result.no_data_value[0] is None
-        assert np.asarray(result.read_array())[0, 0] == -10003, "the sentinel is data"
-        assert np.asarray(result.read_array())[1, 1] == 6
+        assert np.asarray(result.io.read_array())[0, 0] == -10003, "the sentinel is data"
+        assert np.asarray(result.io.read_array())[1, 1] == 6
 
     def test_a_result_that_leaves_no_free_value_is_refused(self):
         """When every candidate occurs in the result there is nothing to mark a gap with.
@@ -743,7 +743,7 @@ class TestCombine:
         other = Dataset.from_array(zeros, geo_ref=geo_ref, no_data_value=1)
 
         with pytest.raises(ValueError, match="leaves no free value"):
-            masked.combine(other, lambda a, b: (a + b).astype("int8"))
+            masked.analysis.combine(other, lambda a, b: (a + b).astype("int8"))
 
     def test_a_nan_sentinel_that_the_result_holds_still_warns(self):
         """A non-finite sentinel skips the range prefilter and is compared directly.
@@ -761,7 +761,7 @@ class TestCombine:
         )
 
         with pytest.warns(NoDataCollisionWarning, match="also a value"):
-            result = left.combine(right, np.divide, no_data_value=np.nan)
+            result = left.analysis.combine(right, np.divide, no_data_value=np.nan)
 
         assert np.isnan(result.no_data_value[0])
 
@@ -777,13 +777,13 @@ class TestCombine:
         left = np.full((4, 4), 3.0, "float32")
         left[0, 0] = -9999.0
 
-        result = _raster(left).combine(
+        result = _raster(left).analysis.combine(
             _raster(np.full((4, 4), 1.0, "float32")),
             lambda a, b: (a - b).astype("complex128"),
         )
 
         assert result.no_data_value[0] == -9999
-        assert np.asarray(result.read_array())[1, 1] == 2.0 + 0j
+        assert np.asarray(result.io.read_array())[1, 1] == 2.0 + 0j
 
     def test_a_nan_elsewhere_does_not_silence_the_collision_warning(self):
         """The range prefilter must not be defeated by a single NaN in the result.
@@ -803,7 +803,7 @@ class TestCombine:
         other = _raster(right)
 
         with pytest.warns(NoDataCollisionWarning, match="also a value"):
-            masked.combine(other, np.subtract, no_data_value=-9999.0)
+            masked.analysis.combine(other, np.subtract, no_data_value=-9999.0)
 
     @pytest.mark.parametrize(
         ("dtype", "left_value", "right_value", "wrapped"),
@@ -829,10 +829,10 @@ class TestCombine:
         left = _raster(np.full((3, 3), left_value, dtype))
         right = _raster(np.full((3, 3), right_value, dtype))
 
-        assert (np.asarray((left - right).read_array()) == wrapped).all()
+        assert (np.asarray((left - right).io.read_array()) == wrapped).all()
 
-        promoted = left.combine(right, lambda a, b: a.astype("int32") - b)
-        assert (np.asarray(promoted.read_array()) == left_value - right_value).all(), (
+        promoted = left.analysis.combine(right, lambda a, b: a.astype("int32") - b)
+        assert (np.asarray(promoted.io.read_array()) == left_value - right_value).all(), (
             "promoting inside func is the documented way out"
         )
 
@@ -867,13 +867,13 @@ class TestCombine:
                 raise ValueError("arrays not supported")
             return left - right
 
-        result = _raster(np.full((2, 2), 5.0, "float32")).combine(
+        result = _raster(np.full((2, 2), 5.0, "float32")).analysis.combine(
             _raster(np.full((2, 2), 2.0, "float32")), raises_on_arrays
         )
 
         assert calls[0] == 1, "the array form is tried first"
         assert 0 in calls, "then it is retried scalar by scalar"
-        assert np.allclose(np.asarray(result.read_array()), 3.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 3.0)
 
     def test_a_bool_sentinel_is_refused(self):
         """`True` fits every numeric dtype as 1, so accepting it would be a trap.
@@ -886,7 +886,7 @@ class TestCombine:
         right = _raster(np.full((3, 3), 1.0, "float32"))
 
         with pytest.raises(ValueError, match="is a bool"):
-            left.combine(right, np.subtract, no_data_value=True)
+            left.analysis.combine(right, np.subtract, no_data_value=True)
 
     def test_the_derive_default_renders_readably_in_the_signature(self):
         """The sentinel's repr is what `help()` and the API docs show.
@@ -909,7 +909,7 @@ class TestCombine:
             np.full((4, 4), 4, "int32")
         )
 
-        array = np.asarray(result.read_array())
+        array = np.asarray(result.io.read_array())
         assert np.issubdtype(array.dtype, np.floating), "division must not truncate"
         assert np.allclose(array, 2.5)
 
@@ -930,7 +930,7 @@ class TestSingleBandBroadcast:
 
         assert result.band_count == 3
         np.testing.assert_allclose(
-            np.asarray(result.read_array()),
+            np.asarray(result.io.read_array()),
             np.arange(12.0, dtype="float32").reshape(3, 2, 2) * 2.0,
         )
 
@@ -944,8 +944,8 @@ class TestSingleBandBroadcast:
         stack = _raster(np.arange(12.0, dtype="float32").reshape(3, 2, 2))
         mask = _raster(np.full((2, 2), 2.0, "float32"))
 
-        left_first = np.asarray((stack * mask).read_array())
-        right_first = np.asarray((mask * stack).read_array())
+        left_first = np.asarray((stack * mask).io.read_array())
+        right_first = np.asarray((mask * stack).io.read_array())
 
         assert (mask * stack).band_count == 3
         np.testing.assert_allclose(left_first, right_first)
@@ -978,7 +978,7 @@ class TestSingleBandBroadcast:
 
         assert result.band_count == 3
         np.testing.assert_array_equal(
-            np.asarray(result.read_array()).ravel(), np.array([0, 1, 1], "uint8")
+            np.asarray(result.io.read_array()).ravel(), np.array([0, 1, 1], "uint8")
         )
 
     def test_no_data_on_the_single_band_masks_every_band(self):
@@ -993,7 +993,7 @@ class TestSingleBandBroadcast:
         values[0, 0] = -9999.0
         mask = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
 
-        result = np.asarray((stack / mask).read_array())
+        result = np.asarray((stack / mask).io.read_array())
 
         assert result.shape == (3, 1, 2)
         assert np.isnan(result[:, 0, 0]).all(), "the masked cell is a gap in every band"
@@ -1058,7 +1058,7 @@ class TestSingleBandBroadcast:
 
         assert result.band_count == 1
         np.testing.assert_allclose(
-            np.asarray(result.read_array()), np.full((2, 2), 3.0)
+            np.asarray(result.io.read_array()), np.full((2, 2), 3.0)
         )
 
     def test_a_grid_mismatch_is_not_rescued_by_broadcasting(self):
@@ -1113,7 +1113,7 @@ class TestSummingRasters:
         total = sum(rasters)
 
         assert isinstance(total, Dataset), "sum must fold into a Dataset"
-        assert np.allclose(np.asarray(total.read_array()), 6.0)
+        assert np.allclose(np.asarray(total.io.read_array()), 6.0)
         assert total.geotransform == rasters[0].geotransform
 
     def test_summing_one_raster_does_not_alias_it(self):
@@ -1128,7 +1128,7 @@ class TestSummingRasters:
         total = sum(rasters[:1])
 
         assert total is not rasters[0], "the identity step must copy"
-        assert np.allclose(np.asarray(total.read_array()), 1.0)
+        assert np.allclose(np.asarray(total.io.read_array()), 1.0)
 
     def test_sum_agrees_with_an_explicit_fold(self):
         """The `sum()` route and the documented alternatives give one answer.
@@ -1138,9 +1138,9 @@ class TestSummingRasters:
         """
         rasters = self._rasters()
 
-        summed = np.asarray(sum(rasters).read_array())
-        seeded = np.asarray(sum(rasters[1:], start=rasters[0]).read_array())
-        folded = np.asarray(reduce(operator.add, rasters).read_array())
+        summed = np.asarray(sum(rasters).io.read_array())
+        seeded = np.asarray(sum(rasters[1:], start=rasters[0]).io.read_array())
+        folded = np.asarray(reduce(operator.add, rasters).io.read_array())
 
         np.testing.assert_array_equal(summed, seeded)
         np.testing.assert_array_equal(summed, folded)
@@ -1165,7 +1165,7 @@ class TestSummingRasters:
         result = zero + raster
 
         assert isinstance(result, Dataset), f"{zero!r} should be absorbed"
-        assert np.allclose(np.asarray(result.read_array()), 2.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 2.0)
 
     def test_false_is_not_treated_as_the_additive_identity(self):
         """`False` is a Number equal to 0, but adding it is a caller's mistake.
@@ -1201,7 +1201,7 @@ class TestSummingRasters:
         )
 
         result = zero + raster if reflected else raster + zero
-        values = np.asarray(result.read_array())
+        values = np.asarray(result.io.read_array())
 
         assert np.allclose(values, 2), f"got {values}"
         assert values.dtype == np.dtype("int16"), f"the band widened to {values.dtype}"
@@ -1234,21 +1234,21 @@ class TestSummingRasters:
         product = math.prod(rasters)
 
         assert isinstance(product, Dataset), "math.prod must fold into a Dataset"
-        assert np.allclose(np.asarray(product.read_array()), 6.0)
+        assert np.allclose(np.asarray(product.io.read_array()), 6.0)
 
     def test_a_non_unit_scalar_on_the_left_multiplies(self):
         """`2 * ds` computes; only the identity `1` short-circuits to a copy (#1136)."""
         raster = _raster(np.full((4, 4), 1.0, "float32"))
 
-        assert np.allclose(np.asarray((2 * raster).read_array()), 2.0)
-        assert np.allclose(np.asarray((1 * raster).read_array()), 1.0)
+        assert np.allclose(np.asarray((2 * raster).io.read_array()), 2.0)
+        assert np.allclose(np.asarray((1 * raster).io.read_array()), 1.0)
 
     def test_a_non_zero_scalar_on_the_left_adds(self):
         """`1 + ds` computes; only the identity `0` short-circuits to a copy (#1136)."""
         raster = _raster(np.full((4, 4), 1.0, "float32"))
 
-        assert np.allclose(np.asarray((1 + raster).read_array()), 2.0)
-        assert np.allclose(np.asarray((0 + raster).read_array()), 1.0)
+        assert np.allclose(np.asarray((1 + raster).io.read_array()), 2.0)
+        assert np.allclose(np.asarray((0 + raster).io.read_array()), 1.0)
 
 
 class TestComparisonOperators:
@@ -1281,7 +1281,7 @@ class TestComparisonOperators:
 
         mask = compare(higher, lower)
 
-        array = np.asarray(mask.read_array())
+        array = np.asarray(mask.io.read_array())
         assert array.dtype == np.uint8, "a comparison is stored as Byte"
         assert mask.no_data_value[0] == 255, "255 cannot collide with 0/1"
         assert (array == expected).all()
@@ -1298,7 +1298,7 @@ class TestComparisonOperators:
 
         mask = _raster(values) >= _raster(np.full((3, 3), 1.0, "float32"))
 
-        array = np.asarray(mask.read_array())
+        array = np.asarray(mask.io.read_array())
         assert array[0, 0] == 255, "a gap must not become a 0"
         assert array[1, 1] == 1, "a real cell still answers the question"
 
@@ -1317,7 +1317,7 @@ class TestComparisonOperators:
         mask = left >= right
 
         assert mask.shape == (2, 3, 3), "the band count must be preserved"
-        np.testing.assert_array_equal(np.asarray(mask.read_array())[:, 0, 0], [0, 1])
+        np.testing.assert_array_equal(np.asarray(mask.io.read_array())[:, 0, 0], [0, 1])
 
     def test_comparing_rasters_off_one_grid_is_refused(self):
         """A comparison is a `combine`, so it inherits the grid rule.
@@ -1342,7 +1342,7 @@ class TestComparisonOperators:
         """
         raster = _raster(np.full((3, 3), 30.0, "float32"))
 
-        mask = np.asarray((raster >= 5).read_array())
+        mask = np.asarray((raster >= 5).io.read_array())
         assert mask.dtype == np.uint8
         assert (mask == 1).all()
 
@@ -1383,7 +1383,7 @@ class TestComparisonOperators:
             lambda m, ref: m,
             lambda m, ref: m.copy(),
             lambda m, ref: sum([m]),
-            lambda m, ref: m.crop(ref),
+            lambda m, ref: m.spatial.crop(ref),
         ],
         ids=["as-returned", "copied", "summed", "cropped"],
     )
@@ -1416,7 +1416,7 @@ class TestComparisonOperators:
         right = _raster(np.full((3, 3), 1.0, "float32"))
 
         with pytest.raises(ValueError, match="truth value of a Dataset is ambiguous"):
-            bool(left.combine(right, np.logical_and))
+            bool(left.analysis.combine(right, np.logical_and))
 
     @pytest.mark.parametrize("fold", [sorted, max, min], ids=["sorted", "max", "min"])
     def test_ordering_two_or_more_rasters_is_refused(self, fold):
@@ -1488,7 +1488,7 @@ class TestSameGrid:
         Test scenario:
             same_grid is True for two rasters of equal size on the same origin and CRS.
         """
-        assert _raster(np.zeros((5, 5), "float32")).same_grid(
+        assert _raster(np.zeros((5, 5), "float32")).spatial.same_grid(
             _raster(np.ones((5, 5), "float32"))
         )
 
@@ -1500,7 +1500,7 @@ class TestSameGrid:
         """
         elsewhere = GeoReference(top_left_corner=(50.0, 5.0), cell_size=0.25, epsg=4326)
 
-        assert not _raster(np.zeros((5, 5), "float32")).same_grid(
+        assert not _raster(np.zeros((5, 5), "float32")).spatial.same_grid(
             _raster(np.zeros((5, 5), "float32"), geo_ref=elsewhere)
         )
 
@@ -1516,8 +1516,8 @@ class TestSameGrid:
         lonlat = _raster(np.zeros((5, 5), "float32"))
         other = _raster(np.zeros((5, 5), "float32"), geo_ref=projected)
 
-        assert not lonlat.same_grid(other), "the CRSes differ"
-        assert lonlat.same_grid(other, compare_crs=False), "the pixel grids match"
+        assert not lonlat.spatial.same_grid(other), "the CRSes differ"
+        assert lonlat.spatial.same_grid(other, compare_crs=False), "the pixel grids match"
 
     def test_a_non_dataset_argument_is_refused(self):
         """The public predicate says what it wants instead of failing on a property read.
@@ -1530,7 +1530,7 @@ class TestSameGrid:
         not_a_raster = np.zeros((5, 5))
 
         with pytest.raises(TypeError, match=r"`other` must be a Dataset, got ndarray"):
-            raster.same_grid(not_a_raster)
+            raster.spatial.same_grid(not_a_raster)
 
     def test_a_different_crs_does_not_match(self):
         """Identical numbers in a different CRS describe a different grid.
@@ -1540,7 +1540,7 @@ class TestSameGrid:
         """
         projected = GeoReference(top_left_corner=(0.0, 5.0), cell_size=0.25, epsg=3857)
 
-        assert not _raster(np.zeros((5, 5), "float32")).same_grid(
+        assert not _raster(np.zeros((5, 5), "float32")).spatial.same_grid(
             _raster(np.zeros((5, 5), "float32"), geo_ref=projected)
         )
 
@@ -1564,7 +1564,7 @@ class TestScalarOperands:
     def test_scalar_arithmetic_on_either_side(self, apply_operator, expected):
         """Each operator accepts a scalar left or right and computes cell by cell."""
         result = apply_operator(_raster(np.full((4, 4), 5.0, "float32")))
-        assert np.allclose(np.asarray(result.read_array()), expected), (
+        assert np.allclose(np.asarray(result.io.read_array()), expected), (
             f"expected {expected}, got {np.asarray(result.read_array()).flat[0]}"
         )
 
@@ -1581,7 +1581,7 @@ class TestScalarOperands:
     def test_scalar_comparison_yields_a_byte_mask(self, apply_operator, expected):
         """A scalar comparison follows the raster-to-raster rule: a Byte 1/0 mask."""
         result = apply_operator(_raster(np.full((4, 4), 5.0, "float32")))
-        array = np.asarray(result.read_array())
+        array = np.asarray(result.io.read_array())
         assert array.dtype == np.uint8, f"expected a Byte mask, got {array.dtype}"
         assert (array == expected).all()
 
@@ -1590,7 +1590,7 @@ class TestScalarOperands:
         source = _raster(np.full((3, 4, 4), 5.0, "float32"))
         result = source * 2
         assert result.band_count == source.band_count, "bands must not be dropped"
-        assert np.allclose(np.asarray(result.read_array()), 10.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 10.0)
 
     def test_a_scalar_agrees_with_the_equivalent_raster_operand(self):
         """`ds * 2` equals `ds * <raster of 2s>` — the operator family stays consistent.
@@ -1602,8 +1602,8 @@ class TestScalarOperands:
         source = _raster(np.full((4, 4), 5.0, "float32"))
         twos = _raster(np.full((4, 4), 2.0, "float32"))
         np.testing.assert_allclose(
-            np.asarray((source * 2).read_array()),
-            np.asarray((source * twos).read_array()),
+            np.asarray((source * 2).io.read_array()),
+            np.asarray((source * twos).io.read_array()),
         )
 
     def test_no_data_cells_stay_no_data(self):
@@ -1612,7 +1612,7 @@ class TestScalarOperands:
         array[0, 0] = -9999.0
         source = Dataset.from_array(array, geo_ref=GEO_REF, no_data_value=-9999.0)
         result = source * 2
-        assert np.isnan(np.asarray(result.read_array())[0, 0]), (
+        assert np.isnan(np.asarray(result.io.read_array())[0, 0]), (
             "the masked cell should come back as the derived sentinel"
         )
 
@@ -1624,9 +1624,9 @@ class TestScalarOperands:
             `combine`, so a one-element fold keeps the source's sentinel.
         """
         source = _raster(np.full((4, 4), 5.0, "float32"))
-        assert np.allclose(np.asarray(sum([source]).read_array()), 5.0)
-        assert np.allclose(np.asarray(math.prod([source]).read_array()), 5.0)
-        assert np.allclose(np.asarray(sum([source, source]).read_array()), 10.0)
+        assert np.allclose(np.asarray(sum([source]).io.read_array()), 5.0)
+        assert np.allclose(np.asarray(math.prod([source]).io.read_array()), 5.0)
+        assert np.allclose(np.asarray(sum([source, source]).io.read_array()), 10.0)
 
 
 class TestPowerOperator:
@@ -1636,7 +1636,7 @@ class TestPowerOperator:
         """`ds ** 2` on an int16 band stays int16, like `ds * 2`."""
         result = _raster(np.full((3, 3), 3, "int16")) ** 2
         assert result.dtype == ["int16"], result.dtype
-        assert int(np.asarray(result.read_array())[0, 0]) == 9
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 9
 
     def test_raising_to_the_first_power_preserves_the_sentinel(self):
         """`ds ** 1` is a no-op, so it short-circuits to a copy and keeps the sentinel.
@@ -1651,12 +1651,12 @@ class TestPowerOperator:
         result = source**1
         assert result.no_data_value == (-9999.0,), result.no_data_value
         assert result is not source, "a no-op returns a copy, not the source"
-        assert int(np.asarray(result.read_array())[0, 0]) == 3
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 3
 
     def test_the_first_power_is_absorbed_only_from_the_right(self):
         """`1 ** ds` is all ones, not a no-op, so it is not short-circuited."""
         result = 1 ** _raster(np.full((2, 2), 3.0, "float32"))
-        assert np.allclose(np.asarray(result.read_array()), 1.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 1.0)
 
     def test_a_float_first_power_is_absorbed_and_keeps_the_integer_dtype(self):
         """`ds ** 1.0` is the no-op exception to widening: it stays the band's dtype.
@@ -1674,25 +1674,25 @@ class TestPowerOperator:
     def test_the_zeroth_power_is_not_absorbed(self):
         """`ds ** 0` is one everywhere, so it computes rather than copying."""
         result = _raster(np.full((2, 2), 3.0, "float32")) ** 0
-        assert np.allclose(np.asarray(result.read_array()), 1.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 1.0)
 
     def test_a_scalar_base_raises_each_cell(self):
         """`2 ** ds` computes the reflected power cell by cell."""
         result = 2 ** _raster(np.full((2, 2), 3.0, "float32"))
-        assert np.allclose(np.asarray(result.read_array()), 8.0)
+        assert np.allclose(np.asarray(result.io.read_array()), 8.0)
 
     def test_a_raster_exponent_is_applied_cell_by_cell(self):
         """A raster on the right is a per-cell exponent, like any binary operand."""
         base = _raster(np.full((2, 2), 2.0, "float32"))
         exponent = _raster(np.full((2, 2), 3.0, "float32"))
-        assert np.allclose(np.asarray((base**exponent).read_array()), 8.0)
+        assert np.allclose(np.asarray((base**exponent).io.read_array()), 8.0)
 
     def test_a_gap_stays_a_gap(self):
         """A masked cell is still masked after `** 2`, as for `*`."""
         array = np.full((2, 2), 2.0, "float32")
         array[0, 0] = -9999.0
         source = Dataset.from_array(array, geo_ref=GEO_REF, no_data_value=-9999.0)
-        assert np.isnan(np.asarray((source**2).read_array())[0, 0])
+        assert np.isnan(np.asarray((source**2).io.read_array())[0, 0])
 
     def test_a_bool_exponent_is_declined(self):
         """`ds ** True` is refused like every other bool operand."""
@@ -1718,18 +1718,18 @@ class TestUnaryOperators:
     def test_negation_flips_the_sign(self):
         """`-ds` negates every cell."""
         result = -_raster(np.array([[2.0, -3.0]], "float32"))
-        assert np.asarray(result.read_array()).tolist() == [[-2.0, 3.0]]
+        assert np.asarray(result.io.read_array()).tolist() == [[-2.0, 3.0]]
 
     def test_abs_takes_the_magnitude(self):
         """`abs(ds)` takes the magnitude of every cell."""
         result = abs(_raster(np.array([[-4.0, 5.0]], "float32")))
-        assert np.asarray(result.read_array()).tolist() == [[4.0, 5.0]]
+        assert np.asarray(result.io.read_array()).tolist() == [[4.0, 5.0]]
 
     def test_a_signed_integer_band_keeps_its_type_under_negation(self):
         """Negation keeps a signed band's own dtype, like the scalar operators."""
         result = -_raster(np.full((2, 2), 3, "int16"))
         assert result.dtype == ["int16"], result.dtype
-        assert int(np.asarray(result.read_array())[0, 0]) == -3
+        assert int(np.asarray(result.io.read_array())[0, 0]) == -3
 
     @pytest.mark.parametrize("member", [operator.neg, operator.abs])
     def test_every_band_is_folded(self, member):
@@ -1755,7 +1755,7 @@ class TestUnaryOperators:
         array = np.full((2, 2), -3.0, "float32")
         array[0, 0] = -9999.0
         source = Dataset.from_array(array, geo_ref=GEO_REF, no_data_value=-9999.0)
-        assert np.isnan(np.asarray(apply_op(source).read_array())[0, 0])
+        assert np.isnan(np.asarray(apply_op(source).io.read_array())[0, 0])
 
     def test_negation_of_an_unsigned_band_wraps_like_the_reflected_subtraction(self):
         """`-uint8` wraps modulo the range, matching `0 - ds` (its arithmetic equal).
@@ -1766,9 +1766,9 @@ class TestUnaryOperators:
             from `ds * -1` (which raises) is pinned here.
         """
         source = _raster(np.full((2, 2), 3, "uint8"))
-        negated = np.asarray((-source).read_array())
+        negated = np.asarray((-source).io.read_array())
         assert negated[0, 0] == 253, negated[0, 0]
-        assert (negated == np.asarray((0 - source).read_array())).all()
+        assert (negated == np.asarray((0 - source).io.read_array())).all()
 
     def test_negation_of_an_unsigned_band_diverges_from_times_minus_one(self):
         """`ds * -1` rejects `-1` for an unsigned band, unlike `-ds` which wraps."""
@@ -1778,7 +1778,7 @@ class TestUnaryOperators:
     def test_abs_of_the_signed_minimum_overflows(self):
         """`abs(int16 min)` overflows and stays negative, as numpy does (documented)."""
         result = abs(_raster(np.full((2, 2), -32768, "int16")))
-        assert int(np.asarray(result.read_array())[0, 0]) == -32768
+        assert int(np.asarray(result.io.read_array())[0, 0]) == -32768
 
 
 class TestNonFiniteResults:
@@ -1794,7 +1794,7 @@ class TestNonFiniteResults:
         """
         source = _raster(np.array([[0.0, 2.0], [4.0, 0.0]], "float32"))
         result = 1 / source
-        values = np.asarray(result.read_array())
+        values = np.asarray(result.io.read_array())
         assert np.isinf(values[0, 0]), "a divide by zero should store an infinity"
         assert values[0, 1] == 0.5
         assert np.isnan(result.no_data_value[0]), "the derived sentinel is NaN"
@@ -1802,7 +1802,7 @@ class TestNonFiniteResults:
     def test_zero_divided_by_zero_is_a_gap(self):
         """`0/0` is `NaN`, which *is* the derived sentinel, so it reads as no-data."""
         source = _raster(np.zeros((2, 2), "float32"))
-        values = np.asarray((0 / source).read_array())
+        values = np.asarray((0 / source).io.read_array())
         assert np.isnan(values).all(), "0/0 should come back as the NaN sentinel"
 
 
@@ -1839,7 +1839,7 @@ class TestIdentityScalars:
             no-data tag off a raster on its way to disk.
         """
         result = apply_operator(self._int_raster())
-        values = np.asarray(result.read_array())
+        values = np.asarray(result.io.read_array())
         assert values.dtype == np.int16, f"dtype changed to {values.dtype}"
         assert result.no_data_value[0] == -9999, (
             f"the declared sentinel was lost: {result.no_data_value}"
@@ -1849,7 +1849,7 @@ class TestIdentityScalars:
     def test_a_non_identity_scalar_still_computes(self):
         """The short-circuit is exactly the identities, not scalars in general."""
         result = self._int_raster() + 1
-        assert (np.asarray(result.read_array()) == 6).all()
+        assert (np.asarray(result.io.read_array()) == 6).all()
 
     def test_the_identity_returns_a_copy_not_the_source(self):
         """A no-op hands back a fresh raster, so a later write cannot reach the input."""
@@ -1910,7 +1910,7 @@ class TestOneOperandIsReadOnce:
     def test_combining_a_raster_with_itself_is_still_correct(self):
         """`ds.combine(ds, add)` doubles the values — the two-operand path, twice read."""
         ds = _raster(np.full((4, 4), 3.0, "float32"))
-        assert float(np.asarray(ds.combine(ds, np.add).read_array()).mean()) == 6.0
+        assert float(np.asarray(ds.analysis.combine(ds, np.add).io.read_array()).mean()) == 6.0
 
     def test_the_shared_path_is_declared_not_inferred(self, monkeypatch):
         """`ds.combine(ds, …)` reads twice; only `_fold` declares the single read.
@@ -1925,7 +1925,7 @@ class TestOneOperandIsReadOnce:
         """
         seen = self._counting_operand_arrays(monkeypatch)
         ds = _raster(np.full((4, 4), 3.0, "float32"))
-        ds.combine(ds, np.add)
+        ds.analysis.combine(ds, np.add)
         assert len(seen) == 2, f"expected two reads, got {len(seen)}"
 
     def test_fold_reads_once_and_matches_the_two_operand_answer(self, monkeypatch):
@@ -1938,14 +1938,14 @@ class TestOneOperandIsReadOnce:
         ds = _raster(np.full((4, 4), 3.0, "float32"))
         folded = ds.analysis._fold(lambda values: values * 2)
         assert len(seen) == 1, f"expected one read, got {len(seen)}"
-        assert float(np.asarray(folded.read_array()).mean()) == 6.0
+        assert float(np.asarray(folded.io.read_array()).mean()) == 6.0
 
     def test_the_shared_domain_still_masks(self):
         """A no-data cell stays no-data when the raster is combined with itself."""
         values = np.array([[1.0, -9999.0], [3.0, 4.0]], dtype="float32")
         ds = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
         doubled = ds * 2
-        result = np.asarray(doubled.read_array())
+        result = np.asarray(doubled.io.read_array())
         assert result[0, 1] == pytest.approx(doubled.no_data_value[0], nan_ok=True), (
             f"the masked cell should stay masked, got {result[0, 1]}"
         )
@@ -1965,12 +1965,12 @@ class TestExoticRealScalars:
             a dtype a band can hold.
         """
         result = _raster(np.full((2, 2), 6.0, "float32")) * Fraction(1, 3)
-        assert float(np.asarray(result.read_array()).mean()) == pytest.approx(2.0)
+        assert float(np.asarray(result.io.read_array()).mean()) == pytest.approx(2.0)
 
     def test_a_fraction_on_the_left_divides(self):
         """The reflected path coerces too — `Fraction(1, 2) / ds` is not special."""
         result = Fraction(1, 2) / _raster(np.full((2, 2), 4.0, "float32"))
-        assert float(np.asarray(result.read_array()).mean()) == pytest.approx(0.125)
+        assert float(np.asarray(result.io.read_array()).mean()) == pytest.approx(0.125)
 
     def test_a_zero_fraction_is_still_absorbed(self):
         """`Fraction(0) + ds` keeps the documented identity short-circuit."""
@@ -1982,7 +1982,7 @@ class TestExoticRealScalars:
     def test_an_integer_scalar_is_not_widened(self):
         """`ds * 2` stays an integer multiply; the coercion touches only exotic Reals."""
         result = _raster(np.full((2, 2), 3, "int16")) * 2
-        assert np.issubdtype(np.asarray(result.read_array()).dtype, np.integer), (
+        assert np.issubdtype(np.asarray(result.io.read_array()).dtype, np.integer), (
             f"got {np.asarray(result.read_array()).dtype}"
         )
 
@@ -2074,14 +2074,14 @@ class TestIntegerScalarEdges:
             that masked nothing declares no sentinel, so they read as ordinary data.
         """
         result = _raster(np.full((2, 2), 200, "uint8")) * 2
-        assert int(np.asarray(result.read_array())[0, 0]) == 144, (
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 144, (
             f"got {np.asarray(result.read_array())[0, 0]}"
         )
 
     def test_subtraction_underflows_on_a_byte_band(self):
         """`uint8 0 - 1` underflows to `255`, numpy's answer for the same expression."""
         result = _raster(np.zeros((2, 2), "uint8")) - 1
-        assert int(np.asarray(result.read_array())[0, 0]) == 255
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 255
 
     def test_a_sum_landing_on_the_byte_sentinel_stays_data(self):
         """`uint8 250 + 5` lands on `255` and is still data, not a gap.
@@ -2094,7 +2094,7 @@ class TestIntegerScalarEdges:
             ordinary data to every consumer.
         """
         result = _raster(np.full((2, 2), 250, "uint8")) + 5
-        assert int(np.asarray(result.read_array())[0, 0]) == 255
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 255
         assert result.no_data_value[0] is None, (
             f"the wrapped cells must not be masked, got {result.no_data_value[0]}"
         )
@@ -2113,7 +2113,7 @@ class TestIntegerScalarEdges:
         )
         result = source + 5
         assert result.no_data_value[0] != 255, f"got {result.no_data_value[0]}"
-        assert int(np.asarray(result.read_array())[0, 0]) == 255
+        assert int(np.asarray(result.io.read_array())[0, 0]) == 255
 
     def test_a_scalar_too_wide_for_the_band_overflows(self):
         """`uint8 + 300` raises numpy's `OverflowError` rather than wrapping silently."""
@@ -2123,7 +2123,7 @@ class TestIntegerScalarEdges:
     def test_integer_division_widens_to_float(self):
         """`int32 / 2` gives floats, as `int / int` does everywhere else in the package."""
         result = _raster(np.full((2, 2), 7, "int32")) / 2
-        assert float(np.asarray(result.read_array())[0, 0]) == pytest.approx(3.5)
+        assert float(np.asarray(result.io.read_array())[0, 0]) == pytest.approx(3.5)
 
 
 class TestNumpyScalarPromotion:
@@ -2132,12 +2132,12 @@ class TestNumpyScalarPromotion:
     def test_a_python_scalar_keeps_the_band_width(self):
         """`float32 * 2` stays `float32` — a Python scalar promotes weakly."""
         result = _raster(np.full((2, 2), 3.0, "float32")) * 2
-        assert np.asarray(result.read_array()).dtype == np.dtype("float32")
+        assert np.asarray(result.io.read_array()).dtype == np.dtype("float32")
 
     def test_a_python_float_keeps_the_band_width(self):
         """`float32 * 2.0` stays `float32` too; the literal's kind does not matter."""
         result = _raster(np.full((2, 2), 3.0, "float32")) * 2.0
-        assert np.asarray(result.read_array()).dtype == np.dtype("float32")
+        assert np.asarray(result.io.read_array()).dtype == np.dtype("float32")
 
     def test_a_numpy_scalar_widens_the_band(self):
         """`float32 * np.float64(2)` doubles the band's width.
@@ -2147,7 +2147,7 @@ class TestNumpyScalarPromotion:
             literal silently decides how many bytes the result occupies.
         """
         result = _raster(np.full((2, 2), 3.0, "float32")) * np.float64(2)
-        assert np.asarray(result.read_array()).dtype == np.dtype("float64")
+        assert np.asarray(result.io.read_array()).dtype == np.dtype("float64")
 
 
 class TestNonFiniteScalars:
@@ -2161,18 +2161,18 @@ class TestNonFiniteScalars:
             arithmetic says, and it is pinned here so it cannot change unnoticed.
         """
         result = _raster(np.full((2, 2), 6.0, "float32")) * float("nan")
-        assert np.isnan(np.asarray(result.read_array())).all()
+        assert np.isnan(np.asarray(result.io.read_array())).all()
         assert np.isnan(result.no_data_value[0]), f"got {result.no_data_value[0]}"
 
     def test_an_inf_scalar_stores_infinities(self):
         """`ds * inf` stores `inf` as a value rather than masking it."""
         result = _raster(np.full((2, 2), 6.0, "float32")) * float("inf")
-        assert np.isinf(np.asarray(result.read_array())).all()
+        assert np.isinf(np.asarray(result.io.read_array())).all()
 
     def test_a_comparison_against_nan_is_false_everywhere(self):
         """`ds > nan` is `0` in every cell, as numpy's own comparison is."""
         result = _raster(np.full((2, 2), 6.0, "float32")) > float("nan")
-        assert set(np.asarray(result.read_array()).ravel()) == {0}
+        assert set(np.asarray(result.io.read_array()).ravel()) == {0}
 
 
 class TestTheRightIdentities:
@@ -2191,7 +2191,7 @@ class TestTheRightIdentities:
             np.full((4, 4), 2, "int16"), geo_ref=GEO_REF, no_data_value=-9999
         )
         result = raster - 0
-        values = np.asarray(result.read_array())
+        values = np.asarray(result.io.read_array())
 
         assert np.allclose(values, 2), f"got {values}"
         assert values.dtype == np.dtype("int16"), f"the band widened to {values.dtype}"
@@ -2202,7 +2202,7 @@ class TestTheRightIdentities:
         raster = Dataset.from_array(
             np.full((4, 4), 2, "int16"), geo_ref=GEO_REF, no_data_value=-9999
         )
-        assert np.asarray((raster - 0.0).read_array()).dtype == np.dtype("int16")
+        assert np.asarray((raster - 0.0).io.read_array()).dtype == np.dtype("int16")
 
     def test_dividing_by_one_still_widens(self):
         """`ds / 1` computes, because true division widens an integer band.
@@ -2214,13 +2214,13 @@ class TestTheRightIdentities:
         raster = Dataset.from_array(
             np.full((4, 4), 2, "int16"), geo_ref=GEO_REF, no_data_value=-9999
         )
-        values = np.asarray((raster / 1).read_array())
+        values = np.asarray((raster / 1).io.read_array())
         assert np.issubdtype(values.dtype, np.floating), f"got {values.dtype}"
 
     def test_zero_minus_the_raster_still_negates(self):
         """`0 - ds` is not an identity and must keep computing."""
         result = 0 - _raster(np.full((2, 2), 3.0, "float32"))
-        assert float(np.asarray(result.read_array()).mean()) == pytest.approx(-3.0)
+        assert float(np.asarray(result.io.read_array()).mean()) == pytest.approx(-3.0)
 
 
 def _dom(ws):

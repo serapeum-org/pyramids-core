@@ -36,11 +36,11 @@ class TestStreamingWrite:
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
         plain_path = tmp_path / "plain.tif"
-        plain.to_file(plain_path)
+        plain.io.to_file(plain_path)
 
         on_disk = Dataset.read_file(str(plain_path))
-        out = on_disk.to_cog(tmp_path / "streamed.tif")
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, (
+        out = on_disk.cog.to_cog(tmp_path / "streamed.tif")
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
             "on-disk source should COG-encode to a valid COG"
         )
 
@@ -61,4 +61,4 @@ class TestStreamingWrite:
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
         with pytest.raises(pickle.PicklingError):
-            mem.to_file(tmp_path / "x.tif", compute=False)
+            mem.io.to_file(tmp_path / "x.tif", compute=False)

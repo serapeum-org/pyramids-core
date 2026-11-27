@@ -52,7 +52,7 @@ def src_raster(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -284,7 +284,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         out_path = str(tmp_path / "merged.tif")
         assert main(["raster", "merge", src_raster, second, out_path]) == 0
         merged = Dataset.read_file(out_path)
@@ -313,7 +313,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         out_path = str(tmp_path / "windowed.tif")
         rc = main(
             [
@@ -346,7 +346,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         xs, ys = reproject_coordinates(
             [1.0, 5.0], [1.0, 5.0], from_crs=4326, to_crs=3857, precision=None
         )
@@ -383,7 +383,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         out_path = str(tmp_path / "full.tif")
         assert main(["raster", "merge", src_raster, second, out_path]) == 0
         assert Dataset.read_file(out_path).columns > 8, "mosaic must span both tiles"
@@ -401,7 +401,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         rc = main(
             [
                 "raster",
@@ -428,7 +428,7 @@ class TestMergeCommand:
             np.ones((8, 8), dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(4, 8), cell_size=1.0, epsg=4326),
-        ).to_file(second)
+        ).io.to_file(second)
         rc = main(
             [
                 "raster",
@@ -456,7 +456,7 @@ class TestOverviewCommand:
             main(["raster", "overview", "create", src_raster, "--levels", "2", "4"])
             == 0
         )
-        assert Dataset.read_file(src_raster).overview_count[0] == 2, (
+        assert Dataset.read_file(src_raster).io.overview_count[0] == 2, (
             "expected 2 overview levels"
         )
 
@@ -544,7 +544,7 @@ class TestSampleCommand:
             np.arange(64, dtype="float32").reshape(8, 8),
             no_data_value=None,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         assert main(["raster", "sample", path, "--points", "100,100", "--json"]) == 0
         values = json.loads(capsys.readouterr().out)["values"]
         assert values == [[None]], f"out-of-bounds must be null: {values}"
@@ -559,8 +559,8 @@ class TestConvertCommand:
         assert main(["raster", "convert", src_raster, out_path]) == 0
         converted = Dataset.read_file(out_path)
         np.testing.assert_array_equal(
-            converted.read_array(),
-            Dataset.read_file(src_raster).read_array(),
+            converted.io.read_array(),
+            Dataset.read_file(src_raster).io.read_array(),
             err_msg="conversion must preserve values",
         )
 
@@ -823,7 +823,7 @@ class TestGeoreferenceCLI:
         Dataset.from_array(
             np.ones((2, 2), "float32"),
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0),
-        ).to_file(out)
+        ).io.to_file(out)
         rc = main(
             [
                 "raster",
@@ -899,7 +899,7 @@ class TestCalc:
         Dataset.from_array(
             np.full((2, 2), value, "float32"),
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0),
-        ).to_file(path)
+        ).io.to_file(path)
         return path
 
     def test_ndvi_correctness(self, tmp_path):
@@ -913,7 +913,7 @@ class TestCalc:
         out = str(tmp_path / "ndvi.tif")
         rc = main(["raster", "calc", "(A - B) / (A + B)", a, b, out])
         assert rc == 0, "calc must exit 0"
-        result = np.asarray(Dataset.read_file(out).read_array())
+        result = np.asarray(Dataset.read_file(out).io.read_array())
         assert np.allclose(result, (4.0 - 2.0) / (4.0 + 2.0))
 
     def test_np_where_allowed(self, tmp_path):
@@ -926,7 +926,7 @@ class TestCalc:
         out = str(tmp_path / "w.tif")
         rc = main(["raster", "calc", "np.where(A > 3, 1, 0)", a, out])
         assert rc == 0
-        assert np.allclose(np.asarray(Dataset.read_file(out).read_array()), 1)
+        assert np.allclose(np.asarray(Dataset.read_file(out).io.read_array()), 1)
 
     def test_operands_shorter_than_input_plus_output_are_refused(self, tmp_path):
         """calc needs at least one input and an output path.
@@ -975,7 +975,7 @@ class TestCalc:
         Dataset.from_array(
             np.full((2, 2), 2.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(50, 2), cell_size=1.0),
-        ).to_file(elsewhere)
+        ).io.to_file(elsewhere)
         out = str(tmp_path / "diff.tif")
 
         rc = main(["raster", "calc", "A - B", a, elsewhere, out])
@@ -1003,7 +1003,7 @@ class TestCalc:
         rc = main(["raster", "calc", "A - B", a, untagged, result])
 
         assert rc == 0, "an untagged input on the same grid must be accepted"
-        assert np.allclose(np.asarray(Dataset.read_file(result).read_array()), 2.0)
+        assert np.allclose(np.asarray(Dataset.read_file(result).io.read_array()), 2.0)
 
     def test_the_output_no_data_value_does_not_follow_the_template(self, tmp_path):
         """`calc` keeps writing -9999 rather than inheriting the template's sentinel.
@@ -1017,7 +1017,7 @@ class TestCalc:
             np.full((2, 2), 3.0, "float32"),
             no_data_value=np.nan,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
-        ).to_file(source)
+        ).io.to_file(source)
         out = str(tmp_path / "doubled.tif")
 
         rc = main(["raster", "calc", "A * 2", source, out, "--dtype", "int16"])
@@ -1054,7 +1054,7 @@ class TestCalc:
         Dataset.from_array(
             np.full((2, 2), 2.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=3857),
-        ).to_file(projected)
+        ).io.to_file(projected)
         out = str(tmp_path / "diff.tif")
 
         rc = main(["raster", "calc", "A - B", a, projected, out])
@@ -1074,7 +1074,7 @@ class TestCalc:
         Dataset.from_array(
             np.full((4, 4), 5.0, "float32"),
             geo_ref=GeoReference(geo=geotransform, epsg=4326),
-        ).to_file(source)
+        ).io.to_file(source)
         out = str(tmp_path / "rot_out.tif")
 
         rc = main(["raster", "calc", "A * 2", source, out])
@@ -1102,7 +1102,7 @@ class TestCalc:
         out = str(tmp_path / "d.tif")
         rc = main(["raster", "calc", "A * 2", src_raster, out, "--dtype", "float64"])
         assert rc == 0
-        assert np.asarray(Dataset.read_file(out).read_array()).dtype == np.float64
+        assert np.asarray(Dataset.read_file(out).io.read_array()).dtype == np.float64
 
     def test_sets_crs_from_authority_string(self, src_raster):
         """edit-info accepts EPSG:NNNN / PROJ4, not just a bare integer (review M1).

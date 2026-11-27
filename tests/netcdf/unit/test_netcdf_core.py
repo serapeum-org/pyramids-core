@@ -605,7 +605,7 @@ class TestSetVariableEdgeCases:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(0.0, 1.0, 0, 10.0, 0, -1.0), epsg=4326),
         )
-        nc.set_variable(
+        nc.variables.set(
             "pressure",
             ds,
             attrs={"units": "hPa", "long_name": "Surface Pressure"},
@@ -628,7 +628,7 @@ class TestSetVariableEdgeCases:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(0.0, 1.0, 0, 10.0, 0, -1.0), epsg=4326),
         )
-        nc.set_variable("flat_var", ds)
+        nc.variables.set("flat_var", ds)
         rg = nc._raster.GetRootGroup()
         md_arr = rg.OpenMDArray("flat_var")
         dims = md_arr.GetDimensions()
@@ -651,7 +651,7 @@ class TestSetVariableEdgeCases:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(0.0, 1.0, 0, 10.0, 0, -1.0), epsg=4326),
         )
-        nc.set_variable(
+        nc.variables.set(
             "timed_var",
             ds,
             band_dim_name="time",
@@ -905,7 +905,7 @@ class TestEndToEndRoundTrip:
         )
         ds_modified._band_dim_name = var._band_dim_name
         ds_modified._band_dim_values = var._band_dim_values
-        nc.set_variable("precip_doubled", ds_modified)
+        nc.variables.set("precip_doubled", ds_modified)
         assert "precip_doubled" in nc.variable_names, (
             "precip_doubled should be in variable_names"
         )
@@ -953,7 +953,7 @@ class TestEndToEndRoundTrip:
             no_data_value=var.no_data_value,
             geo_ref=GeoReference(geo=var.geotransform, epsg=var.epsg),
         )
-        nc.set_variable("temp_plus100", ds)
+        nc.variables.set("temp_plus100", ds)
         out = str(tmp_path / "modified_roundtrip.nc")
         nc.to_file(out)
         reloaded = NetCDF.read_file(out, open_as_multi_dimensional=True)

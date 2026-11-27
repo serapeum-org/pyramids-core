@@ -426,7 +426,7 @@ class TestCluster:
             Verify the four return values have the expected types:
             ndarray, int, list, list.
         """
-        cluster_array, count, position, values = uniform_dataset.cluster(1, 10)
+        cluster_array, count, position, values = uniform_dataset.vector.cluster(1, 10)
 
         assert isinstance(cluster_array, np.ndarray), (
             f"Expected np.ndarray, got {type(cluster_array)}"
@@ -442,7 +442,7 @@ class TestCluster:
             All 16 cells have value 5 and bounds are [1, 10], so there
             should be exactly 1 cluster containing all cells.
         """
-        cluster_array, count, position, values = uniform_dataset.cluster(1, 10)
+        cluster_array, count, position, values = uniform_dataset.vector.cluster(1, 10)
 
         assert count == 2, (
             f"Expected count=2 (1 cluster + final increment), got {count}"
@@ -463,7 +463,7 @@ class TestCluster:
         """
         arr = np.ones((3, 3), dtype=np.float64) * 5
         dataset = make_dataset(arr)
-        cluster_array, count, position, values = dataset.cluster(10, 20)
+        cluster_array, count, position, values = dataset.vector.cluster(10, 20)
 
         assert count == 1, f"Expected count=1 (no clusters found), got {count}"
         assert position == [], f"Expected empty positions, got {position}"
@@ -477,7 +477,7 @@ class TestCluster:
             Two 2x2 blocks of value 5 separated by a 2-wide zero gap.
             With bounds [4, 6], both blocks should be separate clusters.
         """
-        cluster_array, count, position, _ = two_cluster_dataset.cluster(4, 6)
+        cluster_array, count, position, _ = two_cluster_dataset.vector.cluster(4, 6)
 
         assert count == 3, (
             f"Expected count=3 (2 clusters + final increment), got {count}"
@@ -506,7 +506,7 @@ class TestCluster:
             dtype=np.float64,
         )
         dataset = make_dataset(arr)
-        _, count, position, _ = dataset.cluster(4, 6)
+        _, count, position, _ = dataset.vector.cluster(4, 6)
 
         assert count == 2, f"Expected count=2 (1 cluster + increment), got {count}"
         assert len(position) == 8, (
@@ -529,7 +529,7 @@ class TestCluster:
             dtype=np.float64,
         )
         dataset = make_dataset(arr)
-        cluster_array, _, position, values = dataset.cluster(4, 6)
+        cluster_array, _, position, values = dataset.vector.cluster(4, 6)
 
         assert len(position) == 1, f"Expected 1 position, got {len(position)}"
         assert position[0] == [1, 1], f"Expected position [1,1], got {position[0]}"
@@ -547,7 +547,7 @@ class TestCluster:
         """
         arr = np.array([[2.0, 5.0, 8.0]], dtype=np.float64)
         dataset = make_dataset(arr)
-        _, _, position, values = dataset.cluster(2.0, 8.0)
+        _, _, position, values = dataset.vector.cluster(2.0, 8.0)
 
         assert len(position) == 3, f"Expected 3 cells, got {len(position)}"
         assert set(values) == {
@@ -572,7 +572,7 @@ class TestCluster:
             dtype=np.float64,
         )
         dataset = make_dataset(arr)
-        _, count, position, _ = dataset.cluster(4, 6)
+        _, count, position, _ = dataset.vector.cluster(4, 6)
 
         assert count == 2, (
             f"Expected count=2 (1 diagonal cluster + increment), got {count}"
@@ -589,7 +589,7 @@ class TestCluster:
         """
         arr = np.ones((5, 7), dtype=np.float64) * 3
         dataset = make_dataset(arr)
-        cluster_array, _, _, _ = dataset.cluster(1, 10)
+        cluster_array, _, _, _ = dataset.vector.cluster(1, 10)
 
         assert cluster_array.shape == (
             5,
@@ -610,7 +610,7 @@ class TestCluster:
         arr[4, 0] = 5.0
         arr[4, 4] = 5.0
         dataset = make_dataset(arr)
-        _, count, position, _ = dataset.cluster(4, 6)
+        _, count, position, _ = dataset.vector.cluster(4, 6)
 
         assert count == 5, (
             f"Expected count=5 (4 isolated clusters + increment), got {count}"
@@ -627,7 +627,7 @@ class TestCluster:
         """
         arr = np.ones((200, 200), dtype=np.float64) * 5
         dataset = make_dataset(arr)
-        cluster_array, count, position, _ = dataset.cluster(1, 10)
+        cluster_array, count, position, _ = dataset.vector.cluster(1, 10)
 
         assert count == 2, f"Expected count=2 (1 cluster + increment), got {count}"
         assert len(position) == 40000, f"Expected 40000 cells, got {len(position)}"
@@ -643,7 +643,7 @@ class TestCluster:
         rng = np.random.default_rng(42)
         arr = rng.integers(1, 10, size=(6, 6)).astype(np.float64)
         dataset = make_dataset(arr)
-        _, _, position, values = dataset.cluster(3, 7)
+        _, _, position, values = dataset.vector.cluster(3, 7)
 
         for v in values:
             assert 3 <= v <= 7, f"Value {v} is outside bounds [3, 7]"
@@ -662,7 +662,7 @@ class TestCluster:
         """
         arr = np.array([[5.0, 5.0, 0.0, 5.0, 5.0]], dtype=np.float64)
         dataset = make_dataset(arr)
-        _, count, position, _ = dataset.cluster(4, 6)
+        _, count, position, _ = dataset.vector.cluster(4, 6)
 
         assert count == 3, f"Expected count=3 (2 clusters + increment), got {count}"
         assert len(position) == 4, f"Expected 4 cells, got {len(position)}"
@@ -675,7 +675,7 @@ class TestCluster:
         """
         arr = np.array([[5.0], [5.0], [0.0], [5.0]], dtype=np.float64)
         dataset = make_dataset(arr)
-        _, count, position, _ = dataset.cluster(4, 6)
+        _, count, position, _ = dataset.vector.cluster(4, 6)
 
         assert count == 3, f"Expected count=3 (2 clusters + increment), got {count}"
         assert len(position) == 3, f"Expected 3 cells, got {len(position)}"
@@ -692,7 +692,7 @@ class TestCluster:
         arr[2, 0] = 5.0
         arr[4, 0] = 5.0
         dataset = make_dataset(arr)
-        cluster_array, _, _, _ = dataset.cluster(4, 6)
+        cluster_array, _, _, _ = dataset.vector.cluster(4, 6)
 
         assert cluster_array[0, 0] == 1, (
             f"First cluster should be label 1, got {cluster_array[0, 0]}"
@@ -719,7 +719,7 @@ class TestCluster:
             dtype=np.float64,
         )
         dataset = make_dataset(arr)
-        cluster_array, _, _, _ = dataset.cluster(4, 6)
+        cluster_array, _, _, _ = dataset.vector.cluster(4, 6)
 
         assert cluster_array[0, 1] == 0, (
             f"Out-of-bound cell (0,1) should be 0, got {cluster_array[0, 1]}"
@@ -738,7 +738,7 @@ class TestCluster:
         rng = np.random.default_rng(99)
         arr = rng.uniform(1, 10, size=(4, 4)).astype(np.float64)
         dataset = make_dataset(arr)
-        _, _, position, values = dataset.cluster(3, 7)
+        _, _, position, values = dataset.vector.cluster(3, 7)
 
         for (r, c), v in zip(position, values):
             assert v == arr[r, c], (
@@ -753,7 +753,7 @@ class TestCluster:
             compare against stored expected results.
         """
         dataset = Dataset(rhine_dem)
-        cluster_array, count, position, values = dataset.cluster(0.1, 20)
+        cluster_array, count, position, values = dataset.vector.cluster(0.1, 20)
 
         assert count == 155, f"Expected 155 clusters, got {count}"
         assert np.array_equal(cluster_array, clusters), (

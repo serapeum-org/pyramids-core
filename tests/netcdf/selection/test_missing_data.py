@@ -86,7 +86,7 @@ class TestFillna:
 
     def test_it_fills_the_gaps(self):
         """The gap takes the value; the cells that held data keep theirs."""
-        read = np.asarray(self._raster().fillna(0.0).read_array(), dtype="float64")
+        read = np.asarray(self._raster().analysis.fillna(0.0).io.read_array(), dtype="float64")
         assert_allclose(read, np.array([[1.0, 0.0], [3.0, 4.0]]))
 
     def test_it_is_the_inverse_of_fill(self):
@@ -96,13 +96,13 @@ class TestFillna:
             The two names are one letter apart and do opposite things, which is the whole
             reason the plan called the naming a risk.
         """
-        filled = np.asarray(self._raster().fill(0.0).read_array(), dtype="float64")
+        filled = np.asarray(self._raster().fill(0.0).io.read_array(), dtype="float64")
         assert_allclose(filled, np.array([[0.0, NDV], [0.0, 0.0]]))
 
     def test_the_grid_survives(self):
         """Filling changes values, never georeferencing."""
         source = self._raster()
-        result = source.fillna(0.0)
+        result = source.analysis.fillna(0.0)
         assert result.geotransform == source.geotransform
         assert result.epsg == source.epsg
 
@@ -111,7 +111,7 @@ class TestFillna:
         values = np.array([[1.0, 2.0], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=RASTER_GEO, no_data_value=NDV)
         assert_allclose(
-            np.asarray(raster.fillna(0.0).read_array(), dtype="float64"), values
+            np.asarray(raster.analysis.fillna(0.0).io.read_array(), dtype="float64"), values
         )
 
     def test_a_raster_declaring_no_sentinel_has_no_gaps_to_fill(self):
@@ -123,15 +123,15 @@ class TestFillna:
         """
         values = np.array([[1.0, 2.0], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=RASTER_GEO, no_data_value=None)
-        result = raster.fillna(0.0)
-        assert_allclose(np.asarray(result.read_array(), dtype="float64"), values)
+        result = raster.analysis.fillna(0.0)
+        assert_allclose(np.asarray(result.io.read_array(), dtype="float64"), values)
         assert result.no_data_value[0] is None
 
     def test_every_band_of_a_stack_is_filled(self):
         """A gap in the second band is filled as one in the first is."""
         stack = np.array([[[1.0, NDV], [3.0, 4.0]], [[5.0, 6.0], [NDV, 8.0]]])
         raster = Dataset.from_array(stack, geo_ref=RASTER_GEO, no_data_value=NDV)
-        read = np.asarray(raster.fillna(0.0).read_array(), dtype="float64")
+        read = np.asarray(raster.analysis.fillna(0.0).io.read_array(), dtype="float64")
         assert read.shape == (2, 2, 2)
         assert_allclose(read[0], np.array([[1.0, 0.0], [3.0, 4.0]]))
         assert_allclose(read[1], np.array([[5.0, 6.0], [0.0, 8.0]]))
@@ -153,7 +153,7 @@ class TestNullFlags:
     def test_isnull_flags_the_gap(self):
         """`1` at the gap, `0` everywhere else."""
         assert_array_equal(
-            np.asarray(self._raster().isnull().read_array()),
+            np.asarray(self._raster().analysis.isnull().io.read_array()),
             np.array([[0, 1], [0, 0]], dtype="uint8"),
         )
 
@@ -161,30 +161,30 @@ class TestNullFlags:
         """Every cell is one or the other, and never both."""
         raster = self._raster()
         assert_array_equal(
-            np.asarray(raster.isnull().read_array())
-            + np.asarray(raster.notnull().read_array()),
+            np.asarray(raster.analysis.isnull().io.read_array())
+            + np.asarray(raster.analysis.notnull().io.read_array()),
             np.ones((2, 2), dtype="uint8"),
         )
 
     def test_the_flags_are_uint8(self):
         """GDAL has no boolean band type, so the flags come back as a comparison's do."""
-        assert np.asarray(self._raster().isnull().read_array()).dtype == np.uint8
+        assert np.asarray(self._raster().analysis.isnull().io.read_array()).dtype == np.uint8
 
     def test_the_flags_declare_no_no_data_value(self):
         """Every cell is either missing or not, so no flag could fail to be judged."""
-        assert self._raster().isnull().no_data_value[0] is None
+        assert self._raster().analysis.isnull().no_data_value[0] is None
 
     def test_they_read_as_a_condition_for_where(self):
         """`where(notnull())` keeps exactly the cells that hold data."""
         raster = self._raster()
-        kept = np.asarray(raster.where(raster.notnull()).read_array(), dtype="float64")
+        kept = np.asarray(raster.analysis.where(raster.analysis.notnull()).io.read_array(), dtype="float64")
         assert_allclose(kept, np.array([[1.0, NDV], [3.0, 4.0]]))
 
     def test_isnull_selects_the_gaps_for_where(self):
         """`where(isnull(), 0.0)` writes into the cells that hold data, keeping the gaps."""
         raster = self._raster()
         read = np.asarray(
-            raster.where(raster.isnull(), 0.0).read_array(), dtype="float64"
+            raster.analysis.where(raster.analysis.isnull(), 0.0).io.read_array(), dtype="float64"
         )
         assert read[0, 1] == pytest.approx(NDV)
         assert read[0, 0] == pytest.approx(0.0)
@@ -193,10 +193,10 @@ class TestNullFlags:
         """A stack is flagged plane by plane, keeping its band count."""
         stack = np.array([[[1.0, NDV], [3.0, 4.0]], [[5.0, 6.0], [NDV, 8.0]]])
         raster = Dataset.from_array(stack, geo_ref=RASTER_GEO, no_data_value=NDV)
-        flags = raster.isnull()
+        flags = raster.analysis.isnull()
         assert flags.band_count == 2
         assert_array_equal(
-            np.asarray(flags.read_array()),
+            np.asarray(flags.io.read_array()),
             np.array([[[0, 1], [0, 0]], [[0, 0], [1, 0]]], dtype="uint8"),
         )
 
@@ -205,10 +205,10 @@ class TestNullFlags:
         values = np.array([[1.0, 2.0], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=RASTER_GEO, no_data_value=None)
         assert_array_equal(
-            np.asarray(raster.isnull().read_array()), np.zeros((2, 2), dtype="uint8")
+            np.asarray(raster.analysis.isnull().io.read_array()), np.zeros((2, 2), dtype="uint8")
         )
         assert_array_equal(
-            np.asarray(raster.notnull().read_array()), np.ones((2, 2), dtype="uint8")
+            np.asarray(raster.analysis.notnull().io.read_array()), np.ones((2, 2), dtype="uint8")
         )
 
 

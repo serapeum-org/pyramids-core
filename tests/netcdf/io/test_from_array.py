@@ -575,7 +575,7 @@ class TestCreateFromArraySetVariableRoundTrip:
         )
         ds._band_dim_name = var._band_dim_name
         ds._band_dim_values = var._band_dim_values
-        nc.set_variable("doubled", ds)
+        nc.variables.set("doubled", ds)
         assert "doubled" in nc.variable_names, (
             f"Expected 'doubled' in {nc.variable_names}"
         )
@@ -610,7 +610,7 @@ class TestCreateFromArraySetVariableRoundTrip:
             no_data_value=var.no_data_value,
             geo_ref=GeoReference(geo=var.geotransform, epsg=var.epsg),
         )
-        nc.set_variable("precip_offset", ds)
+        nc.variables.set("precip_offset", ds)
         out = str(tmp_path / "workflow.nc")
         nc.to_file(out)
         reloaded = NetCDF.read_file(out, open_as_multi_dimensional=True)

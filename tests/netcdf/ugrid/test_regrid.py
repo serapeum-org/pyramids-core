@@ -175,7 +175,7 @@ class TestRasterizeLike:
         assert tuple(out.geotransform) == tuple(reference.geotransform)
         assert out.shape == reference.shape
         assert out.epsg == reference.epsg
-        np.testing.assert_array_equal(out.read_array(), reference.read_array())
+        np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
     def test_nodata_honored(self):
         """With a tiny max_distance every cell falls outside and is filled with nodata."""
@@ -191,7 +191,7 @@ class TestRasterizeLike:
             max_distance=0.01,
         )
         np.testing.assert_array_equal(
-            out.read_array(), np.full(reference.read_array().shape, -9999.0)
+            out.io.read_array(), np.full(reference.io.read_array().shape, -9999.0)
         )
 
     def test_idw_method_runs(self):
@@ -202,7 +202,7 @@ class TestRasterizeLike:
             ds.mesh, ds["v"].data, reference, location="face", method="idw"
         )
         assert tuple(out.geotransform) == tuple(reference.geotransform)
-        arr = out.read_array()
+        arr = out.io.read_array()
         finite = arr[arr != -9999.0]
         assert finite.size > 0
         assert np.all(np.isfinite(finite))
@@ -215,7 +215,7 @@ class TestRasterizeLike:
         out = rasterize_like(
             ds.mesh, temporal, reference, location="face", method="nearest"
         )
-        np.testing.assert_array_equal(out.read_array(), reference.read_array())
+        np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
     def test_same_epsg_reproject_is_noop(self):
         """Passing source_epsg equal to the reference EPSG changes nothing (reproject no-op)."""
@@ -229,7 +229,7 @@ class TestRasterizeLike:
             method="nearest",
             source_epsg=reference.epsg,
         )
-        np.testing.assert_array_equal(out.read_array(), reference.read_array())
+        np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
 
 class TestInterpTime:

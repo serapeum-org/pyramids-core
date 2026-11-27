@@ -69,14 +69,14 @@ class TestBandFilesDownloadStackPersist:
         ]
         ds = Dataset.from_band_files(files)
         assert ds.band_names == ["B2", "B3", "B4"], f"band names: {ds.band_names}"
-        assert [int(ds.read_array(band=i).flat[0]) for i in range(3)] == [
+        assert [int(ds.io.read_array(band=i).flat[0]) for i in range(3)] == [
             100,
             200,
             300,
         ], "per-band values not carried into the stack"
 
         out = tmp_path / "stacked.tif"
-        ds.to_file(str(out))
+        ds.io.to_file(str(out))
         assert out.exists(), "stacked multi-band raster was not written"
         reloaded = Dataset.read_file(str(out))
         assert reloaded.band_count == 3, f"expected 3 bands, got {reloaded.band_count}"
@@ -85,7 +85,7 @@ class TestBandFilesDownloadStackPersist:
             "B3",
             "B4",
         ], f"band names lost on disk: {reloaded.band_names}"
-        assert [int(reloaded.read_array(band=i).flat[0]) for i in range(3)] == [
+        assert [int(reloaded.io.read_array(band=i).flat[0]) for i in range(3)] == [
             100,
             200,
             300,
@@ -94,7 +94,7 @@ class TestBandFilesDownloadStackPersist:
         minx, miny, maxx, maxy = reloaded.bbox
         sub = box(minx, (miny + maxy) / 2, (minx + maxx) / 2, maxy)
         mask = gpd.GeoDataFrame(geometry=[sub], crs=reloaded.epsg)
-        cropped = reloaded.crop(mask)
+        cropped = reloaded.spatial.crop(mask)
         assert cropped.band_count == 3, f"crop changed band count: {cropped.band_count}"
         assert cropped.rows < reloaded.rows or cropped.columns < reloaded.columns, (
             "crop to a sub-box should shrink the raster"

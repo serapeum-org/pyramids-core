@@ -300,13 +300,13 @@ class TestDatasetBboxAndAxes:
             value via `read_part`.
         """
         ds = _ramp_dataset(SOUTH_UP)
-        data = np.asarray(ds.read_array())
+        data = np.asarray(ds.io.read_array())
         y = np.asarray(ds.y)
         x = np.asarray(ds.x)
 
         for i in (0, 3, 7):
             for j in (0, 5, 7):
-                sample = ds.read_part(
+                sample = ds.cog.read_part(
                     bbox=[x[j], y[i], x[j], y[i]],
                     dst_width=1,
                     dst_height=1,

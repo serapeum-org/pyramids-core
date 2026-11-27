@@ -71,7 +71,7 @@ class TestMaskedReads:
             One -9999 cell -> mask count 1; `filled(0)` replaces it with 0
             while valid cells keep their values.
         """
-        result = nodata_dataset.read_array(band=0, masked=True)
+        result = nodata_dataset.io.read_array(band=0, masked=True)
         assert isinstance(result, np.ma.MaskedArray), f"got {type(result).__name__}"
         assert result.mask.sum() == 1, (
             f"expected 1 masked cell, got {result.mask.sum()}"
@@ -97,7 +97,7 @@ class TestMaskedReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, masked=True)
+        result = ds.io.read_array(band=0, masked=True)
         assert result.mask[0, 0], "the exact -9999 cell must be masked"
         assert not result.mask[0, 1], "a valid -9990 pixel must not be masked"
         assert result.mask.sum() == 1, (
@@ -117,7 +117,7 @@ class TestMaskedReads:
             no_data_value=-100,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, masked=True)
+        result = ds.io.read_array(band=0, masked=True)
         assert result.mask[0, 0], "the exact -100 cell must be masked"
         assert not result.mask[0, 1], "a valid -99 pixel must not be masked"
         assert result.mask.sum() == 1, (
@@ -137,7 +137,7 @@ class TestMaskedReads:
             no_data_value=np.nan,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, masked=True)
+        result = ds.io.read_array(band=0, masked=True)
         assert result.mask.sum() == 1, f"NaN cell not masked: {result.mask}"
         assert result.mask[0, 0], "the NaN cell must be the masked one"
 
@@ -155,7 +155,7 @@ class TestMaskedReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(masked=True)
+        result = ds.io.read_array(masked=True)
         assert result.shape == (2, 2, 2), f"unexpected shape {result.shape}"
         assert result.mask[0].sum() == 1, "band 0 must have one masked cell"
         assert result.mask[1].sum() == 0, "band 1 must have no masked cells"
@@ -167,7 +167,7 @@ class TestMaskedReads:
             The only invalidity signal is the mask band (flags branch); the
             zeroed mask cell is masked in the result.
         """
-        result = mask_band_dataset.read_array(band=0, masked=True)
+        result = mask_band_dataset.io.read_array(band=0, masked=True)
         assert result.mask.sum() == 1, f"mask band ignored: {result.mask}"
         assert result[0, 1] is np.ma.masked, "cell (0,1) must be masked"
 
@@ -178,7 +178,7 @@ class TestMaskedReads:
             Window covering the top row contains the nodata cell; the mask
             aligns with the window shape.
         """
-        result = nodata_dataset.read_array(band=0, window=[0, 0, 2, 1], masked=True)
+        result = nodata_dataset.io.read_array(band=0, window=[0, 0, 2, 1], masked=True)
         assert result.shape == (1, 2), f"unexpected window shape {result.shape}"
         assert result.mask.sum() == 1, "window must contain one masked cell"
 
@@ -190,7 +190,7 @@ class TestMaskedReads:
             must mask exactly that cell, proving the mask band is read with
             the same pixel offsets as the data.
         """
-        result = mask_band_dataset.read_array(band=0, window=[0, 0, 2, 1], masked=True)
+        result = mask_band_dataset.io.read_array(band=0, window=[0, 0, 2, 1], masked=True)
         assert result.shape == (1, 2), f"unexpected window shape {result.shape}"
         assert result.mask.sum() == 1, f"mask band ignored in window: {result.mask}"
         assert result.mask[0, 1], "the mask-band-zeroed cell must be masked"
@@ -204,7 +204,7 @@ class TestMaskedReads:
             raised ``TypeError: 'Window' object is not subscriptable`` because
             ``_band_mask`` slices the mask band with ``window[0..3]``.
         """
-        result = mask_band_dataset.read_array(
+        result = mask_band_dataset.io.read_array(
             band=0, window=Window(0, 0, 2, 1), masked=True
         )
         assert result.shape == (1, 2), f"unexpected window shape {result.shape}"
@@ -228,7 +228,7 @@ class TestMaskedReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, bbox=(1.0, 1.0, 3.0, 3.0), masked=True)
+        result = ds.io.read_array(band=0, bbox=(1.0, 1.0, 3.0, 3.0), masked=True)
         assert isinstance(result, np.ma.MaskedArray), f"got {type(result).__name__}"
         assert result.shape == (2, 2), f"unexpected bbox shape {result.shape}"
         assert result.mask.sum() == 1, (
@@ -259,7 +259,7 @@ class TestMaskedReads:
         )
         ds.FlushCache()
         ds = None
-        result = Dataset.read_file(path).read_array(band=0, masked=True)
+        result = Dataset.read_file(path).io.read_array(band=0, masked=True)
         assert isinstance(result, np.ma.MaskedArray), f"got {type(result).__name__}"
         assert result.mask.sum() == 0, f"nothing must be masked: {result.mask}"
 
@@ -277,7 +277,7 @@ class TestMaskedReads:
             no_data_value=0.1,
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         )
-        result = ds.read_array(band=0, masked=True)
+        result = ds.io.read_array(band=0, masked=True)
         assert result.mask[0, 0], "float32-precision nodata cell must be masked"
         assert result.mask.sum() == 1, (
             f"expected 1 masked cell, got {result.mask.sum()}"
@@ -289,7 +289,7 @@ class TestMaskedReads:
         Test scenario:
             No MaskedArray unless explicitly requested.
         """
-        result = nodata_dataset.read_array(band=0)
+        result = nodata_dataset.io.read_array(band=0)
         assert type(result) is np.ndarray, f"default changed: {type(result).__name__}"
 
     def test_chunks_with_masked_raises(self, nodata_dataset):
@@ -299,7 +299,7 @@ class TestMaskedReads:
             Lazy masked reads are explicitly unsupported in v1.
         """
         with pytest.raises(NotImplementedError, match="masked=True"):
-            nodata_dataset.read_array(band=0, chunks=2, masked=True)
+            nodata_dataset.io.read_array(band=0, chunks=2, masked=True)
 
 
 @pytest.fixture
@@ -362,10 +362,10 @@ class TestMaskedDecimatedReads:
             because a blending resampler absorbs this fixture's scattered no-data
             (covered by ``test_average_masks_only_a_fully_no_data_block``).
         """
-        masked = ramp8_float.read_array(
+        masked = ramp8_float.io.read_array(
             out_shape=(4, 4), masked=True, resampling="nearest"
         )
-        stored = ramp8_float.read_array(
+        stored = ramp8_float.io.read_array(
             out_shape=(4, 4), unpack=False, resampling="nearest"
         )
         assert isinstance(masked, np.ma.MaskedArray), f"got {type(masked).__name__}"
@@ -410,8 +410,8 @@ class TestMaskedDecimatedReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        masked = ds.read_array(out_shape=(4, 4), masked=True, resampling=resampling)
-        stored = ds.read_array(out_shape=(4, 4), unpack=False, resampling=resampling)
+        masked = ds.io.read_array(out_shape=(4, 4), masked=True, resampling=resampling)
+        stored = ds.io.read_array(out_shape=(4, 4), unpack=False, resampling=resampling)
         assert masked.mask[0, 0], "the fully-no-data block must be masked"
         np.testing.assert_array_equal(masked.mask, stored == -9999.0)
         if resampling == "average":
@@ -435,10 +435,10 @@ class TestMaskedDecimatedReads:
         )
         xmin, _, _, ymax = ds.bbox
         quarter = (xmin, ymax - 4.0, xmin + 4.0, ymax)
-        masked = ds.read_array(
+        masked = ds.io.read_array(
             bbox=quarter, out_shape=(2, 2), masked=True, resampling="nearest"
         )
-        stored = ds.read_array(
+        stored = ds.io.read_array(
             bbox=quarter, out_shape=(2, 2), unpack=False, resampling="nearest"
         )
         assert masked.shape == (2, 2), f"unexpected shape {masked.shape}"
@@ -464,7 +464,7 @@ class TestMaskedDecimatedReads:
         """
         xmin, _, _, ymax = mask_band_8x8.bbox
         quarter = (xmin, ymax - 4.0, xmin + 4.0, ymax)
-        masked = mask_band_8x8.read_array(
+        masked = mask_band_8x8.io.read_array(
             bbox=quarter, out_shape=(2, 2), masked=True, resampling="nearest"
         )
         assert isinstance(masked, np.ma.MaskedArray), f"got {type(masked).__name__}"
@@ -485,8 +485,8 @@ class TestMaskedDecimatedReads:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        masked = ds.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
-        stored = ds.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
+        masked = ds.io.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
+        stored = ds.io.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
         np.testing.assert_array_equal(masked.mask, stored == -9999)
 
     def test_mask_band_is_decimated_to_the_output_shape(self, mask_band_8x8):
@@ -497,7 +497,7 @@ class TestMaskedDecimatedReads:
             nodata marker; decimated 8x8 -> 4x4 (nearest) that is the top output
             row, so only it is masked.
         """
-        masked = mask_band_8x8.read_array(
+        masked = mask_band_8x8.io.read_array(
             out_shape=(4, 4), masked=True, resampling="nearest"
         )
         assert isinstance(masked, np.ma.MaskedArray), f"got {type(masked).__name__}"
@@ -519,9 +519,9 @@ class TestMaskedDecimatedReads:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        ds.scale = [0.5]
-        masked = ds.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
-        stored = ds.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
+        ds.bands.scale = [0.5]
+        masked = ds.io.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
+        stored = ds.io.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
         assert masked.dtype == np.float64, f"packed read must unpack: {masked.dtype}"
         np.testing.assert_array_equal(masked.mask, stored == -9999)
 
@@ -543,8 +543,8 @@ class TestMaskedDecimatedReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        masked = ds.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
-        stored = ds.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
+        masked = ds.io.read_array(out_shape=(4, 4), masked=True, resampling="nearest")
+        stored = ds.io.read_array(out_shape=(4, 4), unpack=False, resampling="nearest")
         assert masked.shape == (2, 4, 4), f"unexpected shape {masked.shape}"
         np.testing.assert_array_equal(masked.mask, stored == -9999.0)
 
@@ -554,7 +554,7 @@ class TestMaskedDecimatedReads:
         Test scenario:
             The decimated read is unchanged when masked is not requested.
         """
-        result = ramp8_float.read_array(out_shape=(4, 4))
+        result = ramp8_float.io.read_array(out_shape=(4, 4))
         assert type(result) is np.ndarray, f"masked leaked in: {type(result).__name__}"
 
 
@@ -570,7 +570,7 @@ class TestMaskedBoundlessReads:
             valid in-raster cell stays unmasked.
         """
         window = [6, 0, 6, 8]  # cols 6..11; raster has 8 cols -> 4 padding columns
-        masked = ramp8_float.read_array(window=window, boundless=True, masked=True)
+        masked = ramp8_float.io.read_array(window=window, boundless=True, masked=True)
         assert isinstance(masked, np.ma.MaskedArray), f"got {type(masked).__name__}"
         assert masked.shape == (8, 6), f"unexpected shape {masked.shape}"
         assert masked.mask[:, 2:].all(), "the four out-of-raster columns must be masked"
@@ -586,10 +586,10 @@ class TestMaskedBoundlessReads:
             value, not what counts as padding — and the padding stays masked.
         """
         window = [6, 0, 6, 8]
-        default_fill = ramp8_float.read_array(
+        default_fill = ramp8_float.io.read_array(
             window=window, boundless=True, masked=True
         )
-        explicit_fill = ramp8_float.read_array(
+        explicit_fill = ramp8_float.io.read_array(
             window=window, boundless=True, masked=True, fill_value=123.0
         )
         np.testing.assert_array_equal(
@@ -606,7 +606,7 @@ class TestMaskedBoundlessReads:
             No intersection with the raster -> the whole buffer is fill and
             every cell is masked.
         """
-        masked = ramp8_float.read_array(
+        masked = ramp8_float.io.read_array(
             window=[20, 20, 3, 3], boundless=True, masked=True
         )
         assert isinstance(masked, np.ma.MaskedArray), f"got {type(masked).__name__}"
@@ -629,7 +629,7 @@ class TestMaskedBoundlessReads:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        masked = ds.read_array(window=[6, 0, 6, 8], boundless=True, masked=True)
+        masked = ds.io.read_array(window=[6, 0, 6, 8], boundless=True, masked=True)
         assert masked.shape == (2, 8, 6), f"unexpected shape {masked.shape}"
         assert masked.mask[:, :, 2:].all(), (
             "padding columns must be masked in every band"
@@ -643,7 +643,7 @@ class TestMaskedBoundlessReads:
         Test scenario:
             The padded read is unchanged when masked is not requested.
         """
-        result = ramp8_float.read_array(window=[6, 0, 6, 8], boundless=True)
+        result = ramp8_float.io.read_array(window=[6, 0, 6, 8], boundless=True)
         assert type(result) is np.ndarray, f"masked leaked in: {type(result).__name__}"
 
 

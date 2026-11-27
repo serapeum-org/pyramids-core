@@ -668,14 +668,14 @@ class TestWeightedEmptyContainer:
     def test_the_refusal_names_the_operation(self):
         """The message reads `"Cannot weight an empty container"`, matching the other members."""
         container = _container()
-        container.remove_variable("v")
+        container.variables.remove("v")
         with pytest.raises(ValueError, match="Cannot weight an empty container"):
             container.weighted("area")
 
     def test_an_empty_container_is_refused_before_the_weights_are_read(self):
         """Unusable weights are not what the caller hears about: the empty container comes first."""
         container = _container()
-        container.remove_variable("v")
+        container.variables.remove("v")
         with pytest.raises(ValueError, match="empty container"):
             container.weighted(np.ones((99, 99)))
 
@@ -871,7 +871,7 @@ class TestWeightedContainerMixedVariables:
             NetCDF: The container.
         """
         container = _container()
-        container.set_variable(
+        container.variables.set(
             "flat",
             Dataset.from_array(
                 np.arange(NY * NX, dtype="float64").reshape(NY, NX), geo_ref=GEO

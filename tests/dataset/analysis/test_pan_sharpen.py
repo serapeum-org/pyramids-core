@@ -54,7 +54,7 @@ def pan() -> Dataset:
 
 def test_pan_sharpen_fuses_to_pan_resolution(multispectral: Dataset, pan: Dataset):
     """The fused raster is at the pan grid with one band per spectral band."""
-    fused = multispectral.pan_sharpen(pan)
+    fused = multispectral.analysis.pan_sharpen(pan)
     assert (fused.rows, fused.columns) == (128, 128)
     assert fused.band_count == 3
     assert fused.epsg == 4326
@@ -65,7 +65,7 @@ def test_pan_sharpen_band_subset_controls_output_bands(
     multispectral: Dataset, pan: Dataset
 ):
     """`bands` selects which spectral bands to sharpen and their output order."""
-    fused = multispectral.pan_sharpen(pan, bands=[0, 2])
+    fused = multispectral.analysis.pan_sharpen(pan, bands=[0, 2])
     assert fused.band_count == 2
 
 
@@ -73,7 +73,7 @@ def test_pan_sharpen_accepts_weights_resampling_and_nodata(
     multispectral: Dataset, pan: Dataset
 ):
     """Weights, a resampling kernel, and a no-data value are all honoured."""
-    fused = multispectral.pan_sharpen(
+    fused = multispectral.analysis.pan_sharpen(
         pan, weights=[0.4, 0.3, 0.3], resampling="bilinear", nodata=0
     )
     assert fused.band_count == 3
@@ -87,14 +87,14 @@ def test_pan_sharpen_resampling_kernels(
     multispectral: Dataset, pan: Dataset, resampling: str
 ):
     """Every documented resampling name is accepted by GDAL."""
-    fused = multispectral.pan_sharpen(pan, resampling=resampling)
+    fused = multispectral.analysis.pan_sharpen(pan, resampling=resampling)
     assert (fused.rows, fused.columns, fused.band_count) == (128, 128, 3)
 
 
 def test_pan_sharpen_weights_change_the_output(multispectral: Dataset, pan: Dataset):
     """Different Brovey weights produce different fused pixels (not silently ignored)."""
-    red_heavy = multispectral.pan_sharpen(pan, weights=[0.9, 0.05, 0.05]).read_array()
-    green_heavy = multispectral.pan_sharpen(pan, weights=[0.05, 0.9, 0.05]).read_array()
+    red_heavy = multispectral.analysis.pan_sharpen(pan, weights=[0.9, 0.05, 0.05]).io.read_array()
+    green_heavy = multispectral.analysis.pan_sharpen(pan, weights=[0.05, 0.9, 0.05]).io.read_array()
     assert not np.array_equal(red_heavy, green_heavy), "weights must affect the fusion"
 
 
@@ -102,28 +102,28 @@ def test_pan_sharpen_resampling_changes_the_output(
     multispectral: Dataset, pan: Dataset
 ):
     """A different resampling kernel produces different fused pixels."""
-    nearest = multispectral.pan_sharpen(pan, resampling="nearest").read_array()
-    cubic = multispectral.pan_sharpen(pan, resampling="cubic").read_array()
+    nearest = multispectral.analysis.pan_sharpen(pan, resampling="nearest").io.read_array()
+    cubic = multispectral.analysis.pan_sharpen(pan, resampling="cubic").io.read_array()
     assert not np.array_equal(nearest, cubic), "resampling must affect the fusion"
 
 
 def test_pan_sharpen_facade_matches_engine(multispectral: Dataset, pan: Dataset):
     """The Dataset facade and the engine method produce identical pixels."""
-    via_facade = multispectral.pan_sharpen(pan).read_array()
-    via_engine = multispectral.analysis.pan_sharpen(pan).read_array()
+    via_facade = multispectral.analysis.pan_sharpen(pan).io.read_array()
+    via_engine = multispectral.analysis.pan_sharpen(pan).io.read_array()
     np.testing.assert_array_equal(via_facade, via_engine)
 
 
 def test_pan_sharpen_rejects_unknown_algorithm(multispectral: Dataset, pan: Dataset):
     """Only the Brovey transform GDAL implements is accepted."""
     with pytest.raises(ValueError, match="algorithm must be 'brovey'"):
-        multispectral.pan_sharpen(pan, algorithm="ihs")
+        multispectral.analysis.pan_sharpen(pan, algorithm="ihs")
 
 
 def test_pan_sharpen_rejects_unknown_resampling(multispectral: Dataset, pan: Dataset):
     """An unrecognised resampling name is rejected with the valid set."""
     with pytest.raises(ValueError, match="resampling must be one of"):
-        multispectral.pan_sharpen(pan, resampling="spline")
+        multispectral.analysis.pan_sharpen(pan, resampling="spline")
 
 
 def test_pan_sharpen_non_string_option_raises_value_error(
@@ -131,9 +131,9 @@ def test_pan_sharpen_non_string_option_raises_value_error(
 ):
     """A non-string algorithm/resampling raises ValueError, not AttributeError."""
     with pytest.raises(ValueError, match="algorithm must be 'brovey'"):
-        multispectral.pan_sharpen(pan, algorithm=42)
+        multispectral.analysis.pan_sharpen(pan, algorithm=42)
     with pytest.raises(ValueError, match="resampling must be one of"):
-        multispectral.pan_sharpen(pan, resampling=42)
+        multispectral.analysis.pan_sharpen(pan, resampling=42)
 
 
 def test_pan_sharpen_unhashable_option_raises_value_error(
@@ -141,21 +141,21 @@ def test_pan_sharpen_unhashable_option_raises_value_error(
 ):
     """An unhashable algorithm/resampling raises ValueError, not TypeError."""
     with pytest.raises(ValueError, match="algorithm must be 'brovey'"):
-        multispectral.pan_sharpen(pan, algorithm=[1, 2])
+        multispectral.analysis.pan_sharpen(pan, algorithm=[1, 2])
     with pytest.raises(ValueError, match="resampling must be one of"):
-        multispectral.pan_sharpen(pan, resampling=["cubic"])
+        multispectral.analysis.pan_sharpen(pan, resampling=["cubic"])
 
 
 def test_pan_sharpen_rejects_empty_bands(multispectral: Dataset, pan: Dataset):
     """Selecting no spectral band is an error."""
     with pytest.raises(ValueError, match="at least one multispectral band"):
-        multispectral.pan_sharpen(pan, bands=[])
+        multispectral.analysis.pan_sharpen(pan, bands=[])
 
 
 def test_pan_sharpen_rejects_out_of_range_band(multispectral: Dataset, pan: Dataset):
     """A band index beyond the multispectral stack is rejected."""
     with pytest.raises((ValueError, IndexError)):
-        multispectral.pan_sharpen(pan, bands=[0, 9])
+        multispectral.analysis.pan_sharpen(pan, bands=[0, 9])
 
 
 def test_pan_sharpen_rejects_weight_length_mismatch(
@@ -163,7 +163,7 @@ def test_pan_sharpen_rejects_weight_length_mismatch(
 ):
     """`weights` must carry one entry per selected band."""
     with pytest.raises(ValueError, match="one entry per selected band"):
-        multispectral.pan_sharpen(pan, weights=[0.5, 0.5])
+        multispectral.analysis.pan_sharpen(pan, weights=[0.5, 0.5])
 
 
 def test_pan_sharpen_rejects_crs_mismatch(multispectral: Dataset):
@@ -175,7 +175,7 @@ def test_pan_sharpen_rejects_crs_mismatch(multispectral: Dataset):
         no_data_value=None,
     )
     with pytest.raises(AlignmentError, match="shared CRS"):
-        multispectral.pan_sharpen(pan_3857)
+        multispectral.analysis.pan_sharpen(pan_3857)
 
 
 def test_pan_sharpen_raises_when_vrt_build_fails(
@@ -188,7 +188,7 @@ def test_pan_sharpen_raises_when_vrt_build_fails(
         analysis_mod.gdal, "CreatePansharpenedVRT", lambda *a, **k: None
     )
     with pytest.raises(ValueError, match="could not build the pan-sharpened VRT"):
-        multispectral.pan_sharpen(pan)
+        multispectral.analysis.pan_sharpen(pan)
 
 
 def test_pan_sharpen_rejects_disjoint_extent(multispectral: Dataset):
@@ -200,7 +200,7 @@ def test_pan_sharpen_rejects_disjoint_extent(multispectral: Dataset):
         no_data_value=None,
     )
     with pytest.raises(AlignmentError, match="overlap"):
-        multispectral.pan_sharpen(pan_far)
+        multispectral.analysis.pan_sharpen(pan_far)
 
 
 def test_pan_sharpen_crs_fallback_compares_wkt(multispectral: Dataset, pan: Dataset):
@@ -209,7 +209,7 @@ def test_pan_sharpen_crs_fallback_compares_wkt(multispectral: Dataset, pan: Data
     pan.crs = ""
     assert multispectral.epsg is None
     assert pan.epsg is None
-    fused = multispectral.pan_sharpen(pan)
+    fused = multispectral.analysis.pan_sharpen(pan)
     assert (fused.rows, fused.columns, fused.band_count) == (128, 128, 3)
 
 
@@ -219,7 +219,7 @@ def test_pan_sharpen_rejects_one_sided_crs(multispectral: Dataset, pan: Dataset)
     assert multispectral.epsg == 4326
     assert pan.epsg is None
     with pytest.raises(AlignmentError, match="shared CRS"):
-        multispectral.pan_sharpen(pan)
+        multispectral.analysis.pan_sharpen(pan)
 
 
 def test_pan_sharpen_single_band_multispectral(pan: Dataset):
@@ -230,5 +230,5 @@ def test_pan_sharpen_single_band_multispectral(pan: Dataset):
         geo_ref=GeoReference(top_left_corner=TOP_LEFT, cell_size=0.01, epsg=4326),
         no_data_value=None,
     )
-    fused = mono.pan_sharpen(pan)
+    fused = mono.analysis.pan_sharpen(pan)
     assert (fused.rows, fused.columns, fused.band_count) == (128, 128, 1)

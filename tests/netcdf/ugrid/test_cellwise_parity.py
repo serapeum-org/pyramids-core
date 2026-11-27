@@ -34,7 +34,7 @@ def _mesh(values, nodata, dtype=None):
 
 
 def _raster_out(ds):
-    return np.asarray(ds.read_array()).ravel()
+    return np.asarray(ds.io.read_array()).ravel()
 
 
 def _mesh_out(ds):
@@ -43,20 +43,20 @@ def _mesh_out(ds):
 
 # (name, (values, nodata, dtype), raster-call, mesh-call)
 _OPS = [
-    ("clip", lambda ds: ds.clip(8.0, 22.0), lambda ds: ds.clip_values(8.0, 22.0)),
-    ("round", lambda ds: ds.round(0), lambda ds: ds.round(0)),
-    ("astype_int32", lambda ds: ds.astype(np.int32), lambda ds: ds.astype(np.int32)),
+    ("clip", lambda ds: ds.analysis.clip(8.0, 22.0), lambda ds: ds.clip_values(8.0, 22.0)),
+    ("round", lambda ds: ds.analysis.round(0), lambda ds: ds.analysis.round(0)),
+    ("astype_int32", lambda ds: ds.analysis.astype(np.int32), lambda ds: ds.analysis.astype(np.int32)),
     (
         "astype_float16",
-        lambda ds: ds.astype(np.float16),
+        lambda ds: ds.analysis.astype(np.float16),
         lambda ds: ds.astype(np.float16),
     ),
     (
         "apply",
-        lambda ds: ds.apply(lambda a: a * 2),
+        lambda ds: ds.analysis.apply(lambda a: a * 2),
         lambda ds: ds.apply(lambda a: a * 2),
     ),
-    ("fillna", lambda ds: ds.fillna(0.0), lambda ds: ds.fillna(0.0)),
+    ("fillna", lambda ds: ds.analysis.fillna(0.0), lambda ds: ds.analysis.fillna(0.0)),
 ]
 
 
@@ -73,7 +73,7 @@ def test_raster_and_mesh_agree_on_a_gap_carrying_array(name, r_op, m_op):
 
 def test_isin_agrees_on_the_gap():
     """A gap is in no set on either hierarchy, whatever band type each returns."""
-    r = _raster_out(_raster([5.0, -9999.0], -9999.0).isin([-9999.0]))
+    r = _raster_out(_raster([5.0, -9999.0], -9999.0).analysis.isin([-9999.0]))
     m = _mesh_out(_mesh([5.0, -9999.0], -9999.0).isin([-9999.0]))
     np.testing.assert_array_equal(m.astype(bool), r.astype(bool))
     assert not r.astype(bool).any()
@@ -81,7 +81,7 @@ def test_isin_agrees_on_the_gap():
 
 def test_round_preserves_a_fractional_sentinel_on_both():
     """``round(0)`` leaves ``-9999.5`` where it was declared, raster and mesh alike."""
-    r = _raster_out(_raster([5.0, -9999.5], -9999.5).round(0))
+    r = _raster_out(_raster([5.0, -9999.5], -9999.5).analysis.round(0))
     m = _mesh_out(_mesh([5.0, -9999.5], -9999.5).round(0))
     np.testing.assert_array_equal(m, r)
     assert r.tolist() == [5.0, -9999.5]
@@ -89,7 +89,7 @@ def test_round_preserves_a_fractional_sentinel_on_both():
 
 def test_fillna_widens_a_float32_band_on_both():
     """``fillna(1e300)`` on a ``float32`` band widens to ``float64`` rather than storing inf."""
-    r_ds = _raster([5.0, -9999.0], -9999.0, dtype="float32").fillna(1e300)
+    r_ds = _raster([5.0, -9999.0], -9999.0, dtype="float32").analysis.fillna(1e300)
     m_ds = _mesh([5.0, -9999.0], -9999.0, dtype="float32").fillna(1e300)
     np.testing.assert_array_equal(_mesh_out(m_ds), _raster_out(r_ds))
     assert m_ds["depth"].data.dtype == np.float64
@@ -101,7 +101,7 @@ def test_both_refuse_bad_clip_bounds(bad):
     lower, upper = bad
     raster = _raster([5.0, 25.0], -9999.0)
     with pytest.raises(ValueError):
-        raster.clip(lower, upper)
+        raster.analysis.clip(lower, upper)
     mesh = _mesh([5.0, 25.0], -9999.0)
     with pytest.raises(ValueError):
         mesh.clip_values(lower, upper)

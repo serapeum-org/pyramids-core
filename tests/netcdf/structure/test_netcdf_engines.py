@@ -246,7 +246,7 @@ class TestVariablesEngine:
             geo_ref=GeoReference(geo=(0, 1, 0, 4, 0, -1), epsg=4326),
         )
         with pytest.raises(ValueError, match="multidimensional container"):
-            classic_container.set_variable("new", donor)
+            classic_container.variables.set("new", donor)
 
     def test_rename_variable_unknown_old_name_raises(self, mdim_container):
         """``rename_variable`` raises ValueError for an unknown source name.
@@ -256,7 +256,7 @@ class TestVariablesEngine:
             and lists the available ones.
         """
         with pytest.raises(ValueError, match="not found"):
-            mdim_container.rename_variable("does_not_exist", "whatever")
+            mdim_container.variables.rename("does_not_exist", "whatever")
 
     def test_rename_variable_existing_target_raises(self, mdim_container):
         """``rename_variable`` raises ValueError when the target name is taken.
@@ -314,7 +314,7 @@ class TestVariablesEngine:
             geo_ref=GeoReference(geo=geo),
             variable_name="b",
         )
-        dst.add_variable(src)
+        dst.variables.add(src)
         assert sorted(dst.variable_names) == [
             "a",
             "b",
@@ -477,7 +477,7 @@ class TestSelectionEngine:
             available variables instead of failing opaquely.
         """
         with pytest.raises(ValueError, match="not a variable in this store"):
-            mdim_container.subset("no_such_variable")
+            mdim_container.selection.subset("no_such_variable")
 
     def test_subset_rejects_variable_below_two_dims(self, mdim_container):
         """``subset`` of a 1-D variable raises ValueError naming the dim count.
@@ -489,7 +489,7 @@ class TestSelectionEngine:
             via the multidimensional API even though they are not data variables.)
         """
         with pytest.raises(ValueError, match=r"dimension\(s\); subset\(\) needs"):
-            mdim_container.subset("x")
+            mdim_container.selection.subset("x")
 
     def test_subset_requires_multidimensional(self, classic_container):
         """``subset`` on a classic container raises ValueError.
@@ -499,7 +499,7 @@ class TestSelectionEngine:
             has no root group and is rejected.
         """
         with pytest.raises(ValueError, match="requires a multidimensional store"):
-            classic_container.subset("anything")
+            classic_container.selection.subset("anything")
 
     def test_reduce_unknown_how_raises(self, mdim_container):
         """``reduce`` with an unknown reducer name raises ValueError.

@@ -121,14 +121,14 @@ class TestToRasterRenamedToToFile:
             original array, identical to one written via ``to_file``.
         """
         src = _value_raster()
-        expected = src.read_array(band=0)
+        expected = src.io.read_array(band=0)
         via_alias = tmp_path / "alias.tif"
         via_canonical = tmp_path / "canonical.tif"
         with pytest.warns(DeprecationWarning):
             src.to_raster(str(via_alias))
-        _value_raster().to_file(str(via_canonical))
-        got_alias = Dataset.read_file(str(via_alias)).read_array(band=0)
-        got_canonical = Dataset.read_file(str(via_canonical)).read_array(band=0)
+        _value_raster().io.to_file(str(via_canonical))
+        got_alias = Dataset.read_file(str(via_alias)).io.read_array(band=0)
+        got_canonical = Dataset.read_file(str(via_canonical)).io.read_array(band=0)
         np.testing.assert_array_equal(
             got_alias, expected, err_msg="to_raster round-trip changed the data"
         )
@@ -185,7 +185,7 @@ class TestFirstLastReturnDataset:
             f"first() must return a Dataset, got {type(first)}"
         )
         np.testing.assert_array_equal(
-            first.read_array(band=0),
+            first.io.read_array(band=0),
             values[0],
             err_msg="first() does not expose timestep 0",
         )
@@ -202,7 +202,7 @@ class TestFirstLastReturnDataset:
             f"last() must return a Dataset, got {type(last)}"
         )
         np.testing.assert_array_equal(
-            last.read_array(band=0),
+            last.io.read_array(band=0),
             values[-1],
             err_msg="last() does not expose the final timestep",
         )
@@ -217,12 +217,12 @@ class TestFirstLastReturnDataset:
         """
         cube, _ = _cube()
         np.testing.assert_array_equal(
-            cube.first().read_array(band=0),
-            cube.iloc(0).read_array(band=0),
+            cube.first().io.read_array(band=0),
+            cube.iloc(0).io.read_array(band=0),
             err_msg="first() diverged from iloc(0)",
         )
         np.testing.assert_array_equal(
-            cube.last().read_array(band=0),
-            cube.iloc(-1).read_array(band=0),
+            cube.last().io.read_array(band=0),
+            cube.iloc(-1).io.read_array(band=0),
             err_msg="last() diverged from iloc(-1)",
         )

@@ -33,7 +33,7 @@ def big_float_cog(tmp_path) -> str:
     rng = np.random.default_rng(seed=11)
     arr = (rng.random((600, 600)) * 100.0).astype("float32")
     ds = Dataset.from_array(arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326))
-    out = ds.to_cog(tmp_path / "big.tif")
+    out = ds.cog.to_cog(tmp_path / "big.tif")
     return str(out)
 
 
@@ -211,7 +211,7 @@ class TestCogInfoFacade:
             same compression and overview count as the module-level function.
         """
         ds = Dataset.read_file(big_float_cog)
-        info = ds.cog_info()
+        info = ds.cog.info()
         assert isinstance(info, COGInfo), f"unexpected type {type(info)}"
         ref = cog_info(big_float_cog)
         assert info.compression == ref.compression, "compression mismatch"
@@ -228,4 +228,4 @@ class TestCogInfoFacade:
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
         with pytest.raises(FileNotFoundError):
-            ds.cog_info()
+            ds.cog.info()

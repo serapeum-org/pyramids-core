@@ -188,7 +188,7 @@ class TestToNetcdfDefaults:
         values = _array_values(str(out), "Band_1")
         assert values.shape == (2, 4, 5), f"expected (2,4,5), got {values.shape}"
         for i, p in enumerate(paths):
-            expected = Dataset.read_file(p).read_array()
+            expected = Dataset.read_file(p).io.read_array()
             assert np.array_equal(values[i], expected), (
                 f"timestep {i} disk-array mismatch"
             )
@@ -1100,7 +1100,7 @@ class TestToNetcdfRoundTrip:
                 arr,
                 no_data_value=nd,
                 geo_ref=GeoReference(geo=(ox, cell, 0.0, oy, 0.0, -cell), epsg=4647),
-            ).to_file(path)
+            ).io.to_file(path)
             paths.append(path)
         out = tmp_path / "gt.nc"
         DatasetCollection.from_files(paths).to_netcdf(str(out))

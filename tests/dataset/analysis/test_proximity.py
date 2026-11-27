@@ -60,7 +60,7 @@ class TestProximity:
         Test scenario:
             Pixel (2,2) is the target, so its proximity is 0.
         """
-        result = single_target.proximity(distance_units="PIXEL").read_array()
+        result = single_target.analysis.proximity(distance_units="PIXEL").io.read_array()
         assert float(result[2, 2]) == pytest.approx(0.0), (
             f"Target pixel should be 0, got {result[2, 2]}"
         )
@@ -71,7 +71,7 @@ class TestProximity:
         Test scenario:
             Two cells left of the target is 2.0; the diagonal corner is 2*sqrt2.
         """
-        result = single_target.proximity(distance_units="PIXEL").read_array()
+        result = single_target.analysis.proximity(distance_units="PIXEL").io.read_array()
         assert float(result[2, 0]) == pytest.approx(2.0), f"Got {result[2, 0]}"
         assert float(result[4, 4]) == pytest.approx(2 * math.sqrt(2)), (
             f"Got {result[4, 4]}"
@@ -89,7 +89,7 @@ class TestProximity:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=2.0, epsg=4326),
         )
-        result = ds.proximity(distance_units="GEO").read_array()
+        result = ds.analysis.proximity(distance_units="GEO").io.read_array()
         assert float(result[2, 0]) == pytest.approx(4.0), f"Got {result[2, 0]}"
 
     def test_nonzero_targets_default(self, two_classes):
@@ -98,7 +98,7 @@ class TestProximity:
         Test scenario:
             Both (2,2) and (0,0) are targets, so both read 0.
         """
-        result = two_classes.proximity(distance_units="PIXEL").read_array()
+        result = two_classes.analysis.proximity(distance_units="PIXEL").io.read_array()
         assert float(result[2, 2]) == pytest.approx(0.0) and float(
             result[0, 0]
         ) == pytest.approx(0.0), (
@@ -112,9 +112,9 @@ class TestProximity:
             With target_values=[1] the value-5 pixel at (0,0) is NOT a target;
             its distance is measured to (2,2) = 2*sqrt2.
         """
-        result = two_classes.proximity(
+        result = two_classes.analysis.proximity(
             distance_units="PIXEL", target_values=[1]
-        ).read_array()
+        ).io.read_array()
         assert float(result[0, 0]) == pytest.approx(2 * math.sqrt(2)), (
             f"(0,0) should measure to the value-1 target, got {result[0, 0]}"
         )
@@ -126,9 +126,9 @@ class TestProximity:
             max_distance=1 leaves the far corner unreachable -> nodata -1, while
             an adjacent cell stays 1.0.
         """
-        result = single_target.proximity(
+        result = single_target.analysis.proximity(
             distance_units="PIXEL", max_distance=1.0, nodata=-1
-        ).read_array()
+        ).io.read_array()
         assert float(result[4, 4]) == -1.0, (
             f"Far corner should be nodata -1, got {result[4, 4]}"
         )
@@ -142,7 +142,7 @@ class TestProximity:
         Test scenario:
             proximity(nodata=-1) yields a band reporting no-data -1.
         """
-        result = single_target.proximity(nodata=-1)
+        result = single_target.analysis.proximity(nodata=-1)
         assert result.no_data_value[0] == -1.0, (
             f"Expected nodata -1, got {result.no_data_value[0]}"
         )
@@ -153,7 +153,7 @@ class TestProximity:
         Test scenario:
             proximity returns one float32 band regardless of source dtype.
         """
-        result = single_target.proximity()
+        result = single_target.analysis.proximity()
         assert isinstance(result, Dataset), f"Expected a Dataset, got {type(result)}"
         assert result.band_count == 1, f"Expected 1 band, got {result.band_count}"
         assert result.dtype[0] == "float32", f"Expected float32, got {result.dtype[0]}"
@@ -164,7 +164,7 @@ class TestProximity:
         Test scenario:
             Shape, geotransform, and EPSG match the source.
         """
-        result = single_target.proximity()
+        result = single_target.analysis.proximity()
         assert (result.rows, result.columns) == (
             5,
             5,
@@ -189,7 +189,7 @@ class TestProximity:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 5), cell_size=1.0, epsg=4326),
         )
-        result = ds.proximity(band=1, distance_units="PIXEL").read_array()
+        result = ds.analysis.proximity(band=1, distance_units="PIXEL").io.read_array()
         assert float(result[2, 2]) == pytest.approx(0.0), (
             f"Band-1 target should be 0, got {result[2, 2]}"
         )
@@ -201,7 +201,7 @@ class TestProximity:
             'metres' is not a recognised unit.
         """
         with pytest.raises(ValueError, match="distance_units must be"):
-            single_target.proximity(distance_units="metres")
+            single_target.analysis.proximity(distance_units="metres")
 
     def test_band_out_of_range_raises(self, single_target):
         """A band index beyond the raster raises ValueError.
@@ -210,7 +210,7 @@ class TestProximity:
             band=9 on a 1-band raster is out of range.
         """
         with pytest.raises(ValueError, match="out of range"):
-            single_target.proximity(band=9)
+            single_target.analysis.proximity(band=9)
 
     def test_negative_max_distance_raises(self, single_target):
         """A negative max_distance raises ValueError.
@@ -219,4 +219,4 @@ class TestProximity:
             max_distance=-5 is invalid.
         """
         with pytest.raises(ValueError, match="max_distance must be >= 0"):
-            single_target.proximity(max_distance=-5)
+            single_target.analysis.proximity(max_distance=-5)

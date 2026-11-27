@@ -33,7 +33,7 @@ def raster(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -44,7 +44,7 @@ def multiband(tmp_path) -> str:
     Dataset.from_array(
         np.arange(32, dtype="float32").reshape(2, 4, 4),
         geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -56,7 +56,7 @@ def nodata_only(tmp_path) -> str:
         np.full((8, 8), -9999.0, dtype="float32"),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -67,7 +67,7 @@ def other_grid(tmp_path) -> str:
     Dataset.from_array(
         np.ones((8, 8), dtype="float32"),
         geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=0.5, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -352,7 +352,7 @@ class TestFootprint:
             geo_ref=GeoReference(
                 top_left_corner=(0, 8000), cell_size=1000.0, epsg=3857
             ),
-        ).to_file(path)
+        ).io.to_file(path)
         assert main(["raster", "footprint", path]) == 0, (
             "projected footprint summary must succeed"
         )

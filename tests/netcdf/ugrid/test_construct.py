@@ -99,7 +99,7 @@ class TestFromStructured:
             node_x, node_y, fnc, data=data, epsg=north_up_dataset.epsg
         )
         cx, cy = uds.mesh.face_centroids
-        source = north_up_dataset.read_array()
+        source = north_up_dataset.io.read_array()
         for r in range(3):
             for c in range(3):
                 face = r * 3 + c
@@ -139,9 +139,9 @@ class TestFromStructured:
 
     def test_source_not_mutated(self, north_up_dataset: Dataset):
         """Building a mesh leaves the source raster values untouched."""
-        before = north_up_dataset.read_array().copy()
+        before = north_up_dataset.io.read_array().copy()
         from_structured(north_up_dataset)
-        np.testing.assert_array_equal(north_up_dataset.read_array(), before)
+        np.testing.assert_array_equal(north_up_dataset.io.read_array(), before)
 
 
 class TestFromGeoDataFrame:

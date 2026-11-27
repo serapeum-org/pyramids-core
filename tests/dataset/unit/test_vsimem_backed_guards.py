@@ -36,7 +36,7 @@ def geotiff_bytes(tmp_path: Path) -> bytes:
     Dataset.from_array(
         np.arange(16, dtype="float32").reshape(4, 4),
         geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-    ).to_file(str(source))
+    ).io.to_file(str(source))
     return source.read_bytes()
 
 
@@ -63,7 +63,7 @@ class TestPicklingAVsimemBackedDataset:
         Dataset.from_array(
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-        ).to_file(str(source))
+        ).io.to_file(str(source))
 
         assert pickle.dumps(Dataset.read_file(str(source)))
 
@@ -75,7 +75,7 @@ class TestCogPredicateOnMemoryDatasets:
         """The `name=` placeholder no longer reads as an on-disk path."""
         dataset = Dataset.from_bytes(geotiff_bytes, name="x")
 
-        assert dataset.is_cog is False
+        assert dataset.cog.is_cog is False
 
     def test_a_mem_dataset_is_not_a_cog(self):
         """A plain in-memory raster has nothing to validate."""
@@ -84,7 +84,7 @@ class TestCogPredicateOnMemoryDatasets:
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
         )
 
-        assert dataset.is_cog is False
+        assert dataset.cog.is_cog is False
 
     def test_a_closed_dataset_does_not_raise(self, tmp_path: Path):
         """`driver_type` requires an open handle, so it is asked last.
@@ -96,8 +96,8 @@ class TestCogPredicateOnMemoryDatasets:
         Dataset.from_array(
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-        ).to_file(str(source))
+        ).io.to_file(str(source))
         dataset = Dataset.read_file(str(source))
         dataset.close()
 
-        assert dataset.is_cog in (True, False)
+        assert dataset.cog.is_cog in (True, False)

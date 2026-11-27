@@ -101,7 +101,7 @@ class TestCreateRasterObject:
         assert dataset_n.top_left_corner == top_left_corner
         assert dataset_n.band_count == bands_count
         assert dataset_n.dtype == ["int32"]
-        arr = dataset_n.read_array()
+        arr = dataset_n.io.read_array()
         # check that the raster is filled with the no_data_value value.
         assert np.unique(arr) == dataset_n.no_data_value[0]
         # the dtype is np.int32, and the no_data_value is -3.4028230607370965e+38
@@ -118,7 +118,7 @@ class TestCreateRasterObject:
         new_no_data_value = np.float64(dataset_n.default_no_data_value)
         assert dataset_n.no_data_value[0] == [new_no_data_value]
         assert isinstance(dataset_n.no_data_value[0], np.float64)
-        arr = dataset_n.read_array()
+        arr = dataset_n.io.read_array()
         assert arr[0, 0] == new_no_data_value
 
     def test_copy(self, src: gdal.Dataset):
@@ -239,11 +239,11 @@ class TestAttributesTable:
         assert df.equals(df2)
 
     def test_add_attribute_table(self, writable_dataset):
-        df = writable_dataset.get_attribute_table(band=1)
+        df = writable_dataset.bands.get_attribute_table(band=1)
         pd.testing.assert_frame_equal(self.attribute_table, df)
 
     def test_set_attribute_table(self, writable_dataset):
-        writable_dataset.set_attribute_table(self.attribute_table, band=0)
+        writable_dataset.bands.set_attribute_table(self.attribute_table, band=0)
         assert isinstance(
             writable_dataset._raster.GetRasterBand(1).GetDefaultRAT(),
             gdal.RasterAttributeTable,
@@ -251,16 +251,16 @@ class TestAttributesTable:
 
     def test_overwrite_attribute_table(self, writable_dataset):
         assert (
-            writable_dataset.set_attribute_table(self.attribute_table, band=1) is None
+            writable_dataset.bands.set_attribute_table(self.attribute_table, band=1) is None
         )
 
 
 class TestAddBand:
     def test_add_band_return_copy(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        arr = dataset.read_array()
+        arr = dataset.io.read_array()
         # test add different dimension array
-        new_dataset = dataset.add_band(arr, unit="meter")
+        new_dataset = dataset.bands.add_band(arr, unit="meter")
         assert new_dataset.band_count == 2
         band = new_dataset._iloc(1)
         assert band.GetUnitType() == "meter"
@@ -268,25 +268,25 @@ class TestAddBand:
 
     def test_add_band_inplace(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        arr = dataset.read_array()
+        arr = dataset.io.read_array()
         with pytest.raises(ValueError):
-            dataset.add_band(arr, unit="meter", inplace=True)
+            dataset.bands.add_band(arr, unit="meter", inplace=True)
 
     def test_add_band_1d_array(self, src: gdal.Dataset):
         dataset = Dataset(src)
         arr = np.random.default_rng(0).random(13)
         with pytest.raises(ValueError):
-            dataset.add_band(arr)
+            dataset.bands.add_band(arr)
 
     def test_add_band_different_dimension(self, src: gdal.Dataset):
         dataset = Dataset(src)
         arr = np.random.default_rng(0).random((2, 2))
         with pytest.raises(ValueError):
-            dataset.add_band(arr)
+            dataset.bands.add_band(arr)
 
     def test_add_band_with_attribute_table(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        arr = dataset.read_array()
+        arr = dataset.io.read_array()
         data = {
             "Value": [1, 2, 3],
             "ClassName": ["Forest", "Water", "Urban"],
@@ -294,16 +294,16 @@ class TestAddBand:
         }
         df = pd.DataFrame(data)
         # test add different dimension array
-        new_dataset = dataset.add_band(arr, unit="meter", attribute_table=df)
+        new_dataset = dataset.bands.add_band(arr, unit="meter", attribute_table=df)
         band = new_dataset._iloc(1)
         assert band.GetDefaultRAT() is not None
 
     def test_wrong_dims_array(self, src: gdal.Dataset):
         # test add different dimension array
         dataset = Dataset(src)
-        arr = dataset.read_array()[:5, :5]
+        arr = dataset.io.read_array()[:5, :5]
         with pytest.raises(ValueError):
-            dataset.add_band(arr)
+            dataset.bands.add_band(arr)
 
 
 class TestProperties:
@@ -354,7 +354,7 @@ class TestProperties:
 
     def test_read_array(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        assert isinstance(dataset.read_array(), np.ndarray)
+        assert isinstance(dataset.io.read_array(), np.ndarray)
 
     def test_get_band_names(self, src: gdal.Dataset):
         src = Dataset(src)
@@ -414,34 +414,34 @@ class TestProperties:
     def test_band_units(self, src: gdal.Dataset):
         src = Dataset(src)
         src = src.copy()
-        assert src.band_units == [""]
-        src.band_units = ["meter"]
+        assert src.bands.band_units == [""]
+        src.bands.band_units = ["meter"]
         assert src._iloc(0).GetUnitType() == "meter"
 
     def test_scale(self, src: gdal.Dataset):
         src = Dataset(src)
         src = src.copy()
-        assert src.scale == [1.0]
-        src.scale = [2.0]
+        assert src.bands.scale == [1.0]
+        src.bands.scale = [2.0]
         assert src._iloc(0).GetScale() == pytest.approx(2.0)
 
     def test_offset(self, src: gdal.Dataset):
         src = Dataset(src)
         src = src.copy()
-        assert src.offset == [0]
-        src.offset = [2.0]
+        assert src.bands.offset == [0]
+        src.bands.offset = [2.0]
         assert src._iloc(0).GetOffset() == pytest.approx(2.0)
 
     def test_band_color(self, src: gdal.Dataset):
         src = Dataset(src)
         src = src.copy()
-        assert src.band_color == {0: "gray_index"}
-        src.band_color = {0: "undefined"}
+        assert src.bands.band_color == {0: "gray_index"}
+        src.bands.band_color = {0: "undefined"}
         assert src._iloc(0).GetColorInterpretation() == 0
 
     def test_get_band_by_color(self, src: gdal.Dataset):
         src = Dataset(src)
-        band_index = src.get_band_by_color("gray_index")
+        band_index = src.bands.get_band_by_color("gray_index")
         assert band_index == 0
 
     def test_metadata(self, src: gdal.Dataset):
@@ -467,7 +467,7 @@ class TestSpatialProperties:
         src_arr: np.ndarray,
     ):
         src = Dataset(src)
-        arr = src.read_array(band=0)
+        arr = src.io.read_array(band=0)
         assert np.array_equal(src_arr, arr)
 
     def test_read_array_multi_bands(
@@ -475,7 +475,7 @@ class TestSpatialProperties:
         multi_band: gdal.Dataset,
     ):
         src = Dataset(multi_band)
-        arr = src.read_array()
+        arr = src.io.read_array()
         assert np.array_equal(multi_band.ReadAsArray(), arr)
 
     def test_read_block_with_list_window(
@@ -485,7 +485,7 @@ class TestSpatialProperties:
         src_arr: np.ndarray,
     ):
         src = Dataset(src)
-        arr = src.read_array(band=0, window=[0, 0, 5, 5])
+        arr = src.io.read_array(band=0, window=[0, 0, 5, 5])
         assert np.array_equal(src_arr[:5, :5], arr)
 
     def test_read_block_with_polygon(
@@ -508,7 +508,7 @@ class TestSpatialProperties:
             crs=dataset.epsg,
             data=[[0]],
         )
-        full = dataset.read_array(band=0)
+        full = dataset.io.read_array(band=0)
         for mode in ("cover", "nearest"):
             assert dataset.io._convert_polygon_to_window(gdf, rounding=mode) == [
                 col,
@@ -517,11 +517,11 @@ class TestSpatialProperties:
                 1,
             ]
         assert np.array_equal(
-            np.squeeze(dataset.read_array(band=0, window=[col, row, 1, 1])),
+            np.squeeze(dataset.io.read_array(band=0, window=[col, row, 1, 1])),
             full[row, col],
         )
         assert np.array_equal(
-            np.squeeze(dataset.read_array(band=0, window=gdf)), full[row, col]
+            np.squeeze(dataset.io.read_array(band=0, window=gdf)), full[row, col]
         )
 
     def test_read_block_bigger_than_array(
@@ -532,14 +532,14 @@ class TestSpatialProperties:
     ):
         src = Dataset(src)
         with pytest.raises(OutOfBoundsError):
-            src.read_array(band=0, window=[0, 0, 20, 20])
+            src.io.read_array(band=0, window=[0, 0, 20, 20])
 
     def test_read_block_multi_bands(
         self,
         multi_band: gdal.Dataset,
     ):
         src = Dataset(multi_band)
-        arr = src.read_array(window=[0, 0, 5, 5])
+        arr = src.io.read_array(window=[0, 0, 5, 5])
         assert np.array_equal(multi_band.ReadAsArray()[:, :5, :5], arr)
 
     def test_create_sr_from_epsg(self):
@@ -552,7 +552,7 @@ class TestSetCRS:
         proj = WGS84_WKT
         proj_epsg = 4326
         dataset = Dataset(src).copy()
-        dataset.set_crs(epsg=proj_epsg)
+        dataset.spatial.set_crs(epsg=proj_epsg)
         assert dataset.epsg == proj_epsg
         assert dataset.raster.GetProjection() == proj
 
@@ -560,7 +560,7 @@ class TestSetCRS:
         proj = WGS84_WKT
         proj_epsg = 4326
         dataset = Dataset(src).copy()
-        dataset.set_crs(crs=proj)
+        dataset.spatial.set_crs(crs=proj)
         assert dataset.epsg == proj_epsg
         assert dataset.raster.GetProjection() == proj
 
@@ -571,7 +571,7 @@ class TestSetCRS:
         proj = WGS84_WKT
         dataset = Dataset.read_file(ascii_without_projection)
         with pytest.raises(TypeError):
-            dataset.set_crs(crs=proj)
+            dataset.spatial.set_crs(crs=proj)
 
 
 class TestCountDomainCells:
@@ -579,11 +579,11 @@ class TestCountDomainCells:
 
     def test_single_band(self, src: gdal.Dataset):
         src = Dataset(src)
-        assert src.count_domain_cells() == 89
+        assert src.analysis.count_domain_cells() == 89
 
     def test_multi_band(self, era5_image: gdal.Dataset):
         src = Dataset(era5_image)
-        assert src.count_domain_cells() == 5
+        assert src.analysis.count_domain_cells() == 5
 
     @staticmethod
     def _dataset_with_no_data(array: np.ndarray, no_data_value: float) -> Dataset:
@@ -624,7 +624,7 @@ class TestCountDomainCells:
             [[no_data_value, 1.0, 2.0], [no_data_value, 4.0, 5.0]], dtype="float32"
         )
         dataset = self._dataset_with_no_data(array, no_data_value)
-        counted = dataset.count_domain_cells()
+        counted = dataset.analysis.count_domain_cells()
         assert counted == 4, (
             f"expected 4 domain cells with no_data_value={no_data_value}, got {counted}"
         )
@@ -637,7 +637,7 @@ class TestCountDomainCells:
             the old arithmetic this returned the full cell count.
         """
         dataset = self._dataset_with_no_data(np.zeros((2, 2), dtype="float32"), 0.0)
-        counted = dataset.count_domain_cells()
+        counted = dataset.analysis.count_domain_cells()
         assert counted == 0, f"an all-no-data band must count 0, got {counted}"
 
     def test_no_cells_are_no_data(self):
@@ -649,7 +649,7 @@ class TestCountDomainCells:
         """
         array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype="float32")
         dataset = self._dataset_with_no_data(array, 0.0)
-        counted = dataset.count_domain_cells()
+        counted = dataset.analysis.count_domain_cells()
         assert counted == 4, f"expected all 4 cells, got {counted}"
 
 
@@ -662,7 +662,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
     ):
         """get cell coordinates from cells inside the domain only."""
         src = Dataset(src)
-        coords = src.get_cell_coords(location="center", domain_only=True)
+        coords = src.cell.get_cell_coords(location="center", domain_only=True)
         assert coords.shape[0] == src_masked_values_len
         assert np.isclose(
             coords[-4:, :], src_masked_cells_center_coords_last4, rtol=0.000001
@@ -678,7 +678,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
     ):
         """get center coordinates of all cells."""
         src = Dataset(src)
-        coords = src.get_cell_coords(location="center", domain_only=False)
+        coords = src.cell.get_cell_coords(location="center", domain_only=False)
         assert len(coords) == src_shape[0] * src_shape[1]
         assert np.isclose(
             coords[:4, :], src_cell_center_coords_first_4_rows, rtol=0.000001
@@ -693,7 +693,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
         src_cells_corner_coords_last4,
     ):
         src = Dataset(src)
-        coords = src.get_cell_coords(location="corner")
+        coords = src.cell.get_cell_coords(location="corner")
         assert np.isclose(
             coords[-4:, :], src_cells_corner_coords_last4, rtol=0.000001
         ).all()
@@ -702,7 +702,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
         self, src: gdal.Dataset, src_shape: Tuple, src_epsg: int
     ):
         src = Dataset(src)
-        gdf = src.to_geodataframe(geometry="polygon", values=False)
+        gdf = src.vector.to_geodataframe(geometry="polygon", values=False)
         assert len(gdf) == src_shape[0] * src_shape[1]
         assert gdf.crs.to_epsg() == src_epsg
 
@@ -710,7 +710,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
         self, src: gdal.Dataset, src_shape: Tuple, src_epsg: int
     ):
         src = Dataset(src)
-        gdf = src.to_geodataframe(geometry="point", values=False)
+        gdf = src.vector.to_geodataframe(geometry="point", values=False)
         # check the size
         assert len(gdf) == src_shape[0] * src_shape[1]
         assert gdf.crs.to_epsg() == src_epsg
@@ -719,7 +719,7 @@ class TestGetCellCoordsAndCreateCellGeometry:
         self, era5_image: gdal.Dataset, src_shape: Tuple, src_epsg: int
     ):
         src = Dataset(era5_image)
-        gdf = src.to_geodataframe(geometry="point", values=False, dropna=True)
+        gdf = src.vector.to_geodataframe(geometry="point", values=False, dropna=True)
         # check the size
         assert len(gdf) == 5
         assert gdf.crs.to_epsg() == 4326
@@ -732,7 +732,7 @@ class TestMathOperations:
         mapalgebra_function,
     ):
         src = Dataset(src)
-        dst = src.apply(mapalgebra_function)
+        dst = src.analysis.apply(mapalgebra_function)
         arr = dst.raster.ReadAsArray()
         nodataval = dst.raster.GetRasterBand(1).GetNoDataValue()
         vals = arr[~np.isclose(arr, nodataval, rtol=0.00000000000001)]

@@ -311,7 +311,7 @@ class TestSeveralKeywordsCompose:
             variable_name="u",
             dims=ExtraDimensions(name="level", values=[10.0, 20.0]),
         )
-        container.set_variable("u", donor.get_variable("u"))
+        container.variables.set("u", donor.get_variable("u"))
 
         cut = container.isel(time=[0])
 

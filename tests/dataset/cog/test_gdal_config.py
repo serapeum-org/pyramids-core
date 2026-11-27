@@ -35,7 +35,7 @@ def float_cog(tmp_path) -> str:
     """
     arr = (np.random.default_rng(seed=8).random((64, 64)) * 100).astype("float32")
     ds = Dataset.from_array(arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326))
-    return str(ds.to_cog(tmp_path / "c.tif"))
+    return str(ds.cog.to_cog(tmp_path / "c.tif"))
 
 
 class TestRemoteDetection:
@@ -106,8 +106,8 @@ class TestConfigApplication:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.to_cog(tmp_path / "cfg.tif", config={"GDAL_NUM_THREADS": "1"})
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, (
+        out = ds.cog.to_cog(tmp_path / "cfg.tif", config={"GDAL_NUM_THREADS": "1"})
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
             "config write invalid"
         )
 

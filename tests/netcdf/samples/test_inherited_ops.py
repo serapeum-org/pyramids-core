@@ -131,7 +131,7 @@ def test_inherited_footprint(tos_view):
     """footprint covers only the data cells of a NetCDF variable view, not the nodata fill (#592)."""
     arr = np.asarray(tos_view.read_array(band=0))
     data_cells = int((~np.isclose(arr, tos_view.no_data_value[0], rtol=1e-5)).sum())
-    fp = tos_view.footprint(band=0)
+    fp = tos_view.analysis.footprint(band=0)
     assert fp is not None, "footprint should return a GeoDataFrame"
     gt = tos_view.geotransform
     covered = round(fp.geometry.area.sum() / abs(gt[1] * gt[5]))
@@ -154,7 +154,7 @@ def test_recreate_overviews_requires_write(sample, tmp_path):
     builder = NetCDF.read_file(str(work))
     try:
         # build external overviews so they exist on the read-only reopen below
-        builder.get_variable("tos").create_overviews()
+        builder.get_variable("tos").io.create_overviews()
     finally:
         builder.close()
 
@@ -162,7 +162,7 @@ def test_recreate_overviews_requires_write(sample, tmp_path):
     try:
         view = nc.get_variable("tos")
         with pytest.raises(ReadOnlyError):
-            view.recreate_overviews()
+            view.io.recreate_overviews()
     finally:
         nc.close()
 
@@ -195,7 +195,7 @@ def test_overview_ops_isolated_to_temp_copy(sample, tmp_path):
     nc = NetCDF.read_file(str(work))
     try:
         view = nc.get_variable("tos")
-        view.create_overviews()
+        view.io.create_overviews()
         # The external `.ovr` file only lands on GDAL >= 3.13; win_arm64's 3.12.4 builds the overviews
         # without that sidecar file. This assertion is intentionally version-gated, NOT capability-gated
         # (`overview_count > 0`), so a total no-op regression on a capable build -- nothing built and no
@@ -209,11 +209,11 @@ def test_overview_ops_isolated_to_temp_copy(sample, tmp_path):
         # (`test_recreate_overviews_requires_write` passes there, which requires `overview_count > 0`),
         # so these run on every platform. Probe every band -- matching `read_overview_array(band=None)`'s
         # all-bands precondition and guarding a hypothetical zero-band view.
-        if view.overview_count and all(c > 0 for c in view.overview_count):
-            assert view.get_overview() is not None, (
+        if view.io.overview_count and all(c > 0 for c in view.io.overview_count):
+            assert view.io.get_overview() is not None, (
                 "get_overview should return a band after building"
             )
-            assert view.read_overview_array() is not None, (
+            assert view.io.read_overview_array() is not None, (
                 "read_overview_array should return data"
             )
     finally:
@@ -238,8 +238,8 @@ def test_overview_dataset_from_a_variable_view(sample, tmp_path):
     overview = None
     try:
         view = nc.get_variable("tos")
-        view.create_overviews(overview_levels=[2])
-        overview = view.get_overview_dataset(band=0)
+        view.io.create_overviews(overview_levels=[2])
+        overview = view.io.get_overview_dataset(band=0)
         assert type(overview) is Dataset, (
             f"expected a plain Dataset, got {type(overview).__name__}"
         )
@@ -283,7 +283,7 @@ def test_to_file_of_reversed_y_md_view_roundtrips(tos_view, tmp_path):
     out = tmp_path / "tos_roundtrip.tif"
     tos_view.to_file(str(out))
 
-    reloaded = np.asarray(Dataset.read_file(str(out)).read_array(band=0))
+    reloaded = np.asarray(Dataset.read_file(str(out)).io.read_array(band=0))
     assert reloaded.shape == expected.shape, (
         f"shape changed writing the md-view: {expected.shape} -> {reloaded.shape}"
     )

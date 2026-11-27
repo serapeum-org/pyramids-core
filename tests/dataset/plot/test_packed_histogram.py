@@ -45,8 +45,8 @@ def _packed(counts: np.ndarray) -> Dataset:
         ),
         no_data_value=-9999,
     )
-    dataset.scale = [0.01]
-    dataset.offset = [1.5]
+    dataset.bands.scale = [0.01]
+    dataset.bands.offset = [1.5]
     return dataset
 
 
@@ -63,7 +63,7 @@ class TestPlotHistogramOnAPackedBand:
         """
         dataset = _packed(np.array([[-9999, 100], [200, 300]], dtype="int16"))
 
-        _fig, _ax, hist = dataset.plot_histogram(band=0, bins=2)
+        _fig, _ax, hist = dataset.glyph.histogram(band=0, bins=2)
 
         edges = np.asarray(hist["bins"], dtype="float64").ravel()
         assert edges[0] == pytest.approx(2.5), f"lowest edge {edges[0]}"
@@ -82,7 +82,7 @@ class TestPlotHistogramOnAPackedBand:
         counts[2:, 2:] = 300
         dataset = _packed(counts)
 
-        _fig, _ax, hist = dataset.plot_histogram(band=0, bins=2, max_samples=4)
+        _fig, _ax, hist = dataset.glyph.histogram(band=0, bins=2, max_samples=4)
 
         edges = np.asarray(hist["bins"], dtype="float64").ravel()
         assert float(np.sum(hist["n"])) == pytest.approx(3.0), hist["n"]
@@ -93,7 +93,7 @@ class TestPlotHistogramOnAPackedBand:
         """`exclude_value` is compared with the physical values the bins are drawn over."""
         dataset = _packed(np.array([[-9999, 100], [200, 300]], dtype="int16"))
 
-        _fig, _ax, hist = dataset.plot_histogram(band=0, bins=2, exclude_value=4.5)
+        _fig, _ax, hist = dataset.glyph.histogram(band=0, bins=2, exclude_value=4.5)
 
         edges = np.asarray(hist["bins"], dtype="float64").ravel()
         assert float(np.sum(hist["n"])) == pytest.approx(2.0), hist["n"]

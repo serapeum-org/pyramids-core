@@ -34,7 +34,7 @@ def dem_raster(tmp_path) -> str:
     Dataset.from_array(
         np.linspace(0.0, 3000.0, 256, dtype="float32").reshape(16, 16),
         geo_ref=GeoReference(top_left_corner=(0, 16), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 

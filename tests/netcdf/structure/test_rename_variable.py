@@ -39,7 +39,7 @@ def _make_multi_nc():
         no_data_value=-9999.0,
         geo_ref=GeoReference(geo=GEO, epsg=4326),
     )
-    nc.set_variable("pressure", ds2)
+    nc.variables.set("pressure", ds2)
     return nc
 
 
@@ -54,7 +54,7 @@ class TestRenameVariableHappyPath:
             disappear from variable_names.
         """
         nc = _make_nc()
-        nc.rename_variable("temperature", "temp")
+        nc.variables.rename("temperature", "temp")
         assert "temperature" not in nc.variable_names, (
             f"Old name should be gone, got {nc.variable_names}"
         )
@@ -66,7 +66,7 @@ class TestRenameVariableHappyPath:
             Rename 'temperature' → 'temp'. 'temp' should appear.
         """
         nc = _make_nc()
-        nc.rename_variable("temperature", "temp")
+        nc.variables.rename("temperature", "temp")
         assert "temp" in nc.variable_names, (
             f"New name should be present, got {nc.variable_names}"
         )
@@ -80,7 +80,7 @@ class TestRenameVariableHappyPath:
         """
         nc = _make_nc()
         orig_data = nc.get_variable("temperature").read_array()
-        nc.rename_variable("temperature", "new_temp")
+        nc.variables.rename("temperature", "new_temp")
         renamed_data = nc.get_variable("new_temp").read_array()
         assert_allclose(
             renamed_data,
@@ -96,7 +96,7 @@ class TestRenameVariableHappyPath:
         """
         nc = _make_nc()
         orig_shape = nc.get_variable("temperature").shape
-        nc.rename_variable("temperature", "t")
+        nc.variables.rename("temperature", "t")
         new_shape = nc.get_variable("t").shape
         assert new_shape == orig_shape, f"Shape changed: {orig_shape} → {new_shape}"
 
@@ -108,7 +108,7 @@ class TestRenameVariableHappyPath:
             'air_temp'. 'pressure' should still be accessible.
         """
         nc = _make_multi_nc()
-        nc.rename_variable("temp", "air_temp")
+        nc.variables.rename("temp", "air_temp")
         assert "pressure" in nc.variable_names, (
             f"Other variable should be unaffected: {nc.variable_names}"
         )
@@ -124,7 +124,7 @@ class TestRenameVariableHappyPath:
         """
         nc = _make_multi_nc()
         count_before = len(nc.variable_names)
-        nc.rename_variable("temp", "air_temp")
+        nc.variables.rename("temp", "air_temp")
         count_after = len(nc.variable_names)
         assert count_after == count_before, (
             f"Variable count changed: {count_before} → {count_after}"
@@ -142,7 +142,7 @@ class TestRenameVariableErrors:
         """
         nc = _make_nc()
         with pytest.raises(ValueError, match="not found"):
-            nc.rename_variable("nonexistent", "new_name")
+            nc.variables.rename("nonexistent", "new_name")
 
     def test_new_name_already_exists_raises(self):
         """Renaming to an existing name should raise ValueError.
@@ -153,7 +153,7 @@ class TestRenameVariableErrors:
         """
         nc = _make_multi_nc()
         with pytest.raises(ValueError, match="already exists"):
-            nc.rename_variable("temp", "pressure")
+            nc.variables.rename("temp", "pressure")
 
     def test_classic_mode_raises(self):
         """rename_variable on classic-mode container should raise.
@@ -166,7 +166,7 @@ class TestRenameVariableErrors:
             open_as_multi_dimensional=False,
         )
         with pytest.raises(ValueError, match="multidimensional"):
-            nc.rename_variable("Band1", "precip")
+            nc.variables.rename("Band1", "precip")
 
 
 class TestRenameVariableCacheInvalidation:
@@ -180,7 +180,7 @@ class TestRenameVariableCacheInvalidation:
         """
         nc = _make_nc()
         _ = nc.variable_names
-        nc.rename_variable("temperature", "t")
+        nc.variables.rename("temperature", "t")
         names = nc.variable_names
         assert "t" in names, f"Cache should be invalidated: {names}"
         assert "temperature" not in names, f"Old name should not be in cache: {names}"
@@ -192,7 +192,7 @@ class TestRenameVariableCacheInvalidation:
             Access variables dict after rename — new key should exist.
         """
         nc = _make_nc()
-        nc.rename_variable("temperature", "t2m")
+        nc.variables.rename("temperature", "t2m")
         assert "t2m" in nc.variables, (
             f"New name should be in variables dict: {list(nc.variables.keys())}"
         )
@@ -208,7 +208,7 @@ class TestRenameVariableDiskRoundTrip:
             Rename → to_file → read_file → check variable_names.
         """
         nc = _make_nc()
-        nc.rename_variable("temperature", "air_temp")
+        nc.variables.rename("temperature", "air_temp")
         out = str(tmp_path / "renamed.nc")
         nc.to_file(out)
         reloaded = NetCDF.read_file(out)
@@ -227,7 +227,7 @@ class TestRenameVariableDiskRoundTrip:
         """
         nc = _make_nc()
         orig = nc.get_variable("temperature").read_array()
-        nc.rename_variable("temperature", "t")
+        nc.variables.rename("temperature", "t")
         out = str(tmp_path / "rt.nc")
         nc.to_file(out)
         reloaded = NetCDF.read_file(out)

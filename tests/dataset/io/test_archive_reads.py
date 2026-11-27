@@ -265,7 +265,7 @@ class TestReadFileVsi:
             whose first pixel is ``2``.
         """
         ds = Dataset.read_file(band_zip, vsi="zip")
-        assert int(ds.read_array().flat[0]) == 2, (
+        assert int(ds.io.read_array().flat[0]) == 2, (
             "expected member 0 (asset.B2.tif, value 2)"
         )
 
@@ -280,7 +280,7 @@ class TestReadFileVsi:
             first pixel ``4``.
         """
         ds = Dataset.read_file(band_zip, vsi="zip", file_i=2)
-        assert int(ds.read_array().flat[0]) == 4, (
+        assert int(ds.io.read_array().flat[0]) == 4, (
             "expected member 2 (asset.B4.tif, value 4)"
         )
 
@@ -294,7 +294,7 @@ class TestReadFileVsi:
             ``Dataset.read_file(band_zip, vsi="auto")`` — expected: first pixel ``2``.
         """
         ds = Dataset.read_file(band_zip, vsi="auto")
-        assert int(ds.read_array().flat[0]) == 2, "auto-inferred zip, member 0"
+        assert int(ds.io.read_array().flat[0]) == 2, "auto-inferred zip, member 0"
 
     def test_file_index_out_of_range_raises(self, band_zip):
         """An out-of-range ``file_i`` raises ``FileFormatNotSupportedError``.
@@ -334,7 +334,7 @@ class TestReadFileVsi:
             pixel ``3``.
         """
         ds = Dataset.read_file(f"{band_zip}/asset.B3.tif")
-        assert int(ds.read_array().flat[0]) == 3, "extension-sniffed member open"
+        assert int(ds.io.read_array().flat[0]) == 3, "extension-sniffed member open"
 
 
 class TestDatasetFromArchive:
@@ -353,7 +353,7 @@ class TestDatasetFromArchive:
         ds = Dataset.from_archive(band_zip, member_glob="*.tif")
         assert ds.band_count == 3, f"expected 3 bands, got {ds.band_count}"
         assert ds.band_names == ["B2", "B3", "B4"], f"unexpected names: {ds.band_names}"
-        assert [int(ds.read_array(band=i).flat[0]) for i in range(3)] == [
+        assert [int(ds.io.read_array(band=i).flat[0]) for i in range(3)] == [
             2,
             3,
             4,

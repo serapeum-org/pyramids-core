@@ -116,7 +116,7 @@ def _mixed_container() -> NetCDF:
         NetCDF: The container.
     """
     container = _container()
-    container.add_variable(_flat_variable())
+    container.variables.add(_flat_variable())
     return container
 
 
@@ -284,7 +284,7 @@ class TestEmptyContainer:
             verb: The verb its refusal uses.
         """
         container = _container()
-        container.remove_variable("v")
+        container.variables.remove("v")
         with pytest.raises(ValueError, match=f"Cannot {verb} an empty container"):
             _call(container, member)
 

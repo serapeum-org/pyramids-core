@@ -35,7 +35,7 @@ def packed_raster_path(tmp_path):
         no_data_value=0,
         geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
     )
-    dataset.to_file(path)
+    dataset.io.to_file(path)
     return path
 
 
@@ -90,7 +90,7 @@ def three_local_items(tmp_path):
         Dataset.from_array(
             np.full((3, 3), float(index + 1), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         items.append(
             {
                 "type": "Feature",

@@ -60,9 +60,9 @@ class TestTheInMemoryCopyIsWritable:
         source = Dataset.read_file(source_path, read_only=True)
 
         copy = source.copy()
-        copy.write_array(np.full((4, 5), 7.0, dtype=np.float32))
+        copy.io.write_array(np.full((4, 5), 7.0, dtype=np.float32))
 
-        assert copy.read_array()[0, 0] == pytest.approx(7.0)
+        assert copy.io.read_array()[0, 0] == pytest.approx(7.0)
 
     def test_the_source_is_left_read_only(self, source_path):
         """Copying must not relax the original's protection.

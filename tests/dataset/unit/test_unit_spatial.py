@@ -41,7 +41,7 @@ class TestCorrectWrapCutlineError:
         assert corrected.columns == 2, (
             f"Expected 2 columns after correction, got {corrected.columns}"
         )
-        result_arr = corrected.read_array()
+        result_arr = corrected.io.read_array()
         expected = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         np.testing.assert_array_equal(
             result_arr,
@@ -117,7 +117,7 @@ class TestCorrectWrapCutlineError:
             f"expected 2 columns after trim, got {corrected.columns}"
         )
         np.testing.assert_array_equal(
-            corrected.read_array(),
+            corrected.io.read_array(),
             np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32),
         )
         # The exact spherical GRIB datum is preserved, not relabeled to 4326.
@@ -163,15 +163,15 @@ class TestApply:
 
     def test_apply_function(self, single_band_dataset):
         """apply should transform each valid cell."""
-        result = single_band_dataset.apply(lambda v: v * 2)
-        arr = result.read_array()
+        result = single_band_dataset.analysis.apply(lambda v: v * 2)
+        arr = result.io.read_array()
         # Cell (0,0) was 1.0, should now be 2.0
         assert np.isclose(arr[0, 0], 2.0), "apply(v*2) should double the values"
 
     def test_apply_non_callable_raises(self, single_band_dataset):
         """apply with a non-callable should raise TypeError."""
         with pytest.raises(TypeError, match="function"):
-            single_band_dataset.apply("not_a_function")
+            single_band_dataset.analysis.apply("not_a_function")
 
     @pytest.mark.parametrize(
         "func, expected_corner",
@@ -193,8 +193,8 @@ class TestApply:
             array-compatible lambdas should work via the direct array
             application path without falling back to np.vectorize.
         """
-        result = single_band_dataset.apply(func)
-        arr = result.read_array()
+        result = single_band_dataset.analysis.apply(func)
+        arr = result.io.read_array()
         assert np.isclose(arr[0, 0], expected_corner), (
             f"Expected {expected_corner} at (0,0), got {arr[0, 0]}"
         )
@@ -224,8 +224,8 @@ class TestApply:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.apply(classify)
-        result_arr = result.read_array()
+        result = ds.analysis.apply(classify)
+        result_arr = result.io.read_array()
         expected = np.array(
             [[0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [1.0, 2.0, 2.0]], dtype=np.float32
         )
@@ -248,8 +248,8 @@ class TestApply:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.apply(lambda x: x * 10)
-        result_arr = result.read_array()
+        result = ds.analysis.apply(lambda x: x * 10)
+        result_arr = result.io.read_array()
         assert np.isclose(result_arr[0, 0], 10.0), (
             f"Domain cell should be transformed, got {result_arr[0, 0]}"
         )
@@ -276,8 +276,8 @@ class TestApply:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.apply(lambda x: x * 100)
-        result_arr = result.read_array()
+        result = ds.analysis.apply(lambda x: x * 100)
+        result_arr = result.io.read_array()
         assert np.allclose(result_arr, -9999.0, rtol=0.001), (
             "All-nodata input should produce all-nodata output"
         )
@@ -294,8 +294,8 @@ class TestApply:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.apply(lambda x: x**2)
-        assert np.isclose(result.read_array()[0, 0], 25.0), (
+        result = ds.analysis.apply(lambda x: x**2)
+        assert np.isclose(result.io.read_array()[0, 0], 25.0), (
             f"Expected 25.0, got {result.read_array()[0, 0]}"
         )
 
@@ -306,9 +306,9 @@ class TestApply:
             Applying to band=1 on a multi-band dataset should produce a
             single-band result with that band's values transformed.
         """
-        original_band1 = multi_band_dataset.read_array(band=1).copy()
-        result = multi_band_dataset.apply(lambda x: x + 100, band=1)
-        result_arr = result.read_array()
+        original_band1 = multi_band_dataset.io.read_array(band=1).copy()
+        result = multi_band_dataset.analysis.apply(lambda x: x + 100, band=1)
+        result_arr = result.io.read_array()
         assert result.band_count == 1, (
             f"Result should be single-band, got {result.band_count}"
         )
@@ -331,7 +331,7 @@ class TestApply:
         original_geo = single_band_dataset.geotransform
         original_epsg = single_band_dataset.epsg
         original_nd = single_band_dataset.no_data_value[0]
-        result = single_band_dataset.apply(np.abs)
+        result = single_band_dataset.analysis.apply(np.abs)
         assert result.geotransform == original_geo, (
             f"Geotransform mismatch: {result.geotransform} vs {original_geo}"
         )
@@ -355,10 +355,10 @@ class TestApply:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        original_arr = ds.read_array().copy()
-        ds.apply(lambda x: x * 0)
+        original_arr = ds.io.read_array().copy()
+        ds.analysis.apply(lambda x: x * 0)
         np.testing.assert_array_equal(
-            ds.read_array(),
+            ds.io.read_array(),
             original_arr,
             err_msg="Original dataset should not be mutated by non-inplace apply",
         )
@@ -369,7 +369,7 @@ class TestResample:
 
     def test_resample_changes_cell_size(self, single_band_dataset):
         """Resampling to a larger cell size should reduce rows/columns."""
-        resampled = single_band_dataset.resample(cell_size=0.1)
+        resampled = single_band_dataset.spatial.resample(cell_size=0.1)
         assert resampled.cell_size == pytest.approx(0.1), (
             f"Cell size should be 0.1, got {resampled.cell_size}"
         )
@@ -385,13 +385,13 @@ class TestToCrs:
 
     def test_to_crs_basic(self, single_band_dataset):
         """to_crs should change the EPSG of the dataset."""
-        result = single_band_dataset.to_crs(to_epsg=3857)
+        result = single_band_dataset.spatial.to_crs(to_epsg=3857)
         assert result is not None, "to_crs should return a Dataset"
         assert result.epsg == 3857, f"Expected EPSG 3857, got {result.epsg}"
 
     def test_to_crs_returns_new_dataset(self, single_band_dataset):
         """to_crs() should always return a new Dataset."""
-        result = single_band_dataset.to_crs(to_epsg=3857)
+        result = single_band_dataset.spatial.to_crs(to_epsg=3857)
         assert result is not None, "to_crs should return a Dataset"
         assert result.epsg == 3857, "EPSG should be 3857 on the returned dataset"
 
@@ -405,7 +405,7 @@ class TestToCrs:
         Test scenario:
             Both an authority string and a bare numeric string reproject to EPSG 3857.
         """
-        result = single_band_dataset.to_crs(to_epsg=crs)
+        result = single_band_dataset.spatial.to_crs(to_epsg=crs)
         assert result.epsg == 3857, (
             f"Expected EPSG 3857 from {crs!r}, got {result.epsg}"
         )
@@ -418,7 +418,7 @@ class TestToCrs:
         """
         from pyproj import CRS
 
-        result = single_band_dataset.to_crs(to_epsg=CRS.from_epsg(3857))
+        result = single_band_dataset.spatial.to_crs(to_epsg=CRS.from_epsg(3857))
         assert result.epsg == 3857, f"Expected EPSG 3857, got {result.epsg}"
 
     def test_to_crs_uninterpretable_crs_raises(self, single_band_dataset):
@@ -429,7 +429,7 @@ class TestToCrs:
             mentioning that it could not be interpreted.
         """
         with pytest.raises(ValueError, match="could not interpret"):
-            single_band_dataset.to_crs(to_epsg="not-a-crs")
+            single_band_dataset.spatial.to_crs(to_epsg="not-a-crs")
 
     def test_to_crs_wrong_type_raises(self, single_band_dataset):
         """to_crs rejects a value that cannot be a CRS at all.
@@ -438,17 +438,17 @@ class TestToCrs:
             A list is not a valid CRS input and raises a ValueError (CRSError subclass).
         """
         with pytest.raises(ValueError):
-            single_band_dataset.to_crs(to_epsg=[3857])
+            single_band_dataset.spatial.to_crs(to_epsg=[3857])
 
     def test_to_crs_invalid_method_raises(self, single_band_dataset):
         """to_crs with an invalid method should raise ValueError."""
         with pytest.raises(ValueError):
-            single_band_dataset.to_crs(to_epsg=3857, method="invalid_method")
+            single_band_dataset.spatial.to_crs(to_epsg=3857, method="invalid_method")
 
     def test_to_crs_invalid_method_type_raises(self, single_band_dataset):
         """to_crs with a non-string method should raise TypeError."""
         with pytest.raises(TypeError):
-            single_band_dataset.to_crs(to_epsg=3857, method=123)
+            single_band_dataset.spatial.to_crs(to_epsg=3857, method=123)
 
 
 class TestWrapLongitude:
@@ -463,7 +463,7 @@ class TestWrapLongitude:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = ds.wrap_longitude()
+        result = ds.spatial.wrap_longitude()
         assert result is not None, "wrap_longitude should return a Dataset"
         gt = result.geotransform
         assert gt[0] < 0, "After conversion, top-left x should be negative"
@@ -477,7 +477,7 @@ class TestWrapLongitude:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with pytest.raises(ValueError, match="global grid"):
-            ds.wrap_longitude()
+            ds.spatial.wrap_longitude()
 
     def test_wrap_longitude_rejects_regional_window_past_180(self):
         """A regional window whose longitudes exceed 180 but does not span the globe is rejected.
@@ -495,7 +495,7 @@ class TestWrapLongitude:
             ),
         )
         with pytest.raises(ValueError, match="global grid"):
-            ds.wrap_longitude()
+            ds.spatial.wrap_longitude()
 
     def test_wrap_longitude_returns_new_dataset(self):
         """wrap_longitude() should always return a new Dataset."""
@@ -506,7 +506,7 @@ class TestWrapLongitude:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = ds.wrap_longitude()
+        result = ds.spatial.wrap_longitude()
         assert result is not None, "wrap_longitude should return a Dataset"
         assert isinstance(result, Dataset), "wrap_longitude should return a Dataset"
 
@@ -516,11 +516,11 @@ class TestWrapLongitudePaths:
 
     def test_file_backed_uses_lazy_vrt(self, noah):
         """A file-backed global raster is shifted lazily through a VRT (no eager copy)."""
-        result = Dataset(noah).wrap_longitude()
+        result = Dataset(noah).spatial.wrap_longitude()
         assert result.raster.GetDriver().ShortName == "VRT"
         assert result.top_left_corner == (-180.0, 90.0)
         # the VRT still reads back real data
-        assert result.read_array(band=0).shape == (noah.RasterYSize, noah.RasterXSize)
+        assert result.io.read_array(band=0).shape == (noah.RasterYSize, noah.RasterXSize)
 
     def test_in_memory_rolls_columns_exactly(self):
         """An in-memory source is rolled exactly (eager path), preserving the no-data value."""
@@ -530,10 +530,10 @@ class TestWrapLongitudePaths:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = ds.wrap_longitude()
+        result = ds.spatial.wrap_longitude()
         assert result.raster.GetDriver().ShortName == "MEM"
         expected = arr[:, list(range(180, 360)) + list(range(0, 180))]
-        np.testing.assert_array_equal(result.read_array(band=0), expected)
+        np.testing.assert_array_equal(result.io.read_array(band=0), expected)
         assert result.raster.GetRasterBand(1).GetNoDataValue() == -9999.0
 
     def test_vrt_matches_eager_reference(self, noah):
@@ -547,11 +547,11 @@ class TestWrapLongitudePaths:
         lon = dataset.lon
         first = int(np.nonzero(lon > 180)[0][0])
         order = list(range(first, noah.RasterXSize)) + list(range(0, first))
-        result = dataset.wrap_longitude()
+        result = dataset.spatial.wrap_longitude()
         for band in range(noah.RasterCount):
             reference = noah.GetRasterBand(band + 1).ReadAsArray()[:, order]
             np.testing.assert_array_equal(
-                result.read_array(band=band),
+                result.io.read_array(band=band),
                 reference,
                 err_msg=f"band {band}: VRT roll differs from eager reference",
             )
@@ -562,7 +562,7 @@ class TestWrapLongitudePaths:
         Test scenario:
             Projection WKT and every band's no-data value must match the source after conversion.
         """
-        result = Dataset(noah).wrap_longitude()
+        result = Dataset(noah).spatial.wrap_longitude()
         assert result.raster.GetProjection() == noah.GetProjection(), (
             "projection not preserved"
         )
@@ -579,9 +579,9 @@ class TestWrapLongitudePaths:
             After changing CWD to an unrelated directory, reading the VRT-backed result still
             returns the full array (the SourceFilename resolves).
         """
-        result = Dataset(noah).wrap_longitude()
+        result = Dataset(noah).spatial.wrap_longitude()
         monkeypatch.chdir(tmp_path)
-        array = result.read_array(band=0)
+        array = result.io.read_array(band=0)
         assert array.shape == (
             noah.RasterYSize,
             noah.RasterXSize,
@@ -601,11 +601,11 @@ class TestWrapLongitudePaths:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = dataset.wrap_longitude()
+        result = dataset.spatial.wrap_longitude()
         order = list(range(180, 360)) + list(range(0, 180))
         for band in range(2):
             np.testing.assert_array_equal(
-                result.read_array(band=band),
+                result.io.read_array(band=band),
                 arr[band][:, order],
                 err_msg=f"band {band} not rolled correctly",
             )
@@ -622,7 +622,7 @@ class TestWrapLongitudePaths:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = dataset.wrap_longitude()
+        result = dataset.spatial.wrap_longitude()
         assert result.epsg == 4326, f"expected EPSG 4326, got {result.epsg}"
 
     def test_vrt_source_without_nodata_or_projection(self, tmp_path):
@@ -644,7 +644,7 @@ class TestWrapLongitudePaths:
         out.FlushCache()
         out = None
 
-        result = Dataset.read_file(path).wrap_longitude()
+        result = Dataset.read_file(path).spatial.wrap_longitude()
         assert result.raster.GetDriver().ShortName == "VRT", (
             "file-backed source should use VRT"
         )
@@ -656,7 +656,7 @@ class TestWrapLongitudePaths:
             :, order
         ]
         np.testing.assert_array_equal(
-            result.read_array(band=0),
+            result.io.read_array(band=0),
             expected,
             err_msg="roll incorrect for minimal-metadata source",
         )
@@ -675,12 +675,12 @@ class TestWrapLongitudePaths:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
         dataset.raster.SetDescription("invalid\x00path")
-        result = dataset.wrap_longitude()
+        result = dataset.spatial.wrap_longitude()
         assert result.raster.GetDriver().ShortName == "MEM", (
             "should fall back to the eager path"
         )
         order = list(range(180, 360)) + list(range(0, 180))
-        np.testing.assert_array_equal(result.read_array(band=0), arr[:, order])
+        np.testing.assert_array_equal(result.io.read_array(band=0), arr[:, order])
 
 
 class TestNonSquareResolution:
@@ -696,7 +696,7 @@ class TestNonSquareResolution:
 
     def test_resample_nonsquare_output(self):
         """resample((2, 1)) halves the columns, keeps the rows, and yields a 2°×1° grid."""
-        result = self._square_source().resample(cell_size=(2.0, 1.0))
+        result = self._square_source().spatial.resample(cell_size=(2.0, 1.0))
         gt = result.geotransform
         assert abs(gt[1]) == pytest.approx(2.0), gt
         assert abs(gt[5]) == pytest.approx(1.0), gt
@@ -707,7 +707,7 @@ class TestNonSquareResolution:
 
     def test_resample_scalar_stays_square(self):
         """A scalar cell_size still produces square cells (no behaviour change)."""
-        result = self._square_source().resample(cell_size=2.0)
+        result = self._square_source().spatial.resample(cell_size=2.0)
         gt = result.geotransform
         assert abs(gt[1]) == pytest.approx(2.0), gt
         assert abs(gt[5]) == pytest.approx(2.0), gt
@@ -715,7 +715,7 @@ class TestNonSquareResolution:
 
     def test_to_crs_nonsquare_output(self):
         """to_crs(..., cell_size=(2, 1)) produces a non-square output grid."""
-        result = self._square_source().to_crs(4326, cell_size=(2.0, 1.0))
+        result = self._square_source().spatial.to_crs(4326, cell_size=(2.0, 1.0))
         gt = result.geotransform
         assert abs(gt[1]) == pytest.approx(2.0), gt
         assert abs(gt[5]) == pytest.approx(1.0), gt
@@ -724,9 +724,9 @@ class TestNonSquareResolution:
         """A non-positive or malformed cell_size raises a clear ValueError."""
         src = self._square_source()
         with pytest.raises(ValueError, match="cell_size must be positive"):
-            src.resample(cell_size=(2.0, 0.0))
+            src.spatial.resample(cell_size=(2.0, 0.0))
         with pytest.raises(ValueError, match="x_res, y_res"):
-            src.resample(cell_size=(1.0, 2.0, 3.0))
+            src.spatial.resample(cell_size=(1.0, 2.0, 3.0))
 
 
 class TestResampleErrors:
@@ -735,12 +735,12 @@ class TestResampleErrors:
     def test_resample_invalid_method_type_raises(self, single_band_dataset):
         """resample with non-string method should raise TypeError."""
         with pytest.raises(TypeError):
-            single_band_dataset.resample(cell_size=0.1, method=123)
+            single_band_dataset.spatial.resample(cell_size=0.1, method=123)
 
     def test_resample_invalid_method_value_raises(self, single_band_dataset):
         """resample with unknown method should raise ValueError."""
         with pytest.raises(ValueError):
-            single_band_dataset.resample(cell_size=0.1, method="invalid_interp")
+            single_band_dataset.spatial.resample(cell_size=0.1, method="invalid_interp")
 
 
 class TestToCrsSameEpsg:
@@ -748,7 +748,7 @@ class TestToCrsSameEpsg:
 
     def test_to_crs_same_epsg(self, single_band_dataset):
         """to_crs with the same EPSG should still return a valid Dataset."""
-        result = single_band_dataset.to_crs(to_epsg=4326)
+        result = single_band_dataset.spatial.to_crs(to_epsg=4326)
         assert result is not None, "to_crs with same EPSG should return a Dataset"
         assert result.epsg == 4326, "EPSG should remain 4326"
 
@@ -766,7 +766,7 @@ class TestToCrsWestHemisphere:
                 top_left_corner=(200.0, 50.0), cell_size=1.0, epsg=4326
             ),
         )
-        result = ds.to_crs(to_epsg=3857)
+        result = ds.spatial.to_crs(to_epsg=3857)
         assert result is not None, "to_crs should handle west-hemisphere longitudes"
 
 
@@ -792,7 +792,7 @@ class TestCropAligned:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         result = src.spatial._crop_aligned(mask)
-        arr = result.read_array()
+        arr = result.io.read_array()
         assert np.isclose(arr[1, 1], nd), "Masked cell should be nodata"
 
     def test_crop_aligned_numpy_mask_no_noval_raises(self):
@@ -888,7 +888,7 @@ class TestCropAligned:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         result = src.spatial._crop_aligned(mask)
-        arr = result.read_array()
+        arr = result.io.read_array()
         assert arr.ndim == 3, "Multi-band result should be 3D"
 
     def test_crop_aligned_single_band_nan_mask(self):
@@ -926,11 +926,11 @@ class TestAlign:
     def test_align_invalid_type_raises(self, single_band_dataset):
         """align with non-Dataset should raise TypeError."""
         with pytest.raises(TypeError):
-            single_band_dataset.align("not_a_dataset")
+            single_band_dataset.spatial.align("not_a_dataset")
 
     def test_align_same_dataset(self, single_band_dataset):
         """align with itself should return a valid Dataset."""
-        result = single_band_dataset.align(single_band_dataset)
+        result = single_band_dataset.spatial.align(single_band_dataset)
         assert isinstance(result, Dataset), "align should return a Dataset"
 
 
@@ -958,7 +958,7 @@ class TestCropErrors:
     def test_crop_invalid_mask_raises(self, single_band_dataset):
         """crop with invalid mask type should raise TypeError."""
         with pytest.raises(TypeError, match="GeoDataFrame or Dataset"):
-            single_band_dataset.crop(mask="not_valid")
+            single_band_dataset.spatial.crop(mask="not_valid")
 
 
 class TestNearestNeighbour:
@@ -1054,13 +1054,13 @@ class TestMapToArrayCoordinates:
     def test_invalid_input_type_raises(self, single_band_dataset):
         """nearest_cell with bad input type raises TypeError."""
         with pytest.raises(TypeError, match="GeoDataFrame"):
-            single_band_dataset.nearest_cell(12345)
+            single_band_dataset.cell.nearest_cell(12345)
 
     def test_dataframe_missing_xy_raises(self, single_band_dataset):
         """nearest_cell with DataFrame lacking x,y raises ValueError."""
         df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
         with pytest.raises(ValueError, match="x, and y"):
-            single_band_dataset.nearest_cell(df)
+            single_band_dataset.cell.nearest_cell(df)
 
     def test_map_to_array_nonsquare_roundtrip(self):
         """On a non-square grid the cell centres round-trip back to their indices.
@@ -1075,9 +1075,9 @@ class TestMapToArrayCoordinates:
             geo_ref=GeoReference(geo=(10.0, 2.0, 0.0, 8.0, 0.0, -0.5), epsg=4326),
         )
         rows, cols = [0, 1, 3], [0, 1, 2]
-        x, y = ds.xy(rows, cols, center=True)
+        x, y = ds.cell.xy(rows, cols, center=True)
         df = pd.DataFrame({"x": x, "y": y})
-        indices = ds.nearest_cell(df)
+        indices = ds.cell.nearest_cell(df)
         assert indices.tolist() == [
             [0, 0],
             [1, 1],
@@ -1090,7 +1090,7 @@ class TestArrayToMapCoordinates:
 
     def test_array_to_map_center(self, single_band_dataset):
         """xy with center returns center coords."""
-        x, y = single_band_dataset.xy([0, 1], [0, 1], center=True)
+        x, y = single_band_dataset.cell.xy([0, 1], [0, 1], center=True)
         assert len(x) == 2, "Should return 2 x-coordinates"
         assert len(y) == 2, "Should return 2 y-coordinates"
         expected_x0 = 0.0 + 0.05 / 2
@@ -1098,7 +1098,7 @@ class TestArrayToMapCoordinates:
 
     def test_array_to_map_corner(self, single_band_dataset):
         """xy with center=False returns corner."""
-        x, _ = single_band_dataset.xy([0], [0], center=False)
+        x, _ = single_band_dataset.cell.xy([0], [0], center=False)
         assert abs(x[0] - 0.0) < 1e-6, "Corner x should be 0.0"
 
     @staticmethod
@@ -1116,19 +1116,19 @@ class TestArrayToMapCoordinates:
         (8 - 1*0.5 - 0.25); the old code returned y=5.0 by reusing the 2.0
         pixel width for the y axis.
         """
-        x, y = self._nonsquare().xy([1], [2], center=True)
+        x, y = self._nonsquare().cell.xy([1], [2], center=True)
         assert abs(x[0] - 15.0) < 1e-9, f"x should be 15.0, got {x[0]}"
         assert abs(y[0] - 7.25) < 1e-9, f"y should be 7.25 (height-based), got {y[0]}"
 
     def test_array_to_map_nonsquare_corner(self):
         """Corner coordinates also use the per-axis pixel sizes."""
-        x, y = self._nonsquare().xy([1], [2], center=False)
+        x, y = self._nonsquare().cell.xy([1], [2], center=False)
         assert abs(x[0] - 14.0) < 1e-9, f"corner x should be 14.0, got {x[0]}"
         assert abs(y[0] - 7.5) < 1e-9, f"corner y should be 7.5, got {y[0]}"
 
     def test_array_to_map_nonsquare_vector(self):
         """Vector inputs are converted element-wise with the per-axis sizes."""
-        x, y = self._nonsquare().xy([0, 1, 3], [0, 1, 2], center=False)
+        x, y = self._nonsquare().cell.xy([0, 1, 3], [0, 1, 2], center=False)
         assert x == [10.0, 12.0, 14.0], f"x corners wrong: {x}"
         assert y == [8.0, 7.5, 6.5], f"y corners must step by 0.5, got {y}"
 
@@ -1138,7 +1138,7 @@ class TestArrayToMapCoordinates:
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.5, 0.0, 0.5, -1.0), epsg=4326),
         )
-        x, y = rot.xy([1], [2], center=False)
+        x, y = rot.cell.xy([1], [2], center=False)
         # Column 2 and row 1 through the affine give x of 2.5 (two pixel
         # widths plus one row-rotation half) and y of 0.0 (one column
         # rotation minus one pixel height).
@@ -1147,7 +1147,7 @@ class TestArrayToMapCoordinates:
 
     def test_array_to_map_empty_input(self):
         """Empty index inputs return a pair of empty lists, not an error."""
-        x, y = self._nonsquare().xy([], [])
+        x, y = self._nonsquare().cell.xy([], [])
         assert x == [], f"empty input must give an empty x, got {x}"
         assert y == [], f"empty input must give an empty y, got {y}"
 
@@ -1158,11 +1158,11 @@ class TestArrayToMapCoordinates:
         the inputs were lists or ndarrays.
         """
         ds = self._nonsquare()
-        x, y = ds.xy(np.array([0, 1, 3]), np.array([0, 1, 2]), center=True)
+        x, y = ds.cell.xy(np.array([0, 1, 3]), np.array([0, 1, 2]), center=True)
         assert all(type(v) is float for v in x + y), (
             f"elements must be plain Python floats, got {[type(v) for v in x + y]}"
         )
-        x_list, y_list = ds.xy([0, 1, 3], [0, 1, 2], center=True)
+        x_list, y_list = ds.cell.xy([0, 1, 3], [0, 1, 2], center=True)
         assert x == x_list, "ndarray and list x must agree"
         assert y == y_list, "ndarray and list y must agree"
 
@@ -1172,7 +1172,7 @@ class TestArrayToMapCoordinates:
             np.ones((10, 10), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        x, y = sq.xy([1, 3, 5], [2, 4, 6], center=False)
+        x, y = sq.cell.xy([1, 3, 5], [2, 4, 6], center=False)
         assert x == pytest.approx([0.1, 0.2, 0.3]), f"square x changed: {x}"
         assert y == pytest.approx([-0.05, -0.15, -0.25]), f"square y changed: {y}"
 
@@ -1226,7 +1226,7 @@ class TestCluster2:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=[0])
+        gdf = ds.vector.to_polygons(band=[0])
         assert gdf is not None, (
             "to_polygons with list band should return a GeoDataFrame"
         )
@@ -1280,7 +1280,7 @@ class TestCropAlignedFillGaps:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         result = src.spatial._crop_aligned(mask, fill_gaps=True)
-        arr = result.read_array()
+        arr = result.io.read_array()
         assert arr is not None, "Fill gaps result should have a valid array"
 
 
@@ -1297,7 +1297,7 @@ class TestToCrsSameEpsgPaths:
                 top_left_corner=(10.0, 50.0), cell_size=0.5, epsg=4326
             ),
         )
-        result = ds.to_crs(to_epsg=4326)
+        result = ds.spatial.to_crs(to_epsg=4326)
         assert result is not None, "Should return a Dataset"
         assert result.epsg == 4326, "EPSG should stay 4326"
         assert result.rows > 0, "Should have rows"
@@ -1317,7 +1317,7 @@ class TestToCrsWestHemLongitude:
                 top_left_corner=(200.0, 50.0), cell_size=1.0, epsg=4326
             ),
         )
-        result = ds.to_crs(to_epsg=3857)
+        result = ds.spatial.to_crs(to_epsg=3857)
         assert result is not None, "Should handle >180 longitude"
         assert result.epsg == 3857, "EPSG should be 3857"
 
@@ -1350,7 +1350,7 @@ class TestReprojectNonSquareCells:
                 top_left_corner=(10.0, 60.5), cell_size=0.1, epsg=4326
             ),
         )
-        result = ds.to_crs(to_epsg=3857, maintain_alignment=True)
+        result = ds.spatial.to_crs(to_epsg=3857, maintain_alignment=True)
         x_spacing = abs(result.geotransform[1])
         y_spacing = abs(result.geotransform[5])
         ratio = y_spacing / x_spacing
@@ -1376,7 +1376,7 @@ class TestReprojectNonSquareCells:
                 geo=(500_000.0, 2.0, 0.0, 5_500_000.0, 0.0, -14.0), epsg=32633
             ),
         )
-        result = ds.to_crs(to_epsg=3857, maintain_alignment=True)
+        result = ds.spatial.to_crs(to_epsg=3857, maintain_alignment=True)
         x_spacing = abs(result.geotransform[1])
         y_spacing = abs(result.geotransform[5])
         ratio = y_spacing / x_spacing
@@ -1421,7 +1421,7 @@ class TestCropAlignedNanMask:
             f"Output geotransform {result.geotransform} should match "
             f"source {src.geotransform}"
         )
-        result_arr = result.read_array()
+        result_arr = result.io.read_array()
         assert np.isclose(result_arr[0, 0], nd), "Cell 0,0 should be nodata"
         assert np.isclose(result_arr[2, 3], nd), "Cell 2,3 should be nodata"
         assert np.isclose(result_arr[1, 1], 5.0), "Cell 1,1 should be unchanged"
@@ -1446,7 +1446,7 @@ class TestCropAlignedNanMask:
         # Set mask nodata to None to trigger nan check path
         mask_ds._no_data_value = [None]
         result = src.spatial._crop_aligned(mask_ds)
-        result_arr = result.read_array()
+        result_arr = result.io.read_array()
         assert result_arr.ndim == 3, "Multi-band result should be 3D"
 
     def test_crop_aligned_single_band_nan_mask_noval(self):
@@ -1467,7 +1467,7 @@ class TestCropAlignedNanMask:
         )
         mask_ds._no_data_value = [None]
         result = src.spatial._crop_aligned(mask_ds)
-        result_arr = result.read_array()
+        result_arr = result.io.read_array()
         assert result_arr is not None, "Should return a valid array"
 
 
@@ -1507,7 +1507,7 @@ class TestCluster2BandList:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=[0])
+        gdf = ds.vector.to_polygons(band=[0])
         assert gdf is not None, "to_polygons should return a GeoDataFrame"
         assert len(gdf) > 0, "Should have some polygons"
 
@@ -1537,7 +1537,7 @@ class TestCluster2BandNone:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=None)
+        gdf = ds.vector.to_polygons(band=None)
         assert gdf is not None, "to_polygons with None band should work"
 
     def test_to_polygons_int_band(self):
@@ -1548,7 +1548,7 @@ class TestCluster2BandNone:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=0)
+        gdf = ds.vector.to_polygons(band=0)
         assert gdf is not None, "to_polygons with int band should work"
 
     def test_to_polygons_list_band(self):
@@ -1559,7 +1559,7 @@ class TestCluster2BandNone:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=[0])
+        gdf = ds.vector.to_polygons(band=[0])
         assert gdf is not None, "to_polygons with list band should work"
 
     def test_cluster2_deprecated_alias_warns_and_forwards(self):
@@ -1571,8 +1571,8 @@ class TestCluster2BandNone:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with pytest.warns(DeprecationWarning, match="cluster2 is deprecated"):
-            legacy = ds.cluster2()
-        assert len(legacy) == len(ds.to_polygons()), (
+            legacy = ds.vector.cluster2()
+        assert len(legacy) == len(ds.vector.to_polygons()), (
             "cluster2 should forward to to_polygons"
         )
 
@@ -1589,7 +1589,7 @@ class TestWrapLongitudeInplace:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
         )
-        result = ds.wrap_longitude()
+        result = ds.spatial.wrap_longitude()
         assert isinstance(result, Dataset), "Should return a new Dataset"
         assert result.geotransform[0] < 0, "New top-left x should be negative"
 
@@ -1626,7 +1626,7 @@ class TestMapToArrayFeatureCollection:
             crs="EPSG:4326",
         )
         fc = FeatureCollection(pts)
-        result = single_band_dataset.nearest_cell(fc)
+        result = single_band_dataset.cell.nearest_cell(fc)
         assert result is not None, "Should return array indices"
         assert result.shape[0] == 2, "Should have 2 points"
 
@@ -1643,7 +1643,7 @@ class TestNonSquareCells:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=gt, epsg=4326),
         )
-        coords = ds.get_cell_coords(location="center")
+        coords = ds.cell.get_cell_coords(location="center")
         assert coords is not None, "Should return coordinates for non-square cells"
 
 
@@ -1666,5 +1666,5 @@ class TestGroupNeighbours:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        gdf = ds.to_polygons(band=0)
+        gdf = ds.vector.to_polygons(band=0)
         assert len(gdf) >= 4, "Should find at least 4 clusters"

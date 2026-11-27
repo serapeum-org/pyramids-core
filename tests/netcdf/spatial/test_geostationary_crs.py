@@ -295,7 +295,7 @@ class TestGeostationaryContainerOps:
         path = str(tmp_path / "geos.nc")
         _write_geostationary_mdim(path)
         var = NetCDF.read_file(path).get_variable("CMI_C02")
-        gdf = var.to_polygons()
+        gdf = var.vector.to_polygons()
         assert gdf is not None and "geometry" in gdf.columns
 
     def test_set_variable_preserves_geostationary_crs(self, tmp_path):
@@ -303,7 +303,7 @@ class TestGeostationaryContainerOps:
         path = str(tmp_path / "geos.nc")
         _write_geostationary_mdim(path)
         container = NetCDF.read_file(path)
-        container.set_variable("CMI_copy", container.get_variable("CMI_C02"))
+        container.variables.set("CMI_copy", container.get_variable("CMI_C02"))
         copy = container.get_variable("CMI_copy")
         assert copy.epsg is None
         assert "Geostationary_Satellite" in copy.crs

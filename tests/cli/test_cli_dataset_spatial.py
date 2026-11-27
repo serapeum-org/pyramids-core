@@ -37,7 +37,7 @@ def ramp(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -52,7 +52,7 @@ def fine_grid(tmp_path) -> str:
     Dataset.from_array(
         np.zeros((16, 16), dtype="float32"),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=0.5, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -67,7 +67,7 @@ def twos(tmp_path) -> str:
     Dataset.from_array(
         np.full((8, 8), 2.0, dtype="float32"),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -98,7 +98,7 @@ def ramp_3857(tmp_path) -> str:
     Dataset.from_array(
         np.ones((8, 8), dtype="float32"),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=3857),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -114,7 +114,7 @@ def global_360(tmp_path) -> str:
         np.arange(360, dtype="float32").reshape(1, 360),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0.0, 0.5), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -182,7 +182,7 @@ class TestCombine:
         )
         result = Dataset.read_file(out)
         assert (result.rows, result.columns) == (8, 8), "grid must be preserved"
-        arr = result.read_array()
+        arr = result.io.read_array()
         assert float(arr.min()) == pytest.approx(2.0), "0 + 2 wrong"
         assert float(arr.max()) == pytest.approx(65.0), "63 + 2 wrong"
 
@@ -304,7 +304,7 @@ class TestTranslate:
         )
         assert rc == 0, "translate --output-type must exit 0"
         typed = Dataset.read_file(out)
-        assert typed.read_array().dtype == np.int16, "output dtype not int16"
+        assert typed.io.read_array().dtype == np.int16, "output dtype not int16"
 
     def test_nodata_sets_sentinel(self, ramp, tmp_path, capsys):
         """--nodata sets the output no-data value."""
@@ -357,7 +357,7 @@ class TestTranslate:
             ]
         )
         assert rc == 0, "translate --scale must exit 0"
-        arr = Dataset.read_file(out).read_array()
+        arr = Dataset.read_file(out).io.read_array()
         assert float(arr.max()) == pytest.approx(100.0), "63 -> 100 rescale wrong"
         assert float(arr.min()) == pytest.approx(0.0), "0 -> 0 rescale wrong"
 

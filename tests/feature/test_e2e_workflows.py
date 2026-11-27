@@ -134,7 +134,7 @@ class TestFromFeaturesToRasterize:
         raster = Dataset.from_features(combined, cell_size=0.25)
 
         # Spot-check: the raster contains both burned values.
-        arr = raster.read_array()
+        arr = raster.io.read_array()
         unique = set(arr[arr != raster.no_data_value[0]])
         assert 1.0 in unique
         assert 2.0 in unique
@@ -394,6 +394,6 @@ class TestBatch4Chain:
         assert len(fc) == 2
 
         raster = _Ds.from_features(fc, cell_size=cell_size, column_name="class_id")
-        arr = raster.read_array()
+        arr = raster.io.read_array()
         assert int(arr.max()) == 13, f"expected 13 in burned raster; got {arr.max()}"
         assert 7 in {int(v) for v in arr.flatten() if v != raster.no_data_value[0]}

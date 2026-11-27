@@ -48,15 +48,15 @@ class TestTheVerdictsMatchXarray:
     def test_a_copy_is_equal_and_identical(self):
         """Nothing differs, so both hold."""
         raster = _raster()
-        assert raster.equals(raster.copy())
-        assert raster.identical(raster.copy())
+        assert raster.analysis.equals(raster.copy())
+        assert raster.analysis.identical(raster.copy())
 
     def test_one_changed_cell_is_neither(self):
         """A single different value is enough to separate two rasters."""
         changed = VALUES.copy()
         changed[1, 1] = 99.0
-        assert not _raster().equals(_raster(changed))
-        assert not _raster().identical(_raster(changed))
+        assert not _raster().analysis.equals(_raster(changed))
+        assert not _raster().analysis.identical(_raster(changed))
 
     def test_an_attribute_only_difference_separates_the_two_methods(self):
         """The values agree and the descriptions do not — equal, not identical.
@@ -68,8 +68,8 @@ class TestTheVerdictsMatchXarray:
         raster = _raster()
         relabelled = _raster()
         relabelled.band_names = ["reflectance"]
-        assert raster.equals(relabelled)
-        assert not raster.identical(relabelled)
+        assert raster.analysis.equals(relabelled)
+        assert not raster.analysis.identical(relabelled)
 
     def test_a_metadata_only_difference_also_separates_the_two_methods(self):
         """The dataset tags are attributes too, not only the band names.
@@ -83,8 +83,8 @@ class TestTheVerdictsMatchXarray:
         tagged = _raster()
         tagged.meta_data = {"units": "mm"}
         assert raster.meta_data == {}, "precondition: the tags start out empty"
-        assert raster.equals(tagged)
-        assert not raster.identical(tagged)
+        assert raster.analysis.equals(tagged)
+        assert not raster.analysis.identical(tagged)
 
     def test_the_same_tags_on_both_sides_are_identical(self):
         """Metadata only separates the two verdicts when it actually differs."""
@@ -92,19 +92,19 @@ class TestTheVerdictsMatchXarray:
         raster.meta_data = {"units": "mm"}
         same = _raster()
         same.meta_data = {"units": "mm"}
-        assert raster.identical(same)
+        assert raster.analysis.identical(same)
 
     def test_a_different_grid_is_neither(self):
         """Same numbers somewhere else on the globe is a different raster."""
         elsewhere = GeoReference(top_left_corner=(50.0, 2.0), cell_size=1.0, epsg=4326)
-        assert not _raster().equals(_raster(geo_ref=elsewhere))
-        assert not _raster().identical(_raster(geo_ref=elsewhere))
+        assert not _raster().analysis.equals(_raster(geo_ref=elsewhere))
+        assert not _raster().analysis.identical(_raster(geo_ref=elsewhere))
 
     def test_a_different_shape_is_neither(self):
         """Shapes that do not match cannot hold the same cells."""
         taller = Dataset.from_array(np.ones((3, 2)), geo_ref=GEO_REF, no_data_value=NDV)
-        assert not _raster().equals(taller)
-        assert not _raster().identical(taller)
+        assert not _raster().analysis.equals(taller)
+        assert not _raster().analysis.identical(taller)
 
 
 class TestGapsCompareEqual:
@@ -112,7 +112,7 @@ class TestGapsCompareEqual:
 
     def test_a_gap_equals_a_gap(self):
         """The same cell missing in both is agreement, not disagreement."""
-        assert _raster().equals(_raster())
+        assert _raster().analysis.equals(_raster())
 
     def test_two_sentinels_for_the_same_missing_cell(self):
         """Marking the same gap with a different number is still the same raster.
@@ -123,18 +123,18 @@ class TestGapsCompareEqual:
         """
         other = np.array([[1.0, -32768.0], [3.0, 4.0]])
         theirs = Dataset.from_array(other, geo_ref=GEO_REF, no_data_value=-32768.0)
-        assert _raster().equals(theirs)
+        assert _raster().analysis.equals(theirs)
 
     def test_a_gap_in_one_and_a_value_in_the_other(self):
         """One raster knows a cell the other does not, so they differ."""
         complete = np.array([[1.0, 2.0], [3.0, 4.0]])
-        assert not _raster().equals(_raster(complete))
+        assert not _raster().analysis.equals(_raster(complete))
 
     def test_a_nan_gap_equals_itself(self):
         """A NaN is not equal to itself as a number, and must not decide the verdict."""
         values = np.array([[1.0, np.nan], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=np.nan)
-        assert raster.equals(raster.copy())
+        assert raster.analysis.equals(raster.copy())
 
 
 class TestCheapInvariantsFirst:
@@ -145,13 +145,13 @@ class TestCheapInvariantsFirst:
         stack = Dataset.from_array(
             np.stack([VALUES, VALUES]), geo_ref=GEO_REF, no_data_value=NDV
         )
-        assert not _raster().equals(stack)
+        assert not _raster().analysis.equals(stack)
 
     def test_something_that_is_not_a_raster(self):
         """Comparing with anything else answers `False` rather than raising."""
-        assert not _raster().equals(42)
-        assert not _raster().equals(None)
-        assert not _raster().identical("a raster")
+        assert not _raster().analysis.equals(42)
+        assert not _raster().analysis.equals(None)
+        assert not _raster().analysis.identical("a raster")
 
 
 class TestOnANetCDFVariable:
@@ -178,7 +178,7 @@ class TestOnANetCDFVariable:
     def test_a_variable_equals_its_own_copy(self):
         """The same cube twice agrees on values and on stamps."""
         variable = self._variable([0.0, 6.0])
-        assert variable.equals(variable.copy())
+        assert variable.analysis.equals(variable.copy())
 
     def test_different_stamps_are_a_different_cube(self):
         """The same numbers at different times are not the same cube.
@@ -187,7 +187,7 @@ class TestOnANetCDFVariable:
             Only the band dimensions' coordinates differ, so a comparison that read the
             values alone would call these equal.
         """
-        assert not self._variable([0.0, 6.0]).equals(self._variable([0.0, 12.0]))
+        assert not self._variable([0.0, 6.0]).analysis.equals(self._variable([0.0, 12.0]))
 
     def test_a_variable_and_a_plain_raster_of_the_same_values(self):
         """A cube with a `time` dimension is not a plain raster of the same cells."""
@@ -197,7 +197,7 @@ class TestOnANetCDFVariable:
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
             no_data_value=NDV,
         )
-        assert not variable.equals(plain)
+        assert not variable.analysis.equals(plain)
 
 
 class TestAStrayNanUnderANumericSentinel:
@@ -223,17 +223,17 @@ class TestAStrayNanUnderANumericSentinel:
             produce before M1 was fixed.
         """
         raster = self._stray()
-        assert raster.equals(raster.copy())
+        assert raster.analysis.equals(raster.copy())
 
     def test_it_is_identical_to_its_own_copy(self):
         """`identical` reads the same comparison, so it inherits the same property."""
         raster = self._stray()
-        assert raster.identical(raster.copy())
+        assert raster.analysis.identical(raster.copy())
 
     def test_a_different_stray_nan_still_differs(self):
         """Reflexivity must not be bought by calling every NaN-bearing raster equal."""
         other = np.array([[1.0, 2.0], [3.0, np.nan]])
-        assert not self._stray().equals(
+        assert not self._stray().analysis.equals(
             Dataset.from_array(other, geo_ref=GEO_REF, no_data_value=NDV)
         )
 
@@ -270,12 +270,12 @@ class TestOnAVariableReadFromAStore:
             the same pair answered `True`, because only `identical` reads the tags.
         """
         variable = self._variable()
-        assert variable.identical(variable.copy())
+        assert variable.analysis.identical(variable.copy())
 
     def test_equals_agrees_on_the_same_pair(self):
         """The values half was never broken, and must stay that way."""
         variable = self._variable()
-        assert variable.equals(variable.copy())
+        assert variable.analysis.equals(variable.copy())
 
     def test_the_tags_compared_are_the_variables_own(self):
         """A file-wide snapshot would make every variable of one store identical.
@@ -311,8 +311,8 @@ class TestOnAVariableReadFromAStore:
             ),
         ).get_variable("tos")
         assert dict(twin.attrs) != dict(variable.attrs), "precondition: the tags differ"
-        assert variable.equals(twin)
-        assert not variable.identical(twin)
+        assert variable.analysis.equals(twin)
+        assert not variable.analysis.identical(twin)
 
     def test_a_variable_with_no_tags_is_identical_to_its_copy(self):
         """An empty `attrs` is not a reason to answer `False`."""
@@ -326,4 +326,4 @@ class TestOnAVariableReadFromAStore:
         )
         variable = store.get_variable(store.variable_names[0])
         assert dict(variable.attrs) == {}, "precondition: this fixture has none"
-        assert variable.identical(variable.copy())
+        assert variable.analysis.identical(variable.copy())

@@ -187,7 +187,7 @@ class TestGeodesicArea:
         """
         geo_ref = GeoReference(top_left_corner=(0.0, 1.0), cell_size=1.0, epsg=4326)
         raster = Dataset.from_array(np.ones((1, 1), "float32"), geo_ref=geo_ref)
-        raster_km2 = float(raster.cell_area(unit="km2")[0, 0])
+        raster_km2 = float(raster.cell.cell_area(unit="km2")[0, 0])
         vector_km2 = _fc([Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]).geodesic_area(
             unit="km2"
         )

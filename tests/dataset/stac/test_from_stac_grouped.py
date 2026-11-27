@@ -57,7 +57,7 @@ def holed_items(tmp_path):
             array,
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         items.append(
             {
                 "id": f"holed{index}",
@@ -94,7 +94,7 @@ def offgrid_items(tmp_path):
             np.full((3, 3), value, dtype="float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=corner, cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         items.append(
             {
                 "id": f"offgrid{index}",
@@ -150,7 +150,7 @@ def _sinusoidal_item(tmp_path, name, value, *, orbit=1, href=None):
         geo_ref=GeoReference(geo=(0.0, 1000.0, 0.0, 3000.0, 0.0, -1000.0), epsg=None),
     )
     source.crs = _SINUSOIDAL_WKT
-    source.to_file(path)
+    source.io.to_file(path)
     return {
         "id": name,
         "bbox": [0.0, 0.0, 1.0, 1.0],
@@ -428,8 +428,8 @@ class TestFlexibleGroupby:
         coll = DatasetCollection.from_stac(
             three_local_items, asset="data", groupby="orbit"
         )
-        first = float(coll.datasets[0].read_array()[0, 0])
-        second = float(coll.datasets[1].read_array()[0, 0])
+        first = float(coll.datasets[0].io.read_array()[0, 0])
+        second = float(coll.datasets[1].io.read_array()[0, 0])
         assert first == pytest.approx(1.0), (
             f"orbit 1 should come first and keep the first-valid 1.0, got {first}"
         )
@@ -529,7 +529,7 @@ class TestGroupedMosaicMethod:
         coll = DatasetCollection.from_stac(
             three_local_items, asset="data", groupby="orbit"
         )
-        assert float(coll.datasets[0].read_array()[0, 0]) == pytest.approx(1.0), (
+        assert float(coll.datasets[0].io.read_array()[0, 0]) == pytest.approx(1.0), (
             "the default grouped mosaic must still be first-valid"
         )
 
@@ -545,7 +545,7 @@ class TestGroupedMosaicMethod:
             groupby="orbit",
             fusion=GroupFusion(method="mean"),
         )
-        value = float(coll.datasets[0].read_array()[0, 0])
+        value = float(coll.datasets[0].io.read_array()[0, 0])
         assert value == pytest.approx(1.5), f"expected the mean 1.5, got {value}"
 
     def test_max_reduces_the_group(self, three_local_items):
@@ -560,7 +560,7 @@ class TestGroupedMosaicMethod:
             groupby="orbit",
             fusion=GroupFusion(method="max"),
         )
-        value = float(coll.datasets[0].read_array()[0, 0])
+        value = float(coll.datasets[0].io.read_array()[0, 0])
         assert value == pytest.approx(2.0), f"expected the max 2.0, got {value}"
 
     def test_method_without_groupby_raises(self, three_local_items):
@@ -627,7 +627,7 @@ class TestFuseFunc:
             groupby="orbit",
             fusion=GroupFusion(fuse_func=self._keep_first),
         )
-        fused = coll.datasets[0].read_array()
+        fused = coll.datasets[0].io.read_array()
         assert float(fused[0, 0]) == pytest.approx(9.0), (
             f"the hole should be filled from the second source, got {fused[0, 0]}"
         )
@@ -681,7 +681,7 @@ class TestFuseFunc:
         assert seen == [(3, 3)], (
             f"the fuser must see the reference shape (3, 3), got {seen}"
         )
-        fused = coll.datasets[0].read_array()
+        fused = coll.datasets[0].io.read_array()
         assert fused.shape == (3, 3), f"the fused grid should be the first's: {fused}"
         assert float(fused[1, 1]) == pytest.approx(9.0), (
             f"the aligned source should have landed on the reference grid: {fused}"
@@ -703,7 +703,7 @@ class TestFuseFunc:
             groupby="orbit",
             fusion=GroupFusion(fuse_func=fuse_max),
         )
-        value = float(coll.datasets[0].read_array()[0, 0])
+        value = float(coll.datasets[0].io.read_array()[0, 0])
         assert value == pytest.approx(2.0), f"expected the fused max 2.0, got {value}"
 
     def test_works_with_solar_day(self, three_local_items):
@@ -803,7 +803,7 @@ class TestErrorsAsNodata:
         assert coll.time_length == 3, (
             f"the unreadable timestep should be kept, got {coll.time_length}"
         )
-        assert np.isnan(coll.datasets[1].read_array()).all(), (
+        assert np.isnan(coll.datasets[1].io.read_array()).all(), (
             "the substituted timestep should be entirely no-data"
         )
 
@@ -819,10 +819,10 @@ class TestErrorsAsNodata:
             coll = DatasetCollection.from_stac(
                 broken, asset="data", tolerance=tolerance
             )
-        assert float(coll.datasets[0].read_array()[0, 0]) == pytest.approx(1.0), (
+        assert float(coll.datasets[0].io.read_array()[0, 0]) == pytest.approx(1.0), (
             "the first timestep should be unaffected"
         )
-        assert float(coll.datasets[2].read_array()[0, 0]) == pytest.approx(3.0), (
+        assert float(coll.datasets[2].io.read_array()[0, 0]) == pytest.approx(3.0), (
             "the last timestep should be unaffected"
         )
 
@@ -878,7 +878,7 @@ class TestErrorsAsNodata:
         assert coll.time_length == 3, (
             f"expected 3 substituted timesteps, got {coll.time_length}"
         )
-        assert np.isnan(coll.datasets[0].read_array()).all(), (
+        assert np.isnan(coll.datasets[0].io.read_array()).all(), (
             "a grid-backed substitution should be entirely no-data"
         )
 
@@ -900,7 +900,7 @@ class TestErrorsAsNodata:
         assert coll.time_length == 2, (
             f"both orbit groups should survive, got {coll.time_length}"
         )
-        assert float(coll.datasets[0].read_array()[0, 0]) == pytest.approx(1.0), (
+        assert float(coll.datasets[0].io.read_array()[0, 0]) == pytest.approx(1.0), (
             "the surviving orbit-1 source should back its group"
         )
 
@@ -923,7 +923,7 @@ class TestErrorsAsNodata:
         assert coll.time_length == 2, (
             f"the emptied group should still be a timestep, got {coll.time_length}"
         )
-        assert np.isnan(coll.datasets[1].read_array()).all(), (
+        assert np.isnan(coll.datasets[1].io.read_array()).all(), (
             "the emptied group's timestep should be entirely no-data"
         )
 
@@ -951,7 +951,7 @@ class TestErrorsAsNodata:
         assert coll.datasets[1].band_count == 2, (
             f"the plane should keep the band axis, got {coll.datasets[1].band_count}"
         )
-        assert np.isnan(coll.datasets[1].read_array()).all(), (
+        assert np.isnan(coll.datasets[1].io.read_array()).all(), (
             "the substituted multi-asset timestep should be entirely no-data"
         )
 
@@ -1045,7 +1045,7 @@ class TestErrorsAsNodataNarrowness:
         assert coll.time_length == 2, (
             f"the unreadable timestep must be kept, got {coll.time_length}"
         )
-        assert np.isnan(coll.datasets[1].read_array()).all(), (
+        assert np.isnan(coll.datasets[1].io.read_array()).all(), (
             "the substituted timestep should be entirely no-data"
         )
 
@@ -1105,7 +1105,7 @@ class TestEmptyGroupPlaneGrid:
         assert coll.time_length == 2, (
             f"both groups must still be emitted, got {coll.time_length}"
         )
-        assert np.isnan(coll.datasets[1].read_array()).all(), (
+        assert np.isnan(coll.datasets[1].io.read_array()).all(), (
             "the empty group should be entirely no-data"
         )
 
@@ -1190,6 +1190,6 @@ class TestNonEpsgCrsSurvivesTheRebuild:
         assert "Sinusoidal" in fused.crs, (
             f"the fused group must keep the source projection, got {fused.crs!r}"
         )
-        assert float(np.asarray(fused.read_array())[0, 0]) == pytest.approx(9.0), (
+        assert float(np.asarray(fused.io.read_array())[0, 0]) == pytest.approx(9.0), (
             "the fuser must still have run, so the max of 1 and 9 is expected"
         )

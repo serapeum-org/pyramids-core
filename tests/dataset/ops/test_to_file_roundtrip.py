@@ -35,6 +35,6 @@ def test_multiband_to_file_roundtrips_through_second_handle(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 32.0), cell_size=1.0, epsg=4326),
     )
     out = str(tmp_path / "mb.tif")
-    ds.to_file(out)
-    reread = np.asarray(Dataset.read_file(out).read_array())
+    ds.io.to_file(out)
+    reread = np.asarray(Dataset.read_file(out).io.read_array())
     np.testing.assert_array_equal(reread, a)

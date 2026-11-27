@@ -93,7 +93,7 @@ class TestWarpToDataset:
         )
         del source
         gc.collect()
-        array = np.asarray(result.read_array())
+        array = np.asarray(result.io.read_array())
         assert np.isfinite(array).any(), (
             "the warped VRT must still read after its source wrapper is gone"
         )

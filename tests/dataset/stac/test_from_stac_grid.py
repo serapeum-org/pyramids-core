@@ -30,7 +30,7 @@ def offset_grid_items(tmp_path):
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=2.0, epsg=4326),
         )
         p = str(tmp_path / f"g{i}.tif")
-        ds.to_file(p)
+        ds.io.to_file(p)
         items.append(
             {
                 "id": f"i{i}",

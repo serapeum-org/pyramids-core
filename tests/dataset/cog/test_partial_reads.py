@@ -121,7 +121,7 @@ class TestReadPart:
         Test scenario:
             The dataset bbox at no explicit output size yields (100, 100).
         """
-        arr = ramp_4326.read_part(tuple(ramp_4326.bbox), bbox_crs=4326, band=0)
+        arr = ramp_4326.cog.read_part(tuple(ramp_4326.bbox), bbox_crs=4326, band=0)
         assert arr.shape == (100, 100), f"unexpected shape {arr.shape}"
 
     def test_decimated_output_shape(self, ramp_4326):
@@ -133,7 +133,7 @@ class TestReadPart:
         Test scenario:
             Requesting 25x25 over the full bbox returns a 25x25 array.
         """
-        arr = ramp_4326.read_part(
+        arr = ramp_4326.cog.read_part(
             tuple(ramp_4326.bbox), dst_width=25, dst_height=25, bbox_crs=4326, band=0
         )
         assert arr.shape == (25, 25), f"unexpected shape {arr.shape}"
@@ -149,7 +149,7 @@ class TestReadPart:
             single-band read to 2-D (rows, cols) — a multiband source would
             instead yield (bands, rows, cols).
         """
-        arr = ramp_4326.read_part(tuple(ramp_4326.bbox), bbox_crs=4326)
+        arr = ramp_4326.cog.read_part(tuple(ramp_4326.bbox), bbox_crs=4326)
         assert arr.shape == (100, 100), f"unexpected shape {arr.shape}"
 
     def test_invalid_resampling_raises(self, ramp_4326):
@@ -163,7 +163,7 @@ class TestReadPart:
         """
         bbox = tuple(ramp_4326.bbox)
         with pytest.raises(ValueError, match="unknown resampling"):
-            ramp_4326.read_part(bbox, resampling="bogus")
+            ramp_4326.cog.read_part(bbox, resampling="bogus")
 
     def test_nearest_neighbor_alias_accepted(self, ramp_4326):
         """The 'nearest neighbor' alias resolves like the warp family (L1).
@@ -174,10 +174,10 @@ class TestReadPart:
             ``"nearest"``, so the resampling vocabulary is consistent across
             read paths.
         """
-        via_alias = ramp_4326.read_part(
+        via_alias = ramp_4326.cog.read_part(
             tuple(ramp_4326.bbox), bbox_crs=4326, resampling="nearest neighbor"
         )
-        via_short = ramp_4326.read_part(
+        via_short = ramp_4326.cog.read_part(
             tuple(ramp_4326.bbox), bbox_crs=4326, resampling="nearest"
         )
         np.testing.assert_array_equal(
@@ -194,7 +194,7 @@ class TestReadPart:
             A far-away bbox does not intersect the raster.
         """
         with pytest.raises(OutOfBoundsError):
-            ramp_4326.read_part((50.0, 50.0, 51.0, 51.0), bbox_crs=4326)
+            ramp_4326.cog.read_part((50.0, 50.0, 51.0, 51.0), bbox_crs=4326)
 
     def test_partial_overlap_pads_with_nodata(self, ramp_4326):
         """A partially-overlapping window is padded, not stretched (M1).
@@ -215,7 +215,7 @@ class TestReadPart:
         def is_fill(v):
             return bool(np.isnan(v)) if nd is None else v == nd
 
-        arr = ramp_4326.read_part(
+        arr = ramp_4326.cog.read_part(
             (0.5, 9.5, 1.5, 10.5),
             dst_width=100,
             dst_height=100,
@@ -240,7 +240,7 @@ class TestReadPart:
             A single-band partial read returns a 2-D padded array of the
             requested size.
         """
-        arr = ramp_4326.read_part(
+        arr = ramp_4326.cog.read_part(
             (0.5, 9.5, 1.5, 10.5), dst_width=64, dst_height=64, bbox_crs=4326
         )
         assert arr.shape == (64, 64), f"unexpected shape {arr.shape}"
@@ -256,7 +256,7 @@ class TestReadPart:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.read_part(
+        out = ds.cog.read_part(
             (0.5, 9.5, 1.5, 10.5), dst_width=80, dst_height=80, bbox_crs=4326
         )
         assert out.shape == (3, 80, 80), f"unexpected shape {out.shape}"
@@ -272,7 +272,7 @@ class TestReadPart:
             contains no NoData fill values.
         """
         nd = ramp_4326._raster.GetRasterBand(1).GetNoDataValue()
-        arr = ramp_4326.read_part(
+        arr = ramp_4326.cog.read_part(
             (0.2, 9.2, 0.8, 9.8), dst_width=60, dst_height=60, bbox_crs=4326, band=0
         )
         assert arr.shape == (60, 60), f"unexpected shape {arr.shape}"
@@ -292,7 +292,7 @@ class TestReadPart:
             no_data_value=-1.0,
             geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326),
         )
-        out = ds.read_part(
+        out = ds.cog.read_part(
             (0.5, 9.5, 1.5, 10.5), dst_width=100, dst_height=100, bbox_crs=4326, band=0
         )
         assert out[10, 10] == -1.0, (
@@ -316,7 +316,7 @@ class TestReadPart:
             path too. It must name the offending argument instead.
         """
         with pytest.raises(ValueError, match="must be a positive pixel count"):
-            ramp_4326.read_part(tuple(ramp_4326.bbox), bbox_crs=4326, band=0, **bad)
+            ramp_4326.cog.read_part(tuple(ramp_4326.bbox), bbox_crs=4326, band=0, **bad)
 
 
 class TestReadPartReturnTransform:
@@ -345,7 +345,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        result = grid.read_part((1.5, 1.5, 4.5, 4.5), dst_width=3, dst_height=3, band=0)
+        result = grid.cog.read_part((1.5, 1.5, 4.5, 4.5), dst_width=3, dst_height=3, band=0)
 
         assert isinstance(result, np.ndarray), (
             f"expected a bare array, got {type(result)}"
@@ -364,7 +364,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part(
+        array, gt = grid.cog.read_part(
             (1.5, 1.5, 4.5, 4.5),
             dst_width=3,
             dst_height=3,
@@ -389,7 +389,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part(
+        array, gt = grid.cog.read_part(
             (1.5, 1.5, 4.5, 4.5),
             dst_width=3,
             dst_height=3,
@@ -413,7 +413,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part(
+        array, gt = grid.cog.read_part(
             (-1.5, 1.5, 1.5, 4.5),
             dst_width=3,
             dst_height=3,
@@ -458,7 +458,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part((-1.0, 5.0, 5.0, 9.0), band=0, return_transform=True)
+        array, gt = grid.cog.read_part((-1.0, 5.0, 5.0, 9.0), band=0, return_transform=True)
 
         assert self._worst_cell_offset(array, gt) == pytest.approx(0.0, abs=1e-9)
 
@@ -476,7 +476,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part(
+        array, gt = grid.cog.read_part(
             (-1.0, 5.0, 5.0, 9.0),
             dst_width=3,
             dst_height=3,
@@ -507,7 +507,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part(
+        array, gt = grid.cog.read_part(
             (-0.6, 1.5, 0.4, 6.5),
             dst_width=13,
             dst_height=13,
@@ -537,7 +537,7 @@ class TestReadPartReturnTransform:
             cols, geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0), epsg=3857)
         )
 
-        _, gt = south_up.read_part(
+        _, gt = south_up.cog.read_part(
             (1.5, 1.5, 4.5, 4.5),
             dst_width=3,
             dst_height=3,
@@ -560,7 +560,7 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.read_part((1.5, 1.5, 4.5, 4.5), band=0, return_transform=True)
+        array, gt = grid.cog.read_part((1.5, 1.5, 4.5, 4.5), band=0, return_transform=True)
 
         assert array.shape == (4, 4), f"native-size snapped window, got {array.shape}"
         assert gt == pytest.approx((1.0, 1.0, 0.0, 5.0, 0.0, -1.0)), (
@@ -583,7 +583,7 @@ class TestReadPartReturnTransform:
         """
         west, south, east, north = _xyz_bounds_3857(1, 0, 0)
 
-        _, gt = tile_3857.read_part(
+        _, gt = tile_3857.cog.read_part(
             (-100.0, 20.0, -80.0, 40.0),
             dst_width=32,
             dst_height=32,
@@ -625,10 +625,10 @@ class TestReadPartReturnTransform:
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=3857),
         )
 
-        all_bands, gt_all = dataset.read_part(
+        all_bands, gt_all = dataset.cog.read_part(
             (1.5, 1.5, 4.5, 4.5), dst_width=3, dst_height=3, return_transform=True
         )
-        _, gt_one = dataset.read_part(
+        _, gt_one = dataset.cog.read_part(
             (1.5, 1.5, 4.5, 4.5),
             dst_width=3,
             dst_height=3,
@@ -734,7 +734,7 @@ class TestPreview:
         Test scenario:
             max_size=40 on a square raster yields a 40x40 thumbnail.
         """
-        thumb = ramp_4326.preview(max_size=40, band=0)
+        thumb = ramp_4326.cog.preview(max_size=40, band=0)
         assert max(thumb.shape) == 40, f"unexpected shape {thumb.shape}"
 
     def test_small_raster_not_upsampled(self, ramp_4326):
@@ -746,7 +746,7 @@ class TestPreview:
         Test scenario:
             max_size=512 leaves the 100x100 raster unchanged.
         """
-        thumb = ramp_4326.preview(max_size=512, band=0)
+        thumb = ramp_4326.cog.preview(max_size=512, band=0)
         assert thumb.shape == (100, 100), f"unexpected shape {thumb.shape}"
 
 
@@ -765,7 +765,7 @@ class TestPoint:
         """
         x = (20 + 0.5) * 0.01
         y = 10.0 - (30 + 0.5) * 0.01
-        value = ramp_4326.point(x, y, point_crs=4326, band=0)
+        value = ramp_4326.cog.point(x, y, point_crs=4326, band=0)
         assert float(value) == pytest.approx(3020.0), f"got {value}"
 
     def test_all_bands_returns_vector(self, ramp_4326):
@@ -779,7 +779,7 @@ class TestPoint:
         """
         x = (10 + 0.5) * 0.01
         y = 10.0 - (10 + 0.5) * 0.01
-        vec = ramp_4326.point(x, y, point_crs=4326)
+        vec = ramp_4326.cog.point(x, y, point_crs=4326)
         assert vec.shape == (1,), f"unexpected shape {vec.shape}"
 
     def test_out_of_bounds_raises(self, ramp_4326):
@@ -792,7 +792,7 @@ class TestPoint:
             A far-away lon/lat is rejected.
         """
         with pytest.raises(OutOfBoundsError):
-            ramp_4326.point(80.0, -10.0, point_crs=4326)
+            ramp_4326.cog.point(80.0, -10.0, point_crs=4326)
 
     def test_reprojects_point_crs(self, tile_3857):
         """point reprojects from point_crs to the dataset CRS.
@@ -804,7 +804,7 @@ class TestPoint:
             A 4326 lon/lat inside the NW quadrant (e.g. -90, 45) samples a
             finite value after reprojection to 3857.
         """
-        value = tile_3857.point(-90.0, 45.0, point_crs=4326, band=0)
+        value = tile_3857.cog.point(-90.0, 45.0, point_crs=4326, band=0)
         assert np.isfinite(float(value)), f"expected a finite sample, got {value}"
 
 
@@ -820,7 +820,7 @@ class TestReadTile:
         Test scenario:
             read_tile(1, 0, 0) over the matching 3857 dataset yields 256x256.
         """
-        tile = tile_3857.read_tile(1, 0, 0, tilesize=256, band=0)
+        tile = tile_3857.cog.read_tile(1, 0, 0, tilesize=256, band=0)
         assert tile.shape == (256, 256), f"unexpected shape {tile.shape}"
 
     def test_custom_tilesize(self, tile_3857):
@@ -832,7 +832,7 @@ class TestReadTile:
         Test scenario:
             tilesize=128 yields a 128x128 tile.
         """
-        tile = tile_3857.read_tile(1, 0, 0, tilesize=128, band=0)
+        tile = tile_3857.cog.read_tile(1, 0, 0, tilesize=128, band=0)
         assert tile.shape == (128, 128), f"unexpected shape {tile.shape}"
 
     def test_non_overlapping_tile_raises(self, tile_3857):
@@ -845,7 +845,7 @@ class TestReadTile:
             Tile (1, 1, 1) is the south-east quadrant and does not intersect.
         """
         with pytest.raises(OutOfBoundsError):
-            tile_3857.read_tile(1, 1, 1, tilesize=256, band=0)
+            tile_3857.cog.read_tile(1, 1, 1, tilesize=256, band=0)
 
     def test_edge_tile_is_padded(self, straddle_3857):
         """An edge tile that partially overlaps is padded to tilesize (M1).
@@ -858,7 +858,7 @@ class TestReadTile:
             tile is returned at full 256x256 with the non-overlapping remainder
             filled with the dataset's NoData value (-1) — not stretched.
         """
-        tile = straddle_3857.read_tile(1, 0, 0, tilesize=256, band=0)
+        tile = straddle_3857.cog.read_tile(1, 0, 0, tilesize=256, band=0)
         assert tile.shape == (256, 256), f"edge tile must keep tilesize: {tile.shape}"
         assert (tile == -1.0).any(), "edge tile should have NoData-padded margin"
         assert np.isclose(tile, 1.0).any(), "edge tile should also contain real data"
@@ -873,7 +873,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture spanning (0, 9) to (1, 10).
         """
-        arr = ramp_4326.read_part((0.0, 9.0, 1.0, 10.0), gsd=0.05)
+        arr = ramp_4326.cog.read_part((0.0, 9.0, 1.0, 10.0), gsd=0.05)
         assert arr.shape == (20, 20), f"expected 20x20 from gsd, got {arr.shape}"
 
     def test_gsd_matches_equivalent_dst_size(self, ramp_4326):
@@ -883,8 +883,8 @@ class TestReadPartGsd:
             ramp_4326: 100x100 ramp fixture.
         """
         bbox = (0.0, 9.0, 1.0, 10.0)
-        by_gsd = ramp_4326.read_part(bbox, gsd=0.05)
-        by_dst = ramp_4326.read_part(bbox, dst_width=20, dst_height=20)
+        by_gsd = ramp_4326.cog.read_part(bbox, gsd=0.05)
+        by_dst = ramp_4326.cog.read_part(bbox, dst_width=20, dst_height=20)
         assert np.array_equal(by_gsd, by_dst), "gsd must equal explicit dst_ sizing"
 
     def test_gsd_with_dst_size_is_rejected(self, ramp_4326):
@@ -894,7 +894,7 @@ class TestReadPartGsd:
             ramp_4326: 100x100 ramp fixture.
         """
         with pytest.raises(ValueError, match="either gsd or dst_width"):
-            ramp_4326.read_part((0.0, 9.0, 1.0, 10.0), gsd=0.05, dst_width=10)
+            ramp_4326.cog.read_part((0.0, 9.0, 1.0, 10.0), gsd=0.05, dst_width=10)
 
     @pytest.mark.parametrize("bad", [0.0, -0.01, float("nan"), float("inf")])
     def test_non_finite_or_non_positive_gsd_is_rejected(self, ramp_4326, bad):
@@ -905,7 +905,7 @@ class TestReadPartGsd:
             bad: A rejected ground-sample-distance (0, negative, NaN, or inf).
         """
         with pytest.raises(ValueError, match="gsd must be a positive"):
-            ramp_4326.read_part((0.0, 9.0, 1.0, 10.0), gsd=bad)
+            ramp_4326.cog.read_part((0.0, 9.0, 1.0, 10.0), gsd=bad)
 
     def test_subnormal_gsd_raises_valueerror_not_overflow(self, ramp_4326):
         """A gsd so tiny the derived size overflows raises ValueError, not OverflowError.
@@ -914,7 +914,7 @@ class TestReadPartGsd:
             ramp_4326: 100x100 ramp fixture.
         """
         with pytest.raises(ValueError, match="derived output size is not finite"):
-            ramp_4326.read_part((0.0, 9.0, 1.0, 10.0), gsd=5e-324)
+            ramp_4326.cog.read_part((0.0, 9.0, 1.0, 10.0), gsd=5e-324)
 
     def test_coarse_gsd_floors_at_one_pixel(self, ramp_4326):
         """A gsd larger than the whole window still yields at least a 1x1 read.
@@ -922,7 +922,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture.
         """
-        arr = ramp_4326.read_part((0.0, 9.0, 1.0, 10.0), gsd=100.0)
+        arr = ramp_4326.cog.read_part((0.0, 9.0, 1.0, 10.0), gsd=100.0)
         assert arr.shape == (1, 1), f"expected a 1x1 floor, got {arr.shape}"
 
     def test_gsd_non_square_window_keeps_axis_order(self, ramp_4326):
@@ -931,7 +931,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture (native cell 0.01).
         """
-        arr = ramp_4326.read_part((0.0, 9.0, 1.0, 9.5), gsd=0.05)
+        arr = ramp_4326.cog.read_part((0.0, 9.0, 1.0, 9.5), gsd=0.05)
         assert arr.shape == (10, 20), f"expected (rows=10, cols=20), got {arr.shape}"
 
     def test_gsd_realised_resolution_drifts_small_for_a_wide_window(self, ramp_4326):
@@ -940,7 +940,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture (native cell 0.01).
         """
-        arr, gt = ramp_4326.read_part(
+        arr, gt = ramp_4326.cog.read_part(
             (0.005, 9.005, 0.245, 9.995), gsd=0.01, return_transform=True
         )
         assert arr.shape == (99, 24), f"unexpected shape {arr.shape}"
@@ -959,7 +959,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture (native cell 0.01).
         """
-        arr, gt = ramp_4326.read_part(
+        arr, gt = ramp_4326.cog.read_part(
             (0.009, 9.5, 0.031, 9.52), gsd=0.02, return_transform=True
         )
         assert arr.shape == (1, 1), f"expected a 1x1 read, got {arr.shape}"
@@ -973,7 +973,7 @@ class TestReadPartGsd:
         Args:
             ramp_4326: 100x100 ramp fixture spanning x[0, 1], y[9, 10].
         """
-        arr = ramp_4326.read_part((0.9, 9.0, 1.1, 10.0), gsd=0.01)
+        arr = ramp_4326.cog.read_part((0.9, 9.0, 1.1, 10.0), gsd=0.01)
         assert arr.shape == (100, 20), f"expected (100, 20), got {arr.shape}"
 
     def test_gsd_cross_crs_sizes_from_bbox_units(self, ramp_4326):
@@ -984,7 +984,7 @@ class TestReadPartGsd:
         """
         # A deliberately non-square 3857 window (x span 40000, y span 20000) so the
         # shape also pins axis mapping: x->width, y->height, in the bbox CRS.
-        arr = ramp_4326.read_part(
+        arr = ramp_4326.cog.read_part(
             (10000.0, 1_010_000.0, 50000.0, 1_030_000.0), gsd=5000.0, bbox_crs=3857
         )
         assert arr.shape == (4, 8), (

@@ -104,8 +104,8 @@ class TestRasterBaseCompanions:
             geo_ref=GeoReference(geo=AFFINES[name], epsg=4326),
         )
 
-        x, y = dataset.xy(2, 1, center=True)
-        row, col = dataset.rowcol(x, y)
+        x, y = dataset.cell.xy(2, 1, center=True)
+        row, col = dataset.cell.rowcol(x, y)
 
         assert (row, col) == (2, 1)
 
@@ -116,7 +116,7 @@ class TestRasterBaseCompanions:
             geo_ref=GeoReference(geo=AFFINES["north_up"], epsg=4326),
         )
 
-        x, y = dataset.xy(1, 1)
+        x, y = dataset.cell.xy(1, 1)
 
         assert isinstance(x, float)
         assert isinstance(y, float)
@@ -128,7 +128,7 @@ class TestRasterBaseCompanions:
             geo_ref=GeoReference(geo=AFFINES["north_up"], epsg=4326),
         )
 
-        xs, ys = dataset.xy([0, 1], [0, 1])
+        xs, ys = dataset.cell.xy([0, 1], [0, 1])
 
         assert isinstance(xs, list)
         assert len(xs) == 2

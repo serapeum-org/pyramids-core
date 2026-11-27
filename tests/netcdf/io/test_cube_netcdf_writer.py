@@ -50,9 +50,9 @@ def _stub_base(rows, cols, *, bands=1, scale=None, offset=None):
         geo_ref=GeoReference(top_left_corner=(0, rows), cell_size=1.0, epsg=4326),
     )
     if scale is not None:
-        dataset.scale = list(scale) if isinstance(scale, list) else [scale] * bands
+        dataset.bands.scale = list(scale) if isinstance(scale, list) else [scale] * bands
     if offset is not None:
-        dataset.offset = list(offset) if isinstance(offset, list) else [offset] * bands
+        dataset.bands.offset = list(offset) if isinstance(offset, list) else [offset] * bands
     return dataset
 
 
@@ -141,8 +141,8 @@ def _packed_step(counts, *, no_data, scale, offset):
         ),
         no_data_value=list(no_data),
     )
-    step.scale = list(scale)
-    step.offset = list(offset)
+    step.bands.scale = list(scale)
+    step.bands.offset = list(offset)
     return step
 
 
@@ -696,9 +696,9 @@ def _packed_timesteps(tmp_path, scales, *, bands=1):
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=[-9999] * bands,
         )
-        step.scale = list(per_band)
-        step.offset = [0.0] * bands
-        step.to_file(str(tmp_path / f"t{index}.tif"))
+        step.bands.scale = list(per_band)
+        step.bands.offset = [0.0] * bands
+        step.io.to_file(str(tmp_path / f"t{index}.tif"))
     return DatasetCollection.from_files(str(tmp_path), glob="*.tif")
 
 

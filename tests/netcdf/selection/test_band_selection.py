@@ -815,7 +815,7 @@ class TestWritingAReorderedAxisBack:
         """
         container = NetCDF.read_file(str(CF_STORE))
         cube = container["temperature"]
-        container.set_variable(name, call(cube))
+        container.variables.set(name, call(cube))
         return container, cube, container.get_variable(name)
 
     def test_the_stamps_follow_the_planes(self):
@@ -872,9 +872,9 @@ class TestWritingAReorderedAxisBack:
         first_write = cube.sortby("time", ascending=False)
         second_write = cube.sortby("time", ascending=False)
         with pytest.warns(UserWarning, match="different coordinate values"):
-            container.set_variable("a", first_write)
+            container.variables.set("a", first_write)
         with pytest.warns(UserWarning, match="different coordinate values"):
-            container.set_variable("b", second_write)
+            container.variables.set("b", second_write)
         first = container.get_variable("a")._band_dim_names[0]
         second = container.get_variable("b")._band_dim_names[0]
         assert first == second, f"the two writes landed on {first} and {second}"
@@ -889,9 +889,9 @@ class TestWritingAReorderedAxisBack:
         reordered = cube.sortby("time", ascending=False)
         cut = cube.isel(time=[0, 1])
         with pytest.warns(UserWarning, match="different coordinate values"):
-            container.set_variable("down", reordered)
+            container.variables.set("down", reordered)
         with pytest.warns(UserWarning, match="different coordinate values"):
-            container.set_variable("cut", cut)
+            container.variables.set("cut", cut)
         assert (
             container.get_variable("down")._band_dim_names[0]
             != container.get_variable("cut")._band_dim_names[0]
@@ -903,7 +903,7 @@ class TestWritingAReorderedAxisBack:
         cube = container["temperature"]
         reordered = cube.sortby("time", ascending=False)
         with pytest.warns(UserWarning, match="Select on the result under that name"):
-            container.set_variable("down", reordered)
+            container.variables.set("down", reordered)
 
     def test_an_unchanged_axis_still_reuses_the_store_dimension(self):
         """A variable written back on the store's own order must not gain a second axis."""
@@ -1005,7 +1005,7 @@ class TestTheHelpersOwnGuards:
             `expand_dims` on such a result has only the variable's own dimensions to
             check a name against.
         """
-        standalone = _variable().isnull()
+        standalone = _variable().analysis.isnull()
         assert standalone._parent_nc is None, (
             "isnull() was expected to drop the parent reference"
         )

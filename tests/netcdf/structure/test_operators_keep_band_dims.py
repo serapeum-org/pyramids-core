@@ -631,7 +631,7 @@ class TestWhatMustNotChange:
         )
         result = plain * 2
         assert type(result) is Dataset
-        assert_array_equal(result.read_array(), np.full((2, NY, NX), 6.0))
+        assert_array_equal(result.io.read_array(), np.full((2, NY, NX), 6.0))
 
     def test_combining_one_band_skips_the_layout_check(self):
         """`band=0` combines two variables whose layouts disagree, without refusing.
@@ -1047,7 +1047,7 @@ class TestEveryRouteToCombineSharesTheLayout:
             pytest.param(
                 lambda v: v.analysis.combine(v, np.add), id="analysis.combine"
             ),
-            pytest.param(lambda v: Dataset.combine(v, v, np.add), id="Dataset.combine"),
+            pytest.param(lambda v: Dataset.analysis.combine(v, v, np.add), id="Dataset.analysis.combine"),
             pytest.param(
                 lambda v: v.analysis._fold(lambda values: values * 2), id="_fold"
             ),
@@ -1966,7 +1966,7 @@ class TestCombineLayoutSource:
         # `result` is a plain Dataset, whose read is the classic flattened `(bands, rows, cols)`;
         # compare against the labelled operand in the same flattened layout (`squeeze=True`, #1241).
         assert_array_equal(
-            result.read_array(), np.asarray(labelled.read_array(squeeze=True)) + 1
+            result.io.read_array(), np.asarray(labelled.io.read_array(squeeze=True)) + 1
         )
 
 
@@ -2109,7 +2109,7 @@ class TestACoordinatelessDimensionIsWrittenWithoutStamps:
         container = _variable([("time", TIMES)])._parent_nc
         result = self._coordinateless_result()
         with pytest.warns(UserWarning, match="written as 'time_4'"):
-            container.set_variable("summed", result)
+            container.variables.set("summed", result)
         values = container.get_variable("summed")._band_dim_values_map
         assert list(values) == ["time_4"], values
         assert list(values.values()) == [None], values
@@ -2128,7 +2128,7 @@ class TestACoordinatelessDimensionIsWrittenWithoutStamps:
         container = _variable([("time", TIMES)])._parent_nc
         result = self._coordinateless_result()
         with pytest.warns(UserWarning, match="written as 'time_4'"):
-            container.set_variable("summed", result)
+            container.variables.set("summed", result)
         out = tmp_path / "coordless.nc"
         container.to_file(str(out))
         back = NetCDF.read_file(str(out))
@@ -2142,13 +2142,13 @@ class TestACoordinatelessDimensionIsWrittenWithoutStamps:
             variable_name="seed",
             dims=ExtraDimensions(name="band", values=[0.0]),
         )
-        fresh.set_variable("summed", self._coordinateless_result())
+        fresh.variables.set("summed", self._coordinateless_result())
         assert fresh.get_variable("summed")._band_dim_values_map == {"time": None}
 
     def test_a_coordinated_variable_still_round_trips_its_stamps(self):
         """A variable that does carry coordinates is unaffected — no regression."""
         container = _variable([("time", TIMES)])._parent_nc
-        container.set_variable("normal", _variable([("time", TIMES)]))
+        container.variables.set("normal", _variable([("time", TIMES)]))
         assert container.get_variable("normal")._band_dim_values_map == {"time": TIMES}
 
     @staticmethod
@@ -2185,7 +2185,7 @@ class TestACoordinatelessDimensionIsWrittenWithoutStamps:
             variable_name="seed",
             dims=ExtraDimensions(name="band", values=[0.0]),
         )
-        fresh.set_variable("summed", self._multi_band_dim_result())
+        fresh.variables.set("summed", self._multi_band_dim_result())
         values = fresh.get_variable("summed")._band_dim_values_map
         assert values == {"time": None, "pressure_level": LEVELS}, values
 
@@ -2201,7 +2201,7 @@ class TestACoordinatelessDimensionIsWrittenWithoutStamps:
             variable_name="seed",
             dims=ExtraDimensions(name="band", values=[0.0]),
         )
-        fresh.set_variable("summed", self._multi_band_dim_result())
+        fresh.variables.set("summed", self._multi_band_dim_result())
         out = tmp_path / "coordless_2d.nc"
         fresh.to_file(str(out))
         back = NetCDF.read_file(str(out)).get_variable("summed")._band_dim_values_map
@@ -2359,7 +2359,7 @@ class TestABandAxisWithoutValuesGetsPositionalCoordinates:
             geo_ref=GeoReference(geo=GEO, epsg=4326),
         )
 
-        fresh.set_variable("plain", plain)
+        fresh.variables.set("plain", plain)
         written = fresh.get_variable("plain")
 
         assert written._band_dim_names == ("bands",), written._band_dim_names

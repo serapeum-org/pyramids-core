@@ -78,7 +78,7 @@ def _make_multi_var_nc():
     )
     ds2._band_dim_name = "time"
     ds2._band_dim_values = [0, 6, 12, 18]
-    nc.set_variable("pressure", ds2)
+    nc.variables.set("pressure", ds2)
     return nc
 
 
@@ -876,7 +876,7 @@ class TestSetVariableAfterSpatialOps:
         nc = _make_3d_nc()
         var = nc.get_variable("temperature")
         cropped = var.crop(mask=crop_mask)
-        nc.set_variable("temperature", cropped)
+        nc.variables.set("temperature", cropped)
         restored = nc.get_variable("temperature")
         assert restored.rows == cropped.rows, (
             f"Expected {cropped.rows} rows, got {restored.rows}"
@@ -892,7 +892,7 @@ class TestSetVariableAfterSpatialOps:
         nc = _make_3d_nc()
         var = nc.get_variable("temperature")
         selected = var.sel(time=[0, 12])
-        nc.set_variable("temp_subset", selected)
+        nc.variables.set("temp_subset", selected)
         assert "temp_subset" in nc.variable_names, (
             "temp_subset should be in variable_names after set_variable"
         )

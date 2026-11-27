@@ -40,7 +40,7 @@ def tiled_raster(tmp_path):
     Dataset.from_array(
         arr,
         geo_ref=GeoReference(top_left_corner=(0, 256), cell_size=1.0, epsg=4326),
-    ).to_file(path, creation_options=["TILED=YES", "BLOCKXSIZE=64", "BLOCKYSIZE=64"])
+    ).io.to_file(path, creation_options=["TILED=YES", "BLOCKXSIZE=64", "BLOCKYSIZE=64"])
     return Dataset.read_file(path), arr
 
 
@@ -51,8 +51,8 @@ class TestThreadsafeEagerReads:
         """A threadsafe read equals the default shared-handle read."""
         ds, _ = tiled_raster
         np.testing.assert_array_equal(
-            ds.read_array(band=0, threadsafe=True),
-            ds.read_array(band=0),
+            ds.io.read_array(band=0, threadsafe=True),
+            ds.io.read_array(band=0),
             err_msg="threadsafe path must produce identical pixels",
         )
 
@@ -67,8 +67,8 @@ class TestThreadsafeEagerReads:
         ds, _ = tiled_raster
         win = Window(32, 64, 48, 16)
         np.testing.assert_array_equal(
-            ds.read_array(band=0, window=win, threadsafe=True),
-            ds.read_array(band=0, window=win),
+            ds.io.read_array(band=0, window=win, threadsafe=True),
+            ds.io.read_array(band=0, window=win),
             err_msg="threadsafe path must accept a Window like the default path",
         )
 
@@ -83,7 +83,7 @@ class TestThreadsafeEagerReads:
         windows = [[c * 32, r * 32, 32, 32] for r in range(8) for c in range(8)]
 
         def read(window):
-            return window, ds.read_array(band=0, window=window, threadsafe=True)
+            return window, ds.io.read_array(band=0, window=window, threadsafe=True)
 
         with ThreadPoolExecutor(max_workers=8) as pool:
             for window, block in pool.map(read, windows):
@@ -104,7 +104,7 @@ class TestThreadsafeEagerReads:
         ds, _ = tiled_raster
 
         def read(_):
-            return ds.read_array(band=0, window=[10, 10, 100, 100], threadsafe=True)
+            return ds.io.read_array(band=0, window=[10, 10, 100, 100], threadsafe=True)
 
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(read, range(32)))
@@ -126,7 +126,7 @@ class TestThreadsafeEagerReads:
 
         def read(_):
             barrier.wait()
-            return ds.read_array(band=0, window=[0, 0, 64, 64], threadsafe=True)
+            return ds.io.read_array(band=0, window=[0, 0, 64, 64], threadsafe=True)
 
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(read, range(8)))
@@ -155,7 +155,7 @@ class TestThreadsafeEagerReads:
         ds = Dataset.read_file(path)
         try:
             np.testing.assert_array_equal(
-                ds.read_array(band=0, threadsafe=True),
+                ds.io.read_array(band=0, threadsafe=True),
                 arr,
                 err_msg="vsimem threadsafe read returned wrong pixels",
             )
@@ -174,7 +174,7 @@ class TestThreadsafeEagerReads:
             geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=4326),
         )
         with pytest.raises(ValueError, match="reopenable path"):
-            mem.read_array(threadsafe=True)
+            mem.io.read_array(threadsafe=True)
 
     def test_multi_band_and_all_bands(self, tmp_path):
         """threadsafe reads cover single-band, all-bands, and windowed forms."""
@@ -183,19 +183,19 @@ class TestThreadsafeEagerReads:
         Dataset.from_array(
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path)
         np.testing.assert_array_equal(
-            ds.read_array(threadsafe=True), arr, err_msg="all-bands read wrong"
+            ds.io.read_array(threadsafe=True), arr, err_msg="all-bands read wrong"
         )
         np.testing.assert_array_equal(
-            ds.read_array(band=2, threadsafe=True), arr[2], err_msg="band read wrong"
+            ds.io.read_array(band=2, threadsafe=True), arr[2], err_msg="band read wrong"
         )
-        windowed = ds.read_array(window=[1, 1, 4, 3], threadsafe=True)
+        windowed = ds.io.read_array(window=[1, 1, 4, 3], threadsafe=True)
         assert windowed.shape == (3, 3, 4), f"windowed all-bands shape {windowed.shape}"
         np.testing.assert_array_equal(
             windowed,
-            ds.read_array(window=[1, 1, 4, 3]),
+            ds.io.read_array(window=[1, 1, 4, 3]),
             err_msg="windowed all-bands read diverged from the default path",
         )
 
@@ -209,8 +209,8 @@ class TestThreadsafeEagerReads:
         ds, _ = tiled_raster
         bbox = (10.0, 200.0, 42.0, 232.0)
         np.testing.assert_array_equal(
-            ds.read_array(band=0, bbox=bbox, threadsafe=True),
-            ds.read_array(band=0, bbox=bbox),
+            ds.io.read_array(band=0, bbox=bbox, threadsafe=True),
+            ds.io.read_array(band=0, bbox=bbox),
             err_msg="bbox threadsafe read diverged from the default path",
         )
 
@@ -223,32 +223,32 @@ class TestThreadsafeEagerReads:
         """
         ds, _ = tiled_raster
         with pytest.raises(ValueError, match="is out of range for a"):
-            ds.read_array(band=99, threadsafe=True)
+            ds.io.read_array(band=99, threadsafe=True)
         assert ds._thread_manager is None, "failed validation must not open handles"
 
     def test_invalid_window_type_rejected(self, tiled_raster):
         """A non-list window raises the same ValueError as _read_block."""
         ds, _ = tiled_raster
         with pytest.raises(ValueError, match="window must be a Window or a list"):
-            ds.read_array(band=0, window="0,0,4,4", threadsafe=True)
+            ds.io.read_array(band=0, window="0,0,4,4", threadsafe=True)
 
     def test_wrong_length_window_rejected(self, tiled_raster):
         """A 3-element window raises a clear length error, not an opaque GDAL one."""
         ds, _ = tiled_raster
         with pytest.raises(ValueError, match="list of 4 integers"):
-            ds.read_array(band=0, window=[0, 0, 4], threadsafe=True)
+            ds.io.read_array(band=0, window=[0, 0, 4], threadsafe=True)
 
     def test_boundless_with_threadsafe_rejected(self, tiled_raster):
         """boundless=True + threadsafe=True raises, not a silent shared-handle read (L4)."""
         ds, _ = tiled_raster
         with pytest.raises(NotImplementedError, match="boundless=True.*threadsafe"):
-            ds.read_array(band=0, window=[0, 0, 4, 4], boundless=True, threadsafe=True)
+            ds.io.read_array(band=0, window=[0, 0, 4, 4], boundless=True, threadsafe=True)
 
     def test_out_shape_with_threadsafe_rejected(self, tiled_raster):
         """out_shape + threadsafe=True raises, not a silent shared-handle read (L12)."""
         ds, _ = tiled_raster
         with pytest.raises(NotImplementedError, match="out_shape.*threadsafe"):
-            ds.read_array(band=0, out_shape=(8, 8), threadsafe=True)
+            ds.io.read_array(band=0, out_shape=(8, 8), threadsafe=True)
 
     def test_out_of_bounds_window_contract(self, tiled_raster):
         """An OOB window raises OutOfBoundsError, matching the default path.
@@ -259,12 +259,12 @@ class TestThreadsafeEagerReads:
         """
         ds, _ = tiled_raster
         with pytest.raises(OutOfBoundsError, match="out of the raster bounds"):
-            ds.read_array(band=0, window=[250, 250, 32, 32], threadsafe=True)
+            ds.io.read_array(band=0, window=[250, 250, 32, 32], threadsafe=True)
 
     def test_default_path_untouched(self, tiled_raster):
         """threadsafe=False (default) never creates the per-thread manager."""
         ds, _ = tiled_raster
-        ds.read_array(band=0)
+        ds.io.read_array(band=0)
         assert getattr(ds, "_thread_manager", None) is None, (
             "default reads must not allocate the thread-local manager"
         )
@@ -276,7 +276,7 @@ class TestThreadLocalManagerSemantics:
     def test_one_handle_per_thread(self, tiled_raster):
         """The same thread reuses its handle; different threads get their own."""
         ds, _ = tiled_raster
-        ds.read_array(band=0, threadsafe=True)
+        ds.io.read_array(band=0, threadsafe=True)
         manager = ds._thread_manager
         main_handle_1 = manager.acquire()
         main_handle_2 = manager.acquire()
@@ -306,14 +306,14 @@ class TestThreadLocalManagerSemantics:
         Dataset.from_array(
             np.ones((8, 8), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path)
-        ds.read_array(band=0, threadsafe=True)
+        ds.io.read_array(band=0, threadsafe=True)
         assert ds._thread_manager is not None, "read must have cached the manager"
         ds.close()
         assert ds._thread_manager is None, "close() must drop the manager"
         with pytest.raises(ValueError, match="closed Dataset"):
-            ds.read_array(band=0, threadsafe=True)
+            ds.io.read_array(band=0, threadsafe=True)
         assert ds._thread_manager is None, "a rejected read must not re-cache"
         os.remove(path)
 
@@ -330,11 +330,11 @@ class TestThreadLocalManagerSemantics:
         Dataset.from_array(
             np.arange(64, dtype="float32").reshape(8, 8),
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path)
 
         def worker():
-            ds.read_array(band=0, threadsafe=True)
+            ds.io.read_array(band=0, threadsafe=True)
 
         thread = threading.Thread(target=worker)
         thread.start()
@@ -361,7 +361,7 @@ class TestThreadLocalManagerSemantics:
         Dataset.from_array(
             np.ones((8, 8), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path)
         ds.close()
         with pytest.raises(ValueError, match="closed Dataset"):
@@ -393,4 +393,4 @@ class TestThreadsafeLazyReads:
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
         with pytest.raises(ValueError, match="reopenable path"):
-            mem.read_array(chunks=4, lock=False, threadsafe=True)
+            mem.io.read_array(chunks=4, lock=False, threadsafe=True)

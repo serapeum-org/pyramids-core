@@ -545,7 +545,7 @@ class TestContainerIsel:
         """
         cube = _cube([0.0, 1.0, 2.0], "standard", values=[1.0, 2.0, 3.0])
         donor = _cube([0.0, 1.0, 2.0], "standard", values=[10.0, 20.0, 30.0], name="u")
-        cube.set_variable("u", donor.get_variable("u"))
+        cube.variables.set("u", donor.get_variable("u"))
         return cube
 
     def test_a_list_selects_those_steps_from_every_variable(self):
@@ -698,7 +698,7 @@ class TestContainerSelAndSqueeze:
         """
         container = _cube([0.0, 1.0, 2.0], "standard", values=[1.0, 2.0, 3.0])
         donor = _cube([0.0, 1.0, 2.0], "standard", values=[10.0, 20.0, 30.0], name="u")
-        container.set_variable("u", donor.get_variable("u"))
+        container.variables.set("u", donor.get_variable("u"))
 
         cut = container.sel(time=2.0)
 

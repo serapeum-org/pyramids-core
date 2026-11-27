@@ -57,7 +57,7 @@ class TestVariableCutlineCropSRS:
     def _crop(self):
         """Wrap ``tos`` to -180..180 and crop it by the Gulf/Caribbean polygon."""
         nc = NetCDF.read_file(FIXTURE)
-        tos = nc.get_variable("tos").wrap_longitude()
+        tos = nc.get_variable("tos").spatial.wrap_longitude()
         aoi = FeatureCollection(gpd.GeoDataFrame(geometry=[Polygon(REGION)], crs=4326))
         return tos.crop(aoi)
 

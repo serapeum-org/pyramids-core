@@ -151,7 +151,7 @@ def _make_multi_var_nc():
     )
     ds2._band_dim_name = "time"
     ds2._band_dim_values = [0, 6, 12]
-    nc.set_variable("pressure", ds2)
+    nc.variables.set("pressure", ds2)
     return nc
 
 

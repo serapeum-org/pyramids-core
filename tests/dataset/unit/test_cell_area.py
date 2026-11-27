@@ -58,7 +58,7 @@ class TestCellAreaOnAProjectedGrid:
         geo_ref = GeoReference(top_left_corner=(0.0, 0.0), cell_size=30.0, epsg=32636)
         raster = Dataset.from_array(np.ones((3, 4), "float32"), geo_ref=geo_ref)
 
-        areas = raster.cell_area()
+        areas = raster.cell.cell_area()
 
         assert areas.shape == (3, 4)
         assert np.allclose(areas, 900.0)
@@ -74,7 +74,7 @@ class TestCellAreaOnAProjectedGrid:
         geo_ref = GeoReference(geo=(0.0, 30.0, 10.0, 0.0, 10.0, -30.0), epsg=32636)
         raster = Dataset.from_array(np.ones((2, 2), "float32"), geo_ref=geo_ref)
 
-        areas = raster.cell_area()
+        areas = raster.cell.cell_area()
 
         assert np.allclose(areas, abs(30.0 * -30.0 - 10.0 * 10.0))
 
@@ -89,7 +89,7 @@ class TestCellAreaOnAProjectedGrid:
         geo_ref = GeoReference(top_left_corner=(0.0, 0.0), cell_size=30.0, epsg=32636)
         raster = Dataset.from_array(np.ones((5, 5), "float32"), geo_ref=geo_ref)
 
-        areas = raster.cell_area()
+        areas = raster.cell.cell_area()
 
         assert len(np.unique(areas)) == 1
         assert np.allclose(areas, 900.0)
@@ -106,7 +106,7 @@ class TestCellAreaOnAGeographicGrid:
             area is not remotely constant: the equatorial row is more than five
             times the row at 80 degrees north.
         """
-        areas = _global_grid().cell_area(unit="km2")
+        areas = _global_grid().cell.cell_area(unit="km2")
 
         equator = float(areas[90, 0])
         high_latitude = float(areas[10, 0])
@@ -126,7 +126,7 @@ class TestCellAreaOnAGeographicGrid:
             geodesic polygon -- which bows the north and south edges poleward
             and is wrong by 2.6e-05 per cell even at 1 degree.
         """
-        areas = _global_grid().cell_area()
+        areas = _global_grid().cell.cell_area()
         geod = CRS.from_epsg(4326).get_geod()
         a, f = geod.a, geod.f
         e2 = f * (2.0 - f)
@@ -156,7 +156,7 @@ class TestCellAreaOnAGeographicGrid:
             exactly over a whole globe -- which is why an ungapped-globe check
             cannot catch it and this test must.
         """
-        areas = _global_grid().cell_area()
+        areas = _global_grid().cell.cell_area()
         geod = CRS.from_epsg(4326).get_geod()
 
         geodesic, _ = geod.polygon_area_perimeter(
@@ -173,7 +173,7 @@ class TestCellAreaOnAGeographicGrid:
             a future simplification to `R**2 * dlam * (sin a - sin b)` from
             passing unnoticed.
         """
-        equator = float(_global_grid().cell_area(unit="km2")[90, 0])
+        equator = float(_global_grid().cell.cell_area(unit="km2")[90, 0])
 
         spherical = (
             6371.0088**2
@@ -185,7 +185,7 @@ class TestCellAreaOnAGeographicGrid:
 
     def test_the_rows_are_symmetric_about_the_equator(self):
         """Test scenario: an ellipsoid of revolution is symmetric, so its rows are."""
-        areas = _global_grid().cell_area()
+        areas = _global_grid().cell.cell_area()
 
         assert np.allclose(areas[:90, 0], areas[179:89:-1, 0], rtol=1e-12)
 
@@ -198,7 +198,7 @@ class TestCellAreaOnAGeographicGrid:
             `to_geodataframe` builds one geometry per pixel and then doing
             the same here would miss the point of the issue.
         """
-        areas = _global_grid().cell_area()
+        areas = _global_grid().cell.cell_area()
 
         assert areas.shape == (180, 360)
         # Asked through the public flags rather than `.base`, a numpy
@@ -227,7 +227,7 @@ class TestTheUnits:
         geo_ref = GeoReference(top_left_corner=(0.0, 0.0), cell_size=100.0, epsg=32636)
         raster = Dataset.from_array(np.ones((2, 2), "float32"), geo_ref=geo_ref)
 
-        assert float(raster.cell_area(unit=unit)[0, 0]) == pytest.approx(
+        assert float(raster.cell.cell_area(unit=unit)[0, 0]) == pytest.approx(
             10_000.0 / divisor
         )
 
@@ -236,7 +236,7 @@ class TestTheUnits:
         raster = _global_grid()
 
         with pytest.raises(ValueError, match="unknown area unit"):
-            raster.cell_area(unit="acres")
+            raster.cell.cell_area(unit="acres")
 
 
 class TestWhatCannotBeAnswered:
@@ -257,7 +257,7 @@ class TestWhatCannotBeAnswered:
         # `require_crs_spec` phrases it, so the message names the operation
         # and the fix; `CRSError` is a `ValueError`, so the contract holds.
         with pytest.raises(ValueError, match="cannot compute cell area"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
     def test_a_rotated_geographic_raster_is_refused(self):
         """Rotation breaks the one assumption the per-row shortcut rests on.
@@ -271,7 +271,7 @@ class TestWhatCannotBeAnswered:
         raster = Dataset.from_array(np.ones((4, 4), "float32"), geo_ref=geo_ref)
 
         with pytest.raises(ValueError, match="rotated geographic"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
     @pytest.mark.parametrize(
         "geo",
@@ -301,7 +301,7 @@ class TestWhatCannotBeAnswered:
         )
 
         with pytest.raises(ValueError, match="rotated geographic"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
 
 class TestTheRefusalsAddedAfterReview:
@@ -323,7 +323,7 @@ class TestTheRefusalsAddedAfterReview:
         grid = _global_grid()
 
         with pytest.raises(ValueError, match="unknown area unit"):
-            grid.cell_area(unit=unit)
+            grid.cell.cell_area(unit=unit)
 
     @pytest.mark.parametrize("method", ["domain_area", "count_domain_cells"])
     @pytest.mark.parametrize("band", [5, -1])
@@ -362,7 +362,7 @@ class TestTheRefusalsAddedAfterReview:
         raster = Dataset(handle)
 
         with pytest.raises(ValueError, match="neither geographic nor projected"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
     @pytest.mark.parametrize(
         "geo",
@@ -386,7 +386,7 @@ class TestTheRefusalsAddedAfterReview:
         )
 
         with pytest.raises(ValueError, match="no area"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
     def test_a_degenerate_geotransform_is_refused(self):
         """A cell with no extent is not a cell of zero area.
@@ -402,7 +402,7 @@ class TestTheRefusalsAddedAfterReview:
         raster = Dataset(handle)
 
         with pytest.raises(ValueError, match="no area"):
-            raster.cell_area()
+            raster.cell.cell_area()
 
     def test_a_half_cell_past_the_pole_keeps_the_globe_exact(self):
         """The cell-centred convention puts the first edge half a cell outside.
@@ -419,7 +419,7 @@ class TestTheRefusalsAddedAfterReview:
         geo_ref = GeoReference(geo=(-180.0, 0.25, 0.0, 90.125, 0.0, -0.25), epsg=4326)
         raster = Dataset.from_array(np.ones((721, 1440), "float32"), geo_ref=geo_ref)
 
-        total = raster.cell_area(unit="km2").sum() / 1e6
+        total = raster.cell.cell_area(unit="km2").sum() / 1e6
 
         assert total == pytest.approx(WGS84_ELLIPSOID_KM2 / 1e6, rel=1e-9)
 
@@ -436,7 +436,7 @@ class TestTheRefusalsAddedAfterReview:
         raster = Dataset.from_array(np.ones((200, 360), "float32"), geo_ref=geo_ref)
 
         with pytest.raises(ValueError, match="runs off the ellipsoid") as caught:
-            raster.cell_area()
+            raster.cell.cell_area()
 
         assert "19 of its 200 rows" in str(caught.value)
 
@@ -455,7 +455,7 @@ class TestTheRefusalsAddedAfterReview:
         raster = Dataset.from_array(np.ones((10, 8), "float32"), geo_ref=geo_ref)
 
         with pytest.raises(ValueError, match="runs off the ellipsoid") as caught:
-            raster.cell_area()
+            raster.cell.cell_area()
 
         assert "4 of its 10 rows" in str(caught.value)
 
@@ -471,7 +471,7 @@ class TestTheRefusalsAddedAfterReview:
         geo_ref = GeoReference(geo=(-180.0, 1.0, 0.0, 90.5, 0.0, -1.0), epsg=4326)
         raster = Dataset.from_array(np.ones((3, 360), "float32"), geo_ref=geo_ref)
 
-        areas = raster.cell_area(unit="km2")
+        areas = raster.cell.cell_area(unit="km2")
 
         # The 89.5-90 zone, not the 90-90.5 one reflected back down: were the
         # clip removed, the top edge would read as 89.5 and the row would
@@ -492,7 +492,7 @@ class TestDomainArea:
             weighting is right rather than merely plausible -- an error in the
             row edges or the band formula would not survive it.
         """
-        total = _global_grid().domain_area(unit="km2")
+        total = _global_grid().analysis.domain_area(unit="km2")
 
         assert total == pytest.approx(WGS84_ELLIPSOID_KM2, rel=1e-6)
 
@@ -510,9 +510,9 @@ class TestDomainArea:
         values[latitudes < 60.0, :] = -9999.0
         cap = _global_grid(values, no_data=-9999.0)
 
-        areas = cap.cell_area(unit="km2")
+        areas = cap.cell.cell_area(unit="km2")
         expected = float(areas[latitudes >= 60.0, :].sum())
-        assert cap.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
+        assert cap.analysis.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
 
     def test_the_unweighted_count_overstates_a_polar_domain(self):
         """The defect the issue is about, stated as a ratio.
@@ -527,9 +527,9 @@ class TestDomainArea:
         values[latitudes < 60.0, :] = -9999.0
         cap = _global_grid(values, no_data=-9999.0)
 
-        weighted = cap.domain_area(unit="km2")
-        nominal = float(cap.cell_area(unit="km2")[90, 0])
-        naive = cap.count_domain_cells() * nominal
+        weighted = cap.analysis.domain_area(unit="km2")
+        nominal = float(cap.cell.cell_area(unit="km2")[90, 0])
+        naive = cap.analysis.count_domain_cells() * nominal
 
         # Bounded both ways around the true ~3.9 that the `domain_area`
         # doctest pins exactly. A bare `> 3.5` was satisfied by anything that
@@ -542,7 +542,7 @@ class TestDomainArea:
         values = np.full((10, 10), -9999.0, dtype="float32")
         raster = Dataset.from_array(values, geo_ref=GEOGRAPHIC, no_data_value=-9999.0)
 
-        assert raster.domain_area() == 0.0
+        assert raster.analysis.domain_area() == 0.0
 
     def test_a_raster_taller_than_one_strip_weighs_each_row(self):
         """The row offset only matters once the reader makes a second call.
@@ -562,7 +562,7 @@ class TestDomainArea:
         grid = Dataset.from_array(np.ones((720, 1440), "float32"), geo_ref=geo_ref)
 
         assert grid.rows > 256, "the raster must span more than one strip"
-        assert grid.domain_area(unit="km2") == pytest.approx(
+        assert grid.analysis.domain_area(unit="km2") == pytest.approx(
             WGS84_ELLIPSOID_KM2, rel=1e-6
         )
 
@@ -582,9 +582,9 @@ class TestDomainArea:
         values[600:, :] = -9999.0
         grid = Dataset.from_array(values, geo_ref=geo_ref, no_data_value=-9999.0)
 
-        areas = grid.cell_area(unit="km2")
+        areas = grid.cell.cell_area(unit="km2")
         expected = float(areas[:600, :].sum())
-        assert grid.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
+        assert grid.analysis.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
 
     def test_it_matches_a_whole_band_sum_despite_streaming(self):
         """The strips must line up with the rows they weigh.
@@ -600,16 +600,16 @@ class TestDomainArea:
         values[values < 0.25] = -9999.0
         raster = _global_grid(values, no_data=-9999.0)
 
-        areas = raster.cell_area()
+        areas = raster.cell.cell_area()
         # The same predicate the implementation uses, rather than a second
         # idea of what counts as no-data: `is_stored_no_data` gives integer
         # bands no tolerance at all and floating ones single precision's `eps`
         # with no absolute term, which an `np.isclose` reference would not
         # reproduce.
-        inside = ~is_stored_no_data(np.asarray(raster.read_array()), -9999.0)
+        inside = ~is_stored_no_data(np.asarray(raster.io.read_array()), -9999.0)
         expected = float((areas * inside).sum())
 
-        assert raster.domain_area() == pytest.approx(expected, rel=1e-9)
+        assert raster.analysis.domain_area() == pytest.approx(expected, rel=1e-9)
 
     def test_a_projected_domain_is_the_count_times_the_cell(self):
         """Test scenario: with constant cells the weighted answer is the simple one."""
@@ -618,8 +618,8 @@ class TestDomainArea:
         values[0, :] = -9999.0
         raster = Dataset.from_array(values, geo_ref=geo_ref, no_data_value=-9999.0)
 
-        assert raster.domain_area() == pytest.approx(
-            raster.count_domain_cells() * 900.0
+        assert raster.analysis.domain_area() == pytest.approx(
+            raster.analysis.count_domain_cells() * 900.0
         )
 
 
@@ -638,7 +638,7 @@ class TestTheEdgesTheHappyPathMisses:
         raster = Dataset.from_array(np.ones((2, 2), "float32"), geo_ref=geo_ref)
 
         side_m = 100.0 * CRS.from_epsg(2225).axis_info[0].unit_conversion_factor
-        assert float(raster.cell_area()[0, 0]) == pytest.approx(side_m**2, rel=1e-12)
+        assert float(raster.cell.cell_area()[0, 0]) == pytest.approx(side_m**2, rel=1e-12)
 
     def test_each_band_is_weighed_by_its_own_domain(self):
         """`band=` selects which mask is applied, as it does for the count.
@@ -655,9 +655,9 @@ class TestTheEdgesTheHappyPathMisses:
         # Pinned to the rows each band actually keeps, not merely ordered: a
         # band that returned 0.0 from an unrelated fault would satisfy
         # `band1 < band0` while being entirely wrong.
-        areas = raster.cell_area()
-        assert raster.domain_area(band=0) == pytest.approx(float(areas.sum()))
-        assert raster.domain_area(band=1) == pytest.approx(float(areas[1:, :].sum()))
+        areas = raster.cell.cell_area()
+        assert raster.analysis.domain_area(band=0) == pytest.approx(float(areas.sum()))
+        assert raster.analysis.domain_area(band=1) == pytest.approx(float(areas[1:, :].sum()))
 
     def test_each_band_is_masked_by_its_own_sentinel(self):
         """`band=` selects the sentinel too, not only which pixels are read.
@@ -680,9 +680,9 @@ class TestTheEdgesTheHappyPathMisses:
             values, geo_ref=geo_ref, no_data_value=[-9999.0, -1.0]
         )
 
-        areas = raster.cell_area()
-        assert raster.domain_area(band=0) == pytest.approx(float(areas[1:, :].sum()))
-        assert raster.domain_area(band=1) == pytest.approx(float(areas[:3, :].sum()))
+        areas = raster.cell.cell_area()
+        assert raster.analysis.domain_area(band=0) == pytest.approx(float(areas[1:, :].sum()))
+        assert raster.analysis.domain_area(band=1) == pytest.approx(float(areas[:3, :].sum()))
 
     def test_an_east_to_west_grid_has_positive_areas(self):
         """A negative `dx` walks the columns the other way; area has no sign.
@@ -701,10 +701,10 @@ class TestTheEdgesTheHappyPathMisses:
             np.ones((180, 360), "float32"), geo_ref=geo_ref
         )
 
-        areas = east_to_west.cell_area(unit="km2")
+        areas = east_to_west.cell.cell_area(unit="km2")
 
         assert np.allclose(
-            areas[:, 0], _global_grid().cell_area(unit="km2")[:, 0], rtol=1e-12
+            areas[:, 0], _global_grid().cell.cell_area(unit="km2")[:, 0], rtol=1e-12
         )
         assert float(areas.sum()) == pytest.approx(WGS84_ELLIPSOID_KM2, rel=1e-6)
 
@@ -721,8 +721,8 @@ class TestTheEdgesTheHappyPathMisses:
             np.ones((3, 3), "float32"), geo_ref=geo_ref, no_data_value=None
         )
 
-        assert raster.count_domain_cells() == 9
-        assert raster.domain_area() == pytest.approx(float(raster.cell_area().sum()))
+        assert raster.analysis.count_domain_cells() == 9
+        assert raster.analysis.domain_area() == pytest.approx(float(raster.cell.cell_area().sum()))
 
     def test_a_south_up_grid_has_positive_areas(self):
         """A positive `dy` walks the rows the other way; area has no sign.
@@ -741,13 +741,13 @@ class TestTheEdgesTheHappyPathMisses:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, -6.0, 0.0, -1.0), epsg=4326),
         )
 
-        areas = south_up.cell_area()
+        areas = south_up.cell.cell_area()
 
         assert np.all(np.isfinite(areas))
         # The two describe the same four latitude bands in opposite order, so
         # one is the other reversed. Asserting only "finite and positive" would
         # pass for any answer at all.
-        assert np.allclose(areas[:, 0], north_up.cell_area()[::-1, 0], rtol=1e-12)
+        assert np.allclose(areas[:, 0], north_up.cell.cell_area()[::-1, 0], rtol=1e-12)
 
 
 class TestASphericalDatum:
@@ -768,7 +768,7 @@ class TestASphericalDatum:
         handle.SetProjection(SPHERICAL_DATUM_WKT)
         raster = Dataset(handle)
 
-        total = float(raster.cell_area(unit="km2").sum())
+        total = float(raster.cell.cell_area(unit="km2").sum())
 
         assert total == pytest.approx(4.0 * np.pi * 6371.229**2, rel=1e-12)
 
@@ -784,8 +784,8 @@ class TestASphericalDatum:
         handle = gdal.GetDriverByName("MEM").Create("", 360, 180, 1, gdal.GDT_Float32)
         handle.SetGeoTransform((-180.0, 1.0, 0.0, 90.0, 0.0, -1.0))
         handle.SetProjection(SPHERICAL_DATUM_WKT)
-        sphere = Dataset(handle).cell_area(unit="km2")
-        ellipsoid = _global_grid().cell_area(unit="km2")
+        sphere = Dataset(handle).cell.cell_area(unit="km2")
+        ellipsoid = _global_grid().cell.cell_area(unit="km2")
 
         assert float(sphere[90, 0]) > float(ellipsoid[90, 0])
         assert float(sphere[0, 0]) < float(ellipsoid[0, 0])
@@ -813,7 +813,7 @@ class TestTheGuardsNoPublicInputReaches:
         grid = _global_grid()
 
         with pytest.raises(ValueError, match="declares no ellipsoid"):
-            grid.cell_area()
+            grid.cell.cell_area()
 
 
 class TestHowAUnitIsSpelled:
@@ -826,7 +826,7 @@ class TestHowAUnitIsSpelled:
         Args:
             spelling: A way of writing the same unit.
         """
-        areas = _global_grid().cell_area(unit=spelling)
+        areas = _global_grid().cell.cell_area(unit=spelling)
 
         assert float(areas[90, 0]) == pytest.approx(12308.46, rel=1e-5)
 
@@ -840,7 +840,7 @@ class TestHowAUnitIsSpelled:
         grid = _global_grid()
 
         with pytest.raises(ValueError, match="unknown area unit"):
-            grid.cell_area(unit=spelling)
+            grid.cell.cell_area(unit=spelling)
 
 
 class TestPrecisionAtSmallCellSizes:
@@ -930,7 +930,7 @@ class TestACompoundCrs:
         handle.SetProjection(CRS.from_epsg(epsg).to_wkt())
         raster = Dataset(handle)
 
-        assert float(raster.cell_area()[0, 0]) == pytest.approx(expected, rel=1e-3)
+        assert float(raster.cell.cell_area()[0, 0]) == pytest.approx(expected, rel=1e-3)
 
 
 class TestANonDegreeAngularUnit:
@@ -970,7 +970,7 @@ class TestANonDegreeAngularUnit:
         handle.SetGeoTransform((0.0, 1.0, 0.0, 100.0, 0.0, -1.0))
         handle.SetProjection(crs.to_wkt())
 
-        total = float(Dataset(handle).cell_area().sum())
+        total = float(Dataset(handle).cell.cell_area().sum())
 
         assert total == pytest.approx(exact, rel=1e-9)
 
@@ -1005,7 +1005,7 @@ class TestWhichRefusalComesFirst:
         raster = Dataset(handle)
 
         with pytest.raises(ValueError, match=message):
-            raster.domain_area(**kwargs)
+            raster.analysis.domain_area(**kwargs)
 
 
 class TestWhatItCostsToAsk:
@@ -1041,7 +1041,7 @@ class TestWhatItCostsToAsk:
 
         tracemalloc.start()
         try:
-            areas = raster.cell_area()
+            areas = raster.cell.cell_area()
             peak = tracemalloc.get_traced_memory()[1]
         finally:
             tracemalloc.stop()

@@ -29,7 +29,7 @@ def _packed_row(values, *, scale=0.5, no_data=-9999):
         geo_ref=GEO,
         no_data_value=no_data,
     )
-    ds.scale = [scale]
+    ds.bands.scale = [scale]
     return ds
 
 
@@ -54,7 +54,7 @@ def _packed_stack(no_data=-9999, scale=(0.5, 0.5)):
     """A two-band CF-packed stack with a gap in the first band (physical = stored * scale)."""
     stack = np.array([[[100, 120, -9999]], [[140, 160, 180]]], dtype="int16")
     ds = Dataset.from_array(stack, geo_ref=GEO, no_data_value=no_data)
-    ds.scale = list(scale)
+    ds.bands.scale = list(scale)
     return ds
 
 
@@ -71,8 +71,8 @@ class TestPackedNoDataMasking:
             gap).
         """
         ds = _packed_row([100, 120, 140, -9999, 160, 180])
-        out = ds.percentile_stretch(0, 100)
-        arr = out.read_array().ravel()
+        out = ds.analysis.percentile_stretch(0, 100)
+        arr = out.io.read_array().ravel()
         valid = arr[[0, 1, 2, 4, 5]]
         assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
@@ -87,8 +87,8 @@ class TestPackedNoDataMasking:
         """
         ds = _packed_row([100, 120, 140, -9999, 160, 180])
         ref = _packed_row([40, 60, 80, -9999, 100, 120])
-        out = ds.match_histogram(ref)
-        arr = out.read_array().ravel()
+        out = ds.analysis.match_histogram(ref)
+        arr = out.io.read_array().ravel()
         assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert np.isfinite(arr[[0, 1, 2, 4, 5]]).all(), "every real cell must be finite"
 
@@ -118,7 +118,7 @@ class TestPackedNoDataMasking:
             geo_ref=GEO,
             no_data_value=-9999.0,
         )
-        arr = ds.percentile_stretch(0, 100).read_array().ravel()
+        arr = ds.analysis.percentile_stretch(0, 100).io.read_array().ravel()
         valid = arr[[0, 1, 2, 4]]
         assert np.isnan(arr[3]), "the gap must be no-data (NaN) in the output"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
@@ -135,8 +135,8 @@ class TestPackedNoDataMasking:
         ds = Dataset.from_array(
             np.array([[1.0, 2.0, np.nan, 3.0, 4.0]], dtype="float32"), geo_ref=GEO
         )
-        out = ds.percentile_stretch(0, 100)
-        arr = out.read_array().ravel()
+        out = ds.analysis.percentile_stretch(0, 100)
+        arr = out.io.read_array().ravel()
         valid = arr[[0, 1, 3, 4]]
         assert np.isnan(arr[2]), "the NaN cell must stay no-data (NaN)"
         assert valid.min() == pytest.approx(0.0), f"min must be 0; got {valid.tolist()}"
@@ -156,8 +156,8 @@ class TestPackedNoDataMasking:
             geo_ref=GEO,
             no_data_value=-9999.0,
         )
-        out = ds.match_histogram(ref)
-        arr = out.read_array().ravel()
+        out = ds.analysis.match_histogram(ref)
+        arr = out.io.read_array().ravel()
         assert np.isnan(arr[3]), "the source gap must be no-data (NaN)"
         assert np.isfinite(arr[[0, 1, 2, 4, 5]]).all(), (
             "every real source cell must be finite"
@@ -202,8 +202,8 @@ class TestPackedNoDataMasking:
             geo_ref=GEO,
             no_data_value=0.5,
         )
-        out = ds.percentile_stretch(0, 100)
-        arr = out.read_array().ravel()
+        out = ds.analysis.percentile_stretch(0, 100)
+        arr = out.io.read_array().ravel()
         assert np.isnan(out.no_data_value[0]), (
             "output no-data must be NaN, not the stored 0.5"
         )
@@ -232,8 +232,8 @@ class TestPackedNoDataMasking:
         ref = Dataset.from_array(
             np.array([[-10000.0, -9999.0, -9998.0]], dtype="float32"), geo_ref=GEO
         )
-        out = src.match_histogram(ref)
-        arr = out.read_array().ravel()
+        out = src.analysis.match_histogram(ref)
+        arr = out.io.read_array().ravel()
         assert np.isnan(out.no_data_value[0]), "output no-data must be NaN"
         assert np.isfinite(arr[[0, 1, 2]]).all(), (
             f"every remapped cell must stay finite; arr={arr.tolist()}"

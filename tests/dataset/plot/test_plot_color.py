@@ -58,8 +58,8 @@ class TestColorTable:
                 ],
             }
         )
-        dataset.color_table = color_table
-        retrieved_color_table = dataset.color_table
+        dataset.bands.color_table = color_table
+        retrieved_color_table = dataset.bands.color_table
         assert all(
             ["band", "values", "red", "green", "blue", "alpha"]
             == retrieved_color_table.columns
@@ -73,7 +73,7 @@ class TestColorTable:
         assert all(df.columns == ["band", "values", "red", "green", "blue", "alpha"])
         assert all(df.band == 1)
         # test the color_table property
-        df = dataset.color_table
+        df = dataset.bands.color_table
         assert isinstance(df, DataFrame)
         assert all(df.columns == ["band", "values", "red", "green", "blue", "alpha"])
         assert all(df.band == 1)
@@ -109,7 +109,7 @@ class TestColorTable:
             (214, 193, 156, 255),
         ]
         # test the color_table property
-        dataset.color_table = df
+        dataset.bands.color_table = df
 
 
 class TestColorRelief:
@@ -154,7 +154,7 @@ class TestPalettePlot:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.color_table = pd.DataFrame(
+        dataset.bands.color_table = pd.DataFrame(
             {
                 "band": [1, 1, 1],
                 "values": [1, 2, 3],
@@ -203,7 +203,7 @@ class TestPalettePlot:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.color_table = pd.DataFrame(
+        dataset.bands.color_table = pd.DataFrame(
             {
                 "band": [1, 1, 1],
                 "values": [11, 21, 31],
@@ -237,7 +237,7 @@ class TestPalettePlot:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.color_table = pd.DataFrame(
+        dataset.bands.color_table = pd.DataFrame(
             {
                 "band": [1, 1, 1],
                 "values": [10, 132, 200],
@@ -269,7 +269,7 @@ class TestPalettePlot:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.color_table = pd.DataFrame(
+        dataset.bands.color_table = pd.DataFrame(
             {"band": [1], "values": [0], "color": ["#ff0000"]}
         )
         glyph = dataset.plot(band=0)
@@ -352,10 +352,10 @@ class TestPalettePlot:
             np.stack([other, mid, other]),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.color_table = pd.DataFrame(
+        dataset.bands.color_table = pd.DataFrame(
             {"band": [2, 2], "values": [1, 3], "color": ["#ff0000", "#00ff00"]}
         )
-        dataset.band_color = {1: "palette_index"}
+        dataset.bands.band_color = {1: "palette_index"}
 
         glyph = dataset.plot()
         assert type(glyph.im.norm).__name__ == "BoundaryNorm"
@@ -387,14 +387,14 @@ class TestColorRamp:
             up paletted.
         """
         dataset = self._dataset()
-        dataset.set_color_ramp(
+        dataset.glyph.set_color_ramp(
             band=1,
             start_value=1,
             end_value=5,
             start_color="#709959",
             end_color="#F2CE85",
         )
-        table = dataset.color_table.set_index("values")
+        table = dataset.bands.color_table.set_index("values")
         assert tuple(table.loc[1, ["red", "green", "blue", "alpha"]]) == (
             112,
             153,
@@ -425,8 +425,8 @@ class TestColorRamp:
             value 5 its yellow end, and the band is paletted.
         """
         dataset = self._dataset()
-        dataset.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
-        table = dataset.color_table.set_index("values")
+        dataset.glyph.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
+        table = dataset.bands.color_table.set_index("values")
         assert tuple(table.loc[1, ["red", "green", "blue"]]) == (68, 1, 84), (
             "value 1 must be viridis' start"
         )
@@ -447,8 +447,8 @@ class TestColorRamp:
         from matplotlib import colormaps
 
         dataset = self._dataset()
-        dataset.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
-        table = dataset.color_table.set_index("values")
+        dataset.glyph.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
+        table = dataset.bands.color_table.set_index("values")
         red, green, blue, _ = colormaps["viridis"](0.5)
         assert tuple(table.loc[3, ["red", "green", "blue"]]) == (
             round(red * 255),
@@ -459,14 +459,14 @@ class TestColorRamp:
     def test_start_value_zero_is_the_ramp_start_not_a_spurious_entry(self):
         """`start_value=0` is accepted and value 0 becomes the ramp start colour."""
         dataset = self._dataset()
-        dataset.set_color_ramp(
+        dataset.glyph.set_color_ramp(
             band=1,
             start_value=0,
             end_value=4,
             start_color="#000000",
             end_color="#ffffff",
         )
-        table = dataset.color_table.set_index("values")
+        table = dataset.bands.color_table.set_index("values")
         assert tuple(table.loc[0, ["red", "green", "blue", "alpha"]]) == (
             0,
             0,
@@ -498,35 +498,35 @@ class TestColorRamp:
             for i in range(span + 1)
         ]
         enumerated = self._dataset()
-        enumerated.color_table = pd.DataFrame(
+        enumerated.bands.color_table = pd.DataFrame(
             {"band": [1] * 5, "values": [1, 2, 3, 4, 5], "color": stops}
         )
         ramped = self._dataset()
-        ramped.set_color_ramp(
+        ramped.glyph.set_color_ramp(
             band=1,
             start_value=1,
             end_value=5,
             start_color="#709959",
             end_color="#f2ce85",
         )
-        pd.testing.assert_frame_equal(enumerated.color_table, ramped.color_table)
+        pd.testing.assert_frame_equal(enumerated.bands.color_table, ramped.bands.color_table)
 
     def test_an_integral_float_value_is_accepted(self):
         """An integer-valued float (5.0) is coerced and builds the full range."""
         dataset = self._dataset()
-        dataset.set_color_ramp(
+        dataset.glyph.set_color_ramp(
             band=1,
             start_value=1,
             end_value=5.0,
             start_color="#000000",
             end_color="#ffffff",
         )
-        assert {1, 2, 3, 4, 5}.issubset(set(dataset.color_table["values"]))
+        assert {1, 2, 3, 4, 5}.issubset(set(dataset.bands.color_table["values"]))
 
     def test_an_unknown_colormap_raises(self):
         """A colormap name absent from matplotlib's registry is rejected clearly."""
         dataset = self._dataset()
         with pytest.raises(ValueError, match="unknown colormap"):
-            dataset.set_color_ramp(
+            dataset.glyph.set_color_ramp(
                 band=1, start_value=1, end_value=5, colormap="not-a-real-cmap"
             )

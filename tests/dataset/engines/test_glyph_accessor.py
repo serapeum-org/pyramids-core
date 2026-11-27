@@ -39,10 +39,10 @@ def test_glyph_exposes_the_plotting_family(byte_raster: Dataset, name: str):
 
 def test_set_color_ramp_via_glyph_writes_the_palette(byte_raster: Dataset):
     byte_raster.glyph.set_color_ramp(start_value=0, end_value=15, colormap="viridis")
-    assert byte_raster.color_table is not None
+    assert byte_raster.bands.color_table is not None
 
 
 def test_flat_set_color_ramp_delegates_to_glyph(byte_raster: Dataset):
     # The flat facade produces the same effect as the accessor.
-    byte_raster.set_color_ramp(start_value=0, end_value=15, colormap="viridis")
-    assert byte_raster.color_table is not None
+    byte_raster.glyph.set_color_ramp(start_value=0, end_value=15, colormap="viridis")
+    assert byte_raster.bands.color_table is not None

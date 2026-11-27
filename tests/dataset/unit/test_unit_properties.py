@@ -148,7 +148,7 @@ class TestSetCrsAbstract:
 
     def test_set_crs_with_epsg(self, single_band_dataset):
         """Setting CRS via epsg should update the EPSG attribute."""
-        single_band_dataset.set_crs(epsg=32618)
+        single_band_dataset.spatial.set_crs(epsg=32618)
         assert single_band_dataset.epsg == 32618, (
             "EPSG not updated after set_crs(epsg=...)"
         )
@@ -158,7 +158,7 @@ class TestSetCrsAbstract:
         sr = osr.SpatialReference()
         sr.ImportFromEPSG(32618)
         wkt = sr.ExportToWkt()
-        single_band_dataset.set_crs(crs=wkt)
+        single_band_dataset.spatial.set_crs(crs=wkt)
         assert single_band_dataset.epsg == 32618, (
             "EPSG not updated after set_crs(crs=wkt)"
         )
@@ -169,7 +169,7 @@ class TestSetCrsAbstract:
         sr.ImportFromEPSG(32618)
         wkt = sr.ExportToWkt()
         # Pass both crs and epsg; the WKT (32618) should win
-        single_band_dataset.set_crs(crs=wkt, epsg=4326)
+        single_band_dataset.spatial.set_crs(crs=wkt, epsg=4326)
         assert single_band_dataset.epsg == 32618, (
             "CRS WKT should take precedence over epsg arg"
         )
@@ -276,38 +276,38 @@ class TestScaleOffset:
 
     def test_scale_default(self, single_band_dataset):
         """Default scale should be 1.0 for each band."""
-        assert single_band_dataset.scale == [1.0], "Default scale should be [1.0]"
+        assert single_band_dataset.bands.scale == [1.0], "Default scale should be [1.0]"
 
     def test_scale_setter(self, single_band_dataset):
         """Setting scale should update GDAL band scale."""
-        single_band_dataset.scale = [0.5]
+        single_band_dataset.bands.scale = [0.5]
         assert single_band_dataset._iloc(0).GetScale() == pytest.approx(0.5), (
             "GDAL band scale not updated by setter"
         )
 
     def test_offset_default(self, single_band_dataset):
         """Default offset should be 0 for each band."""
-        assert single_band_dataset.offset == [0], "Default offset should be [0]"
+        assert single_band_dataset.bands.offset == [0], "Default offset should be [0]"
 
     def test_offset_setter(self, single_band_dataset):
         """Setting offset should update GDAL band offset."""
-        single_band_dataset.offset = [100.0]
+        single_band_dataset.bands.offset = [100.0]
         assert single_band_dataset._iloc(0).GetOffset() == pytest.approx(100.0), (
             "GDAL band offset not updated by setter"
         )
 
     def test_multi_band_scale_offset(self, multi_band_dataset):
         """Scale and offset setters should work per-band for multi-band."""
-        multi_band_dataset.scale = [0.1, 0.2, 0.3]
-        scales = multi_band_dataset.scale
+        multi_band_dataset.bands.scale = [0.1, 0.2, 0.3]
+        scales = multi_band_dataset.bands.scale
         assert scales == [
             0.1,
             0.2,
             0.3,
         ], f"Multi-band scales incorrect: {scales}"
 
-        multi_band_dataset.offset = [10.0, 20.0, 30.0]
-        offsets = multi_band_dataset.offset
+        multi_band_dataset.bands.offset = [10.0, 20.0, 30.0]
+        offsets = multi_band_dataset.bands.offset
         assert offsets == [
             10.0,
             20.0,
@@ -329,8 +329,8 @@ class TestBandNamesUnitsSetters:
     def test_band_units_setter(self, multi_band_dataset):
         """Setting band_units should write units to each GDAL band."""
         new_units = ["m", "kg", "s"]
-        multi_band_dataset.band_units = new_units
-        assert multi_band_dataset.band_units == new_units, (
+        multi_band_dataset.bands.band_units = new_units
+        assert multi_band_dataset.bands.band_units == new_units, (
             "band_units setter did not update units"
         )
         for i, expected in enumerate(new_units):
@@ -345,23 +345,23 @@ class TestBandFamilyEngineFacades:
 
     def test_band_units_facade_matches_engine(self, multi_band_dataset):
         """Dataset.band_units delegates to Bands.band_units in both directions."""
-        multi_band_dataset.band_units = ["m", "kg", "s"]
-        assert multi_band_dataset.band_units == multi_band_dataset.bands.band_units, (
+        multi_band_dataset.bands.band_units = ["m", "kg", "s"]
+        assert multi_band_dataset.bands.band_units == multi_band_dataset.bands.band_units, (
             "band_units facade and engine disagree"
         )
         multi_band_dataset.bands.band_units = ["a", "b", "c"]
-        assert multi_band_dataset.band_units == ["a", "b", "c"], (
+        assert multi_band_dataset.bands.band_units == ["a", "b", "c"], (
             "setting via the engine is not visible on the facade"
         )
 
     def test_scale_offset_facade_matches_engine(self, multi_band_dataset):
         """Dataset.scale/offset delegate to Bands.scale/offset."""
-        multi_band_dataset.scale = [0.1, 0.2, 0.3]
-        multi_band_dataset.offset = [1.0, 2.0, 3.0]
-        assert multi_band_dataset.scale == multi_band_dataset.bands.scale, (
+        multi_band_dataset.bands.scale = [0.1, 0.2, 0.3]
+        multi_band_dataset.bands.offset = [1.0, 2.0, 3.0]
+        assert multi_band_dataset.bands.scale == multi_band_dataset.bands.scale, (
             "scale facade and engine disagree"
         )
-        assert multi_band_dataset.offset == multi_band_dataset.bands.offset, (
+        assert multi_band_dataset.bands.offset == multi_band_dataset.bands.offset, (
             "offset facade and engine disagree"
         )
 
@@ -426,7 +426,7 @@ class TestBandMetaData:
         Dataset.from_array(
             np.zeros((2, 4, 4), dtype="int16"),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         ds = Dataset.read_file(str(path), read_only=True)
         assert ds.access == "read_only", "fixture must be read-only for this test"
         with pytest.raises(ReadOnlyError, match="read-only"):
@@ -473,7 +473,7 @@ class TestBandMetaData:
         Dataset.from_array(
             np.zeros((4, 4), dtype="int16"),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         ds = Dataset.read_file(str(path), read_only=True)
         with pytest.raises(ReadOnlyError, match="read-only"):
             ds.bands.set_metadata_item("A", "1", band=0)
@@ -489,13 +489,13 @@ class TestConvertUnits:
             A 3x3 raster labelled "K" converted to "celsius" subtracts 273.15 from
             every cell and updates band_units to ["celsius"].
         """
-        single_band_dataset.band_units = ["K"]
-        result = single_band_dataset.convert_units("celsius")
-        expected = single_band_dataset.read_array() - 273.15
+        single_band_dataset.bands.band_units = ["K"]
+        result = single_band_dataset.bands.convert_units("celsius")
+        expected = single_band_dataset.io.read_array() - 273.15
         np.testing.assert_allclose(
-            result.read_array(), expected, rtol=1e-6, err_msg="K->C values wrong"
+            result.io.read_array(), expected, rtol=1e-6, err_msg="K->C values wrong"
         )
-        assert result.band_units == ["celsius"], (
+        assert result.bands.band_units == ["celsius"], (
             f"Units not updated: {result.band_units}"
         )
 
@@ -506,15 +506,15 @@ class TestConvertUnits:
             A 3-band raster all labelled "m" converted to "mm" scales every band by
             1000 and labels all bands "mm".
         """
-        multi_band_dataset.band_units = ["m", "m", "m"]
-        result = multi_band_dataset.convert_units("mm")
+        multi_band_dataset.bands.band_units = ["m", "m", "m"]
+        result = multi_band_dataset.bands.convert_units("mm")
         np.testing.assert_allclose(
-            result.read_array(),
-            multi_band_dataset.read_array() * 1000.0,
+            result.io.read_array(),
+            multi_band_dataset.io.read_array() * 1000.0,
             rtol=1e-6,
             err_msg="m->mm values wrong",
         )
-        assert result.band_units == ["mm", "mm", "mm"], f"Units: {result.band_units}"
+        assert result.bands.band_units == ["mm", "mm", "mm"], f"Units: {result.bands.band_units}"
 
     def test_band_argument_converts_one_band_only(self, multi_band_dataset):
         """convert_units with band= converts only the selected band.
@@ -523,10 +523,10 @@ class TestConvertUnits:
             Converting only band 0 (m->mm) scales band 0 by 1000 but leaves bands 1
             and 2 untouched, and only band 0's unit label changes.
         """
-        multi_band_dataset.band_units = ["m", "m", "m"]
-        source = multi_band_dataset.read_array()
-        result = multi_band_dataset.convert_units("mm", band=0)
-        converted = result.read_array()
+        multi_band_dataset.bands.band_units = ["m", "m", "m"]
+        source = multi_band_dataset.io.read_array()
+        result = multi_band_dataset.bands.convert_units("mm", band=0)
+        converted = result.io.read_array()
         np.testing.assert_allclose(
             converted[0], source[0] * 1000.0, rtol=1e-6, err_msg="band 0 not converted"
         )
@@ -536,7 +536,7 @@ class TestConvertUnits:
         np.testing.assert_array_equal(
             converted[2], source[2], err_msg="band 2 should be untouched"
         )
-        assert result.band_units == ["mm", "m", "m"], f"Units: {result.band_units}"
+        assert result.bands.band_units == ["mm", "m", "m"], f"Units: {result.bands.band_units}"
 
     def test_nodata_cells_preserved(self):
         """convert_units leaves no-data cells at their sentinel value.
@@ -551,9 +551,9 @@ class TestConvertUnits:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        ds.band_units = ["K"]
-        result = ds.convert_units("celsius")
-        out = result.read_array()
+        ds.bands.band_units = ["K"]
+        result = ds.bands.convert_units("celsius")
+        out = result.io.read_array()
         assert out[0, 1] == -9999.0, f"No-data cell altered: {out[0, 1]}"
         assert out[0, 0] == pytest.approx(0.0), f"Valid cell wrong: {out[0, 0]}"
         assert out[1, 0] == pytest.approx(20.0), f"Valid cell wrong: {out[1, 0]}"
@@ -564,16 +564,16 @@ class TestConvertUnits:
         Test scenario:
             After conversion the source still reports its original values and units.
         """
-        single_band_dataset.band_units = ["K"]
-        snapshot = single_band_dataset.read_array().copy()
-        result = single_band_dataset.convert_units("celsius")
+        single_band_dataset.bands.band_units = ["K"]
+        snapshot = single_band_dataset.io.read_array().copy()
+        result = single_band_dataset.bands.convert_units("celsius")
         assert result is not single_band_dataset, (
             "convert_units must return a new object"
         )
         np.testing.assert_array_equal(
-            single_band_dataset.read_array(), snapshot, err_msg="source was mutated"
+            single_band_dataset.io.read_array(), snapshot, err_msg="source was mutated"
         )
-        assert single_band_dataset.band_units == ["K"], "source units changed"
+        assert single_band_dataset.bands.band_units == ["K"], "source units changed"
 
     def test_band_out_of_range_raises(self, single_band_dataset):
         """convert_units rejects a band index outside the valid range.
@@ -582,9 +582,9 @@ class TestConvertUnits:
             Requesting band 5 on a single-band raster raises ValueError mentioning
             'out of range'.
         """
-        single_band_dataset.band_units = ["K"]
+        single_band_dataset.bands.band_units = ["K"]
         with pytest.raises(ValueError, match="out of range") as exc:
-            single_band_dataset.convert_units("celsius", band=5)
+            single_band_dataset.bands.convert_units("celsius", band=5)
         assert "out of range" in str(exc.value), f"Unexpected: {exc.value}"
 
     def test_unknown_target_raises(self, single_band_dataset):
@@ -594,9 +594,9 @@ class TestConvertUnits:
             A target unit absent from the affine table raises ValueError mentioning
             'No unit conversion'.
         """
-        single_band_dataset.band_units = ["K"]
+        single_band_dataset.bands.band_units = ["K"]
         with pytest.raises(ValueError, match="No unit conversion") as exc:
-            single_band_dataset.convert_units("furlongs")
+            single_band_dataset.bands.convert_units("furlongs")
         assert "No unit conversion" in str(exc.value), f"Unexpected: {exc.value}"
 
 
@@ -605,12 +605,12 @@ class TestCountDomainCells:
 
     def test_all_valid_cells(self, single_band_dataset):
         """All cells in the fixture contain valid data."""
-        count = single_band_dataset.count_domain_cells()
+        count = single_band_dataset.analysis.count_domain_cells()
         assert count == 9, f"Expected 9 domain cells for a 3x3 raster, got {count}"
 
     def test_with_nodata_cells(self, dataset_with_nodata):
         """Cells with nodata should not be counted."""
-        count = dataset_with_nodata.count_domain_cells()
+        count = dataset_with_nodata.analysis.count_domain_cells()
         assert count == 4, f"Expected 4 domain cells (5 nodata), got {count}"
 
 
@@ -724,7 +724,7 @@ class TestContextManager:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with ds:
-            result = ds.read_array()
+            result = ds.io.read_array()
             assert result.shape == (2, 2), f"Expected shape (2, 2), got {result.shape}"
             assert ds.epsg == 4326, f"Expected EPSG 4326, got {ds.epsg}"
             assert ds.rows == 2, f"Expected 2 rows, got {ds.rows}"
@@ -742,7 +742,7 @@ class TestContextManager:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
         with ds as ctx:
-            val = ctx.read_array()[0, 0]
+            val = ctx.io.read_array()[0, 0]
             assert np.isclose(val, 5.0), f"Expected 5.0, got {val}"
         assert ds._raster is None, "Should be closed after with block"
 
@@ -812,7 +812,7 @@ class TestCellGeometryMethods:
 
     def test_get_cell_coords_center(self, single_band_dataset):
         """Center coords should be at half-cell offsets from corners."""
-        coords = single_band_dataset.get_cell_coords(location="center")
+        coords = single_band_dataset.cell.get_cell_coords(location="center")
         assert coords.shape == (9, 2), f"Expected (9,2) array, got {coords.shape}"
         assert np.isclose(coords[0, 0], 0.025, atol=1e-6), (
             "First x-center coordinate is wrong"
@@ -823,7 +823,7 @@ class TestCellGeometryMethods:
 
     def test_get_cell_coords_corner(self, single_band_dataset):
         """Corner coords should be the top-left of each cell."""
-        coords = single_band_dataset.get_cell_coords(location="corner")
+        coords = single_band_dataset.cell.get_cell_coords(location="corner")
         assert np.isclose(coords[0, 0], 0.0, atol=1e-6), (
             "First x-corner coordinate should be 0.0"
         )
@@ -834,13 +834,13 @@ class TestCellGeometryMethods:
     def test_get_cell_coords_invalid_location(self, single_band_dataset):
         """An invalid location string should raise ValueError."""
         with pytest.raises(ValueError, match="center.*corner"):
-            single_band_dataset.get_cell_coords(location="middle")
+            single_band_dataset.cell.get_cell_coords(location="middle")
 
     def test_get_cell_points_center(self, single_band_dataset):
         """to_geodataframe(geometry="point") returns a GeoDataFrame with Point geometry."""
         import geopandas as gpd
 
-        gdf = single_band_dataset.to_geodataframe(
+        gdf = single_band_dataset.vector.to_geodataframe(
             geometry="point", location="center", values=False
         )
         assert isinstance(gdf, gpd.GeoDataFrame), "Should return GeoDataFrame"
@@ -849,7 +849,7 @@ class TestCellGeometryMethods:
 
     def test_get_cell_points_corner(self, single_band_dataset):
         """to_geodataframe point geometry with location="corner" returns corner coordinates."""
-        gdf = single_band_dataset.to_geodataframe(
+        gdf = single_band_dataset.vector.to_geodataframe(
             geometry="point", location="corner", values=False
         )
         first_point = gdf.geometry.iloc[0]
@@ -861,7 +861,7 @@ class TestCellGeometryMethods:
         """to_geodataframe(geometry="polygon") returns polygons covering each cell."""
         import geopandas as gpd
 
-        gdf = single_band_dataset.to_geodataframe(geometry="polygon", values=False)
+        gdf = single_band_dataset.vector.to_geodataframe(geometry="polygon", values=False)
         assert isinstance(gdf, gpd.GeoDataFrame), "Should return GeoDataFrame"
         assert len(gdf) == 9, f"Expected 9 polygons, got {len(gdf)}"
         poly = gdf.geometry.iloc[0]
@@ -875,7 +875,7 @@ class TestCellGeometryMethods:
         """With mask=True, only domain cells should get polygons."""
         import geopandas as gpd
 
-        gdf = dataset_with_nodata.to_geodataframe(
+        gdf = dataset_with_nodata.vector.to_geodataframe(
             geometry="polygon", values=False, dropna=True
         )
         assert isinstance(gdf, gpd.GeoDataFrame), "Should return GeoDataFrame"
@@ -895,7 +895,7 @@ class TestCellGeometryMethods:
             arr,
             geo_ref=GeoReference(geo=(10.0, 0.1, 0.0, 50.0, 0.0, -0.1), epsg=4326),
         )
-        return ds.to_crs(cls._ORTHO_PROJ4)
+        return ds.spatial.to_crs(cls._ORTHO_PROJ4)
 
     def test_get_cell_polygons_authority_less_crs(self):
         """Polygon geometry labels the frame with an authority-less CRS, not a crash (#979).
@@ -906,7 +906,7 @@ class TestCellGeometryMethods:
             is None.
         """
         r = self._authority_less_raster()
-        gdf = r.to_geodataframe(geometry="polygon", values=False)
+        gdf = r.vector.to_geodataframe(geometry="polygon", values=False)
         assert gdf.crs is not None, "authority-less CRS must still label the frame"
         assert gdf.crs.to_epsg() is None, "authority-less CRS has no EPSG code"
         assert gdf.crs.equals(crs_from_user_input(self._ORTHO_PROJ4)), (
@@ -921,7 +921,7 @@ class TestCellGeometryMethods:
             code, instead of raising CRSError.
         """
         r = self._authority_less_raster()
-        gdf = r.to_geodataframe(geometry="point", values=False)
+        gdf = r.vector.to_geodataframe(geometry="point", values=False)
         assert gdf.crs is not None, "authority-less CRS must still label the frame"
         assert gdf.crs.to_epsg() is None, "authority-less CRS has no EPSG code"
         assert gdf.crs.equals(crs_from_user_input(self._ORTHO_PROJ4)), (
@@ -940,7 +940,7 @@ class TestCellGeometryMethods:
             arr,
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 3.0, 0.0, -1.0), epsg=None),
         )
-        gdf = ds.to_geodataframe(geometry="polygon", values=False)
+        gdf = ds.vector.to_geodataframe(geometry="polygon", values=False)
         assert gdf.crs is None, "a CRS-less raster must yield an unprojected frame"
         assert len(gdf) == 9, f"expected 9 polygons, got {len(gdf)}"
 
@@ -956,7 +956,7 @@ class TestCellGeometryMethods:
             arr,
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 3.0, 0.0, -1.0), epsg=None),
         )
-        gdf = ds.to_geodataframe(geometry="point", values=False)
+        gdf = ds.vector.to_geodataframe(geometry="point", values=False)
         assert gdf.crs is None, "a CRS-less raster must yield an unprojected frame"
         assert len(gdf) == 9, f"expected 9 points, got {len(gdf)}"
 
@@ -968,7 +968,7 @@ class TestCellGeometryMethods:
             still carries the source orthographic CRS, proving the masked path shares the fix.
         """
         r = self._authority_less_raster()
-        gdf = r.to_geodataframe(geometry="polygon", values=False, dropna=True)
+        gdf = r.vector.to_geodataframe(geometry="polygon", values=False, dropna=True)
         assert gdf.crs is not None, "domain_only path must still label the frame"
         assert gdf.crs.to_epsg() is None, "authority-less CRS has no EPSG code"
         assert gdf.crs.equals(crs_from_user_input(self._ORTHO_PROJ4)), (
@@ -993,7 +993,7 @@ class TestCellGeometryMethods:
                 "pyproj resolves EPSG:10857 on this stack; the WKT-fallback branch "
                 "is not exercised here"
             )
-        gdf = ds.to_geodataframe(geometry="polygon", values=False)
+        gdf = ds.vector.to_geodataframe(geometry="polygon", values=False)
         assert gdf.crs is not None, "a GDAL-only code must still label the frame"
         assert gdf.crs.equals(crs_from_user_input(10857)), (
             "cell polygons must carry the CRS the GDAL-only code resolves to"
@@ -1007,7 +1007,7 @@ class TestCellGeometryMethods:
             orthographic CRS, mirroring the polygon masked-path check.
         """
         r = self._authority_less_raster()
-        gdf = r.to_geodataframe(geometry="point", values=False, dropna=True)
+        gdf = r.vector.to_geodataframe(geometry="point", values=False, dropna=True)
         assert gdf.crs is not None, "domain_only path must still label the frame"
         assert gdf.crs.to_epsg() is None, "authority-less CRS has no EPSG code"
         assert gdf.crs.equals(crs_from_user_input(self._ORTHO_PROJ4)), (
@@ -1031,7 +1031,7 @@ class TestCellGeometryMethods:
                 "pyproj resolves EPSG:10857 on this stack; the WKT-fallback branch "
                 "is not exercised here"
             )
-        gdf = ds.to_geodataframe(geometry="point", values=False)
+        gdf = ds.vector.to_geodataframe(geometry="point", values=False)
         assert gdf.crs is not None, "a GDAL-only code must still label the frame"
         assert gdf.crs.equals(crs_from_user_input(10857)), (
             "cell points must carry the CRS the GDAL-only code resolves to"
@@ -1048,14 +1048,14 @@ class TestGetBandByColor:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        ds.band_color = {0: "red", 1: "green", 2: "blue"}
-        assert ds.get_band_by_color("red") == 0, "Red should be band 0"
-        assert ds.get_band_by_color("green") == 1, "Green should be band 1"
-        assert ds.get_band_by_color("blue") == 2, "Blue should be band 2"
+        ds.bands.band_color = {0: "red", 1: "green", 2: "blue"}
+        assert ds.bands.get_band_by_color("red") == 0, "Red should be band 0"
+        assert ds.bands.get_band_by_color("green") == 1, "Green should be band 1"
+        assert ds.bands.get_band_by_color("blue") == 2, "Blue should be band 2"
 
     def test_band_by_color_not_found(self, single_band_dataset):
         """get_band_by_color should return None for a color not in the dataset."""
-        result = single_band_dataset.get_band_by_color("red")
+        result = single_band_dataset.bands.get_band_by_color("red")
         assert result is None, "Should return None when color is not assigned"
 
 
@@ -1126,7 +1126,7 @@ class TestDatasetProperties:
 
     def test_band_color_property(self, single_band_dataset):
         """band_color should return a dict mapping band index to color name."""
-        colors = single_band_dataset.band_color
+        colors = single_band_dataset.bands.band_color
         assert isinstance(colors, dict), "band_color should return a dict"
         assert 0 in colors, "band_color should contain index 0"
 
@@ -1188,7 +1188,7 @@ class TestBandColorSetter:
     def test_band_color_invalid_index_raises(self, single_band_dataset):
         """band_color setter with index > band_count should raise."""
         with pytest.raises(ValueError, match="is out of range for a"):
-            single_band_dataset.band_color = {10: "red"}
+            single_band_dataset.bands.band_color = {10: "red"}
 
 
 class TestColorTable:
@@ -1208,7 +1208,7 @@ class TestColorTable:
         ct.SetColorEntry(2, (0, 255, 0, 128))
         ct.SetColorEntry(3, (0, 0, 255, 0))
         ds._iloc(0).SetColorTable(ct)
-        df = ds.color_table
+        df = ds.bands.color_table
         assert isinstance(df, pd.DataFrame), "color_table should return DataFrame"
         expected_cols = ["band", "values", "red", "green", "blue", "alpha"]
         for col in expected_cols:
@@ -1224,7 +1224,7 @@ class TestColorTable:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with pytest.raises(TypeError, match="DataFrame"):
-            ds.color_table = "not_a_dataframe"
+            ds.bands.color_table = "not_a_dataframe"
 
     def test_color_table_setter_missing_columns_raises(self):
         """color_table setter without required columns should raise ValueError."""
@@ -1236,7 +1236,7 @@ class TestColorTable:
         )
         bad_df = pd.DataFrame({"x": [1, 2], "y": [3, 4]})
         with pytest.raises(ValueError, match="columns"):
-            ds.color_table = bad_df
+            ds.bands.color_table = bad_df
 
 
 @pytest.mark.plot
@@ -1258,8 +1258,8 @@ class TestColorTableSetterValid:
                 "color": ["#000000", "#FF0000", "#00FF00", "#0000FF"],
             }
         )
-        ds.color_table = df
-        assert ds.color_table is not None
+        ds.bands.color_table = df
+        assert ds.bands.color_table is not None
 
 
 class TestInplaceConsistency:
@@ -1268,7 +1268,7 @@ class TestInplaceConsistency:
     def test_resample_returns_new_dataset(self, single_band_dataset):
         """resample() should always return a new Dataset."""
         original_cell_size = single_band_dataset.cell_size
-        result = single_band_dataset.resample(cell_size=0.1)
+        result = single_band_dataset.spatial.resample(cell_size=0.1)
         assert result is not None, "resample should return a Dataset"
         assert isinstance(result, Dataset), f"Expected Dataset, got {type(result)}"
         assert result.cell_size == pytest.approx(0.1), (
@@ -1286,7 +1286,7 @@ class TestInplaceConsistency:
             ref_arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.02, epsg=4326),
         )
-        result = single_band_dataset.align(ref)
+        result = single_band_dataset.spatial.align(ref)
         assert result is not None, "align should return a Dataset"
         assert isinstance(result, Dataset), f"Expected Dataset, got {type(result)}"
         assert result.rows == 5, f"Rows should be 5 after align, got {result.rows}"
@@ -1299,20 +1299,20 @@ class TestInplaceConsistency:
 
     def test_apply_inplace_returns_self(self, single_band_dataset):
         """apply(inplace=True) should return self and modify the dataset in place."""
-        result = single_band_dataset.apply(lambda x: x * 2, inplace=True)
+        result = single_band_dataset.analysis.apply(lambda x: x * 2, inplace=True)
         assert result is single_band_dataset, "inplace apply should return self"
-        arr = single_band_dataset.read_array()
+        arr = single_band_dataset.io.read_array()
         assert arr[0, 0] == pytest.approx(2.0), (
             f"Expected 2.0 after doubling, got {arr[0, 0]}"
         )
 
     def test_apply_not_inplace_returns_new_dataset(self, single_band_dataset):
         """apply(inplace=False) should return a new Dataset without modifying the original."""
-        original_val = single_band_dataset.read_array()[0, 0]
-        result = single_band_dataset.apply(lambda x: x * 2, inplace=False)
+        original_val = single_band_dataset.io.read_array()[0, 0]
+        result = single_band_dataset.analysis.apply(lambda x: x * 2, inplace=False)
         assert result is not None, "non-inplace apply should return a Dataset"
         assert isinstance(result, Dataset), f"Expected Dataset, got {type(result)}"
-        assert single_band_dataset.read_array()[0, 0] == original_val, (
+        assert single_band_dataset.io.read_array()[0, 0] == original_val, (
             "Original dataset values should not change"
         )
 
@@ -1324,7 +1324,7 @@ class TestInplaceConsistency:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.change_no_data_value(-1.0, old_value=-9999.0, inplace=True)
+        result = ds.bands.change_no_data_value(-1.0, old_value=-9999.0, inplace=True)
         assert result is ds, "inplace change_no_data_value should return self"
         assert ds.no_data_value[0] == -1.0, (
             f"No data value should be -1.0 after inplace change, got {ds.no_data_value[0]}"
@@ -1338,7 +1338,7 @@ class TestInplaceConsistency:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.change_no_data_value(-1.0, old_value=-9999.0, inplace=False)
+        result = ds.bands.change_no_data_value(-1.0, old_value=-9999.0, inplace=False)
         assert result is not None, (
             "non-inplace change_no_data_value should return a Dataset"
         )
@@ -1403,7 +1403,7 @@ class TestPDEP8InplacePattern:
             geo_ref=GeoReference(top_left_corner=(0.0, 90.0), cell_size=0.5, epsg=4326),
         )
         with pytest.raises(TypeError):
-            ds.wrap_longitude(inplace=True)
+            ds.spatial.wrap_longitude(inplace=True)
 
     def test_crop_always_returns_new_dataset(self, single_band_dataset):
         """crop should always return a new Dataset, never None.
@@ -1418,7 +1418,7 @@ class TestPDEP8InplacePattern:
         poly = box(0.0, -0.15, 0.15, 0.0)
         mask = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
         original_shape = single_band_dataset.shape
-        result = single_band_dataset.crop(mask)
+        result = single_band_dataset.spatial.crop(mask)
         assert isinstance(result, Dataset), f"Expected Dataset, got {type(result)}"
         assert result is not single_band_dataset, "crop should return a new object"
         assert single_band_dataset.shape == original_shape, "Original should not change"
@@ -1429,7 +1429,7 @@ class TestPDEP8InplacePattern:
         Test scenario:
             Reproject and verify a new Dataset is returned.
         """
-        result = single_band_dataset.to_crs(to_epsg=3857)
+        result = single_band_dataset.spatial.to_crs(to_epsg=3857)
         assert isinstance(result, Dataset), f"Expected Dataset, got {type(result)}"
         assert result is not single_band_dataset, "to_crs should return a new object"
 
@@ -1467,9 +1467,9 @@ class TestPDEP8InplacePattern:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.fill(10, inplace=True).apply(lambda x: x + 5, inplace=True)
+        result = ds.fill(10, inplace=True).analysis.apply(lambda x: x + 5, inplace=True)
         assert result is ds, "Chained inplace calls should return the same object"
-        result_arr = ds.read_array()
+        result_arr = ds.io.read_array()
         assert np.allclose(result_arr, 15.0), (
             f"Expected all cells to be 15 after fill(10)+apply(+5), got {result_arr}"
         )
@@ -1487,7 +1487,7 @@ class TestPDEP8InplacePattern:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = ds.change_no_data_value(-1.0, old_value=-9999.0, inplace=True)
+        result = ds.bands.change_no_data_value(-1.0, old_value=-9999.0, inplace=True)
         assert result is ds, "change_no_data_value(inplace=True) should return self"
         assert ds.no_data_value[0] == -1.0, (
             f"Expected no_data_value=-1.0, got {ds.no_data_value[0]}"

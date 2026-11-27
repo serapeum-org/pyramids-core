@@ -202,8 +202,8 @@ class TestWindowedIO:
         Test scenario:
             Window(1, 2, 3, 2) is [1, 2, 3, 2] in the legacy list form.
         """
-        via_window = ramp_dataset.read_array(band=0, window=Window(1, 2, 3, 2))
-        via_list = ramp_dataset.read_array(band=0, window=[1, 2, 3, 2])
+        via_window = ramp_dataset.io.read_array(band=0, window=Window(1, 2, 3, 2))
+        via_list = ramp_dataset.io.read_array(band=0, window=[1, 2, 3, 2])
         np.testing.assert_array_equal(
             via_window, via_list, err_msg="Window read must equal the list read"
         )
@@ -223,7 +223,7 @@ class TestWindowedIO:
                 np.full((2, 3), 99.0, dtype="float32"), window=w
             )
         np.testing.assert_array_equal(
-            ramp_dataset.read_array(band=0, window=w),
+            ramp_dataset.io.read_array(band=0, window=w),
             np.full((2, 3), 99.0, dtype="float32"),
             err_msg="Window write did not land at the addressed block",
         )
@@ -236,11 +236,11 @@ class TestWindowedIO:
             as Window(1, 2, 3, 2); one deprecation cycle keeps it working.
         """
         with pytest.warns(DeprecationWarning, match="y-first"):
-            ramp_dataset.write_array(
+            ramp_dataset.io.write_array(
                 np.full((2, 3), 7.0, dtype="float32"), window=(2, 1, 2, 3)
             )
         np.testing.assert_array_equal(
-            ramp_dataset.read_array(band=0, window=Window(1, 2, 3, 2)),
+            ramp_dataset.io.read_array(band=0, window=Window(1, 2, 3, 2)),
             np.full((2, 3), 7.0, dtype="float32"),
             err_msg="legacy tuple write must keep working through the deprecation",
         )
@@ -250,7 +250,7 @@ class TestWindowedIO:
         arr = np.zeros((3, 3), dtype="float32")
         window = Window(0, 0, 2, 2)
         with pytest.raises(ValueError, match="does not match"):
-            ramp_dataset.write_array(arr, window=window)
+            ramp_dataset.io.write_array(arr, window=window)
 
     def test_read_write_round_trip_same_window_object(self, ramp_dataset):
         """One Window object addresses both the read and the write back.
@@ -260,10 +260,10 @@ class TestWindowedIO:
             Window — the wart the shared object removes.
         """
         w = Window(2, 2, 2, 2)
-        block = ramp_dataset.read_array(band=0, window=w)
-        ramp_dataset.write_array(block * 0 + 5.0, window=w)
+        block = ramp_dataset.io.read_array(band=0, window=w)
+        ramp_dataset.io.write_array(block * 0 + 5.0, window=w)
         np.testing.assert_array_equal(
-            ramp_dataset.read_array(band=0, window=w),
+            ramp_dataset.io.read_array(band=0, window=w),
             np.full((2, 2), 5.0, dtype="float32"),
             err_msg="round-trip through one Window object failed",
         )
@@ -327,7 +327,7 @@ class TestBlockIteration:
 
     def test_iter_blocks_rebuilds_raster(self, ramp_dataset):
         """Streaming blocks and reassembling them reproduces the raster."""
-        src = ramp_dataset.read_array(band=0)
+        src = ramp_dataset.io.read_array(band=0)
         rebuilt = np.zeros_like(src)
         for w, block in ramp_dataset.iter_blocks():
             rebuilt[w.row_off : w.row_off + w.rows, w.col_off : w.col_off + w.cols] = (
@@ -348,13 +348,13 @@ class TestBlockIteration:
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
         for w, block in ramp_dataset.iter_blocks():
-            empty.write_array(block, window=w)
+            empty.io.write_array(block, window=w)
         np.testing.assert_array_equal(
-            empty.read_array(band=0),
-            ramp_dataset.read_array(band=0),
+            empty.io.read_array(band=0),
+            ramp_dataset.io.read_array(band=0),
             err_msg="block-by-block copy mismatch",
         )
-        empty.to_file(path)
+        empty.io.to_file(path)
 
     def test_block_windows_on_tiled_geotiff(self, tmp_path):
         """A tiled GeoTIFF yields multiple per-tile windows.
@@ -367,7 +367,7 @@ class TestBlockIteration:
             np.zeros((512, 512), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 512), cell_size=1.0, epsg=4326),
         )
-        big.to_file(
+        big.io.to_file(
             path, creation_options=["TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"]
         )
         tiled = Dataset.read_file(path)
@@ -389,7 +389,7 @@ class TestBlockIteration:
         Dataset.from_array(
             np.zeros((512, 512), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 512), cell_size=1.0, epsg=4326),
-        ).to_file(
+        ).io.to_file(
             path, creation_options=["TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"]
         )
         tiled = Dataset.read_file(path)
@@ -506,5 +506,5 @@ class TestBboxlessReadDoesNotResolveEpsg:
             new_callable=mocker.PropertyMock,
             side_effect=AssertionError("epsg must not be read for a bbox-less read"),
         )
-        result = ramp_dataset.read_array(band=0)
+        result = ramp_dataset.io.read_array(band=0)
         assert result.shape == (6, 6), f"expected a full 6x6 read, got {result.shape}"

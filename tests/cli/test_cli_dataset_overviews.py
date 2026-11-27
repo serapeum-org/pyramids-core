@@ -32,9 +32,9 @@ def raster_with_overviews(tmp_path) -> str:
     Dataset.from_array(
         np.arange(256, dtype="float32").reshape(16, 16),
         geo_ref=GeoReference(top_left_corner=(0, 16), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     ds = Dataset.read_file(path, read_only=False)
-    ds.create_overviews(overview_levels=[2, 4])
+    ds.io.create_overviews(overview_levels=[2, 4])
     ds.raster.FlushCache()
     del ds
     return path
@@ -48,7 +48,7 @@ class TestRecreateOverviews:
         assert main(["raster", "overview", "recreate", raster_with_overviews]) == 0
         assert all(
             count > 0
-            for count in Dataset.read_file(raster_with_overviews).overview_count
+            for count in Dataset.read_file(raster_with_overviews).io.overview_count
         )
 
     def test_missing_input_errors(self, tmp_path):

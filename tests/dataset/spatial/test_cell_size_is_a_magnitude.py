@@ -222,7 +222,7 @@ class TestAMagnitudeIsNotACoRegistrationCheck:
         mask = _raster(mask_geotransform)
 
         with pytest.raises(ValueError, match="upper left corner"):
-            source.crop(mask)
+            source.spatial.crop(mask)
 
     def test_an_identically_gridded_mask_is_still_accepted(self):
         """The guard must not have become a blanket refusal.
@@ -233,4 +233,4 @@ class TestAMagnitudeIsNotACoRegistrationCheck:
         """
         source = _raster(NORTH_UP)
 
-        assert source.crop(_raster(NORTH_UP)).shape[-2:] == (6, 8)
+        assert source.spatial.crop(_raster(NORTH_UP)).shape[-2:] == (6, 8)

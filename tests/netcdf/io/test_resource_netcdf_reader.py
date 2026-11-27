@@ -88,7 +88,7 @@ class TestNetcdfResourcesReachTheNetcdfReader:
         Dataset.from_array(
             np.ones((4, 4), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-        ).to_file(str(source))
+        ).io.to_file(str(source))
 
         result = read_resource(str(source))
 
