@@ -186,7 +186,7 @@ class TestCubeNetCDFWriterWrite:
             the output path, and one slab per band per timestep is written.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         # An unpacked timestep: `write` asks each one for its recipe to decide whether
         # one recipe describes the whole cube.
         ds._effective_packing.return_value = (None, None)
@@ -486,7 +486,7 @@ class TestCubeNetCDFWriterStream:
             band's variable name with the (rows, cols) plane.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         writer = _stream_writer(datasets=[ds, ds], files=["f0", "f1"])
         sink = Mock()
         writer._stream(sink, dims={"y": 4, "x": 5}, var_per_band=True)
@@ -504,7 +504,7 @@ class TestCubeNetCDFWriterStream:
             The (band, rows, cols) block is written under the ``data`` variable name.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         writer = _stream_writer(datasets=[ds], files=["f0"])
         sink = Mock()
         writer._stream(sink, dims={"y": 4, "x": 5}, var_per_band=False)
@@ -520,7 +520,7 @@ class TestCubeNetCDFWriterStream:
             message names the source file.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((2, 4, 5))
+        ds._read_array.return_value = np.zeros((2, 4, 5))
         writer = _stream_writer(datasets=[ds], files=["bad.tif"], band_count=1)
         sink = Mock()
         with pytest.raises(AlignmentError, match="bad.tif"):
@@ -533,7 +533,7 @@ class TestCubeNetCDFWriterStream:
             With no ``files`` list, a shape mismatch names the positional timestep.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((3, 4, 5))
+        ds._read_array.return_value = np.zeros((3, 4, 5))
         writer = _stream_writer(datasets=[ds], files=None, band_count=1)
         sink = Mock()
         with pytest.raises(AlignmentError, match="timestep 0"):

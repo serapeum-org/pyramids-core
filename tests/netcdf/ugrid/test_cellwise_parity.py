@@ -48,11 +48,11 @@ _OPS = [
         lambda ds: ds.analysis.clip(8.0, 22.0),
         lambda ds: ds.clip_values(8.0, 22.0),
     ),
-    ("round", lambda ds: ds.analysis.round(0), lambda ds: ds.analysis.round(0)),
+    ("round", lambda ds: ds.analysis.round(0), lambda ds: ds.round(0)),
     (
         "astype_int32",
         lambda ds: ds.analysis.astype(np.int32),
-        lambda ds: ds.analysis.astype(np.int32),
+        lambda ds: ds.astype(np.int32),
     ),
     (
         "astype_float16",
@@ -64,7 +64,7 @@ _OPS = [
         lambda ds: ds.analysis.apply(lambda a: a * 2),
         lambda ds: ds.apply(lambda a: a * 2),
     ),
-    ("fillna", lambda ds: ds.analysis.fillna(0.0), lambda ds: ds.analysis.fillna(0.0)),
+    ("fillna", lambda ds: ds.analysis.fillna(0.0), lambda ds: ds.fillna(0.0)),
 ]
 
 

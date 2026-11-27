@@ -12,6 +12,8 @@ end to end.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import gc
 import logging
 from pathlib import Path
@@ -743,6 +745,9 @@ class _FakeVariable:
         # rather than by the nan handling under test.
         self.no_data_value = tuple(float("nan") for _ in range(12))
         self.__dict__.update(overrides)
+        # The summary reads band units through the bands accessor; mirror the (possibly
+        # overridden) flat list so an "absent units" case stays absent here too.
+        self.bands = SimpleNamespace(band_units=self.band_units)
 
     def _crs_label(self) -> str:
         """The CRS label the real method would produce."""
