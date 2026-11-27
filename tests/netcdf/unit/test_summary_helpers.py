@@ -12,11 +12,10 @@ end to end.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import gc
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
