@@ -10,7 +10,6 @@ import pytest
 from osgeo import gdal
 
 from pyramids.base.georeference import GeoReference
-from pyramids.dataset.engines.cog import _COG
 from pyramids.dataset.cog import facade
 from pyramids.dataset.cog.facade import (
     PYRAMIDS_COG_DEFAULTS,
@@ -21,6 +20,7 @@ from pyramids.dataset.cog.facade import (
     write_cog,
 )
 from pyramids.dataset.dataset import Dataset
+from pyramids.dataset.engines.cog import _COG
 from tests.dataset.cog.conftest import COG_GEOTRANSFORM
 
 pytestmark = pytest.mark.core
