@@ -241,7 +241,7 @@ class TestSpatialSubsetRefused:
         """Regression (M3): subset_by_bounds on a ragged mesh must raise too."""
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="ragged"):
-            ds.subset_by_bounds(0.0, 0.0, 2.5, 1.0)
+            ds.spatial.subset_by_bounds(0.0, 0.0, 2.5, 1.0)
 
 
 class TestNetcdfRoundTrip:

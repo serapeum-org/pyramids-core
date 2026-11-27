@@ -61,7 +61,7 @@ class TestContour:
     def test_crs_propagated_to_geodataframe(self):
         """Contour output GeoDataFrame carries the mesh CRS."""
         ds = _make_ds()
-        ds.set_crs(epsg=4326)
+        ds.spatial.set_crs(epsg=4326)
         gdf = ds.vector.contour(levels=3)
         assert gdf.crs is not None
         assert CRS(gdf.crs).to_epsg() == 4326

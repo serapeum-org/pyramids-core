@@ -355,7 +355,7 @@ class TestSummaries:
     def test_zonal_stats_reprojects_mismatched_zones(self, ramp_file, tmp_path, capsys):
         """Zones in a different CRS are reprojected onto the mesh CRS before summarising."""
         mesh = MeshDataset.read_file(ramp_file)
-        mesh.set_crs(epsg=4326)
+        mesh.spatial.set_crs(epsg=4326)
         geo_mesh = str(tmp_path / "geo.nc")
         mesh.to_file(geo_mesh)
         zones = str(tmp_path / "zones3857.geojson")

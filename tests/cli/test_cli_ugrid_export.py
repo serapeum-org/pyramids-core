@@ -79,7 +79,7 @@ def _crs_mesh(tmp_path: Path) -> str:
         str: Path to the written mesh.
     """
     mesh = MeshDataset.read_file(str(_MESH))
-    mesh.set_crs(epsg=4326)
+    mesh.spatial.set_crs(epsg=4326)
     out = str(tmp_path / "crs_mesh.nc")
     mesh.to_file(out)
     return out

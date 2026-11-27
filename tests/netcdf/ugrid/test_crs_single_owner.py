@@ -39,7 +39,7 @@ class TestCrsSingleOwner:
 
     def test_to_crs_carries_the_crs_to_contour(self):
         """Reprojection's new CRS reaches the geometry exports."""
-        reprojected = _square_mesh(epsg=4326).to_crs(3857)
+        reprojected = _square_mesh(epsg=4326).spatial.to_crs(3857)
         assert reprojected.epsg == 3857
         assert reprojected.vector.contour(3, "depth").crs.to_epsg() == 3857
 
@@ -53,7 +53,7 @@ class TestCrsSingleOwner:
         from pyproj import CRS
 
         ds = _square_mesh(epsg=4326)
-        ds.set_crs(epsg=3857)
+        ds.spatial.set_crs(epsg=3857)
         assert CRS.from_wkt(ds._topology_info.crs_wkt).to_epsg() == 3857
 
     def test_malformed_wkt_is_tolerated_not_raised(self):

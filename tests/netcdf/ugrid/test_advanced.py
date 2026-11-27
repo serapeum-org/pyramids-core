@@ -47,7 +47,7 @@ class TestCrsHandling:
             face_node_connectivity=np.array([[0, 1, 2]]),
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.epsg == 4326, f"Expected EPSG 4326, got {reprojected.epsg}"
         assert reprojected.mesh.node_x[0] < 180, (
             f"Expected longitude < 180, got {reprojected.mesh.node_x[0]}"
@@ -70,7 +70,7 @@ class TestCrsHandling:
             data_locations={"temp": "face"},
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected["temp"].data[0] == pytest.approx(25.0), (
             f"Data should be preserved, got {reprojected['temp'].data[0]}"
         )
@@ -87,7 +87,7 @@ class TestCrsHandling:
             face_node_connectivity=np.array([[0, 1, 2]]),
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.n_node == ds.n_node, "n_node should be preserved"
         assert reprojected.n_face == ds.n_face, "n_face should be preserved"
 
@@ -114,7 +114,7 @@ class TestCrsHandling:
             global_attributes={},
         )
         with pytest.raises(ValueError, match="source CRS is unknown"):
-            ds.to_crs(4326)
+            ds.spatial.to_crs(4326)
 
 
 class TestTimeDimension:

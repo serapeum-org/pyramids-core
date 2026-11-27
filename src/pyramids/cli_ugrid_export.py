@@ -269,7 +269,7 @@ def _cmd_mesh_to_crs(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    reprojected = mesh.to_crs(args.epsg)
+    reprojected = mesh.spatial.to_crs(args.epsg)
     reprojected.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -290,7 +290,7 @@ def _cmd_mesh_set_crs(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    mesh.set_crs(crs=args.crs, epsg=args.epsg)
+    mesh.spatial.set_crs(crs=args.crs, epsg=args.epsg)
     mesh.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

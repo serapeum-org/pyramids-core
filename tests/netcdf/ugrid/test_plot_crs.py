@@ -60,7 +60,7 @@ class TestGlyphCarriesDatasetCRS:
         fall back to EPSG:3857 and misproject.
         """
         ds = _mesh(28992)
-        ds.set_crs(crs=_CUSTOM_WKT)
+        ds.spatial.set_crs(crs=_CUSTOM_WKT)
         assert ds.epsg is None, (
             "precondition: the custom CRS has no EPSG authority code"
         )

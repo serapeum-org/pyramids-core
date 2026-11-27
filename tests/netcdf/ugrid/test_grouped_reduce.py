@@ -62,28 +62,28 @@ class TestResample:
     def test_monthly_bins(self):
         stamps = ["2020-01-01", "2020-01-15", "2020-02-01"]
         values = np.array([[1.0, 1.0], [3.0, 3.0], [10.0, 10.0]])
-        out = _temporal(values, stamps=stamps).resample("1MS", "mean")
+        out = _temporal(values, stamps=stamps).spatial.resample("1MS", "mean")
         assert out["d"].data.tolist() == [[2.0, 2.0], [10.0, 10.0]]
         assert len(out["d"].attributes["time_values"]) == 2
 
     def test_resample_defaults_to_mean(self):
         stamps = ["2020-01-01", "2020-01-02"]
         values = np.array([[2.0, 2.0], [4.0, 4.0]])
-        out = _temporal(values, stamps=stamps).resample("1MS")
+        out = _temporal(values, stamps=stamps).spatial.resample("1MS")
         assert out["d"].data.tolist() == [[3.0, 3.0]]
 
     def test_empty_bins_are_dropped(self):
         # Jan and Mar only: the Feb bin is empty and must not become an all-gap step.
         stamps = ["2020-01-01", "2020-03-01"]
         values = np.array([[1.0, 1.0], [5.0, 5.0]])
-        out = _temporal(values, stamps=stamps).resample("1MS", "sum")
+        out = _temporal(values, stamps=stamps).spatial.resample("1MS", "sum")
         assert out["d"].data.tolist() == [[1.0, 1.0], [5.0, 5.0]]
 
     def test_non_date_coordinates_raise(self):
         values = np.array([[1.0, 1.0], [2.0, 2.0]])
         mesh = _temporal(values, stamps=["not-a-date", "also-not"])
         with pytest.raises(ValueError, match="date-like time coordinates"):
-            mesh.resample("1MS")
+            mesh.spatial.resample("1MS")
 
 
 class TestReduceMinCount:

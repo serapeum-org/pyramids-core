@@ -273,7 +273,7 @@ def _cmd_mesh_subset_by_bounds(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     minx, miny, maxx, maxy = args.bbox
     with map_lookup_errors():
-        result = mesh.subset_by_bounds(minx, miny, maxx, maxy)
+        result = mesh.spatial.subset_by_bounds(minx, miny, maxx, maxy)
     return _write(args, result)
 
 
@@ -292,7 +292,9 @@ def _cmd_mesh_crop(args: argparse.Namespace) -> int:
     mask = None if args.mask is None else FeatureCollection.read_file(args.mask)
     bbox = None if args.bbox is None else tuple(args.bbox)
     with map_lookup_errors():
-        result = mesh.crop(mask=mask, touch=args.touch, bbox=bbox, epsg=args.epsg)
+        result = mesh.spatial.crop(
+            mask=mask, touch=args.touch, bbox=bbox, epsg=args.epsg
+        )
     return _write(args, result)
 
 

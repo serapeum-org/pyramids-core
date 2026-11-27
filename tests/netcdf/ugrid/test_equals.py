@@ -84,7 +84,7 @@ class TestIdentical:
 
     def test_different_crs_wkt_not_identical(self):
         ds1 = _make_ds()
-        ds1.set_crs(epsg=4326)
+        ds1.spatial.set_crs(epsg=4326)
         ds2 = _make_ds()
         assert not ds1.identical(ds2), "Different CRS WKT should be non-identical"
 
@@ -113,16 +113,16 @@ class TestIdentical:
 
     def test_same_crs_both_set_identical(self):
         ds1 = _make_ds()
-        ds1.set_crs(epsg=4326)
+        ds1.spatial.set_crs(epsg=4326)
         ds2 = _make_ds()
-        ds2.set_crs(epsg=4326)
+        ds2.spatial.set_crs(epsg=4326)
         assert ds1.identical(ds2), "Same EPSG should be identical"
 
     def test_different_crs_both_set_not_identical(self):
         ds1 = _make_ds()
-        ds1.set_crs(epsg=4326)
+        ds1.spatial.set_crs(epsg=4326)
         ds2 = _make_ds()
-        ds2.set_crs(epsg=32631)
+        ds2.spatial.set_crs(epsg=32631)
         assert not ds1.identical(ds2), "Different EPSG should not be identical"
 
     def test_both_crs_none_identical(self):

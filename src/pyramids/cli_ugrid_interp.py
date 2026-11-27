@@ -231,7 +231,9 @@ def _cmd_mesh_resample(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.resample(args.freq, args.how, skipna=args.skipna, q=args.q),
+        lambda mesh: mesh.spatial.resample(
+            args.freq, args.how, skipna=args.skipna, q=args.q
+        ),
     )
 
 

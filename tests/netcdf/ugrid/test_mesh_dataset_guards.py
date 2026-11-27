@@ -323,7 +323,7 @@ class TestToCrsRecomputesTheCentres:
             global_attributes={},
             crs_wkt=mesh.crs_wkt,
         )
-        moved = source.to_crs(3857)
+        moved = source.spatial.to_crs(3857)
         assert moved.mesh.has_face_coords is True
         assert moved.mesh.face_x[0] == pytest.approx(55659.745, abs=0.01)
         assert moved.mesh.edge_x[1] == pytest.approx(111319.491, abs=0.01)

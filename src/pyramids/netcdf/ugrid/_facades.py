@@ -34,6 +34,7 @@ from pyramids.netcdf.ugrid.messages import unknown_variable_message
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+    from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
     from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
     from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
@@ -210,6 +211,9 @@ class _MeshFacades:
 
         @property
         def topology(self) -> _MeshTopology: ...
+
+        @property
+        def spatial(self) -> _MeshSpatial: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.

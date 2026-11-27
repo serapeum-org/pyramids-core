@@ -58,11 +58,11 @@ class TestPositionalAxisIsRefused:
     def test_resample_raises_on_a_positional_axis(self, positional):
         assert positional.time_values == [0, 1, 2]
         with pytest.raises(ValueError, match="date-like"):
-            positional.resample("1MS")
+            positional.spatial.resample("1MS")
 
     def test_the_message_points_at_the_alternative(self, positional):
         with pytest.raises(ValueError, match="label sequence"):
-            positional.resample("1MS")
+            positional.spatial.resample("1MS")
 
     def test_reduce_with_an_offset_alias_is_refused_too(self, positional):
         with pytest.raises(ValueError, match="date-like"):
@@ -71,16 +71,16 @@ class TestPositionalAxisIsRefused:
     def test_a_float_positional_axis_is_refused(self):
         dataset = _dataset([0.0, 1.0, 2.0])
         with pytest.raises(ValueError, match="date-like"):
-            dataset.resample("1MS")
+            dataset.spatial.resample("1MS")
 
 
 class TestDateLikeAxisStillWorks:
     def test_two_months_give_two_bins(self, dated):
-        resampled = dated.resample("1MS")
+        resampled = dated.spatial.resample("1MS")
         assert np.asarray(resampled["v"].data).shape[0] == 2
 
     def test_the_bins_hold_the_right_means(self, dated):
-        resampled = dated.resample("1MS")
+        resampled = dated.spatial.resample("1MS")
         # January holds steps 0 and 1; February holds step 2.
         assert np.asarray(resampled["v"].data)[0].tolist() == pytest.approx([2.0, 3.0])
         assert np.asarray(resampled["v"].data)[1].tolist() == pytest.approx([5.0, 6.0])

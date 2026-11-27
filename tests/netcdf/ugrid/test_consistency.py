@@ -276,7 +276,7 @@ class TestEveryDerivationKeepsTheSubclassAndFileName:
 
     def test_to_crs_keeps_the_subclass(self, derived):
         """Reprojection is a derivation like any other."""
-        assert type(derived.to_crs(3857)) is self.Derived
+        assert type(derived.spatial.to_crs(3857)) is self.Derived
 
     def test_sel_time_keeps_the_subclass(self, derived):
         """Selecting a single step keeps the type."""
@@ -289,7 +289,7 @@ class TestEveryDerivationKeepsTheSubclassAndFileName:
     @pytest.mark.parametrize(
         "derive",
         [
-            lambda ds: ds.to_crs(3857),
+            lambda ds: ds.spatial.to_crs(3857),
             lambda ds: ds.sel_time(0),
             lambda ds: ds.sel_time_range(0, 2),
         ],

@@ -110,7 +110,7 @@ class TestFullLifecycle:
             data_locations={"salinity": "face"},
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.epsg == 4326, f"Expected EPSG 4326, got {reprojected.epsg}"
 
         raster = reprojected.to_dataset("salinity", cell_size=0.0005)
@@ -127,7 +127,7 @@ class TestFullLifecycle:
         xmin, ymin, xmax, ymax = ds.bounds
         mid_x = (xmin + xmax) / 2
         mid_y = (ymin + ymax) / 2
-        subset = ds.subset_by_bounds(xmin, ymin, mid_x, mid_y)
+        subset = ds.spatial.subset_by_bounds(xmin, ymin, mid_x, mid_y)
         assert subset.n_face > 0, "Subset should have faces"
 
         raster = subset.to_dataset("mesh2d_node_z", cell_size=500.0)

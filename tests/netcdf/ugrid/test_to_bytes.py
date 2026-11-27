@@ -12,7 +12,7 @@ pytestmark = pytest.mark.core
 
 def _make_ds() -> MeshDataset:
     ds = make_two_triangle_ds()
-    ds.set_crs(epsg=4326)
+    ds.spatial.set_crs(epsg=4326)
     return ds
 
 

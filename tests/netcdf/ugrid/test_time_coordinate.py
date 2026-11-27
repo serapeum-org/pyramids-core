@@ -159,7 +159,7 @@ class TestResampleUnblocked:
         path = tmp_path / "resample.nc"
         ds.to_file(path)
         back = MeshDataset.read_file(path)
-        hourly = back.resample("1h", how="mean")
+        hourly = back.spatial.resample("1h", how="mean")
         assert hourly["depth"].n_time_steps == 2
 
 
