@@ -328,7 +328,7 @@ class _Analysis(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> packed.offset = [1.5]
+              >>> packed.bands.offset = [1.5]
               >>> packed.stats(band=0, approx_ok=False).loc["Band_1"].round(6).tolist()
               [2.5, 4.5, 3.5, 0.816497]
               >>> float(packed.read_array(masked=True).max())

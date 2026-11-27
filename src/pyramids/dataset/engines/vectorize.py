@@ -721,7 +721,7 @@ class _Vector(_Engine["Dataset"]):
 
                 - set the offset to 100.
 
-                    >>> dataset.offset = [100]
+                    >>> dataset.bands.offset = [100]
 
                 - check if the offset has been set.
 
@@ -753,7 +753,7 @@ class _Vector(_Engine["Dataset"]):
 
                 - set the offset to 100, and a scale of 0.1.
 
-                    >>> dataset.offset = [100]
+                    >>> dataset.bands.offset = [100]
                     >>> dataset.scale = [0.1]
 
                 - check if the offset has been set.

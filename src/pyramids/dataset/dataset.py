@@ -1370,10 +1370,10 @@ class Dataset(RasterBase):
     def apply(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.apply <pyramids.dataset.engines.Analysis.apply>`.
 
-        The collaborator returns `None` for `inplace=True` so the facade
-        can substitute the actual `self` (preserving identity); the proxy
-        used by the collaborator's back-reference would otherwise fail
-        `result is ds` checks.
+        For `inplace=True` the collaborator returns the bound dataset (its strong
+        `self._ds`, which is this `self`), so the facade's
+        `return self if result is None else result` hands back the same object and
+        `result is ds` holds.
         """
         warnings.warn(
             "`ds.apply` is deprecated and will be removed in a future release; use "
@@ -1454,8 +1454,8 @@ class Dataset(RasterBase):
         """Facade — delegates to :meth:`Analysis.fill_domain <pyramids.dataset.engines.Analysis.fill_domain>`.
 
         Writes `value` to the cells that already hold data (the domain) and leaves
-        the gaps alone -- the opposite of :meth:`fillna`. The collaborator returns
-        `None` for `inplace=True`; see :meth:`apply` for the rationale.
+        the gaps alone -- the opposite of :meth:`fillna`. For `inplace=True` the
+        collaborator returns the bound dataset; see :meth:`apply` for the rationale.
         """
         warnings.warn(
             "`ds.fill_domain` is deprecated and will be removed in a future release; use "
@@ -1507,8 +1507,8 @@ class Dataset(RasterBase):
             DeprecationWarning,
             stacklevel=2,
         )
-        # The engine returns None for inplace=True; mirror the fill_domain facade and
-        # hand back self so `ds.fill(v, inplace=True)` returns the mutated dataset.
+        # The engine returns the bound dataset for inplace=True; the facade's
+        # pass-through hands it back so `ds.fill(v, inplace=True)` returns it.
         result = self.analysis.fill_domain(*args, **kwargs)
         return self if result is None else result
 
@@ -2435,7 +2435,7 @@ class Dataset(RasterBase):
                 ...     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
                 ... )
                 >>> ds.scale = [0.01]
-                >>> ds.offset = [1.5]
+                >>> ds.bands.offset = [1.5]
                 >>> ds._effective_packing(0)
                 (0.01, 1.5)
                 >>> ds.read_array().tolist()
@@ -2975,9 +2975,9 @@ class Dataset(RasterBase):
     def change_no_data_value(self, *args, **kwargs):
         """Facade — concrete override of the abstract :meth:`RasterBase.change_no_data_value`.
 
-        The collaborator returns `None` for the `inplace=True` path; the
-        facade substitutes `self` for identity preservation, matching
-        :meth:`apply` and :meth:`fill`.
+        For the `inplace=True` path the collaborator returns the bound dataset
+        (this `self`); the facade passes it through, matching :meth:`apply` and
+        :meth:`fill`.
         """
         warnings.warn(
             "`ds.change_no_data_value` is deprecated and will be removed in a future release; use "
@@ -4746,7 +4746,7 @@ class Dataset(RasterBase):
                 ...     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
                 ...     no_data_value=-9999,
                 ... )
-                >>> packed.offset = [273.15]
+                >>> packed.bands.offset = [273.15]
                 >>> packed.band_units = ["K"]
                 >>> converted = packed.convert_units("celsius")
                 >>> [round(value, 6) for value in converted.read_array().ravel().tolist()]

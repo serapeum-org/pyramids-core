@@ -913,7 +913,7 @@ class _IO(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> packed.offset = [1.5]
+              >>> packed.bands.offset = [1.5]
               >>> packed.read_array(unpack=False).tolist()
               [[100, 200], [300, -9999]]
               >>> packed.read_array(masked=True).tolist()
