@@ -338,7 +338,9 @@ class TestAddBand:
         """add_band(inplace=True) should modify the dataset in place."""
         new_arr = np.ones((3, 3), dtype=np.float32) * 99
         result = single_band_dataset.bands.add_band(new_arr, inplace=True)
-        assert result is None, "add_band inplace should return None"
+        assert result is single_band_dataset, (
+            "add_band inplace returns the dataset (chainable)"
+        )
         assert single_band_dataset.band_count == 2, (
             "Band count should increase after inplace add"
         )
