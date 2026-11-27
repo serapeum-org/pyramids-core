@@ -161,7 +161,9 @@ class _MeshSpatial(_MeshEngine):
             # not emit the `subset_by_bounds` deprecation warning from inside `crop`.
             result = self.subset_by_bounds(west, south, east, north)
         elif mask is not None:
-            result = self._ds.clip(mask, touch=touch)
+            # Call the engine sibling, not the deprecated flat facade, so a mask crop does
+            # not emit the `clip` deprecation warning from inside `crop`.
+            result = self._ds.analysis.clip(mask, touch=touch)
         else:
             raise TypeError(
                 "crop requires a `mask` (polygon) or a `bbox` (west, south, east, north) tuple"

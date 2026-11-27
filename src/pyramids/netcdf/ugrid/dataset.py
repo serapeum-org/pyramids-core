@@ -57,7 +57,6 @@ from pyramids.base._reductions import (
     _check_window,
     gaps_as_nan,
     reduce_axis,
-    reduce_by_label,
     reduce_groups,
     validate_min_count,
     window_members,
@@ -90,6 +89,7 @@ from pyramids.netcdf.ugrid._drivers import (
 )
 from pyramids.netcdf.ugrid._facades import _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
+from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
 from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
 from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
 from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
@@ -125,7 +125,6 @@ from pyramids.netcdf.ugrid.models import (
 )
 from pyramids.netcdf.ugrid.spatial import (
     MeshSpatialIndex,
-    clip_mesh,
     subset_mesh_by_faces,
 )
 from pyramids.netcdf.utils import (
@@ -524,6 +523,11 @@ class MeshDataset(_MeshFacades):
         return result
 
     @property
+    def analysis(self) -> _MeshAnalysis:
+        """Analysis engine: cell-wise transforms, focal, sampling, reductions (``mesh.analysis``)."""
+        return _MeshAnalysis(self)
+
+    @property
     def terrain(self) -> _MeshTerrain:
         """Terrain engine: DEM derivatives -- slope, aspect, hillshade (``mesh.terrain``)."""
         return _MeshTerrain(self)
@@ -668,23 +672,17 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         return True
 
     def equals(self, other: object) -> bool:
-        """Value equality — same mesh, same variable values at non-missing positions.
+        """Facade -- delegates to :meth:`_MeshAnalysis.equals`."""
+        warnings.warn(
+            "`mesh.equals` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.equals`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.equals(other)
 
-        Compares node coordinates, face connectivity, CRS (by EPSG),
-        variable names, and per-variable values (ignoring positions
-        where either side is nodata/NaN).
-
-        Args:
-            other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``MeshDataset``.
-
-        Returns:
-            ``True`` when the two datasets are value-equal.
-
-        See Also:
-            identical: Strict comparison that also checks dtype,
-                nodata sentinels, CRS WKT, and global attributes.
-        """
+    def _equals_impl(self, other: object) -> bool:
+        """Implementation of :meth:`_MeshAnalysis.equals`; see that method for the contract."""
         if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
@@ -731,22 +729,17 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         return self._crs_wkt == other._crs_wkt
 
     def identical(self, other: object) -> bool:
-        """Strict equality — same dtype, same values, same nodata, same attributes.
+        """Facade -- delegates to :meth:`_MeshAnalysis.identical`."""
+        warnings.warn(
+            "`mesh.identical` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.identical`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.identical(other)
 
-        Everything must match exactly, including NaN positions, dtypes,
-        nodata sentinels, CRS WKT, and global attributes.
-
-        Args:
-            other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``MeshDataset``.
-
-        Returns:
-            ``True`` when the two datasets are bitwise-identical.
-
-        See Also:
-            equals: Looser comparison that ignores nodata positions,
-                dtype differences, and attribute mismatches.
-        """
+    def _identical_impl(self, other: object) -> bool:
+        """Implementation of :meth:`_MeshAnalysis.identical`; see that method for the contract."""
         if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
@@ -1079,21 +1072,14 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         )
 
     def clip(self, mask: Any, touch: bool = True) -> MeshDataset:
-        """Clip the mesh to a polygon mask.
-
-        Selects faces that intersect (touch=True) or are fully
-        contained within (touch=False) the mask polygon.
-
-        Args:
-            mask: Polygon mask (GeoDataFrame, FeatureCollection,
-                or Shapely geometry).
-            touch: If True, include faces touching the boundary.
-
-        Returns:
-            New MeshDataset with clipped mesh and data.
-        """
-        mesh, data_variables = clip_mesh(self, mask, touch=touch)
-        return self._wrap_subset(mesh, data_variables)
+        """Facade -- delegates to :meth:`_MeshAnalysis.clip`."""
+        warnings.warn(
+            "`mesh.clip` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.clip`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.clip(mask, touch=touch)
 
     def subset_by_bounds(
         self,
@@ -3082,44 +3068,17 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         return self.topology.active_mask(variable_name)
 
     def masked_values(self, variable_name: str) -> np.typing.NDArray:
-        """The variable's values with both ``nodata`` **and** the active mask blanked to NaN.
+        """Facade -- delegates to :meth:`_MeshAnalysis.masked_values`."""
+        warnings.warn(
+            "`mesh.masked_values` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.masked_values`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.masked_values(variable_name)
 
-        The **opt-in** counterpart of a bare ``.data`` read (issue #1331): dry elements (where
-        :meth:`active_mask` is ``False``) become NaN on top of the usual ``nodata`` blanking,
-        so a caller that wants "treat dry as missing" gets it explicitly — the values are
-        never masked by default. Keeps the variable's full shape (every time step and layer),
-        unlike the single-step :meth:`sample` / :meth:`weighted` path. When the variable has no
-        mask the result is just the ``nodata``-blanked values.
-
-        Args:
-            variable_name: Name of the data variable.
-
-        Returns:
-            np.ndarray: The float64 values, dry and missing elements alike as NaN.
-
-        Raises:
-            KeyError: ``variable_name`` is not a data variable of this dataset.
-            ValueError: The variable has no loaded data.
-
-        Examples:
-            - Dry elements become NaN, so a mean over the wet cells is straightforward:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"depth": np.array([2.0, 4.0])},
-                ... )
-                >>> ds["depth"].active = np.array([True, False])
-                >>> ds.masked_values("depth").tolist()
-                [2.0, nan]
-                >>> float(np.nanmean(ds.masked_values("depth")))
-                2.0
-
-                ```
-        """
+    def _masked_values_impl(self, variable_name: str) -> np.typing.NDArray:
+        """Implementation of :meth:`_MeshAnalysis.masked_values`; see that method for the contract."""
         var = self[variable_name]
         data = var.data
         if data is None:
@@ -3266,66 +3225,16 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         method: str = "contains",
         time_index: int = 0,
     ) -> np.typing.NDArray:
-        """Sample a mesh variable at point locations.
-
-        The mesh counterpart of :meth:`pyramids.dataset.Dataset.sample`. Where the raster
-        version inverts an affine geotransform to find the pixel under each point, a mesh
-        resolves the point to an element through :class:`MeshSpatialIndex`: a face-located
-        variable by which face contains the point (``method="contains"``) or the nearest
-        face centroid (``method="nearest"``); a node-located variable by nearest node.
-
-        Args:
-            variable_name: Name of the data variable.
-            x: Query x-coordinate(s), in the mesh CRS.
-            y: Query y-coordinate(s), in the mesh CRS.
-            method: ``"contains"`` (point-in-face, face variables only) or ``"nearest"``.
-                Defaults to ``"contains"``.
-            time_index: Step for a temporal variable. Defaults to 0.
-
-        Returns:
-            numpy.ndarray: One value per query point; NaN where a ``"contains"`` query
-            falls outside every face.
-
-        Raises:
-            ValueError: An unknown ``method``, ``"contains"`` on a non-face variable, or a
-                variable located on edges (unsupported).
-        """
-        var, arr = self._element_values(variable_name, time_index=time_index)
-        xs = np.atleast_1d(np.asarray(x, dtype="float64"))
-        ys = np.atleast_1d(np.asarray(y, dtype="float64"))
-        index = MeshSpatialIndex(self._mesh)
-        if var.location == "face":
-            if method == "contains":
-                idx = index.locate_faces(xs, ys)
-            elif method == "nearest":
-                idx = np.atleast_1d(index.locate_nearest_face(xs, ys)).ravel()
-            else:
-                raise ValueError(
-                    f"sample method must be 'contains' or 'nearest', got {method!r}"
-                )
-        elif var.location == "node":
-            # A node is a point, so "contains" has no meaning here — only "nearest"
-            # applies. Reject "contains" rather than silently doing a nearest lookup, as
-            # the docstring promises.
-            if method == "contains":
-                raise ValueError(
-                    "sample method='contains' is only valid for a face-located variable; "
-                    f"{variable_name!r} is on 'node' — use method='nearest'."
-                )
-            if method != "nearest":
-                raise ValueError(
-                    f"sample method must be 'contains' or 'nearest', got {method!r}"
-                )
-            idx = np.atleast_1d(index.locate_nearest_node(xs, ys)).ravel()
-        else:
-            raise ValueError(
-                f"sample supports 'face' and 'node' variables; {variable_name!r} is on "
-                f"{var.location!r}."
-            )
-        out = np.full(len(xs), np.nan, dtype="float64")
-        inside = idx >= 0
-        out[inside] = arr[idx[inside]]
-        return out
+        """Facade -- delegates to :meth:`_MeshAnalysis.sample`."""
+        warnings.warn(
+            "`mesh.sample` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sample`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.sample(
+            variable_name, x, y, method=method, time_index=time_index
+        )
 
     def weighted(
         self,
@@ -3355,79 +3264,20 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         weighted: bool = True,
         time_index: int = 0,
     ) -> pd.DataFrame:
-        """Aggregate a face variable within polygons, weighted by face area.
-
-        The mesh counterpart of :func:`pyramids.dataset.ops._zonal.zonal_stats`. Each face
-        is assigned to the zone whose polygon contains its centroid (the mesh analogue of a
-        raster pixel's cell centre), then the shared
-        :func:`pyramids.base._reductions.reduce_by_label` reduces the face values per zone.
-        With ``weighted`` (the default) the **averaging** statistics (``mean`` / ``std`` /
-        ``var``) are area-weighted, so a zone's mean is area-exact — a capability the raster
-        path does not yet have. ``sum`` is always the plain Σ value (never an area integral),
-        and ``count`` / ``min`` / ``max`` are weight-invariant.
-
-        Args:
-            zones: Polygons, as a :class:`~pyramids.feature.FeatureCollection` (or any
-                object exposing ``geometry``, ``index`` and ``len``). CRS must match the
-                mesh; reproject first if not.
-            variable_name: Name of a **face-located** data variable.
-            stats: Statistics per zone, any of ``"mean"``, ``"sum"``, ``"min"``, ``"max"``,
-                ``"std"``, ``"var"``, ``"count"``. Defaults to ``("mean",)``.
-            weighted: Area-weight the averaging statistics (``mean`` / ``std`` / ``var``).
-                Defaults to True. ``sum`` / ``count`` / ``min`` / ``max`` are unaffected.
-            time_index: Step for a temporal variable. Defaults to 0.
-
-        Returns:
-            pandas.DataFrame: Indexed like ``zones``; one column per statistic. A zone
-            containing no face centroid is NaN (``count`` ``0.0``).
-
-        Raises:
-            ValueError: The variable is not face-located, or the zones' CRS disagrees with
-                the mesh CRS.
-        """
-        var, arr = self._element_values(variable_name, time_index=time_index)
-        if var.location != "face":
-            raise ValueError(
-                "mesh zonal_stats needs a face-located variable; "
-                f"{variable_name!r} is on {var.location!r}."
-            )
-        zone_crs = getattr(zones, "crs", None)
-        if zone_crs is not None and self.epsg is not None:
-            zone_epsg = zone_crs.to_epsg()
-            if zone_epsg is not None and zone_epsg != self.epsg:
-                raise ValueError(
-                    f"zonal_stats: zones CRS (EPSG:{zone_epsg}) does not match mesh CRS "
-                    f"(EPSG:{self.epsg}). Reproject the zones to the mesh CRS first."
-                )
-        geometries = list(zones.geometry)
-        cx, cy = self._mesh.face_centroids
-        centroids = shapely.points(cx, cy)
-        tree = shapely.STRtree(geometries)
-        # Face centroid within a zone polygon -> that zone. A centroid in more than one
-        # (overlapping zones) keeps the first, mirroring a raster pixel landing in one cell.
-        centroid_idx, zone_idx = tree.query(centroids, predicate="within")
-        labels = np.full(self._mesh.n_face, -1, dtype=np.intp)
-        for face_i, zone_i in zip(centroid_idx, zone_idx):
-            if labels[face_i] == -1:
-                labels[face_i] = zone_i
-        n_zones = len(geometries)
-        columns: dict[str, np.typing.NDArray] = {}
-        # Area weighting applies only to the averaging statistics. `sum` stays the plain
-        # Σ value (a weighted sum would be an area integral — a different quantity, and a
-        # silent surprise); `count` / `min` / `max` are weight-invariant anyway.
-        averaging = [s for s in stats if s in ("mean", "std", "var")]
-        plain = [s for s in stats if s not in ("mean", "std", "var")]
-        if weighted and averaging:
-            columns.update(
-                reduce_by_label(
-                    arr, labels, n_zones, averaging, weights=self._mesh.face_areas
-                )
-            )
-            if plain:
-                columns.update(reduce_by_label(arr, labels, n_zones, plain))
-        else:
-            columns.update(reduce_by_label(arr, labels, n_zones, list(stats)))
-        return pd.DataFrame({stat: columns[stat] for stat in stats}, index=zones.index)
+        """Facade -- delegates to :meth:`_MeshAnalysis.zonal_stats`."""
+        warnings.warn(
+            "`mesh.zonal_stats` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.zonal_stats`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.zonal_stats(
+            zones,
+            variable_name=variable_name,
+            stats=stats,
+            weighted=weighted,
+            time_index=time_index,
+        )
 
     def _temporal_names(self) -> list[str]:
         """Names of the variables that carry a real time dimension."""
@@ -3590,88 +3440,64 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         return self.spatial.resample(freq, how, skipna=skipna, q=q)
 
     def mean(self, *, skipna: bool = True) -> MeshDataset:
-        """Mean over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time mean.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("mean", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.mean`."""
+        warnings.warn(
+            "`mesh.mean` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.mean`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.mean(skipna=skipna)
 
     def sum(self, *, skipna: bool = True) -> MeshDataset:
-        """Sum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time sum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("sum", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.sum`."""
+        warnings.warn(
+            "`mesh.sum` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sum`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.sum(skipna=skipna)
 
     def min(self, *, skipna: bool = True) -> MeshDataset:
-        """Minimum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time minimum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("min", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.min`."""
+        warnings.warn(
+            "`mesh.min` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.min`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.min(skipna=skipna)
 
     def max(self, *, skipna: bool = True) -> MeshDataset:
-        """Maximum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time maximum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("max", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.max`."""
+        warnings.warn(
+            "`mesh.max` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.max`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.max(skipna=skipna)
 
     def std(self, *, skipna: bool = True) -> MeshDataset:
-        """Std-dev over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time std.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("std", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.std`."""
+        warnings.warn(
+            "`mesh.std` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.std`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.std(skipna=skipna)
 
     def var(self, *, skipna: bool = True) -> MeshDataset:
-        """Variance over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time variance.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.selection.reduce("var", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.var`."""
+        warnings.warn(
+            "`mesh.var` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.var`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.var(skipna=skipna)
 
     def _transform_time(
         self, operation: str, fn: Any, active_fn: Any = None

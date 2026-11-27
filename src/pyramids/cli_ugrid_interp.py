@@ -158,7 +158,9 @@ def _cmd_mesh_fillna(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.fillna(args.value, variable_name=args.var))
+    return _apply(
+        args, lambda mesh: mesh.analysis.fillna(args.value, variable_name=args.var)
+    )
 
 
 def _cmd_mesh_ffill(args: argparse.Namespace) -> int:
@@ -201,7 +203,7 @@ def _cmd_mesh_fill_na_spatial(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.fill_na_spatial(
+        lambda mesh: mesh.analysis.fill_na_spatial(
             variable_name=args.var, max_distance=args.max_distance
         ),
     )
@@ -219,7 +221,7 @@ def _cmd_mesh_laplace_interpolate(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.laplace_interpolate(
+        lambda mesh: mesh.analysis.laplace_interpolate(
             variable_name=args.var,
             use_weights=args.use_weights,
             direct_solve=args.direct_solve,

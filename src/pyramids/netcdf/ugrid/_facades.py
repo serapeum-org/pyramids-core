@@ -20,11 +20,8 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 
-from pyramids.base import _array_ops
 from pyramids.base._array_ops import nodata_mask
 from pyramids.netcdf.ugrid import analysis as _analysis
-from pyramids.netcdf.ugrid import fill as _fill
-from pyramids.netcdf.ugrid import focal as _focal
 from pyramids.netcdf.ugrid import graph as _graph
 from pyramids.netcdf.ugrid import interop_xarray as _interop
 from pyramids.netcdf.ugrid import regrid as _regrid
@@ -32,6 +29,7 @@ from pyramids.netcdf.ugrid import vector_ops as _vector_ops
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
@@ -196,6 +194,9 @@ class _MeshFacades:
     if TYPE_CHECKING:  # engine accessors provided by the MeshDataset subclass
 
         @property
+        def analysis(self) -> _MeshAnalysis: ...
+
+        @property
         def terrain(self) -> _MeshTerrain: ...
 
         @property
@@ -355,14 +356,14 @@ class _MeshFacades:
             focal_std: Spread over the same neighbourhood.
             focal_apply: An arbitrary aggregation over the same neighbourhood.
         """
-        var, values, active = self._focal_inputs("focal_mean", variable_name)
-        return _focal.focal_mean(
-            self._mesh,  # type: ignore[attr-defined]
-            values,
-            rings=rings,
-            nodata=var.nodata,
-            active=active,
-            reach=reach,
+        warnings.warn(
+            "`mesh.focal_mean` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.focal_mean`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.focal_mean(
+            rings=rings, variable_name=variable_name, reach=reach
         )
 
     def focal_std(
@@ -394,14 +395,14 @@ class _MeshFacades:
         See Also:
             focal_mean: The mean over the same neighbourhood.
         """
-        var, values, active = self._focal_inputs("focal_std", variable_name)
-        return _focal.focal_std(
-            self._mesh,  # type: ignore[attr-defined]
-            values,
-            rings=rings,
-            nodata=var.nodata,
-            active=active,
-            reach=reach,
+        warnings.warn(
+            "`mesh.focal_std` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.focal_std`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.focal_std(
+            rings=rings, variable_name=variable_name, reach=reach
         )
 
     def focal_apply(
@@ -438,15 +439,14 @@ class _MeshFacades:
         See Also:
             focal_mean: The vectorised mean, when that is all you need.
         """
-        var, values, active = self._focal_inputs("focal_apply", variable_name)
-        return _focal.focal_apply(
-            self._mesh,  # type: ignore[attr-defined]
-            values,
-            func,
-            rings=rings,
-            nodata=var.nodata,
-            active=active,
-            reach=reach,
+        warnings.warn(
+            "`mesh.focal_apply` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.focal_apply`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.focal_apply(
+            func, rings=rings, variable_name=variable_name, reach=reach
         )
 
     def _elevation_nodes(self, operation: str, variable_name: str | None) -> np.ndarray:
@@ -603,12 +603,13 @@ class _MeshFacades:
             bounding_polygon: The whole mesh outline, data or not.
             polygonize: One polygon per distinct value.
         """
-        var = self._facade_variable("footprint", variable_name)
-        return _graph.valid_footprint(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            var.nodata,
+        warnings.warn(
+            "`mesh.footprint` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.footprint`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.analysis.footprint(variable_name)
 
     def exterior_edges(self) -> np.ndarray:
         """Facade -- delegates to :meth:`_MeshTopology.exterior_edges`."""
@@ -786,14 +787,13 @@ class _MeshFacades:
         Returns:
             MeshDataset: A new dataset with the gaps filled.
         """
-        var = self._facade_variable("fill_na_spatial", variable_name)
-        filled = _fill.fill_na_spatial(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            var.location,
-            max_distance=max_distance,
+        warnings.warn(
+            "`mesh.fill_na_spatial` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.fill_na_spatial`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, filled)
+        return self.analysis.fill_na_spatial(variable_name, max_distance=max_distance)
 
     def laplace_interpolate(
         self,
@@ -815,15 +815,15 @@ class _MeshFacades:
         Returns:
             MeshDataset: A new dataset with the interior gaps filled.
         """
-        var = self._facade_variable("laplace_interpolate", variable_name)
-        filled = _fill.laplace_interpolate(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            var.location,
-            use_weights=use_weights,
-            direct_solve=direct_solve,
+        warnings.warn(
+            "`mesh.laplace_interpolate` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.laplace_interpolate`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, filled)
+        return self.analysis.laplace_interpolate(
+            variable_name, use_weights=use_weights, direct_solve=direct_solve
+        )
 
     def polygonize(
         self, variable_name: str | None = None, *, decimals: int | None = None
@@ -864,12 +864,13 @@ class _MeshFacades:
             ValueError: ``variable_name`` is ``None`` while the dataset holds no variable or
                 more than one, or the variable's last axis does not match ``n_face``.
         """
-        var = self._facade_variable("sample_line", variable_name)
-        return _vector_ops.sample_line(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            line,
+        warnings.warn(
+            "`mesh.sample_line` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sample_line`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.analysis.sample_line(line, variable_name)
 
     def burn(
         self,
@@ -1079,13 +1080,13 @@ class _MeshFacades:
                 element.
 
         """
-        var = self._facade_variable("fillna", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result, declared = _array_ops.fillna(
-            values, value, domain=domain, sentinel=var.nodata
+        warnings.warn(
+            "`mesh.fillna` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.fillna`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=declared)
+        return self.analysis.fillna(value, variable_name)
 
     def isnull(self, variable_name: str | None = None) -> Any:
         """Boolean mask of missing positions.
@@ -1101,9 +1102,13 @@ class _MeshFacades:
             fillna: Replace missing values with a constant.
 
         """
-        var = self._facade_variable("isnull", variable_name)
-        result = _array_ops.isnull(np.asarray(var.data), var.nodata)
-        return self._rewrap(var, result)
+        warnings.warn(
+            "`mesh.isnull` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.isnull`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.isnull(variable_name)
 
     def notnull(self, variable_name: str | None = None) -> Any:
         """Boolean mask of non-missing positions.
@@ -1118,9 +1123,13 @@ class _MeshFacades:
             isnull: Inverse mask (missing positions).
 
         """
-        var = self._facade_variable("notnull", variable_name)
-        result = _array_ops.notnull(np.asarray(var.data), var.nodata)
-        return self._rewrap(var, result)
+        warnings.warn(
+            "`mesh.notnull` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.notnull`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.notnull(variable_name)
 
     def clip_values(
         self, lower: Any, upper: Any, variable_name: str | None = None
@@ -1142,18 +1151,13 @@ class _MeshFacades:
             round: Round values to a number of decimal places.
 
         """
-        var = self._facade_variable("clip_values", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result, declared = _array_ops.clip_values(
-            values,
-            lower,
-            upper,
-            domain=domain,
-            sentinel=var.nodata,
-            operation="clip_values",
+        warnings.warn(
+            "`mesh.clip_values` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.clip_values`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=declared)
+        return self.analysis.clip_values(lower, upper, variable_name)
 
     def round(self, decimals: int = 0, variable_name: str | None = None) -> Any:
         """Round variable values to *decimals* decimal places.
@@ -1169,13 +1173,13 @@ class _MeshFacades:
             clip_values: Clamp values to a range.
 
         """
-        var = self._facade_variable("round", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result, declared = _array_ops.round_values(
-            values, decimals, domain=domain, sentinel=var.nodata, operation="round"
+        warnings.warn(
+            "`mesh.round` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.round`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=declared)
+        return self.analysis.round(decimals, variable_name)
 
     def astype(self, dtype: Any, variable_name: str | None = None) -> Any:
         """Cast variable values to a different dtype.
@@ -1191,13 +1195,13 @@ class _MeshFacades:
             round: Round floating-point values before an integer cast.
 
         """
-        var = self._facade_variable("astype", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result, declared = _array_ops.astype_values(
-            values, dtype, domain=domain, sentinel=var.nodata, operation="astype"
+        warnings.warn(
+            "`mesh.astype` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.astype`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=declared)
+        return self.analysis.astype(dtype, variable_name)
 
     def where(
         self,
@@ -1228,16 +1232,13 @@ class _MeshFacades:
             clip_values: Clamp values to a range instead of masking outside it.
             masked_values: Apply the active mask to the values, on demand.
         """
-        var = self._facade_variable("where", variable_name)
-        result = _array_ops.where_values(np.asarray(var.data), cond, other, var.nodata)
-        # With a non-NaN `other`, every no-data element is overwritten by it, so the result no
-        # longer uses the source's sentinel to mark anything and declaring it would claim a
-        # marker that is now an ordinary value. With the default NaN fill the gaps stay
-        # missing, so the sentinel still describes them.
-        overwrites_gaps = other is not None and not (
-            isinstance(other, float) and np.isnan(other)
+        warnings.warn(
+            "`mesh.where` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.where`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=None if overwrites_gaps else _KEEP)
+        return self.analysis.where(cond, other, variable_name)
 
     def apply(self, func: Any, variable_name: str | None = None) -> Any:
         """Apply ``func`` to every element of a variable (issue #1375).
@@ -1260,13 +1261,13 @@ class _MeshFacades:
             astype: Cast values to another dtype.
             round: Round values to a number of decimal places.
         """
-        var = self._facade_variable("apply", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result, declared = _array_ops.apply_values(
-            values, func, domain=domain, sentinel=var.nodata
+        warnings.warn(
+            "`mesh.apply` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.apply`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result, nodata=declared)
+        return self.analysis.apply(func, variable_name)
 
     def get_histogram(
         self,
@@ -1296,8 +1297,13 @@ class _MeshFacades:
             plot_histogram: The same distribution, drawn.
             summary: Per-variable min / max / mean / std over the whole mesh.
         """
-        var = self._facade_variable("get_histogram", variable_name)
-        return _analysis.histogram(np.asarray(var.data), var.nodata, bins, value_range)
+        warnings.warn(
+            "`mesh.get_histogram` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.get_histogram`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.get_histogram(bins, value_range, variable_name)
 
     def isin(self, test_values: Any, variable_name: str | None = None) -> Any:
         """Boolean mask where variable values are in *test_values*.
@@ -1309,12 +1315,13 @@ class _MeshFacades:
         Returns:
             MeshDataset: A new dataset with boolean data.
         """
-        var = self._facade_variable("isin", variable_name)
-        values = np.asarray(var.data)
-        domain = _array_ops.notnull(values, var.nodata)
-        result = _array_ops.isin_values(values, test_values, domain=domain)
-        # A boolean membership mask is a different quantity from the data; it declares no gap.
-        return self._rewrap(var, result, nodata=None)
+        warnings.warn(
+            "`mesh.isin` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.isin`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.isin(test_values, variable_name)
 
     def domain_area(self) -> float:
         """Total area of the mesh domain.
@@ -1327,7 +1334,13 @@ class _MeshFacades:
             count_domain_cells: Count of active faces rather than
                 their total area.
         """
-        return float(self._mesh.face_areas.sum())  # type: ignore[attr-defined]
+        warnings.warn(
+            "`mesh.domain_area` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.domain_area`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.domain_area()
 
     def count_domain_cells(self, variable_name: str | None = None) -> int:
         """Number of active (non-masked) mesh faces.
@@ -1345,14 +1358,13 @@ class _MeshFacades:
             domain_area: Total area rather than face count.
 
         """
-        result = int(self._mesh.n_face)  # type: ignore[attr-defined]
-        if variable_name is not None:
-            mask = self.topology.active_mask(variable_name)
-            if mask is not None:
-                if mask.ndim > 1:
-                    mask = mask[-1]
-                result = int(np.count_nonzero(mask))
-        return result
+        warnings.warn(
+            "`mesh.count_domain_cells` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.count_domain_cells`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.count_domain_cells(variable_name)
 
     def extract(
         self,
@@ -1380,15 +1392,13 @@ class _MeshFacades:
             sample: Interpolated point sampling (existing method on
                 MeshDataset).
         """
-        var = self._facade_variable("extract", variable_name)
-        result = _analysis.extract_points(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            np.atleast_1d(np.asarray(x, dtype=float)),
-            np.atleast_1d(np.asarray(y, dtype=float)),
-            var.location,
+        warnings.warn(
+            "`mesh.extract` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.extract`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.analysis.extract(x, y, variable_name)
 
     def sample_random(
         self,
@@ -1411,14 +1421,13 @@ class _MeshFacades:
                 ones.
 
         """
-        var = self._facade_variable("sample_random", variable_name)
-        result = _analysis.sample_random(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            n,
-            seed,
+        warnings.warn(
+            "`mesh.sample_random` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sample_random`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.analysis.sample_random(n, variable_name, seed)
 
     def contour(
         self,
@@ -1486,10 +1495,13 @@ class _MeshFacades:
         See Also:
             sieve: Remove small connected regions by area threshold.
         """
-        return _graph.proximity(
-            self._mesh,  # type: ignore[attr-defined]
-            np.atleast_1d(np.asarray(target_faces, dtype=np.intp)),
+        warnings.warn(
+            "`mesh.proximity` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.proximity`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.analysis.proximity(target_faces)
 
     def sieve(
         self,
@@ -1517,16 +1529,10 @@ class _MeshFacades:
             proximity: Compute graph distances from target faces.
 
         """
-        var = self._facade_variable("sieve", variable_name)
-        data = np.asarray(var.data)
-        if data.ndim > 1:
-            raise ValueError(
-                "sieve requires a single time step; select a time "
-                "step first to reduce temporal data to 1-D."
-            )
-        result = _graph.sieve(
-            self._mesh,  # type: ignore[attr-defined]
-            data,
-            threshold,
+        warnings.warn(
+            "`mesh.sieve` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sieve`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, result)
+        return self.analysis.sieve(threshold, variable_name)

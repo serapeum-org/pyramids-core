@@ -392,7 +392,7 @@ def _cmd_masked_values(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.masked_values(args.variable)
+        values = mesh.analysis.masked_values(args.variable)
     finite = np.isfinite(values)
     payload = {
         "variable": args.variable,

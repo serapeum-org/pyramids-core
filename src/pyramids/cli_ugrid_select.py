@@ -311,7 +311,7 @@ def _cmd_mesh_clip(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     mask = FeatureCollection.read_file(args.mask)
     with map_lookup_errors():
-        result = mesh.clip(mask, touch=args.touch)
+        result = mesh.analysis.clip(mask, touch=args.touch)
     return _write(args, result)
 
 
@@ -328,7 +328,9 @@ def _cmd_mesh_clip_values(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.clip_values(args.lower, args.upper, variable_name=args.var)
+        result = mesh.analysis.clip_values(
+            args.lower, args.upper, variable_name=args.var
+        )
     return _write(args, result)
 
 
@@ -365,7 +367,9 @@ def _cmd_mesh_where(args: argparse.Namespace) -> int:
     variable_name = _resolve_variable(mesh, cond_var or args.var)
     cond = _build_condition(mesh, variable_name, args.cond)
     with map_lookup_errors():
-        result = mesh.where(cond, other=args.other, variable_name=variable_name)
+        result = mesh.analysis.where(
+            cond, other=args.other, variable_name=variable_name
+        )
     return _write(args, result)
 
 
