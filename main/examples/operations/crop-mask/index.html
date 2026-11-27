@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8841,7 +8841,7 @@ ds.shape, ds.epsg, (len(polys), polys.epsg)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x773f4e2f8830&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76d49941bcb0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8883,10 +8883,10 @@ ds.shape, ds.epsg, (len(polys), polys.epsg)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">clipped</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">polys</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">clipped</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">polys</span><span class="p">)</span>
 <span class="n">clipped</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">clipped</span><span class="o">.</span><span class="n">epsg</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">clipped = ds.crop(mask=polys)
+<div class="clipboard-copy-txt" id="cell-4">clipped = ds.spatial.crop(mask=polys)
 clipped.shape, clipped.epsg</div>
 </div>
 </div>
@@ -8957,7 +8957,7 @@ clipped.shape, clipped.epsg</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x773f45f7b390&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76d490f7d950&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9001,12 +9001,12 @@ clipped.shape, clipped.epsg</div>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span>
 <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
-<span class="n">inner</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
+<span class="n">inner</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
 <span class="n">inner</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">xmin, ymin, xmax, ymax = ds.total_bounds
 dx, dy = (xmax - xmin) / 4, (ymax - ymin) / 4
-inner = ds.crop(bbox=(xmin + dx, ymin + dy, xmax - dx, ymax - dy), epsg=ds.epsg)
+inner = ds.spatial.crop(bbox=(xmin + dx, ymin + dy, xmax - dx, ymax - dy), epsg=ds.epsg)
 inner.shape</div>
 </div>
 </div>
@@ -9077,7 +9077,7 @@ inner.shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x773fc04de5d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76d490e3e0d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9119,11 +9119,11 @@ inner.shape</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_mask</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">get_mask</span><span class="p">()</span>
 <span class="n">valid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">valid</span><span class="p">,</span> <span class="s1">'valid of'</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">size</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">mask = ds.get_mask()
+<div class="clipboard-copy-txt" id="cell-8">mask = ds.analysis.get_mask()
 valid = int((mask &gt; 0).sum())
 mask.shape, valid, 'valid of', mask.size</div>
 </div>

@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8833,7 +8833,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
         <span class="n">geo_ref</span><span class="o">=</span><span class="n">GeoReference</span><span class="p">(</span><span class="n">top_left_corner</span><span class="o">=</span><span class="n">top_left</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="n">cell</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">32630</span><span class="p">),</span>
     <span class="p">)</span>
     <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">WORK</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">.tif'</span><span class="p">)</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span>
 
 
@@ -8880,7 +8880,7 @@ def write_band(name, value, *, cell=10.0, shape=(4, 4), top_left=(600000.0, 5300
         geo_ref=GeoReference(top_left_corner=top_left, cell_size=cell, epsg=32630),
     )
     path = str(WORK / f'{name}.tif')
-    ds.to_file(path)
+    ds.io.to_file(path)
     return path
 
 
@@ -8906,7 +8906,7 @@ print('workspace:', WORK)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>workspace: /tmp/pyramids_stac_nb_gcbgs5qw
+<pre>workspace: /tmp/pyramids_stac_nb_ic9g4p7_
 </pre>
 </div>
 </div>
@@ -9109,14 +9109,14 @@ single.time_length, single.datasets[0].band_count</div>
     <span class="n">items</span><span class="p">,</span> <span class="n">asset</span><span class="o">=</span><span class="p">[</span><span class="s1">'B04'</span><span class="p">,</span> <span class="s1">'B05'</span><span class="p">],</span> <span class="n">alignment</span><span class="o">=</span><span class="n">Alignment</span><span class="p">(</span><span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="p">)</span>
 <span class="n">ds0</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">ds0</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span> <span class="n">ds0</span><span class="o">.</span><span class="n">band_names</span><span class="p">,</span> <span class="n">ds0</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">ds0</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span> <span class="n">ds0</span><span class="o">.</span><span class="n">band_names</span><span class="p">,</span> <span class="n">ds0</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5"># multiple assets -&gt; band axis; Alignment(align=True) resamples the 20 m B05 onto B04's 10 m grid
 cube = DatasetCollection.from_stac(
     items, asset=['B04', 'B05'], alignment=Alignment(align=True)
 )
 ds0 = cube.datasets[0]
-ds0.band_count, ds0.band_names, ds0.read_array().shape</div>
+ds0.band_count, ds0.band_names, ds0.io.read_array().shape</div>
 </div>
 </div>
 </div>
@@ -9178,7 +9178,7 @@ ds0.band_count, ds0.band_names, ds0.read_array().shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a3c0aa81400&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x78052ce91be0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9317,7 +9317,7 @@ mosaic per day.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[8]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a3c02664050&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x780524a10e10&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9360,7 +9360,7 @@ mosaic per day.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">b04</span><span class="p">)</span>
-<span class="n">item</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_stac_item</span><span class="p">(</span>
+<span class="n">item</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_stac_item</span><span class="p">(</span>
     <span class="s1">'scene-0'</span><span class="p">,</span>
     <span class="n">asset_href</span><span class="o">=</span><span class="n">b04</span><span class="p">,</span>
     <span class="n">asset_media_type</span><span class="o">=</span><span class="s1">'image/tiff; application=geotiff'</span><span class="p">,</span>
@@ -9369,7 +9369,7 @@ mosaic per day.</p>
 <span class="n">item</span><span class="p">[</span><span class="s1">'properties'</span><span class="p">][</span><span class="s1">'proj:code'</span><span class="p">],</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">'bbox'</span><span class="p">]]</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-9">ds = Dataset.read_file(b04)
-item = ds.to_stac_item(
+item = ds.io.to_stac_item(
     'scene-0',
     asset_href=b04,
     asset_media_type='image/tiff; application=geotiff',
@@ -9500,14 +9500,14 @@ except ImportError:
 <span class="n">b</span> <span class="o">=</span> <span class="n">write_band</span><span class="p">(</span><span class="s1">'tileB'</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="n">top_left</span><span class="o">=</span><span class="p">(</span><span class="mf">600040.0</span><span class="p">,</span> <span class="mf">5300000.0</span><span class="p">))</span>  <span class="c1"># abuts tileA to the east</span>
 <span class="n">mosaic_items</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">'assets'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'data'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'href'</span><span class="p">:</span> <span class="n">a</span><span class="p">}}},</span> <span class="p">{</span><span class="s1">'assets'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'data'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'href'</span><span class="p">:</span> <span class="n">b</span><span class="p">}}}]</span>
 <span class="n">vrt</span> <span class="o">=</span> <span class="n">build_vrt_from_stac</span><span class="p">(</span><span class="n">mosaic_items</span><span class="p">,</span> <span class="n">asset</span><span class="o">=</span><span class="s1">'data'</span><span class="p">)</span>
-<span class="n">arr</span> <span class="o">=</span> <span class="n">vrt</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span>
+<span class="n">arr</span> <span class="o">=</span> <span class="n">vrt</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span>
 <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># union 4x8; left=tileA(10), right=tileB(20)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-11">a = write_band('tileA', 10, top_left=(600000.0, 5300000.0))
 b = write_band('tileB', 20, top_left=(600040.0, 5300000.0))  # abuts tileA to the east
 mosaic_items = [{'assets': {'data': {'href': a}}}, {'assets': {'data': {'href': b}}}]
 vrt = build_vrt_from_stac(mosaic_items, asset='data')
-arr = vrt.read_array()
+arr = vrt.io.read_array()
 arr.shape, int(arr[0, 0]), int(arr[0, -1])  # union 4x8; left=tileA(10), right=tileB(20)</div>
 </div>
 </div>
@@ -9571,7 +9571,7 @@ tileB (20) on the right.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[12]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7a3c0252ae90&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x78052493b9d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9717,7 +9717,7 @@ resolved_href(items[0], 'B04')</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[15]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>'/tmp/pyramids_stac_nb_gcbgs5qw/B04.tif'</pre>
+<pre>'/tmp/pyramids_stac_nb_ic9g4p7_/B04.tif'</pre>
 </div>
 </div>
 </div>

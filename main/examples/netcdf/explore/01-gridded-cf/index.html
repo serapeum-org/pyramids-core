@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8917,7 +8917,7 @@ print(meta)</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># select the variable to plot</span>
 <span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'tos'</span><span class="p">)</span>
 <span class="c1"># this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline</span>
-<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="c1"># plot in the data's own CRS (lon/lat degrees) — no reprojection</span>
 <span class="n">glyph</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="c1"># draw the Natural Earth coastline on top so the geography stays visible over the data</span>
@@ -8926,7 +8926,7 @@ print(meta)</div>
 <div class="clipboard-copy-txt" id="cell-5"># select the variable to plot
 field = nc.get_variable('tos')
 # this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline
-field = field.wrap_longitude()
+field = field.spatial.wrap_longitude()
 # plot in the data's own CRS (lon/lat degrees) — no reprojection
 glyph = field.plot()
 # draw the Natural Earth coastline on top so the geography stays visible over the data
@@ -8987,7 +8987,7 @@ glyph.add_features("coastline", "50m", zorder=5)</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># select the variable to plot</span>
 <span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'tos'</span><span class="p">)</span>
 <span class="c1"># this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline</span>
-<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="c1"># plot in the data's own CRS (lon/lat degrees) — no reprojection</span>
 <span class="n">glyph</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="c1"># draw the Natural Earth coastline on top so the geography stays visible over the data</span>
@@ -8996,7 +8996,7 @@ glyph.add_features("coastline", "50m", zorder=5)</div>
 <div class="clipboard-copy-txt" id="cell-6"># select the variable to plot
 field = nc.get_variable('tos')
 # this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline
-field = field.wrap_longitude()
+field = field.spatial.wrap_longitude()
 # plot in the data's own CRS (lon/lat degrees) — no reprojection
 glyph = field.plot()
 # draw the Natural Earth coastline on top so the geography stays visible over the data
@@ -9145,7 +9145,7 @@ print('dimensions after reducing time:', dict(time_mean.dimension_sizes))</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3250/942131265.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
+<pre>/tmp/ipykernel_3352/942131265.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
   time_mean = nc.reduce('time', how='mean')
 </pre>
 </div>
@@ -9191,7 +9191,7 @@ print('dimensions after reducing time:', dict(time_mean.dimension_sizes))</div>
     <span class="n">variable_name</span><span class="o">=</span><span class="s1">'tos_slice0'</span><span class="p">,</span>
     <span class="n">path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">),</span>
 <span class="p">)</span>
-<span class="n">nc</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'tos_slice0'</span><span class="p">)</span>
+<span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'tos_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after add:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-9">work = Path(tempfile.mkdtemp())
@@ -9202,7 +9202,7 @@ NetCDF.from_array(
     variable_name='tos_slice0',
     path=str(work / 'derived.nc'),
 )
-nc.add_variable(NetCDF.read_file(str(work / 'derived.nc')), 'tos_slice0')
+nc.variables.add(NetCDF.read_file(str(work / 'derived.nc')), 'tos_slice0')
 print('variables after add:', nc.variable_names)</div>
 </div>
 </div>
@@ -9252,10 +9252,10 @@ print('variables after add:', nc.variable_names)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">remove_variable</span><span class="p">(</span><span class="s1">'tos_slice0'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">'tos_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after remove:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-10">nc.remove_variable('tos_slice0')
+<div class="clipboard-copy-txt" id="cell-10">nc.variables.remove('tos_slice0')
 print('variables after remove:', nc.variable_names)</div>
 </div>
 </div>
@@ -9324,7 +9324,7 @@ print('variables after remove:', nc.variable_names)</div>
 <span class="c1"># select the sea-surface-temperature variable</span>
 <span class="n">tos</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'tos'</span><span class="p">)</span>
 <span class="c1"># this grid is 0..360; wrap to -180..180 so it matches the polygon (defined in -180..180)</span>
-<span class="n">tos</span> <span class="o">=</span> <span class="n">tos</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<span class="n">tos</span> <span class="o">=</span> <span class="n">tos</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="c1"># crop to the polygon (cells outside it become no-data)</span>
 <span class="n">tos_gulf</span> <span class="o">=</span> <span class="n">tos</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">aoi</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'cropped tos bounds:'</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">tos_gulf</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">])</span>
@@ -9353,7 +9353,7 @@ aoi = FeatureCollection(gpd.GeoDataFrame(geometry=[Polygon(region)], crs=4326))
 # select the sea-surface-temperature variable
 tos = nc.get_variable('tos')
 # this grid is 0..360; wrap to -180..180 so it matches the polygon (defined in -180..180)
-tos = tos.wrap_longitude()
+tos = tos.spatial.wrap_longitude()
 # crop to the polygon (cells outside it become no-data)
 tos_gulf = tos.crop(aoi)
 print('cropped tos bounds:', [round(b, 1) for b in tos_gulf.total_bounds])
@@ -9515,11 +9515,11 @@ glyph.add_features("coastline", "50m", zorder=5)</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">work</span> <span class="o">/</span> <span class="s1">'cropped.nc'</span>
-<span class="n">cropped</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="n">cropped</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'saved cropped container to'</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">exists</span><span class="p">())</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-13">out = work / 'cropped.nc'
-cropped.to_file(out)
+cropped.io.to_file(out)
 print('saved cropped container to', out.name, '-&gt;', out.exists())</div>
 </div>
 </div>
@@ -9796,7 +9796,7 @@ print(meta)</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># select the variable to plot</span>
 <span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'ua'</span><span class="p">)</span>
 <span class="c1"># this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline</span>
-<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="c1"># plot in the data's own CRS (lon/lat degrees) — no reprojection</span>
 <span class="n">glyph</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="c1"># draw the Natural Earth coastline on top so the geography stays visible over the data</span>
@@ -9805,7 +9805,7 @@ print(meta)</div>
 <div class="clipboard-copy-txt" id="cell-17"># select the variable to plot
 field = nc.get_variable('ua')
 # this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline
-field = field.wrap_longitude()
+field = field.spatial.wrap_longitude()
 # plot in the data's own CRS (lon/lat degrees) — no reprojection
 glyph = field.plot()
 # draw the Natural Earth coastline on top so the geography stays visible over the data
@@ -9939,7 +9939,7 @@ min / mean / max: -24.159502029418945 5.543607884874514e+18 1.0000000200408773e+
     <span class="n">variable_name</span><span class="o">=</span><span class="s1">'ua_slice0'</span><span class="p">,</span>
     <span class="n">path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">),</span>
 <span class="p">)</span>
-<span class="n">nc</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'ua_slice0'</span><span class="p">)</span>
+<span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'ua_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after add:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-19">work = Path(tempfile.mkdtemp())
@@ -9950,7 +9950,7 @@ NetCDF.from_array(
     variable_name='ua_slice0',
     path=str(work / 'derived.nc'),
 )
-nc.add_variable(NetCDF.read_file(str(work / 'derived.nc')), 'ua_slice0')
+nc.variables.add(NetCDF.read_file(str(work / 'derived.nc')), 'ua_slice0')
 print('variables after add:', nc.variable_names)</div>
 </div>
 </div>
@@ -10008,10 +10008,10 @@ print('variables after add:', nc.variable_names)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">remove_variable</span><span class="p">(</span><span class="s1">'ua_slice0'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">'ua_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after remove:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-20">nc.remove_variable('ua_slice0')
+<div class="clipboard-copy-txt" id="cell-20">nc.variables.remove('ua_slice0')
 print('variables after remove:', nc.variable_names)</div>
 </div>
 </div>
@@ -10338,7 +10338,7 @@ print(meta)</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># select the variable to plot</span>
 <span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'T'</span><span class="p">,</span> <span class="n">x_dim</span><span class="o">=</span><span class="s1">'lon'</span><span class="p">,</span> <span class="n">y_dim</span><span class="o">=</span><span class="s1">'lat'</span><span class="p">)</span>
 <span class="c1"># this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline</span>
-<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="c1"># plot in the data's own CRS (lon/lat degrees) — no reprojection</span>
 <span class="n">glyph</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="c1"># draw the Natural Earth coastline on top so the geography stays visible over the data</span>
@@ -10347,7 +10347,7 @@ print(meta)</div>
 <div class="clipboard-copy-txt" id="cell-25"># select the variable to plot
 field = nc.get_variable('T', x_dim='lon', y_dim='lat')
 # this grid's longitudes run 0..360; wrap them to -180..180 so it lines up with the coastline
-field = field.wrap_longitude()
+field = field.spatial.wrap_longitude()
 # plot in the data's own CRS (lon/lat degrees) — no reprojection
 glyph = field.plot()
 # draw the Natural Earth coastline on top so the geography stays visible over the data
@@ -10481,7 +10481,7 @@ min / mean / max: 180.13432898897665 221.17292953231126 245.30911131068692
     <span class="n">variable_name</span><span class="o">=</span><span class="s1">'T_slice0'</span><span class="p">,</span>
     <span class="n">path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">),</span>
 <span class="p">)</span>
-<span class="n">nc</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'T_slice0'</span><span class="p">)</span>
+<span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'T_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after add:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-27">work = Path(tempfile.mkdtemp())
@@ -10492,7 +10492,7 @@ NetCDF.from_array(
     variable_name='T_slice0',
     path=str(work / 'derived.nc'),
 )
-nc.add_variable(NetCDF.read_file(str(work / 'derived.nc')), 'T_slice0')
+nc.variables.add(NetCDF.read_file(str(work / 'derived.nc')), 'T_slice0')
 print('variables after add:', nc.variable_names)</div>
 </div>
 </div>
@@ -10542,10 +10542,10 @@ print('variables after add:', nc.variable_names)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">remove_variable</span><span class="p">(</span><span class="s1">'T_slice0'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">'T_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after remove:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-28">nc.remove_variable('T_slice0')
+<div class="clipboard-copy-txt" id="cell-28">nc.variables.remove('T_slice0')
 print('variables after remove:', nc.variable_names)</div>
 </div>
 </div>

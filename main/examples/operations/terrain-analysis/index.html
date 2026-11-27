@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8835,7 +8835,7 @@ dem.shape, dem.epsg, dem.cell_size</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x75ee2f71c440&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x786c932e78c0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8877,12 +8877,12 @@ dem.shape, dem.epsg, dem.cell_size</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">slope</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">slope</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">'degrees'</span><span class="p">)</span>
-<span class="n">aspect</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">aspect</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">slope</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">terrain</span><span class="o">.</span><span class="n">slope</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">'degrees'</span><span class="p">)</span>
+<span class="n">aspect</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">terrain</span><span class="o">.</span><span class="n">aspect</span><span class="p">()</span>
 <span class="n">slope</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">slope</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">slope</span><span class="p">)),</span> <span class="n">aspect</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">slope = dem.slope(units='degrees')
-aspect = dem.aspect()
+<div class="clipboard-copy-txt" id="cell-4">slope = dem.terrain.slope(units='degrees')
+aspect = dem.terrain.aspect()
 slope.shape, float(np.nanmin(slope)), float(np.nanmax(slope)), aspect.shape</div>
 </div>
 </div>
@@ -8956,7 +8956,7 @@ slope_ds.plot(band=0, title="Slope (degrees)", cmap="magma")</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x75ee273d1950&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x786c8aeb7250&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8998,10 +8998,10 @@ slope_ds.plot(band=0, title="Slope (degrees)", cmap="magma")</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">shade</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">hillshade</span><span class="p">(</span><span class="n">azimuth</span><span class="o">=</span><span class="mf">315.0</span><span class="p">,</span> <span class="n">altitude</span><span class="o">=</span><span class="mf">45.0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">shade</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">terrain</span><span class="o">.</span><span class="n">hillshade</span><span class="p">(</span><span class="n">azimuth</span><span class="o">=</span><span class="mf">315.0</span><span class="p">,</span> <span class="n">altitude</span><span class="o">=</span><span class="mf">45.0</span><span class="p">)</span>
 <span class="n">shade</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">shade</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">shade</span><span class="p">))</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">shade = dem.hillshade(azimuth=315.0, altitude=45.0)
+<div class="clipboard-copy-txt" id="cell-6">shade = dem.terrain.hillshade(azimuth=315.0, altitude=45.0)
 shade.shape, float(np.nanmin(shade)), float(np.nanmax(shade))</div>
 </div>
 </div>
@@ -9075,7 +9075,7 @@ shade_ds.plot(band=0, title="Hillshade", cmap="gray")</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x75ee272e5450&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x786c8aeb7390&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9118,10 +9118,10 @@ equal to 1). Returns a <code>Dataset</code> whose values are distances in the ra
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dist</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">proximity</span><span class="p">(</span><span class="n">target_values</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">distance_units</span><span class="o">=</span><span class="s1">'GEO'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dist</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">proximity</span><span class="p">(</span><span class="n">target_values</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">distance_units</span><span class="o">=</span><span class="s1">'GEO'</span><span class="p">)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">dist = dem.proximity(target_values=[1], distance_units='GEO')
+<div class="clipboard-copy-txt" id="cell-8">dist = dem.analysis.proximity(target_values=[1], distance_units='GEO')
 type(dist).__name__, dist.shape</div>
 </div>
 </div>
@@ -9185,7 +9185,7 @@ target cell, so values grow with distance from the targets.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x75ee271c4690&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x786c8aeb4a50&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

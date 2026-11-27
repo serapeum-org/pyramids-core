@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8865,7 +8865,7 @@ ds.shape, ds.epsg</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c60230b4590&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x752c6f0c3a10&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8908,19 +8908,19 @@ ds.shape, ds.epsg</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">asc</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'acc.asc'</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">asc</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">asc</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="c1"># Round-trip back to GeoTIFF.</span>
 <span class="n">back</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">asc</span><span class="p">)</span>
 <span class="n">tif_again</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'from_asc.tif'</span>
-<span class="n">back</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">tif_again</span><span class="p">)</span>
+<span class="n">back</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">tif_again</span><span class="p">)</span>
 <span class="n">back</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">tif_again</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-4">asc = WORK / 'acc.asc'
-ds.to_file(asc, band=0)
+ds.io.to_file(asc, band=0)
 # Round-trip back to GeoTIFF.
 back = Dataset.read_file(asc)
 tif_again = WORK / 'from_asc.tif'
-back.to_file(tif_again)
+back.io.to_file(tif_again)
 back.shape, Dataset.read_file(tif_again).shape</div>
 </div>
 </div>
@@ -8991,7 +8991,7 @@ back.shape, Dataset.read_file(tif_again).shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c601aa2e990&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x752c66c94cd0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9034,11 +9034,11 @@ back.shape, Dataset.read_file(tif_again).shape</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">cog</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'acc_cog.tif'</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">cog</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">'COG'</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">cog</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">'COG'</span><span class="p">)</span>
 <span class="n">cog</span><span class="o">.</span><span class="n">exists</span><span class="p">(),</span> <span class="n">cog</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">cog = WORK / 'acc_cog.tif'
-ds.to_file(cog, driver='COG')
+ds.io.to_file(cog, driver='COG')
 cog.exists(), cog.stat().st_size &gt; 0</div>
 </div>
 </div>

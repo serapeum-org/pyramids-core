@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8785,7 +8785,7 @@ grid, one per timestep, that we'll then write, extend, and reduce.</p>
     <span class="p">)</span>
     <span class="n">d</span><span class="o">.</span><span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"rainfall_mm"</span><span class="p">]</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tif"</span>
-    <span class="n">d</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span>
 
 
@@ -8821,7 +8821,7 @@ def make_step(value: float, name: str) -&gt; Path:
     )
     d.band_names = ["rainfall_mm"]
     path = workspace / f"{name}.tif"
-    d.to_file(path)
+    d.io.to_file(path)
     return path
 
 

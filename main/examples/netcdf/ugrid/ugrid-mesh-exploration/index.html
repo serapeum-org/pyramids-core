@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -10031,11 +10031,11 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Save raster to GeoTIFF</span>
-<span class="n">raster</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="s2">"bathymetry_raster.tif"</span><span class="p">)</span>
+<span class="n">raster</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="s2">"bathymetry_raster.tif"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Saved bathymetry_raster.tif"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-21"># Save raster to GeoTIFF
-raster.to_file("bathymetry_raster.tif")
+raster.io.to_file("bathymetry_raster.tif")
 print("Saved bathymetry_raster.tif")</div>
 </div>
 </div>

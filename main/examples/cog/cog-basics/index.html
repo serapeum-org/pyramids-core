@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8921,7 +8921,7 @@ print(ds)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[2]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x723e202212b0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7bd054a10980&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8964,18 +8964,18 @@ overview resampling (continuous float → <code>average</code>) from the source 
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="s2">"scene.tif"</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="s2">"scene.tif"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"wrote"</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span>
 
 <span class="c1"># A named compression profile is a one-word shortcut:</span>
-<span class="n">out_zstd</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="s2">"scene_zstd.tif"</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
+<span class="n">out_zstd</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="s2">"scene_zstd.tif"</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"wrote"</span><span class="p">,</span> <span class="n">out_zstd</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">out = ds.to_cog(workdir / "scene.tif")
+<div class="clipboard-copy-txt" id="cell-3">out = ds.cog.to_cog(workdir / "scene.tif")
 print("wrote", out)
 
 # A named compression profile is a one-word shortcut:
-out_zstd = ds.to_cog(workdir / "scene_zstd.tif", compression="zstd")
+out_zstd = ds.cog.to_cog(workdir / "scene_zstd.tif", compression="zstd")
 print("wrote", out_zstd)</div>
 </div>
 </div>
@@ -8988,8 +8988,8 @@ print("wrote", out_zstd)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>wrote /tmp/pyramids-cog-0ochh1rv/scene.tif
-wrote /tmp/pyramids-cog-0ochh1rv/scene_zstd.tif
+<pre>wrote /tmp/pyramids-cog-r1d467ft/scene.tif
+wrote /tmp/pyramids-cog-r1d467ft/scene_zstd.tif
 </pre>
 </div>
 </div>
@@ -9029,7 +9029,7 @@ pyramid.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">scene</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
-<span class="n">info</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog_info</span><span class="p">()</span>
+<span class="n">info</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"compression:"</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"predictor:  "</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">predictor</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"blocksize:  "</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">blocksize</span><span class="p">)</span>
@@ -9038,7 +9038,7 @@ pyramid.</p>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"overviews:  "</span><span class="p">,</span> <span class="p">[</span><span class="n">o</span><span class="o">.</span><span class="n">decimation</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">info</span><span class="o">.</span><span class="n">overviews</span><span class="p">])</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-4">scene = Dataset.read_file(out)
-info = scene.cog_info()
+info = scene.cog.info()
 print("compression:", info.compression)
 print("predictor:  ", info.predictor)
 print("blocksize:  ", info.blocksize)
@@ -9113,7 +9113,7 @@ COG encoding.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x723e1ff80b90&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7bd054784b90&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9158,12 +9158,12 @@ COG encoding.</p>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">report</span> <span class="o">=</span> <span class="n">validate</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"is_valid:"</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">is_valid</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"errors:  "</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"is_cog (fast probe):"</span><span class="p">,</span> <span class="n">scene</span><span class="o">.</span><span class="n">is_cog</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"is_cog (fast probe):"</span><span class="p">,</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">is_cog</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">report = validate(out)
 print("is_valid:", report.is_valid)
 print("errors:  ", report.errors)
-print("is_cog (fast probe):", scene.is_cog)</div>
+print("is_cog (fast probe):", scene.cog.is_cog)</div>
 </div>
 </div>
 </div>
@@ -9217,29 +9217,29 @@ ranges are fetched). <code>read_tile(z, x, y)</code> reads a Web-Mercator XYZ ti
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Whole-image thumbnail (long edge &lt;= 64 px):</span>
-<span class="n">thumb</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">max_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">thumb</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">max_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"thumbnail shape:"</span><span class="p">,</span> <span class="n">thumb</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
 <span class="c1"># A geographic window, decimated to an explicit output size. The raster spans</span>
 <span class="c1"># lon 0..6, lat 4..10 (top-left (0, 10), 0.01 deg cells, 600x600).</span>
-<span class="n">part</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">read_part</span><span class="p">((</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">),</span> <span class="n">dst_width</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">dst_height</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">part</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">read_part</span><span class="p">((</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">),</span> <span class="n">dst_width</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">dst_height</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"window shape:   "</span><span class="p">,</span> <span class="n">part</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
 <span class="c1"># Sample a single coordinate (reprojected from point_crs when needed):</span>
-<span class="n">value</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="n">point_crs</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="n">point_crs</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"point value:    "</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7"># Whole-image thumbnail (long edge &lt;= 64 px):
-thumb = scene.preview(max_size=64, band=0)
+thumb = scene.cog.preview(max_size=64, band=0)
 print("thumbnail shape:", thumb.shape)
 
 # A geographic window, decimated to an explicit output size. The raster spans
 # lon 0..6, lat 4..10 (top-left (0, 10), 0.01 deg cells, 600x600).
-part = scene.read_part((1.0, 5.0, 3.0, 7.0), dst_width=128, dst_height=128, band=0)
+part = scene.cog.read_part((1.0, 5.0, 3.0, 7.0), dst_width=128, dst_height=128, band=0)
 print("window shape:   ", part.shape)
 
 # Sample a single coordinate (reprojected from point_crs when needed):
-value = scene.point(3.0, 7.0, point_crs=4326, band=0)
+value = scene.cog.point(3.0, 7.0, point_crs=4326, band=0)
 print("point value:    ", float(value))</div>
 </div>
 </div>
@@ -9292,11 +9292,11 @@ file. It accepts the same keywords as <code>to_cog</code>.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blob</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_cog_bytes</span><span class="p">(</span><span class="n">compression</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">Compression</span><span class="p">(</span><span class="n">compress</span><span class="o">=</span><span class="s2">"DEFLATE"</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blob</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog_bytes</span><span class="p">(</span><span class="n">compression</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">Compression</span><span class="p">(</span><span class="n">compress</span><span class="o">=</span><span class="s2">"DEFLATE"</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"bytes:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="s2">"TIFF marker:"</span><span class="p">,</span> <span class="n">blob</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
 <span class="c1"># e.g. boto3: s3.put_object(Bucket=..., Key="scene.tif", Body=blob)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">blob = ds.to_cog_bytes(compression=cog.Compression(compress="DEFLATE"))
+<div class="clipboard-copy-txt" id="cell-8">blob = ds.cog.to_cog_bytes(compression=cog.Compression(compress="DEFLATE"))
 print("bytes:", len(blob), "TIFF marker:", blob[:2])
 # e.g. boto3: s3.put_object(Bucket=..., Key="scene.tif", Body=blob)</div>
 </div>
@@ -9355,7 +9355,7 @@ never mutated.</p>
     <span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float32"</span><span class="p">),</span>
     <span class="n">geo_ref</span><span class="o">=</span><span class="n">GeoReference</span><span class="p">(</span><span class="n">top_left_corner</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">),</span>
 <span class="p">)</span>
-<span class="n">rgb</span> <span class="o">=</span> <span class="n">multi</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span>
+<span class="n">rgb</span> <span class="o">=</span> <span class="n">multi</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span>
     <span class="n">workdir</span> <span class="o">/</span> <span class="s2">"rgb.tif"</span><span class="p">,</span>
     <span class="n">bands</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">BandSelection</span><span class="p">(</span>
         <span class="n">indexes</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># select + reorder bands (0-based)</span>
@@ -9367,7 +9367,7 @@ never mutated.</p>
         <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"source"</span><span class="p">:</span> <span class="s2">"cog-basics-notebook"</span><span class="p">},</span>
     <span class="p">),</span>
 <span class="p">)</span>
-<span class="n">rgb_info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">cog_info</span><span class="p">()</span>
+<span class="n">rgb_info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">"bands:"</span><span class="p">,</span>
     <span class="n">rgb_info</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span>
@@ -9382,7 +9382,7 @@ multi = Dataset.from_array(
     rng.random((4, 64, 64)).astype("float32"),
     geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=0.01, epsg=4326),
 )
-rgb = multi.to_cog(
+rgb = multi.cog.to_cog(
     workdir / "rgb.tif",
     bands=cog.BandSelection(
         indexes=[2, 1, 0],  # select + reorder bands (0-based)
@@ -9394,7 +9394,7 @@ rgb = multi.to_cog(
         metadata={"source": "cog-basics-notebook"},
     ),
 )
-rgb_info = Dataset.read_file(rgb).cog_info()
+rgb_info = Dataset.read_file(rgb).cog.info()
 print(
     "bands:",
     rgb_info.band_count,
@@ -9476,7 +9476,7 @@ print("validate exit code:", rc_val)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>file:        /tmp/pyramids-cog-0ochh1rv/scene.tif
+<pre>file:        /tmp/pyramids-cog-r1d467ft/scene.tif
 is_cog:      True
 driver:      GTiff
 size:        600 x 600 (1 band(s))
@@ -9490,7 +9490,7 @@ blocksize:   (512, 512)
 overviews:   1
   - level 0: 300 x 300 (1/2)
 info exit code: 0
-/tmp/pyramids-cog-0ochh1rv/scene.tif: valid COG
+/tmp/pyramids-cog-r1d467ft/scene.tif: valid COG
 validate exit code: 0
 </pre>
 </div>

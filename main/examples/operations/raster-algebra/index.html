@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8842,7 +8842,7 @@ ds.shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c58f0ef4440&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x74467926b8c0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8884,29 +8884,29 @@ ds.shape</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">doubled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">doubled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
 <span class="p">(</span>
     <span class="nb">type</span><span class="p">(</span><span class="n">doubled</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
     <span class="nb">float</span><span class="p">(</span>
         <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-                <span class="n">doubled</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span> <span class="o">==</span> <span class="n">doubled</span><span class="o">.</span><span class="n">no_data_value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">doubled</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span> <span class="o">==</span> <span class="n">doubled</span><span class="o">.</span><span class="n">no_data_value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
-                <span class="n">doubled</span><span class="o">.</span><span class="n">read_array</span><span class="p">(),</span>
+                <span class="n">doubled</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">(),</span>
             <span class="p">)</span>
         <span class="p">)</span>
     <span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">doubled = ds.apply(lambda a: a * 2)
+<div class="clipboard-copy-txt" id="cell-4">doubled = ds.analysis.apply(lambda a: a * 2)
 (
     type(doubled).__name__,
     float(
         np.nanmax(
             np.where(
-                doubled.read_array() == doubled.no_data_value[0],
+                doubled.io.read_array() == doubled.no_data_value[0],
                 np.nan,
-                doubled.read_array(),
+                doubled.io.read_array(),
             )
         )
     ),
@@ -8980,7 +8980,7 @@ ds.shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c58e8825d10&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x744670eaf390&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9023,11 +9023,11 @@ ds.shape</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">sen</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'geotiff'</span> <span class="o">/</span> <span class="s1">'sentinel_crop.tif'</span><span class="p">)</span>
-<span class="n">incremented</span> <span class="o">=</span> <span class="n">sen</span><span class="o">.</span><span class="n">map_blocks</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="n">incremented</span> <span class="o">=</span> <span class="n">sen</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">map_blocks</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">incremented</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">incremented</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">sen = Dataset.read_file(DATA / 'geotiff' / 'sentinel_crop.tif')
-incremented = sen.map_blocks(lambda a: a + 1, tile_size=128)
+incremented = sen.io.map_blocks(lambda a: a + 1, tile_size=128)
 type(incremented).__name__, incremented.shape</div>
 </div>
 </div>
@@ -9090,7 +9090,7 @@ type(incremented).__name__, incremented.shape</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c58e8a26210&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x744670d16490&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9134,12 +9134,16 @@ class footprint. Pass <code>raw_values=True</code> to also get the raw grouped v
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">classes</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'geotiff'</span> <span class="o">/</span> <span class="s1">'sentinel-classes.tif'</span><span class="p">)</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">sen</span><span class="p">)</span>
-<span class="n">zones</span> <span class="o">=</span> <span class="n">sen</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">classes</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span> <span class="s1">'count'</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">classes</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'geotiff'</span> <span class="o">/</span> <span class="s1">'sentinel-classes.tif'</span><span class="p">)</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">align</span><span class="p">(</span>
+    <span class="n">sen</span>
+<span class="p">)</span>
+<span class="n">zones</span> <span class="o">=</span> <span class="n">sen</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">classes</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span> <span class="s1">'count'</span><span class="p">))</span>
 <span class="n">zones</span><span class="p">[[</span><span class="s1">'mean'</span><span class="p">,</span> <span class="s1">'count'</span><span class="p">]]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">classes = Dataset.read_file(DATA / 'geotiff' / 'sentinel-classes.tif').align(sen)
-zones = sen.zonal_stats(classes, stats=('mean', 'count'))
+<div class="clipboard-copy-txt" id="cell-8">classes = Dataset.read_file(DATA / 'geotiff' / 'sentinel-classes.tif').spatial.align(
+    sen
+)
+zones = sen.analysis.zonal_stats(classes, stats=('mean', 'count'))
 zones[['mean', 'count']]</div>
 </div>
 </div>

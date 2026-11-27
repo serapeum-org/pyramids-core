@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8937,7 +8937,7 @@ ds.shape, ds.band_count, ds.epsg</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7890f59d4ad0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7fd743e506e0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9052,7 +9052,7 @@ NetCDF.read_file(out).variable_names</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7890ed3682d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7fd73bbfd6d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9104,7 +9104,7 @@ and they become the variable names (otherwise you get <code>Band_1</code>, <code
 <span class="p">)</span>
 <span class="n">img</span><span class="o">.</span><span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'red'</span><span class="p">,</span> <span class="s1">'green'</span><span class="p">,</span> <span class="s1">'blue'</span><span class="p">,</span> <span class="s1">'nir'</span><span class="p">]</span>
 <span class="n">rgbn_tif</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'rgbn.tif'</span>
-<span class="n">img</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">rgbn_tif</span><span class="p">)</span>
+<span class="n">img</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">rgbn_tif</span><span class="p">)</span>
 <span class="n">img</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span> <span class="n">img</span><span class="o">.</span><span class="n">band_names</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7"># A synthetic 4-band image (red / green / blue / nir).
@@ -9116,7 +9116,7 @@ img = Dataset.from_array(
 )
 img.band_names = ['red', 'green', 'blue', 'nir']
 rgbn_tif = WORK / 'rgbn.tif'
-img.to_file(rgbn_tif)
+img.io.to_file(rgbn_tif)
 img.band_count, img.band_names</div>
 </div>
 </div>
@@ -9379,7 +9379,7 @@ exported</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[12]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7890ed67f610&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7fd73bbfd450&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

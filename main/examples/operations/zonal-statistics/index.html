@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8852,10 +8852,10 @@ zones.plot()</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stats</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">zones</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span> <span class="s1">'min'</span><span class="p">,</span> <span class="s1">'max'</span><span class="p">,</span> <span class="s1">'sum'</span><span class="p">,</span> <span class="s1">'count'</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stats</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">zones</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span> <span class="s1">'min'</span><span class="p">,</span> <span class="s1">'max'</span><span class="p">,</span> <span class="s1">'sum'</span><span class="p">,</span> <span class="s1">'count'</span><span class="p">))</span>
 <span class="n">stats</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">stats = ds.zonal_stats(zones, stats=('mean', 'min', 'max', 'sum', 'count'))
+<div class="clipboard-copy-txt" id="cell-4">stats = ds.analysis.zonal_stats(zones, stats=('mean', 'min', 'max', 'sum', 'count'))
 stats</div>
 </div>
 </div>

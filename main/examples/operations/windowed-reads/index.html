@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8857,7 +8857,7 @@ ds.shape, ds.epsg</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x79ed508ec590&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x73d1e7b67a10&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8899,10 +8899,10 @@ ds.shape, ds.epsg</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">patch</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">])</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">patch</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">])</span>
 <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">patch</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">patch = ds.read_array(window=[50, 50, 100, 100])
+<div class="clipboard-copy-txt" id="cell-4">patch = ds.io.read_array(window=[50, 50, 100, 100])
 np.asarray(patch).shape</div>
 </div>
 </div>
@@ -8953,12 +8953,12 @@ np.asarray(patch).shape</div>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">total_bounds</span>
 <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
-<span class="n">part</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">read_part</span><span class="p">((</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">bbox_crs</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
+<span class="n">part</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">read_part</span><span class="p">((</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">bbox_crs</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
 <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">part</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5">xmin, ymin, xmax, ymax = ds.total_bounds
 dx, dy = (xmax - xmin) / 4, (ymax - ymin) / 4
-part = ds.read_part((xmin + dx, ymin + dy, xmax - dx, ymax - dy), bbox_crs=ds.epsg)
+part = ds.cog.read_part((xmin + dx, ymin + dy, xmax - dx, ymax - dy), bbox_crs=ds.epsg)
 np.asarray(part).shape</div>
 </div>
 </div>
@@ -9008,10 +9008,14 @@ so you can see exactly which sub-region the window covers against the full raste
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span>
+    <span class="n">bbox</span><span class="o">=</span><span class="p">(</span><span class="n">xmin</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">+</span> <span class="n">dy</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">dx</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">dy</span><span class="p">),</span> <span class="n">epsg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span>
+<span class="p">)</span>
 <span class="n">subset</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"inner-bbox subset"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">subset = ds.crop(bbox=(xmin + dx, ymin + dy, xmax - dx, ymax - dy), epsg=ds.epsg)
+<div class="clipboard-copy-txt" id="cell-6">subset = ds.spatial.crop(
+    bbox=(xmin + dx, ymin + dy, xmax - dx, ymax - dy), epsg=ds.epsg
+)
 subset.plot(band=0, title="inner-bbox subset")</div>
 </div>
 </div>
@@ -9024,7 +9028,7 @@ subset.plot(band=0, title="inner-bbox subset")</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x79ed485860d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x73d1df7c87d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9066,10 +9070,10 @@ subset.plot(band=0, title="inner-bbox subset")</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">tiles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">128</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">tiles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">128</span><span class="p">))</span>
 <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">),</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7">tiles = list(ds.get_tile(size=128))
+<div class="clipboard-copy-txt" id="cell-7">tiles = list(ds.io.get_tile(size=128))
 len(tiles), tiles[0].shape</div>
 </div>
 </div>
@@ -9118,10 +9122,10 @@ len(tiles), tiles[0].shape</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blocks</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_block_arrangement</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blocks</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_block_arrangement</span><span class="p">()</span>
 <span class="nb">list</span><span class="p">(</span><span class="n">blocks</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">blocks = ds.get_block_arrangement()
+<div class="clipboard-copy-txt" id="cell-8">blocks = ds.io.get_block_arrangement()
 list(blocks.columns), len(blocks)</div>
 </div>
 </div>

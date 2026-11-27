@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8887,7 +8887,7 @@ everything in the <a href="../../dask/dataset.ipynb">Dataset quickstart</a> appl
 <span class="n">grid</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span><span class="s1">'mesh2d_node_z'</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="p">(</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">/</span> <span class="mi">40</span><span class="p">)</span>
 
 <span class="n">tif</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'pyramids-ugrid-'</span><span class="p">))</span> <span class="o">/</span> <span class="s1">'node_z.tif'</span>
-<span class="n">grid</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">tif</span><span class="p">)</span>  <span class="c1"># persist the interpolated raster</span>
+<span class="n">grid</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">tif</span><span class="p">)</span>  <span class="c1"># persist the interpolated raster</span>
 <span class="n">gridded</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">tif</span><span class="p">)</span>  <span class="c1"># reopen file-backed</span>
 <span class="n">gridded</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">gridded</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="n">gridded</span><span class="o">.</span><span class="n">cell_size</span>
 </pre></div>
@@ -8899,7 +8899,7 @@ xmin, ymin, xmax, ymax = u.bounds
 grid = u.to_dataset('mesh2d_node_z', cell_size=(xmax - xmin) / 40)
 
 tif = Path(tempfile.mkdtemp(prefix='pyramids-ugrid-')) / 'node_z.tif'
-grid.to_file(tif)  # persist the interpolated raster
+grid.io.to_file(tif)  # persist the interpolated raster
 gridded = Dataset.read_file(tif)  # reopen file-backed
 gridded.shape, gridded.epsg, gridded.cell_size</div>
 </div>

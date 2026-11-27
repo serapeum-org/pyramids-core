@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8817,10 +8817,10 @@ dem.shape</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">image</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">to_image</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'terrain'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">image</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">to_image</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'terrain'</span><span class="p">)</span>
 <span class="n">image</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">image = dem.to_image(band=0, cmap='terrain')
+<div class="clipboard-copy-txt" id="cell-3">image = dem.analysis.to_image(band=0, cmap='terrain')
 image</div>
 </div>
 </div>
@@ -8937,13 +8937,13 @@ IPyImage(png)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">plot_histogram</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">histogram</span><span class="p">()</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span>
 <span class="n">hist_png</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'dem_hist.png'</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">hist_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">'tight'</span><span class="p">)</span>
 <span class="n">IPyImage</span><span class="p">(</span><span class="n">hist_png</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">result = dem.plot_histogram()
+<div class="clipboard-copy-txt" id="cell-5">result = dem.glyph.histogram()
 fig = result[0] if isinstance(result, tuple) else result
 hist_png = WORK / 'dem_hist.png'
 fig.savefig(hist_png, dpi=80, bbox_inches='tight')

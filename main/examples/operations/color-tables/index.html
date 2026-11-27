@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8751,13 +8751,13 @@ DATA.is_dir(), WORK.is_dir()</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyramids.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
 
 <span class="n">paletted</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'geotiff'</span> <span class="o">/</span> <span class="s1">'coello-with-color-table.tif'</span><span class="p">)</span>
-<span class="n">ct</span> <span class="o">=</span> <span class="n">paletted</span><span class="o">.</span><span class="n">color_table</span>
+<span class="n">ct</span> <span class="o">=</span> <span class="n">paletted</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">color_table</span>
 <span class="nb">list</span><span class="p">(</span><span class="n">ct</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ct</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">from pyramids.dataset import Dataset
 
 paletted = Dataset.read_file(DATA / 'geotiff' / 'coello-with-color-table.tif')
-ct = paletted.color_table
+ct = paletted.bands.color_table
 list(ct.columns), len(ct)</div>
 </div>
 </div>
@@ -8933,7 +8933,7 @@ list(ct.columns), len(ct)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76caf9fc0590&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x75403d593a10&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8983,8 +8983,8 @@ its colour.</p>
 <span class="c1"># read_only=False so tagging band colours persists to the raster (the setter</span>
 <span class="c1"># rejects a read-only on-disk handle to avoid a silent PAM sidecar spill).</span>
 <span class="n">rgb</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">rgb_path</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">rgb</span><span class="o">.</span><span class="n">band_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">'red'</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">'green'</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">'blue'</span><span class="p">}</span>
-<span class="n">rgb</span><span class="o">.</span><span class="n">band_color</span><span class="p">,</span> <span class="n">rgb</span><span class="o">.</span><span class="n">get_band_by_color</span><span class="p">(</span><span class="s1">'green'</span><span class="p">)</span>
+<span class="n">rgb</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">band_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">'red'</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">'green'</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">'blue'</span><span class="p">}</span>
+<span class="n">rgb</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">band_color</span><span class="p">,</span> <span class="n">rgb</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">get_band_by_color</span><span class="p">(</span><span class="s1">'green'</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5">from pyramids.dataset.merge import stack_bands
 
@@ -8993,8 +8993,8 @@ stack_bands([DATA / 'acc4000.tif'] * 3, path=rgb_path)
 # read_only=False so tagging band colours persists to the raster (the setter
 # rejects a read-only on-disk handle to avoid a silent PAM sidecar spill).
 rgb = Dataset.read_file(rgb_path, read_only=False)
-rgb.band_color = {0: 'red', 1: 'green', 2: 'blue'}
-rgb.band_color, rgb.get_band_by_color('green')</div>
+rgb.bands.band_color = {0: 'red', 1: 'green', 2: 'blue'}
+rgb.bands.band_color, rgb.bands.get_band_by_color('green')</div>
 </div>
 </div>
 </div>
@@ -9065,7 +9065,7 @@ colour interpretation labels.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x76caf1caf250&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7540351f0cd0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

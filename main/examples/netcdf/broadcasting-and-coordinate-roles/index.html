@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9162,9 +9162,9 @@ than the raster is refused.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stack</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="nb">bool</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">band_count</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stack</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="nb">bool</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">band_count</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7">stack.where(np.ones((3, 3), bool), 0.0).band_count</div>
+<div class="clipboard-copy-txt" id="cell-7">stack.analysis.where(np.ones((3, 3), bool), 0.0).band_count</div>
 </div>
 </div>
 </div>
@@ -9409,12 +9409,12 @@ first and they are - which is precisely what <code>broadcast_equals</code> answe
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="p">(</span>
-    <span class="n">mask</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">lifted</span><span class="p">),</span>
+    <span class="n">mask</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">lifted</span><span class="p">),</span>
     <span class="n">mask</span><span class="o">.</span><span class="n">broadcast_equals</span><span class="p">(</span><span class="n">lifted</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-11">(
-    mask.equals(lifted),
+    mask.analysis.equals(lifted),
     mask.broadcast_equals(lifted),
 )</div>
 </div>
@@ -9640,6 +9640,14 @@ The variable itself was never moved or copied: only its role changed, and it sti
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
 <div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>/tmp/ipykernel_3268/906395820.py:2: DeprecationWarning: `data_vars` is deprecated and will be removed in a future release; use `variables`.
+  'lsp' in promoted.data_vars,
+</pre>
+</div>
+</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[15]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">

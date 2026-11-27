@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8781,7 +8781,7 @@ build a temp workspace with a small synthetic raster.</p>
 <span class="c1"># `to_zarr` builds a dask graph that reopens the source by path, so round-trip the</span>
 <span class="c1"># in-memory array through a temp GeoTIFF first — exactly how a real workflow would start.</span>
 <span class="n">source_tif</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"source.tif"</span>
-<span class="n">mem</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">)</span>
+<span class="n">mem</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">)</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">ds</span><span class="o">.</span><span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"red"</span><span class="p">,</span> <span class="s2">"nir"</span><span class="p">]</span>
 <span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">cell_size</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">epsg</span>
@@ -8809,7 +8809,7 @@ mem.band_names = ["red", "nir"]
 # `to_zarr` builds a dask graph that reopens the source by path, so round-trip the
 # in-memory array through a temp GeoTIFF first — exactly how a real workflow would start.
 source_tif = workspace / "source.tif"
-mem.to_file(source_tif)
+mem.io.to_file(source_tif)
 ds = Dataset.read_file(source_tif, read_only=False)
 ds.band_names = ["red", "nir"]
 ds.shape, ds.cell_size, ds.epsg</div>
@@ -8851,7 +8851,7 @@ it. Default chunking is parallel-friendly; default compressor is whatever zarr v
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">store</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"basic.zarr"</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
 
 <span class="n">rt</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
 
@@ -8864,7 +8864,7 @@ it. Default chunking is parallel-friendly; default compressor is whatever zarr v
 <span class="nb">print</span><span class="p">(</span><span class="s2">"round-trip OK"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">store = workspace / "basic.zarr"
-ds.to_zarr(store)
+ds.io.to_zarr(store)
 
 rt = Dataset.from_zarr(store)
 
@@ -9046,7 +9046,7 @@ in a list automatically; you can also pass a list yourself.</li>
         <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"zstd.zarr"</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">]:</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">&gt;13</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">store_size</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
 
 <span class="c1"># All three variants still round-trip identically:</span>
@@ -9073,7 +9073,7 @@ for label, kwargs, target in [
         workspace / "zstd.zarr",
     ),
 ]:
-    ds.to_zarr(target, **kwargs)
+    ds.io.to_zarr(target, **kwargs)
     print(f"{label:&gt;13} -&gt; {store_size(target):&gt;8} bytes")
 
 # All three variants still round-trip identically:
@@ -9122,7 +9122,7 @@ alongside the full-resolution <code>data</code>. pyramids also writes an OGC / O
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ms_store</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"pyramid.zarr"</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">ms_store</span><span class="p">,</span> <span class="n">overview_factors</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">overview_resampling</span><span class="o">=</span><span class="s2">"average"</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">ms_store</span><span class="p">,</span> <span class="n">overview_factors</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">overview_resampling</span><span class="o">=</span><span class="s2">"average"</span><span class="p">)</span>
 
 <span class="n">g_ms</span> <span class="o">=</span> <span class="n">zarr</span><span class="o">.</span><span class="n">open_group</span><span class="p">(</span><span class="n">ms_store</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"arrays    :"</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">g_ms</span><span class="o">.</span><span class="n">array_keys</span><span class="p">()))</span>
@@ -9133,7 +9133,7 @@ alongside the full-resolution <code>data</code>. pyramids also writes an OGC / O
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"shape (</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">) : </span><span class="si">{</span><span class="n">lvl</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">  cell_size: </span><span class="si">{</span><span class="n">lvl</span><span class="o">.</span><span class="n">cell_size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6">ms_store = workspace / "pyramid.zarr"
-ds.to_zarr(ms_store, overview_factors=[2, 4], overview_resampling="average")
+ds.io.to_zarr(ms_store, overview_factors=[2, 4], overview_resampling="average")
 
 g_ms = zarr.open_group(ms_store, mode="r")
 print("arrays    :", sorted(g_ms.array_keys()))

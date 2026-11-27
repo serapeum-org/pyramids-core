@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -7918,7 +7918,7 @@ pixels onto a regular grid.</p>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># four corner tie points in EPSG:4326</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">raw</span><span class="o">.</span><span class="n">set_gcps</span><span class="p">(</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">raw</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">set_gcps</span><span class="p">(</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="p">[</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="n">GroundControlPoint</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">50.0</span><span class="p">),</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="n">GroundControlPoint</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mf">11.0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">50.0</span><span class="p">),</span>
@@ -7928,9 +7928,9 @@ pixels onto a regular grid.</p>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">projection</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">)</span>
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="nb">print</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">gcp_count</span><span class="p">,</span> <span class="n">raw</span><span class="o">.</span><span class="n">has_gcps</span><span class="p">)</span>          <span class="c1"># 4 True</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="nb">print</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">gcp_count</span><span class="p">,</span> <span class="n">raw</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">has_gcps</span><span class="p">)</span>          <span class="c1"># 4 True</span>
 <a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="n">georeferenced</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">georeference</span><span class="p">()</span>          <span class="c1"># warp from the GCPs (polynomial order 1)</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="n">georeferenced</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">georeference</span><span class="p">()</span>          <span class="c1"># warp from the GCPs (polynomial order 1)</span>
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="nb">print</span><span class="p">(</span><span class="n">georeferenced</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>                   <span class="c1"># 4326</span>
 <a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="nb">print</span><span class="p">(</span><span class="n">georeferenced</span><span class="o">.</span><span class="n">bbox</span><span class="p">)</span>                   <span class="c1"># ~ [10, 49, 11, 50]</span>
 </code></pre></div>
@@ -7950,10 +7950,10 @@ pixels onto a regular grid.</p>
 with <code>ds.rpcs</code>, attach them with <code>set_rpcs</code>, and remove terrain distortion with <code>orthorectify</code> —
 ideally against a DEM:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"scene.tif"</span><span class="p">)</span>     <span class="c1"># a scene whose RPCs GDAL read on open</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">has_rpcs</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">ortho</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">orthorectify</span><span class="p">(</span><span class="n">dem</span><span class="o">=</span><span class="s2">"dem.tif"</span><span class="p">)</span>          <span class="c1"># DEM-based orthorectification</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">has_rpcs</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">ortho</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">orthorectify</span><span class="p">(</span><span class="n">dem</span><span class="o">=</span><span class="s2">"dem.tif"</span><span class="p">)</span>          <span class="c1"># DEM-based orthorectification</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="c1"># or, with no DEM, a constant elevation:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">ortho</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">orthorectify</span><span class="p">(</span><span class="n">rpc_height</span><span class="o">=</span><span class="mf">120.0</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">ortho</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">georef</span><span class="o">.</span><span class="n">orthorectify</span><span class="p">(</span><span class="n">rpc_height</span><span class="o">=</span><span class="mf">120.0</span><span class="p">)</span>
 </code></pre></div>
 <p>From the command line:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pyramids<span class="w"> </span>raster<span class="w"> </span>orthorectify<span class="w"> </span>scene.tif<span class="w"> </span>ortho.tif<span class="w"> </span>--dem<span class="w"> </span>dem.tif

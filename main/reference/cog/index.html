@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -12794,7 +12794,7 @@ validation.</p>
 <a id="__codelineno-0-494" name="__codelineno-0-494"></a>    <span class="c1"># there. write_cog only normalises the input and forwards the caller's</span>
 <a id="__codelineno-0-495" name="__codelineno-0-495"></a>    <span class="c1"># overrides as `extra`, so write_cog and a direct ds.to_cog(...) produce</span>
 <a id="__codelineno-0-496" name="__codelineno-0-496"></a>    <span class="c1"># identical output for identical input.</span>
-<a id="__codelineno-0-497" name="__codelineno-0-497"></a>    <span class="n">output_path</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">options</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a>    <span class="n">output_path</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">options</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a>
 <a id="__codelineno-0-499" name="__codelineno-0-499"></a>    <span class="n">report</span><span class="p">:</span> <span class="n">ValidationReport</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <a id="__codelineno-0-500" name="__codelineno-0-500"></a>    <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>

@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8822,10 +8822,10 @@ ds.shape, ds.epsg</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">polys</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="n">geometry</span><span class="o">=</span><span class="s1">'polygon'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">polys</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="n">geometry</span><span class="o">=</span><span class="s1">'polygon'</span><span class="p">)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">polys</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">polys</span><span class="p">),</span> <span class="nb">list</span><span class="p">(</span><span class="n">polys</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">polys = ds.to_geodataframe(geometry='polygon')
+<div class="clipboard-copy-txt" id="cell-3">polys = ds.vector.to_geodataframe(geometry='polygon')
 type(polys).__name__, len(polys), list(polys.columns)</div>
 </div>
 </div>
@@ -8930,10 +8930,10 @@ type(polys).__name__, len(polys), list(polys.columns)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">lines</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">lines</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
 <span class="nb">type</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">lines = ds.contour(interval=10.0)
+<div class="clipboard-copy-txt" id="cell-5">lines = ds.vector.contour(interval=10.0)
 type(lines).__name__, len(lines)</div>
 </div>
 </div>
@@ -9056,7 +9056,7 @@ burned.plot(band=0, title='rasterized zones')</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7c964d899550&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7ac938b5fe00&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

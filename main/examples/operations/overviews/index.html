@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8747,7 +8747,7 @@ DATA.is_dir(), WORK.is_dir()</div>
 <span class="n">src</span> <span class="o">=</span> <span class="n">WORK</span> <span class="o">/</span> <span class="s1">'dem.tif'</span>
 <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s1">'dem'</span> <span class="o">/</span> <span class="s1">'DEM5km_Rhine_burned_acc.tif'</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">overview_count</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">overview_count</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">from pyramids.dataset import Dataset
 
@@ -8755,7 +8755,7 @@ DATA.is_dir(), WORK.is_dir()</div>
 src = WORK / 'dem.tif'
 shutil.copy(DATA / 'dem' / 'DEM5km_Rhine_burned_acc.tif', src)
 ds = Dataset.read_file(src)
-ds.shape, ds.overview_count</div>
+ds.shape, ds.io.overview_count</div>
 </div>
 </div>
 </div>
@@ -8817,7 +8817,7 @@ ds.shape, ds.overview_count</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7e5eecc9c590&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7584fd267a10&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8859,11 +8859,11 @@ ds.shape, ds.overview_count</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">create_overviews</span><span class="p">(</span><span class="n">resampling_method</span><span class="o">=</span><span class="s1">'average'</span><span class="p">)</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">overview_count</span>  <span class="c1"># levels per band</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">create_overviews</span><span class="p">(</span><span class="n">resampling_method</span><span class="o">=</span><span class="s1">'average'</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">overview_count</span>  <span class="c1"># levels per band</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">ds.create_overviews(resampling_method='average')
-ds.overview_count  # levels per band</div>
+<div class="clipboard-copy-txt" id="cell-4">ds.io.create_overviews(resampling_method='average')
+ds.io.overview_count  # levels per band</div>
 </div>
 </div>
 </div>
@@ -8911,11 +8911,11 @@ ds.overview_count  # levels per band</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ov</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_overview</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">overview_index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">ov</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_overview</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">overview_index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">full</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">shape</span>
 <span class="n">full</span><span class="p">,</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="p">(</span><span class="n">ov</span><span class="o">.</span><span class="n">XSize</span><span class="p">,</span> <span class="n">ov</span><span class="o">.</span><span class="n">YSize</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">ov = ds.get_overview(band=0, overview_index=0)
+<div class="clipboard-copy-txt" id="cell-5">ov = ds.io.get_overview(band=0, overview_index=0)
 full = ds.shape
 full, '-&gt;', (ov.XSize, ov.YSize)</div>
 </div>
@@ -8966,10 +8966,10 @@ cell size shows what that stored overview looks like — the same terrain, far f
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">coarse</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">cell_size</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">cell_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">ov</span><span class="o">.</span><span class="n">YSize</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">coarse</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">cell_size</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">cell_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">ov</span><span class="o">.</span><span class="n">YSize</span><span class="p">))</span>
 <span class="n">coarse</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"coarsest level (resampled view)"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">coarse = ds.resample(cell_size=ds.cell_size * (ds.shape[1] / ov.YSize))
+<div class="clipboard-copy-txt" id="cell-6">coarse = ds.spatial.resample(cell_size=ds.cell_size * (ds.shape[1] / ov.YSize))
 coarse.plot(band=0, title="coarsest level (resampled view)")</div>
 </div>
 </div>
@@ -8982,7 +8982,7 @@ coarse.plot(band=0, title="coarsest level (resampled view)")</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7e5ee4978190&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7584f4dd0b90&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

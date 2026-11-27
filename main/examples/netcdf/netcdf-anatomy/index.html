@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -10588,12 +10588,12 @@ Natural Earth coastline for geographic context.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'tos'</span><span class="p">)</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">field</span> <span class="o">=</span> <span class="n">nc</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">'tos'</span><span class="p">)</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 <span class="n">glyph</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="c1"># the glyph already carries its CRS from plot(), so add_features defaults to it</span>
 <span class="n">glyph</span><span class="o">.</span><span class="n">add_features</span><span class="p">(</span><span class="s2">"coastline"</span><span class="p">,</span> <span class="s2">"50m"</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-15">field = nc.get_variable('tos').wrap_longitude()
+<div class="clipboard-copy-txt" id="cell-15">field = nc.get_variable('tos').spatial.wrap_longitude()
 glyph = field.plot()
 # the glyph already carries its CRS from plot(), so add_features defaults to it
 glyph.add_features("coastline", "50m", zorder=5)</div>
@@ -10842,7 +10842,7 @@ dict(time_mean.dimension_sizes)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3529/2515305529.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
+<pre>/tmp/ipykernel_3667/2515305529.py:1: UserWarning: reduce() dropped auxiliary variable(s) ['time_bnds'] that span the reduced dimension 'time'; carrying them unchanged would leave an inconsistent 'time' length in the result.
   time_mean = nc.reduce('time', how='mean')
 </pre>
 </div>

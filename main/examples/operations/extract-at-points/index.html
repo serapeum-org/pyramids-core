@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8822,7 +8822,7 @@ ds.shape, ds.epsg, (len(gauges), gauges.epsg)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7cb1da744830&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x72e71c73bcb0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8865,11 +8865,11 @@ ds.shape, ds.epsg, (len(gauges), gauges.epsg)</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">pts</span> <span class="o">=</span> <span class="n">gauges</span> <span class="k">if</span> <span class="n">gauges</span><span class="o">.</span><span class="n">epsg</span> <span class="o">==</span> <span class="n">ds</span><span class="o">.</span><span class="n">epsg</span> <span class="k">else</span> <span class="n">FeatureCollection</span><span class="p">(</span><span class="n">gauges</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">epsg</span><span class="p">))</span>
-<span class="n">values</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
 <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-4">pts = gauges if gauges.epsg == ds.epsg else FeatureCollection(gauges.to_crs(ds.epsg))
-values = ds.sample(pts)
+values = ds.analysis.sample(pts)
 values.shape, np.asarray(values).ravel()</div>
 </div>
 </div>
@@ -8974,10 +8974,10 @@ values.shape, np.asarray(values).ravel()</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">cells</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">extract</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">cells</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">extract</span><span class="p">()</span>
 <span class="n">cells</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">cells = ds.extract()
+<div class="clipboard-copy-txt" id="cell-6">cells = ds.analysis.extract()
 cells.shape, float(cells.min()), float(cells.max())</div>
 </div>
 </div>

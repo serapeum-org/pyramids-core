@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8306,7 +8306,7 @@ are safe to ship to dask workers via <code>client.submit</code> or
 <a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"s3://bucket/scene.tif"</span><span class="p">)</span>
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># safe — the handle isn't shipped, only the open recipe</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">future</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">future</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span>
 <a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># (1, H, W)</span>
 </code></pre></div>
 <p>The accompanying <code>SerializableLock</code> token-backed lock guards against
@@ -8387,7 +8387,7 @@ choice depends on what you're doing:</p>
 <a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="n">shuffled</span> <span class="o">=</span> <span class="n">zones</span><span class="o">.</span><span class="n">spatial_shuffle</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">"hilbert"</span><span class="p">)</span><span class="o">.</span><span class="n">persist</span><span class="p">()</span>
 <a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>
 <a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a><span class="c1"># 4. Reduce. Single compute materialises the whole DAG.</span>
-<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="n">stats</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">shuffled</span><span class="o">.</span><span class="n">compute</span><span class="p">(),</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">,))</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="n">stats</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">zonal_stats</span><span class="p">(</span><span class="n">shuffled</span><span class="o">.</span><span class="n">compute</span><span class="p">(),</span> <span class="n">stats</span><span class="o">=</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">,))</span>
 </code></pre></div>
 <p>The four stages each map onto a per-subsystem how-to. Continue to:</p>
 <ul>

@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8868,7 +8868,7 @@ print("work:", work)</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>data: /home/runner/work/pyramids-core/pyramids-core/examples/data
-work: /tmp/pyramids-cog-real-0ehtb7mz
+work: /tmp/pyramids-cog-real-8ry5z0in
 </pre>
 </div>
 </div>
@@ -8909,8 +8909,8 @@ predictor (float → 3) and overview resampling (continuous → <code>average</c
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">noah</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"geotiff"</span> <span class="o">/</span> <span class="s2">"noah-precipitation-1979.tif"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"source:"</span><span class="p">,</span> <span class="n">noah</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">noah</span><span class="o">.</span><span class="n">rows</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">noah</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">noah</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span> <span class="s2">"bands"</span><span class="p">)</span>
 
-<span class="n">out</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"noah_cog.tif"</span><span class="p">)</span>
-<span class="n">info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="n">cog_info</span><span class="p">()</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"noah_cog.tif"</span><span class="p">)</span>
+<span class="n">info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"compression:"</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">compression</span><span class="p">,</span> <span class="s2">"predictor:"</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">predictor</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"blocksize:  "</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">blocksize</span><span class="p">,</span> <span class="s2">"dtype:"</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"overviews:  "</span><span class="p">,</span> <span class="p">[</span><span class="n">o</span><span class="o">.</span><span class="n">decimation</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">info</span><span class="o">.</span><span class="n">overviews</span><span class="p">])</span>
@@ -8921,8 +8921,8 @@ predictor (float → 3) and overview resampling (continuous → <code>average</c
 <div class="clipboard-copy-txt" id="cell-2">noah = Dataset.read_file(DATA / "geotiff" / "noah-precipitation-1979.tif")
 print("source:", noah.epsg, f"{noah.rows}x{noah.columns}", noah.band_count, "bands")
 
-out = noah.to_cog(work / "noah_cog.tif")
-info = Dataset.read_file(out).cog_info()
+out = noah.cog.to_cog(work / "noah_cog.tif")
+info = Dataset.read_file(out).cog.info()
 print("compression:", info.compression, "predictor:", info.predictor)
 print("blocksize:  ", info.blocksize, "dtype:", info.dtype)
 print("overviews:  ", [o.decimation for o in info.overviews])
@@ -8995,7 +8995,7 @@ valid COG: True | errors: []
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x71a92b788830&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x751b77093cb0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9037,11 +9037,11 @@ valid COG: True | errors: []
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">zstd</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"noah_zstd.tif"</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"compression=zstd -&gt;"</span><span class="p">,</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">zstd</span><span class="p">)</span><span class="o">.</span><span class="n">cog_info</span><span class="p">()</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">zstd</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"noah_zstd.tif"</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"compression=zstd -&gt;"</span><span class="p">,</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">zstd</span><span class="p">)</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">info</span><span class="p">()</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">zstd = noah.to_cog(work / "noah_zstd.tif", compression="zstd")
-print("compression=zstd -&gt;", Dataset.read_file(zstd).cog_info().compression)</div>
+<div class="clipboard-copy-txt" id="cell-4">zstd = noah.cog.to_cog(work / "noah_zstd.tif", compression="zstd")
+print("compression=zstd -&gt;", Dataset.read_file(zstd).cog.info().compression)</div>
 </div>
 </div>
 </div>
@@ -9095,32 +9095,36 @@ Requesting a smaller output size makes GDAL serve the data from the nearest over
 <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">maxx</span> <span class="o">-</span> <span class="n">minx</span><span class="p">,</span> <span class="n">maxy</span> <span class="o">-</span> <span class="n">miny</span>
 
 <span class="c1"># Whole-image thumbnail (long edge &lt;= 128 px):</span>
-<span class="n">thumb</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">max_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">thumb</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">max_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"thumbnail:"</span><span class="p">,</span> <span class="n">thumb</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
 <span class="c1"># Central quarter window, decimated to 256x256:</span>
 <span class="n">sub</span> <span class="o">=</span> <span class="p">(</span><span class="n">minx</span> <span class="o">+</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">w</span><span class="p">,</span> <span class="n">miny</span> <span class="o">+</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">h</span><span class="p">,</span> <span class="n">minx</span> <span class="o">+</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">w</span><span class="p">,</span> <span class="n">miny</span> <span class="o">+</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">h</span><span class="p">)</span>
-<span class="n">part</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">read_part</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span> <span class="n">dst_width</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">dst_height</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">bbox_crs</span><span class="o">=</span><span class="n">noah</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">part</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">read_part</span><span class="p">(</span>
+    <span class="n">sub</span><span class="p">,</span> <span class="n">dst_width</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">dst_height</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">bbox_crs</span><span class="o">=</span><span class="n">noah</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"window:   "</span><span class="p">,</span> <span class="n">part</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
 <span class="c1"># Sample the centre coordinate:</span>
-<span class="n">value</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="n">minx</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">w</span><span class="p">,</span> <span class="n">miny</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">h</span><span class="p">,</span> <span class="n">point_crs</span><span class="o">=</span><span class="n">noah</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="n">minx</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">w</span><span class="p">,</span> <span class="n">miny</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">h</span><span class="p">,</span> <span class="n">point_crs</span><span class="o">=</span><span class="n">noah</span><span class="o">.</span><span class="n">epsg</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"centre value:"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5">minx, miny, maxx, maxy = noah.total_bounds
 w, h = maxx - minx, maxy - miny
 
 # Whole-image thumbnail (long edge &lt;= 128 px):
-thumb = noah.preview(max_size=128, band=0)
+thumb = noah.cog.preview(max_size=128, band=0)
 print("thumbnail:", thumb.shape)
 
 # Central quarter window, decimated to 256x256:
 sub = (minx + 0.25 * w, miny + 0.25 * h, minx + 0.75 * w, miny + 0.75 * h)
-part = noah.read_part(sub, dst_width=256, dst_height=256, bbox_crs=noah.epsg, band=0)
+part = noah.cog.read_part(
+    sub, dst_width=256, dst_height=256, bbox_crs=noah.epsg, band=0
+)
 print("window:   ", part.shape)
 
 # Sample the centre coordinate:
-value = noah.point(minx + 0.5 * w, miny + 0.5 * h, point_crs=noah.epsg, band=0)
+value = noah.cog.point(minx + 0.5 * w, miny + 0.5 * h, point_crs=noah.epsg, band=0)
 print("centre value:", float(value))</div>
 </div>
 </div>
@@ -9172,11 +9176,11 @@ centre value: -9.969209968386869e+36
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blob</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">to_cog_bytes</span><span class="p">(</span><span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">blob</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog_bytes</span><span class="p">(</span><span class="n">compression</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"bytes:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="s2">"| TIFF marker:"</span><span class="p">,</span> <span class="n">blob</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
 <span class="c1"># e.g. boto3: s3.put_object(Bucket=..., Key="noah.tif", Body=blob)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">blob = noah.to_cog_bytes(compression="zstd")
+<div class="clipboard-copy-txt" id="cell-6">blob = noah.cog.to_cog_bytes(compression="zstd")
 print("bytes:", len(blob), "| TIFF marker:", blob[:2])
 # e.g. boto3: s3.put_object(Bucket=..., Key="noah.tif", Body=blob)</div>
 </div>
@@ -9228,7 +9232,7 @@ all on an in-memory copy, so the source dataset is never mutated.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">rgb</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">rgb</span> <span class="o">=</span> <span class="n">noah</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span>
     <span class="n">work</span> <span class="o">/</span> <span class="s2">"noah_rgb.tif"</span><span class="p">,</span>
     <span class="n">bands</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">BandSelection</span><span class="p">(</span>
         <span class="n">indexes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>  <span class="c1"># select + reorder bands (0-based)</span>
@@ -9240,7 +9244,7 @@ all on an in-memory copy, so the source dataset is never mutated.</p>
         <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"source"</span><span class="p">:</span> <span class="s2">"NOAH-1979"</span><span class="p">,</span> <span class="s2">"pipeline"</span><span class="p">:</span> <span class="s2">"cog-real-data-notebook"</span><span class="p">},</span>
     <span class="p">),</span>
 <span class="p">)</span>
-<span class="n">rgb_info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">cog_info</span><span class="p">()</span>
+<span class="n">rgb_info</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">"bands:"</span><span class="p">,</span>
     <span class="n">rgb_info</span><span class="o">.</span><span class="n">band_count</span><span class="p">,</span>
@@ -9251,7 +9255,7 @@ all on an in-memory copy, so the source dataset is never mutated.</p>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"band-1 tag:"</span><span class="p">,</span> <span class="n">rgb_info</span><span class="o">.</span><span class="n">band_tags</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">))</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7">rgb = noah.to_cog(
+<div class="clipboard-copy-txt" id="cell-7">rgb = noah.cog.to_cog(
     work / "noah_rgb.tif",
     bands=cog.BandSelection(
         indexes=[0, 1, 2],  # select + reorder bands (0-based)
@@ -9263,7 +9267,7 @@ all on an in-memory copy, so the source dataset is never mutated.</p>
         metadata={"source": "NOAH-1979", "pipeline": "cog-real-data-notebook"},
     ),
 )
-rgb_info = Dataset.read_file(rgb).cog_info()
+rgb_info = Dataset.read_file(rgb).cog.info()
 print(
     "bands:",
     rgb_info.band_count,
@@ -9327,13 +9331,17 @@ tile server.</p>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dem</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"dem"</span> <span class="o">/</span> <span class="s2">"DEM5km_Rhine_burned_fill.tif"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"DEM source CRS:"</span><span class="p">,</span> <span class="n">dem</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
 
-<span class="n">web</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"dem_web.tif"</span><span class="p">,</span> <span class="n">tiling</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">Tiling</span><span class="p">(</span><span class="n">scheme</span><span class="o">=</span><span class="s2">"GoogleMapsCompatible"</span><span class="p">))</span>
+<span class="n">web</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">to_cog</span><span class="p">(</span>
+    <span class="n">work</span> <span class="o">/</span> <span class="s2">"dem_web.tif"</span><span class="p">,</span> <span class="n">tiling</span><span class="o">=</span><span class="n">cog</span><span class="o">.</span><span class="n">Tiling</span><span class="p">(</span><span class="n">scheme</span><span class="o">=</span><span class="s2">"GoogleMapsCompatible"</span><span class="p">)</span>
+<span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"web-optimized CRS:"</span><span class="p">,</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">web</span><span class="p">)</span><span class="o">.</span><span class="n">epsg</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-8">dem = Dataset.read_file(DATA / "dem" / "DEM5km_Rhine_burned_fill.tif")
 print("DEM source CRS:", dem.epsg)
 
-web = dem.to_cog(work / "dem_web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible"))
+web = dem.cog.to_cog(
+    work / "dem_web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
+)
 print("web-optimized CRS:", Dataset.read_file(web).epsg)</div>
 </div>
 </div>
@@ -9347,7 +9355,13 @@ print("web-optimized CRS:", Dataset.read_file(web).epsg)</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>DEM source CRS: 4647
-web-optimized CRS: 3857
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>web-optimized CRS: 3857
 </pre>
 </div>
 </div>
@@ -9399,7 +9413,7 @@ projected CRS.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x71a928503110&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x751b74d34910&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9453,7 +9467,7 @@ reprojects the tile's EPSG:3857 bounds back to the dataset CRS — no <code>more
 <span class="n">yt</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">asinh</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat</span><span class="p">)))</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"DEM centre lon/lat = </span><span class="si">{</span><span class="n">lon</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">lat</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  -&gt;  tile z</span><span class="si">{</span><span class="n">z</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">xt</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">yt</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-<span class="n">tile</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">read_tile</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">xt</span><span class="p">,</span> <span class="n">yt</span><span class="p">,</span> <span class="n">tilesize</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+<span class="n">tile</span> <span class="o">=</span> <span class="n">dem</span><span class="o">.</span><span class="n">cog</span><span class="o">.</span><span class="n">read_tile</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">xt</span><span class="p">,</span> <span class="n">yt</span><span class="p">,</span> <span class="n">tilesize</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"tile shape:"</span><span class="p">,</span> <span class="n">tile</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10">cx, cy = (
@@ -9467,7 +9481,7 @@ xt = int((lon + 180.0) / 360.0 * n)
 yt = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
 print(f"DEM centre lon/lat = {lon:.2f}, {lat:.2f}  -&gt;  tile z{z}/{xt}/{yt}")
 
-tile = dem.read_tile(z, xt, yt, tilesize=256)
+tile = dem.cog.read_tile(z, xt, yt, tilesize=256)
 print("tile shape:", tile.shape)</div>
 </div>
 </div>
@@ -9559,7 +9573,7 @@ first slice is a valid COG: True
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_2613/3236988729.py:1: DeprecationWarning: DatasetCollection.read_multiple_files is deprecated; use from_files(path, glob=..., date_format=...) instead.
+<pre>/tmp/ipykernel_2712/3236988729.py:1: DeprecationWarning: DatasetCollection.read_multiple_files is deprecated; use from_files(path, glob=..., date_format=...) instead.
   dc = DatasetCollection.read_multiple_files(DATA / "geotiff" / "rhine", with_order=False)
 </pre>
 </div>
@@ -9612,7 +9626,7 @@ COG stack.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[12]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x71a9284334d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x751b74c0f9d0&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9677,10 +9691,10 @@ main(["raster", "cog", "info", str(out)])</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>/tmp/pyramids-cog-real-0ehtb7mz/noah_cog.tif: valid COG
+<pre>/tmp/pyramids-cog-real-8ry5z0in/noah_cog.tif: valid COG
 validate exit code: 0
 --- info ---
-file:        /tmp/pyramids-cog-real-0ehtb7mz/noah_cog.tif
+file:        /tmp/pyramids-cog-real-8ry5z0in/noah_cog.tif
 is_cog:      True
 driver:      GTiff
 size:        720 x 360 (4 band(s))

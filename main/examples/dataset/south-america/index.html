@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9002,7 +9002,7 @@ print(dataset)</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7b57b5308050&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7b29538bf620&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9364,9 +9364,9 @@ used to decode stored numbers into real-world values.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">band_units</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">band_units</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-10">print(dataset.band_units)</div>
+<div class="clipboard-copy-txt" id="cell-10">print(dataset.bands.band_units)</div>
 </div>
 </div>
 </div>
@@ -9415,9 +9415,9 @@ used to decode stored numbers into real-world values.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-11">print(dataset.scale)</div>
+<div class="clipboard-copy-txt" id="cell-11">print(dataset.bands.scale)</div>
 </div>
 </div>
 </div>
@@ -9466,9 +9466,9 @@ used to decode stored numbers into real-world values.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-12">print(dataset.offset)</div>
+<div class="clipboard-copy-txt" id="cell-12">print(dataset.bands.offset)</div>
 </div>
 </div>
 </div>
@@ -10707,13 +10707,13 @@ second band and give it a unit.</p>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">new_band</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">rows</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-<span class="n">new_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">add_band</span><span class="p">(</span><span class="n">new_band</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"mm"</span><span class="p">)</span>
+<span class="n">new_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">add_band</span><span class="p">(</span><span class="n">new_band</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"mm"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">new_dataset</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-27">import numpy as np
 
 new_band = np.random.rand(dataset.rows, dataset.columns)
-new_dataset = dataset.add_band(new_band, unit="mm")
+new_dataset = dataset.bands.add_band(new_band, unit="mm")
 print(new_dataset)</div>
 </div>
 </div>
@@ -10778,10 +10778,10 @@ either the whole raster at once or a windowed block.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-28">arr = dataset.read_array()
+<div class="clipboard-copy-txt" id="cell-28">arr = dataset.io.read_array()
 print(arr.shape)</div>
 </div>
 </div>
@@ -10900,11 +10900,11 @@ instead of loading the whole raster into memory.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">block</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">block</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_array</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-30">block = dataset.read_array(band=0, window=(0, 0, 100, 100))
+<div class="clipboard-copy-txt" id="cell-30">block = dataset.io.read_array(band=0, window=(0, 0, 100, 100))
 print(block.shape)
 print(block)</div>
 </div>
@@ -10963,9 +10963,9 @@ memory-safe processing of large rasters.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dataset</span><span class="o">.</span><span class="n">get_block_arrangement</span><span class="p">(</span><span class="n">x_block_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">y_block_size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dataset</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_block_arrangement</span><span class="p">(</span><span class="n">x_block_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">y_block_size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-31">dataset.get_block_arrangement(x_block_size=100, y_block_size=100)</div>
+<div class="clipboard-copy-txt" id="cell-31">dataset.io.get_block_arrangement(x_block_size=100, y_block_size=100)</div>
 </div>
 </div>
 </div>
@@ -11118,10 +11118,10 @@ memory-safe processing of large rasters.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">stats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">stats</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-32">stats = dataset.stats(band=0)
+<div class="clipboard-copy-txt" id="cell-32">stats = dataset.analysis.stats(band=0)
 stats</div>
 </div>
 </div>
@@ -11227,10 +11227,10 @@ values, much like a map legend. Below we read the current table, then set our ow
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_attribute_table</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">get_attribute_table</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-33">df = dataset.get_attribute_table(band=0)
+<div class="clipboard-copy-txt" id="cell-33">df = dataset.bands.get_attribute_table(band=0)
 print(df)</div>
 </div>
 </div>
@@ -11311,7 +11311,7 @@ category and description — turning bare numbers into an interpretable legend.<
     <span class="p">],</span>
 <span class="p">}</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">attribute_table</span><span class="p">)</span>
-<span class="n">dataset</span><span class="o">.</span><span class="n">set_attribute_table</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">dataset</span><span class="o">.</span><span class="n">bands</span><span class="o">.</span><span class="n">set_attribute_table</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-34">import pandas as pd
 
@@ -11327,7 +11327,7 @@ attribute_table = {
     ],
 }
 df = pd.DataFrame(attribute_table)
-dataset.set_attribute_table(df, band=0)</div>
+dataset.bands.set_attribute_table(df, band=0)</div>
 </div>
 </div>
 </div>

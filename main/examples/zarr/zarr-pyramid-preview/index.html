@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8737,7 +8737,7 @@ and shows the bytes-on-disk cost vs the bytes-read win for a thumbnail-style pre
 <span class="n">mem</span><span class="o">.</span><span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"distance_m"</span><span class="p">,</span> <span class="s2">"distance_pct"</span><span class="p">]</span>
 
 <span class="n">source_tif</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"source.tif"</span>
-<span class="n">mem</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">)</span>
+<span class="n">mem</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">)</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">source_tif</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">ds</span><span class="o">.</span><span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"distance_m"</span><span class="p">,</span> <span class="s2">"distance_pct"</span><span class="p">]</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"shape    :"</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -8770,7 +8770,7 @@ mem = Dataset.from_array(
 mem.band_names = ["distance_m", "distance_pct"]
 
 source_tif = workspace / "source.tif"
-mem.to_file(source_tif)
+mem.io.to_file(source_tif)
 ds = Dataset.read_file(source_tif, read_only=False)
 ds.band_names = ["distance_m", "distance_pct"]
 print("shape    :", ds.shape)
@@ -8816,7 +8816,7 @@ root group that maps each level to its scale factor.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">zarr.codecs</span><span class="w"> </span><span class="kn">import</span> <span class="n">BloscCodec</span>
 
 <span class="n">store</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"pyramid.zarr"</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span>
     <span class="n">store</span><span class="p">,</span>
     <span class="n">overview_factors</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span>
     <span class="n">overview_resampling</span><span class="o">=</span><span class="s2">"average"</span><span class="p">,</span>
@@ -8833,7 +8833,7 @@ root group that maps each level to its scale factor.</p>
 from zarr.codecs import BloscCodec
 
 store = workspace / "pyramid.zarr"
-ds.to_zarr(
+ds.io.to_zarr(
     store,
     overview_factors=[2, 4, 8, 16],
     overview_resampling="average",
@@ -8990,7 +8990,7 @@ smaller is a preview read than a full-resolution read?</p>
 
 
 <span class="n">flat</span> <span class="o">=</span> <span class="n">workspace</span> <span class="o">/</span> <span class="s2">"flat.zarr"</span>
-<span class="n">ds</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">compressor</span><span class="o">=</span><span class="n">BloscCodec</span><span class="p">(</span><span class="n">cname</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">,</span> <span class="n">clevel</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">compressor</span><span class="o">=</span><span class="n">BloscCodec</span><span class="p">(</span><span class="n">cname</span><span class="o">=</span><span class="s2">"zstd"</span><span class="p">,</span> <span class="n">clevel</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
 
 <span class="n">flat_bytes</span> <span class="o">=</span> <span class="n">store_size</span><span class="p">(</span><span class="n">flat</span><span class="p">)</span>
 <span class="n">pyramid_bytes</span> <span class="o">=</span> <span class="n">store_size</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
@@ -9011,7 +9011,7 @@ smaller is a preview read than a full-resolution read?</p>
 
 
 flat = workspace / "flat.zarr"
-ds.to_zarr(flat, compressor=BloscCodec(cname="zstd", clevel=5))
+ds.io.to_zarr(flat, compressor=BloscCodec(cname="zstd", clevel=5))
 
 flat_bytes = store_size(flat)
 pyramid_bytes = store_size(store)

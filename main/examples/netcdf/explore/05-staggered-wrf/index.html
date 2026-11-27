@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9057,7 +9057,7 @@ min / mean / max: 0.0 185.22796630859375 297.0773620605469
     <span class="n">variable_name</span><span class="o">=</span><span class="s1">'T2_slice0'</span><span class="p">,</span>
     <span class="n">path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">),</span>
 <span class="p">)</span>
-<span class="n">nc</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'T2_slice0'</span><span class="p">)</span>
+<span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">NetCDF</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s1">'derived.nc'</span><span class="p">)),</span> <span class="s1">'T2_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after add:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7">work = Path(tempfile.mkdtemp())
@@ -9068,7 +9068,7 @@ NetCDF.from_array(
     variable_name='T2_slice0',
     path=str(work / 'derived.nc'),
 )
-nc.add_variable(NetCDF.read_file(str(work / 'derived.nc')), 'T2_slice0')
+nc.variables.add(NetCDF.read_file(str(work / 'derived.nc')), 'T2_slice0')
 print('variables after add:', nc.variable_names)</div>
 </div>
 </div>
@@ -9118,10 +9118,10 @@ print('variables after add:', nc.variable_names)</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">remove_variable</span><span class="p">(</span><span class="s1">'T2_slice0'</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">nc</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">'T2_slice0'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'variables after remove:'</span><span class="p">,</span> <span class="n">nc</span><span class="o">.</span><span class="n">variable_names</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">nc.remove_variable('T2_slice0')
+<div class="clipboard-copy-txt" id="cell-8">nc.variables.remove('T2_slice0')
 print('variables after remove:', nc.variable_names)</div>
 </div>
 </div>

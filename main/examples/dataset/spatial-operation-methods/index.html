@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8903,7 +8903,7 @@ worth knowing:</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7156df4486e0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f785ff2bb60&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9032,9 +9032,9 @@ let's confirm the raster's current cell size.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dataset_8km</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">cell_size</span><span class="o">=</span><span class="mi">8000</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"bilinear"</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">dataset_8km</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">cell_size</span><span class="o">=</span><span class="mi">8000</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"bilinear"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">dataset_8km = dataset.resample(cell_size=8000, method="bilinear")</div>
+<div class="clipboard-copy-txt" id="cell-6">dataset_8km = dataset.spatial.resample(cell_size=8000, method="bilinear")</div>
 </div>
 </div>
 </div>
@@ -9092,7 +9092,7 @@ let's confirm the raster's current cell size.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7156d71b5950&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f7857ac7110&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9206,9 +9206,9 @@ metres are different units, the cell size and dimensions change as part of the r
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">reprojected_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">reprojected_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9">reprojected_dataset = dataset.to_crs(4326)</div>
+<div class="clipboard-copy-txt" id="cell-9">reprojected_dataset = dataset.spatial.to_crs(4326)</div>
 </div>
 </div>
 </div>
@@ -9332,7 +9332,7 @@ cell size is a fraction of a degree.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[11]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7156d70cd450&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f78579de350&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9569,9 +9569,9 @@ WGS 84 into the DEM's UTM CRS (EPSG:4647).</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">meteo_data_r</span> <span class="o">=</span> <span class="n">meteo_data</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4647</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">meteo_data_r</span> <span class="o">=</span> <span class="n">meteo_data</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4647</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-15">meteo_data_r = meteo_data.to_crs(4647)</div>
+<div class="clipboard-copy-txt" id="cell-15">meteo_data_r = meteo_data.spatial.to_crs(4647)</div>
 </div>
 </div>
 </div>
@@ -9621,7 +9621,7 @@ WGS 84 into the DEM's UTM CRS (EPSG:4647).</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[16]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7156d6e460d0&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f7857776350&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9675,9 +9675,9 @@ Rhine basin.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">rhine_meteo_data</span> <span class="o">=</span> <span class="n">meteo_data_r</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">rhine_meteo_data</span> <span class="o">=</span> <span class="n">meteo_data_r</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-17">rhine_meteo_data = meteo_data_r.crop(dataset)</div>
+<div class="clipboard-copy-txt" id="cell-17">rhine_meteo_data = meteo_data_r.spatial.crop(dataset)</div>
 </div>
 </div>
 </div>
@@ -9727,7 +9727,7 @@ Rhine basin.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[18]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7156d6d1d810&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f7857655950&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">

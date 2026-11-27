@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8272,13 +8272,13 @@ chunk file. A geobox-attribute schema (the standard GeoZarr convention) is
 written so downstream Zarr consumers can reconstruct the geobox
 without pyramids:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">cube</span> <span class="o">=</span> <span class="n">DatasetCollection</span><span class="o">.</span><span class="n">from_files</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">cube</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s2">"cube.zarr"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">cube</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s2">"cube.zarr"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">)</span>
 </code></pre></div>
 <p>The root group carries <code>epsg</code>, <code>GeoTransform</code>, <code>crs_wkt</code>, <code>nodata</code>,
 <code>band_names</code>, <code>dtype</code>, plus a <code>pyramids_zarr_version</code> marker and the
 source file list.</p>
 <p>Cloud writes via fsspec:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">cube</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">cube</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="s2">"s3://bucket/key.zarr"</span><span class="p">,</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">storage_options</span><span class="o">=</span><span class="p">{</span><span class="s2">"anon"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"key"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">,</span> <span class="s2">"secret"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">},</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">)</span>
@@ -8374,7 +8374,7 @@ use it for anything that operates on a single raster (plotting,
 <a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="n">summer_mean</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>          <span class="c1"># numpy (1, H, W)</span>
 <a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a>
 <a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="c1"># Write the cube for reuse.</span>
-<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a><span class="n">cube</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s2">"s2_nir_summer.zarr"</span><span class="p">)</span>
+<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a><span class="n">cube</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s2">"s2_nir_summer.zarr"</span><span class="p">)</span>
 </code></pre></div>
 <p>A full runnable notebook spanning search → cube → reduction →
 write lives in the <code>pyramids-lazy</code> repo (<code>docs/examples/dataset/dask-lazy-datasets.ipynb</code>).</p>

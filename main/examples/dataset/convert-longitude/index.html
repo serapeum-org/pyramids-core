@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9137,9 +9137,9 @@ longitude runs from -180 to 180. The original dataset is left untouched.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">new_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">new_dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">wrap_longitude</span><span class="p">()</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">new_dataset = dataset.wrap_longitude()</div>
+<div class="clipboard-copy-txt" id="cell-6">new_dataset = dataset.spatial.wrap_longitude()</div>
 </div>
 </div>
 </div>
@@ -9201,7 +9201,7 @@ longitude runs from -180 to 180. The original dataset is left untouched.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x7f846ccc6d50&gt;</pre>
+<pre>&lt;cleopatra.glyphs.gridded.array_glyph.ArrayGlyph at 0x794525a64550&gt;</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -9310,10 +9310,10 @@ Max longitude: 179.75
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">out_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">())</span> <span class="o">/</span> <span class="s2">"noah-precipitation-1979-corrected.tif"</span>
-<span class="n">new_dataset</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">out_path</span><span class="p">))</span>
+<span class="n">new_dataset</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">out_path</span><span class="p">))</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-9">out_path = Path(tempfile.mkdtemp()) / "noah-precipitation-1979-corrected.tif"
-new_dataset.to_file(str(out_path))</div>
+new_dataset.io.to_file(str(out_path))</div>
 </div>
 </div>
 </div>

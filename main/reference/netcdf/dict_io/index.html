@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9122,7 +9122,7 @@ pyramids.netcdf.NetCDF.from_array: The constructor this builds on, and the reaso
 <a id="__codelineno-0-857" name="__codelineno-0-857"></a>    <span class="c1"># cast to assert what the validation already guarantees.</span>
 <a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">first</span><span class="p">),</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="n">pieces</span>
 <a id="__codelineno-0-859" name="__codelineno-0-859"></a>    <span class="k">for</span> <span class="n">later_name</span><span class="p">,</span> <span class="n">later_cube</span> <span class="ow">in</span> <span class="n">rest</span><span class="p">:</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">first</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">later_cube</span><span class="p">,</span> <span class="n">later_name</span><span class="p">)</span>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">first</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">later_cube</span><span class="p">,</span> <span class="n">later_name</span><span class="p">)</span>
 <a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="k">return</span> <span class="n">first</span>
 </code></pre></div></td></tr></table></div>
             </details>
