@@ -103,7 +103,7 @@ def _cmd_slope(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.slope(units=args.units, variable_name=args.var)
+        values = mesh.terrain.slope(units=args.units, variable_name=args.var)
     mesh.with_variable("slope", np.asarray(values), location="face").to_file(
         args.output
     )
@@ -123,7 +123,7 @@ def _cmd_aspect(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.aspect(variable_name=args.var)
+        values = mesh.terrain.aspect(variable_name=args.var)
     mesh.with_variable("aspect", np.asarray(values), location="face").to_file(
         args.output
     )
@@ -144,7 +144,7 @@ def _cmd_hillshade(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.hillshade(
+        values = mesh.terrain.hillshade(
             azimuth=args.azimuth, altitude=args.altitude, variable_name=args.var
         )
     mesh.with_variable("hillshade", np.asarray(values), location="face").to_file(

@@ -33,27 +33,27 @@ class TestSlope:
 
     def test_a_one_to_one_plane_is_45_degrees(self):
         """z = x rises one unit per unit east, so the surface is at 45 degrees."""
-        assert _dem(_NODE_X).slope().tolist() == pytest.approx([45.0, 45.0])
+        assert _dem(_NODE_X).terrain.slope().tolist() == pytest.approx([45.0, 45.0])
 
     def test_radians(self):
-        assert _dem(_NODE_X).slope("radians").tolist() == pytest.approx(
+        assert _dem(_NODE_X).terrain.slope("radians").tolist() == pytest.approx(
             [np.pi / 4, np.pi / 4]
         )
 
     def test_a_flat_mesh_has_zero_slope(self):
-        assert _dem(np.zeros(4)).slope().tolist() == pytest.approx([0.0, 0.0])
+        assert _dem(np.zeros(4)).terrain.slope().tolist() == pytest.approx([0.0, 0.0])
 
     def test_a_steeper_plane(self):
         """z = 2x is arctan(2) ~= 63.43 degrees."""
         expected = np.degrees(np.arctan(2.0))
-        assert _dem(2.0 * _NODE_X).slope().tolist() == pytest.approx(
+        assert _dem(2.0 * _NODE_X).terrain.slope().tolist() == pytest.approx(
             [expected, expected]
         )
 
     def test_invalid_units_are_refused(self):
         subject = _dem(_NODE_X)
         with pytest.raises(ValueError, match="degrees.*radians"):
-            subject.slope("gradians")
+            subject.terrain.slope("gradians")
 
 
 class TestAspect:
@@ -61,17 +61,17 @@ class TestAspect:
 
     def test_an_east_rising_plane_faces_west(self):
         """Mirrors the raster convention exactly: gradient east => faces west => 270."""
-        assert _dem(_NODE_X).aspect().tolist() == pytest.approx([270.0, 270.0])
+        assert _dem(_NODE_X).terrain.aspect().tolist() == pytest.approx([270.0, 270.0])
 
     def test_a_north_rising_plane_faces_south(self):
         """The sign mapping between map coordinates and the raster's row-wise derivative."""
-        assert _dem(_NODE_Y).aspect().tolist() == pytest.approx([180.0, 180.0])
+        assert _dem(_NODE_Y).terrain.aspect().tolist() == pytest.approx([180.0, 180.0])
 
     def test_a_west_rising_plane_faces_east(self):
-        assert _dem(-_NODE_X).aspect().tolist() == pytest.approx([90.0, 90.0])
+        assert _dem(-_NODE_X).terrain.aspect().tolist() == pytest.approx([90.0, 90.0])
 
     def test_the_range_is_zero_to_360(self):
-        values = _dem(_NODE_X + 2.0 * _NODE_Y).aspect()
+        values = _dem(_NODE_X + 2.0 * _NODE_Y).terrain.aspect()
         assert np.all(values >= 0.0)
         assert np.all(values < 360.0)
 
@@ -82,20 +82,20 @@ class TestHillshade:
     def test_a_flat_mesh_saturates_at_the_illumination_level(self):
         """No gradient => pure sin(altitude) * 255, as the raster version answers."""
         expected = np.sin(np.deg2rad(45.0)) * 255.0
-        assert _dem(np.zeros(4)).hillshade().tolist() == pytest.approx(
+        assert _dem(np.zeros(4)).terrain.hillshade().tolist() == pytest.approx(
             [expected, expected]
         )
 
     def test_stays_within_zero_and_255(self):
-        values = _dem(10.0 * _NODE_X).hillshade()
+        values = _dem(10.0 * _NODE_X).terrain.hillshade()
         assert np.all(values >= 0.0)
         assert np.all(values <= 255.0)
 
     def test_a_slope_lit_from_the_front_is_brighter_than_from_behind(self):
         """An east-facing surface is brighter lit from the east than from the west."""
         ds = _dem(-_NODE_X)  # rises west, faces east
-        from_east = ds.hillshade(azimuth=90.0).mean()
-        from_west = ds.hillshade(azimuth=270.0).mean()
+        from_east = ds.terrain.hillshade(azimuth=90.0).mean()
+        from_west = ds.terrain.hillshade(azimuth=270.0).mean()
         assert from_east > from_west
 
 
@@ -105,7 +105,7 @@ class TestInputLocations:
     def test_a_face_located_elevation_is_averaged_onto_the_nodes(self):
         """Bed level usually lives on faces (`mesh2d_flowelem_bl`), so this must work."""
         ds = _dem(np.array([1.0, 2.0]), location="face")
-        result = ds.slope()
+        result = ds.terrain.slope()
         assert result.shape == (2,)
         assert np.all(np.isfinite(result))
 
@@ -119,7 +119,7 @@ class TestInputLocations:
             data_locations={"z": "edge"},
         )
         with pytest.raises(ValueError, match="node- or face-located"):
-            ds.slope()
+            ds.terrain.slope()
 
     def test_a_temporal_elevation_is_refused(self):
         ds = MeshDataset.from_arrays(
@@ -130,7 +130,7 @@ class TestInputLocations:
             data_locations={"z": "node"},
         )
         with pytest.raises(ValueError, match="one value per element"):
-            ds.slope()
+            ds.terrain.slope()
 
 
 class TestDegenerateFaces:
@@ -145,8 +145,10 @@ class TestDegenerateFaces:
             data={"z": np.array([0.0, 1.0, 2.0])},
             data_locations={"z": "node"},
         )
-        assert np.isnan(ds.slope()).all(), "a collinear face has no defined slope"
-        assert np.isnan(ds.aspect()).all()
+        assert np.isnan(ds.terrain.slope()).all(), (
+            "a collinear face has no defined slope"
+        )
+        assert np.isnan(ds.terrain.aspect()).all()
 
     def test_a_degenerate_face_does_not_poison_its_neighbours(self):
         """The NaN must stay local to the face that has no plane."""
@@ -157,7 +159,7 @@ class TestDegenerateFaces:
             data={"z": np.array([0.0, 1.0, 2.0, 3.0, 5.0])},
             data_locations={"z": "node"},
         )
-        result = ds.slope()
+        result = ds.terrain.slope()
         assert np.isnan(result[0]), "the collinear face is undefined"
         assert np.isfinite(result[1]), "its neighbour is unaffected"
 
@@ -210,24 +212,24 @@ class TestNodataIsNotTerrain:
 
     def test_a_sentinel_node_does_not_fabricate_a_cliff(self):
         """Was slope 89.99 degrees on an otherwise flat mesh."""
-        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).slope()
+        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).terrain.slope()
         assert result[0] == pytest.approx(0.0), "the untouched face is still flat"
         assert np.isnan(result[1]), "the face touching the void has no defined slope"
 
     def test_a_sentinel_node_does_not_fabricate_an_aspect(self):
         """Was a confident 45 degrees."""
-        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).aspect()
+        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).terrain.aspect()
         assert np.isnan(result[1]), "no direction is defined across a void"
 
     def test_a_sentinel_node_does_not_fabricate_a_shade(self):
         """Was 0.0255 - a near-black face indistinguishable from a real shadow."""
-        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).hillshade()
+        result = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).terrain.hillshade()
         assert np.isnan(result[1]), "a void cannot be shaded"
 
     def test_a_face_located_sentinel_is_also_excluded(self):
         """Bed level usually lives on faces, and the sentinel was averaged onto every node of
         its face, spreading the contamination."""
-        result = _void_dem([1.0, -9999.0], location="face").slope()
+        result = _void_dem([1.0, -9999.0], location="face").terrain.slope()
         assert np.isnan(result[1]), "the void's own face is undefined"
 
     def test_no_declared_nodata_leaves_every_face_defined(self):
@@ -239,12 +241,14 @@ class TestNodataIsNotTerrain:
             data={"z": _QUAD_X.copy()},
             data_locations={"z": "node"},
         )
-        assert np.all(np.isfinite(ds.slope())), "no sentinel declared, nothing masked"
+        assert np.all(np.isfinite(ds.terrain.slope())), (
+            "no sentinel declared, nothing masked"
+        )
 
     def test_nan_in_the_data_behaves_the_same_as_the_sentinel(self):
         """The two spellings of "missing" must agree."""
-        sentinel = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).slope()
-        nan = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, np.nan], nodata=None).slope()
+        sentinel = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, -9999.0]).terrain.slope()
+        nan = _void_dem([0.0, 0.0, 0.0, 0.0, 0.0, np.nan], nodata=None).terrain.slope()
         assert np.isnan(sentinel[1])
         assert np.isnan(nan[1])
         assert sentinel[0] == pytest.approx(nan[0])

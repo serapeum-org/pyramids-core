@@ -28,11 +28,11 @@ from pyramids.netcdf.ugrid import focal as _focal
 from pyramids.netcdf.ugrid import graph as _graph
 from pyramids.netcdf.ugrid import interop_xarray as _interop
 from pyramids.netcdf.ugrid import regrid as _regrid
-from pyramids.netcdf.ugrid import terrain as _terrain
 from pyramids.netcdf.ugrid import vector_ops as _vector_ops
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
     from pyramids.netcdf.ugrid.models import MeshVariable
 
 _KEEP = object()
@@ -185,6 +185,11 @@ def _numeric_stamps(stamps: Any) -> np.ndarray:
 
 class _MeshFacades:
     """Capability facades mixed into :class:`~pyramids.netcdf.ugrid.dataset.MeshDataset`."""
+
+    if TYPE_CHECKING:  # engine accessors provided by the MeshDataset subclass
+
+        @property
+        def terrain(self) -> _MeshTerrain: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -464,59 +469,24 @@ class _MeshFacades:
     def slope(
         self, units: str = "degrees", variable_name: str | None = None
     ) -> np.ndarray:
-        """Per-face slope of a mesh DEM, in degrees (default) or radians (issue #1374).
-
-        An unstructured bed-level mesh is a DEM. The raster version reads a 3x3 pixel window,
-        which has no mesh equivalent; this fits a plane through each face's own node elevations
-        and reads the slope off that -- exact for a triangle, least-squares for a polygon.
-
-        Args:
-            units: ``"degrees"`` (default) or ``"radians"``.
-            variable_name: The elevation variable (default: the only one). A face-located one
-                is averaged onto the nodes first.
-
-        Returns:
-            numpy.ndarray: Per-face slope of length ``n_face``; ``NaN`` on a degenerate face,
-            and on any face touching a ``nodata`` elevation — a void has no defined gradient,
-            which is the contract the raster kernels state too.
-
-        Raises:
-            ValueError: ``units`` is invalid, the variable is edge-located, or it is not one
-                value per element.
-
-        See Also:
-            aspect: The direction the slope faces.
-            hillshade: Shaded relief from the same gradient.
-        """
-        return _terrain.slope(
-            self._mesh,  # type: ignore[attr-defined]
-            self._elevation_nodes("slope", variable_name),
-            units=units,
+        """Facade -- delegates to :meth:`_MeshTerrain.slope`."""
+        warnings.warn(
+            "`mesh.slope` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.terrain.slope`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.terrain.slope(units=units, variable_name=variable_name)
 
     def aspect(self, variable_name: str | None = None) -> np.ndarray:
-        """Per-face aspect of a mesh DEM, in degrees clockwise from north (issue #1374).
-
-        Names the direction the slope **faces** (downhill), matching the raster convention: a
-        surface rising to the east faces west, 270 degrees.
-
-        Args:
-            variable_name: The elevation variable (default: the only one).
-
-        Returns:
-            numpy.ndarray: Per-face aspect in ``[0, 360)``; ``NaN`` on a degenerate face, and
-            on any face touching a ``nodata`` elevation.
-
-        Raises:
-            ValueError: The variable is edge-located, or is not one value per element.
-
-        See Also:
-            slope: The magnitude of the same gradient.
-        """
-        return _terrain.aspect(
-            self._mesh,  # type: ignore[attr-defined]
-            self._elevation_nodes("aspect", variable_name),
+        """Facade -- delegates to :meth:`_MeshTerrain.aspect`."""
+        warnings.warn(
+            "`mesh.aspect` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.terrain.aspect`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.terrain.aspect(variable_name=variable_name)
 
     def hillshade(
         self,
@@ -524,29 +494,15 @@ class _MeshFacades:
         altitude: float = 45.0,
         variable_name: str | None = None,
     ) -> np.ndarray:
-        """Per-face shaded relief of a mesh DEM, clipped to ``0..255`` (issue #1374).
-
-        Args:
-            azimuth: Sun azimuth in degrees (0 = north, 90 = east). Defaults to 315 (NW).
-            altitude: Sun altitude above the horizon in degrees. Defaults to 45.
-            variable_name: The elevation variable (default: the only one).
-
-        Returns:
-            numpy.ndarray: Per-face intensity in ``[0, 255]``; ``NaN`` on a degenerate face,
-            and on any face touching a ``nodata`` elevation. A
-            flat mesh saturates at ``sin(altitude) * 255``, as the raster version does.
-
-        Raises:
-            ValueError: The variable is edge-located, or is not one value per element.
-
-        See Also:
-            slope: The slope magnitude the shading is derived from.
-        """
-        return _terrain.hillshade(
-            self._mesh,  # type: ignore[attr-defined]
-            self._elevation_nodes("hillshade", variable_name),
-            azimuth=azimuth,
-            altitude=altitude,
+        """Facade -- delegates to :meth:`_MeshTerrain.hillshade`."""
+        warnings.warn(
+            "`mesh.hillshade` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.terrain.hillshade`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.terrain.hillshade(
+            azimuth=azimuth, altitude=altitude, variable_name=variable_name
         )
 
     def cluster(

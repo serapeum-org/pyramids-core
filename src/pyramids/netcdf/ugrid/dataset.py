@@ -106,6 +106,7 @@ from pyramids.netcdf.ugrid._drivers import (
 )
 from pyramids.netcdf.ugrid._facades import _axis_distances, _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
+from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
 from pyramids.netcdf.ugrid.io import (
@@ -532,6 +533,11 @@ class MeshDataset(_MeshFacades):
             self._topology_info.mesh_name if self._topology_info else DEFAULT_MESH_NAME
         )
         return result
+
+    @property
+    def terrain(self) -> _MeshTerrain:
+        """Terrain engine: DEM derivatives -- slope, aspect, hillshade (``mesh.terrain``)."""
+        return _MeshTerrain(self)
 
     @property
     def variable_names(self) -> list[str]:
