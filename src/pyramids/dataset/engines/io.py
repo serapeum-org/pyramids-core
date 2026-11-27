@@ -5060,8 +5060,8 @@ class _IO(_Engine["Dataset"]):
         # seconds, not milliseconds.
         band_names = self._ds.band_names
         band_units = self._ds.bands.band_units
-        scale = self._ds.bands.scale
-        offset = self._ds.bands.offset
+        scale = self._ds.scale
+        offset = self._ds.offset
         overview.band_names = [band_names[index] for index in selection]
         overview.bands.band_units = [band_units[index] for index in selection]
         overview.bands.scale = [scale[index] for index in selection]
