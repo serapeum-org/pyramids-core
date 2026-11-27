@@ -235,7 +235,7 @@ ds = Dataset.read_file("dem.tif")
 polys = FeatureCollection.read_parquet("zones.parquet", backend="dask")
 
 # must materialise for now:
-stats = ds.zonal_stats(polys.compute(), stats=("mean", "sum"))
+stats = ds.analysis.zonal_stats(polys.compute(), stats=("mean", "sum"))
 ```
 
 A lazy `zonal_stats` that accepts a `LazyFeatureCollection` is tracked as a

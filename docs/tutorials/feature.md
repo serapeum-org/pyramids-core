@@ -271,7 +271,7 @@ from pyramids.feature import FeatureCollection
 
 fc = FeatureCollection.read_file("roads.shp")
 ds = Dataset.from_features(fc, cell_size=30, column_name="lanes")
-ds.to_file("roads_raster.tif")
+ds.io.to_file("roads_raster.tif")
 ```
 
 `Dataset.from_features` validates up front (M4):

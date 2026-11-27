@@ -22,10 +22,10 @@ ds = Dataset.from_array(
     geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=4326),
 )
 ds.band_names = ["red", "nir"]
-ds.to_file("source.tif")
+ds.io.to_file("source.tif")
 
 # Write — parallel chunk writes, GeoZarr layout, default Blosc codec
-Dataset.read_file("source.tif").to_zarr("out.zarr")
+Dataset.read_file("source.tif").io.to_zarr("out.zarr")
 
 # Read — round-trips values, CRS, GeoTransform, nodata, band names
 rt = Dataset.from_zarr("out.zarr")
@@ -67,7 +67,7 @@ present but `GeoTransform` is absent — for foreign stores).
 ### Write — `Dataset.to_zarr`
 
 ```python
-ds.to_zarr(
+ds.io.to_zarr(
     "out.zarr",
     *,
     compute=True,           # False -> dask.delayed
@@ -101,7 +101,7 @@ ds = Dataset.from_zarr(
 ```python
 col = DatasetCollection.from_files(["t0.tif", "t1.tif", "t2.tif"])
 
-col.to_zarr(
+col.io.to_zarr(
     "cube.zarr",
     *,
     compute=True,
@@ -126,15 +126,15 @@ col.mean()           # time reduction without materialising the whole cube
 
 ```python
 # 1) initial write
-DatasetCollection.from_files(jan_files).to_zarr("cube.zarr")
+DatasetCollection.from_files(jan_files).io.to_zarr("cube.zarr")
 
 # 2) append later timesteps along time
-DatasetCollection.from_files(feb_files).to_zarr(
+DatasetCollection.from_files(feb_files).io.to_zarr(
     "cube.zarr", mode="a", append_dim="time",
 )
 
 # 3) overwrite a specific time slice (e.g. fix a bad month)
-DatasetCollection.from_files(fixed_march).to_zarr(
+DatasetCollection.from_files(fixed_march).io.to_zarr(
     "cube.zarr", mode="a", region={"time": slice(2, 3)},
 )
 ```
@@ -150,14 +150,14 @@ single codec is wrapped in a list automatically; `None` means **uncompressed**;
 
 ```python
 from zarr.codecs import BloscCodec
-ds.to_zarr("zstd.zarr", compressor=BloscCodec(cname="zstd", clevel=5))
-ds.to_zarr("raw.zarr",  compressor=None)
+ds.io.to_zarr("zstd.zarr", compressor=BloscCodec(cname="zstd", clevel=5))
+ds.io.to_zarr("raw.zarr",  compressor=None)
 ```
 
 ## Multiscale pyramid levels
 
 ```python
-ds.to_zarr("ms.zarr", overview_factors=[2, 4, 8])
+ds.io.to_zarr("ms.zarr", overview_factors=[2, 4, 8])
 # adds data_2 / data_4 / data_8 plus an OGC/OME-Zarr `multiscales` attribute
 
 # read a level back (cell size scales by the factor)

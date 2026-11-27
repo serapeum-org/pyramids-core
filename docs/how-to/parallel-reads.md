@@ -12,7 +12,7 @@ from pyramids.dataset import Dataset, Window
 
 ds = Dataset.read_file("big.tif")            # must be path-backed (disk or /vsimem/)
 windows = list(ds.block_windows())           # or any list of Window objects
-blocks = ds.read_windows(windows, threads=8) # one ndarray per window, in input order
+blocks = ds.io.read_windows(windows, threads=8) # one ndarray per window, in input order
 ```
 
 `read_windows` submits each window to a `concurrent.futures.ThreadPoolExecutor`, reading every window
@@ -42,7 +42,7 @@ from pyramids.base.remote import CloudConfig
 
 with CloudConfig(extra={"AWS_S3_ENDPOINT": "minio.example",
                         "AWS_ACCESS_KEY_ID": "AK"}):
-    blocks = ds.read_windows(windows, threads=8)
+    blocks = ds.io.read_windows(windows, threads=8)
 ```
 
 No `path=` is needed here: the read knows its own source. The same applies to a
@@ -81,11 +81,11 @@ ds = Dataset.read_file("big.tif")
 windows = list(ds.block_windows())
 
 t0 = time.perf_counter()
-_ = [ds.read_array(window=w) for w in windows]          # sequential
+_ = [ds.io.read_array(window=w) for w in windows]          # sequential
 seq = time.perf_counter() - t0
 
 t0 = time.perf_counter()
-_ = ds.read_windows(windows, threads=8)                  # parallel
+_ = ds.io.read_windows(windows, threads=8)                  # parallel
 par = time.perf_counter() - t0
 
 print(f"sequential {seq:.3f}s  parallel {par:.3f}s  speedup {seq / par:.1f}x")

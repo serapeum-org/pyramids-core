@@ -38,7 +38,7 @@ from pyramids.dataset import Dataset
 
 ds = Dataset.read_file("tests/data/geotiff/noah-precipitation-1979-corrected.tif")
 
-eager = ds.read_array()                 # numpy.ndarray
+eager = ds.io.read_array()                 # numpy.ndarray
 lazy = ds.read_array(chunks=(512, 512)) # dask.array.Array
 
 lazy.shape        # (H, W)
@@ -114,7 +114,7 @@ reloaded = Dataset.from_zarr("out.zarr", chunks=(1, 1024, 1024))
 Pass `compute=False` to defer the write:
 
 ```python
-delayed = ds.to_zarr("out.zarr", compute=False)
+delayed = ds.io.to_zarr("out.zarr", compute=False)
 # ... build a larger graph ...
 dask.compute(delayed, other_task)
 ```
@@ -122,7 +122,7 @@ dask.compute(delayed, other_task)
 `storage_options=` forwards to fsspec so cloud stores work:
 
 ```python
-ds.to_zarr(
+ds.io.to_zarr(
     "s3://bucket/key.zarr",
     chunks=(1, 1024, 1024),
     storage_options={"anon": False, "key": "...", "secret": "..."},
@@ -154,7 +154,7 @@ from pyramids.dataset import Dataset
 dem = Dataset.read_file("dem.tif")
 
 # eager — same as before
-slope_eager = dem.slope()
+slope_eager = dem.terrain.slope()
 
 # lazy — parallelised across chunks
 slope_lazy = dem.slope(chunks=(1024, 1024))
@@ -196,7 +196,7 @@ from pyramids.feature import FeatureCollection
 dem = Dataset.read_file("dem.tif")
 polys = FeatureCollection.read_file("watersheds.geojson")
 
-df = dem.zonal_stats(polys, stats=("mean", "std", "count"))
+df = dem.analysis.zonal_stats(polys, stats=("mean", "std", "count"))
 # pandas.DataFrame indexed by polys.index, one column per stat
 ```
 

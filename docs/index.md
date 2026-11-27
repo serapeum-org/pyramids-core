@@ -143,12 +143,12 @@ print(ds.columns, ds.rows, ds.geotransform)
 print(ds.epsg, ds.cell_size, ds.no_data_value)
 
 # Access array data
-arr = ds.read_array()
+arr = ds.io.read_array()
 print(arr.shape, arr.dtype)
 
 # Save a single band to a new GeoTIFF (writes alongside input by default)
 out = "./dem_copy.tif"
-ds.to_file(out)
+ds.io.to_file(out)
 print("Saved to", out)
 ```
 

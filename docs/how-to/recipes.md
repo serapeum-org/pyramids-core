@@ -18,7 +18,7 @@ print(arr.min(), arr.max(), arr.mean())
 from pyramids.dataset import Dataset
 
 ds = Dataset.read_file("tests\\data\\geotiff\\dem.tif")
-ds.to_file("out.asc")
+ds.io.to_file("out.asc")
 ```
 
 ## Crop a raster to bounding box
@@ -33,7 +33,7 @@ src = "tests\\data\\geotiff\\dem.tif"
 ds = Dataset.read_file(src)
 # ds.crop_bbox is illustrative; see actual API for cropping/windowing
 # cropped = ds.crop_bbox(bbox)
-# cropped.to_file("dem_cropped.tif")
+# cropped.io.to_file("dem_cropped.tif")
 ```
 
 ## Read multiple rasters into a datacube
@@ -53,6 +53,6 @@ from pyramids.feature import FeatureCollection
 
 raster = Dataset.read_file("tests\\data\\geotiff\\dem.tif")
 polys = FeatureCollection.read_file("tests\\data\\geometries\\polygons.geojson")
-# table = raster.zonal_stats(polys)  # replace with the actual method name in your API
+# table = raster.analysis.zonal_stats(polys)  # replace with the actual method name in your API
 # print(table.head())
 ```
