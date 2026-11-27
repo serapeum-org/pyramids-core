@@ -462,7 +462,7 @@ class TestCarryAuxVariablesWarn:
         """
         cube = _era5_like_cube()
         result = Mock()
-        result.add_variable.side_effect = RuntimeError("boom")
+        result.variables.add.side_effect = RuntimeError("boom")
         with pytest.warns(UserWarning, match="could not carry"):
             cube._carry_aux_variables(result, ["number"], "crop")
 
@@ -476,7 +476,7 @@ class TestCarryAuxVariablesWarn:
         """
         cube = _era5_like_cube()
         result = Mock()
-        result.add_variable.side_effect = RuntimeError("boom")
+        result.variables.add.side_effect = RuntimeError("boom")
         with pytest.warns(UserWarning, match="could not carry 2 non-spatial") as record:
             cube._carry_aux_variables(result, ["number", "expver"], "crop")
         assert len(record) == 1, f"must emit exactly one warning, got {len(record)}"

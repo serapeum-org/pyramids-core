@@ -16,6 +16,7 @@ from shapely.geometry import Polygon, box
 from pyramids.base._errors import NoDataValueError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
+from pyramids.dataset.engines.io import _IO
 from pyramids.dataset.engines.spatial import _Spatial, _survives_a_c_double
 from pyramids.feature import FeatureCollection
 
@@ -1319,14 +1320,14 @@ class TestCropBoundsTheReadToTheCrop:
         """
         dataset = self._large_source()
         peak = {"cells": 0}
-        original = Dataset.read_array
+        original = _IO.read_array
 
         def spy(self, *args, **kwargs):
             arr = original(self, *args, **kwargs)
             peak["cells"] = max(peak["cells"], getattr(arr, "size", 0))
             return arr
 
-        monkeypatch.setattr(Dataset, "read_array", spy)
+        monkeypatch.setattr(_IO, "read_array", spy)
         out = dataset.spatial.crop(mask=self._grid_aligned_mask(), touch=True)
         output_cells = out.shape[-1] * out.shape[-2]
         assert peak["cells"] <= 4 * output_cells, (
@@ -1934,7 +1935,7 @@ class TestCropFillValues:
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=None)
         source.no_data_value = [np.nan]
         calls = []
-        original = Dataset.read_array
+        original = _IO.read_array
         monkeypatch.setattr(
             Dataset,
             "read_array",
