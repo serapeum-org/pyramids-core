@@ -529,7 +529,7 @@ class TestRun:
             and one collected failure, with the failure carrying the second source.
         """
         good = tmp_path / "good.tif"
-        raster_ds.to_file(str(good))
+        raster_ds.io.to_file(str(good))
         bad = tmp_path / "missing.tif"
         out = tmp_path / "out"
         result = run(

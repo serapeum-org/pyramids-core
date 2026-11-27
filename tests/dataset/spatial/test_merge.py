@@ -117,7 +117,7 @@ class TestMergeMethod:
         pa, pb = overlapping_pair
         out = tmp_path / f"out_{method}.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0, method=method)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.shape == (4, 6), f"Expected union shape (4, 6), got {arr.shape}"
         assert arr[0, 2] == expected_overlap and arr[0, 3] == expected_overlap, (
             f"{method} overlap should be {expected_overlap}, got {arr[0, 2]} / {arr[0, 3]}"
@@ -149,7 +149,7 @@ class TestMergeMethod:
         pa, pb = disjoint_pair
         out = tmp_path / f"int_{method}.tif"
         merge_rasters([pa, pb], out, method=method)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(covered_a), (
             f"{method}: raster A's own column reduced to {arr[0, 0]}"
         )
@@ -185,8 +185,8 @@ class TestMergeMethod:
         stripped = tmp_path / f"stripped_{method}.tif"
         merge_rasters([top, bottom], stripped, no_data_value=-9999.0, method=method)
         assert np.array_equal(
-            Dataset.read_file(str(single)).read_array(),
-            Dataset.read_file(str(stripped)).read_array(),
+            Dataset.read_file(str(single)).io.read_array(),
+            Dataset.read_file(str(stripped)).io.read_array(),
         ), f"{method}: 1-row-strip result differs from the single-pass merge"
 
     @pytest.mark.parametrize("method", ["min", "max", "sum", "count", "mean"])
@@ -219,8 +219,8 @@ class TestMergeMethod:
         monkeypatch.setattr(merge_mod, "_MERGE_STRIP_ROWS", 1)
         stripped = tmp_path / f"stripped_{method}.tif"
         merge_rasters([top, bottom], stripped, no_data_value=-9999.0, method=method)
-        single_arr = Dataset.read_file(str(single)).read_array()
-        stripped_arr = Dataset.read_file(str(stripped)).read_array()
+        single_arr = Dataset.read_file(str(single)).io.read_array()
+        stripped_arr = Dataset.read_file(str(stripped)).io.read_array()
         assert single_arr.shape[0] == 2, f"expected 2 bands, got {single_arr.shape}"
         assert np.array_equal(single_arr, stripped_arr), (
             f"{method}: multi-band striped merge diverged from the single-pass merge"
@@ -256,8 +256,8 @@ class TestMergeMethod:
         # Warm the build's one-time GDAL read buffer with a small windowed read of each
         # source OUTSIDE the traced region so it is already live during the measurement; the
         # absolute ceiling below is the load-bearing backstop (see #1047 / #1049).
-        Dataset.read_file(str(pa)).read_array(window=[0, 0, cols, 128])
-        Dataset.read_file(str(pb)).read_array(window=[0, 0, cols, 128])
+        Dataset.read_file(str(pa)).io.read_array(window=[0, 0, cols, 128])
+        Dataset.read_file(str(pb)).io.read_array(window=[0, 0, cols, 128])
 
         # Stripped merge.
         monkeypatch.setattr(merge_mod, "_MERGE_STRIP_ROWS", 128)
@@ -295,7 +295,7 @@ class TestMergeMethod:
         pa, pb = overlapping_pair
         out = tmp_path / "default.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(20.0), (
             f"Default should be last-wins (20), got {arr[0, 2]}"
         )
@@ -314,7 +314,7 @@ class TestMergeMethod:
         pb = write_raster(tmp_path / "br.tif", b, (2, 2))
         out = tmp_path / "gappy.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, method="sum")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(5.0), (
             f"Top-left should be A=5, got {arr[0, 0]}"
         )
@@ -341,7 +341,7 @@ class TestMergeMethod:
         pb = write_raster(tmp_path / "mb.tif", b, (0, 3))
         out = tmp_path / "mmax.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0, method="max")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 1, 1] == pytest.approx(4.0), (
             f"Band 0 max should be 4, got {arr[0, 1, 1]}"
         )
@@ -362,7 +362,7 @@ class TestMergeMethod:
         pb = write_raster(tmp_path / "nb.tif", b, (2, 4), nodata=-9999.0)
         out = tmp_path / "n_min.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, n=20, method="min")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(10.0), (
             f"Overlap min ignoring 20 should be 10, got {arr[0, 2]}"
         )
@@ -474,7 +474,7 @@ class TestMergeCountAndMean:
         pa, pb = overlapping_pair
         out = tmp_path / "count.tif"
         merge_rasters([pa, pb], out, method="count")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.shape == (4, 6), f"Expected union shape (4, 6), got {arr.shape}"
         assert arr[0, 2] == pytest.approx(2.0), (
             f"overlap column 2 should count 2 sources, got {arr[0, 2]}"
@@ -497,7 +497,7 @@ class TestMergeCountAndMean:
         pa, pb = overlapping_pair
         out = tmp_path / "mean.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0, method="mean")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(15.0), (
             f"overlap column 2 should hold mean(10, 20) = 15, got {arr[0, 2]}"
         )
@@ -524,7 +524,7 @@ class TestMergeCountAndMean:
         pa, pb, pc = holed_trio
         out = tmp_path / "trio_mean.tif"
         merge_rasters([pa, pb, pc], out, no_data_value=-1.0, method="mean")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(15.0), (
             "the holed column must average the 2 valid values (15), not divide by "
             f"the 3 overlapping sources (10), got {arr[0, 0]}"
@@ -543,7 +543,7 @@ class TestMergeCountAndMean:
         pa, pb, pc = holed_trio
         out = tmp_path / "trio_count.tif"
         merge_rasters([pa, pb, pc], out, method="count")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(2.0), (
             f"the holed column should count 2 contributions, got {arr[0, 0]}"
         )
@@ -563,7 +563,7 @@ class TestMergeCountAndMean:
         pa, pb = gappy_pair
         out = tmp_path / "gappy_count.tif"
         merge_rasters([pa, pb], out, method="count")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(1.0), (
             f"the covered top-left should count 1, got {arr[0, 0]}"
         )
@@ -601,7 +601,7 @@ class TestMergeCountAndMean:
             f"tally that a marker could mask; it declared {marker}"
         )
         mosaic = Dataset.read_file(str(out))
-        masked = mosaic.read_array(masked=True)
+        masked = mosaic.io.read_array(masked=True)
         masked = masked[0] if masked.ndim == 3 else masked
         assert int(masked.size - masked.count()) == 0, (
             "no cell of a count mosaic may read as masked; the uncovered quadrants' "
@@ -637,7 +637,7 @@ class TestMergeCountAndMean:
         pa, pb = gappy_pair
         out = tmp_path / "gappy_mean.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, method="mean")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 0] == pytest.approx(5.0), (
             f"the covered top-left should stay 5, got {arr[0, 0]}"
         )
@@ -668,8 +668,8 @@ class TestMergeCountAndMean:
         averaged = tmp_path / "band_mean.tif"
         merge_rasters([pa, pb], counted, method="count")
         merge_rasters([pa, pb], averaged, no_data_value=-1.0, method="mean")
-        tally = Dataset.read_file(str(counted)).read_array()
-        mean = Dataset.read_file(str(averaged)).read_array()
+        tally = Dataset.read_file(str(counted)).io.read_array()
+        mean = Dataset.read_file(str(averaged)).io.read_array()
         assert tally[0, 1, 1] == pytest.approx(1.0), (
             f"band 0 is valid in one source only, got a count of {tally[0, 1, 1]}"
         )
@@ -710,7 +710,7 @@ class TestMergeCountAndMean:
         pa, pb = overlapping_pair
         out = tmp_path / f"regression_{method}.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0, method=method)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert np.array_equal(arr, np.tile(np.asarray(expected), (4, 1))), (
             f"{method} no longer matches its recorded output:\n{arr}"
         )
@@ -731,7 +731,7 @@ class TestMergeCountAndMean:
         pa, pb = gappy_pair
         out = tmp_path / f"gap_{method}.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, method=method)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 3] == pytest.approx(-1.0), (
             f"{method}: uncovered top-right should hold -1, got {arr[0, 3]}"
         )
@@ -798,7 +798,7 @@ class TestMergeRastersInheritsNoData:
                     top_left_corner=(x0, 2.0), cell_size=1.0, epsg=4326
                 ),
             )
-            ds.to_file(tmp_path / name)
+            ds.io.to_file(tmp_path / name)
             handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
             band = handle.GetRasterBand(1)
             if no_data is None:
@@ -833,7 +833,7 @@ class TestMergeRastersInheritsNoData:
                     top_left_corner=(x0, 2.0), cell_size=1.0, epsg=4326
                 ),
             )
-            ds.to_file(tmp_path / name)
+            ds.io.to_file(tmp_path / name)
             handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
             band = handle.GetRasterBand(1)
             if no_data is None:
@@ -849,7 +849,7 @@ class TestMergeRastersInheritsNoData:
     def _masked_count(path):
         """Return how many cells of the mosaic read as masked."""
         ds = Dataset.read_file(str(path))
-        masked = ds.read_array(masked=True)
+        masked = ds.io.read_array(masked=True)
         masked = masked[0] if masked.ndim == 3 else masked
         return int(masked.size - masked.count()), ds
 
@@ -876,9 +876,9 @@ class TestMergeRastersInheritsNoData:
             f"the sources' -9999 should be inherited, got {ds.no_data_value[0]}"
         )
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "stats() must report the true minimum of 0.0, not 3.0"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "stats() must report the true minimum of 0.0, not 3.0"
 
     def test_sources_declaring_none_still_leave_real_zeros_readable(self, tmp_path):
         """No source declaring one must not cost the caller their real 0 cells.
@@ -896,9 +896,9 @@ class TestMergeRastersInheritsNoData:
         assert raw is not None, "a float mosaic should declare a marker"
         assert np.isnan(raw), f"it should be the NaN its gaps hold, got {raw}"
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "stats() must still report the true minimum of 0.0"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "stats() must still report the true minimum of 0.0"
 
     def test_a_contiguous_integer_mosaic_is_left_unmarked_never_nan(self, tmp_path):
         """Tiles that leave no gap need no marker, and must not be given a NaN one.
@@ -917,9 +917,9 @@ class TestMergeRastersInheritsNoData:
         masked, ds = self._masked_count(out)
         assert raw is None, f"a gapless mosaic needs no marker, got {raw}"
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "the genuine 0 cells must still be readable"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "the genuine 0 cells must still be readable"
 
     def test_a_gapless_mosaic_is_not_surveyed(self, tmp_path, monkeypatch):
         """Choosing a marker reads every source, so it is not done when unnecessary.
@@ -994,7 +994,7 @@ class TestMergeRastersInheritsNoData:
                 geo_ref=GeoReference(
                     top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(tmp_path / name)
+            ).io.to_file(tmp_path / name)
             handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
             handle.GetRasterBand(1).DeleteNoDataValue()
             handle.FlushCache()
@@ -1035,7 +1035,7 @@ class TestMergeRastersInheritsNoData:
             merge_rasters(tiles, out, init=0)
         masked, ds = self._masked_count(out)
         marker = self._raw_marker(out)
-        values = np.asarray(ds.read_array(), dtype="float64")
+        values = np.asarray(ds.io.read_array(), dtype="float64")
         values = values[0] if values.ndim == 3 else values
         assert marker == pytest.approx(-9999.0), (
             f"a value the data does not use should be chosen, got {marker}"
@@ -1094,7 +1094,7 @@ class TestMergeRastersInheritsNoData:
             self._gapped_tiles(tmp_path, "int32"), out, no_data_value=-1, init=0
         )
         ds = Dataset.read_file(str(out))
-        values = np.asarray(ds.read_array(), dtype="float64")
+        values = np.asarray(ds.io.read_array(), dtype="float64")
         values = values[0] if values.ndim == 3 else values
         assert self._raw_marker(out) == pytest.approx(-1.0), "the marker was not kept"
         assert values[0][2] == pytest.approx(0.0), (
@@ -1150,7 +1150,7 @@ class TestMergeRastersInheritsNoData:
         else:
             assert raw == pytest.approx(wanted), f"expected {wanted}, got {raw}"
         assert masked == 4, f"the four gap cells should be masked, {masked} were"
-        stats = ds.stats(approx_ok=False)
+        stats = ds.analysis.stats(approx_ok=False)
         assert float(stats["min"].iloc[0]) == pytest.approx(1.0), (
             f"gap pixels leaked into stats(): min {stats['min'].iloc[0]}"
         )
@@ -1196,11 +1196,11 @@ class TestMergeRastersInheritsNoData:
         Dataset.from_array(
             saturated,
             geo_ref=GeoReference(top_left_corner=(0.0, 16.0), cell_size=1.0, epsg=4326),
-        ).to_file(tmp_path / "full.tif")
+        ).io.to_file(tmp_path / "full.tif")
         Dataset.from_array(
             np.ones((2, 2), dtype="uint8"),
             geo_ref=GeoReference(top_left_corner=(40.0, 2.0), cell_size=1.0, epsg=4326),
-        ).to_file(tmp_path / "far.tif")
+        ).io.to_file(tmp_path / "far.tif")
         for name in ("full.tif", "far.tif"):
             handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
             handle.GetRasterBand(1).DeleteNoDataValue()
@@ -1230,9 +1230,9 @@ class TestMergeRastersInheritsNoData:
             "the sources' own value should still be inherited"
         )
         assert masked == 4, f"the four gap cells should be masked, {masked} were"
-        assert float(ds.stats(approx_ok=False)["mean"].iloc[0]) == pytest.approx(4.5), (
-            "the gaps leaked into stats()"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["mean"].iloc[0]
+        ) == pytest.approx(4.5), "the gaps leaked into stats()"
 
     def test_an_unstorable_inherited_marker_is_replaced_and_warns(self, tmp_path):
         """A NaN inherited onto an integer band is refused by GDAL, so it is not used.
@@ -1268,7 +1268,7 @@ class TestMergeRastersInheritsNoData:
             holed,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        ds.to_file(paths[0])
+        ds.io.to_file(paths[0])
         handle = gdal.Open(str(paths[0]), gdal.GA_Update)
         handle.GetRasterBand(1).SetNoDataValue(-9999.0)
         handle.FlushCache()
@@ -1277,7 +1277,7 @@ class TestMergeRastersInheritsNoData:
         out = tmp_path / "m.tif"
         merge_rasters(paths, out)
         masked, mosaic = self._masked_count(out)
-        values = np.asarray(mosaic.read_array(), dtype="float64")
+        values = np.asarray(mosaic.io.read_array(), dtype="float64")
         values = values[0] if values.ndim == 3 else values
         # The masked count alone does not discriminate: the old `0` default
         # masked the one real 0.0 cell and produced the same total.
@@ -1315,7 +1315,7 @@ class TestMergeRastersInheritsNoData:
                 geo_ref=GeoReference(
                     top_left_corner=(x0, 2.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(tmp_path / f"{name}.tif")
+            ).io.to_file(tmp_path / f"{name}.tif")
             source = gdal.Open(str(tmp_path / f"{name}.tif"))
             vrt = gdal.GetDriverByName("VRT").CreateCopy(
                 str(tmp_path / f"{name}.vrt"), source
@@ -1397,7 +1397,7 @@ class TestMergeRastersInheritsNoData:
                 geo_ref=GeoReference(
                     top_left_corner=(x0, 2.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(tmp_path / name)
+            ).io.to_file(tmp_path / name)
             handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
             handle.GetRasterBand(1).SetNoDataValue(marker)
             handle.FlushCache()
@@ -1408,7 +1408,7 @@ class TestMergeRastersInheritsNoData:
         with pytest.warns(UserWarning, match="disagree on no-data value"):
             merge_rasters(paths, out, method=method)
         masked, ds = self._masked_count(out)
-        values = np.asarray(ds.read_array(), dtype="float64")
+        values = np.asarray(ds.io.read_array(), dtype="float64")
         values = values[0] if values.ndim == 3 else values
         assert masked == 2, (
             f"both sources' holes should be masked, {masked} were: {values.tolist()}"
@@ -1510,7 +1510,7 @@ def unmarked_tiles(tmp_path):
         Dataset.from_array(
             np.array(values, dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(x0, 2.0), cell_size=1.0, epsg=4326),
-        ).to_file(tmp_path / name)
+        ).io.to_file(tmp_path / name)
         handle = gdal.Open(str(tmp_path / name), gdal.GA_Update)
         handle.GetRasterBand(1).DeleteNoDataValue()
         handle.FlushCache()
@@ -1731,12 +1731,12 @@ class TestStorableMarker:
             np.array([[1, 2], [3, 4]], dtype="int32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        west.to_file(tmp_path / "iw.tif")
+        west.io.to_file(tmp_path / "iw.tif")
         east = Dataset.from_array(
             np.array([[5, 6], [7, 8]], dtype="int32"),
             geo_ref=GeoReference(top_left_corner=(2.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        east.to_file(tmp_path / "ie.tif")
+        east.io.to_file(tmp_path / "ie.tif")
         with pytest.raises(ValueError, match="is not a number"):
             merge_rasters(
                 [tmp_path / "iw.tif", tmp_path / "ie.tif"],
@@ -1912,7 +1912,7 @@ class TestMergeRastersInputContracts:
         out = tmp_path / "gap.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, init=-1.0, method="last")
         ds = Dataset.read_file(str(out))
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         assert arr.shape == (4, 12), f"Expected union shape (4, 12), got {arr.shape}"
         assert arr[0, 5] == pytest.approx(-1), (
             f"Uncovered pixel should hold init=-1, got {arr[0, 5]}"
@@ -1931,7 +1931,7 @@ class TestMergeRastersInputContracts:
         pa, pb = disjoint_pair
         out = tmp_path / "dtype_zorder.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, init=-1.0, method="last")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.dtype == np.int32, f"z-order should preserve int32, got {arr.dtype}"
 
     def test_reduce_promotes_to_float64(self, disjoint_pair, tmp_path):
@@ -1944,7 +1944,7 @@ class TestMergeRastersInputContracts:
         pa, pb = disjoint_pair
         out = tmp_path / "dtype_reduce.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, method="max")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.dtype == np.float64, f"reduce should write float64, got {arr.dtype}"
 
     def test_n_ignores_source_value_in_zorder(self, overlapping_pair, tmp_path):
@@ -1958,7 +1958,7 @@ class TestMergeRastersInputContracts:
         pa, pb = overlapping_pair
         out = tmp_path / "n_zorder.tif"
         merge_rasters([pa, pb], out, no_data_value=-1.0, init=-1.0, n=20, method="last")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(10.0), (
             f"Overlap should fall back to A=10, got {arr[0, 2]}"
         )
@@ -1977,7 +1977,7 @@ class TestMergeRastersInputContracts:
         pa, pb = disjoint_pair
         out = tmp_path / "path_objects.tif"
         merge_rasters([Path(pa), Path(pb)], Path(out), no_data_value=-1.0, init=-1.0)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.shape == (4, 12), f"Expected union shape (4, 12), got {arr.shape}"
         assert arr[0, 0] == pytest.approx(10) and arr[0, 11] == pytest.approx(20), (
             f"Tile values lost: left={arr[0, 0]}, right={arr[0, 11]}"
@@ -2000,7 +2000,7 @@ class TestDatasetCollectionMergeMethod:
         )
         out = tmp_path / "coll_sum.tif"
         collection.merge(out, no_data_value=-9999.0, method="sum")
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(30.0), (
             f"Collection sum overlap should be 30, got {arr[0, 2]}"
         )
@@ -2035,7 +2035,7 @@ def disagree_pair(tmp_path):
     pa = write_raster(tmp_path / "da_4326.tif", a, (0, 4), epsg=4326)
     pb_4326 = write_raster(tmp_path / "db_4326.tif", b, (2, 4), epsg=4326)
     pb = str(tmp_path / "db_3857.tif")
-    Dataset.read_file(pb_4326).to_crs(3857).to_file(pb)
+    Dataset.read_file(pb_4326).spatial.to_crs(3857).io.to_file(pb)
     return pa, pb
 
 
@@ -2079,7 +2079,7 @@ class TestMergeRastersDstCrs:
         out = tmp_path / "default_crs.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0)
         result = Dataset.read_file(str(out))
-        arr = result.read_array()
+        arr = result.io.read_array()
         assert result.epsg == 4326, f"Expected output EPSG 4326, got {result.epsg}"
         assert arr[0, 2] == pytest.approx(20.0), (
             f"Last-wins overlap should be 20, got {arr[0, 2]}"
@@ -2116,7 +2116,7 @@ class TestMergeRastersDstCrs:
         merge_rasters([pa, pb], out, no_data_value=-9999.0, method=method, dst_crs=3857)
         result = Dataset.read_file(str(out))
         assert result.epsg == 3857, f"{method}: expected EPSG 3857, got {result.epsg}"
-        assert result.read_array().size > 0, f"{method}: mosaic is empty"
+        assert result.io.read_array().size > 0, f"{method}: mosaic is empty"
 
     def test_invalid_dst_crs_string_raises(self, shared_crs_pair, tmp_path):
         """An unparseable ``dst_crs`` string raises ValueError.
@@ -2538,7 +2538,7 @@ class TestMergeRastersSigner:
         pa, pb = shared_crs_pair
         out = tmp_path / "no_signer.tif"
         merge_rasters([pa, pb], out, no_data_value=-9999.0, signer=None)
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(20.0), (
             f"signer=None overlap should be 20, got {arr[0, 2]}"
         )
@@ -2558,7 +2558,7 @@ class TestMergeRastersSigner:
             no_data_value=-9999.0,
             signer=_FakeSigner({"GDAL_HTTP_TIMEOUT": "30"}),
         )
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr[0, 2] == pytest.approx(20.0), (
             f"Signed merge overlap should be 20, got {arr[0, 2]}"
         )
@@ -2630,7 +2630,7 @@ class TestMergeRastersSigner:
         merge_rasters(
             [pa, pb], out, no_data_value=-9999.0, method=method, signer=_FakeSigner({})
         )
-        arr = Dataset.read_file(str(out)).read_array()
+        arr = Dataset.read_file(str(out)).io.read_array()
         assert arr.shape == (
             4,
             6,
@@ -2803,8 +2803,8 @@ def uint16_mixed_res_bands(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 40.0), cell_size=20.0, epsg=32630),
     )
     pa, pb = str(tmp_path / "b10.tif"), str(tmp_path / "b20.tif")
-    a.to_file(pa)
-    b.to_file(pb)
+    a.io.to_file(pa)
+    b.io.to_file(pb)
     return pa, pb
 
 
@@ -3748,7 +3748,7 @@ class TestReduceWindowPrunesSources:
             method="max",
             bbox=(0.0, 0.0, 12.0, 4.0),
         )
-        values = Dataset.read_file(str(out)).read_array()
+        values = Dataset.read_file(str(out)).io.read_array()
         assert np.nanmax(values) == 3.0, (
             f"the easternmost tile must still contribute, got max {np.nanmax(values)}"
         )

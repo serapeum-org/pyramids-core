@@ -177,7 +177,7 @@ class TestTheReceiversAndRefusals:
             geo_ref=GEO,
             no_data_value=None,
         )
-        container.set_variable("static", flat)
+        container.variables.set("static", flat)
         with pytest.raises(ValueError, match="share their band dimensions"):
             container.to_dataframe()
 

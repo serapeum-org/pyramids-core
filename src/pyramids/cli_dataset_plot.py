@@ -42,7 +42,7 @@ def _cmd_plot_histogram(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     force_agg_backend()
     ds = Dataset.read_file(args.input)
-    fig, _ax, _hist = ds.plot_histogram(
+    fig, _ax, _hist = ds.glyph.histogram(
         band=args.band,
         bins=args.bins,
         exclude_value=args.exclude_value,
@@ -66,7 +66,7 @@ def _cmd_plot_vector_field(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     force_agg_backend()
     ds = Dataset.read_file(args.input)
-    fig, _ax, _im = ds.plot_vector_field(
+    fig, _ax, _im = ds.glyph.vector_field(
         u_band=args.u_band, v_band=args.v_band, kind=args.kind
     )
     fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")

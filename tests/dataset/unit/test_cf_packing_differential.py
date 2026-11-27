@@ -50,8 +50,8 @@ def _packed() -> Dataset:
         Dataset: The packed raster.
     """
     dataset = Dataset.from_array(COUNTS, geo_ref=GEO, no_data_value=SENTINEL)
-    dataset.scale = [SCALE]
-    dataset.offset = [OFFSET]
+    dataset.bands.scale = [SCALE]
+    dataset.bands.offset = [OFFSET]
     return dataset
 
 
@@ -88,8 +88,8 @@ def _to_celsius(dataset: Dataset) -> Dataset:
     Returns:
         Dataset: The converted raster.
     """
-    dataset.band_units = ["K"]
-    return dataset.convert_units("celsius")
+    dataset.bands.band_units = ["K"]
+    return dataset.bands.convert_units("celsius")
 
 
 def _zones() -> gpd.GeoDataFrame:
@@ -125,50 +125,62 @@ def _overlaid(dataset: Dataset) -> np.ndarray:
 
 
 CASES: list[tuple[str, Callable[[Dataset], Any]]] = [
-    ("count_domain_cells", lambda ds: ds.count_domain_cells()),
-    ("domain_area", lambda ds: ds.domain_area()),
-    ("stats", lambda ds: ds.stats(approx_ok=False)[["min", "max", "mean"]].to_numpy()),
-    ("extract", lambda ds: np.sort(np.asarray(ds.extract(), dtype="float64").ravel())),
-    ("get_cell_coords", lambda ds: len(ds.get_cell_coords(domain_only=True))),
+    ("count_domain_cells", lambda ds: ds.analysis.count_domain_cells()),
+    ("domain_area", lambda ds: ds.analysis.domain_area()),
+    (
+        "stats",
+        lambda ds: ds.analysis.stats(approx_ok=False)[
+            ["min", "max", "mean"]
+        ].to_numpy(),
+    ),
+    (
+        "extract",
+        lambda ds: np.sort(np.asarray(ds.analysis.extract(), dtype="float64").ravel()),
+    ),
+    ("get_cell_coords", lambda ds: len(ds.cell.get_cell_coords(domain_only=True))),
     (
         "to_geodataframe",
         lambda ds: np.sort(
-            ds.to_geodataframe(geometry="point", tile=False)
+            ds.vector.to_geodataframe(geometry="point", tile=False)
             .iloc[:, 0]
             .to_numpy(dtype="float64")
         ),
     ),
-    ("footprint", lambda ds: float(ds.footprint().area.sum())),
-    ("focal_mean", lambda ds: _domain(ds.focal_mean(radius=1))),
-    ("apply", lambda ds: _domain(ds.apply(lambda a: a * 2).read_array())),
+    ("footprint", lambda ds: float(ds.analysis.footprint().area.sum())),
+    ("focal_mean", lambda ds: _domain(ds.analysis.focal_mean(radius=1))),
+    ("apply", lambda ds: _domain(ds.analysis.apply(lambda a: a * 2).io.read_array())),
     (
         "apply-tiled",
-        lambda ds: _domain(ds.apply(lambda a: a * 2, elementwise=True).read_array()),
+        lambda ds: _domain(
+            ds.analysis.apply(lambda a: a * 2, elementwise=True).io.read_array()
+        ),
     ),
     (
         "map_blocks",
-        lambda ds: _domain(ds.map_blocks(lambda t: t * 2, tile_size=2).read_array()),
+        lambda ds: _domain(
+            ds.io.map_blocks(lambda t: t * 2, tile_size=2).io.read_array()
+        ),
     ),
     (
         "stream_transform",
         lambda ds: _domain(
-            ds.io.stream_transform(lambda t: t * 2, tile_size=2).read_array()
+            ds.io.stream_transform(lambda t: t * 2, tile_size=2).io.read_array()
         ),
     ),
-    ("get_histogram", lambda ds: ds.get_histogram(band=0, bins=4)[0]),
+    ("get_histogram", lambda ds: ds.analysis.get_histogram(band=0, bins=4)[0]),
     (
         "zonal_stats",
-        lambda ds: ds.zonal_stats(_zones(), stats=("mean", "count", "min"))[
+        lambda ds: ds.analysis.zonal_stats(_zones(), stats=("mean", "count", "min"))[
             ["mean", "count", "min"]
         ].to_numpy(dtype="float64"),
     ),
-    ("point", lambda ds: float(ds.point(10.15, 49.95, band=0))),
-    ("convert_units", lambda ds: _domain(_to_celsius(ds).read_array())),
-    ("get_tile", lambda ds: _domain(next(iter(ds.get_tile(size=4))))),
+    ("point", lambda ds: float(ds.cog.point(10.15, 49.95, band=0))),
+    ("convert_units", lambda ds: _domain(_to_celsius(ds).io.read_array())),
+    ("get_tile", lambda ds: _domain(next(iter(ds.io.get_tile(size=4))))),
     (
         "to_geodataframe-tiled",
         lambda ds: np.sort(
-            ds.to_geodataframe(geometry="point", tile=True, tile_size=2)
+            ds.vector.to_geodataframe(geometry="point", tile=True, tile_size=2)
             .iloc[:, 0]
             .to_numpy(dtype="float64")
         ),
@@ -181,7 +193,7 @@ CASES: list[tuple[str, Callable[[Dataset], Any]]] = [
         # tip the window a cell either way on any platform: it is always 5x5, and
         # [3, 3] is raster cell (1, 1), a real value rather than the gap.
         lambda ds: float(
-            np.asarray(ds.read_part((9.85, 49.75, 10.25, 50.15), band=0))[3, 3]
+            np.asarray(ds.cog.read_part((9.85, 49.75, 10.25, 50.15), band=0))[3, 3]
         ),
     ),
     (
@@ -191,20 +203,20 @@ CASES: list[tuple[str, Callable[[Dataset], Any]]] = [
         # window one cell wider on some platforms -- macOS read 4x5 where Windows read
         # 4x4. It also excludes the gap cell, so the two rasters compare cell for cell.
         "read_part",
-        lambda ds: np.asarray(ds.read_part((10.12, 49.62, 10.38, 49.88), band=0)),
+        lambda ds: np.asarray(ds.cog.read_part((10.12, 49.62, 10.38, 49.88), band=0)),
     ),
-    ("preview", lambda ds: _domain(ds.preview(band=0))),
+    ("preview", lambda ds: _domain(ds.cog.preview(band=0))),
     ("overlay", _overlaid),
     (
         "map_blocks-band",
         lambda ds: _domain(
-            ds.map_blocks(lambda t: t * 2, tile_size=2, band=0).read_array()
+            ds.io.map_blocks(lambda t: t * 2, tile_size=2, band=0).io.read_array()
         ),
     ),
     (
         "stream_transform-band",
         lambda ds: _domain(
-            ds.io.stream_transform(lambda t: t * 2, band=0, tile_size=2).read_array()
+            ds.io.stream_transform(lambda t: t * 2, band=0, tile_size=2).io.read_array()
         ),
     ),
 ]
@@ -234,15 +246,15 @@ def test_the_packed_raster_answers_like_its_twin(
 @pytest.mark.parametrize(
     ("name", "compute"),
     [
-        ("apply", lambda ds: ds.apply(lambda a: a * 2)),
-        ("map_blocks", lambda ds: ds.map_blocks(lambda t: t * 2, tile_size=2)),
+        ("apply", lambda ds: ds.analysis.apply(lambda a: a * 2)),
+        ("map_blocks", lambda ds: ds.io.map_blocks(lambda t: t * 2, tile_size=2)),
         (
             "stream_transform",
             lambda ds: ds.io.stream_transform(lambda t: t * 2, tile_size=2),
         ),
         (
             "map_blocks-band",
-            lambda ds: ds.map_blocks(lambda t: t * 2, tile_size=2, band=0),
+            lambda ds: ds.io.map_blocks(lambda t: t * 2, tile_size=2, band=0),
         ),
         (
             "stream_transform-band",
@@ -273,7 +285,7 @@ def test_a_computed_result_still_marks_its_gap(
     """
     result = compute(_packed())
     declared = result.no_data_value[0]
-    values = np.asarray(result.read_array(unpack=False), dtype="float64").reshape(
+    values = np.asarray(result.io.read_array(unpack=False), dtype="float64").reshape(
         COUNTS.shape
     )
     assert declared is not None, f"{name}: the result declares no sentinel at all"

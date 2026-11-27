@@ -158,7 +158,7 @@ class TestGroupbyBinsOnContainersAndVariables:
     def test_a_container_reduces_every_variable(self):
         """A two-variable container bins both variables onto the same binned axis."""
         cube = _cube([100.0, 300.0, 600.0, 900.0], cols=2)
-        cube.set_variable("u", cube.get_variable("t") * 10.0)
+        cube.variables.set("u", cube.get_variable("t") * 10.0)
         binned = cube.groupby_bins("level", [0, 500, 1000], "mean")
         assert sorted(binned.variable_names) == ["t", "u"]
         assert binned.get_variable("u")._band_dim_values_map["level"] == [0.0, 500.0]

@@ -617,7 +617,7 @@ def _unit_targets(dataset: Any, overrides: AssetOverrides) -> list[str] | None:
     """
     targets: list[str] | None = None
     if overrides.unit is not None:
-        native = [str(unit or "") for unit in dataset.band_units]
+        native = [str(unit or "") for unit in dataset.bands.band_units]
         labelled = [unit for unit in native if unit]
         if labelled:
             _skipped("unit", overrides.unit, labelled[0], overrides.quiet)
@@ -659,7 +659,7 @@ def _band_first(dataset: Any) -> Any:
     Returns:
         A `(bands, rows, columns)` masked array of stored values.
     """
-    stored = np.ma.asanyarray(dataset.read_array(unpack=False, masked=True))
+    stored = np.ma.asanyarray(dataset.io.read_array(unpack=False, masked=True))
     # np.ma.atleast_3d would append the new axis, not prepend it.
     return stored[np.newaxis, :, :] if stored.ndim == 2 else stored
 
@@ -800,9 +800,9 @@ def _carry_identity(source: Any, target: Any, units: list[str] | None) -> None:
     metadata = [_band_identity(band) for band in source.bands.metadata]
     if any(metadata):
         target.bands.metadata = metadata
-    labels = units or [str(unit or "") for unit in source.band_units]
+    labels = units or [str(unit or "") for unit in source.bands.band_units]
     if any(labels):
-        target.band_units = labels
+        target.bands.band_units = labels
 
 
 @dataclass(frozen=True)

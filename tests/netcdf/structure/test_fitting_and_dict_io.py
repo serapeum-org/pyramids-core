@@ -455,7 +455,7 @@ class TestCurveFit:
         """
         container = _cube([1.0, 3.0, 7.0, 13.0])
         other = _cube([2.0, 6.0, 14.0, 26.0], name="u")
-        container.add_variable(other, "u")
+        container.variables.add(other, "u")
 
         fit = container.curvefit("level", _line, [1.0, 1.0])
 
@@ -665,7 +665,7 @@ class TestRollingExp:
             A two-variable container smooths both.
         """
         container = _cube([10.0, 10.0, 10.0, 20.0])
-        container.add_variable(_cube([0.0, 0.0, 0.0, 4.0], name="u"), "u")
+        container.variables.add(_cube([0.0, 0.0, 0.0, 4.0], name="u"), "u")
 
         smoothed = container.rolling_exp("level", 0.5)
 
@@ -946,7 +946,7 @@ class TestDictRoundTrip:
             A two-variable container round-trips with both variables and their own values.
         """
         container = _cube([1.0, 2.0, 3.0, 4.0])
-        container.add_variable(_cube([5.0, 6.0, 7.0, 8.0], name="u"), "u")
+        container.variables.add(_cube([5.0, 6.0, 7.0, 8.0], name="u"), "u")
 
         rebuilt = NetCDF.from_dict(container.to_dict())
 
@@ -1037,7 +1037,7 @@ class TestDictRoundTrip:
         An empty container has nothing to export.
         """
         container = _cube([1.0, 2.0, 3.0, 4.0])
-        container.remove_variable("t")
+        container.variables.remove("t")
 
         with pytest.raises(ValueError, match="describe as a grid"):
             container.to_dict()
@@ -1345,7 +1345,7 @@ class TestDictExportDefensivePaths:
             Two variables reporting different spatial pairs are refused, naming both layouts.
         """
         container = _cube([1.0, 2.0, 3.0, 4.0])
-        container.add_variable(_cube([5.0, 6.0, 7.0, 8.0], name="u"), "u")
+        container.variables.add(_cube([5.0, 6.0, 7.0, 8.0], name="u"), "u")
         layouts = {"t": ["level", "y", "x"], "u": ["level", "row", "col"]}
         monkeypatch.setattr(
             type(container),

@@ -479,6 +479,26 @@ class _LazyVariableDict(dict):
         """`(name, variable)` for every variable, loading each; values as for `values`."""
         return [(k, self[k]) for k in self._names]
 
+    def add(self, *args: Any, **kwargs: Any) -> Any:
+        """Add a new variable to the container. See :meth:`NetCDF.add_variable`.
+
+        The read-through mapping is a snapshot; after a mutation, re-read ``nc.variables``
+        to see the change (item assignment ``variables[name] = ...`` is refused by design).
+        """
+        return self._nc._varops.add_variable(*args, **kwargs)
+
+    def set(self, *args: Any, **kwargs: Any) -> Any:
+        """Create or overwrite a variable. See :meth:`NetCDF.set_variable`."""
+        return self._nc._varops.set_variable(*args, **kwargs)
+
+    def remove(self, *args: Any, **kwargs: Any) -> Any:
+        """Remove a variable by name. See :meth:`NetCDF.remove_variable`."""
+        return self._nc._varops.remove_variable(*args, **kwargs)
+
+    def rename(self, *args: Any, **kwargs: Any) -> Any:
+        """Rename a variable. See :meth:`NetCDF.rename_variable`."""
+        return self._nc._varops.rename_variable(*args, **kwargs)
+
 
 def _reconstruct_netcdf(
     path: str,
@@ -1749,7 +1769,7 @@ def _variable_summary(nc: NetCDF) -> str:
         bands += f" along {band_axis}"
     lines.append(bands)
 
-    units = _collapse_uniform(nc.band_units)
+    units = _collapse_uniform(nc.bands.band_units)
     if units:
         lines.append(f"  units   : {units}")
     dtype = _collapse_uniform(nc.dtype)
@@ -2608,16 +2628,25 @@ class NetCDF(Dataset):
         self._variable_attrs: dict[str, Any] = {}
         self._scale: float | None = None
         self._offset: float | None = None
-        # NetCDF-specific engine collaborators (issue #615, STR-1). Distinct
-        # attribute names from the eight inherited Dataset engines so they do
-        # not clobber `self.io` / `self.spatial` / … . NetCDF exposes thin
-        # façade methods that delegate here (e.g. `nc.<method>()` ->
-        # `self.interop.<method>()`).
-        self.interop = _Interop(self)
-        # `varops` (not `variables`) because `variables` is an existing read-side
-        # property returning the lazy variable dict — the engine must not shadow it.
-        self.varops = _Variables(self)
-        self.selection = _Selection(self)
+        # NetCDF-specific engine accessors (interop / selection / the internal _varops)
+        # are properties below, like the inherited Dataset engines: fresh per access with
+        # a strong back-reference for the call, no stored cycle. `_varops` is internal and
+        # named so (not `variables`) because `variables` is the read-side property.
+
+    @property
+    def interop(self) -> _Interop:
+        """Interoperability engine: to/from xarray, dask, kerchunk, dict (``nc.interop``)."""
+        return _Interop(self)
+
+    @property
+    def selection(self) -> _Selection:
+        """Selection engine: label/index selection and the xarray-style along-dim ops."""
+        return _Selection(self)
+
+    @property
+    def _varops(self) -> _Variables:
+        """Internal variable-mutation engine (surfaced via ``nc.variables.add/remove/...``)."""
+        return _Variables(self)
 
     def close(self) -> None:
         """Release every GDAL handle this container holds, then close the base.
@@ -3954,6 +3983,12 @@ class NetCDF(Dataset):
             NetCDF.variable_names: The names alone, as a list.
             NetCDF.dtypes: The same names, mapped to their types.
         """
+        warnings.warn(
+            "`data_vars` is deprecated and will be removed in a future release; use "
+            "`variables`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.variables
 
     @property
@@ -4022,6 +4057,12 @@ class NetCDF(Dataset):
             NetCDF.dimension_sizes: The canonical member, and where the subset rule comes from.
             NetCDF.dimension_names: The names alone, as a list.
         """
+        warnings.warn(
+            "`dims` is deprecated and will be removed in a future release; use "
+            "`dimension_sizes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.dimension_sizes
 
     @property
@@ -4061,6 +4102,12 @@ class NetCDF(Dataset):
             NetCDF.dimension_sizes: The canonical member.
             NetCDF.dims: The same mapping, under xarray's other name for it.
         """
+        warnings.warn(
+            "`sizes` is deprecated and will be removed in a future release; use "
+            "`dimension_sizes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.dimension_sizes
 
     @property
@@ -4116,6 +4163,12 @@ class NetCDF(Dataset):
             NetCDF.global_attributes: The canonical member, and the setters
                 `set_global_attribute` / `delete_global_attribute`.
         """
+        warnings.warn(
+            "`attrs` is deprecated and will be removed in a future release; use "
+            "`global_attributes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.global_attributes
 
     @property
@@ -5023,6 +5076,24 @@ class NetCDF(Dataset):
         return self.variables.items()
 
     @property
+    def varops(self) -> _Variables:
+        """Deprecated alias for the variable-mutation surface, now on :attr:`variables`.
+
+        The separate ``varops`` engine is gone: read and mutate the variable collection
+        through one accessor -- ``nc.variables["t2m"]`` to read, ``nc.variables.add(...)`` /
+        ``.remove(...)`` / ``.rename(...)`` / ``.set(...)`` to mutate. This alias forwards to
+        the internal engine and will be removed in a future release.
+        """
+        warnings.warn(
+            "`nc.varops` is deprecated and will be removed in a future release; use "
+            "`nc.variables` (read via `nc.variables[name]`, mutate via "
+            "`nc.variables.add/remove/rename/set`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops
+
+    @property
     def variables(self) -> _LazyVariableDict:
         """All data variables as a lazy dict of `{name: subset}`.
 
@@ -5138,7 +5209,7 @@ class NetCDF(Dataset):
     def stats(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.stats`."""
         self._check_not_container("stats")
-        return super().stats(*args, **kwargs)
+        return self.analysis.stats(*args, **kwargs)
 
     def summary(
         self,
@@ -5213,37 +5284,61 @@ class NetCDF(Dataset):
     def slope(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.slope`."""
         self._check_not_container("slope")
-        return super().slope(*args, **kwargs)
+        return self.terrain.slope(*args, **kwargs)
 
     def hillshade(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.hillshade`."""
         self._check_not_container("hillshade")
-        return super().hillshade(*args, **kwargs)
+        return self.terrain.hillshade(*args, **kwargs)
 
     def write_array(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.write_array`."""
         self._check_not_container("write_array")
-        return super().write_array(*args, **kwargs)
+        return self.io.write_array(*args, **kwargs)
 
     def to_cog(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.to_cog`."""
         self._check_not_container("to_cog")
-        return super().to_cog(*args, **kwargs)
+        return self.cog.to_cog(*args, **kwargs)
 
     def to_geodataframe(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.to_geodataframe`."""
         self._check_not_container("to_geodataframe")
-        return super().to_geodataframe(*args, **kwargs)
+        return self.vector.to_geodataframe(*args, **kwargs)
 
     def zonal_stats(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.zonal_stats`."""
         self._check_not_container("zonal_stats")
-        return super().zonal_stats(*args, **kwargs)
+        return self.analysis.zonal_stats(*args, **kwargs)
 
     def sample(self, *args, **kwargs):  # type: ignore[override]
         """Container-guarded facade for `Dataset.sample`."""
         self._check_not_container("sample")
-        return super().sample(*args, **kwargs)
+        return self.analysis.sample(*args, **kwargs)
+
+    def _read_array(self, *args, **kwargs):
+        """Non-deprecated internal read — routes to NetCDF's variable/dimension/lazy override."""
+        return self.read_array(*args, **kwargs)
+
+    def _band_scale(self) -> list[float]:
+        """Non-deprecated internal band-scale read — NetCDF's CF-packing getter."""
+        return self.scale
+
+    def _band_offset(self) -> list[float]:
+        """Non-deprecated internal band-offset read — NetCDF's CF-packing getter."""
+        return self.offset
+
+    def _crop(self, *args, **kwargs):
+        """Non-deprecated internal crop — routes to NetCDF's multidim/curvilinear override."""
+        return self.crop(*args, **kwargs)
+
+    def _to_crs(self, *args, **kwargs):
+        """Non-deprecated internal reproject — routes to NetCDF's multidim override."""
+        return self.to_crs(*args, **kwargs)
+
+    def _zonal_stats(self, *args, **kwargs):
+        """Non-deprecated internal zonal stats — routes to NetCDF's container-guarded override."""
+        return self.zonal_stats(*args, **kwargs)
 
     # NetCDF intentionally exposes a richer, variable/selector-oriented plot
     # signature than the band-oriented Dataset/RasterBase one; the override
@@ -6475,7 +6570,7 @@ class NetCDF(Dataset):
         Raises:
             ReadOnlyError: The variable is a read-only on-disk file.
         """
-        Dataset.scale.fset(self, value)  # type: ignore[attr-defined]
+        self.bands.scale = value
         if self._scale is not None or self._offset is not None:
             self._scale = float(value[0])
 
@@ -6506,7 +6601,7 @@ class NetCDF(Dataset):
         Raises:
             ReadOnlyError: The variable is a read-only on-disk file.
         """
-        Dataset.offset.fset(self, value)  # type: ignore[attr-defined]
+        self.bands.offset = value
         if self._scale is not None or self._offset is not None:
             self._offset = float(value[0])
 
@@ -6583,7 +6678,7 @@ class NetCDF(Dataset):
         """
         scale, offset = self._effective_packing()
         if unpack and not _is_identity_packing(scale, offset):
-            raw = super().read_array(
+            raw = self.io.read_array(
                 band=band,
                 window=window,
                 masked=masked,
@@ -6593,7 +6688,7 @@ class NetCDF(Dataset):
             return cast(ArrayLike, apply_unpack(raw, scale, offset))
         return cast(
             ArrayLike,
-            super().read_array(
+            self.io.read_array(
                 band=band,
                 window=window,
                 masked=masked,
@@ -7258,7 +7353,7 @@ class NetCDF(Dataset):
                 # `result` is the private container the fan-out built; nothing else
                 # references its raster yet, so carry each aux var in place (copy=False)
                 # to avoid a full MEM copy per aux variable (#143).
-                result.add_variable(self, var_name, copy=False)
+                result.variables.add(self, var_name, copy=False)
             except (RuntimeError, TypeError, ValueError) as exc:
                 # `TypeError` too: a string array with a NULL entry reads back
                 # with `None` in it, and writing that list raises "sequence must
@@ -7901,7 +7996,7 @@ class NetCDF(Dataset):
                 # `result` is a private container built by this fan-out; nothing else
                 # references its raster yet, so mutate it in place (copy=False) to avoid
                 # an O(n^2) per-variable MEM copy on wide cubes (#143).
-                result.set_variable(var_name, ds, copy=False)
+                result.variables.set(var_name, ds, copy=False)
                 # `set_variable` carries `_variable_attrs` but not the packing
                 # slots, which GDAL keeps outside the attribute dictionary.
                 NetCDF._carry_variable_attrs(result, var_name, var)
@@ -8874,7 +8969,7 @@ class NetCDF(Dataset):
             # band dimensions this variable owns and the first did not — a `merge` of a
             # time cube with a level cube creates `level` here, and without this its CF
             # units would live only in memory and die at `to_file` (#1179).
-            result.set_variable(var_name, ds, copy=False, dim_attrs=dim_attrs)
+            result.variables.set(var_name, ds, copy=False, dim_attrs=dim_attrs)
         return result
 
     def to_crs(
@@ -8948,7 +9043,7 @@ class NetCDF(Dataset):
             # to_crs warps the backing raster; a multidim view can't be window-read by GDAL >= 3.13,
             # so materialize it first (mirrors resample).
             self._materialize_md_view()
-            result = super().to_crs(
+            result = self.spatial.to_crs(
                 to_epsg=to_epsg,
                 method=method,
                 maintain_alignment=maintain_alignment,
@@ -9007,7 +9102,7 @@ class NetCDF(Dataset):
         # (arrayStartIdx), and a geostationary view carries a raw scan-angle geotransform. Materialize
         # first so the warp sees a plain MEM raster with the corrected geotransform.
         self._materialize_md_view()
-        pinned = super().warped_view(crs, method, cell_size=cell_size, bbox=bbox)
+        pinned = self.spatial.warped_view(crs, method, cell_size=cell_size, bbox=bbox)
         result = self._preserve_netcdf_metadata(pinned)
         # `Spatial.warped_view` builds the view through `self._ds.__class__`, so
         # `pinned` is already a NetCDF and `_preserve_netcdf_metadata` returns it
@@ -9440,7 +9535,7 @@ class NetCDF(Dataset):
         else:
             # resample warps the backing raster; a multidim view can't be window-read by GDAL >= 3.13.
             self._materialize_md_view()
-            result = super().resample(
+            result = self.spatial.resample(
                 cell_size=cell_size,
                 method=method,
             )
@@ -12622,7 +12717,9 @@ class NetCDF(Dataset):
 
               ```
         """
-        return super().combine(other, func, band=band, no_data_value=no_data_value)
+        return self.analysis.combine(
+            other, func, band=band, no_data_value=no_data_value
+        )
 
     def _combine_layout_source(
         self, other: Any, band: int | None
@@ -13092,7 +13189,7 @@ class NetCDF(Dataset):
                 "variable first with .get_variable()."
             )
         else:
-            super().to_file(path, **kwargs)
+            self.io.to_file(path, **kwargs)
 
     def _write_netcdf(self, path: Path) -> None:
         """Write this dataset to a netCDF file, preserving the declared (or absent) convention.
@@ -14552,7 +14649,13 @@ class NetCDF(Dataset):
 
     def set_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.set_variable <pyramids.netcdf.engines.variables.Variables.set_variable>`."""
-        return self.varops.set_variable(*args, **kwargs)
+        warnings.warn(
+            "`nc.set_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.set`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops.set_variable(*args, **kwargs)
 
     def crop_variable(
         self, variable_name: str, mask: Any, touch: bool = True
@@ -14574,7 +14677,7 @@ class NetCDF(Dataset):
         """
         var = self._require_raster_variable(variable_name)
         cropped = var.crop(mask, touch=touch)
-        self.set_variable(variable_name, cropped)
+        self.variables.set(variable_name, cropped)
         return self
 
     def reproject_variable(
@@ -14658,7 +14761,7 @@ class NetCDF(Dataset):
         carry_packing(reprojected.raster, materialized.raster)
         NetCDF._copy_band_dim_metadata(materialized, var)
         materialized._variable_attrs = var._variable_attrs
-        self.set_variable(variable_name, materialized)
+        self.variables.set(variable_name, materialized)
         return self
 
     def resample_variable(
@@ -14683,20 +14786,38 @@ class NetCDF(Dataset):
         """
         var = self._require_raster_variable(variable_name)
         resampled = var.resample(cell_size, method=method)
-        self.set_variable(variable_name, resampled)
+        self.variables.set(variable_name, resampled)
         return self
 
     def add_variable(self, *args, **kwargs):
         """Facade — :meth:`Variables.add_variable <pyramids.netcdf.engines.variables.Variables.add_variable>`."""
-        return self.varops.add_variable(*args, **kwargs)
+        warnings.warn(
+            "`nc.add_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.add`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops.add_variable(*args, **kwargs)
 
     def remove_variable(self, *args, **kwargs):
         """Facade — :meth:`remove_variable <pyramids.netcdf.engines.variables.Variables.remove_variable>`."""
-        return self.varops.remove_variable(*args, **kwargs)
+        warnings.warn(
+            "`nc.remove_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.remove`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops.remove_variable(*args, **kwargs)
 
     def rename_variable(self, *args, **kwargs):
         """Facade — :meth:`rename_variable <pyramids.netcdf.engines.variables.Variables.rename_variable>`."""
-        return self.varops.rename_variable(*args, **kwargs)
+        warnings.warn(
+            "`nc.rename_variable` is deprecated and will be removed in a future release; use "
+            "`nc.variables.rename`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._varops.rename_variable(*args, **kwargs)
 
     def to_xarray(
         self, chunks: dict | str | int | None = None, *, decode_times: bool = True
@@ -14770,6 +14891,12 @@ class NetCDF(Dataset):
 
     def subset(self, *args, **kwargs) -> NetCDF:
         """Facade — :meth:`Selection.subset <pyramids.netcdf.engines.selection.Selection.subset>`."""
+        warnings.warn(
+            "`nc.subset` is deprecated and will be removed in a future release; use "
+            "`nc.selection.subset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.selection.subset(*args, **kwargs)
 
     @staticmethod

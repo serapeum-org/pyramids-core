@@ -112,11 +112,11 @@ class TestToBytes:
             from_bytes(to_bytes(ds)) preserves the array, geotransform, CRS,
             and nodata marker.
         """
-        payload = ramp_dataset.to_bytes()
+        payload = ramp_dataset.io.to_bytes()
         restored = Dataset.from_bytes(payload)
         np.testing.assert_array_equal(
-            restored.read_array(),
-            ramp_dataset.read_array(),
+            restored.io.read_array(),
+            ramp_dataset.io.read_array(),
             err_msg="array must survive the bytes round-trip",
         )
         assert restored.geotransform == pytest.approx(ramp_dataset.geotransform), (
@@ -133,7 +133,7 @@ class TestToBytes:
         Test scenario:
             Little-endian TIFF files start with b"II*\\x00".
         """
-        payload = ramp_dataset.to_bytes()
+        payload = ramp_dataset.io.to_bytes()
         assert payload[:4] == b"II*\x00", f"not a TIFF payload: {payload[:4]!r}"
 
     def test_creation_options_compress(self, ramp_dataset):
@@ -147,8 +147,8 @@ class TestToBytes:
             np.zeros((64, 64), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 64), cell_size=1.0, epsg=4326),
         )
-        compressed = flat.to_bytes(creation_options={"COMPRESS": "DEFLATE"})
-        raw = flat.to_bytes()
+        compressed = flat.io.to_bytes(creation_options={"COMPRESS": "DEFLATE"})
+        raw = flat.io.to_bytes()
         assert len(compressed) < len(raw), (
             f"deflate ({len(compressed)}) should beat raw ({len(raw)}) on zeros"
         )
@@ -173,7 +173,7 @@ class TestToBytes:
             np.zeros((8, 8), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        flat.to_bytes(creation_options={"BIGTIFF": True, "X": None})
+        flat.io.to_bytes(creation_options={"BIGTIFF": True, "X": None})
         assert captured.get("opts") == {"BIGTIFF": True, "X": None}, captured
 
     def test_png_driver(self):
@@ -188,12 +188,12 @@ class TestToBytes:
             no_data_value=255,
             geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
         )
-        payload = ds.to_bytes(driver="PNG")
+        payload = ds.io.to_bytes(driver="PNG")
         assert payload[:4] == b"\x89PNG", f"not a PNG payload: {payload[:4]!r}"
         restored = Dataset.from_bytes(payload, suffix=".png")
         np.testing.assert_array_equal(
-            restored.read_array(),
-            ds.read_array(),
+            restored.io.read_array(),
+            ds.io.read_array(),
             err_msg="PNG round-trip changed pixel values",
         )
 
@@ -206,7 +206,7 @@ class TestToBytes:
         """
         before = sorted(gdal.ReadDir("/vsimem/") or [])
         with pytest.raises(RuntimeError, match="PNG driver"):
-            ramp_dataset.to_bytes(driver="PNG")
+            ramp_dataset.io.to_bytes(driver="PNG")
         after = sorted(gdal.ReadDir("/vsimem/") or [])
         assert before == after, f"vsimem leaked: {set(after) - set(before)}"
 
@@ -217,7 +217,7 @@ class TestToBytes:
             GetDriverByName returns None -> clear error, nothing written.
         """
         with pytest.raises(ValueError, match="unknown GDAL driver"):
-            ramp_dataset.to_bytes(driver="definitely-not-a-driver")
+            ramp_dataset.io.to_bytes(driver="definitely-not-a-driver")
 
     def test_driver_without_createcopy_raises(self, ramp_dataset):
         """A driver lacking the CreateCopy capability is rejected up-front.
@@ -227,7 +227,7 @@ class TestToBytes:
             anything is written to /vsimem/.
         """
         with pytest.raises(ValueError, match="does not support CreateCopy"):
-            ramp_dataset.to_bytes(driver="MEM")
+            ramp_dataset.io.to_bytes(driver="MEM")
 
     def test_multi_file_driver_raises_and_cleans_up(self, ramp_dataset):
         """A driver that writes sidecar files is rejected, leaving no leaks.
@@ -239,7 +239,7 @@ class TestToBytes:
         """
         before = sorted(gdal.ReadDir("/vsimem/") or [])
         with pytest.raises(ValueError, match="multi-file output"):
-            ramp_dataset.to_bytes(driver="AAIGrid")
+            ramp_dataset.io.to_bytes(driver="AAIGrid")
         after = sorted(gdal.ReadDir("/vsimem/") or [])
         assert before == after, f"vsimem leaked: {set(after) - set(before)}"
 
@@ -250,7 +250,7 @@ class TestToBytes:
             The /vsimem/ directory listing is unchanged by to_bytes.
         """
         before = sorted(gdal.ReadDir("/vsimem/") or [])
-        ramp_dataset.to_bytes()
+        ramp_dataset.io.to_bytes()
         after = sorted(gdal.ReadDir("/vsimem/") or [])
         assert before == after, f"vsimem leaked: {set(after) - set(before)}"
 
@@ -268,7 +268,7 @@ class TestToBytes:
         monkeypatch.setattr(io_engine, "read_vsi_bytes", _boom)
         before = sorted(gdal.ReadDir("/vsimem/") or [])
         with pytest.raises(FileNotFoundError, match="forced read-back"):
-            ramp_dataset.to_bytes()
+            ramp_dataset.io.to_bytes()
         after = sorted(gdal.ReadDir("/vsimem/") or [])
         assert before == after, f"vsimem leaked on failure: {set(after) - set(before)}"
 
@@ -283,10 +283,10 @@ class TestToBytes:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 5), cell_size=1.0, epsg=4326),
         )
-        restored = Dataset.from_bytes(ds.to_bytes())
+        restored = Dataset.from_bytes(ds.io.to_bytes())
         assert restored.band_count == 3, f"band count lost: {restored.band_count}"
         np.testing.assert_array_equal(
-            restored.read_array(), arr, err_msg="multi-band values changed"
+            restored.io.read_array(), arr, err_msg="multi-band values changed"
         )
 
     def test_facade_delegates_to_engine(self, ramp_dataset):
@@ -318,14 +318,14 @@ class TestToBytes:
         results: dict[int, bytes] = {}
 
         def encode(i: int) -> None:
-            results[i] = datasets[i].to_bytes()
+            results[i] = datasets[i].io.to_bytes()
 
         with ThreadPoolExecutor(max_workers=8) as pool:
             list(pool.map(encode, range(8)))
 
         for value, payload in results.items():
             restored = Dataset.from_bytes(payload)
-            assert np.allclose(restored.read_array(), float(value)), (
+            assert np.allclose(restored.io.read_array(), float(value)), (
                 f"payload {value} did not round-trip to its own values"
             )
 
@@ -340,12 +340,12 @@ class TestToCogBytesStillWorks:
             The refactored read-back path produces a payload from_bytes can
             open with the original values.
         """
-        payload = ramp_dataset.to_cog_bytes()
+        payload = ramp_dataset.cog.to_cog_bytes()
         assert payload[:4] in (b"II*\x00", b"MM\x00*"), "not a TIFF payload"
         restored = Dataset.from_bytes(payload)
         np.testing.assert_array_equal(
-            restored.read_array(),
-            ramp_dataset.read_array(),
+            restored.io.read_array(),
+            ramp_dataset.io.read_array(),
             err_msg="COG bytes round-trip changed values",
         )
 
@@ -363,4 +363,4 @@ class TestToCogBytesStillWorks:
 
         monkeypatch.setattr(_COG, "to_cog", _boom)
         with pytest.raises(ValueError, match="forced to_cog failure"):
-            ramp_dataset.to_cog_bytes()
+            ramp_dataset.cog.to_cog_bytes()

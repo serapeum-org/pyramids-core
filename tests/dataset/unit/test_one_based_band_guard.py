@@ -135,4 +135,4 @@ class TestTheCallSitesShareTheWording:
             `read_array(band=0)` is the first band, not an error. Converging
             the two guards would have broken exactly this.
         """
-        assert dataset.read_array(band=0).shape == (4, 5)
+        assert dataset.io.read_array(band=0).shape == (4, 5)

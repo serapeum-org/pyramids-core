@@ -76,13 +76,13 @@ class TestPredictorValueForm:
             Both numeric (2/3) and string (STANDARD/FLOATING_POINT/YES) forms are
             accepted by the COG driver and round-trip to the numeric token.
         """
-        out = float_dataset.to_cog(
+        out = float_dataset.cog.to_cog(
             tmp_path / f"p_{predictor}.tif",
             compression=cog.Compression(predictor=predictor),
         )
         assert _predictor_token(out) == expected_token, (
             f"predictor={predictor!r} should yield token {expected_token!r}"
         )
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, (
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
             f"predictor={predictor!r} produced an invalid COG"
         )

@@ -45,7 +45,7 @@ class TestRasterZones:
             by `[1, 2, 3]` (`index.name == "class"`), each row carrying a real geometry in
             the raster's CRS.
         """
-        result = _values().zonal_stats(_classes(), stats=("mean", "count"))
+        result = _values().analysis.zonal_stats(_classes(), stats=("mean", "count"))
         assert isinstance(result, gpd.GeoDataFrame), "must return a GeoDataFrame"
         assert list(result.index) == [1, 2, 3], (
             f"unexpected classes: {list(result.index)}"
@@ -61,7 +61,9 @@ class TestRasterZones:
         Test scenario:
             Class 1 = {10, 20, 40}, class 2 = {30, 50, 60}, class 3 = {70, 80, 90}.
         """
-        result = _values().zonal_stats(_classes(), stats=("mean", "count", "min"))
+        result = _values().analysis.zonal_stats(
+            _classes(), stats=("mean", "count", "min")
+        )
         assert result.loc[1, "mean"] == pytest.approx(70 / 3), "class 1 mean"
         assert result.loc[2, "count"] == 3.0, "class 2 count"
         assert result.loc[3, "min"] == 70.0, "class 3 min"
@@ -78,7 +80,7 @@ class TestRasterZones:
         )
         values = _values()
         with pytest.raises(AlignmentError):
-            values.zonal_stats(other, stats=("mean",))
+            values.analysis.zonal_stats(other, stats=("mean",))
 
     def test_cf_packed_values_are_physical(self):
         """Statistics use physical values on a CF-packed band.
@@ -90,12 +92,12 @@ class TestRasterZones:
             np.array([[100, 200], [300, 400]], dtype="int16"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        packed.scale = [0.01]
+        packed.bands.scale = [0.01]
         classes = Dataset.from_array(
             np.array([[1, 1], [1, 1]], dtype="int32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        result = packed.zonal_stats(classes, stats=("mean",))
+        result = packed.analysis.zonal_stats(classes, stats=("mean",))
         assert result.loc[1, "mean"] == pytest.approx(2.5), "physical mean of 1,2,3,4"
 
 
@@ -104,7 +106,7 @@ class TestRawValues:
 
     def test_raw_values_off_by_default(self):
         """Without `raw_values=True` there is no `raw_values` column."""
-        result = _values().zonal_stats(_classes(), stats=("mean",))
+        result = _values().analysis.zonal_stats(_classes(), stats=("mean",))
         assert "raw_values" not in result.columns
 
     def test_raw_values_are_row_major_ndarrays(self):
@@ -113,7 +115,9 @@ class TestRawValues:
         Test scenario:
             Class 1 covers (r0c0, r0c1, r1c0) = 10, 20, 40 in that row-major order.
         """
-        result = _values().zonal_stats(_classes(), stats=("count",), raw_values=True)
+        result = _values().analysis.zonal_stats(
+            _classes(), stats=("count",), raw_values=True
+        )
         class_one = result.loc[1, "raw_values"]
         assert isinstance(class_one, np.ndarray), "raw_values cell must be an ndarray"
         np.testing.assert_array_equal(
@@ -126,7 +130,7 @@ class TestRawValues:
         Test scenario:
             Excluding 20.0 drops it from class 1, leaving {10, 40}.
         """
-        result = _values().zonal_stats(
+        result = _values().analysis.zonal_stats(
             _classes(), stats=("count",), exclude_value=20.0, raw_values=True
         )
         np.testing.assert_array_equal(
@@ -201,7 +205,7 @@ class TestZonalStatsEdgeCases:
         """An unknown `method` raises ValueError before any work."""
         values, classes = _values(), _classes()
         with pytest.raises(ValueError, match="method must be 'rasterize'"):
-            values.zonal_stats(classes, method="fractional")
+            values.analysis.zonal_stats(classes, method="fractional")
 
     def test_same_shape_different_grid_raises(self):
         """A same-shape class raster on a different grid is rejected, not silently wrong.
@@ -219,7 +223,7 @@ class TestZonalStatsEdgeCases:
         )
         values = _values()
         with pytest.raises(AlignmentError):
-            values.zonal_stats(shifted, stats=("mean",))
+            values.analysis.zonal_stats(shifted, stats=("mean",))
 
     def test_class_value_zero_gets_a_geometry(self):
         """A class whose value is ``0`` still gets a real geometry, not ``None``.
@@ -236,7 +240,7 @@ class TestZonalStatsEdgeCases:
         classes = Dataset.from_array(
             np.array([[0, 0], [2, 2]], dtype="int32"), geo_ref=geo
         )
-        result = values.zonal_stats(classes, stats=("mean",))
+        result = values.analysis.zonal_stats(classes, stats=("mean",))
         assert list(result.index) == [0, 2], "class 0 must be a zone"
         assert result.geometry.notna().all(), "class 0 must carry a real geometry"
         assert result.loc[0, "mean"] == 15.0, "class 0 stats must be correct too"
@@ -257,7 +261,7 @@ class TestZonalStatsEdgeCases:
             np.array([[10.0, 20.0], [30.0, 40.0]], dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        result = values.zonal_stats(classes, stats=("mean",))
+        result = values.analysis.zonal_stats(classes, stats=("mean",))
         assert list(result.index) == [1, 2], "no-data class 0 must be dropped"
 
     def test_all_no_data_class_yields_nan_row(self):
@@ -276,7 +280,7 @@ class TestZonalStatsEdgeCases:
         classes = Dataset.from_array(
             np.array([[1, 1], [2, 2]], dtype="int32"), geo_ref=geo
         )
-        result = values.zonal_stats(classes, stats=("mean", "count"))
+        result = values.analysis.zonal_stats(classes, stats=("mean", "count"))
         assert result.loc[2, "count"] == 0.0, "all-no-data class counts zero"
         assert np.isnan(result.loc[2, "mean"]), "all-no-data class mean is NaN"
 
@@ -296,7 +300,7 @@ class TestZonalStatsEdgeCases:
                 {"zone": ["a"]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:4326"
             )
         )
-        result = values.zonal_stats(fc, stats=("count",), raw_values=True)
+        result = values.analysis.zonal_stats(fc, stats=("count",), raw_values=True)
         np.testing.assert_array_equal(
             result.iloc[0]["raw_values"], np.array([10.0, 20.0, 30.0, 40.0])
         )
@@ -315,4 +319,4 @@ class TestZonalStatsEdgeCases:
         )
         values = _values()
         with pytest.raises(ValueError, match="does not match Dataset CRS"):
-            values.zonal_stats(fc, stats=("mean",))
+            values.analysis.zonal_stats(fc, stats=("mean",))

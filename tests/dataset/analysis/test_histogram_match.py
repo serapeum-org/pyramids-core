@@ -41,19 +41,19 @@ def scene_pair() -> tuple[Dataset, Dataset]:
 def test_match_histogram_aligns_the_mean(scene_pair: tuple[Dataset, Dataset]):
     """Matching pulls the target's mean onto the reference's distribution."""
     reference, target = scene_pair
-    matched = target.match_histogram(reference)
+    matched = target.analysis.match_histogram(reference)
     assert matched.band_count == 1
-    assert matched.read_array().dtype == np.float64
-    ref_mean = float(reference.read_array().mean())
-    assert float(matched.read_array().mean()) == pytest.approx(ref_mean, abs=0.02)
+    assert matched.io.read_array().dtype == np.float64
+    ref_mean = float(reference.io.read_array().mean())
+    assert float(matched.io.read_array().mean()) == pytest.approx(ref_mean, abs=0.02)
     # And it actually moved — the raw target mean is far from the reference.
-    assert abs(float(target.read_array().mean()) - ref_mean) > 0.3
+    assert abs(float(target.io.read_array().mean()) - ref_mean) > 0.3
 
 
 def test_match_histogram_shares_source_grid(scene_pair: tuple[Dataset, Dataset]):
     """The result carries the source geotransform and CRS, not the reference's."""
     reference, target = scene_pair
-    matched = target.match_histogram(reference)
+    matched = target.analysis.match_histogram(reference)
     assert matched.geotransform == target.geotransform
     assert matched.epsg == 4326
 
@@ -62,8 +62,8 @@ def test_match_histogram_facade_matches_engine(scene_pair: tuple[Dataset, Datase
     """The Dataset facade and the engine method produce identical pixels."""
     reference, target = scene_pair
     np.testing.assert_array_equal(
-        target.match_histogram(reference).read_array(),
-        target.analysis.match_histogram(reference).read_array(),
+        target.match_histogram(reference).io.read_array(),
+        target.analysis.match_histogram(reference).io.read_array(),
     )
 
 
@@ -81,8 +81,8 @@ def test_match_histogram_reference_band_selection():
         ]
     )
     reference = Dataset.from_array(arr=ref_arr, geo_ref=GEO)
-    matched = source.match_histogram(reference, reference_band=1)
-    assert float(matched.read_array().mean()) > 90
+    matched = source.analysis.match_histogram(reference, reference_band=1)
+    assert float(matched.io.read_array().mean()) > 90
 
 
 def test_match_histogram_excludes_and_preserves_nodata():
@@ -93,8 +93,8 @@ def test_match_histogram_excludes_and_preserves_nodata():
     reference = Dataset.from_array(
         arr=np.linspace(5, 6, 64, dtype="float32").reshape(8, 8), geo_ref=GEO
     )
-    matched = target.match_histogram(reference)
-    out = matched.read_array()
+    matched = target.analysis.match_histogram(reference)
+    out = matched.io.read_array()
     assert np.isnan(matched.no_data_value[0]), "output no-data is NaN"
     assert np.isnan(out[0, 0]), "the no-data corner is NaN in the output"
     # Every other cell was remapped into the reference's 5..6 range.
@@ -109,7 +109,7 @@ def test_match_histogram_preserves_nan_nodata():
     reference = Dataset.from_array(
         arr=np.linspace(5, 6, 64, dtype="float32").reshape(8, 8), geo_ref=GEO
     )
-    out = target.match_histogram(reference).read_array()
+    out = target.analysis.match_histogram(reference).io.read_array()
     assert np.isnan(out[1, 1])
 
 
@@ -117,16 +117,16 @@ def test_match_histogram_rejects_bad_bins(scene_pair: tuple[Dataset, Dataset]):
     """A bin count below one is rejected."""
     reference, target = scene_pair
     with pytest.raises(ValueError, match="bins must be >= 1"):
-        target.match_histogram(reference, bins=0)
+        target.analysis.match_histogram(reference, bins=0)
 
 
 def test_match_histogram_rejects_out_of_range_band(scene_pair: tuple[Dataset, Dataset]):
     """Both the source and reference band indices are range-checked."""
     reference, target = scene_pair
     with pytest.raises((ValueError, IndexError)):
-        target.match_histogram(reference, band=5)
+        target.analysis.match_histogram(reference, band=5)
     with pytest.raises((ValueError, IndexError)):
-        target.match_histogram(reference, reference_band=5)
+        target.analysis.match_histogram(reference, reference_band=5)
 
 
 def test_match_histogram_rejects_degenerate_source(scene_pair: tuple[Dataset, Dataset]):
@@ -134,7 +134,7 @@ def test_match_histogram_rejects_degenerate_source(scene_pair: tuple[Dataset, Da
     reference, _ = scene_pair
     const = Dataset.from_array(arr=np.full((8, 8), 7.0, dtype="float32"), geo_ref=GEO)
     with pytest.raises(ValueError, match="source band with a range"):
-        const.match_histogram(reference)
+        const.analysis.match_histogram(reference)
 
 
 def test_match_histogram_rejects_all_nodata_source():
@@ -145,7 +145,7 @@ def test_match_histogram_rejects_all_nodata_source():
         arr=np.linspace(0, 1, 64, dtype="float32").reshape(8, 8), geo_ref=GEO
     )
     with pytest.raises(ValueError, match="finite samples"):
-        target.match_histogram(reference)
+        target.analysis.match_histogram(reference)
 
 
 def test_match_histogram_reaches_reference_extremes():
@@ -158,7 +158,7 @@ def test_match_histogram_reaches_reference_extremes():
         arr=np.linspace(5.0, 6.0, 64 * 64, dtype="float32").reshape(64, 64),
         geo_ref=GEO,
     )
-    out = target.match_histogram(reference).read_array()
+    out = target.analysis.match_histogram(reference).io.read_array()
     assert float(out.min()) == pytest.approx(5.0, abs=1e-3)
     assert float(out.max()) == pytest.approx(6.0, abs=1e-3)
 
@@ -179,7 +179,7 @@ def test_match_histogram_discrete_source_maps_atoms_to_cdf_quantile():
         arr=np.linspace(5.0, 6.0, 64 * 64, dtype="float32").reshape(64, 64),
         geo_ref=GEO,
     )
-    out = target.match_histogram(reference).read_array()
+    out = target.analysis.match_histogram(reference).io.read_array()
     atom_prob = float((arr == 0.0).mean())
     expected_min = 5.0 + atom_prob
     assert float(out.min()) == pytest.approx(expected_min, abs=0.02)
@@ -190,8 +190,8 @@ def test_match_histogram_discrete_source_maps_atoms_to_cdf_quantile():
 def test_match_histogram_single_bin(scene_pair: tuple[Dataset, Dataset]):
     """``bins=1`` degrades to a linear remap between the two ranges' endpoints."""
     reference, target = scene_pair
-    matched = target.match_histogram(reference, bins=1).read_array()
-    ref_arr = reference.read_array()
+    matched = target.analysis.match_histogram(reference, bins=1).io.read_array()
+    ref_arr = reference.io.read_array()
     assert float(matched.min()) == pytest.approx(float(ref_arr.min()), abs=1e-3)
     assert float(matched.max()) == pytest.approx(float(ref_arr.max()), abs=1e-3)
 
@@ -202,7 +202,7 @@ def test_percentile_stretch_default_percentiles():
     ds = Dataset.from_array(
         arr, geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=1.0, epsg=4326)
     )
-    stretched = ds.percentile_stretch().read_array()
+    stretched = ds.analysis.percentile_stretch().io.read_array()
     assert float(stretched.min()) == 0.0
     assert float(stretched.max()) == 1.0
 
@@ -213,7 +213,7 @@ def test_percentile_stretch_full_range():
     ds = Dataset.from_array(
         arr, geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=1.0, epsg=4326)
     )
-    stretched = ds.percentile_stretch(0, 100).read_array()
+    stretched = ds.analysis.percentile_stretch(0, 100).io.read_array()
     assert (float(stretched.min()), float(stretched.max())) == (0.0, 1.0)
 
 
@@ -223,7 +223,7 @@ def test_percentile_stretch_clips_tails():
     ds = Dataset.from_array(
         arr, geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=1.0, epsg=4326)
     )
-    stretched = ds.percentile_stretch(10, 90).read_array()
+    stretched = ds.analysis.percentile_stretch(10, 90).io.read_array()
     assert float(stretched.min()) == 0.0
     assert float(stretched.max()) == 1.0
     # The lowest raw values saturate at 0 after clipping.
@@ -235,7 +235,7 @@ def test_percentile_stretch_preserves_nodata():
     arr = np.arange(64, dtype="float32").reshape(8, 8)
     arr[0, 0] = -9999.0
     ds = Dataset.from_array(arr=arr, geo_ref=GEO, no_data_value=-9999.0)
-    out = ds.percentile_stretch(0, 100).read_array()
+    out = ds.analysis.percentile_stretch(0, 100).io.read_array()
     assert np.isnan(out[0, 0]), "the no-data corner is NaN in the output"
     rest = out[np.isfinite(out)]
     assert float(rest.min()) >= 0.0, "stretched values must be >= 0"
@@ -249,7 +249,7 @@ def test_percentile_stretch_rejects_bad_percentiles():
         arr, geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=1.0, epsg=4326)
     )
     with pytest.raises(ValueError, match="0 <= lower < upper <= 100"):
-        ds.percentile_stretch(90, 10)
+        ds.analysis.percentile_stretch(90, 10)
 
 
 def test_percentile_stretch_rejects_degenerate_band():
@@ -257,7 +257,7 @@ def test_percentile_stretch_rejects_degenerate_band():
     arr = np.full((8, 8), 7.0, dtype="float32")
     ds = Dataset.from_array(arr=arr, geo_ref=GEO)
     with pytest.raises(ValueError, match="degenerate stretch"):
-        ds.percentile_stretch(2, 98)
+        ds.analysis.percentile_stretch(2, 98)
 
 
 def test_percentile_stretch_rejects_all_nodata():
@@ -265,4 +265,4 @@ def test_percentile_stretch_rejects_all_nodata():
     arr = np.full((8, 8), -9999.0, dtype="float32")
     ds = Dataset.from_array(arr=arr, geo_ref=GEO, no_data_value=-9999.0)
     with pytest.raises(ValueError, match="finite samples"):
-        ds.percentile_stretch(2, 98)
+        ds.analysis.percentile_stretch(2, 98)

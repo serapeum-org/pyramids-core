@@ -133,7 +133,7 @@ def _write_raster(
         np.asarray(array),
         geo_ref=GeoReference(geo=geotransform, epsg=epsg),
         no_data_value=nodata,
-    ).to_file(output)
+    ).io.to_file(output)
 
 
 def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
@@ -150,10 +150,10 @@ def _cmd_recreate_overviews(args: argparse.Namespace) -> int:
         int: `0` on success.
     """
     ds = Dataset.read_file(args.file, read_only=False)
-    ds.recreate_overviews(resampling_method=args.resampling)
+    ds.io.recreate_overviews(resampling_method=args.resampling)
     info_print(
         args,
-        f"regenerated overviews for {args.file} (levels per band: {ds.overview_count})",
+        f"regenerated overviews for {args.file} (levels per band: {ds.io.overview_count})",
     )
     return 0
 
@@ -189,7 +189,7 @@ def _cmd_read_overview_array(args: argparse.Namespace) -> int:
     if args.output and not args.json:
         _refuse_existing(args.output, args.overwrite)
     array = np.asarray(
-        ds.read_overview_array(band=args.band, overview_index=args.overview_index)
+        ds.io.read_overview_array(band=args.band, overview_index=args.overview_index)
     )
     if args.json:
         print(
@@ -244,7 +244,7 @@ def _cmd_read_part(args: argparse.Namespace) -> int:
         kwargs["dst_width"] = args.dst_width
     if args.dst_height is not None:
         kwargs["dst_height"] = args.dst_height
-    array, geotransform = ds.read_part(tuple(args.bbox), **kwargs)
+    array, geotransform = ds.cog.read_part(tuple(args.bbox), **kwargs)
     _write_raster(
         array,
         geotransform,
@@ -270,7 +270,9 @@ def _cmd_preview(args: argparse.Namespace) -> int:
     _check_band(ds, args.band)
     _refuse_existing(args.output, args.overwrite)
     array = np.asarray(
-        ds.preview(max_size=args.max_size, resampling=args.resampling, band=args.band)
+        ds.cog.preview(
+            max_size=args.max_size, resampling=args.resampling, band=args.band
+        )
     )
     geotransform = _scaled_geotransform(ds, array.shape[-2], array.shape[-1])
     _write_raster(
@@ -299,7 +301,7 @@ def _cmd_point(args: argparse.Namespace) -> int:
     ds = Dataset.read_file(args.input)
     _check_band(ds, args.band)
     sampled = np.asarray(
-        ds.point(args.x, args.y, point_crs=args.point_crs, band=args.band)
+        ds.cog.point(args.x, args.y, point_crs=args.point_crs, band=args.band)
     )
     values = [json_safe(value) for value in sampled.reshape(-1).tolist()]
     if args.json:
@@ -329,7 +331,7 @@ def _cmd_read_tile(args: argparse.Namespace) -> int:
     _check_band(ds, args.band)
     _refuse_existing(args.output, args.overwrite)
     array = np.asarray(
-        ds.read_tile(
+        ds.cog.read_tile(
             args.z,
             args.x,
             args.y,

@@ -581,7 +581,7 @@ class TestCalcNote:
         Dataset.from_array(
             np.full((2, 2), 4.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
-        ).to_file(a)
+        ).io.to_file(a)
         b = str(tmp_path / "b_nocrs.tif")
         out = gdal.GetDriverByName("GTiff").Create(b, 2, 2, 1, gdal.GDT_Float32)
         out.SetGeoTransform(

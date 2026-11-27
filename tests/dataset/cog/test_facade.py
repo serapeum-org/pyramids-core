@@ -20,6 +20,7 @@ from pyramids.dataset.cog.facade import (
     write_cog,
 )
 from pyramids.dataset.dataset import Dataset
+from pyramids.dataset.engines.cog import _COG
 from tests.dataset.cog.conftest import COG_GEOTRANSFORM
 
 pytestmark = pytest.mark.core
@@ -272,7 +273,7 @@ class TestNormalizeToDataset:
             geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326),
         )
         p = tmp_path / "src.tif"
-        src.to_file(str(p))
+        src.io.to_file(str(p))
         result = _normalize_to_dataset(str(p), None, None, None)
         assert isinstance(result, Dataset), "Path should open into a Dataset"
 
@@ -356,7 +357,7 @@ class TestWriteCog:
             calls.append({"output": Path(output), "extra": extra})
             return Path(output)
 
-        monkeypatch.setattr(Dataset, "to_cog", fake_to_cog)
+        monkeypatch.setattr(_COG, "to_cog", fake_to_cog)
         path, report = write_cog(
             float_array,
             out,
@@ -390,7 +391,7 @@ class TestWriteCog:
         def fake_to_cog(self, output, *, extra=None):
             raise RuntimeError("disk full")
 
-        monkeypatch.setattr(Dataset, "to_cog", fake_to_cog)
+        monkeypatch.setattr(_COG, "to_cog", fake_to_cog)
         with pytest.raises(RuntimeError, match="disk full"):
             write_cog(
                 float_array,
@@ -556,7 +557,7 @@ class TestWriteCog:
             geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326),
         )
         src_path = tmp_path / "plain.tif"
-        src.to_file(str(src_path))
+        src.io.to_file(str(src_path))
         out = tmp_path / "cog.tif"
         _, report = write_cog(str(src_path), out, options={"STATISTICS": False})
         assert report.is_valid, f"Expected valid COG, errors: {report.errors}"
@@ -568,7 +569,7 @@ class TestWriteCog:
             geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326),
         )
         src_path = tmp_path / "plain.tif"
-        src.to_file(str(src_path))
+        src.io.to_file(str(src_path))
         out = tmp_path / "ro_path_cog.tif"
         path, _ = write_cog(str(src_path), out, nodata=-9999.0, validate=False)
         result = Dataset.read_file(str(path))
@@ -583,7 +584,7 @@ class TestWriteCog:
             geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326),
         )
         src_path = tmp_path / "plain.tif"
-        src.to_file(str(src_path))
+        src.io.to_file(str(src_path))
         ro = Dataset.read_file(str(src_path), read_only=True)
         assert ro.access == "read_only", (
             "input must be read-only for this regression test"

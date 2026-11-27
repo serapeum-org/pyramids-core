@@ -52,7 +52,7 @@ def _read(raster: Dataset) -> np.ndarray:
     Returns:
         np.ndarray: The values, no-data as NaN.
     """
-    values = np.asarray(raster.read_array(), dtype="float64")
+    values = np.asarray(raster.io.read_array(), dtype="float64")
     sentinel = raster.no_data_value[0]
     if sentinel is not None and not np.isnan(sentinel):
         values = np.where(values == sentinel, np.nan, values)
@@ -64,21 +64,21 @@ class TestWhereMasks:
 
     def test_an_array_condition_masks_the_false_cells(self):
         """`where(values > 5)` keeps 7, 8, 9, 10, 11 and 12 and masks the rest."""
-        result = _raster().where(VALUES > 5)
+        result = _raster().analysis.where(VALUES > 5)
         expected = np.where(VALUES > 5, VALUES, np.nan)
         expected[1, 1] = np.nan
         assert_allclose(_read(result), expected, equal_nan=True)
 
     def test_a_kept_cell_is_untouched(self):
         """The values that survive are the source's, bit for bit."""
-        read = _read(_raster().where(VALUES > 5))
+        read = _read(_raster().analysis.where(VALUES > 5))
         assert read[2, 3] == pytest.approx(12.0)
         assert read[1, 2] == pytest.approx(7.0)
 
     def test_other_replaces_the_false_cells(self):
         """`other=-1.0` writes -1.0 where the condition is false, as xarray does."""
         read = np.asarray(
-            _raster().where(VALUES > 5, -1.0).read_array(), dtype="float64"
+            _raster().analysis.where(VALUES > 5, -1.0).io.read_array(), dtype="float64"
         )
         assert read[0, 0] == pytest.approx(-1.0)
         assert read[2, 0] == pytest.approx(9.0)
@@ -91,14 +91,14 @@ class TestWhereMasks:
             the cell does not survive merely because it was already missing.
         """
         read = np.asarray(
-            _raster().where(VALUES > 5, -1.0).read_array(), dtype="float64"
+            _raster().analysis.where(VALUES > 5, -1.0).io.read_array(), dtype="float64"
         )
         assert read[1, 1] == pytest.approx(-1.0)
 
     def test_the_grid_and_crs_survive(self):
         """Masking changes values, never georeferencing."""
         source = _raster()
-        result = source.where(VALUES > 5)
+        result = source.analysis.where(VALUES > 5)
         assert result.geotransform == source.geotransform
         assert result.epsg == source.epsg
         assert (result.rows, result.columns) == (source.rows, source.columns)
@@ -114,8 +114,8 @@ class TestWhereMasks:
         """
         raster = _raster(CLEAN, no_data_value=None)
         assert raster.no_data_value[0] is None
-        result = raster.where(CLEAN > 9)
-        read = np.asarray(result.read_array(), dtype="float64")
+        result = raster.analysis.where(CLEAN > 9)
+        read = np.asarray(result.io.read_array(), dtype="float64")
         assert np.isnan(result.no_data_value[0])
         assert np.isnan(read[0, 0])
         assert read[2, 1] == pytest.approx(10.0)
@@ -128,8 +128,8 @@ class TestWhereMasks:
             masked cells really are missing. Once `other` fills them with a number there is
             nothing missing, so no sentinel is invented.
         """
-        result = _raster(CLEAN, no_data_value=None).where(CLEAN > 9, 0.0)
-        read = np.asarray(result.read_array(), dtype="float64")
+        result = _raster(CLEAN, no_data_value=None).analysis.where(CLEAN > 9, 0.0)
+        read = np.asarray(result.io.read_array(), dtype="float64")
         assert result.no_data_value[0] is None
         assert read[0, 0] == pytest.approx(0.0)
         assert read[2, 1] == pytest.approx(10.0)
@@ -142,21 +142,23 @@ class TestConditionForms:
         """A plain boolean array selects cell by cell."""
         mask = np.zeros((3, 4), dtype=bool)
         mask[0, 0] = True
-        read = _read(_raster().where(mask))
+        read = _read(_raster().analysis.where(mask))
         assert read[0, 0] == pytest.approx(1.0)
         assert np.isnan(read[0, 1])
 
     def test_a_callable_receives_the_values(self):
         """The callable is handed the raster's array and returns the condition."""
-        read = _read(_raster().where(lambda values: values > 5))
-        assert_allclose(read, _read(_raster().where(VALUES > 5)), equal_nan=True)
+        read = _read(_raster().analysis.where(lambda values: values > 5))
+        assert_allclose(
+            read, _read(_raster().analysis.where(VALUES > 5)), equal_nan=True
+        )
 
     def test_a_raster_condition(self):
         """A `Dataset` of flags on the same grid selects the same cells as its array."""
         flags = _raster((VALUES > 5).astype("uint8"), no_data_value=None)
         assert_allclose(
-            _read(_raster().where(flags)),
-            _read(_raster().where(VALUES > 5)),
+            _read(_raster().analysis.where(flags)),
+            _read(_raster().analysis.where(VALUES > 5)),
             equal_nan=True,
         )
 
@@ -164,8 +166,8 @@ class TestConditionForms:
         """`raster > 5` is the natural condition, and reads as one."""
         source = _raster()
         assert_allclose(
-            _read(source.where(source > 5)),
-            _read(_raster().where(VALUES > 5)),
+            _read(source.analysis.where(source > 5)),
+            _read(_raster().analysis.where(VALUES > 5)),
             equal_nan=True,
         )
 
@@ -180,7 +182,7 @@ class TestConditionForms:
         source = _raster()
         condition = source > 5
         assert condition.no_data_value[0] == pytest.approx(255.0)
-        assert np.isnan(_read(source.where(condition))[1, 1])
+        assert np.isnan(_read(source.analysis.where(condition))[1, 1])
 
     def test_a_condition_on_another_grid_is_refused(self):
         """A condition raster must share the grid; resampling silently would be worse."""
@@ -192,14 +194,14 @@ class TestConditionForms:
         )
         raster = _raster()
         with pytest.raises(AlignmentError):
-            raster.where(flags)
+            raster.analysis.where(flags)
 
     def test_a_condition_of_the_wrong_shape_is_refused(self):
         """An array condition has to describe this raster's cells."""
         raster = _raster()
         wrong_shape = np.ones((2, 2), dtype=bool)
         with pytest.raises(ValueError, match="shape"):
-            raster.where(wrong_shape)
+            raster.analysis.where(wrong_shape)
 
 
 class TestACubeShapedCondition:
@@ -236,7 +238,7 @@ class TestACubeShapedCondition:
         """
         variable, values = self._variable(1)
         assert values.shape == (1, 3, 3), "precondition: the cube layout has the axis"
-        kept = variable.where(values > 4.0)
+        kept = variable.analysis.where(values > 4.0)
         assert np.asarray(kept.read_array()).ravel().tolist()[5:] == [
             5.0,
             6.0,
@@ -247,7 +249,7 @@ class TestACubeShapedCondition:
     def test_a_two_step_cube_is_unaffected(self):
         """The case that already worked still works."""
         variable, values = self._variable(2)
-        kept = variable.where(values > 4.0)
+        kept = variable.analysis.where(values > 4.0)
         assert np.asarray(kept.read_array()).shape == (2, 3, 3)
 
     def test_a_genuinely_wrong_shape_is_still_refused(self):
@@ -255,7 +257,7 @@ class TestACubeShapedCondition:
         variable, _ = self._variable(1)
         wrong = np.ones((1, 2, 2), dtype=bool)
         with pytest.raises(ValueError, match="does not broadcast"):
-            variable.where(wrong)
+            variable.analysis.where(wrong)
 
 
 class TestASingleBandCondition:
@@ -279,7 +281,7 @@ class TestASingleBandCondition:
         keep = np.arange(12.0).reshape(3, 4) > 5
         condition = Dataset.from_array(keep.astype("uint8"), geo_ref=GEO_REF)
 
-        masked = _read(stack.where(condition, 0.0))
+        masked = _read(stack.analysis.where(condition, 0.0))
 
         assert masked.shape == (3, 3, 4)
         for index in range(3):
@@ -299,10 +301,10 @@ class TestASingleBandCondition:
         one_band = _raster(np.arange(12.0).reshape(3, 4))
 
         with pytest.raises(ValueError, match="different number of bands"):
-            one_band.where(np.ones((3, 3, 4), bool), 0.0)
+            one_band.analysis.where(np.ones((3, 3, 4), bool), 0.0)
 
         stack = Dataset.from_array(np.ones((3, 3, 4)), geo_ref=GEO_REF)
-        assert stack.where(np.ones((3, 4), bool), 0.0).band_count == 3
+        assert stack.analysis.where(np.ones((3, 4), bool), 0.0).band_count == 3
 
     def test_a_condition_with_more_bands_is_refused_by_band_count(self):
         """`where` answers in this raster's shape, so extra condition bands have nowhere to go.
@@ -320,7 +322,7 @@ class TestASingleBandCondition:
         )
 
         with pytest.raises(ValueError, match="different number of bands"):
-            one_band.where(condition, 0.0)
+            one_band.analysis.where(condition, 0.0)
 
 
 class TestDrop:
@@ -333,14 +335,14 @@ class TestDrop:
             Measured on xarray: `da.where(da > 9, drop=True)` answers shape `(1, 3)` with
             `y == [0.5]` and `x == [1.5, 2.5, 3.5]`.
         """
-        result = _raster().where(VALUES > 9, drop=True)
+        result = _raster().analysis.where(VALUES > 9, drop=True)
         assert (result.rows, result.columns) == (1, 3)
         assert_allclose(_read(result), np.array([[10.0, 11.0, 12.0]]))
 
     def test_the_trimmed_result_is_georeferenced_to_what_it_kept(self):
         """The origin moves to the first surviving column, and the cell size is unchanged."""
         source = _raster()
-        result = source.where(VALUES > 9, drop=True)
+        result = source.analysis.where(VALUES > 9, drop=True)
         assert result.geotransform[0] == pytest.approx(source.geotransform[0] + 1.0)
         assert result.geotransform[3] == pytest.approx(source.geotransform[3] - 2.0)
         assert result.geotransform[1] == pytest.approx(source.geotransform[1])
@@ -349,8 +351,8 @@ class TestDrop:
     def test_drop_false_keeps_the_full_grid(self):
         """The default leaves every row and column in place."""
         assert (
-            _raster().where(VALUES > 9).rows,
-            _raster().where(VALUES > 9).columns,
+            _raster().analysis.where(VALUES > 9).rows,
+            _raster().analysis.where(VALUES > 9).columns,
         ) == (
             3,
             4,
@@ -358,7 +360,7 @@ class TestDrop:
 
     def test_an_all_true_condition_trims_nothing(self):
         """Nothing is masked, so nothing is trimmed."""
-        result = _raster().where(np.ones((3, 4), dtype=bool), drop=True)
+        result = _raster().analysis.where(np.ones((3, 4), dtype=bool), drop=True)
         assert (result.rows, result.columns) == (3, 4)
 
     def test_an_all_false_condition_is_refused(self):
@@ -366,7 +368,7 @@ class TestDrop:
         raster = _raster()
         mask = np.zeros((3, 4), dtype=bool)
         with pytest.raises(ValueError, match="no cells"):
-            raster.where(mask, drop=True)
+            raster.analysis.where(mask, drop=True)
 
     def test_drop_trims_by_the_condition_even_when_other_fills_the_rest(self):
         """`other` does not save a row the condition was false across.
@@ -378,7 +380,7 @@ class TestDrop:
             `da.where(da > 9, -1.0, drop=True)` answers shape `(1, 3)` holding
             `[[10.0, 11.0, 12.0]]`, the same block as without `other`.
         """
-        result = _raster().where(VALUES > 9, -1.0, drop=True)
+        result = _raster().analysis.where(VALUES > 9, -1.0, drop=True)
         assert (result.rows, result.columns) == (1, 3)
         assert_allclose(_read(result), np.array([[10.0, 11.0, 12.0]]))
 
@@ -392,7 +394,7 @@ class TestDrop:
         """
         edges = np.full((3, 4), NDV)
         edges[1, 1] = 5.0
-        result = _raster(edges).where(np.ones((3, 4), dtype=bool), drop=True)
+        result = _raster(edges).analysis.where(np.ones((3, 4), dtype=bool), drop=True)
         assert (result.rows, result.columns) == (3, 4)
         assert np.isnan(_read(result)).sum() == 11
 
@@ -427,7 +429,7 @@ class TestDropTrimsTheBandDimensionToo:
             `time == [6.0]` and values `[[nan, 5.0], [6.0, 7.0]]`.
         """
         variable, values = self._variable()
-        kept = variable.where(values > 4.0, drop=True)
+        kept = variable.analysis.where(values > 4.0, drop=True)
         assert (kept.band_count, kept.rows, kept.columns) == (1, 2, 2)
         assert kept._band_dim_values_map["time"] == [6.0]
         assert_allclose(
@@ -442,14 +444,14 @@ class TestDropTrimsTheBandDimensionToo:
             `x [1.5]`.
         """
         variable, values = self._variable()
-        kept = variable.where(values > 6.0, drop=True)
+        kept = variable.analysis.where(values > 6.0, drop=True)
         assert (kept.band_count, kept.rows, kept.columns) == (1, 1, 1)
         assert kept._band_dim_values_map["time"] == [6.0]
 
     def test_a_condition_true_in_every_step_keeps_them_all(self):
         """Trimming must not shorten a cube the condition did not empty."""
         variable, values = self._variable()
-        kept = variable.where(values >= 0.0, drop=True)
+        kept = variable.analysis.where(values >= 0.0, drop=True)
         assert kept.band_count == 2
         assert kept._band_dim_values_map["time"] == [0.0, 6.0]
 
@@ -457,7 +459,7 @@ class TestDropTrimsTheBandDimensionToo:
         """A stack has bands without stamps, and the same rule applies to them."""
         cells = np.arange(8.0).reshape(2, 2, 2)
         stack = Dataset.from_array(cells, geo_ref=GEO_REF, no_data_value=NDV)
-        assert stack.where(cells > 4.0, drop=True).band_count == 1
+        assert stack.analysis.where(cells > 4.0, drop=True).band_count == 1
 
     def test_two_band_dimensions_keep_every_band(self):
         """A product of two dimensions has no rectangular subset to cut to.
@@ -480,7 +482,7 @@ class TestDropTrimsTheBandDimensionToo:
         # The bands are the flattened product, which is the layout a condition for this
         # variable has to be in — the `(2, 2, 2, 2)` store layout is a separate gap.
         cells = np.arange(16.0).reshape(4, 2, 2)
-        kept = variable.where(cells > 12.0, drop=True)
+        kept = variable.analysis.where(cells > 12.0, drop=True)
         assert kept.band_count == 4
         assert kept._band_dim_values_map["time"] == [0.0, 6.0]
         assert kept._band_dim_values_map["level"] == [1000.0, 850.0]
@@ -506,7 +508,7 @@ class TestDropTrimsTheBandDimensionToo:
         assert change._band_dim_values_map["time"] is None, "precondition: no stamps"
         condition = np.zeros((2, 2, 2), dtype=bool)
         condition[1] = True
-        kept = change.where(condition, drop=True)
+        kept = change.analysis.where(condition, drop=True)
         assert kept.band_count == 1, f"expected one band, got {kept.band_count}"
         assert kept._band_dim_sizes == (1,), f"stale sizes: {kept._band_dim_sizes}"
         assert kept._band_dim_values_map["time"] is None, "stamps invented from nowhere"
@@ -528,11 +530,11 @@ class TestDropTrimsTheBandDimensionToo:
         """
         cells = np.arange(8.0).reshape(2, 2, 2)
         stack = Dataset.from_array(cells, geo_ref=GEO_REF, no_data_value=NDV)
-        stored = np.asarray(stack.read_array(unpack=False))
+        stored = np.asarray(stack.io.read_array(unpack=False))
         bands = stack.analysis._surviving_bands(np.zeros((2, 2, 2), dtype=bool), stored)
         assert bands.tolist() == [0, 1], f"expected every band, got {bands.tolist()}"
         with pytest.raises(ValueError, match="kept no cells"):
-            stack.where(np.zeros((2, 2, 2), dtype=bool), drop=True)
+            stack.analysis.where(np.zeros((2, 2, 2), dtype=bool), drop=True)
 
 
 class TestBandsAndLayout:
@@ -550,26 +552,28 @@ class TestBandsAndLayout:
     def test_every_band_is_masked_by_a_two_dimensional_condition(self):
         """One condition plane broadcasts across the bands."""
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
-        read = np.asarray(raster.where(VALUES > 9).read_array(), dtype="float64")
+        read = np.asarray(
+            raster.analysis.where(VALUES > 9).io.read_array(), dtype="float64"
+        )
         assert read.shape == (2, 3, 4)
         assert read[1, 2, 1] == pytest.approx(20.0)
-        assert np.isnan(_read(raster.where(VALUES > 9))[1, 2, 0])
+        assert np.isnan(_read(raster.analysis.where(VALUES > 9))[1, 2, 0])
         assert read[0, 0, 0] != pytest.approx(1.0)
 
     def test_a_condition_per_band(self):
         """A condition shaped like the stack selects per band."""
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
         read = np.asarray(
-            raster.where(self._stack() > 11).read_array(), dtype="float64"
+            raster.analysis.where(self._stack() > 11).io.read_array(), dtype="float64"
         )
         assert read[1, 0, 1] == pytest.approx(12.0)
-        assert np.isnan(_read(raster.where(self._stack() > 11))[1, 0, 0])
+        assert np.isnan(_read(raster.analysis.where(self._stack() > 11))[1, 0, 0])
         assert read[0, 0, 0] != pytest.approx(1.0)
 
     def test_the_band_count_is_unchanged(self):
         """Masking never adds or drops a band."""
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
-        assert raster.where(VALUES > 9).band_count == 2
+        assert raster.analysis.where(VALUES > 9).band_count == 2
 
     def test_drop_trims_a_stack_to_the_block_that_survived_in_any_band(self):
         """A row or column is kept when *any* band still holds data there.
@@ -582,9 +586,9 @@ class TestBandsAndLayout:
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
         mask = np.zeros((3, 4), dtype=bool)
         mask[1, 2] = True
-        result = raster.where(mask, drop=True)
+        result = raster.analysis.where(mask, drop=True)
         assert (result.band_count, result.rows, result.columns) == (2, 1, 1)
-        read = np.asarray(result.read_array(), dtype="float64")
+        read = np.asarray(result.io.read_array(), dtype="float64")
         assert read.ravel().tolist() == [7.0, 17.0]
 
     def test_drop_on_a_stack_keeps_the_grid_of_what_it_kept(self):
@@ -592,7 +596,7 @@ class TestBandsAndLayout:
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
         mask = np.zeros((3, 4), dtype=bool)
         mask[1, 2] = True
-        result = raster.where(mask, drop=True)
+        result = raster.analysis.where(mask, drop=True)
         assert result.geotransform[0] == pytest.approx(2.0)
         assert result.geotransform[3] == pytest.approx(2.0)
         assert result.geotransform[1] == pytest.approx(1.0)
@@ -622,27 +626,31 @@ class TestTheResultKeepsItsIdentity:
             `_combine` assigns the names and the tags before labelling, and `where` skipped
             both assignments.
         """
-        assert self._labelled().where(VALUES > 2).band_names == ["reflectance"]
+        assert self._labelled().analysis.where(VALUES > 2).band_names == ["reflectance"]
 
     def test_where_keeps_the_metadata(self):
         """A result that has forgotten its scene is harder to use than the array it came from."""
-        assert self._labelled().where(VALUES > 2).meta_data == {"source": "sentinel"}
+        assert self._labelled().analysis.where(VALUES > 2).meta_data == {
+            "source": "sentinel"
+        }
 
     def test_the_operator_path_is_the_reference(self):
         """Whatever an operator carries, `where` carries — that is the promise."""
         labelled = self._labelled()
-        assert labelled.where(VALUES > 2).band_names == (labelled + 1).band_names
-        assert labelled.where(VALUES > 2).meta_data == (labelled + 1).meta_data
+        assert (
+            labelled.analysis.where(VALUES > 2).band_names == (labelled + 1).band_names
+        )
+        assert labelled.analysis.where(VALUES > 2).meta_data == (labelled + 1).meta_data
 
     def test_fillna_keeps_them_too(self):
         """`fillna` writes to the gaps; it does not rename the band."""
-        assert self._labelled().fillna(0.0).band_names == ["reflectance"]
-        assert self._labelled().fillna(0.0).meta_data == {"source": "sentinel"}
+        assert self._labelled().analysis.fillna(0.0).band_names == ["reflectance"]
+        assert self._labelled().analysis.fillna(0.0).meta_data == {"source": "sentinel"}
 
     def test_the_null_flags_keep_them_too(self):
         """A flag band still describes the band it flags."""
-        assert self._labelled().isnull().band_names == ["reflectance"]
-        assert self._labelled().notnull().meta_data == {"source": "sentinel"}
+        assert self._labelled().analysis.isnull().band_names == ["reflectance"]
+        assert self._labelled().analysis.notnull().meta_data == {"source": "sentinel"}
 
     @pytest.mark.parametrize(
         "member",
@@ -682,7 +690,7 @@ class TestTheResultKeepsItsIdentity:
             no_data_value=NDV,
             dims=ExtraDimensions(name="time", values=[0.0, 6.0]),
         ).get_variable("t")
-        filled = variable.fillna(0.0)
+        filled = variable.analysis.fillna(0.0)
         assert np.asarray(filled.read_array()).ravel().tolist() == list(range(8))
 
     @pytest.mark.parametrize(
@@ -738,23 +746,33 @@ class TestANanOtherIsDeclared:
             missing: `isnull` all zero, `fillna` filling nothing, and the result not even
             equal to its own copy.
         """
-        result = self._flagged().where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
         assert np.isnan(result.no_data_value[0])
 
     def test_it_knows_its_own_gaps(self):
         """`isnull` finds the cells the mask removed."""
-        result = self._flagged().where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
-        assert np.asarray(result.isnull().read_array()).sum() == 4
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
+        assert np.asarray(result.analysis.isnull().io.read_array()).sum() == 4
 
     def test_it_equals_its_own_copy(self):
         """A raster that does not equal its own copy is broken by definition."""
-        result = self._flagged().where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
-        assert result.equals(result.copy())
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
+        assert result.analysis.equals(result.copy())
 
     def test_fillna_can_reach_those_cells(self):
         """The gaps are real gaps, so `fillna` writes to them."""
-        result = self._flagged().where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
-        filled = np.asarray(result.fillna(0.0).read_array(), dtype="float64")
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
+        filled = np.asarray(
+            result.analysis.fillna(0.0).io.read_array(), dtype="float64"
+        )
         assert not np.isnan(filled).any()
 
     def test_a_gap_the_condition_selected_stays_a_gap(self):
@@ -768,10 +786,16 @@ class TestANanOtherIsDeclared:
             to `[[0, 0], [0, 1]]`. xarray answers `[[1.0, nan], [3.0, nan]]` here.
         """
         raster = _raster(np.array([[1.0, NDV], [3.0, 4.0]]))
-        assert np.asarray(raster.isnull().read_array()).tolist() == [[0, 1], [0, 0]]
-        result = raster.where(np.array([[True, True], [True, False]]), np.nan)
+        assert np.asarray(raster.analysis.isnull().io.read_array()).tolist() == [
+            [0, 1],
+            [0, 0],
+        ]
+        result = raster.analysis.where(np.array([[True, True], [True, False]]), np.nan)
         assert np.isnan(result.no_data_value[0])
-        assert np.asarray(result.isnull().read_array()).tolist() == [[0, 1], [0, 1]]
+        assert np.asarray(result.analysis.isnull().io.read_array()).tolist() == [
+            [0, 1],
+            [0, 1],
+        ]
         assert_allclose(
             _read(result), np.array([[1.0, np.nan], [3.0, np.nan]]), equal_nan=True
         )
@@ -779,15 +803,15 @@ class TestANanOtherIsDeclared:
     def test_the_old_sentinel_is_nowhere_in_the_result(self):
         """A raster declaring NaN must not still be carrying `-9999.0` cells."""
         raster = _raster(np.array([[1.0, NDV], [3.0, 4.0]]))
-        result = raster.where(np.array([[True, True], [True, False]]), np.nan)
-        assert not (np.asarray(result.read_array()) == NDV).any()
+        result = raster.analysis.where(np.array([[True, True], [True, False]]), np.nan)
+        assert not (np.asarray(result.io.read_array()) == NDV).any()
 
     def test_other_none_takes_the_same_path(self):
         """`other=None` resolves to NaN, so it must clear the old sentinel too."""
         raster = _raster(np.array([[1.0, NDV], [3.0, 4.0]]))
-        result = raster.where(np.array([[True, True], [True, False]]), None)
+        result = raster.analysis.where(np.array([[True, True], [True, False]]), None)
         assert np.isnan(result.no_data_value[0])
-        assert not (np.asarray(result.read_array()) == NDV).any()
+        assert not (np.asarray(result.io.read_array()) == NDV).any()
 
 
 class TestDropOnASouthUpRaster:
@@ -806,7 +830,7 @@ class TestDropOnASouthUpRaster:
         south_up = GeoReference(geo=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0), epsg=4326)
         values = np.arange(1, 10, dtype="float64").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=south_up, no_data_value=NDV)
-        result = raster.where(values > 6.0, drop=True)
+        result = raster.analysis.where(values > 6.0, drop=True)
         assert (result.rows, result.columns) == (1, 3)
 
 
@@ -830,7 +854,7 @@ class TestDropOnARotatedGrid:
         )
         condition = np.zeros(CLEAN.shape, dtype=bool)
         condition[1:3, 1:3] = True
-        return raster.where(condition, drop=True)
+        return raster.analysis.where(condition, drop=True)
 
     def test_the_origin_moves_through_both_skews(self):
         """The corner is `origin + left * column_terms + top * row_terms`, both axes.
@@ -895,15 +919,15 @@ class TestTheResultKeepsItsType:
         """
         values = np.arange(1, 10).reshape(3, 3).astype(dtype)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=sentinel)
-        masked = raster.where(values > 4)
-        assert np.asarray(masked.read_array()).dtype == np.dtype(dtype)
+        masked = raster.analysis.where(values > 4)
+        assert np.asarray(masked.io.read_array()).dtype == np.dtype(dtype)
 
     def test_an_integer_band_without_a_sentinel_must_widen(self):
         """There is no integer that means "missing", so the gaps need a float band."""
         values = np.arange(1, 10, dtype="uint8").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=None)
-        masked = raster.where(values > 4)
-        assert np.asarray(masked.read_array()).dtype == np.float64
+        masked = raster.analysis.where(values > 4)
+        assert np.asarray(masked.io.read_array()).dtype == np.float64
         assert np.isnan(masked.no_data_value[0])
 
     def test_where_notnull_is_really_a_no_op(self):
@@ -916,9 +940,9 @@ class TestTheResultKeepsItsType:
         """
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
-        result = raster.where(raster.notnull())
-        assert result.equals(raster)
-        assert np.asarray(result.read_array()).dtype == np.float32
+        result = raster.analysis.where(raster.analysis.notnull())
+        assert result.analysis.equals(raster)
+        assert np.asarray(result.io.read_array()).dtype == np.float32
 
     @pytest.mark.parametrize("fill", [np.inf, -np.inf])
     def test_an_infinity_does_not_widen_a_float_band(self, fill):
@@ -936,7 +960,8 @@ class TestTheResultKeepsItsType:
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
         assert (
-            np.asarray(raster.where(values > 4, fill).read_array()).dtype == np.float32
+            np.asarray(raster.analysis.where(values > 4, fill).io.read_array()).dtype
+            == np.float32
         )
 
     @pytest.mark.parametrize("fill", [2.5, np.inf, -np.inf, 1e300])
@@ -959,8 +984,8 @@ class TestTheResultKeepsItsType:
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
         with_gap = np.where(values > 8, -9999.0, values).astype("float32")
         raster = Dataset.from_array(with_gap, geo_ref=GEO_REF, no_data_value=-9999.0)
-        masked = np.asarray(raster.where(values > 4, fill).read_array())
-        filled = np.asarray(raster.fillna(fill).read_array())
+        masked = np.asarray(raster.analysis.where(values > 4, fill).io.read_array())
+        filled = np.asarray(raster.analysis.fillna(fill).io.read_array())
         assert masked.dtype == filled.dtype
 
     def test_fillna_widens_rather_than_overflowing(self):
@@ -972,7 +997,7 @@ class TestTheResultKeepsItsType:
             geo_ref=GEO_REF,
             no_data_value=-9999.0,
         )
-        filled = np.asarray(raster_with_gap.fillna(1e300).read_array())
+        filled = np.asarray(raster_with_gap.analysis.fillna(1e300).io.read_array())
         assert filled.dtype == np.float64
         assert np.isfinite(filled).all(), "the fill must not have overflowed to inf"
         assert filled.ravel()[-1] == 1e300
@@ -982,7 +1007,8 @@ class TestTheResultKeepsItsType:
         values = np.arange(1, 10, dtype="int16").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=None)
         assert (
-            np.asarray(raster.where(values > 4, 0.5).read_array()).dtype == np.float64
+            np.asarray(raster.analysis.where(values > 4, 0.5).io.read_array()).dtype
+            == np.float64
         )
 
     def test_a_float_band_widens_for_a_magnitude_it_cannot_hold(self):
@@ -996,7 +1022,7 @@ class TestTheResultKeepsItsType:
         """
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=None)
-        widened = np.asarray(raster.where(values > 4, 1e300).read_array())
+        widened = np.asarray(raster.analysis.where(values > 4, 1e300).io.read_array())
         assert widened.dtype == np.float64, f"expected float64, got {widened.dtype}"
         assert widened.ravel()[0] == 1e300, f"the fill was lost: {widened.ravel()[0]}"
 
@@ -1050,12 +1076,12 @@ class TestAContainerIsRefusedByName:
         """A refusal that does not say what to do instead is half a refusal."""
         container = self._container()
         with pytest.raises(ValueError, match=r"get_variable\('t'\).fillna"):
-            container.fillna(0.0)
+            container.analysis.fillna(0.0)
 
     def test_a_variable_compared_with_a_container_still_answers_false(self):
         """The guard is about the receiver; anything may be the other operand."""
         container = self._container()
-        assert not container.get_variable("t").equals(container)
+        assert not container.get_variable("t").analysis.equals(container)
 
 
 class TestTheRefusalsAreSentences:
@@ -1071,7 +1097,7 @@ class TestTheRefusalsAreSentences:
         """
         raster = _raster()
         with pytest.raises(TypeError, match="where.. needs a number"):
-            raster.where(VALUES > 5, "x")
+            raster.analysis.where(VALUES > 5, "x")
 
     @pytest.mark.parametrize(
         "value",
@@ -1091,7 +1117,7 @@ class TestTheRefusalsAreSentences:
         """
         raster = _raster()
         with pytest.raises(TypeError, match="needs a number"):
-            raster.where(VALUES > 5, value)
+            raster.analysis.where(VALUES > 5, value)
 
     @pytest.mark.parametrize(
         "value", [2, 2.5, np.float32(0.5), np.int16(7), np.float64(-1.0)]
@@ -1102,7 +1128,7 @@ class TestTheRefusalsAreSentences:
         Args:
             value: The real fill under test.
         """
-        assert _raster().where(VALUES > 5, value) is not None
+        assert _raster().analysis.where(VALUES > 5, value) is not None
 
     def test_other_none_means_nan_whatever_the_raster_declares(self):
         """An explicit `None` is NaN, not the raster's own `-9999.0`.
@@ -1114,6 +1140,6 @@ class TestTheRefusalsAreSentences:
         """
         raster = _raster()
         assert raster.no_data_value[0] == NDV, "precondition: it declares a number"
-        result = raster.where(VALUES > 5, None)
+        result = raster.analysis.where(VALUES > 5, None)
         assert np.isnan(result.no_data_value[0])
         assert np.isnan(_read(result)[0, 0])

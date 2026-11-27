@@ -648,10 +648,10 @@ class TestProjDatabaseSkew:
             # because each hands the raster's EPSG code to pyproj (directly, or
             # through geopandas). They are the read/describe surface a caller needs
             # before anything else works.
-            assert dataset.footprint().crs is not None, (
+            assert dataset.analysis.footprint().crs is not None, (
                 "footprint() should return a georeferenced GeoDataFrame"
             )
-            polygons = dataset.to_polygons(band=0)
+            polygons = dataset.vector.to_polygons(band=0)
             assert len(polygons) > 0, "to_polygons() should return polygons"
             assert polygons.crs is not None, "to_polygons() output should carry a CRS"
             assert RasterMeta.from_dataset(dataset).crs is not None, (
@@ -663,7 +663,7 @@ class TestProjDatabaseSkew:
             # cutline CRS is now stated explicitly, so this works too.
             min_x, min_y, max_x, max_y = dataset.bounds.total_bounds
             inset_x, inset_y = (max_x - min_x) / 4, (max_y - min_y) / 4
-            cropped = dataset.crop(
+            cropped = dataset.spatial.crop(
                 bbox=[
                     min_x + inset_x,
                     min_y + inset_y,

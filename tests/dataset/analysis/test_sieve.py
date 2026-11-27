@@ -61,7 +61,7 @@ class TestSieve:
             The isolated 1-pixel '2' at (5,5) becomes background '1' at
             threshold=4.
         """
-        result = speckled.sieve(threshold=4).read_array()
+        result = speckled.analysis.sieve(threshold=4).io.read_array()
         assert result[5, 5] == 1, (
             f"Isolated pixel should be merged to 1, got {result[5, 5]}"
         )
@@ -72,7 +72,7 @@ class TestSieve:
         Test scenario:
             The 9-pixel '2' block survives threshold=4 unchanged.
         """
-        result = speckled.sieve(threshold=4).read_array()
+        result = speckled.analysis.sieve(threshold=4).io.read_array()
         assert result[0, 0] == 2 and result[2, 2] == 2, (
             f"Large clump should survive, got corners {result[0, 0]} / {result[2, 2]}"
         )
@@ -83,7 +83,7 @@ class TestSieve:
         Test scenario:
             Each lone '2' is size 1 < threshold=2, so both are removed.
         """
-        result = diagonal.sieve(threshold=2, connectedness=4).read_array()
+        result = diagonal.analysis.sieve(threshold=2, connectedness=4).io.read_array()
         assert result[1, 1] == 1 and result[2, 2] == 1, (
             f"4-connectivity should remove diagonal singles, got {result[1, 1]} / {result[2, 2]}"
         )
@@ -94,7 +94,7 @@ class TestSieve:
         Test scenario:
             The two '2's join into a size-2 clump that meets threshold=2.
         """
-        result = diagonal.sieve(threshold=2, connectedness=8).read_array()
+        result = diagonal.analysis.sieve(threshold=2, connectedness=8).io.read_array()
         assert result[1, 1] == 2 and result[2, 2] == 2, (
             f"8-connectivity should keep the joined clump, got {result[1, 1]} / {result[2, 2]}"
         )
@@ -105,7 +105,7 @@ class TestSieve:
         Test scenario:
             Sieving a single-band raster returns a 1-band Dataset.
         """
-        result = speckled.sieve(threshold=4)
+        result = speckled.analysis.sieve(threshold=4)
         assert isinstance(result, Dataset), f"Expected a Dataset, got {type(result)}"
         assert result.band_count == 1, f"Expected 1 band, got {result.band_count}"
 
@@ -115,7 +115,7 @@ class TestSieve:
         Test scenario:
             Shape, geotransform, and EPSG match the source.
         """
-        result = speckled.sieve(threshold=4)
+        result = speckled.analysis.sieve(threshold=4)
         assert (result.rows, result.columns) == (
             6,
             6,
@@ -138,7 +138,7 @@ class TestSieve:
             no_data_value=-1,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = ds.sieve(threshold=4)
+        result = ds.analysis.sieve(threshold=4)
         assert result.no_data_value[0] == -1, (
             f"Expected nodata -1, got {result.no_data_value[0]}"
         )
@@ -156,7 +156,7 @@ class TestSieve:
             no_data_value=None,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = ds.sieve(threshold=4)
+        result = ds.analysis.sieve(threshold=4)
         assert result.raster.GetRasterBand(1).GetNoDataValue() is None, (
             "Output should have no nodata"
         )
@@ -176,7 +176,7 @@ class TestSieve:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = ds.sieve(threshold=4, band=1).read_array()
+        result = ds.analysis.sieve(threshold=4, band=1).io.read_array()
         assert result[5, 5] == 1, f"Band-1 speckle not removed, got {result[5, 5]}"
 
     def test_mask_band(self, speckled):
@@ -191,7 +191,7 @@ class TestSieve:
             mask_arr,
             geo_ref=GeoReference(top_left_corner=(0, 6), cell_size=1.0, epsg=4326),
         )
-        result = speckled.sieve(threshold=4, mask=mask).read_array()
+        result = speckled.analysis.sieve(threshold=4, mask=mask).io.read_array()
         assert result[5, 5] == 1, (
             f"Small clump should be removed with mask, got {result[5, 5]}"
         )
@@ -203,7 +203,7 @@ class TestSieve:
             threshold=0 is rejected.
         """
         with pytest.raises(ValueError, match="threshold must be >= 1"):
-            speckled.sieve(threshold=0)
+            speckled.analysis.sieve(threshold=0)
 
     def test_invalid_connectedness_raises(self, speckled):
         """A connectedness other than 4 or 8 raises ValueError.
@@ -212,7 +212,7 @@ class TestSieve:
             connectedness=5 is invalid.
         """
         with pytest.raises(ValueError, match="connectedness must be 4 or 8"):
-            speckled.sieve(threshold=4, connectedness=5)
+            speckled.analysis.sieve(threshold=4, connectedness=5)
 
     def test_band_out_of_range_raises(self, speckled):
         """A band index beyond the raster raises ValueError.
@@ -221,4 +221,4 @@ class TestSieve:
             band=9 on a 1-band raster is out of range.
         """
         with pytest.raises(ValueError, match="out of range"):
-            speckled.sieve(threshold=4, band=9)
+            speckled.analysis.sieve(threshold=4, band=9)

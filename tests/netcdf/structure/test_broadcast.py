@@ -523,7 +523,7 @@ class TestBroadcastLikeOnAContainer:
         container = NetCDF.from_array(
             np.full((NY, NX), 1.0), geo_ref=_geo_ref(), variable_name="a"
         )
-        container.set_variable("b", _flat(2.0, name="b"))
+        container.variables.set("b", _flat(2.0, name="b"))
         donor = _cube([("time", TIMES)])
 
         lifted = container.broadcast_like(donor)
@@ -627,7 +627,7 @@ class TestAClassicModeRaster:
         assert classic.variable_names == [], "precondition: no variable list"
         assert classic.band_count > 1, "precondition: real bands"
 
-        assert classic.equals(classic) is True
+        assert classic.analysis.equals(classic) is True
         assert (classic * 2.0).broadcast_equals(classic * 2.0) is True
 
     def test_broadcast_like_does_not_call_it_an_empty_container(self):
@@ -765,7 +765,7 @@ class TestBroadcastEquals:
             dims=ExtraDimensions(name="time", values=TIMES),
         ).get_variable("t")
 
-        assert mask.equals(cube) is False
+        assert mask.analysis.equals(cube) is False
         assert mask.broadcast_equals(cube) is True
 
     def test_differing_values_are_not_equal(self):
@@ -811,9 +811,9 @@ class TestBroadcastEquals:
         twin = _cube([("time", TIMES)])
         doubled = cube * 2
 
-        assert cube.equals(twin) is True
+        assert cube.analysis.equals(twin) is True
         assert cube.broadcast_equals(twin) is True
-        assert cube.equals(doubled) is False
+        assert cube.analysis.equals(doubled) is False
         assert cube.broadcast_equals(doubled) is False
 
     def test_an_unbroadcastable_pair_answers_false(self):

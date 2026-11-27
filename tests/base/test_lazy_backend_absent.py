@@ -46,7 +46,7 @@ def test_dataset_to_zarr_branded(no_backend, tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
     )
     with pytest.raises(OptionalPackageDoesNotExist):
-        ds.to_zarr(str(tmp_path / "x.zarr"))
+        ds.io.to_zarr(str(tmp_path / "x.zarr"))
 
 
 def test_dataset_from_zarr_branded(no_backend, tmp_path):

@@ -147,7 +147,7 @@ class TestTheLazyResultReleasesItsRegistryEntry:
         """
         before = len(_artifacts._VSIMEM_PATHS)
 
-        view = rpc_dataset.orthorectify(dem=mem_dem, lazy=True)
+        view = rpc_dataset.georef.orthorectify(dem=mem_dem, lazy=True)
 
         assert len(_artifacts._VSIMEM_PATHS) == before + 1, (
             "the staged DEM should be registered while the view is alive, "
@@ -185,7 +185,7 @@ class TestTheLazyResultReleasesItsRegistryEntry:
         before = len(_artifacts._VSIMEM_PATHS)
 
         for _ in range(5):
-            rpc_dataset.orthorectify(dem=mem_dem, lazy=True)
+            rpc_dataset.georef.orthorectify(dem=mem_dem, lazy=True)
         gc.collect()
 
         assert len(_artifacts._VSIMEM_PATHS) == before, (

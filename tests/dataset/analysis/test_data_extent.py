@@ -53,14 +53,14 @@ class TestTheExtentShrinksToTheData:
         values = np.full((4, 4), -9999.0, dtype="float32")
         values[1:3, 1:3] = 5.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), np.array([1.0, 1.0, 3.0, 3.0]))
+        assert np.array_equal(ds.analysis.data_extent(), np.array([1.0, 1.0, 3.0, 3.0]))
 
     def test_the_extent_sits_inside_total_bounds(self):
         """A gappy band's extent is contained by, and smaller than, the grid box."""
         values = np.full((4, 4), -9999.0, dtype="float32")
         values[1:3, 1:3] = 5.0
         ds = _raster(values, no_data_value=-9999.0)
-        extent, grid = ds.data_extent(), ds.total_bounds
+        extent, grid = ds.analysis.data_extent(), ds.total_bounds
         assert extent[0] >= grid[0]
         assert extent[1] >= grid[1]
         assert extent[2] <= grid[2]
@@ -72,7 +72,7 @@ class TestTheExtentShrinksToTheData:
         values = np.full((4, 4), -9999.0, dtype="float32")
         values[1:3, 2:4] = 1.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), np.array([2.0, 1.0, 4.0, 3.0]))
+        assert np.array_equal(ds.analysis.data_extent(), np.array([2.0, 1.0, 4.0, 3.0]))
 
 
 class TestTheWholeGridCases:
@@ -81,17 +81,17 @@ class TestTheWholeGridCases:
     def test_a_band_with_no_sentinel_has_the_grid_as_its_extent(self):
         """With no sentinel declared there are no gaps, so the extent is the grid."""
         ds = _raster(np.ones((4, 4), dtype="float32"))
-        assert np.array_equal(ds.data_extent(), ds.total_bounds)
+        assert np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
 
     def test_a_full_band_equals_total_bounds(self):
         """A sentinel that marks nothing leaves the extent equal to the grid box."""
         ds = _raster(np.ones((4, 4), dtype="float32"), no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), ds.total_bounds)
+        assert np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
 
     def test_an_all_sentinel_band_has_no_extent(self):
         """Every cell is the sentinel, so there is no data and the result is None."""
         ds = _raster(np.full((4, 4), -9999.0, dtype="float32"), no_data_value=-9999.0)
-        assert ds.data_extent() is None
+        assert ds.analysis.data_extent() is None
 
     def test_a_no_sentinel_float_band_still_shrinks_around_nan(self):
         """Without a sentinel, NaN cells are still gaps, so a NaN border shrinks the box."""
@@ -99,8 +99,8 @@ class TestTheWholeGridCases:
         values[0, :] = np.nan
         values[:, 0] = np.nan
         ds = _raster(values, no_data_value=None)
-        assert np.array_equal(ds.data_extent(), np.array([1.0, 0.0, 4.0, 3.0]))
-        assert not np.array_equal(ds.data_extent(), ds.total_bounds)
+        assert np.array_equal(ds.analysis.data_extent(), np.array([1.0, 0.0, 4.0, 3.0]))
+        assert not np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
 
     def test_nan_with_a_concrete_sentinel_is_counted_as_data(self):
         """With a concrete sentinel declared, a NaN cell is data (not a gap), so it widens the box."""
@@ -108,7 +108,7 @@ class TestTheWholeGridCases:
         values[0, 0] = 5.0
         values[3, 3] = np.nan
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), np.array([0.0, 0.0, 4.0, 4.0]))
+        assert np.array_equal(ds.analysis.data_extent(), np.array([0.0, 0.0, 4.0, 4.0]))
 
 
 class TestTheMaskIsReadFromStoredValues:
@@ -128,8 +128,8 @@ class TestTheMaskIsReadFromStoredValues:
         stored = np.full((3, 3), -9999, dtype="int16")
         stored[1, 1] = 500
         ds = _raster(stored, no_data_value=-9999)
-        ds.scale = [0.01]
-        assert np.array_equal(ds.data_extent(), np.array([1.0, 1.0, 2.0, 2.0]))
+        ds.bands.scale = [0.01]
+        assert np.array_equal(ds.analysis.data_extent(), np.array([1.0, 1.0, 2.0, 2.0]))
 
 
 class TestTheStreamedReductionStitchesStrips:
@@ -147,7 +147,9 @@ class TestTheStreamedReductionStitchesStrips:
         values[10, 2] = 1.0
         values[500, 1] = 2.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), np.array([1.0, 99.0, 3.0, 590.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([1.0, 99.0, 3.0, 590.0])
+        )
 
 
 class TestBandSelectionAndTheFacade:
@@ -159,8 +161,12 @@ class TestBandSelectionAndTheFacade:
         values[0, 0, 0] = 1.0
         values[1, 3, 3] = 2.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(band=0), np.array([0.0, 3.0, 1.0, 4.0]))
-        assert np.array_equal(ds.data_extent(band=1), np.array([3.0, 0.0, 4.0, 1.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(band=0), np.array([0.0, 3.0, 1.0, 4.0])
+        )
+        assert np.array_equal(
+            ds.analysis.data_extent(band=1), np.array([3.0, 0.0, 4.0, 1.0])
+        )
 
     def test_the_facade_delegates_to_the_engine(self):
         """`ds.data_extent()` returns what `ds.analysis.data_extent()` returns."""
@@ -173,7 +179,7 @@ class TestBandSelectionAndTheFacade:
         """An out-of-range band raises `ValueError`, naming neither tuple nor index."""
         ds = _raster(np.ones((4, 4), dtype="float32"), no_data_value=-9999.0)
         with pytest.raises(ValueError, match="out of range"):
-            ds.data_extent(band=3)
+            ds.analysis.data_extent(band=3)
 
 
 class TestOrientationHandling:
@@ -185,24 +191,28 @@ class TestOrientationHandling:
     def test_a_gap_free_south_up_non_square_band_equals_total_bounds(self):
         """A gap-free band on a south-up, non-square grid has the whole-grid box."""
         ds = Dataset.from_array(np.ones((4, 5), dtype="float32"), geo_ref=self.SOUTH_UP)
-        assert np.array_equal(ds.data_extent(), ds.total_bounds)
-        assert np.array_equal(ds.data_extent(), np.array([100.0, 50.0, 110.0, 62.0]))
+        assert np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([100.0, 50.0, 110.0, 62.0])
+        )
 
     def test_a_gappy_south_up_non_square_band_has_the_shrunk_box(self):
         """A rows-1-2, cols-1-3 block projects to its tight box on the south-up grid."""
         values = np.full((4, 5), -9999.0, dtype="float32")
         values[1:3, 1:4] = 1.0
         ds = Dataset.from_array(values, geo_ref=self.SOUTH_UP, no_data_value=-9999.0)
-        assert np.array_equal(ds.data_extent(), np.array([102.0, 53.0, 108.0, 59.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([102.0, 53.0, 108.0, 59.0])
+        )
 
     def test_a_gap_free_rotated_band_equals_total_bounds(self):
         """A gap-free band on a rotated grid still reduces to the whole-grid box."""
         ds = Dataset.from_array(np.ones((4, 4), dtype="float32"), geo_ref=self.ROTATED)
-        assert np.array_equal(ds.data_extent(), ds.total_bounds)
+        assert np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
 
     def test_a_rotated_grid_projects_the_valid_window_with_offsets(self):
         """A single valid cell on a rotated grid projects its window with col/row offsets."""
         values = np.full((4, 4), -9999.0, dtype="float32")
         values[1, 2] = 5.0
         ds = Dataset.from_array(values, geo_ref=self.ROTATED, no_data_value=-9999.0)
-        np.testing.assert_allclose(ds.data_extent(), [2.2, -1.8, 3.4, -0.7])
+        np.testing.assert_allclose(ds.analysis.data_extent(), [2.2, -1.8, 3.4, -0.7])

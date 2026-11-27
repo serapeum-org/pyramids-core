@@ -61,5 +61,5 @@ def write_raster(path, arr, top_left, *, epsg=4326, cell_size=1.0, nodata=-9999.
         no_data_value=nodata,
         geo_ref=GeoReference(top_left_corner=top_left, cell_size=cell_size, epsg=epsg),
     )
-    ds.to_file(str(path))
+    ds.io.to_file(str(path))
     return str(path)

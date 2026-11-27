@@ -94,7 +94,7 @@ class TestRoundTrip:
                 geo_ref=GeoReference(
                     top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(p)
+            ).io.to_file(p)
             items.append(
                 {
                     "id": f"r{i}",
@@ -126,7 +126,7 @@ class TestRoundTrip:
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
         )
-        item = ds.to_stac_item("scene-1", asset_href="s3://b/s.tif")
+        item = ds.io.to_stac_item("scene-1", asset_href="s3://b/s.tif")
         path = str(tmp_path / "one.parquet")
         to_geoparquet([item], path)
         restored = from_geoparquet(path)[0]

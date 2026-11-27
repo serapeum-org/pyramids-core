@@ -59,7 +59,7 @@ class TestCreateEmpty:
             guarantee that unwritten cells are no-data, not 0.
         """
         ds = Dataset.create_empty(4, 4, dtype="float32", no_data_value=-9999.0)
-        whole = ds.read_array()
+        whole = ds.io.read_array()
         assert np.all(np.isclose(whole, -9999.0)), (
             f"unwritten MEM cells should read as nodata -9999, got {np.unique(whole)}"
         )
@@ -73,8 +73,8 @@ class TestCreateEmpty:
         """
         ds = Dataset.create_empty(4, 4, dtype="float32")
         block = np.arange(4, dtype="float32").reshape(2, 2)
-        ds.write_array(block, window=Window(1, 1, 2, 2))
-        back = ds.read_array(window=[1, 1, 2, 2])
+        ds.io.write_array(block, window=Window(1, 1, 2, 2))
+        back = ds.io.read_array(window=[1, 1, 2, 2])
         assert back.tolist() == block.tolist(), f"window did not round-trip: {back}"
 
     def test_window_write_read_roundtrip_gtiff(self, tmp_path: Path):
@@ -94,10 +94,10 @@ class TestCreateEmpty:
             geo_ref=GeoReference(epsg=3857),
         )
         block = np.full((8, 8), 5.0, dtype="float32")
-        ds.write_array(block, window=Window(0, 0, 8, 8))
+        ds.io.write_array(block, window=Window(0, 0, 8, 8))
         del ds
         reopened = Dataset.read_file(str(path))
-        back = reopened.read_array(window=[0, 0, 8, 8])
+        back = reopened.io.read_array(window=[0, 0, 8, 8])
         assert back.tolist() == block.tolist(), (
             f"GTiff window did not round-trip: {back}"
         )
@@ -143,10 +143,10 @@ class TestCreateEmpty:
         ds = Dataset.create_empty(
             1024, 1024, dtype="float32", no_data_value=-9999.0, path=path
         )
-        ds.write_array(np.ones((4, 4), dtype="float32"), window=Window(0, 0, 4, 4))
+        ds.io.write_array(np.ones((4, 4), dtype="float32"), window=Window(0, 0, 4, 4))
         del ds
         reopened = Dataset.read_file(str(path))
-        far = reopened.read_array(window=[1000, 1000, 4, 4])
+        far = reopened.io.read_array(window=[1000, 1000, 4, 4])
         assert np.all(np.isclose(far, -9999.0)), (
             f"unwritten block should read as nodata -9999, got {np.unique(far)}"
         )
@@ -170,10 +170,10 @@ class TestCreateEmpty:
                 no_data_value=None,
                 path=path,
             )
-        ds.write_array(np.ones((4, 4), dtype="float32"), window=Window(0, 0, 4, 4))
+        ds.io.write_array(np.ones((4, 4), dtype="float32"), window=Window(0, 0, 4, 4))
         del ds
         reopened = Dataset.read_file(str(path))
-        far = reopened.read_array(window=[1000, 1000, 4, 4])
+        far = reopened.io.read_array(window=[1000, 1000, 4, 4])
         assert np.all(far == 0), (
             f"with no nodata, unwritten block should read as 0, got {np.unique(far)}"
         )
@@ -267,17 +267,17 @@ class TestCreateEmpty:
             path=path,
         )
         assert ds.band_count == 3, f"expected 3 bands, got {ds.band_count}"
-        ds.write_array(
+        ds.io.write_array(
             np.full((4, 4), 1.0, dtype="float32"), band=0, window=Window(0, 0, 4, 4)
         )
-        ds.write_array(
+        ds.io.write_array(
             np.full((4, 4), 7.0, dtype="float32"), band=2, window=Window(0, 0, 4, 4)
         )
         del ds
         reopened = Dataset.read_file(str(path))
-        band0 = reopened.read_array(band=0, window=[0, 0, 4, 4])
-        band1 = reopened.read_array(band=1, window=[0, 0, 4, 4])
-        band2 = reopened.read_array(band=2, window=[0, 0, 4, 4])
+        band0 = reopened.io.read_array(band=0, window=[0, 0, 4, 4])
+        band1 = reopened.io.read_array(band=1, window=[0, 0, 4, 4])
+        band2 = reopened.io.read_array(band=2, window=[0, 0, 4, 4])
         assert np.all(np.isclose(band0, 1.0)), (
             f"band 0 should be 1.0, got {np.unique(band0)}"
         )
@@ -396,7 +396,7 @@ class TestCreateEmpty:
         ds = Dataset.create_empty(50_000, 90_000, dtype="int8", path=path)
         # Window is (col_off, row_off, cols, rows); the far corner of a
         # 50_000-row x 90_000-col raster.
-        ds.write_array(
+        ds.io.write_array(
             np.ones((4, 4), dtype="int8"), window=Window(89_996, 49_996, 4, 4)
         )
         del ds
@@ -408,7 +408,7 @@ class TestCreateEmpty:
         # read_array window is (col_off, row_off, n_cols, n_rows) — the opposite axis
         # order of write_array (it forwards straight to GDAL ReadAsArray(xoff, yoff,
         # xsize, ysize)). Mirror the write corner with the axes swapped.
-        back = reopened.read_array(window=[89_996, 49_996, 4, 4])
+        back = reopened.io.read_array(window=[89_996, 49_996, 4, 4])
         assert np.all(back == 1), f"far-corner write past 4GB failed: {np.unique(back)}"
 
     @pytest.mark.slow
@@ -565,12 +565,12 @@ class TestEmptyLike:
         path = tmp_path / "like.tif"
         out = Dataset.empty_like(template, path=path)
         # template is 3-band, so target band 0 explicitly when writing a 2-D block.
-        out.write_array(
+        out.io.write_array(
             np.full((2, 2), 7.0, dtype="float32"), band=0, window=Window(0, 0, 2, 2)
         )
         del out
         reopened = Dataset.read_file(str(path))
-        back = reopened.read_array(band=0, window=[0, 0, 2, 2])
+        back = reopened.io.read_array(band=0, window=[0, 0, 2, 2])
         assert back.tolist() == [
             [7.0, 7.0],
             [7.0, 7.0],

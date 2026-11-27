@@ -5,7 +5,7 @@ docstring and in the L-2 plan:
 
 * The seven collaborator classes are accessible as attributes on a
   ``Dataset`` (``ds.io``, ``ds.spatial``, ``ds.bands``, ``ds.analysis``,
-  ``ds.cell``, ``ds.vectorize``, ``ds.cog``).
+  ``ds.cell``, ``ds.vector``, ``ds.cog``).
 * Every public method on every collaborator is a forwarder — calling
   ``ds.<collab>.<method>(...)`` invokes ``ds.<method>(...)`` with the same
   positional and keyword arguments and returns the same value.
@@ -46,7 +46,7 @@ from pyramids.dataset.engines import (
     _Bands,
     _Cell,
     _Spatial,
-    _Vectorize,
+    _Vector,
 )
 from pyramids.dataset.engines._base import (
     _Engine,
@@ -147,14 +147,10 @@ class TestCollaboratorBase:
             "Proxy did not resolve rows attribute"
         )
 
-    def test_proxy_does_not_keep_dataset_alive(self):
-        """Strong-cycle safety: deleting the only Dataset ref must release it.
-
-        Test scenario:
-            A ``weakref.ref`` set up on the Dataset should expire after the
-            local Dataset variable is deleted, even while a collaborator
-            still holds the back-reference. If this fails, GDAL handles
-            leak and Windows file-unlink in tests intermittently fails.
+    def test_a_dataset_with_no_external_refs_is_collected(self):
+        """No stored ds<->engine cycle: the engine accessors are properties, so a Dataset
+        with no external reference (and no engine held) is collected promptly, releasing its
+        GDAL handle -- which keeps Windows file-unlink reliable.
         """
         arr = np.zeros((4, 4), dtype=np.float32)
         ds = Dataset.from_array(
@@ -162,16 +158,32 @@ class TestCollaboratorBase:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
         ref = weakref.ref(ds)
-        collab = _Engine(ds)
         del ds
         gc.collect()
         assert ref() is None, (
-            "Dataset was kept alive by collaborator's _ds back-reference; "
-            "the back-reference must use weakref.proxy"
+            "Dataset must be collected once no external reference remains; a stored engine "
+            "would create a cycle and delay GDAL handle release"
         )
-        # Referencing the proxy after the parent is gone must raise.
-        with pytest.raises(ReferenceError):
-            _ = collab._ds.epsg
+
+    def test_a_held_engine_keeps_its_dataset_alive(self):
+        """The engine holds a strong back-reference, so a chain on a temporary
+        (``Dataset.read_file(p).io.read_array()``) stays valid for the call; the Dataset is
+        released once the engine itself is dropped.
+        """
+        arr = np.zeros((4, 4), dtype=np.float32)
+        ds = Dataset.from_array(
+            arr=arr,
+            geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
+        )
+        ref = weakref.ref(ds)
+        engine = ds.io
+        del ds
+        gc.collect()
+        assert ref() is not None, "a held engine keeps its Dataset alive for the call"
+        assert engine._ds.epsg == 4326
+        del engine
+        gc.collect()
+        assert ref() is None, "dropping the engine releases the Dataset"
 
     def test_reduce_returns_placeholder_recipe(self, in_memory_dataset):
         """``__reduce__`` must return ``(_recreate_placeholder, ())``.
@@ -212,7 +224,7 @@ class TestCollaboratorAttachment:
             ("bands", _Bands),
             ("analysis", _Analysis),
             ("cell", _Cell),
-            ("vectorize", _Vectorize),
+            ("vector", _Vector),
             ("cog", _COG),
         ],
     )
@@ -237,7 +249,7 @@ class TestCollaboratorAttachment:
 
 # Stage 2 facades: Dataset method delegates to the collaborator method
 # (the mixin has been removed from Dataset's MRO). PR 2.1 — cell, PR 2.2 —
-# cog, PR 2.3 — vectorize, PR 2.4 — analysis, PR 2.5 — spatial.
+# cog, PR 2.3 — vector, PR 2.4 — analysis, PR 2.5 — spatial.
 FACADE_METHODS = [
     ("bands", "get_attribute_table"),
     ("bands", "set_attribute_table"),
@@ -272,10 +284,10 @@ FACADE_METHODS = [
     ("cell", "nearest_cell"),
     ("cog", "to_cog"),
     ("cog", "validate_cog"),
-    ("vectorize", "to_geodataframe"),
-    ("vectorize", "translate"),
-    ("vectorize", "cluster"),
-    ("vectorize", "to_polygons"),
+    ("vector", "to_geodataframe"),
+    ("vector", "translate"),
+    ("vector", "cluster"),
+    ("vector", "to_polygons"),
     ("analysis", "stats"),
     ("analysis", "count_domain_cells"),
     ("analysis", "domain_area"),
@@ -325,7 +337,7 @@ class TestFacadeDelegation:
         """
         sentinel = object()
         collab = getattr(in_memory_dataset, collab_attr)
-        mock = mocker.patch.object(collab, method_name, return_value=sentinel)
+        mock = mocker.patch.object(type(collab), method_name, return_value=sentinel)
 
         facade = getattr(in_memory_dataset, method_name)
         result = facade(1, 2, foo="bar")
@@ -394,7 +406,7 @@ class TestAnalysisNormalize:
             Input ``[0, 5, 10]`` with min=0 and max=10 should produce
             ``[0.0, 0.5, 1.0]``.
         """
-        out = _Analysis.normalize(np.array([0.0, 5.0, 10.0]))
+        out = _Analysis._normalize_array(np.array([0.0, 5.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -408,7 +420,7 @@ class TestAnalysisNormalize:
             A 2x2 array ``[[2, 4], [6, 8]]`` should normalize to a 2x2 array
             with min=0.0 and max=1.0 (linear scaling preserves rank).
         """
-        out = _Analysis.normalize(np.array([[2.0, 4.0], [6.0, 8.0]]))
+        out = _Analysis._normalize_array(np.array([[2.0, 4.0], [6.0, 8.0]]))
         assert float(out.min()) == pytest.approx(0.0), (
             f"Expected min 0.0, got {out.min()}"
         )
@@ -424,7 +436,7 @@ class TestAnalysisNormalize:
             Input ``[-10, 0, 10]`` (range 20, min -10) should map to
             ``[0.0, 0.5, 1.0]``.
         """
-        out = _Analysis.normalize(np.array([-10.0, 0.0, 10.0]))
+        out = _Analysis._normalize_array(np.array([-10.0, 0.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -438,7 +450,7 @@ class TestAnalysisNormalize:
             Integer input should not be returned as a Python list or
             Python scalar; the staticmethod always returns ``np.ndarray``.
         """
-        out = _Analysis.normalize(np.array([1, 2, 3, 4]))
+        out = _Analysis._normalize_array(np.array([1, 2, 3, 4]))
         assert isinstance(out, np.ndarray), (
             f"Expected numpy ndarray, got {type(out).__name__}"
         )
@@ -459,10 +471,24 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert float(np.nanmin(out)) == pytest.approx(0.0)
         assert float(np.nanmax(out)) == pytest.approx(1.0)
+
+    def test_the_facade_warns_on_a_multiband_raster_too(self):
+        """`ds.normalize()` emits its deprecation on multi-band input, not only single-band.
+
+        Test scenario:
+            The warning must fire unconditionally (it used to sit inside the single-band
+            branch), so a `-W error::DeprecationWarning` sweep catches every `ds.normalize()`.
+        """
+        geo = GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326)
+        arr = np.arange(18, dtype="float32").reshape(2, 3, 3)
+        ds = Dataset.from_array(arr=arr, geo_ref=geo)
+
+        with pytest.warns(DeprecationWarning, match="ds.normalize"):
+            ds.normalize()
 
     def test_nan_no_data_is_excluded_not_propagated(self):
         """A NaN no-data cell is excluded from the range, not spread to every cell.
@@ -476,7 +502,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, np.nan]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=np.nan)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert np.isnan(out[1, 1]), "the no-data cell must stay NaN"
         np.testing.assert_allclose(
@@ -495,7 +521,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, -9999.0]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=-9999.0)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert np.isnan(out[1, 1]), "the no-data cell must be excluded (NaN)"
         np.testing.assert_allclose(
@@ -515,7 +541,7 @@ class TestDatasetNormalizeFacade:
         arr = np.array([[0.0, 5.0], [10.0, 2.5]], dtype="float32")
         ds = Dataset.from_array(arr=arr, geo_ref=geo, no_data_value=None)
 
-        out = ds.normalize()
+        out = ds.analysis.normalize()
 
         assert not np.isnan(out).any(), "no cell should be NaN without a sentinel"
         assert float(np.min(out)) == pytest.approx(0.0)
@@ -590,7 +616,7 @@ class TestDatasetNormalizeFacade:
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            out = ds.normalize()
+            out = ds.analysis.normalize()
 
         assert np.isnan(out).all()
 
@@ -608,7 +634,7 @@ class TestDatasetNormalizeFacade:
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            out = ds.normalize()
+            out = ds.analysis.normalize()
 
         assert np.array_equal(out, np.zeros((2, 2)))
 
@@ -643,8 +669,8 @@ class TestPickleRoundTrip:
         assert isinstance(roundtripped.cell, _Cell), (
             f"Roundtripped ds.cell is wrong type: {type(roundtripped.cell).__name__}"
         )
-        assert isinstance(roundtripped.vectorize, _Vectorize), (
-            f"Roundtripped ds.vectorize is wrong type: {type(roundtripped.vectorize).__name__}"
+        assert isinstance(roundtripped.vector, _Vector), (
+            f"Roundtripped ds.vector is wrong type: {type(roundtripped.vector).__name__}"
         )
         assert isinstance(roundtripped.cog, _COG), (
             f"Roundtripped ds.cog is wrong type: {type(roundtripped.cog).__name__}"
@@ -671,7 +697,7 @@ class TestPickleRoundTrip:
 
     @pytest.mark.parametrize(
         "collab_attr",
-        ["io", "spatial", "bands", "analysis", "cell", "vectorize", "cog"],
+        ["io", "spatial", "bands", "analysis", "cell", "vector", "cog"],
     )
     def test_directly_pickled_collaborator_yields_placeholder(
         self,
@@ -739,7 +765,7 @@ class TestIsReadOnlyError:
         Dataset.from_array(
             np.zeros((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         # `read_only` has to stay bound: a gdal.Band does not keep its dataset
         # alive, so chaining the two calls invalidates the band immediately.
         read_only = gdal.Open(str(path), gdal.GA_ReadOnly)

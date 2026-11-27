@@ -54,7 +54,7 @@ class TestMaskFlags:
         Test scenario:
             mask_flags().nodata is True; not all_valid.
         """
-        flags = nodata_dataset.mask_flags()
+        flags = nodata_dataset.analysis.mask_flags()
         assert flags.nodata is True
         assert flags.all_valid is False
 
@@ -64,7 +64,7 @@ class TestMaskFlags:
         Test scenario:
             mask_flags().all_valid is True; nodata is False.
         """
-        flags = all_valid_dataset.mask_flags()
+        flags = all_valid_dataset.analysis.mask_flags()
         assert flags.all_valid is True
         assert flags.nodata is False
 
@@ -74,7 +74,7 @@ class TestMaskFlags:
         Test scenario:
             mask_flags(0) on a dataset with an alpha band: alpha and per_dataset.
         """
-        flags = alpha_dataset.mask_flags(0)
+        flags = alpha_dataset.analysis.mask_flags(0)
         assert flags.alpha is True
         assert flags.per_dataset is True
 
@@ -88,7 +88,7 @@ class TestReadMasks:
         Test scenario:
             Column 2 is the nodata column -> mask 0 there, 255 elsewhere.
         """
-        mask = nodata_dataset.read_masks(0)
+        mask = nodata_dataset.analysis.read_masks(0)
         assert mask.shape == (4, 4)
         assert bool((mask[:, 2] == 0).all())
         assert bool((mask[:, 0] == 255).all())
@@ -99,7 +99,7 @@ class TestReadMasks:
         Test scenario:
             A 2-band raster yields a (2, 4, 4) mask stack.
         """
-        masks = alpha_dataset.read_masks()
+        masks = alpha_dataset.analysis.read_masks()
         assert masks.shape == (2, 4, 4)
 
     def test_windowed_mask_matches_full_slice(self, nodata_dataset):
@@ -108,8 +108,8 @@ class TestReadMasks:
         Test scenario:
             read_masks(0, window=Window(0,0,2,2)) == read_masks(0)[:2, :2].
         """
-        full = nodata_dataset.read_masks(0)
-        windowed = nodata_dataset.read_masks(0, window=Window(0, 0, 2, 2))
+        full = nodata_dataset.analysis.read_masks(0)
+        windowed = nodata_dataset.analysis.read_masks(0, window=Window(0, 0, 2, 2))
         assert windowed.shape == (2, 2)
         assert np.array_equal(windowed, full[:2, :2])
 
@@ -127,10 +127,10 @@ class TestCreateMaskBand:
         Dataset.from_array(
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_mask_band()
-        assert ds.mask_flags().per_dataset is True
+        ds.analysis.create_mask_band()
+        assert ds.analysis.mask_flags().per_dataset is True
 
     def test_read_only_raises(self, tmp_path):
         """A read-only dataset rejects create_mask_band.
@@ -142,10 +142,10 @@ class TestCreateMaskBand:
         Dataset.from_array(
             np.ones((4, 4), "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0),
-        ).to_file(path)
+        ).io.to_file(path)
         ds = Dataset.read_file(path, read_only=True)
         with pytest.raises(ReadOnlyError):
-            ds.create_mask_band()
+            ds.analysis.create_mask_band()
 
 
 class TestReadMasksWindowBounds:
@@ -157,7 +157,7 @@ class TestReadMasksWindowBounds:
         Test scenario:
             Window(0,0,100,100) on a 4x4 raster returns the 4x4 in-bounds mask.
         """
-        mask = nodata_dataset.read_masks(0, window=Window(0, 0, 100, 100))
+        mask = nodata_dataset.analysis.read_masks(0, window=Window(0, 0, 100, 100))
         assert mask.shape == (4, 4)
 
     def test_fully_outside_window_raises(self, nodata_dataset):
@@ -168,4 +168,4 @@ class TestReadMasksWindowBounds:
         """
         window = Window(20, 20, 5, 5)
         with pytest.raises(OutOfBoundsError):
-            nodata_dataset.read_masks(0, window=window)
+            nodata_dataset.analysis.read_masks(0, window=window)

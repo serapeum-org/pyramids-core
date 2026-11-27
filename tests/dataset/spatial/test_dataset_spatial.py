@@ -16,6 +16,7 @@ from shapely.geometry import Polygon, box
 from pyramids.base._errors import NoDataValueError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
+from pyramids.dataset.engines.io import _IO
 from pyramids.dataset.engines.spatial import _Spatial, _survives_a_c_double
 from pyramids.feature import FeatureCollection
 
@@ -31,7 +32,7 @@ class TestResample:
         resample_raster_result_dims: tuple,
     ):
         src = Dataset(src)
-        dst = src.resample(
+        dst = src.spatial.resample(
             resample_raster_cell_size,
             method=resample_raster_resample_technique,
         )
@@ -59,7 +60,7 @@ class TestResample:
     ):
         cell_size = 0.00015
         src = Dataset(sentinel_raster)
-        dst = src.resample(
+        dst = src.spatial.resample(
             cell_size,
             method=resample_raster_resample_technique,
         )
@@ -95,7 +96,9 @@ class TestReproject:
         src_shape: tuple,
     ):
         src = Dataset(src)
-        dst = src.to_crs(to_epsg=project_raster_to_epsg, maintain_alignment=True)
+        dst = src.spatial.to_crs(
+            to_epsg=project_raster_to_epsg, maintain_alignment=True
+        )
 
         proj = dst.raster.GetProjection()
         sr = osr.SpatialReference(wkt=proj)
@@ -110,7 +113,7 @@ class TestReproject:
     ):
         epsg = 32637
         src = Dataset(sentinel_raster)
-        dst = src.to_crs(to_epsg=epsg, maintain_alignment=True)
+        dst = src.spatial.to_crs(to_epsg=epsg, maintain_alignment=True)
         assert dst.band_count == src.band_count
         assert dst.epsg == epsg
 
@@ -123,7 +126,9 @@ class TestReproject:
         src_shape: tuple,
     ):
         src = Dataset(src)
-        dst = src.to_crs(to_epsg=project_raster_to_epsg, maintain_alignment=False)
+        dst = src.spatial.to_crs(
+            to_epsg=project_raster_to_epsg, maintain_alignment=False
+        )
 
         proj = dst.crs
         sr = osr.SpatialReference(wkt=proj)
@@ -138,7 +143,7 @@ class TestReproject:
     ):
         epsg = 32637
         src = Dataset(sentinel_raster)
-        dst = src.to_crs(to_epsg=epsg, maintain_alignment=False)
+        dst = src.spatial.to_crs(to_epsg=epsg, maintain_alignment=False)
         assert dst.band_count == src.band_count
         assert dst.epsg == epsg
 
@@ -155,7 +160,7 @@ class TestReproject:
             is a projected raster whose root CRS name identifies Robinson.
         """
         src_ds = Dataset(src)
-        dst = src_ds.to_crs(to_epsg="ESRI:54030")
+        dst = src_ds.spatial.to_crs(to_epsg="ESRI:54030")
         dst_sr = osr.SpatialReference(wkt=dst.crs)
         assert dst_sr.IsProjected() == 1
         assert "Robinson" in dst_sr.GetName(), (
@@ -175,7 +180,7 @@ class TestReproject:
             keeps the same row/column count and reaches the Mollweide projection.
         """
         src_ds = Dataset(src)
-        dst = src_ds.to_crs(to_epsg="ESRI:54009", maintain_alignment=True)
+        dst = src_ds.spatial.to_crs(to_epsg="ESRI:54009", maintain_alignment=True)
         dst_sr = osr.SpatialReference(wkt=dst.crs)
         assert dst_sr.IsProjected() == 1
         assert "Mollweide" in dst_sr.GetName(), (
@@ -205,7 +210,7 @@ class TestReproject:
         """
         proj4 = "+proj=ortho +lat_0=39 +lon_0=-9 +datum=WGS84 +units=m +no_defs"
         src_ds = Dataset(src)
-        dst = src_ds.to_crs(to_epsg=proj4)
+        dst = src_ds.spatial.to_crs(to_epsg=proj4)
         dst_sr = osr.SpatialReference(wkt=dst.crs)
         assert dst_sr.IsProjected() == 1
         assert dst.rows > 0 and dst.columns > 0
@@ -222,7 +227,7 @@ class TestReproject:
             directly — the new SRS-based front door must not break the EPSG fast path.
         """
         src_ds = Dataset(src)
-        dst = src_ds.to_crs(to_epsg=PyprojCRS.from_epsg(3857))
+        dst = src_ds.spatial.to_crs(to_epsg=PyprojCRS.from_epsg(3857))
         assert dst.epsg == 3857
 
     def test_orthographic_off_disc_cells_are_nodata(self):
@@ -245,10 +250,10 @@ class TestReproject:
                 top_left_corner=(-180.0, 90.0), cell_size=1.0, epsg=4326
             ),
         )
-        dst = ds.to_crs(
+        dst = ds.spatial.to_crs(
             to_epsg="+proj=ortho +lat_0=90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
         )
-        out = dst.read_array()
+        out = dst.io.read_array()
         nodata = dst.no_data_value[0]
         corners = np.array([out[0, 0], out[0, -1], out[-1, 0], out[-1, -1]])
         assert np.allclose(corners, nodata), (
@@ -271,12 +276,12 @@ class TestReproject:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 10.0), cell_size=0.5, epsg=4326),
         )
-        dst = ds.to_crs(to_epsg="ESRI:54009", method="bilinear")
+        dst = ds.spatial.to_crs(to_epsg="ESRI:54009", method="bilinear")
         dst_sr = osr.SpatialReference(wkt=dst.crs)
         assert "Mollweide" in dst_sr.GetName(), (
             f"expected Mollweide in dst CRS name, got {dst_sr.GetName()!r}"
         )
-        out = dst.read_array()
+        out = dst.io.read_array()
         finite = out[out != dst.no_data_value[0]]
         assert finite.size > 0, "bilinear warp should produce at least one finite cell"
 
@@ -299,8 +304,8 @@ class TestReproject:
                 top_left_corner=(-180.0, 90.0), cell_size=1.0, epsg=4326
             ),
         )
-        first = src_ds.to_crs(to_epsg="ESRI:54030")
-        second = first.to_crs(to_epsg="ESRI:54030")
+        first = src_ds.spatial.to_crs(to_epsg="ESRI:54030")
+        second = first.spatial.to_crs(to_epsg="ESRI:54030")
         assert (first.rows, first.columns) == (second.rows, second.columns), (
             f"shapes drift: first={first.rows}x{first.columns}, "
             f"second={second.rows}x{second.columns}"
@@ -326,7 +331,7 @@ class TestReproject:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 10.0), cell_size=1.0, epsg=4326),
         )
-        dst = ds.to_crs(to_epsg="ESRI:54030")
+        dst = ds.spatial.to_crs(to_epsg="ESRI:54030")
         assert dst.band_count == ds.band_count, (
             f"band count drift: src={ds.band_count}, dst={dst.band_count}"
         )
@@ -350,7 +355,7 @@ class TestReproject:
                 top_left_corner=(10.0, 50.0), cell_size=0.5, epsg=4326
             ),
         )
-        dst = ds.to_crs(to_epsg=4326, maintain_alignment=True)
+        dst = ds.spatial.to_crs(to_epsg=4326, maintain_alignment=True)
         assert dst.geotransform == ds.geotransform
         assert dst.rows == ds.rows
         assert dst.columns == ds.columns
@@ -374,7 +379,7 @@ class TestReproject:
             ),
         )
         wkt = PyprojCRS.from_epsg(32636).to_wkt()
-        dst = ds.to_crs(to_epsg=wkt)
+        dst = ds.spatial.to_crs(to_epsg=wkt)
         assert dst.epsg == 32636, f"WKT input should resolve to 32636, got {dst.epsg}"
 
     def test_to_crs_projected_identity_maintain_alignment(self):
@@ -397,7 +402,7 @@ class TestReproject:
                 geo=(500_000.0, 100.0, 0.0, 5_500_000.0, 0.0, -100.0), epsg=32636
             ),
         )
-        dst = ds.to_crs(to_epsg=32636, maintain_alignment=True)
+        dst = ds.spatial.to_crs(to_epsg=32636, maintain_alignment=True)
         assert dst.geotransform == ds.geotransform, (
             f"projected identity shortcut should preserve geotransform; "
             f"got {dst.geotransform} vs source {ds.geotransform}"
@@ -431,7 +436,7 @@ class TestReproject:
                 top_left_corner=(200.0, 50.0), cell_size=1.0, epsg=4326
             ),
         )
-        dst = ds.to_crs(to_epsg=3857, maintain_alignment=True)
+        dst = ds.spatial.to_crs(to_epsg=3857, maintain_alignment=True)
         assert dst.epsg == 3857
         assert dst.geotransform[0] < 0, (
             "west-edge shift should land the origin in the western hemisphere "
@@ -450,7 +455,7 @@ class TestAlign:
     ):
         mask_obj = Dataset(src)
         dataset = Dataset(soil_raster)
-        dataset_aligned = dataset.align(mask_obj)
+        dataset_aligned = dataset.spatial.align(mask_obj)
         assert dataset_aligned.raster.ReadAsArray().shape == src_shape
         nodataval = dataset_aligned.raster.GetRasterBand(1).GetNoDataValue()
         src_no_data_value = dataset.no_data_value[0]
@@ -467,7 +472,7 @@ class TestAlign:
     ):
         alignment_src = Dataset(resampled_multiband)
         dataset = Dataset(sentinel_raster)
-        dataset_aligned = dataset.align(alignment_src)
+        dataset_aligned = dataset.spatial.align(alignment_src)
         assert dataset_aligned.rows == resampled_multi_band_dims[0]
         assert dataset_aligned.columns == resampled_multi_band_dims[1]
         assert dataset.top_left_corner == dataset_aligned.top_left_corner
@@ -490,9 +495,9 @@ class TestAlign:
     def test_align_default_is_nearest_unchanged(self):
         """The default keeps the historical nearest-neighbor behaviour."""
         source, template = self._gradient_source_and_template()
-        default = source.align(template)
-        nearest = source.align(template, method="nearest")
-        np.testing.assert_array_equal(default.read_array(), nearest.read_array())
+        default = source.spatial.align(template)
+        nearest = source.spatial.align(template, method="nearest")
+        np.testing.assert_array_equal(default.io.read_array(), nearest.io.read_array())
 
     def test_align_bilinear_lands_on_template_grid_and_differs_from_nearest(self):
         """`method="bilinear"` resamples onto the template's exact grid and, on a
@@ -505,8 +510,8 @@ class TestAlign:
             bilinear actually interpolated rather than replicating blocks).
         """
         source, template = self._gradient_source_and_template()
-        bilinear = source.align(template, method="bilinear")
-        nearest = source.align(template, method="nearest")
+        bilinear = source.spatial.align(template, method="bilinear")
+        nearest = source.spatial.align(template, method="nearest")
 
         assert (bilinear.rows, bilinear.columns, bilinear.epsg) == (10, 10, 4326), (
             f"bilinear align must land on the template grid, got "
@@ -515,7 +520,7 @@ class TestAlign:
         assert bilinear.geotransform == template.geotransform, (
             "bilinear align must copy the template geotransform exactly"
         )
-        assert not np.allclose(bilinear.read_array(), nearest.read_array()), (
+        assert not np.allclose(bilinear.io.read_array(), nearest.io.read_array()), (
             "bilinear must interpolate, not fall back to nearest block replication"
         )
 
@@ -550,7 +555,7 @@ class TestAlign:
             forwarded all the way into `gdal.ReprojectImage`.
         """
         source, template = self._gradient_source_and_template()
-        aligned = source.align(template, method=method)
+        aligned = source.spatial.align(template, method=method)
         assert (aligned.rows, aligned.columns, aligned.epsg) == (10, 10, 4326), (
             f"method={method!r} must land on the template grid, got "
             f"{(aligned.rows, aligned.columns, aligned.epsg)}"
@@ -570,11 +575,11 @@ class TestAlign:
             `resolve_resampling` (which lower-cases and strips).
         """
         source, template = self._gradient_source_and_template()
-        canonical = source.align(template, method="nearest")
-        aliased = source.align(template, method=alias)
+        canonical = source.spatial.align(template, method="nearest")
+        aliased = source.spatial.align(template, method=alias)
         np.testing.assert_array_equal(
-            aliased.read_array(),
-            canonical.read_array(),
+            aliased.io.read_array(),
+            canonical.io.read_array(),
             err_msg=f"alias {alias!r} should resample identically to 'nearest'",
         )
 
@@ -587,7 +592,7 @@ class TestAlign:
         """
         source, template = self._gradient_source_and_template()
         with pytest.raises(ValueError, match="does not exist") as exc_info:
-            source.align(template, method="not-a-real-method")
+            source.spatial.align(template, method="not-a-real-method")
         assert "not-a-real-method" in str(exc_info.value), (
             f"error should echo the bad method name, got: {exc_info.value}"
         )
@@ -601,7 +606,7 @@ class TestAlign:
         """
         source, template = self._gradient_source_and_template()
         with pytest.raises(TypeError, match="must be a string"):
-            source.align(template, method=3)
+            source.spatial.align(template, method=3)
 
     def test_align_non_dataset_template_raises_type_error(self):
         """A non-`RasterBase` template raises `TypeError`.
@@ -612,7 +617,7 @@ class TestAlign:
         """
         source, _ = self._gradient_source_and_template()
         with pytest.raises(TypeError, match="should be a Dataset"):
-            source.align("not-a-dataset", method="nearest")
+            source.spatial.align("not-a-dataset", method="nearest")
 
     def test_align_bilinear_across_different_crs(self):
         """`method` is forwarded through the intermediate reprojection too.
@@ -625,8 +630,8 @@ class TestAlign:
             `to_crs(target_crs, method=...)` call) rather than the same-CRS shortcut.
         """
         source, _ = self._gradient_source_and_template()
-        template = source.to_crs(to_epsg=3857)
-        aligned = source.align(template, method="bilinear")
+        template = source.spatial.to_crs(to_epsg=3857)
+        aligned = source.spatial.align(template, method="bilinear")
         assert aligned.epsg == 3857, f"expected EPSG:3857, got {aligned.epsg}"
         assert (aligned.rows, aligned.columns) == (template.rows, template.columns), (
             "aligned raster must match the template's row/column count"
@@ -645,9 +650,9 @@ class TestAlign:
             CRS boundary and not silently dropped to nearest.
         """
         source, _ = self._gradient_source_and_template()
-        template = source.to_crs(to_epsg=3857)
-        bilinear = source.align(template, method="bilinear").read_array()
-        nearest = source.align(template, method="nearest").read_array()
+        template = source.spatial.to_crs(to_epsg=3857)
+        bilinear = source.spatial.align(template, method="bilinear").io.read_array()
+        nearest = source.spatial.align(template, method="nearest").io.read_array()
         assert bilinear.shape == nearest.shape, "both must share the template grid"
         assert not np.allclose(bilinear, nearest, equal_nan=True), (
             "cross-CRS bilinear must differ from nearest — method must affect values"
@@ -680,7 +685,7 @@ class TestAlign:
             np.zeros((2, 2), dtype=np.float32),
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.5, epsg=4326),
         )
-        aligned = source.align(template, method=method).read_array()
+        aligned = source.spatial.align(template, method=method).io.read_array()
         assert aligned.max() < 100.0, (
             f"method={method!r} must exclude the declared 9999, got max {aligned.max()}"
         )
@@ -703,7 +708,7 @@ class TestAlign:
             np.zeros((2, 2), dtype=np.float32),
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.5, epsg=4326),
         )
-        mixed = source.align(template, method="average").read_array()
+        mixed = source.spatial.align(template, method="average").io.read_array()
         assert mixed.max() > 100.0, (
             f"an undeclared 9999 must mix into the average, got {mixed.max()}"
         )
@@ -728,7 +733,9 @@ class TestAlign:
                 top_left_corner=(0.0, 0.0), cell_size=0.025, epsg=4326
             ),
         )
-        aligned_int = source.align(int_template, method="bilinear").read_array()
+        aligned_int = source.spatial.align(
+            int_template, method="bilinear"
+        ).io.read_array()
         assert np.issubdtype(aligned_int.dtype, np.integer), (
             f"output must adopt the template's integer dtype, got {aligned_int.dtype}"
         )
@@ -742,7 +749,9 @@ class TestAlign:
                 top_left_corner=(0.0, 0.0), cell_size=0.025, epsg=4326
             ),
         )
-        aligned_float = source.align(float_template, method="bilinear").read_array()
+        aligned_float = source.spatial.align(
+            float_template, method="bilinear"
+        ).io.read_array()
         assert not np.array_equal(aligned_float, np.floor(aligned_float)), (
             "the float-template align should keep fractional interpolated values"
         )
@@ -751,11 +760,11 @@ class TestAlign:
         """DoD: works when the template CRS is a PROJ4 string with no EPSG code."""
         source, template = self._gradient_source_and_template()
         proj4 = "+proj=ortho +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
-        ortho_source = source.to_crs(proj4)
-        ortho_template = template.to_crs(proj4)
+        ortho_source = source.spatial.to_crs(proj4)
+        ortho_template = template.spatial.to_crs(proj4)
         assert ortho_template.epsg is None
 
-        aligned = ortho_source.align(ortho_template, method="bilinear")
+        aligned = ortho_source.spatial.align(ortho_template, method="bilinear")
         assert aligned.epsg is None
         assert (aligned.rows, aligned.columns) == (
             ortho_template.rows,
@@ -811,10 +820,10 @@ class TestCrop:
         mask = Dataset.from_array(
             arr_mask, geo_ref=GeoReference(geo=geotransform, epsg=4326)
         )
-        cropped_dataset = dataset.crop(mask=mask)
+        cropped_dataset = dataset.spatial.crop(mask=mask)
 
         assert cropped_dataset.shape == (4, 2, 2)
-        np.testing.assert_array_equal(arr[:, 2:4, 2:4], cropped_dataset.read_array())
+        np.testing.assert_array_equal(arr[:, 2:4, 2:4], cropped_dataset.io.read_array())
 
     def test_crop_dataset_with_array(
         self,
@@ -882,7 +891,7 @@ class TestCropAlignedTiling:
             geo_ref=GeoReference(geo=geotransform, epsg=4326),
         )
 
-        cropped = src.spatial._crop_aligned(mask).read_array()
+        cropped = src.spatial._crop_aligned(mask).io.read_array()
 
         expected = arr.copy()
         holes = mask_arr == mask_no_data
@@ -922,8 +931,8 @@ class TestCropAlignedTiling:
             geo_ref=GeoReference(geo=geotransform, epsg=4326),
         )
 
-        tiled = src.spatial._crop_aligned(mask).read_array()
-        eager = src.spatial._crop_aligned(mask_arr, mask_noval=-1.0).read_array()
+        tiled = src.spatial._crop_aligned(mask).io.read_array()
+        eager = src.spatial._crop_aligned(mask_arr, mask_noval=-1.0).io.read_array()
         np.testing.assert_array_equal(
             tiled,
             eager,
@@ -942,9 +951,9 @@ class TestCropWithPolygon:
         Check that the inplace option is working
         """
         dataset = Dataset(rhine_raster)
-        cells = dataset.count_domain_cells()
-        dataset = dataset.crop(polygon_mask, touch=True)
-        new_cells = dataset.count_domain_cells()
+        cells = dataset.analysis.count_domain_cells()
+        dataset = dataset.spatial.crop(polygon_mask, touch=True)
+        new_cells = dataset.analysis.count_domain_cells()
         assert cells != new_cells
 
     def test_by_warp_touch_true_single_band(
@@ -966,8 +975,8 @@ class TestCropWithPolygon:
 
         validation_dataset = Dataset(crop_by_wrap_touch_true_result)
         assert (
-            validation_dataset.count_domain_cells()
-            == cropped_raster.count_domain_cells()
+            validation_dataset.analysis.count_domain_cells()
+            == cropped_raster.analysis.count_domain_cells()
         )
         assert isinstance(cropped_raster.raster, gdal.Dataset)
         assert cropped_raster.no_data_value[0] == src_obj.no_data_value[0]
@@ -983,8 +992,8 @@ class TestCropWithPolygon:
             geometry=[Polygon([(0.1, -0.1), (0.1, -0.2), (0.2, -0.2), (0.2, -0.1)])],
             crs=4326,
         )
-        cropped_dataset = dataset.crop(mask=mask, touch=True)
-        arr = cropped_dataset.read_array()
+        cropped_dataset = dataset.spatial.crop(mask=mask, touch=True)
+        arr = cropped_dataset.io.read_array()
         assert arr.shape == (4, 2, 2)
 
     def test_by_warp_touch_false(
@@ -1006,8 +1015,8 @@ class TestCropWithPolygon:
 
         validation_dataset = Dataset(crop_by_wrap_touch_false_result)
         assert (
-            validation_dataset.count_domain_cells()
-            == cropped_raster.count_domain_cells()
+            validation_dataset.analysis.count_domain_cells()
+            == cropped_raster.analysis.count_domain_cells()
         )
         assert isinstance(cropped_raster.raster, gdal.Dataset)
         assert cropped_raster.no_data_value[0] == src_obj.no_data_value[0]
@@ -1030,7 +1039,7 @@ class TestCropWithPolygon:
         assert cropped_raster.no_data_value[0] == src_obj.no_data_value[0]
         assert cropped_raster.band_count == src_obj.band_count
         assert cropped_raster.shape == (9, 1, 2)
-        arr = cropped_raster.read_array()
+        arr = cropped_raster.io.read_array()
         vals = np.array(
             [
                 [[2.70369720e02, 2.70399017e02]],
@@ -1080,7 +1089,7 @@ class TestCluster2:
         test_image: gdal.Dataset,
     ):
         dataset = Dataset(test_image)
-        gdf = dataset.to_polygons()
+        gdf = dataset.vector.to_polygons()
         assert isinstance(gdf, GeoDataFrame)
         assert len(gdf) == 4
         assert all(gdf.columns == ["GPP", "geometry"])
@@ -1091,7 +1100,7 @@ class TestCluster2:
         sentinel_raster: gdal.Dataset,
     ):
         dataset = Dataset(sentinel_raster)
-        gdf = dataset.to_polygons()
+        gdf = dataset.vector.to_polygons()
         assert isinstance(gdf, GeoDataFrame)
         assert len(gdf) == 1767
         assert all(
@@ -1105,7 +1114,7 @@ class TestOverlay:
         src_obj = Dataset(rhine_raster)
         classes_src = Dataset.read_file(germany_classes)
         class_dict = src_obj.overlay(classes_src)
-        arr = classes_src.read_array()
+        arr = classes_src.io.read_array()
         class_values = np.unique(arr)
         assert len(class_dict.keys()) == len(class_values) - 1
         extracted_classes = list(class_dict.keys())
@@ -1118,7 +1127,7 @@ class TestOverlay:
         dataset = Dataset(sentinel_raster)
         classes_src = Dataset(sentinel_classes)
         class_dict = dataset.overlay(classes_src, band=1)
-        arr = classes_src.read_array()
+        arr = classes_src.io.read_array()
         class_values = np.unique(arr)
         assert len(class_dict.keys()) == len(class_values)
         extracted_classes = list(class_dict.keys())
@@ -1129,11 +1138,11 @@ class TestOverlay:
 class TestMAsk:
     def test_get_mask(self, src: gdal.Dataset):
         dataset = Dataset(src)
-        values = dataset.read_array()
+        values = dataset.io.read_array()
         no_data_value = dataset.no_data_value[0]
         values[~np.isclose(values, no_data_value)] = 255
         values[np.isclose(values, no_data_value)] = 0
-        arr = dataset.get_mask(band=0)
+        arr = dataset.analysis.get_mask(band=0)
         np.testing.assert_equal(values, arr)
         vals = np.unique(arr)
         assert np.array_equal(vals, [0, 255])
@@ -1171,7 +1180,7 @@ class TestToCrsWarpSourceLifetime:
             must be a strong reference to the source GDAL raster.
         """
         source = self._memory_dataset()
-        reprojected = source.to_crs(3857)
+        reprojected = source.spatial.to_crs(3857)
         pinned = getattr(reprojected, "_warp_source", None)
         assert pinned is source.raster, (
             f"to_crs must pin the source GDAL raster, got {pinned!r}"
@@ -1190,18 +1199,18 @@ class TestToCrsWarpSourceLifetime:
             outer VRT still points at it.
         """
 
-        reprojected = self._memory_dataset().to_crs(3857)
+        reprojected = self._memory_dataset().spatial.to_crs(3857)
         gc.collect()
-        values = np.asarray(reprojected.read_array())
+        values = np.asarray(reprojected.io.read_array())
         assert values.shape == (8, 8), f"expected an 8x8 read, got {values.shape}"
         assert np.isfinite(values).any(), "the reprojected read returned no finite data"
 
     def test_chained_reprojection_round_trips(self) -> None:
         """Two chained reprojections still produce a readable dataset."""
 
-        chained = self._memory_dataset().to_crs(3857).to_crs(4326)
+        chained = self._memory_dataset().spatial.to_crs(3857).spatial.to_crs(4326)
         gc.collect()
-        values = np.asarray(chained.read_array())
+        values = np.asarray(chained.io.read_array())
         assert values.size > 0, "chained to_crs produced an empty read"
         assert np.isfinite(values).any(), "chained to_crs returned no finite data"
 
@@ -1243,7 +1252,7 @@ class TestCutlineBorderTrim:
             f"{trimmed.rows}x{trimmed.columns}"
         )
         np.testing.assert_array_equal(
-            np.asarray(trimmed.read_array()),
+            np.asarray(trimmed.io.read_array()),
             np.arange(9, dtype="float32").reshape(3, 3),
         )
 
@@ -1311,15 +1320,15 @@ class TestCropBoundsTheReadToTheCrop:
         """
         dataset = self._large_source()
         peak = {"cells": 0}
-        original = Dataset.read_array
+        original = _IO.read_array
 
         def spy(self, *args, **kwargs):
             arr = original(self, *args, **kwargs)
             peak["cells"] = max(peak["cells"], getattr(arr, "size", 0))
             return arr
 
-        monkeypatch.setattr(Dataset, "read_array", spy)
-        out = dataset.crop(mask=self._grid_aligned_mask(), touch=True)
+        monkeypatch.setattr(_IO, "read_array", spy)
+        out = dataset.spatial.crop(mask=self._grid_aligned_mask(), touch=True)
         output_cells = out.shape[-1] * out.shape[-2]
         assert peak["cells"] <= 4 * output_cells, (
             f"the crop must read ~its output ({output_cells} cells), not the "
@@ -1338,13 +1347,13 @@ class TestCropBoundsTheReadToTheCrop:
         """
         dataset = self._large_source()
         mask = self._grid_aligned_mask()
-        windowed = dataset.crop(mask=mask, touch=True)
-        reference = dataset.crop(mask=mask, touch=False)
+        windowed = dataset.spatial.crop(mask=mask, touch=True)
+        reference = dataset.spatial.crop(mask=mask, touch=False)
         assert windowed.shape == reference.shape, (
             f"shapes differ: {windowed.shape} vs {reference.shape}"
         )
         np.testing.assert_array_equal(
-            np.asarray(windowed.read_array()), np.asarray(reference.read_array())
+            np.asarray(windowed.io.read_array()), np.asarray(reference.io.read_array())
         )
         # The two paths reach the origin through different float arithmetic, so it
         # can differ by a ULP (~1e-16 deg); every practical tolerance is far coarser.
@@ -1428,16 +1437,16 @@ class TestCropBoundsTheReadToTheCrop:
             ],
             crs=4326,
         )
-        windowed = self._large_source().crop(mask=mask, touch=True)
+        windowed = self._large_source().spatial.crop(mask=mask, touch=True)
         monkeypatch.setattr(
             _Spatial, "_cutline_window_bounds", staticmethod(lambda src, feature: None)
         )
-        full = self._large_source().crop(mask=mask, touch=True)
+        full = self._large_source().spatial.crop(mask=mask, touch=True)
         assert windowed.shape == full.shape, (
             f"the window truncated a non-aligned polygon: {windowed.shape} vs {full.shape}"
         )
         np.testing.assert_array_equal(
-            np.asarray(windowed.read_array()), np.asarray(full.read_array())
+            np.asarray(windowed.io.read_array()), np.asarray(full.io.read_array())
         )
 
     def test_a_feature_collection_gives_the_same_window_as_a_geodataframe(self):
@@ -1499,14 +1508,14 @@ class TestCropBoundsTheReadToTheCrop:
             fallback is wired and produces a sound crop end to end.
         """
         mask = self._grid_aligned_mask().to_crs(32631)
-        cropped = self._large_source().crop(mask=mask, touch=True)
+        cropped = self._large_source().spatial.crop(mask=mask, touch=True)
         assert 45 <= cropped.shape[-2] <= 55, (
             f"the cross-CRS crop's rows must cover the ~50-cell region: {cropped.shape}"
         )
         assert 45 <= cropped.shape[-1] <= 55, (
             f"the cross-CRS crop's cols must cover the ~50-cell region: {cropped.shape}"
         )
-        assert np.isfinite(np.asarray(cropped.read_array())).any(), (
+        assert np.isfinite(np.asarray(cropped.io.read_array())).any(), (
             "the fallback crop must contain real data"
         )
 
@@ -1529,19 +1538,19 @@ class TestCropBoundsTheReadToTheCrop:
     def test_crop_falls_back_to_the_full_source_warp_when_the_window_is_none(self):
         """A CRS-less source (window=None) crops to the exact same pixels as the windowed path."""
         crs_less_mask = gpd.GeoDataFrame(geometry=[box(1.0, 3.0, 1.5, 3.5)], crs=None)
-        reference = self._large_source().crop(
+        reference = self._large_source().spatial.crop(
             mask=self._grid_aligned_mask(), touch=True
         )
         crs_less_source = self._crs_less_source()
         assert (
             _Spatial._cutline_window_bounds(crs_less_source, crs_less_mask) is None
         ), "a CRS-less source must trigger the full-source fallback"
-        fallback = crs_less_source.crop(mask=crs_less_mask, touch=True)
+        fallback = crs_less_source.spatial.crop(mask=crs_less_mask, touch=True)
         assert fallback.shape == reference.shape, (
             f"fallback shape {fallback.shape} != reference {reference.shape}"
         )
         np.testing.assert_array_equal(
-            np.asarray(fallback.read_array()), np.asarray(reference.read_array())
+            np.asarray(fallback.io.read_array()), np.asarray(reference.io.read_array())
         )
 
     def test_bounded_touch_crop_is_grid_origin_independent(self):
@@ -1555,13 +1564,13 @@ class TestCropBoundsTheReadToTheCrop:
             ),
         )
         mask = gpd.GeoDataFrame(geometry=[box(210.0, 22.0, 213.0, 25.0)], crs=4326)
-        windowed = source.crop(mask=mask, touch=True)
-        reference = source.crop(mask=mask, touch=False)
+        windowed = source.spatial.crop(mask=mask, touch=True)
+        reference = source.spatial.crop(mask=mask, touch=False)
         assert windowed.shape == reference.shape, (
             f"shapes differ on a 0..360 grid: {windowed.shape} vs {reference.shape}"
         )
         np.testing.assert_array_equal(
-            np.asarray(windowed.read_array()), np.asarray(reference.read_array())
+            np.asarray(windowed.io.read_array()), np.asarray(reference.io.read_array())
         )
 
     def test_crop_with_polygon_warp_rejects_a_non_feature(self):
@@ -1628,10 +1637,10 @@ class TestCropFillValues:
         """
         source = self._source(np.full((4, 4), 7, dtype=dtype))
 
-        cropped = source.crop(self._mask(dtype))
+        cropped = source.spatial.crop(self._mask(dtype))
 
         fill = cropped.no_data_value[0]
-        masked_cell = np.asarray(cropped.read_array())[0, 0]
+        masked_cell = np.asarray(cropped.io.read_array())[0, 0]
         assert masked_cell == fill or (np.isnan(fill) and np.isnan(masked_cell)), (
             f"masked cell {masked_cell} is not the declared fill {fill}"
         )
@@ -1651,9 +1660,9 @@ class TestCropFillValues:
         """
         source = self._source(np.full((2, 4, 4), 7, dtype=dtype))
 
-        cropped = source.crop(self._mask(dtype))
+        cropped = source.spatial.crop(self._mask(dtype))
 
-        values = np.asarray(cropped.read_array())
+        values = np.asarray(cropped.io.read_array())
         assert values.shape[0] == 2
         for band in range(2):
             assert values[band][0, 0] == cropped.no_data_value[band]
@@ -1671,11 +1680,11 @@ class TestCropFillValues:
         values = np.full((4, 4), 255, dtype="uint8")
         source = self._source(values)
 
-        cropped = source.crop(self._mask("uint8"))
+        cropped = source.spatial.crop(self._mask("uint8"))
 
         fill = cropped.no_data_value[0]
         assert fill != 255
-        unmasked = np.asarray(cropped.read_array())[1:]
+        unmasked = np.asarray(cropped.io.read_array())[1:]
         assert not (unmasked == fill).any(), "the fill collides with real data"
 
     def test_a_band_with_a_storable_sentinel_keeps_it(self):
@@ -1689,10 +1698,10 @@ class TestCropFillValues:
         values = np.full((4, 4), 7, dtype="int16")
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=-32768)
 
-        cropped = source.crop(self._mask("int16"))
+        cropped = source.spatial.crop(self._mask("int16"))
 
         assert cropped.no_data_value[0] == -32768
-        assert np.asarray(cropped.read_array())[0, 0] == -32768
+        assert np.asarray(cropped.io.read_array())[0, 0] == -32768
 
     @pytest.mark.parametrize("dtype", ["uint8", "uint16", "int16", "float32"])
     def test_a_polygon_crop_answers_the_same_way(self, dtype: str):
@@ -1716,9 +1725,9 @@ class TestCropFillValues:
         source.no_data_value = [np.nan]
         polygon = gpd.GeoDataFrame(geometry=[box(1.0, 1.0, 5.0, 5.0)], crs=4326)
 
-        cropped = source.crop(polygon)
+        cropped = source.spatial.crop(polygon)
 
-        values = np.asarray(cropped.read_array())
+        values = np.asarray(cropped.io.read_array())
         fill = cropped.no_data_value[0]
         assert values.shape == (4, 4), f"{dtype} was not trimmed to the polygon"
         assert values[0, 0] == 25, "the trim removed the wrong rows"
@@ -1744,10 +1753,10 @@ class TestCropFillValues:
         )
         assert source.no_data_value == (None,), "fixture must declare no sentinel"
 
-        cropped = source.crop(self._mask(dtype))
+        cropped = source.spatial.crop(self._mask(dtype))
 
         fill = cropped.no_data_value[0]
-        masked_cell = np.asarray(cropped.read_array())[0, 0]
+        masked_cell = np.asarray(cropped.io.read_array())[0, 0]
         assert fill is not None, "the excluded cells were written but not declared"
         assert masked_cell == fill or (np.isnan(fill) and np.isnan(masked_cell)), (
             f"masked cell {masked_cell} is not the declared fill {fill}"
@@ -1779,10 +1788,10 @@ class TestCropFillValues:
             values[3, 3] = np.nan
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=None)
 
-        cropped = source.crop(self._mask("float32"))
+        cropped = source.spatial.crop(self._mask("float32"))
 
         assert np.isnan(cropped.no_data_value[0])
-        assert np.isnan(np.asarray(cropped.read_array())[0, 0])
+        assert np.isnan(np.asarray(cropped.io.read_array())[0, 0])
 
     def test_a_float_band_holding_nan_and_the_default_still_crops(self):
         """Two "taken" candidates used to exhaust the float search entirely.
@@ -1799,10 +1808,10 @@ class TestCropFillValues:
         values[2, 2] = -9999.0
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=None)
 
-        cropped = source.crop(self._mask("float32"))
+        cropped = source.spatial.crop(self._mask("float32"))
 
         assert np.isnan(cropped.no_data_value[0])
-        assert np.asarray(cropped.read_array()).shape == (4, 4)
+        assert np.asarray(cropped.io.read_array()).shape == (4, 4)
 
     def test_a_polygon_crop_invents_nothing_for_an_undeclared_band(self):
         """Where GDAL writes the cells, no sentinel is claimed for them.
@@ -1821,7 +1830,7 @@ class TestCropFillValues:
         )
         polygon = gpd.GeoDataFrame(geometry=[box(1.0, 1.0, 5.0, 5.0)], crs=4326)
 
-        cropped = source.crop(polygon)
+        cropped = source.spatial.crop(polygon)
 
         fill = cropped.no_data_value[0]
         assert fill is None or np.isnan(fill), (
@@ -1901,9 +1910,9 @@ class TestCropFillValues:
         values[0, 0] = 1
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=None)
 
-        cropped = source.crop(self._mask(dtype))
+        cropped = source.spatial.crop(self._mask(dtype))
 
-        kept = np.asarray(cropped.read_array())
+        kept = np.asarray(cropped.io.read_array())
         assert kept.shape == (4, 4), f"real data was trimmed away: {kept.shape}"
         assert int((kept == near_value).sum()) == 15
 
@@ -1926,7 +1935,7 @@ class TestCropFillValues:
         source = Dataset.from_array(values, geo_ref=self.GEO, no_data_value=None)
         source.no_data_value = [np.nan]
         calls = []
-        original = Dataset.read_array
+        original = _IO.read_array
         monkeypatch.setattr(
             Dataset,
             "read_array",
@@ -1961,9 +1970,9 @@ class TestCropFillValues:
             np.full((4, 4), 7, dtype=dtype), geo_ref=self.GEO, no_data_value=None
         )
 
-        cropped = source.crop(mask)
+        cropped = source.spatial.crop(mask)
 
-        assert np.asarray(cropped.read_array()).shape == (3, 3)
+        assert np.asarray(cropped.io.read_array()).shape == (3, 3)
 
     def test_a_band_whose_every_cell_is_no_data_falls_back_to_reading(self):
         """A declared sentinel means GDAL and `read_array` disagree already.
@@ -2015,7 +2024,7 @@ class TestCropFillValues:
 
         fill = source.spatial._crop_fill_values()[0]
 
-        held = np.asarray(source.read_array(band=0))
+        held = np.asarray(source.io.read_array(band=0))
         assert not (held == fill).any(), f"the fill {fill} is a value the band holds"
 
     @pytest.mark.parametrize(
@@ -2057,9 +2066,9 @@ class TestCropFillValues:
         source.no_data_value = [np.nan]
         polygon = gpd.GeoDataFrame(geometry=[box(2.0, 2.0, 6.0, 6.0)], crs=4326)
 
-        cropped = source.crop(polygon)
+        cropped = source.spatial.crop(polygon)
 
-        assert np.asarray(cropped.read_array()).shape == shape
+        assert np.asarray(cropped.io.read_array()).shape == shape
         sentinel = cropped.no_data_value[0]
         assert (sentinel is not None) is declares
 
@@ -2085,9 +2094,9 @@ class TestCropFillValues:
         source = Dataset(raster)
         polygon = gpd.GeoDataFrame(geometry=[box(2.0, 2.0, 6.0, 6.0)], crs=4326)
 
-        cropped = source.crop(polygon)
+        cropped = source.spatial.crop(polygon)
 
-        assert np.asarray(cropped.read_array()).shape == (2, 4, 4)
+        assert np.asarray(cropped.io.read_array()).shape == (2, 4, 4)
 
     @pytest.mark.parametrize(
         ("value", "survives"),
@@ -2133,10 +2142,10 @@ class TestCropFillValues:
         source.no_data_value = [np.nan]
         polygon = gpd.GeoDataFrame(geometry=[box(2.0, 2.0, 6.0, 6.0)], crs=4326)
 
-        cropped = source.crop(polygon)
+        cropped = source.spatial.crop(polygon)
 
         assert cropped.no_data_value[0] == 0
-        assert np.asarray(cropped.read_array()).shape == (4, 4)
+        assert np.asarray(cropped.io.read_array()).shape == (4, 4)
 
     def test_a_band_holding_every_candidate_refuses(self):
         """The honest failure, rather than a colliding fill.
@@ -2155,4 +2164,4 @@ class TestCropFillValues:
         mask = Dataset.from_array(mask_values, geo_ref=geo, no_data_value=0)
 
         with pytest.raises(NoDataValueError, match="no value is free to mark"):
-            source.crop(mask)
+            source.spatial.crop(mask)

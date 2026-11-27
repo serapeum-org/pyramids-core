@@ -18,7 +18,7 @@ def test_remove_variable_drops_it(sample):
     try:
         before = list(nc.variable_names)
         target = next(n for n in before if n not in ("time", "latitude", "longitude"))
-        nc.remove_variable(target)
+        nc.variables.remove(target)
         assert target not in nc.variable_names
         assert len(nc.variable_names) == len(before) - 1
     finally:
@@ -32,7 +32,7 @@ def test_rename_variable_keeps_data(sample):
         target = next(
             n for n in nc.variable_names if n not in ("time", "latitude", "longitude")
         )
-        nc.rename_variable(target, "renamed_var")
+        nc.variables.rename(target, "renamed_var")
         assert "renamed_var" in nc.variable_names
         assert target not in nc.variable_names
     finally:

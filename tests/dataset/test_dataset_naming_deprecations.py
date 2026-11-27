@@ -15,6 +15,7 @@ import pytest
 
 from pyramids.dataset import Dataset, GeoReference
 from pyramids.dataset.collection import DatasetCollection
+from pyramids.dataset.engines.io import _IO
 
 _GEO = dict(top_left_corner=(0, 2), cell_size=1.0, epsg=4326)
 
@@ -100,15 +101,16 @@ class TestToRasterRenamedToToFile:
         )
 
     def test_to_file_does_not_warn(self, tmp_path):
-        """The canonical ``to_file`` must not emit a ``DeprecationWarning``.
+        """The canonical accessor ``io.to_file`` must not emit a ``DeprecationWarning``.
 
         Test scenario:
             With ``DeprecationWarning`` promoted to an error, ``to_file`` writes cleanly.
         """
         out = tmp_path / "clean.tif"
+        raster = _value_raster()
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
-            _value_raster().to_file(str(out))
+            raster.io.to_file(str(out))
         assert out.exists(), "to_file must write the raster without warning"
 
     def test_to_raster_round_trips_the_values(self, tmp_path):
@@ -119,14 +121,14 @@ class TestToRasterRenamedToToFile:
             original array, identical to one written via ``to_file``.
         """
         src = _value_raster()
-        expected = src.read_array(band=0)
+        expected = src.io.read_array(band=0)
         via_alias = tmp_path / "alias.tif"
         via_canonical = tmp_path / "canonical.tif"
         with pytest.warns(DeprecationWarning):
             src.to_raster(str(via_alias))
-        _value_raster().to_file(str(via_canonical))
-        got_alias = Dataset.read_file(str(via_alias)).read_array(band=0)
-        got_canonical = Dataset.read_file(str(via_canonical)).read_array(band=0)
+        _value_raster().io.to_file(str(via_canonical))
+        got_alias = Dataset.read_file(str(via_alias)).io.read_array(band=0)
+        got_canonical = Dataset.read_file(str(via_canonical)).io.read_array(band=0)
         np.testing.assert_array_equal(
             got_alias, expected, err_msg="to_raster round-trip changed the data"
         )
@@ -145,7 +147,7 @@ class TestToRasterRenamedToToFile:
         """
         ds = _value_raster()
         out = str(tmp_path / "fwd.tif")
-        spy = mocker.patch.object(ds.io, "to_file", return_value="sentinel")
+        spy = mocker.patch.object(_IO, "to_file", return_value="sentinel")
         with pytest.warns(DeprecationWarning):
             result = ds.io.to_raster(
                 out,
@@ -183,7 +185,7 @@ class TestFirstLastReturnDataset:
             f"first() must return a Dataset, got {type(first)}"
         )
         np.testing.assert_array_equal(
-            first.read_array(band=0),
+            first.io.read_array(band=0),
             values[0],
             err_msg="first() does not expose timestep 0",
         )
@@ -200,7 +202,7 @@ class TestFirstLastReturnDataset:
             f"last() must return a Dataset, got {type(last)}"
         )
         np.testing.assert_array_equal(
-            last.read_array(band=0),
+            last.io.read_array(band=0),
             values[-1],
             err_msg="last() does not expose the final timestep",
         )
@@ -215,12 +217,12 @@ class TestFirstLastReturnDataset:
         """
         cube, _ = _cube()
         np.testing.assert_array_equal(
-            cube.first().read_array(band=0),
-            cube.iloc(0).read_array(band=0),
+            cube.first().io.read_array(band=0),
+            cube.iloc(0).io.read_array(band=0),
             err_msg="first() diverged from iloc(0)",
         )
         np.testing.assert_array_equal(
-            cube.last().read_array(band=0),
-            cube.iloc(-1).read_array(band=0),
+            cube.last().io.read_array(band=0),
+            cube.iloc(-1).io.read_array(band=0),
             err_msg="last() diverged from iloc(-1)",
         )

@@ -604,7 +604,7 @@ class TestRealDriverOffline:
         assert ds.epsg == 4326
         # projWin span 2x2 deg at 0.01 deg/px -> a bounded 200x200 read, not the planet
         assert ds.shape == (1, 200, 200)
-        arr = np.asarray(ds.read_array())
+        arr = np.asarray(ds.io.read_array())
         assert np.isfinite(arr).any()
         assert float(np.nanstd(arr)) > 0.0
 

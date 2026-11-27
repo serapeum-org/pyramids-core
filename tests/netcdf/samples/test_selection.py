@@ -42,7 +42,7 @@ def test_subset_returns_smaller_dataset(sample):
     nc = NetCDF.read_file(sample(TOS))
     try:
         full_cols = nc.read_array(variable="tos").shape[-1]
-        ds = nc.subset("tos", time=0, bbox=(0, -40, 60, 40))
+        ds = nc.selection.subset("tos", time=0, bbox=(0, -40, 60, 40))
         assert isinstance(ds, Dataset)
         assert ds.shape[-1] < full_cols, "bbox subset should reduce the column extent"
     finally:
@@ -112,7 +112,7 @@ class TestAntimeridianCrop:
             geo_ref=GeoReference(geo=geo, epsg=4326),
             variable_name="v",
         )
-        nc.set_variable(
+        nc.variables.set(
             "w", Dataset.from_array(w_arr, geo_ref=GeoReference(geo=geo, epsg=4326))
         )
         cropped = nc.crop(bbox=(170.0, -10.0, -170.0, 10.0))
@@ -137,7 +137,7 @@ class TestAntimeridianCrop:
             geo_ref=GeoReference(geo=geo, epsg=4326),
             variable_name="v",
         )
-        nc.set_variable(
+        nc.variables.set(
             "w", Dataset.from_array(w_arr, geo_ref=GeoReference(geo=geo, epsg=4326))
         )
         cropped = nc.crop(bbox=(170.0, -10.0, -170.0, 10.0))

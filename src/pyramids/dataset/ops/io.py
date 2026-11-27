@@ -244,7 +244,7 @@ def _write_to_file_sync(
     driver, driver_name = _resolve_output_driver(driver, path)
 
     if driver == "ascii":
-        arr = ds.read_array(band=band)
+        arr = ds._read_array(band=band)
         # The physical sentinel, to match the grid: an ASCII grid has nowhere to put
         # `scale_factor`, so the numbers written are the physical ones and the header
         # has to name the value that actually appears among them. Writing the stored
@@ -296,7 +296,7 @@ def _write_cog(
     cog_kwargs: dict[str, Any] = {"extra": creation_options}
     if tile_length is not None:
         cog_kwargs["layout"] = Layout(blocksize=tile_length)
-    ds.to_cog(path, **cog_kwargs)
+    ds.cog.to_cog(path, **cog_kwargs)
 
 
 @cache

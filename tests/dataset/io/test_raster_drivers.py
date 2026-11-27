@@ -397,7 +397,7 @@ class TestCacheColdness:
         """
         fake_entry_points()
         path = tmp_path / "x.tif"
-        _dataset().to_file(str(path))
+        _dataset().io.to_file(str(path))
         clear_driver_cache()
         opened = Dataset.read_file(str(path))
         assert opened.band_count == 1
@@ -413,7 +413,7 @@ class TestCacheColdness:
         one-scan rule above.
         """
         src = tmp_path / "x.tif"
-        _dataset().to_file(str(src))
+        _dataset().io.to_file(str(src))
         tokenless = tmp_path / "x"  # no suffix, no scheme
         tokenless.write_bytes(
             src.read_bytes()
@@ -650,7 +650,9 @@ def _real_geotiff(tmp_path) -> str:
         str: The path to the written GeoTIFF.
     """
     real = tmp_path / "real.tif"
-    Dataset.from_array(np.ones((3, 3), dtype="float32"), geo_ref=GEO).to_file(str(real))
+    Dataset.from_array(np.ones((3, 3), dtype="float32"), geo_ref=GEO).io.to_file(
+        str(real)
+    )
     return str(real)
 
 

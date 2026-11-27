@@ -19,7 +19,7 @@ def src_raster(tmp_path) -> str:
     Dataset.from_array(
         np.ones((1, 8, 8), np.float32),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 

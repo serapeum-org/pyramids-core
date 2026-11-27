@@ -60,15 +60,15 @@ class TestBboxClipPersistE2E:
         """
         arr = np.arange(100, dtype="int16").reshape(10, 10)
         src = Dataset.read_file(_write_raster(tmp_path, "src.tif", arr))
-        cropped = src.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+        cropped = src.spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
 
         out = tmp_path / "clip.tif"
-        cropped.to_file(str(out))
+        cropped.io.to_file(str(out))
         assert out.exists(), "cropped raster was not written"
 
         reloaded = Dataset.read_file(str(out))
         assert reloaded.shape == (1, 2, 2), f"unexpected shape: {reloaded.shape}"
-        assert np.array_equal(reloaded.read_array(), arr[2:4, 2:4]), (
+        assert np.array_equal(reloaded.io.read_array(), arr[2:4, 2:4]), (
             "round-tripped pixels do not match the source slice"
         )
 
@@ -89,8 +89,8 @@ class TestBboxClipPersistE2E:
         arr = np.arange(100, dtype="int16").reshape(10, 10)
         src = Dataset.read_file(_write_raster(tmp_path, "src.tif", arr))
         bbox = (0.1, -0.2, 0.2, -0.1)
-        via_bbox = src.read_array(bbox=bbox)
-        via_window = src.read_array(
+        via_bbox = src.io.read_array(bbox=bbox)
+        via_window = src.io.read_array(
             window=FeatureCollection.from_bbox(bbox, epsg=src.epsg)
         )
         assert np.array_equal(via_bbox, via_window), (
@@ -120,7 +120,7 @@ class TestBboxClipPersistE2E:
         ).close()
         src = Dataset.read_file(src_path)
 
-        cropped = src.crop(bbox=(0.05, -0.4, 0.4, -0.05), epsg=4326)
+        cropped = src.spatial.crop(bbox=(0.05, -0.4, 0.4, -0.05), epsg=4326)
         assert cropped.shape[0] >= 1 and cropped.shape[1] >= 1, (
             f"reprojected crop yielded an empty raster: {cropped.shape}"
         )
@@ -157,8 +157,16 @@ class TestBboxCollectionE2E:
             2,
             2,
         ), f"unexpected template shape: {cropped.base.shape}"
-        expected0 = Dataset.read_file(p0).crop(bbox=(0.1, -0.2, 0.2, -0.1)).read_array()
-        expected1 = Dataset.read_file(p1).crop(bbox=(0.1, -0.2, 0.2, -0.1)).read_array()
+        expected0 = (
+            Dataset.read_file(p0)
+            .spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+            .io.read_array()
+        )
+        expected1 = (
+            Dataset.read_file(p1)
+            .spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+            .io.read_array()
+        )
         assert np.array_equal(cropped[0], expected0), "timestep 0 mismatch"
         assert np.array_equal(cropped[1], expected1), "timestep 1 mismatch"
 
@@ -181,12 +189,12 @@ class TestBboxPrimitiveAlsoUsableStandaloneE2E:
         src = Dataset.read_file(_write_raster(tmp_path, "r.tif", arr))
         fc = FeatureCollection.from_bbox((0.1, -0.2, 0.2, -0.1), epsg=src.epsg)
 
-        a = src.crop(mask=fc)
-        b = src.crop(mask=fc)
-        c = src.crop(bbox=(0.1, -0.2, 0.2, -0.1))
-        assert np.array_equal(a.read_array(), b.read_array()), (
+        a = src.spatial.crop(mask=fc)
+        b = src.spatial.crop(mask=fc)
+        c = src.spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+        assert np.array_equal(a.io.read_array(), b.io.read_array()), (
             "mask reuse changed output"
         )
-        assert np.array_equal(a.read_array(), c.read_array()), (
+        assert np.array_equal(a.io.read_array(), c.io.read_array()), (
             "mask path differs from bbox path"
         )

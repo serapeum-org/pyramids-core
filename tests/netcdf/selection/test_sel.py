@@ -602,7 +602,7 @@ class TestSelRoundTrip:
         nc = _make_nc()
         var = nc.get_variable("temp")
         subset = var.sel(time=[6, 18])
-        nc.set_variable("temp_subset", subset)
+        nc.variables.set("temp_subset", subset)
         assert "temp_subset" in nc.variable_names, (
             f"Expected 'temp_subset' in {nc.variable_names}"
         )
@@ -624,7 +624,7 @@ class TestSelRoundTrip:
         var = nc.get_variable("temp")
         subset = var.sel(time=[6, 12])
         expected = subset.read_array()
-        nc.set_variable("temp_sub", subset)
+        nc.variables.set("temp_sub", subset)
         rg = nc._raster.GetRootGroup()
         stored = rg.OpenMDArray("temp_sub").ReadAsArray()
         assert_array_equal(

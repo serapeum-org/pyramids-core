@@ -269,7 +269,7 @@ def _materialise_asset(
             if dataset is not None:
                 built = materialise(dataset, overrides)
                 if built is not dataset:
-                    built.to_file(out_path)
+                    built.io.to_file(out_path)
                     staged = _StagedAsset(out_path, copy=out_path)
     return staged
 
@@ -1514,7 +1514,7 @@ def _write_nodata_plane(
         plane, geo_ref=GeoReference(geo=geo, epsg=epsg), no_data_value=np.nan
     )
     _carry_projection(crs, built)
-    built.to_file(out_path)
+    built.io.to_file(out_path)
 
 
 def _warn_unreadable(href: str, exc: Exception) -> None:
@@ -1581,7 +1581,7 @@ def _nan_array(dataset: Any) -> np.ndarray:
         masked cell replaced by `NaN`. The shape is whatever
         :meth:`Dataset.read_array` returns for that raster.
     """
-    values = np.ma.asanyarray(dataset.read_array(masked=True)).astype("float64")
+    values = np.ma.asanyarray(dataset.io.read_array(masked=True)).astype("float64")
     return np.ma.filled(values, np.nan)
 
 
@@ -1617,8 +1617,8 @@ def _fuse_group(
         accumulator = _nan_array(reference)
         for href in hrefs[1:]:
             source = Dataset.read_file(href)
-            if not source.same_grid(reference):
-                source = source.align(reference)
+            if not source.spatial.same_grid(reference):
+                source = source.spatial.align(reference)
             fuse_func(accumulator, _nan_array(source))
         fused = Dataset.from_array(
             accumulator,
@@ -1626,7 +1626,7 @@ def _fuse_group(
             no_data_value=np.nan,
         )
         _carry_projection(reference.crs, fused)
-        fused.to_file(out_path)
+        fused.io.to_file(out_path)
         spec = _grid_spec(reference)
     return spec
 
@@ -3490,7 +3490,7 @@ def _data_footprint_4326(
         to the bbox ring (with a warning, and so to the bbox centre) when the
         band holds no valid pixels.
     """
-    gdf = dataset.footprint(band=band, max_samples=max_samples)
+    gdf = dataset.analysis.footprint(band=band, max_samples=max_samples)
     if gdf is None:
         warnings.warn(
             "footprint='data' found no valid pixels; falling back to the bbox "
@@ -3615,7 +3615,7 @@ def _band_statistics(
         warning is emitted.
     """
     try:
-        row = dataset.stats(band=index, approx_ok=approx_ok).iloc[0]
+        row = dataset.analysis.stats(band=index, approx_ok=approx_ok).iloc[0]
     except RuntimeError:
         warnings.warn(
             f"band {index} has no valid pixels; omitting raster statistics",
@@ -3650,7 +3650,7 @@ def _band_histogram(dataset: Any, index: int, bins: int) -> dict[str, Any] | Non
         warning is emitted.
     """
     try:
-        counts, edges = dataset.get_histogram(band=index, bins=bins)
+        counts, edges = dataset.analysis.get_histogram(band=index, bins=bins)
     except RuntimeError:
         warnings.warn(
             f"band {index} has no value range; omitting the raster histogram",
@@ -3697,8 +3697,8 @@ class _BandMetadata:
         """
         self.nodata = dataset.no_data_value
         self.dtypes = dataset.dtype
-        self.scales = dataset.scale
-        self.offsets = dataset.offset
+        self.scales = dataset._band_scale()
+        self.offsets = dataset._band_offset()
 
     @staticmethod
     def _at(values: Sequence[Any], index: int) -> Any:

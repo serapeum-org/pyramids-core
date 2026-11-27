@@ -153,7 +153,7 @@ class TestWhenTheStoreCannotNameTheAxes:
             own axis names are out of reach. The levels are the `y` / `x` a rebuild gives
             it rather than an empty or internal name.
         """
-        rebuilt = _container().get_variable("t").fillna(0.0)
+        rebuilt = _container().get_variable("t").analysis.fillna(0.0)
         assert rebuilt._parent_nc is None, "precondition: nothing to ask"
         frame = rebuilt.to_dataframe()
         assert list(frame.index.names) == ["time", "y", "x"]
@@ -161,7 +161,7 @@ class TestWhenTheStoreCannotNameTheAxes:
 
     def test_a_variable_built_in_memory_keeps_its_band_coordinates(self):
         """The fallback is only about the two spatial levels; the stamps still label time."""
-        rebuilt = _container().get_variable("t").fillna(0.0)
+        rebuilt = _container().get_variable("t").analysis.fillna(0.0)
         stamps = rebuilt.to_dataframe().index.get_level_values("time")
         assert list(dict.fromkeys(stamps)) == STAMPS
 
@@ -174,7 +174,7 @@ class TestWhenTheStoreCannotNameTheAxes:
             or the column comes back as the placeholder `variable` — which also made
             `to_dataframe(variables="t")` refuse the variable's own name.
         """
-        rebuilt = _container().get_variable("t").fillna(0.0)
+        rebuilt = _container().get_variable("t").analysis.fillna(0.0)
         assert rebuilt._parent_nc is None, "precondition: no store to recover it from"
         assert list(rebuilt.to_dataframe().columns) == ["t"]
         assert list(rebuilt.to_dataframe(variables="t").columns) == ["t"]
@@ -186,7 +186,7 @@ class TestWhenTheStoreCannotNameTheAxes:
             The fallback only applies when there is genuinely no name, which is what a
             caller sees if one is never set.
         """
-        rebuilt = _container().get_variable("t").fillna(0.0)
+        rebuilt = _container().get_variable("t").analysis.fillna(0.0)
         rebuilt._source_var_name = None
         assert list(rebuilt.to_dataframe().columns) == ["variable"]
 
@@ -347,6 +347,6 @@ class TestAPackedVariable:
         """
         nc = NetCDF.read_file(self._packed(tmp_path))
         variable = nc.get_variable(nc.variable_names[0])
-        flags = np.asarray(variable.isnull().read_array()).ravel().tolist()
+        flags = np.asarray(variable.analysis.isnull().read_array()).ravel().tolist()
         missing = [int(np.isnan(value)) for value in nc.to_dataframe().iloc[:, 0]]
         assert missing == flags

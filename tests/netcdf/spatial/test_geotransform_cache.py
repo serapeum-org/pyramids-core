@@ -174,8 +174,8 @@ class TestTheDerivedGeotransformIsCached:
         """
         variable = NetCDF.read_file(str(SOURCE)).get_variable("temperature")
 
-        x, y = variable.xy(1, 2)
+        x, y = variable.cell.xy(1, 2)
 
-        assert variable.rowcol(x, y) == (1, 2), (
+        assert variable.cell.rowcol(x, y) == (1, 2), (
             f"({x}, {y}) came back as {variable.rowcol(x, y)}, expected (1, 2)"
         )

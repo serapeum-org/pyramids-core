@@ -155,7 +155,7 @@ class TestWholeContainerCrop:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5), epsg=4326),
         )
-        nc.set_variable("pressure", ds2)
+        nc.variables.set("pressure", ds2)
         return nc
 
     def test_crops_all_variables(self):
@@ -229,7 +229,7 @@ class TestWholeContainerResample:
             no_data_value=-9999.0,
             geo_ref=GeoReference(geo=(30.0, 0.5, 0, 35.0, 0, -0.5), epsg=4326),
         )
-        nc.set_variable("pressure", ds2)
+        nc.variables.set("pressure", ds2)
         resampled = nc.resample(cell_size=1.0)
         assert "temperature" in resampled.variable_names, (
             "temperature should be in resampled container"

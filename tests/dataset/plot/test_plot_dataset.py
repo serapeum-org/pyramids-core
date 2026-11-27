@@ -96,7 +96,7 @@ class TestPlotDataSet:
     def test_plot_histogram_returns_fig_ax_hist(self, src: Dataset):
         """``plot_histogram`` renders and returns ``(fig, ax, hist)``."""
         dataset = Dataset(src)
-        fig, ax, hist = dataset.plot_histogram(band=0, bins=10)
+        fig, ax, hist = dataset.glyph.histogram(band=0, bins=10)
         assert fig is not None and ax is not None
         assert isinstance(hist, dict)
 
@@ -133,7 +133,7 @@ class TestPlotDataSet:
         with patch(
             "cleopatra.glyphs.stats.histogram_glyph.HistogramGlyph", new=_FakeSG
         ):
-            dataset.plot_histogram(band=0, bins=5, exclude_value=7.0)
+            dataset.glyph.histogram(band=0, bins=5, exclude_value=7.0)
         vals = sorted(captured["values"].tolist())
         assert vals == [
             1.0,
@@ -172,10 +172,10 @@ class TestPlotDataSet:
         with patch(
             "cleopatra.glyphs.stats.histogram_glyph.HistogramGlyph", new=_FakeSG
         ):
-            dataset.plot_histogram(band=0, max_samples=400)
+            dataset.glyph.histogram(band=0, max_samples=400)
             decimated = captured["n"]
             decimated_vals = captured["vals"]
-            dataset.plot_histogram(band=0)
+            dataset.glyph.histogram(band=0)
             full = captured["n"]
         assert full == 10000, f"Exact read must see every pixel, got {full}"
         assert decimated <= 500, (
@@ -293,7 +293,7 @@ class TestPlotDataSet:
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
         with pytest.raises(ValueError, match="no valid samples"):
-            dataset.plot_histogram(band=0)
+            dataset.glyph.histogram(band=0)
 
     @pytest.mark.plot
     def test_plot_histogram_integer_band_skips_nan_branch(self):
@@ -311,7 +311,7 @@ class TestPlotDataSet:
             no_data_value=0,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        fig, ax, hist = dataset.plot_histogram(band=0, bins=4)
+        fig, ax, hist = dataset.glyph.histogram(band=0, bins=4)
         assert fig is not None and ax is not None
         assert isinstance(hist, dict)
 
@@ -331,7 +331,7 @@ class TestPlotDataSet:
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
         _fig, host_ax = plt.subplots()
-        _f, ax, _h = dataset.plot_histogram(band=0, ax=host_ax)
+        _f, ax, _h = dataset.glyph.histogram(band=0, ax=host_ax)
         assert ax is host_ax, "histogram must draw on the supplied ax"
 
     @pytest.mark.plot
@@ -374,7 +374,7 @@ class TestPlotDataSet:
             stack,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        fig, ax, _ = dataset.plot_vector_field(u_band=1, v_band=2, kind="quiver")
+        fig, ax, _ = dataset.glyph.vector_field(u_band=1, v_band=2, kind="quiver")
         assert fig is not None and ax is not None
 
     @pytest.mark.plot
@@ -392,7 +392,7 @@ class TestPlotDataSet:
         geo = (10.0, -1.0, 0.0, 0.0, 0.0, -1.0)
         dataset = Dataset.from_array(uv, geo_ref=GeoReference(geo=geo, epsg=4326))
         assert dataset.x[0] > dataset.x[-1], "x must be descending to hit the branch"
-        fig, ax, _ = dataset.plot_vector_field(u_band=0, v_band=1, kind="streamplot")
+        fig, ax, _ = dataset.glyph.vector_field(u_band=0, v_band=1, kind="streamplot")
         assert fig is not None and ax is not None
 
     @pytest.mark.plot
@@ -415,7 +415,7 @@ class TestPlotDataSet:
             np.stack([u, v]), geo_ref=GeoReference(geo=geo, epsg=4326)
         )
         assert dataset.y[0] < dataset.y[-1], "y must be ascending to skip the flip"
-        _, ax, _ = dataset.plot_vector_field(u_band=0, v_band=1, kind="quiver")
+        _, ax, _ = dataset.glyph.vector_field(u_band=0, v_band=1, kind="quiver")
         quiver = ax.collections[-1]
         offsets = np.asarray(quiver.get_offsets())
         xx, yy = np.meshgrid(dataset.x, dataset.y)
@@ -447,7 +447,7 @@ class TestPlotDataSet:
         """
         dataset = self._uv_dataset()
         with pytest.raises(ValueError):
-            dataset.plot_vector_field(u_band=0, v_band=1, kind="bogus")
+            dataset.glyph.vector_field(u_band=0, v_band=1, kind="bogus")
 
     @staticmethod
     def _uv_dataset():
@@ -477,7 +477,7 @@ class TestPlotDataSet:
             triple from ``VectorGlyph.plot``.
         """
         dataset = self._uv_dataset()
-        fig, ax, _ = dataset.plot_vector_field(u_band=0, v_band=1, kind=kind)
+        fig, ax, _ = dataset.glyph.vector_field(u_band=0, v_band=1, kind=kind)
         assert fig is not None and ax is not None
 
     @pytest.mark.plot
@@ -489,7 +489,7 @@ class TestPlotDataSet:
             (colorbar on) adds a second Axes for the colour bar.
         """
         dataset = self._uv_dataset()
-        fig, _, _ = dataset.plot_vector_field(
+        fig, _, _ = dataset.glyph.vector_field(
             u_band=0, v_band=1, kind="quiver", add_colorbar=False
         )
         assert len(fig.axes) == 1, "add_colorbar=False must not add a colorbar axes"
@@ -514,7 +514,7 @@ class TestPlotDataSet:
         fig, host = plt.subplots()
         scalar.plot(band=0, fig=fig, ax=host)
         assert len(host.images) == 1, "the scalar layer should be drawn first"
-        self._uv_dataset().plot_vector_field(
+        self._uv_dataset().glyph.vector_field(
             u_band=0, v_band=1, kind="quiver", ax=host, add_colorbar=False
         )
         assert len(host.images) == 1, "the scalar image must survive the vector call"
@@ -538,9 +538,9 @@ class TestPlotDataSet:
 
         dataset = self._uv_dataset()
         _, host = plt.subplots()
-        dataset.plot_vector_field(u_band=0, v_band=1, ax=host, add_colorbar=False)
+        dataset.glyph.vector_field(u_band=0, v_band=1, ax=host, add_colorbar=False)
         first = len(host.collections)
-        dataset.plot_vector_field(u_band=0, v_band=1, ax=host, add_colorbar=False)
+        dataset.glyph.vector_field(u_band=0, v_band=1, ax=host, add_colorbar=False)
         assert len(host.collections) == first + 1, (
             f"composing again must add a field, got {first} -> {len(host.collections)}"
         )
@@ -564,7 +564,7 @@ class TestPlotDataSet:
         fig, host = plt.subplots()
         scalar.plot(band=0, fig=fig, ax=host, add_colorbar=False)
         n_before = len(fig.axes)
-        self._uv_dataset().plot_vector_field(u_band=0, v_band=1, ax=host)
+        self._uv_dataset().glyph.vector_field(u_band=0, v_band=1, ax=host)
         assert len(fig.axes) == n_before, (
             f"composing must add no colorbar axes by default, got {n_before} -> {len(fig.axes)}"
         )
@@ -580,8 +580,8 @@ class TestPlotDataSet:
             fewer, so a dense grid is not an unreadable mesh.
         """
         dataset = self._uv_dataset()
-        _, ax_full, _ = dataset.plot_vector_field(u_band=0, v_band=1, kind="quiver")
-        _, ax_thin, _ = dataset.plot_vector_field(
+        _, ax_full, _ = dataset.glyph.vector_field(u_band=0, v_band=1, kind="quiver")
+        _, ax_thin, _ = dataset.glyph.vector_field(
             u_band=0, v_band=1, kind="quiver", thin=3
         )
         n_full = len(ax_full.collections[0].get_offsets())
@@ -600,8 +600,8 @@ class TestPlotDataSet:
             arrow renders black (one unique RGBA), where the default yields many.
         """
         dataset = self._uv_dataset()
-        _, ax_def, _ = dataset.plot_vector_field(u_band=0, v_band=1, kind="quiver")
-        _, ax_solid, _ = dataset.plot_vector_field(
+        _, ax_def, _ = dataset.glyph.vector_field(u_band=0, v_band=1, kind="quiver")
+        _, ax_solid, _ = dataset.glyph.vector_field(
             u_band=0, v_band=1, kind="quiver", color="black"
         )
         q_solid = ax_solid.collections[-1]
@@ -634,7 +634,7 @@ class TestPlotDataSet:
         dataset = self._uv_dataset()
         red_cmap = ListedColormap(["red"])
         with pytest.raises(ValueError, match="color=.*or cmap="):
-            dataset.plot_vector_field(u_band=0, v_band=1, color="black", cmap=red_cmap)
+            dataset.glyph.vector_field(u_band=0, v_band=1, color="black", cmap=red_cmap)
 
     @pytest.mark.plot
     def test_plot_vector_field_invalid_color_raises(self):
@@ -646,7 +646,7 @@ class TestPlotDataSet:
         """
         dataset = self._uv_dataset()
         with pytest.raises(ValueError, match="color= must be a matplotlib colour"):
-            dataset.plot_vector_field(u_band=0, v_band=1, color="notacolour")
+            dataset.glyph.vector_field(u_band=0, v_band=1, color="notacolour")
 
     @pytest.mark.plot
     def test_plot_vector_field_solid_color_suppresses_colorbar(self):
@@ -658,11 +658,11 @@ class TestPlotDataSet:
             single axes); an explicit ``add_colorbar=True`` still draws one.
         """
         dataset = self._uv_dataset()
-        fig, _, _ = dataset.plot_vector_field(u_band=0, v_band=1, color="black")
+        fig, _, _ = dataset.glyph.vector_field(u_band=0, v_band=1, color="black")
         assert len(fig.axes) == 1, (
             f"solid color must not add a colorbar, got {len(fig.axes)} axes"
         )
-        fig2, _, _ = dataset.plot_vector_field(
+        fig2, _, _ = dataset.glyph.vector_field(
             u_band=0, v_band=1, color="black", add_colorbar=True
         )
         assert len(fig2.axes) == 2, "explicit add_colorbar=True must still draw a bar"
@@ -677,7 +677,7 @@ class TestPlotDataSet:
             still gets solid arrows rather than a spurious mutual-exclusion error.
         """
         dataset = self._uv_dataset()
-        _, ax, _ = dataset.plot_vector_field(
+        _, ax, _ = dataset.glyph.vector_field(
             u_band=0, v_band=1, kind="quiver", color="black", cmap=None
         )
         q = ax.collections[-1]
@@ -702,7 +702,7 @@ class TestPlotDataSet:
             matching the docstring's "whole field" claim (not just quiver).
         """
         dataset = self._uv_dataset()
-        _, _, im = dataset.plot_vector_field(
+        _, _, im = dataset.glyph.vector_field(
             u_band=0, v_band=1, kind=kind, color="black"
         )
         colors = np.unique(
@@ -731,7 +731,7 @@ class TestPlotDataSet:
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
         with pytest.raises(ValueError, match=r"v_band=1 is out of range"):
-            dataset.plot_vector_field()
+            dataset.glyph.vector_field()
 
     @pytest.mark.plot
     def test_multi_band(
@@ -823,7 +823,7 @@ class TestPlotDatasetCollection:
                 geo_ref=GeoReference(geo=(0, 0.1, 0, 2, 0, -0.1), epsg=4326),
             )
             path = tmp_path / f"frame_{i}.tif"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             files.append(str(path))
 
         cube = DatasetCollection.from_files(files)
@@ -845,7 +845,7 @@ class TestPlotDatasetCollection:
                 geo_ref=GeoReference(geo=(0, 1, 0, 0, 0, -1), epsg=4326),
             )
             path = tmp_path / f"rgb_{t}.tif"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             files.append(str(path))
         return DatasetCollection.from_files(files)
 

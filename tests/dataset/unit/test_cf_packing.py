@@ -64,8 +64,8 @@ def _packed_raster(values: list[list[int]], scale: float, offset: float) -> Data
         Dataset: A one-band packed dataset with a trivial georeference.
     """
     dataset = _int_raster(values)
-    dataset.scale = [scale]
-    dataset.offset = [offset]
+    dataset.bands.scale = [scale]
+    dataset.bands.offset = [offset]
     return dataset
 
 
@@ -104,8 +104,8 @@ def _packed_stack(scales: list[float], offsets: list[float], size: int = 8) -> D
         array,
         geo_ref=GeoReference(top_left_corner=(0, size), cell_size=1.0, epsg=4326),
     )
-    dataset.scale = list(scales)
-    dataset.offset = list(offsets)
+    dataset.bands.scale = list(scales)
+    dataset.bands.offset = list(offsets)
     return dataset
 
 
@@ -138,8 +138,8 @@ def _two_packed_bands() -> Dataset:
         geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
         no_data_value=[-9999, -9999],
     )
-    dataset.scale = [0.01, 0.1]
-    dataset.offset = [1.5, -3.0]
+    dataset.bands.scale = [0.01, 0.1]
+    dataset.bands.offset = [1.5, -3.0]
     return dataset
 
 
@@ -210,8 +210,8 @@ def _packed_dem() -> Dataset:
         ),
         no_data_value=-9999,
     )
-    dem.scale = [0.01]
-    dem.offset = [1.5]
+    dem.bands.scale = [0.01]
+    dem.bands.offset = [1.5]
     return dem
 
 
@@ -472,7 +472,7 @@ class TestStatsArePhysical:
     def test_an_unpacked_raster_keeps_its_statistics(self):
         """The transform must not disturb a raster that was never packed."""
         dataset = _int_raster([[1, 2, 3], [4, 5, 6]])
-        frame = dataset.stats(approx_ok=False)
+        frame = dataset.analysis.stats(approx_ok=False)
         assert float(frame["min"].iloc[0]) == pytest.approx(1.0)
         assert float(frame["max"].iloc[0]) == pytest.approx(6.0)
 
@@ -485,7 +485,7 @@ class TestStatsArePhysical:
             `min=2.5, max=0.5`, a frame no consumer can use.
         """
         dataset = _packed_raster([[100, -100], [0, 50]], -0.01, 1.5)
-        frame = dataset.stats(approx_ok=False)
+        frame = dataset.analysis.stats(approx_ok=False)
         assert float(frame["min"].iloc[0]) == pytest.approx(0.5)
         assert float(frame["max"].iloc[0]) == pytest.approx(2.5)
         assert float(frame["std"].iloc[0]) > 0, "|scale| keeps the spread positive"
@@ -505,7 +505,7 @@ class TestStatsArePhysical:
             resolution the packing existed to preserve.
         """
         dataset = _packed_raster([[0, 30000]], 1e-5, 273.15)
-        frame = dataset.stats(band=band, approx_ok=False)
+        frame = dataset.analysis.stats(band=band, approx_ok=False)
         assert frame.to_numpy().dtype == np.float64, frame.to_numpy().dtype
         assert float(frame["max"].iloc[0]) == pytest.approx(273.45, abs=1e-9), (
             f"the packed resolution was rounded away: {frame['max'].iloc[0]!r}"
@@ -530,8 +530,8 @@ class TestApplyDoesNotCorrupt:
             the result before it ever reached the wider band.
         """
         dataset = _int_raster([[1435, 1272, 1000]])
-        result = dataset.apply(lambda a: a * 0.01, elementwise=elementwise)
-        got = np.asarray(result.read_array(), dtype="float64")
+        result = dataset.analysis.apply(lambda a: a * 0.01, elementwise=elementwise)
+        got = np.asarray(result.io.read_array(), dtype="float64")
         np.testing.assert_allclose(got[0], [14.35, 12.72, 10.0])
 
     @pytest.mark.parametrize("elementwise", [False, True], ids=["whole", "tiled"])
@@ -543,13 +543,15 @@ class TestApplyDoesNotCorrupt:
             anyway would quadruple the storage of every integer `apply` for nothing.
         """
         dataset = _int_raster([[1, 2, 3]])
-        result = dataset.apply(lambda a: a * 2, elementwise=elementwise)
+        result = dataset.analysis.apply(lambda a: a * 2, elementwise=elementwise)
         assert result.dtype == ["int16"], result.dtype
 
     def test_a_result_gdal_cannot_store_keeps_the_source_type(self):
         """An `object`-valued function falls back rather than refusing to run."""
         dataset = _int_raster([[1, 2, 3]])
-        result = dataset.apply(lambda a: np.array([str(v) for v in a], dtype=object))
+        result = dataset.analysis.apply(
+            lambda a: np.array([str(v) for v in a], dtype=object)
+        )
         assert result.dtype == ["int16"], result.dtype
 
     def test_the_identity_leaves_a_packed_raster_alone(self):
@@ -566,7 +568,7 @@ class TestApplyDoesNotCorrupt:
             before = float(
                 np.nanmax(np.asarray(variable.read_array(), dtype="float64"))
             )
-            result = variable.apply(lambda a: a)
+            result = variable.analysis.apply(lambda a: a)
             after = float(np.nanmax(np.asarray(result.read_array(), dtype="float64")))
         finally:
             store.close()
@@ -593,10 +595,10 @@ class TestStreamingRespectsTheDestination:
         # Doubled in physical units -- the function always sees physical values -- and
         # stored back as counts under the source's own recipe.
         np.testing.assert_allclose(
-            np.asarray(dataset.read_array(), dtype="float64").ravel(),
+            np.asarray(dataset.io.read_array(), dtype="float64").ravel(),
             [5.0, 1.0, 3.0, 4.0],
         )
-        stored = np.asarray(dataset.read_array(unpack=False), dtype="float64")
+        stored = np.asarray(dataset.io.read_array(unpack=False), dtype="float64")
         np.testing.assert_allclose(stored.ravel(), [350.0, -50.0, 150.0, 250.0])
 
     def test_a_destination_with_its_own_recipe_repacks_the_result(self):
@@ -612,7 +614,7 @@ class TestStreamingRespectsTheDestination:
         destination = _packed_raster([[0, 0], [0, 0]], 0.1, 0.0)
         source.io.stream_transform(lambda tile: tile, out=destination, tile_size=2)
         np.testing.assert_allclose(
-            np.asarray(destination.read_array(), dtype="float64").ravel(),
+            np.asarray(destination.io.read_array(), dtype="float64").ravel(),
             [1.0, 2.0, 3.0, 4.0],
         )
 
@@ -620,7 +622,7 @@ class TestStreamingRespectsTheDestination:
         """With no `out`, the result is in the same units `read_array` answers in."""
         dataset = _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
         result = dataset.io.stream_transform(lambda tile: tile * 2, tile_size=2)
-        got = np.asarray(result.read_array(), dtype="float64")
+        got = np.asarray(result.io.read_array(), dtype="float64")
         np.testing.assert_allclose(got.ravel(), [5.0, 1.0, 3.0, 4.0])
 
     def test_the_block_mappers_agree_with_apply(self):
@@ -641,12 +643,12 @@ class TestStreamingRespectsTheDestination:
         mapped, streamed, applied = rasters
 
         results = [
-            mapped.map_blocks(lambda tile: tile * 2, tile_size=2),
+            mapped.io.map_blocks(lambda tile: tile * 2, tile_size=2),
             streamed.io.stream_transform(lambda tile: tile * 2, tile_size=2),
-            applied.apply(lambda tile: tile * 2),
+            applied.analysis.apply(lambda tile: tile * 2),
         ]
         for result in results:
-            values = result.read_array(masked=True)
+            values = result.io.read_array(masked=True)
             np.testing.assert_allclose(np.asarray(values).ravel()[:3], [5.0, 1.0, 3.0])
             assert bool(np.ma.getmaskarray(values).ravel()[-1]), (
                 "the gap came back as data"
@@ -655,17 +657,17 @@ class TestStreamingRespectsTheDestination:
     def test_map_blocks_leaves_an_unpacked_raster_narrow(self):
         """The widening is for packed sources only; an ordinary raster keeps its type."""
         dataset = _int_raster([[1, 2], [3, 4]])
-        result = dataset.map_blocks(lambda tile: tile * 2, tile_size=2)
+        result = dataset.io.map_blocks(lambda tile: tile * 2, tile_size=2)
         assert result.dtype == ["int16"], result.dtype
         np.testing.assert_array_equal(
-            np.asarray(result.read_array()).ravel(), [2, 4, 6, 8]
+            np.asarray(result.io.read_array()).ravel(), [2, 4, 6, 8]
         )
 
     def test_an_unpacked_raster_is_unaffected_by_the_rule(self):
         """The destination check must not disturb the ordinary case."""
         dataset = _int_raster([[1, 2], [3, 4]])
         result = dataset.io.stream_transform(lambda tile: tile * 2, tile_size=2)
-        got = np.asarray(result.read_array(), dtype="float64")
+        got = np.asarray(result.io.read_array(), dtype="float64")
         np.testing.assert_allclose(got.ravel(), [2.0, 4.0, 6.0, 8.0])
 
     def test_an_explicit_unpacked_destination_takes_physical_values(self):
@@ -684,7 +686,7 @@ class TestStreamingRespectsTheDestination:
         )
         source.io.stream_transform(lambda tile: tile * 2, out=destination, tile_size=2)
         np.testing.assert_allclose(
-            np.asarray(destination.read_array(), dtype="float64").ravel(),
+            np.asarray(destination.io.read_array(), dtype="float64").ravel(),
             [5.0, 1.0, 3.0, 4.0],
         )
 
@@ -705,7 +707,9 @@ class TestStreamingRespectsTheDestination:
     def test_map_blocks_honours_an_explicit_dtype_too(self):
         """`map_blocks` shares the rule, and the same escape from it."""
         source = _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
-        result = source.map_blocks(lambda tile: tile * 2, tile_size=2, dtype="float32")
+        result = source.io.map_blocks(
+            lambda tile: tile * 2, tile_size=2, dtype="float32"
+        )
         assert result.dtype == ["float32"], result.dtype
 
     def test_map_blocks_reads_every_band_physically(self):
@@ -717,8 +721,8 @@ class TestStreamingRespectsTheDestination:
             recipes, which is exactly the case a shared factor would get wrong.
         """
         source = _packed_stack([0.01, 2.0], [1.5, -3.0], size=4)
-        result = source.map_blocks(lambda tile: tile * 2, tile_size=4)
-        got = np.asarray(result.read_array(), dtype="float64")
+        result = source.io.map_blocks(lambda tile: tile * 2, tile_size=4)
+        got = np.asarray(result.io.read_array(), dtype="float64")
         assert got.shape == (2, 4, 4), got.shape
         assert float(got[0, 0, 0]) == pytest.approx(5.0), got[0, 0, 0]
         assert float(got[1, 0, 0]) == pytest.approx(394.0), got[1, 0, 0]
@@ -757,7 +761,7 @@ class TestStreamingRespectsTheDestination:
 
         dataset.io.stream_transform(lambda tile: tile * 2, out=dataset, tile_size=2)
 
-        stored = np.asarray(dataset.read_array(unpack=False), dtype="float64")
+        stored = np.asarray(dataset.io.read_array(unpack=False), dtype="float64")
         np.testing.assert_allclose(
             stored[0].ravel(),
             [-9999.0, 350.0, 550.0, 750.0],
@@ -768,7 +772,7 @@ class TestStreamingRespectsTheDestination:
             [-9999.0, 170.0, 370.0, 570.0],
             err_msg="band 1 was not repacked at 0.1 / -3.0",
         )
-        values = np.asarray(dataset.read_array(), dtype="float64")
+        values = np.asarray(dataset.io.read_array(), dtype="float64")
         np.testing.assert_allclose(values[:, 0, 1], [5.0, 14.0])
 
     def test_one_band_of_a_stack_is_repacked_with_that_bands_recipe(self):
@@ -785,7 +789,7 @@ class TestStreamingRespectsTheDestination:
             lambda tile: tile * 2, band=1, out=dataset, tile_size=2
         )
 
-        stored = np.asarray(dataset.read_array(unpack=False), dtype="float64")
+        stored = np.asarray(dataset.io.read_array(unpack=False), dtype="float64")
         np.testing.assert_allclose(
             stored[0].ravel(),
             [-9999.0, 100.0, 200.0, 300.0],
@@ -811,18 +815,20 @@ class TestStreamingRespectsTheDestination:
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=-9999.0,
         )
-        destination.scale = [0.4]
-        destination.offset = [0.0]
+        destination.bands.scale = [0.4]
+        destination.bands.offset = [0.0]
 
         source.io.stream_transform(lambda tile: tile, out=destination, tile_size=2)
 
         np.testing.assert_allclose(
-            np.asarray(destination.read_array(unpack=False), dtype="float64").ravel(),
+            np.asarray(
+                destination.io.read_array(unpack=False), dtype="float64"
+            ).ravel(),
             [2.5, 5.0, 7.5, 10.0],
             err_msg="the float destination's counts were rounded",
         )
         np.testing.assert_allclose(
-            np.asarray(destination.read_array(), dtype="float64").ravel(),
+            np.asarray(destination.io.read_array(), dtype="float64").ravel(),
             [1.0, 2.0, 3.0, 4.0],
         )
 
@@ -836,9 +842,9 @@ class TestStreamingRespectsTheDestination:
         """
         dataset = _packed_raster([[-9999, 100], [200, 300]], 0.01, 1.5)
 
-        result = dataset.map_blocks(lambda tile: tile * 2, tile_size=2, band=0)
+        result = dataset.io.map_blocks(lambda tile: tile * 2, tile_size=2, band=0)
 
-        got = np.asarray(result.read_array(), dtype="float64").ravel()
+        got = np.asarray(result.io.read_array(), dtype="float64").ravel()
         assert got[0] == pytest.approx(-9999.0), f"the gap was mapped into data: {got}"
         np.testing.assert_allclose(got[1:], [5.0, 7.0, 9.0])
 
@@ -854,7 +860,7 @@ class TestStreamingRespectsTheDestination:
 
         dataset.io.stream_transform(lambda tile: tile * 2, out=dataset, tile_size=2)
 
-        stored = np.asarray(dataset.read_array(unpack=False))
+        stored = np.asarray(dataset.io.read_array(unpack=False))
         np.testing.assert_array_equal(stored[0], [[-9999, 4], [6, 8]])
         np.testing.assert_array_equal(stored[1], [[10, 12], [14, 16]])
 
@@ -882,7 +888,9 @@ class TestStreamingRespectsTheDestination:
             restore now unwraps a one-band sentinel tuple.
         """
         result = operation(_bare_raster())
-        np.testing.assert_array_equal(np.asarray(result.read_array()).ravel(), expected)
+        np.testing.assert_array_equal(
+            np.asarray(result.io.read_array()).ravel(), expected
+        )
 
 
 class TestTheTileAndItsDomain:
@@ -899,8 +907,8 @@ class TestTheTileAndItsDomain:
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=[-9999, -32768],
         )
-        dataset.scale = [0.01, 0.1]
-        dataset.offset = [1.5, 0.0]
+        dataset.bands.scale = [0.01, 0.1]
+        dataset.bands.offset = [1.5, 0.0]
         return dataset
 
     def test_an_all_bands_window_judges_each_band_by_its_own_sentinel(self):
@@ -1061,7 +1069,7 @@ class TestSentinelReconciliationKeepsTheStore:
         _agree_on_one_sentinel([first, second])
 
         for dataset in (first, second):
-            stored = np.asarray(dataset.read_array(unpack=False), dtype="float64")
+            stored = np.asarray(dataset.io.read_array(unpack=False), dtype="float64")
             np.testing.assert_allclose(stored.ravel()[:3], [100.0, -100.0, 0.0])
         agreed = {first.no_data_value[0], second.no_data_value[0]}
         assert len(agreed) == 1, f"the timesteps still disagree: {agreed}"
@@ -1073,12 +1081,12 @@ class TestGridOpsKeepThePacking:
     @pytest.mark.parametrize(
         "operation",
         [
-            pytest.param(lambda ds: ds.to_crs(3857), id="to_crs"),
+            pytest.param(lambda ds: ds.spatial.to_crs(3857), id="to_crs"),
             pytest.param(
-                lambda ds: ds.to_crs(3857, maintain_alignment=True),
+                lambda ds: ds.spatial.to_crs(3857, maintain_alignment=True),
                 id="to_crs-maintain-alignment",
             ),
-            pytest.param(lambda ds: ds.resample(cell_size=2.0), id="resample"),
+            pytest.param(lambda ds: ds.spatial.resample(cell_size=2.0), id="resample"),
         ],
     )
     def test_a_regridded_raster_still_declares_its_packing(self, operation):
@@ -1095,14 +1103,14 @@ class TestGridOpsKeepThePacking:
 
         result = operation(dataset)
 
-        assert result.scale[0] == pytest.approx(0.01), (
+        assert result.bands.scale[0] == pytest.approx(0.01), (
             f"the packing was dropped: scale={result.scale}"
         )
         # Against the source's own physical values. An upper bound cannot tell a
         # correct result from a double application (1.525 is also below 2.5) or from
         # an all-gap one; every value a regrid produces has to be one of these.
-        source_values = np.asarray(dataset.read_array(), dtype="float64").ravel()
-        values = np.asarray(result.read_array(), dtype="float64").ravel()
+        source_values = np.asarray(dataset.io.read_array(), dtype="float64").ravel()
+        values = np.asarray(result.io.read_array(), dtype="float64").ravel()
         values = values[np.isfinite(values)]
         assert values.size, "the regrid produced no values at all"
         assert np.all(
@@ -1117,16 +1125,16 @@ class TestGridOpsKeepThePacking:
         template = _packed_raster([[1, 1], [1, 1]], 0.5, -3.0)
         dataset = _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
 
-        result = dataset.align(template)
+        result = dataset.spatial.align(template)
 
-        assert result.scale[0] == pytest.approx(0.01), (
+        assert result.bands.scale[0] == pytest.approx(0.01), (
             f"align carried the wrong recipe: scale={result.scale}"
         )
-        assert result.offset[0] == pytest.approx(1.5), (
+        assert result.bands.offset[0] == pytest.approx(1.5), (
             f"align carried the wrong offset: offset={result.offset}"
         )
         np.testing.assert_allclose(
-            np.asarray(result.read_array(), dtype="float64").ravel(),
+            np.asarray(result.io.read_array(), dtype="float64").ravel(),
             [2.5, 0.5, 1.5, 2.0],
         )
 
@@ -1151,7 +1159,7 @@ class TestTheSentinelStaysOutOfTheDomain:
             against a physical read matches nothing at all.
         """
         dataset = self._with_a_gap()
-        values = np.asarray(dataset.read_array(), dtype="float64")
+        values = np.asarray(dataset.io.read_array(), dtype="float64")
         assert dataset.no_data_value[0] == pytest.approx(-9999.0), (
             "no_data_value must stay the stored sentinel"
         )
@@ -1169,8 +1177,10 @@ class TestTheSentinelStaysOutOfTheDomain:
             the stored sentinel found no no-data at all, so the gap was doubled along
             with the real cells and silently became data.
         """
-        result = self._with_a_gap().apply(lambda a: a * 2, elementwise=elementwise)
-        got = np.asarray(result.read_array(), dtype="float64").ravel()
+        result = self._with_a_gap().analysis.apply(
+            lambda a: a * 2, elementwise=elementwise
+        )
+        got = np.asarray(result.io.read_array(), dtype="float64").ravel()
         np.testing.assert_allclose(got[:3], [5.0, 1.0, 3.0])
         assert got[-1] == pytest.approx(-9999.0), (
             f"the sentinel cell was transformed into data: {got[-1]}"
@@ -1178,17 +1188,19 @@ class TestTheSentinelStaysOutOfTheDomain:
 
     def test_extract_skips_the_sentinel_cell(self):
         """`extract` returns the measurements, not the gaps."""
-        values = np.asarray(self._with_a_gap().extract(), dtype="float64").ravel()
+        values = np.asarray(
+            self._with_a_gap().analysis.extract(), dtype="float64"
+        ).ravel()
         assert values.size == 3, f"expected the 3 real cells, got {values}"
         np.testing.assert_allclose(np.sort(values), [0.5, 1.5, 2.5])
 
     def test_combine_excludes_a_gap_in_either_operand(self):
         """A cell missing from one side is missing from the result."""
         left, right = self._with_a_gap(), self._with_a_gap()
-        result = left.combine(right, lambda a, b: a + b)
-        got = np.asarray(result.read_array(), dtype="float64").ravel()
+        result = left.analysis.combine(right, lambda a, b: a + b)
+        got = np.asarray(result.io.read_array(), dtype="float64").ravel()
         np.testing.assert_allclose(got[:3], [5.0, 1.0, 3.0])
-        masked = result.read_array(masked=True)
+        masked = result.io.read_array(masked=True)
         assert bool(np.ma.getmaskarray(masked).ravel()[-1]), (
             f"the combined gap reads as data: {got[-1]}"
         )
@@ -1208,10 +1220,10 @@ class TestTheSentinelStaysOutOfTheDomain:
             geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=3857),
             no_data_value=-9999,
         )
-        dataset.scale = [0.01]
-        dataset.offset = [1.5]
+        dataset.bands.scale = [0.01]
+        dataset.bands.offset = [1.5]
 
-        footprint = dataset.footprint(max_samples=4)
+        footprint = dataset.analysis.footprint(max_samples=4)
 
         area = float(footprint.area.sum())
         assert area == pytest.approx(12.0), (
@@ -1225,14 +1237,18 @@ class TestEveryReadOnOneBandAgrees:
     @pytest.mark.parametrize(
         "read",
         [
-            pytest.param(lambda ds: np.asarray(ds.read_array())[0, 0], id="read_array"),
-            pytest.param(lambda ds: float(ds.point(0.5, 1.5, band=0)), id="point"),
             pytest.param(
-                lambda ds: np.asarray(ds.read_part((0, 0, 2, 2), band=0)).ravel()[0],
+                lambda ds: np.asarray(ds.io.read_array())[0, 0], id="read_array"
+            ),
+            pytest.param(lambda ds: float(ds.cog.point(0.5, 1.5, band=0)), id="point"),
+            pytest.param(
+                lambda ds: np.asarray(ds.cog.read_part((0, 0, 2, 2), band=0)).ravel()[
+                    0
+                ],
                 id="read_part",
             ),
             pytest.param(
-                lambda ds: np.asarray(ds.preview(band=0)).ravel()[0], id="preview"
+                lambda ds: np.asarray(ds.cog.preview(band=0)).ravel()[0], id="preview"
             ),
         ],
     )
@@ -1259,14 +1275,14 @@ class TestEveryReadOnOneBandAgrees:
             and `plot_histogram`, which reads through `read_array`, disagreed with both.
         """
         dataset = _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
-        _counts, ranges = dataset.get_histogram(band=0, bins=2)
+        _counts, ranges = dataset.analysis.get_histogram(band=0, bins=2)
         assert ranges[0][0] == pytest.approx(0.5), f"first edge {ranges[0][0]}"
         assert ranges[-1][-1] == pytest.approx(2.5), f"last edge {ranges[-1][-1]}"
 
     def test_an_unpacked_raster_keeps_its_histogram(self):
         """The transform must not disturb a raster that was never packed."""
         dataset = _int_raster([[1, 2], [3, 4]])
-        _counts, ranges = dataset.get_histogram(band=0, bins=2)
+        _counts, ranges = dataset.analysis.get_histogram(band=0, bins=2)
         assert ranges[0][0] == pytest.approx(1.0)
         assert ranges[-1][-1] == pytest.approx(4.0)
 
@@ -1280,7 +1296,7 @@ class TestEveryReadOnOneBandAgrees:
             plotting them draws negative-width bars.
         """
         dataset = _packed_raster([[100, -100], [0, 50]], -0.01, 1.5)
-        counts, ranges = dataset.get_histogram(band=0, bins=2)
+        counts, ranges = dataset.analysis.get_histogram(band=0, bins=2)
         assert sum(counts) > 0, f"the buckets caught nothing: {counts}"
         for low, high in ranges:
             assert low <= high, f"a bucket came back reversed: {(low, high)}"
@@ -1299,7 +1315,7 @@ class TestEveryReadOnOneBandAgrees:
             asked for is the window described -- whichever direction the factor runs.
         """
         dataset = _packed_raster([[100, -100], [0, 50]], scale, 1.5)
-        _counts, ranges = dataset.get_histogram(
+        _counts, ranges = dataset.analysis.get_histogram(
             band=0, bins=2, min_value=1.0, max_value=2.0
         )
         edges = sorted({edge for pair in ranges for edge in pair})
@@ -1316,13 +1332,13 @@ class TestEveryReadOnOneBandAgrees:
             fills band by band, so the transform lands in a different place.
         """
         single = _packed_raster([[100] * 8] * 8, 0.01, 1.5)
-        single.create_overviews()
-        one = np.asarray(single.read_overview_array(band=0, overview_index=0))
+        single.io.create_overviews()
+        one = np.asarray(single.io.read_overview_array(band=0, overview_index=0))
         assert float(one.ravel()[0]) == pytest.approx(2.5), one.ravel()[0]
 
         stack = _packed_stack([0.01, 2.0], [1.5, -3.0])
-        stack.create_overviews()
-        every = np.asarray(stack.read_overview_array())
+        stack.io.create_overviews()
+        every = np.asarray(stack.io.read_overview_array())
         assert every.shape[0] == 2, every.shape
         assert float(every[0].ravel()[0]) == pytest.approx(2.5), every[0].ravel()[0]
         assert float(every[1].ravel()[0]) == pytest.approx(197.0), every[1].ravel()[0]
@@ -1330,8 +1346,8 @@ class TestEveryReadOnOneBandAgrees:
     def test_an_unpacked_overview_read_keeps_its_dtype(self):
         """The transform must cost an ordinary raster nothing, here as everywhere."""
         dataset = _int_raster([[3] * 8] * 8)
-        dataset.create_overviews()
-        got = np.asarray(dataset.read_overview_array(band=0, overview_index=0))
+        dataset.io.create_overviews()
+        got = np.asarray(dataset.io.read_overview_array(band=0, overview_index=0))
         assert got.dtype == np.dtype("int16"), got.dtype
         assert int(got.ravel()[0]) == 3
 
@@ -1486,8 +1502,8 @@ class TestTheSentinelAsAValue:
     def test_an_undeclared_sentinel_stays_none(self):
         """A band with no sentinel has nothing to convert, packed or not."""
         dataset = _bare_raster()
-        dataset.scale = [0.01]
-        dataset.offset = [1.5]
+        dataset.bands.scale = [0.01]
+        dataset.bands.offset = [1.5]
         assert dataset.no_data_value[0] is None, dataset.no_data_value
         assert dataset.analysis._physical_no_data(0) is None
 
@@ -1500,10 +1516,10 @@ class TestTheSentinelAsAValue:
             rather than replaced into the table. The rows are still physical values.
         """
         dataset = _bare_raster()
-        dataset.scale = [0.01]
-        dataset.offset = [1.5]
+        dataset.bands.scale = [0.01]
+        dataset.bands.offset = [1.5]
 
-        table = dataset.to_geodataframe(geometry="point", tile=tile, tile_size=1)
+        table = dataset.vector.to_geodataframe(geometry="point", tile=tile, tile_size=1)
 
         values = table.iloc[:, 0].to_numpy(dtype="float64")
         np.testing.assert_allclose(values, [1.5, 1.5])
@@ -1519,7 +1535,7 @@ class TestTheSentinelAsAValue:
         dataset = _packed_raster([[100, -9999], [0, 50]], 0.01, 1.5)
         dataset.no_data_value = [-9999]
         path = tmp_path / "packed.asc"
-        dataset.to_file(str(path))
+        dataset.io.to_file(str(path))
 
         header = dict(
             line.split() for line in path.read_text().splitlines()[:6] if line.split()
@@ -1611,10 +1627,10 @@ class TestStoreCopiesKeepTheRecipe:
         """
         dataset = _packed_raster([[100, -100, 0], [50, 25, 75]], 0.01, 1.5)
 
-        crop = dataset.crop(bbox=[0.0, 0.0, 2.0, 2.0])
+        crop = dataset.spatial.crop(bbox=[0.0, 0.0, 2.0, 2.0])
 
-        assert crop.scale[0] == pytest.approx(0.01), f"scale={crop.scale}"
-        peak = float(np.nanmax(np.asarray(crop.read_array(), dtype="float64")))
+        assert crop.bands.scale[0] == pytest.approx(0.01), f"scale={crop.bands.scale}"
+        peak = float(np.nanmax(np.asarray(crop.io.read_array(), dtype="float64")))
         assert peak == pytest.approx(2.5), f"values look like raw counts: {peak}"
 
     def test_a_raster_mask_crop_keeps_the_counts_and_the_recipe(self):
@@ -1626,10 +1642,14 @@ class TestStoreCopiesKeepTheRecipe:
             no_data_value=-9999,
         )
 
-        cropped = dataset.crop(mask)
+        cropped = dataset.spatial.crop(mask)
 
-        assert cropped.scale[0] == pytest.approx(0.01), f"scale={cropped.scale}"
-        stored = np.asarray(cropped.read_array(unpack=False), dtype="float64").ravel()
+        assert cropped.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={cropped.bands.scale}"
+        )
+        stored = np.asarray(
+            cropped.io.read_array(unpack=False), dtype="float64"
+        ).ravel()
         np.testing.assert_allclose(stored, [100.0, -100.0, -9999.0, 50.0, 25.0, 75.0])
 
     def test_an_array_mask_crop_takes_the_same_route(self):
@@ -1640,8 +1660,12 @@ class TestStoreCopiesKeepTheRecipe:
             np.array([[1, 1, -9999], [1, 1, 1]], dtype="int16"), mask_noval=-9999
         )
 
-        assert cropped.scale[0] == pytest.approx(0.01), f"scale={cropped.scale}"
-        stored = np.asarray(cropped.read_array(unpack=False), dtype="float64").ravel()
+        assert cropped.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={cropped.bands.scale}"
+        )
+        stored = np.asarray(
+            cropped.io.read_array(unpack=False), dtype="float64"
+        ).ravel()
         np.testing.assert_allclose(stored, [100.0, -100.0, -9999.0, 50.0, 25.0, 75.0])
 
     def test_a_seam_crossing_crop_keeps_the_packing(self):
@@ -1658,13 +1682,15 @@ class TestStoreCopiesKeepTheRecipe:
             world,
             geo_ref=GeoReference(top_left_corner=(-180, 90), cell_size=10.0, epsg=4326),
         )
-        dataset.scale = [0.01]
-        dataset.offset = [1.5]
+        dataset.bands.scale = [0.01]
+        dataset.bands.offset = [1.5]
 
-        stitched = dataset.crop(bbox=(170.0, -10.0, -170.0, 10.0))
+        stitched = dataset.spatial.crop(bbox=(170.0, -10.0, -170.0, 10.0))
 
-        assert stitched.scale[0] == pytest.approx(0.01), f"scale={stitched.scale}"
-        peak = float(np.nanmax(np.asarray(stitched.read_array(), dtype="float64")))
+        assert stitched.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={stitched.bands.scale}"
+        )
+        peak = float(np.nanmax(np.asarray(stitched.io.read_array(), dtype="float64")))
         assert peak == pytest.approx(2.5), f"the stitch returned raw counts: {peak}"
 
 
@@ -1765,14 +1791,14 @@ class TestBandWiseRebuildsCarryTheirRecipe:
         for index, (scale, offset) in enumerate([(0.01, 1.5), (2.0, -3.0)]):
             source = _packed_raster([[100] * 4] * 4, scale, offset)
             path = tmp_path / f"band{index}.tif"
-            source.to_file(str(path))
+            source.io.to_file(str(path))
             paths.append(str(path))
 
         stacked = Dataset.from_band_files(paths, align=True)
 
-        assert stacked.scale == pytest.approx([0.01, 2.0]), stacked.scale
-        assert stacked.offset == pytest.approx([1.5, -3.0]), stacked.offset
-        corner = np.asarray(stacked.read_array(), dtype="float64")[:, 0, 0]
+        assert stacked.bands.scale == pytest.approx([0.01, 2.0]), stacked.bands.scale
+        assert stacked.bands.offset == pytest.approx([1.5, -3.0]), stacked.bands.offset
+        corner = np.asarray(stacked.io.read_array(), dtype="float64")[:, 0, 0]
         np.testing.assert_allclose(corner, [2.5, 197.0])
 
     def test_writing_a_packed_raster_into_a_container_keeps_its_recipe(self):
@@ -1789,7 +1815,7 @@ class TestBandWiseRebuildsCarryTheirRecipe:
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             variable_name="plain",
         )
-        container.set_variable(
+        container.variables.set(
             "packed", _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
         )
 
@@ -1821,7 +1847,7 @@ class TestBandWiseRebuildsCarryTheirRecipe:
         with patch.object(
             gdal.MDArray, "SetScale", side_effect=RuntimeError("no slot")
         ):
-            container.set_variable(
+            container.variables.set(
                 "packed", _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
             )
 
@@ -1866,17 +1892,17 @@ class TestEveryBandIsUnpackedWithItsOwnFactor:
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=-9999,
         )
-        left.scale, left.offset = [0.01, 2.0], [1.5, -3.0]
+        left.bands.scale, left.bands.offset = [0.01, 2.0], [1.5, -3.0]
         right = Dataset.from_array(
             stack.copy(),
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=-9999,
         )
-        right.scale, right.offset = [0.01, 2.0], [1.5, -3.0]
+        right.bands.scale, right.bands.offset = [0.01, 2.0], [1.5, -3.0]
 
-        result = left.combine(right, lambda a, b: a + b)
+        result = left.analysis.combine(right, lambda a, b: a + b)
 
-        got = np.asarray(result.read_array(), dtype="float64")
+        got = np.asarray(result.io.read_array(), dtype="float64")
         assert got.shape == (2, 2, 2), got.shape
         np.testing.assert_allclose(got[:, 0, 0], [5.0, 194.0])
 
@@ -1891,17 +1917,17 @@ class TestPythonHeldPackingReachesEveryReader:
                 lambda v, x, y: np.asarray(v.read_array(), dtype="float64").ravel()[0],
                 id="read_array",
             ),
-            pytest.param(lambda v, x, y: float(v.point(x, y, band=0)), id="point"),
+            pytest.param(lambda v, x, y: float(v.cog.point(x, y, band=0)), id="point"),
             pytest.param(
                 lambda v, x, y: np.asarray(
-                    v.read_part((0.0, 0.0, 4.0, 3.0), band=0), dtype="float64"
+                    v.cog.read_part((0.0, 0.0, 4.0, 3.0), band=0), dtype="float64"
                 ).ravel()[0],
                 id="read_part",
             ),
             pytest.param(
-                lambda v, x, y: np.asarray(v.preview(band=0), dtype="float64").ravel()[
-                    0
-                ],
+                lambda v, x, y: np.asarray(
+                    v.cog.preview(band=0), dtype="float64"
+                ).ravel()[0],
                 id="preview",
             ),
         ],
@@ -1940,7 +1966,9 @@ class TestAnInPlaceComputeSpendsThePacking:
     @pytest.mark.parametrize(
         ("operation", "expected"),
         [
-            pytest.param(lambda v: v.apply(lambda a: a, inplace=True), 2.5, id="apply"),
+            pytest.param(
+                lambda v: v.analysis.apply(lambda a: a, inplace=True), 2.5, id="apply"
+            ),
             pytest.param(lambda v: v.fill(7.0, inplace=True), 7.0, id="fill"),
         ],
     )
@@ -1977,16 +2005,18 @@ class TestAnInPlaceComputeSpendsThePacking:
         returned = dataset._spend_packing()
 
         assert returned is None, returned
-        assert dataset.scale == pytest.approx([0.01]), dataset.scale
+        assert dataset.bands.scale == pytest.approx([0.01]), dataset.bands.scale
         np.testing.assert_allclose(
-            np.asarray(dataset.read_array(), dtype="float64").ravel(), [2.5, 3.5]
+            np.asarray(dataset.io.read_array(), dtype="float64").ravel(), [2.5, 3.5]
         )
 
     @pytest.mark.parametrize(
         ("operation", "expected"),
         [
             pytest.param(
-                lambda ds: ds.apply(lambda a: a, inplace=True), [2.5, 3.5], id="apply"
+                lambda ds: ds.analysis.apply(lambda a: a, inplace=True),
+                [2.5, 3.5],
+                id="apply",
             ),
             pytest.param(lambda ds: ds.fill(7.0, inplace=True), [7.0, 7.0], id="fill"),
         ],
@@ -2003,7 +2033,7 @@ class TestAnInPlaceComputeSpendsThePacking:
 
         operation(dataset)
 
-        got = np.asarray(dataset.read_array(), dtype="float64").ravel()
+        got = np.asarray(dataset.io.read_array(), dtype="float64").ravel()
         np.testing.assert_allclose(got, expected)
         pair = dataset._effective_packing(0)
         assert _is_identity_packing(*pair), f"the recipe survived the compute: {pair}"
@@ -2033,7 +2063,7 @@ class TestSetVariableRoundTrip:
         )
         expected = float(np.asarray(selected.read_array(), dtype="float64").ravel()[0])
 
-        container.set_variable("copy", selected)
+        container.variables.set("copy", selected)
 
         written = container.get_variable("copy")
         got = float(np.asarray(written.read_array(), dtype="float64").ravel()[0])
@@ -2102,9 +2132,9 @@ class TestApplyPredictsTheTypeTheCallProduces:
             `int16` buffer as `1`.
         """
         dataset = _int_raster([[4, 2], [9, 3]])
-        result = dataset.apply(math.sqrt, elementwise=elementwise)
+        result = dataset.analysis.apply(math.sqrt, elementwise=elementwise)
         np.testing.assert_allclose(
-            np.asarray(result.read_array(), dtype="float64").ravel(),
+            np.asarray(result.io.read_array(), dtype="float64").ravel(),
             [2.0, math.sqrt(2), 3.0, math.sqrt(3)],
         )
 
@@ -2112,8 +2142,8 @@ class TestApplyPredictsTheTypeTheCallProduces:
     def test_a_func_that_refuses_the_sentinel_still_widens(self, elementwise):
         """The probe samples the domain on both arms, never the sentinel at `[0, 0]`."""
         dataset = _int_raster([[-9999, 3], [5, 7]])
-        result = dataset.apply(_halve_positive, elementwise=elementwise)
-        got = np.asarray(result.read_array(), dtype="float64").ravel()
+        result = dataset.analysis.apply(_halve_positive, elementwise=elementwise)
+        got = np.asarray(result.io.read_array(), dtype="float64").ravel()
         np.testing.assert_allclose(got[1:], [1.5, 2.5, 3.5])
 
     def test_a_callable_refusing_arrays_with_a_value_error_is_lifted_too(self):
@@ -2173,8 +2203,8 @@ class TestEachBandIsJudgedOnItsOwn:
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=[-9999, -9999],
         )
-        dataset.scale = scales
-        dataset.offset = [0.0, 0.0]
+        dataset.bands.scale = scales
+        dataset.bands.offset = [0.0, 0.0]
         return dataset
 
     def test_extract_uses_the_packing_of_the_band_it_reads(self):
@@ -2186,7 +2216,7 @@ class TestEachBandIsJudgedOnItsOwn:
             a value of -999.9.
         """
         values = np.asarray(
-            self._two_bands([0.01, 0.1]).extract(band=1), dtype="float64"
+            self._two_bands([0.01, 0.1]).analysis.extract(band=1), dtype="float64"
         ).ravel()
         np.testing.assert_allclose(np.sort(values), [10.0, 20.0, 30.0])
 
@@ -2199,8 +2229,8 @@ class TestEachBandIsJudgedOnItsOwn:
             -- while the same bands read one at a time were unpacked.
         """
         dataset = self._two_bands([0.01, 0.0])
-        together = np.asarray(dataset.read_array(), dtype="float64")
-        alone = float(np.asarray(dataset.read_array(band=0), dtype="float64")[0, 1])
+        together = np.asarray(dataset.io.read_array(), dtype="float64")
+        alone = float(np.asarray(dataset.io.read_array(band=0), dtype="float64")[0, 1])
         assert together[0, 0, 1] == pytest.approx(alone), (
             f"band 0 read {together[0, 0, 1]} with its sibling, {alone} on its own"
         )
@@ -2248,7 +2278,7 @@ class TestTheRendererIsHandedThePhysicalSentinel:
     def test_a_static_plot_of_a_band_with_no_sentinel_masks_nothing(self):
         """No sentinel becomes `NaN`, which masks nothing, rather than a `None` crash."""
         dataset = _bare_raster()
-        dataset.scale = [0.01]
+        dataset.bands.scale = [0.01]
 
         with patch("pyramids.dataset.engines.analysis.render_array") as render:
             dataset.plot(band=0)
@@ -2262,7 +2292,7 @@ class TestTheRendererIsHandedThePhysicalSentinel:
     def test_a_collection_with_no_sentinel_masks_nothing(self):
         """The animation path sanitises a missing sentinel to `NaN` the same way."""
         step = _bare_raster()
-        step.scale = [0.01]
+        step.bands.scale = [0.01]
         collection = DatasetCollection(step, time_length=2, datasets=[step, step])
 
         with patch("pyramids.dataset.collection.render_array") as render:
@@ -2353,7 +2383,7 @@ class TestTerrainRGBEncodesPhysicalHeights:
         """
         dem = _packed_dem()
 
-        out = dem.to_terrain_rgb(
+        out = dem.io.to_terrain_rgb(
             tmp_path / target,
             tiles=tiles,
             min_zoom=1,
@@ -2363,8 +2393,8 @@ class TestTerrainRGBEncodesPhysicalHeights:
         )
 
         rgba = gdal.Open(str(out / inner)).ReadAsArray()
-        gap = np.asarray(dem.read_array(unpack=False)) == -9999
-        heights = np.asarray(dem.read_array(), dtype="float64")
+        gap = np.asarray(dem.io.read_array(unpack=False)) == -9999
+        heights = np.asarray(dem.io.read_array(), dtype="float64")
         np.testing.assert_array_equal(
             rgba[3] == 0, gap, err_msg="the alpha band does not mark exactly the gap"
         )
@@ -2403,11 +2433,11 @@ class TestApplyOnARasterWithNoSentinel:
             placeholder is overwritten everywhere, and the result must not gain a
             sentinel the source never had (#1118).
         """
-        result = self._undeclared(gdal_type).apply(
+        result = self._undeclared(gdal_type).analysis.apply(
             lambda a: a * 2, elementwise=elementwise
         )
         np.testing.assert_array_equal(
-            np.asarray(result.read_array()).ravel(), [2, 4, 6, 8]
+            np.asarray(result.io.read_array()).ravel(), [2, 4, 6, 8]
         )
         assert result.no_data_value == (None,), result.no_data_value
 

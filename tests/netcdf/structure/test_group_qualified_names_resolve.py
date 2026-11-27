@@ -184,7 +184,7 @@ class TestAddVariableFromAGroupedStore:
     def _merged() -> NetCDF:
         """A flat container with a grouped store's variables copied into it."""
         target = NetCDF.read_file(str(DATA / "cf__5v__1d4-3d1__geog__y-desc.nc"))
-        target.add_variable(NetCDF.read_file(str(GROUPED)))
+        target.variables.add(NetCDF.read_file(str(GROUPED)))
         return target
 
     def test_no_copied_array_carries_a_group_separator(self):

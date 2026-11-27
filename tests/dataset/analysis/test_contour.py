@@ -56,7 +56,7 @@ class TestContour:
             A 0..9 ramp contoured at interval=2 (base=0) crosses levels
             2, 4, 6, 8 — four LineString features carrying those elevations.
         """
-        fc = ramp.contour(interval=2.0)
+        fc = ramp.vector.contour(interval=2.0)
         assert isinstance(fc, FeatureCollection), (
             f"Expected FeatureCollection, got {type(fc)}"
         )
@@ -77,7 +77,7 @@ class TestContour:
         Test scenario:
             An EPSG:4326 source yields contours reporting EPSG:4326.
         """
-        fc = ramp.contour(interval=2.0)
+        fc = ramp.vector.contour(interval=2.0)
         assert fc.crs.to_epsg() == 4326, f"Expected EPSG:4326, got {fc.crs}"
 
     def test_fixed_levels(self, ramp):
@@ -86,7 +86,7 @@ class TestContour:
         Test scenario:
             fixed_levels=[3, 5, 7] yields three lines at those elevations.
         """
-        fc = ramp.contour(fixed_levels=[3.0, 5.0, 7.0])
+        fc = ramp.vector.contour(fixed_levels=[3.0, 5.0, 7.0])
         assert sorted(fc["elev"].tolist()) == [
             3.0,
             5.0,
@@ -99,7 +99,7 @@ class TestContour:
         Test scenario:
             interval=2, base=1 yields odd levels 1, 3, 5, 7, 9 within 0..9.
         """
-        fc = ramp.contour(interval=2.0, base=1.0)
+        fc = ramp.vector.contour(interval=2.0, base=1.0)
         assert sorted(fc["elev"].tolist()) == [
             1.0,
             3.0,
@@ -114,7 +114,7 @@ class TestContour:
         Test scenario:
             attribute='height' produces a 'height' column, not 'elev'.
         """
-        fc = ramp.contour(interval=2.0, attribute="height")
+        fc = ramp.vector.contour(interval=2.0, attribute="height")
         assert "height" in fc.columns, f"'height' column missing: {list(fc.columns)}"
         assert "elev" not in fc.columns, f"'elev' should be absent: {list(fc.columns)}"
 
@@ -125,7 +125,7 @@ class TestContour:
             polygonize=True yields (Multi)Polygon geometries and the
             'elev_min' / 'elev_max' attribute pair.
         """
-        fc = ramp.contour(interval=2.0, polygonize=True)
+        fc = ramp.vector.contour(interval=2.0, polygonize=True)
         geom_types = set(fc.geometry.geom_type.unique().tolist())
         assert geom_types <= {
             "Polygon",
@@ -141,7 +141,7 @@ class TestContour:
         Test scenario:
             attribute='z' with polygonize=True produces 'z_min' and 'z_max'.
         """
-        fc = ramp.contour(interval=2.0, polygonize=True, attribute="z")
+        fc = ramp.vector.contour(interval=2.0, polygonize=True, attribute="z")
         assert "z_min" in fc.columns and "z_max" in fc.columns, (
             f"z_min/z_max columns missing: {list(fc.columns)}"
         )
@@ -160,7 +160,7 @@ class TestContour:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 5), cell_size=1.0, epsg=4326),
         )
-        fc = ds.contour(interval=2.0, band=1)
+        fc = ds.vector.contour(interval=2.0, band=1)
         assert sorted(fc["elev"].tolist()) == [
             2.0,
             4.0,
@@ -180,7 +180,7 @@ class TestContour:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0, 10), cell_size=1.0, epsg=4326),
         )
-        fc = ds.contour(interval=2.0)
+        fc = ds.vector.contour(interval=2.0)
         assert len(fc) > 0, "Expected contours from the valid gradient, got none"
         assert min(fc["elev"].tolist()) >= 2.0, (
             f"No-data region should not produce negative contours: {sorted(fc['elev'].tolist())}"
@@ -202,7 +202,7 @@ class TestContour:
         assert ds.raster.GetRasterBand(1).GetNoDataValue() is None, (
             "fixture should have no nodata"
         )
-        fc = ds.contour(interval=2.0)
+        fc = ds.vector.contour(interval=2.0)
         assert sorted(fc["elev"].tolist()) == [
             2.0,
             4.0,
@@ -216,7 +216,7 @@ class TestContour:
         Test scenario:
             A flat value-5 raster contoured at interval=2 has no level crossings.
         """
-        fc = flat.contour(interval=2.0)
+        fc = flat.vector.contour(interval=2.0)
         assert isinstance(fc, FeatureCollection), (
             f"Expected FeatureCollection, got {type(fc)}"
         )
@@ -229,7 +229,7 @@ class TestContour:
             With no level specification the call cannot proceed.
         """
         with pytest.raises(ValueError, match="exactly one of interval or fixed_levels"):
-            ramp.contour()
+            ramp.vector.contour()
 
     def test_both_interval_and_levels_raises(self, ramp):
         """Supplying both interval and fixed_levels raises ValueError.
@@ -238,7 +238,7 @@ class TestContour:
             The two level specifications are mutually exclusive.
         """
         with pytest.raises(ValueError, match="exactly one of interval or fixed_levels"):
-            ramp.contour(interval=2.0, fixed_levels=[1.0])
+            ramp.vector.contour(interval=2.0, fixed_levels=[1.0])
 
     def test_non_positive_interval_raises(self, ramp):
         """A non-positive interval raises ValueError.
@@ -247,7 +247,7 @@ class TestContour:
             interval=0 is rejected.
         """
         with pytest.raises(ValueError, match="interval must be positive"):
-            ramp.contour(interval=0.0)
+            ramp.vector.contour(interval=0.0)
 
     def test_empty_fixed_levels_raises(self, ramp):
         """An empty fixed_levels list raises ValueError.
@@ -256,7 +256,7 @@ class TestContour:
             fixed_levels=[] specifies no levels.
         """
         with pytest.raises(ValueError, match="at least one level"):
-            ramp.contour(fixed_levels=[])
+            ramp.vector.contour(fixed_levels=[])
 
     def test_band_out_of_range_raises(self, ramp):
         """A band index beyond the raster raises ValueError.
@@ -265,7 +265,7 @@ class TestContour:
             band=5 on a 1-band raster is out of range.
         """
         with pytest.raises(ValueError, match="out of range"):
-            ramp.contour(interval=2.0, band=5)
+            ramp.vector.contour(interval=2.0, band=5)
 
     def test_datasource_creation_failure_raises(self, ramp, monkeypatch):
         """A failed in-memory OGR DataSource creation raises RuntimeError.
@@ -284,4 +284,4 @@ class TestContour:
         with pytest.raises(
             RuntimeError, match="Failed to create in-memory OGR DataSource"
         ):
-            ramp.contour(interval=2.0)
+            ramp.vector.contour(interval=2.0)

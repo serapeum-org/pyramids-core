@@ -547,8 +547,8 @@ def from_ogc_coverages(
             mem.Close()
 
     if output_crs is not None:
-        ds = ds.to_crs(output_crs, method=resample)
+        ds = ds.spatial.to_crs(output_crs, method=resample)
 
     if output is not None:
-        ds.to_file(output)
+        ds.io.to_file(output)
     return ds

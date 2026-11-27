@@ -29,7 +29,7 @@ def cli_raster(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -77,5 +77,5 @@ def cli_stack(tmp_path) -> str:
         Dataset.from_array(
             np.full((4, 4), float(index), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0, 4), cell_size=1.0, epsg=4326),
-        ).to_file(str(tmp_path / f"t{index}.tif"))
+        ).io.to_file(str(tmp_path / f"t{index}.tif"))
     return str(tmp_path / "t*.tif")

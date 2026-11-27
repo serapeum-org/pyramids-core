@@ -26,7 +26,7 @@ def _make_geoloc_dataset(tmp_path, *, drop_x=False) -> Dataset:
         Dataset.from_array(
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
     data = np.arange(rows * cols).reshape(rows, cols).astype("float32")
     ds = Dataset.from_array(
         data,
@@ -60,14 +60,14 @@ class TestGeolocationAccessor:
             np.zeros((2, 2)),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        assert ds.geolocation is None
-        assert ds.has_geolocation is False
+        assert ds.georef.geolocation is None
+        assert ds.georef.has_geolocation is False
 
     def test_accessor_returns_domain(self, tmp_path):
         """The accessor returns the GEOLOCATION domain dict when present."""
         ds = _make_geoloc_dataset(tmp_path)
-        assert ds.has_geolocation is True
-        domain = ds.geolocation
+        assert ds.georef.has_geolocation is True
+        domain = ds.georef.geolocation
         assert domain["X_DATASET"].endswith("lon.tif")
         assert domain["Y_DATASET"].endswith("lat.tif")
 
@@ -78,7 +78,7 @@ class TestGeolocate:
     def test_geolocate_grids_to_requested_crs(self, tmp_path):
         """geolocate produces a north-up affine grid in the requested CRS."""
         ds = _make_geoloc_dataset(tmp_path)
-        out = ds.geolocate(to_epsg=4326)
+        out = ds.georef.geolocate(to_epsg=4326)
         assert type(out) is Dataset
         assert out.epsg == 4326
         gt = out.geotransform
@@ -88,12 +88,14 @@ class TestGeolocate:
 
     def test_geolocate_to_epsg_none_uses_domain_srs(self, tmp_path):
         """With to_epsg=None the result adopts the domain's own SRS."""
-        out = _make_geoloc_dataset(tmp_path).geolocate()
+        out = _make_geoloc_dataset(tmp_path).georef.geolocate()
         assert out.epsg == 4326
 
     def test_geolocate_cell_size_honored(self, tmp_path):
         """A requested cell_size sets the output resolution."""
-        out = _make_geoloc_dataset(tmp_path).geolocate(to_epsg=4326, cell_size=0.5)
+        out = _make_geoloc_dataset(tmp_path).georef.geolocate(
+            to_epsg=4326, cell_size=0.5
+        )
         assert out.geotransform[1] == pytest.approx(0.5)
 
     def test_facade_parity(self, tmp_path):
@@ -108,31 +110,31 @@ class TestGeolocate:
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
         with pytest.raises(GeolocationArrayError, match="no geolocation arrays"):
-            ds.geolocate()
+            ds.georef.geolocate()
 
     def test_missing_x_dataset_raises(self, tmp_path):
         """A domain missing X_DATASET raises GeolocationArrayError naming it."""
         ds = _make_geoloc_dataset(tmp_path, drop_x=True)
         with pytest.raises(GeolocationArrayError, match="X_DATASET"):
-            ds.geolocate(to_epsg=4326)
+            ds.georef.geolocate(to_epsg=4326)
 
     def test_bad_crs_raises(self, tmp_path):
         """An unrecognisable to_epsg raises (a ValueError subclass)."""
         ds = _make_geoloc_dataset(tmp_path)
         with pytest.raises(ValueError):
-            ds.geolocate(to_epsg="not-a-crs")
+            ds.georef.geolocate(to_epsg="not-a-crs")
 
     def test_bad_method_raises(self, tmp_path):
         """An unknown resampling method raises ValueError."""
         ds = _make_geoloc_dataset(tmp_path)
         with pytest.raises(ValueError):
-            ds.geolocate(to_epsg=4326, method="bogus")
+            ds.georef.geolocate(to_epsg=4326, method="bogus")
 
     def test_lazy_pins_source_on_base_dataset(self, tmp_path):
         """A lazy geolocate on a base Dataset pins its source and reads through."""
-        out = _make_geoloc_dataset(tmp_path).geolocate(to_epsg=4326, lazy=True)
+        out = _make_geoloc_dataset(tmp_path).georef.geolocate(to_epsg=4326, lazy=True)
         assert out._warp_source is not None
-        assert out.read_array().size > 0
+        assert out.io.read_array().size > 0
 
 
 class TestGeolocateNetCDF:
@@ -143,7 +145,7 @@ class TestGeolocateNetCDF:
         from pyramids.netcdf import NetCDF
 
         var = NetCDF.read_file(CURV).get_variable("Tair")
-        out = var.geolocate(to_epsg=4326)
+        out = var.georef.geolocate(to_epsg=4326)
         assert type(out) is Dataset
         assert out.epsg == 4326
         assert out.band_count == var.band_count
@@ -153,7 +155,7 @@ class TestGeolocateNetCDF:
         from pyramids.netcdf import NetCDF
 
         var = NetCDF.read_file(CURV).get_variable("Tair")
-        domain = var.geolocation
+        domain = var.georef.geolocation
         assert domain is not None
         assert "X_DATASET" in domain
         assert "Y_DATASET" in domain
@@ -165,10 +167,10 @@ class TestGeolocateNetCDF:
         out = (
             NetCDF.read_file(CURV)
             .get_variable("Tair")
-            .geolocate(to_epsg=4326, lazy=True)
+            .georef.geolocate(to_epsg=4326, lazy=True)
         )
         assert out._warp_source is not None
-        assert out.read_array().shape[0] == out.band_count
+        assert out.io.read_array().shape[0] == out.band_count
 
     def test_container_raises(self):
         """A NetCDF container (no variable extracted) has no geolocation arrays."""
@@ -176,7 +178,7 @@ class TestGeolocateNetCDF:
 
         container = NetCDF.read_file(CURV)
         with pytest.raises(GeolocationArrayError):
-            container.geolocate()
+            container.georef.geolocate()
 
     def test_close_drops_geolocation_source_memo(self):
         """`close()` releases the reopened geolocation handle it memoised (#564 handle contract).
@@ -188,7 +190,7 @@ class TestGeolocateNetCDF:
         from pyramids.netcdf import NetCDF
 
         var = NetCDF.read_file(CURV).get_variable("Tair")
-        assert var.geolocation is not None, (
+        assert var.georef.geolocation is not None, (
             "precondition: fixture must carry geolocation arrays"
         )
         assert "_geolocation_source_memo" in var.__dict__, (
@@ -225,11 +227,13 @@ class TestGeolocateFromBytes:
 
         on_disk = NetCDF.read_file(CURV).get_variable("Tair")
         var = NetCDF.from_bytes(self._bytes()).get_variable("Tair")
-        assert on_disk.has_geolocation is True, "fixture must carry geolocation arrays"
-        assert var.has_geolocation is True, (
+        assert on_disk.georef.has_geolocation is True, (
+            "fixture must carry geolocation arrays"
+        )
+        assert var.georef.has_geolocation is True, (
             "an in-memory swath must expose its GEOLOCATION domain (#1053)"
         )
-        domain = var.geolocation
+        domain = var.georef.geolocation
         assert domain is not None
         assert "X_DATASET" in domain
         assert "Y_DATASET" in domain
@@ -243,7 +247,7 @@ class TestGeolocateFromBytes:
             "the cosmetic name must shadow file_name for this test to exercise the fix"
         )
         var = container.get_variable("Tair")
-        assert var.has_geolocation is True, (
+        assert var.georef.has_geolocation is True, (
             "a named in-memory swath must still expose geolocation — the name must not shadow "
             "the /vsimem path"
         )
@@ -253,7 +257,7 @@ class TestGeolocateFromBytes:
         from pyramids.netcdf import NetCDF
 
         var = NetCDF.from_bytes(self._bytes()).get_variable("Tair")
-        out = var.geolocate(to_epsg=4326)
+        out = var.georef.geolocate(to_epsg=4326)
         assert type(out) is Dataset
         assert out.epsg == 4326
         assert out.band_count == var.band_count

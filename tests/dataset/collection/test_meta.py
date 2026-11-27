@@ -32,7 +32,7 @@ def template_file(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
     )
     path = str(tmp_path / "tpl.tif")
-    ds.to_file(path)
+    ds.io.to_file(path)
     return path
 
 

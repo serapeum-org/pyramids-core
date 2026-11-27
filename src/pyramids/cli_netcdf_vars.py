@@ -104,7 +104,7 @@ def _cmd_nc_rename_var(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
-    nc.rename_variable(args.old, args.new)
+    nc.variables.rename(args.old, args.new)
     nc.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -128,7 +128,7 @@ def _cmd_nc_remove_var(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
-    nc.remove_variable(args.var)
+    nc.variables.remove(args.var)
     nc.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -329,7 +329,7 @@ def _cmd_nc_add_var(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
     source = NetCDF.read_file(args.source)
-    nc.add_variable(source, args.var)
+    nc.variables.add(source, args.var)
     nc.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -354,7 +354,7 @@ def _cmd_nc_set_var(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     nc = NetCDF.read_file(args.file)
-    nc.set_variable(args.var, Dataset.read_file(args.raster))
+    nc.variables.set(args.var, Dataset.read_file(args.raster))
     nc.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

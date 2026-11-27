@@ -128,7 +128,7 @@ def _cmd_to_bytes(args: argparse.Namespace) -> int:
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    payload = ds.to_bytes(driver=args.driver)
+    payload = ds.io.to_bytes(driver=args.driver)
     if args.output is not None:
         with open(args.output, "wb") as handle:
             handle.write(payload)
@@ -155,7 +155,7 @@ def _cmd_to_cog_bytes(args: argparse.Namespace) -> int:
         kwargs["compression"] = args.compression
     if args.blocksize:
         kwargs["layout"] = Layout(blocksize=args.blocksize)
-    payload = ds.to_cog_bytes(**kwargs)
+    payload = ds.cog.to_cog_bytes(**kwargs)
     with open(args.output, "wb") as handle:
         handle.write(payload)
     info_print(args, f"wrote {args.output}")
@@ -179,7 +179,7 @@ def _cmd_to_dataframe(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     bands = args.bands if args.bands else None
-    df = ds.to_dataframe(bands=bands, dropna=args.dropna)
+    df = ds.io.to_dataframe(bands=bands, dropna=args.dropna)
     if args.output.lower().endswith(".parquet"):
         with _needs_parquet_extra():
             df.to_parquet(args.output)
@@ -206,7 +206,7 @@ def _cmd_to_polygons(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     driver = resolve_vector_driver(args.output, args.driver)
     ds = Dataset.read_file(args.input)
-    gdf = ds.to_polygons(band=args.band)
+    gdf = ds.vector.to_polygons(band=args.band)
     FeatureCollection(gdf).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -239,7 +239,7 @@ def _cmd_to_raster(args: argparse.Namespace) -> int:
         raise ValueError(
             f"band {args.band} is out of range for a {ds.band_count}-band raster"
         )
-    ds.to_file(
+    ds.io.to_file(
         args.output,
         band=args.band,
         tile_length=args.tile_length,
@@ -282,7 +282,7 @@ def _cmd_to_xyz(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     bands = args.bands if args.bands else None
-    ds.to_xyz(bands=bands, path=args.output)
+    ds.io.to_xyz(bands=bands, path=args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -321,7 +321,9 @@ def _cmd_to_stac_item(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     asset_href = args.asset_href or args.input
-    item = ds.to_stac_item(args.item_id, asset_href=asset_href, datetime=args.datetime)
+    item = ds.io.to_stac_item(
+        args.item_id, asset_href=asset_href, datetime=args.datetime
+    )
     with open(args.output, "w", encoding="utf-8") as handle:
         json.dump(json_sanitize(item), handle)
     info_print(args, f"wrote {args.output}")
@@ -343,7 +345,7 @@ def _cmd_to_terrain_rgb(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    ds.to_terrain_rgb(
+    ds.io.to_terrain_rgb(
         args.output,
         encoding=args.encoding,
         band=args.band,

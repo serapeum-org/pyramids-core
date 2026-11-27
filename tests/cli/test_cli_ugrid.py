@@ -134,7 +134,7 @@ class TestMeshExtract:
         Dataset.from_array(
             np.zeros((20, 20), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(17325.0, 392034.0), cell_size=3500.0),
-        ).to_file(path)
+        ).io.to_file(path)
         return path
 
     def test_rasterizes_onto_template(self, tmp_path):

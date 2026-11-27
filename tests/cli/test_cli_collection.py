@@ -239,7 +239,7 @@ def _local_items(tmp_path) -> list[dict]:
         Dataset.from_array(
             np.full((3, 3), float(index + 1), dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         feats.append(
             {
                 "type": "Feature",

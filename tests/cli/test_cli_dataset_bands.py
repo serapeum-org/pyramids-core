@@ -59,7 +59,7 @@ def single_band(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -70,7 +70,7 @@ def three_band(tmp_path) -> str:
     Dataset.from_array(
         np.arange(3 * 64, dtype="float32").reshape(3, 8, 8),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -82,8 +82,8 @@ def rgb_band(tmp_path) -> str:
         np.arange(3 * 64, dtype="float32").reshape(3, 8, 8),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
     )
-    ds.band_color = {0: "red", 1: "green", 2: "blue"}
-    ds.to_file(path)
+    ds.bands.band_color = {0: "red", 1: "green", 2: "blue"}
+    ds.io.to_file(path)
     return path
 
 
@@ -96,7 +96,7 @@ def nodata_raster(tmp_path) -> str:
         arr,
         no_data_value=-9999.0,
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -112,12 +112,12 @@ def geoloc_raster(tmp_path) -> str:
         Dataset.from_array(
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
-        ).to_file(arr_path)
+        ).io.to_file(arr_path)
     path = str(tmp_path / "geoloc.tif")
     Dataset.from_array(
         np.arange(rows * cols).reshape(rows, cols).astype("float32"),
         geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     domain = {
@@ -246,7 +246,9 @@ class TestCreateMaskBand:
         out = str(tmp_path / "masked.tif")
         rc = main(["raster", "advanced", "create-mask-band", single_band, out])
         assert rc == 0, "create-mask-band must exit 0"
-        assert Dataset.read_file(out).mask_flags().per_dataset, "mask must persist"
+        assert Dataset.read_file(out).analysis.mask_flags().per_dataset, (
+            "mask must persist"
+        )
 
     def test_overwrite_without_flag_error(self, single_band, three_band, capsys):
         """Writing over an existing output without --overwrite exits 1."""
@@ -264,7 +266,7 @@ class TestReadMasks:
             ["raster", "advanced", "read-masks", nodata_raster, out, "--band", "0"]
         )
         assert rc == 0, "read-masks must exit 0"
-        mask = np.asarray(Dataset.read_file(out).read_array())
+        mask = np.asarray(Dataset.read_file(out).io.read_array())
         assert bool((mask[:, 1] == 0).all()), "nodata column must be 0"
         assert bool((mask[:, 0] == 255).all()), "valid column must be 255"
 
@@ -335,7 +337,7 @@ class TestSetColorRamp:
         assert rc == 0, "set-color-ramp must exit 0"
         # The GDAL palette is dense from index 0, so a 1..5 ramp spans 0..5
         # (value 0 padded transparent) — six rows, with every ramp value present.
-        table = Dataset.read_file(out).color_table
+        table = Dataset.read_file(out).bands.color_table
         assert set(range(1, 6)) <= set(table["values"]), "values 1..5 must be coloured"
 
     def test_bad_range_error(self, single_band, tmp_path, capsys):
@@ -371,7 +373,7 @@ class TestSetRpcs:
             ["raster", "advanced", "set-rpcs", single_band, out, "--rpc-json", rpc_path]
         )
         assert rc == 0, "set-rpcs must exit 0"
-        assert Dataset.read_file(out).has_rpcs, "RPC metadata must persist"
+        assert Dataset.read_file(out).georef.has_rpcs, "RPC metadata must persist"
 
     def test_missing_keys_error(self, single_band, tmp_path, capsys):
         """An incomplete coefficient object exits 1 with a clean error."""

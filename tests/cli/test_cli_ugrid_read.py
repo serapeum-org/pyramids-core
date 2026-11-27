@@ -183,7 +183,7 @@ class TestFromStructured:
         Dataset.from_array(
             np.arange(9, dtype="float32").reshape(3, 3),
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         return path
 
     def test_builds_quad_mesh(self, tmp_path):

@@ -50,9 +50,13 @@ def _stub_base(rows, cols, *, bands=1, scale=None, offset=None):
         geo_ref=GeoReference(top_left_corner=(0, rows), cell_size=1.0, epsg=4326),
     )
     if scale is not None:
-        dataset.scale = list(scale) if isinstance(scale, list) else [scale] * bands
+        dataset.bands.scale = (
+            list(scale) if isinstance(scale, list) else [scale] * bands
+        )
     if offset is not None:
-        dataset.offset = list(offset) if isinstance(offset, list) else [offset] * bands
+        dataset.bands.offset = (
+            list(offset) if isinstance(offset, list) else [offset] * bands
+        )
     return dataset
 
 
@@ -141,8 +145,8 @@ def _packed_step(counts, *, no_data, scale, offset):
         ),
         no_data_value=list(no_data),
     )
-    step.scale = list(scale)
-    step.offset = list(offset)
+    step.bands.scale = list(scale)
+    step.bands.offset = list(offset)
     return step
 
 
@@ -182,7 +186,7 @@ class TestCubeNetCDFWriterWrite:
             the output path, and one slab per band per timestep is written.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         # An unpacked timestep: `write` asks each one for its recipe to decide whether
         # one recipe describes the whole cube.
         ds._effective_packing.return_value = (None, None)
@@ -482,7 +486,7 @@ class TestCubeNetCDFWriterStream:
             band's variable name with the (rows, cols) plane.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         writer = _stream_writer(datasets=[ds, ds], files=["f0", "f1"])
         sink = Mock()
         writer._stream(sink, dims={"y": 4, "x": 5}, var_per_band=True)
@@ -500,7 +504,7 @@ class TestCubeNetCDFWriterStream:
             The (band, rows, cols) block is written under the ``data`` variable name.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((4, 5))
+        ds._read_array.return_value = np.zeros((4, 5))
         writer = _stream_writer(datasets=[ds], files=["f0"])
         sink = Mock()
         writer._stream(sink, dims={"y": 4, "x": 5}, var_per_band=False)
@@ -516,7 +520,7 @@ class TestCubeNetCDFWriterStream:
             message names the source file.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((2, 4, 5))
+        ds._read_array.return_value = np.zeros((2, 4, 5))
         writer = _stream_writer(datasets=[ds], files=["bad.tif"], band_count=1)
         sink = Mock()
         with pytest.raises(AlignmentError, match="bad.tif"):
@@ -529,7 +533,7 @@ class TestCubeNetCDFWriterStream:
             With no ``files`` list, a shape mismatch names the positional timestep.
         """
         ds = Mock()
-        ds.read_array.return_value = np.zeros((3, 4, 5))
+        ds._read_array.return_value = np.zeros((3, 4, 5))
         writer = _stream_writer(datasets=[ds], files=None, band_count=1)
         sink = Mock()
         with pytest.raises(AlignmentError, match="timestep 0"):
@@ -696,9 +700,9 @@ def _packed_timesteps(tmp_path, scales, *, bands=1):
             geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
             no_data_value=[-9999] * bands,
         )
-        step.scale = list(per_band)
-        step.offset = [0.0] * bands
-        step.to_file(str(tmp_path / f"t{index}.tif"))
+        step.bands.scale = list(per_band)
+        step.bands.offset = [0.0] * bands
+        step.io.to_file(str(tmp_path / f"t{index}.tif"))
     return DatasetCollection.from_files(str(tmp_path), glob="*.tif")
 
 

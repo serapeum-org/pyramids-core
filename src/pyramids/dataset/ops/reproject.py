@@ -170,7 +170,7 @@ class Aligner(Reprojector):
             Dataset or dask.delayed.Delayed.
         """
         if compute:
-            result = ds.align(self._reference, method=self._plan.method)
+            result = ds.spatial.align(self._reference, method=self._plan.method)
         else:
             result = _deferred_align(self._reference, self._plan.method, ds)
         return result
@@ -178,7 +178,7 @@ class Aligner(Reprojector):
 
 def _apply_plan(plan: ReprojectPlan, ds: Dataset) -> Dataset:
     """Run a :class:`ReprojectPlan` against a dataset eagerly."""
-    return ds.to_crs(
+    return ds.spatial.to_crs(
         plan.target_epsg,
         method=plan.method,
         maintain_alignment=plan.maintain_alignment,

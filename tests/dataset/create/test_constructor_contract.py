@@ -193,7 +193,7 @@ class TestDriverComesFromPath:
         out = tmp_path / "roundtrip.tif"
         Dataset.from_array(array_2d, geo_ref=GeoReference(geo=GEO), path=out).close()
         reopened = Dataset.read_file(str(out))
-        np.testing.assert_array_equal(np.asarray(reopened.read_array()), array_2d)
+        np.testing.assert_array_equal(np.asarray(reopened.io.read_array()), array_2d)
 
 
 class TestGeoRefIsHonoured:

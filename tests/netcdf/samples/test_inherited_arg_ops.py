@@ -48,13 +48,13 @@ def _box(v):
 
 def test_point_reads_value(tos):
     x, y = _inside_xy(tos)
-    assert tos.point(x, y, point_crs=tos.epsg or 4326, band=0) is not None
+    assert tos.cog.point(x, y, point_crs=tos.epsg or 4326, band=0) is not None
 
 
 def test_rowcol_and_xy_roundtrip(tos):
     x, y = _inside_xy(tos)
-    row, col = tos.rowcol(x, y)
-    bx, by = tos.xy(row, col)
+    row, col = tos.cell.rowcol(x, y)
+    bx, by = tos.cell.xy(row, col)
     assert abs(bx - x) <= abs(tos.geotransform[1]) and abs(by - y) <= abs(
         tos.geotransform[5]
     )
@@ -69,15 +69,15 @@ def test_sample_points(tos):
 
 
 def test_read_part_window(tos):
-    assert tos.read_part(tuple(tos.bbox)) is not None
+    assert tos.cog.read_part(tuple(tos.bbox)) is not None
 
 
 def test_sieve(tos):
-    assert isinstance(tos.sieve(threshold=4), NetCDF)
+    assert isinstance(tos.analysis.sieve(threshold=4), NetCDF)
 
 
 def test_extract_with_exclude_value(tos):
-    assert tos.extract(exclude_value=0) is not None
+    assert tos.analysis.extract(exclude_value=0) is not None
 
 
 def test_cluster_single_band(sample):
@@ -85,7 +85,7 @@ def test_cluster_single_band(sample):
     nc = NetCDF.read_file(sample("none__4v__1d1-2d2-3d1__curv.nc"))
     try:
         view = nc.get_variable("xc")  # 2-D coordinate -> single-band raster view
-        assert view.cluster(0, 100) is not None
+        assert view.vector.cluster(0, 100) is not None
     finally:
         nc.close()
 
@@ -97,16 +97,16 @@ def test_zonal_stats(tos):
 
 def test_add_band(tos):
     before = tos.band_count
-    result = tos.add_band(np.zeros((tos.rows, tos.columns), dtype="float32"))
+    result = tos.bands.add_band(np.zeros((tos.rows, tos.columns), dtype="float32"))
     assert result.band_count == before + 1
 
 
 def test_map_blocks(tos):
-    assert isinstance(tos.map_blocks(lambda a: a * 2, tile_size=32), NetCDF)
+    assert isinstance(tos.io.map_blocks(lambda a: a * 2, tile_size=32), NetCDF)
 
 
 def test_focal_apply(tos):
-    assert tos.focal_apply(lambda w: w[4], radius=1) is not None
+    assert tos.analysis.focal_apply(lambda w: w[4], radius=1) is not None
 
 
 def test_fill(tos):
@@ -114,12 +114,12 @@ def test_fill(tos):
 
 
 def test_to_stac_item(tos):
-    item = tos.to_stac_item("scene-1", asset_href="s3://bucket/scene.tif")
+    item = tos.io.to_stac_item("scene-1", asset_href="s3://bucket/scene.tif")
     assert isinstance(item, dict) and item.get("id") == "scene-1"
 
 
 def test_get_band_by_color_absent_returns_none(tos):
-    assert tos.get_band_by_color("gray_index") is None
+    assert tos.bands.get_band_by_color("gray_index") is None
 
 
 def test_change_no_data_value_on_variable_view(tos):
@@ -129,7 +129,7 @@ def test_change_no_data_value_on_variable_view(tos):
     a fresh dataset with the updated no-data value -- the source view is left untouched.
     """
     old = (tos.no_data_value or [None])[0]
-    result = tos.change_no_data_value(-999.0, old)
+    result = tos.bands.change_no_data_value(-999.0, old)
     assert result is not None, "change_no_data_value must return a dataset for a view"
     assert all(nd == -999.0 for nd in result.no_data_value), (
         f"every band's no-data must be -999.0, got {result.no_data_value}"
@@ -149,17 +149,17 @@ def test_overlay_with_classes(tos):
 
 
 def test_read_tile(tos):
-    assert tos.read_tile(0, 0, 0, tilesize=64, band=0) is not None
+    assert tos.cog.read_tile(0, 0, 0, tilesize=64, band=0) is not None
 
 
 def test_fill_gaps(tos):
-    assert tos.fill_gaps(_classes(tos), tos.read_array(band=0)) is not None
+    assert tos.spatial.fill_gaps(_classes(tos), tos.read_array(band=0)) is not None
 
 
 def test_set_attribute_table(tos):
     df_in = pd.DataFrame({"values": [0, 1], "label": ["a", "b"]})
-    tos.set_attribute_table(df_in, band=0)
-    df_out = tos.get_attribute_table(band=0)
+    tos.bands.set_attribute_table(df_in, band=0)
+    df_out = tos.bands.get_attribute_table(band=0)
     assert df_out is not None and len(df_out) == len(df_in)
 
 
@@ -169,8 +169,8 @@ def test_apply_on_variable_view(tos):
     The old "pinned" error was an accidental positional read_array(band) mis-bind, not a
     real guard; both paths now read with band= as a keyword and return a result.
     """
-    default = tos.apply(lambda a: a + 1)
-    streamed = tos.apply(lambda a: a + 1, elementwise=True)
+    default = tos.analysis.apply(lambda a: a + 1)
+    streamed = tos.analysis.apply(lambda a: a + 1, elementwise=True)
     assert default is not None, "default apply must return a dataset on a view"
     assert streamed is not None, "elementwise apply must return a dataset on a view"
     np.testing.assert_array_equal(
@@ -182,10 +182,10 @@ def test_apply_on_variable_view(tos):
 
 def test_set_rpcs_guarded_read_only(tos):
     with pytest.raises(ReadOnlyError):
-        tos.set_rpcs({"HEIGHT_OFF": "0", "HEIGHT_SCALE": "1"})
+        tos.georef.set_rpcs({"HEIGHT_OFF": "0", "HEIGHT_SCALE": "1"})
 
 
 def test_set_gcps_guarded_read_only(tos):
     gcps = [gdal.GCP(0.0, 0.0, 0, 0, 0), gdal.GCP(10.0, 10.0, 0, tos.columns, tos.rows)]
     with pytest.raises(ReadOnlyError):
-        tos.set_gcps(gcps, "EPSG:4326")
+        tos.georef.set_gcps(gcps, "EPSG:4326")

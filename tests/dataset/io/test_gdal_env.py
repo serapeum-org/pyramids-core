@@ -113,7 +113,7 @@ class TestGdalEnvOnReads:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(io_engine._IO, "_read_block", spy)
-        Dataset.read_file(tif, gdal_env=ENV).read_array(window=[0, 0, 2, 2])
+        Dataset.read_file(tif, gdal_env=ENV).io.read_array(window=[0, 0, 2, 2])
         assert seen["payer"] == "requester", f"env not active during read: {seen}"
 
     def test_threadsafe_read_installs_the_env(self, tif, monkeypatch):
@@ -131,7 +131,7 @@ class TestGdalEnvOnReads:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(io_engine._IO, "_read_via_handle", spy)
-        Dataset.read_file(tif, gdal_env=ENV).read_array(threadsafe=True)
+        Dataset.read_file(tif, gdal_env=ENV).io.read_array(threadsafe=True)
         assert seen["payer"] == "requester", (
             f"env not active in threadsafe read: {seen}"
         )
@@ -150,7 +150,7 @@ class TestGdalEnvOnReads:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(io_engine._IO, "_read_block", spy)
-        Dataset.read_file(tif).read_array(window=[0, 0, 2, 2])
+        Dataset.read_file(tif).io.read_array(window=[0, 0, 2, 2])
         assert seen["payer"] is None, f"unexpected config for an unsigned open: {seen}"
 
     def test_values_are_unchanged_by_the_env(self, tif):
@@ -159,8 +159,8 @@ class TestGdalEnvOnReads:
         Test scenario:
             The pixels match a plain open of the same file.
         """
-        signed = Dataset.read_file(tif, gdal_env=ENV).read_array()
-        plain = Dataset.read_file(tif).read_array()
+        signed = Dataset.read_file(tif, gdal_env=ENV).io.read_array()
+        plain = Dataset.read_file(tif).io.read_array()
         np.testing.assert_array_equal(signed, plain)
 
 
@@ -185,7 +185,7 @@ class TestGdalEnvSurvivesPickle:
         ds = Dataset.read_file(tif, gdal_env=ENV)
         restored = pickle.loads(pickle.dumps(ds))
         assert restored.gdal_env == ENV, f"env lost across pickle: {restored.gdal_env}"
-        np.testing.assert_array_equal(restored.read_array(), ds.read_array())
+        np.testing.assert_array_equal(restored.io.read_array(), ds.io.read_array())
 
     def test_legacy_three_element_recipe_still_loads(self, tif):
         """A recipe written before the config existed still reconstructs.
@@ -280,7 +280,7 @@ class TestGdalEnvOnEveryReadPath:
             read succeeds.
         """
         ds = Dataset.read_file(tif, gdal_env=ENV)
-        payer = self._payer_during(lambda: ds.read_array(out_shape=(2, 2)))
+        payer = self._payer_during(lambda: ds.io.read_array(out_shape=(2, 2)))
         assert payer == "requester", f"decimated read ran without the config: {payer}"
 
     def test_boundless_read_installs_the_env(self, tif):
@@ -291,7 +291,7 @@ class TestGdalEnvOnEveryReadPath:
         """
         ds = Dataset.read_file(tif, gdal_env=ENV)
         payer = self._payer_during(
-            lambda: ds.read_array(window=[-1, -1, 3, 3], boundless=True)
+            lambda: ds.io.read_array(window=[-1, -1, 3, 3], boundless=True)
         )
         assert payer == "requester", f"boundless read ran without the config: {payer}"
 
@@ -302,7 +302,7 @@ class TestGdalEnvOnEveryReadPath:
             `get_tile` walks the raster block by block off the shared handle.
         """
         ds = Dataset.read_file(tif, gdal_env=ENV)
-        payer = self._payer_during(lambda: list(ds.get_tile(size=2)))
+        payer = self._payer_during(lambda: list(ds.io.get_tile(size=2)))
         assert payer == "requester", f"get_tile ran without the config: {payer}"
 
     def test_cog_preview_installs_the_env(self, tmp_path):
@@ -316,7 +316,7 @@ class TestGdalEnvOnEveryReadPath:
             np.full((64, 64), 5.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 64.0), cell_size=1.0, epsg=4326),
         )
-        cog_path = str(source.to_cog(tmp_path / "c.tif"))
+        cog_path = str(source.cog.to_cog(tmp_path / "c.tif"))
         ds = Dataset.read_file(cog_path, gdal_env=ENV)
         payer = self._payer_during(lambda: ds.cog.preview(max_size=8))
         assert payer == "requester", f"COG preview ran without the config: {payer}"
@@ -334,10 +334,12 @@ class TestGdalEnvOnEveryReadPath:
             np.full((64, 64), 5.0, "float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 64.0), cell_size=1.0, epsg=4326),
         )
-        cog_path = str(source.to_cog(tmp_path / "c.tif"))
+        cog_path = str(source.cog.to_cog(tmp_path / "c.tif"))
         ds = Dataset.read_file(cog_path, gdal_env=ENV)
         payer = self._payer_during(
-            lambda: ds.read_part((10.0, 10.0, 40.0, 40.0), dst_width=8, dst_height=8)
+            lambda: ds.cog.read_part(
+                (10.0, 10.0, 40.0, 40.0), dst_width=8, dst_height=8
+            )
         )
         assert payer == "requester", f"COG read_part ran without the config: {payer}"
 

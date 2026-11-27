@@ -177,7 +177,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {palette_band: "palette_index"}
+        dataset.bands.band_color = {palette_band: "palette_index"}
 
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
@@ -218,7 +218,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: interp}
+        dataset.bands.band_color = {0: interp}
 
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
@@ -249,7 +249,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green", 2: "blue", 3: "palette_index"}
+        dataset.bands.band_color = {0: "red", 1: "green", 2: "blue", 3: "palette_index"}
 
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
@@ -282,7 +282,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "gray_index"}
+        dataset.bands.band_color = {0: "gray_index"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(
             band=None, rgb=[2, 1, 0]
@@ -308,7 +308,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green", 2: "palette_index"}
+        dataset.bands.band_color = {0: "red", 1: "green", 2: "palette_index"}
 
         with pytest.warns(DeprecationWarning, match=r"Sentinel-2"):
             resolved_band, resolved_rgb = dataset._resolve_plot_band(
@@ -343,7 +343,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green", 2: "blue"}
+        dataset.bands.band_color = {0: "red", 1: "green", 2: "blue"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(band=None, rgb=None)
         assert resolved_band == 0, f"Red is band 0, got {resolved_band}"
@@ -367,7 +367,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "blue", 1: "red", 2: "green"}
+        dataset.bands.band_color = {0: "blue", 1: "red", 2: "green"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(band=None, rgb=None)
         assert resolved_band == 1, f"Red is on band 1, got {resolved_band}"
@@ -391,7 +391,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green", 2: "blue"}
+        dataset.bands.band_color = {0: "red", 1: "green", 2: "blue"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(
             band=None, rgb=[2, 1, 0]
@@ -414,7 +414,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green"}
+        dataset.bands.band_color = {0: "red", 1: "green"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(band=None, rgb=None)
         assert resolved_rgb == [
@@ -440,7 +440,7 @@ class TestResolvePlotBandPolicy:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.05, epsg=4326),
         )
-        dataset.band_color = {0: "red", 1: "green", 2: "blue"}
+        dataset.bands.band_color = {0: "red", 1: "green", 2: "blue"}
 
         resolved_band, resolved_rgb = dataset._resolve_plot_band(band=0, rgb=None)
         assert resolved_band == 0

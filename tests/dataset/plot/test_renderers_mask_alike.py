@@ -84,7 +84,7 @@ class TestTheTwoRenderersMaskTheSameCells:
         dataset = _band(_ALL_SENTINEL)
 
         with pytest.raises(ValueError, match="no valid samples"):
-            dataset.plot_histogram(band=0)
+            dataset.glyph.histogram(band=0)
 
     def test_to_image_refuses_it_too(self):
         """The regression: it rendered the band the histogram called empty.
@@ -107,7 +107,7 @@ class TestTheTwoRenderersMaskTheSameCells:
         """
         dataset = _band(_ALL_SENTINEL)
         with pytest.raises(ValueError) as histogram:
-            dataset.plot_histogram(band=0)
+            dataset.glyph.histogram(band=0)
         with pytest.raises(ValueError) as image:
             dataset.to_image(band=0)
 
@@ -127,7 +127,7 @@ class TestNeitherRendererDropsCellsNearTheSentinel:
             three ordinary cells in it, and the picture disagreed with
             `get_histogram`, which never masked them.
         """
-        _fig, _ax, hist = _band(_NEAR_SENTINEL).plot_histogram(band=0, bins=3)
+        _fig, _ax, hist = _band(_NEAR_SENTINEL).glyph.histogram(band=0, bins=3)
 
         assert int(np.sum(hist["n"][0])) == 3, hist
 
@@ -184,6 +184,6 @@ class TestRealDataIsStillDrawn:
             This is the pair the divergence was visible in: the histogram
             counting one cell where the image drew three.
         """
-        _fig, _ax, hist = _band(_REAL_DATA).plot_histogram(band=0, bins=3)
+        _fig, _ax, hist = _band(_REAL_DATA).glyph.histogram(band=0, bins=3)
 
         assert int(np.sum(hist["n"][0])) == 3, hist

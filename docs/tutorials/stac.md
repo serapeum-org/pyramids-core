@@ -331,7 +331,7 @@ meta["crs"], meta["geotransform"], meta["shape"], meta["band_names"]
 from pyramids.stac import build_vrt_from_stac
 
 ds = build_vrt_from_stac(items, asset="visual", signer=signer)
-arr = ds.read_array(bbox=aoi)      # sources read lazily
+arr = ds.io.read_array(bbox=aoi)      # sources read lazily
 ```
 
 ## Signing cloud credentials
@@ -375,7 +375,7 @@ read — including reads on dask workers.
 with the `proj` and `raster` extensions populated); `pystac` is not required:
 
 ```python
-item = ds.to_stac_item(
+item = ds.io.to_stac_item(
     "scene-1", asset_href="s3://bucket/scene.tif",
     asset_media_type="image/tiff; application=geotiff",
     datetime="2023-06-01T00:00:00Z",
@@ -399,7 +399,7 @@ round-trips the fields `read_extension_metadata` already reads:
 ```python
 from pyramids.stac import BandMetadata
 
-item = ds.to_stac_item(
+item = ds.io.to_stac_item(
     "scene-1", asset_href="s3://bucket/scene.tif",
     bands=BandMetadata(with_stats=True, with_histogram=True, with_eo=True),
 )
@@ -420,7 +420,7 @@ pixels instead, densifying before reprojection so the edges stay accurate:
 ```python
 from pyramids.stac import Footprint
 
-item = ds.to_stac_item(
+item = ds.io.to_stac_item(
     "scene-1", asset_href="s3://bucket/scene.tif",
     footprint=Footprint(mode="data", densify=1000.0, simplify_tolerance=0.001),
 )

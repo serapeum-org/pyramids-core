@@ -1,8 +1,8 @@
 """Vectorize engine.
 
 Owns the Vectorize family of operations on a Dataset. Accessed as
-``ds.vectorize``; the Dataset exposes same-named facade methods so
-``ds.<method>(...)`` and ``ds.vectorize.<method>(...)`` are equivalent.
+``ds.vector``; the Dataset exposes same-named facade methods so
+``ds.<method>(...)`` and ``ds.vector.<method>(...)`` are equivalent.
 """
 
 from __future__ import annotations
@@ -65,8 +65,13 @@ _CELL_ORDER = "_pyramids_cell_order"
 _AUTO_TILE_BYTES = 256 * 1024 * 1024
 
 
-class _Vectorize(_Engine["Dataset"]):
-    """Mixin providing vectorization, clustering, and translate methods for Dataset."""
+class _Vector(_Engine["Dataset"]):
+    """Raster-to-vector operations on a Dataset.
+
+    Owns vectorization, clustering, contouring and translate. Accessed as ``ds.vector``;
+    the Dataset exposes same-named facade methods so ``ds.to_polygons(...)`` and
+    ``ds.vector.to_polygons(...)`` are equivalent.
+    """
 
     def _band_to_polygon(self, band: int, col_name: str) -> GeoDataFrame:
         gdal_band = self._ds.raster.GetRasterBand(band + 1)
@@ -330,7 +335,7 @@ class _Vectorize(_Engine["Dataset"]):
         # a masked `values=False` call must return the AOI's cell footprints, not silently the
         # whole raster.
         if mask is not None:
-            src_ds = self._ds.crop(mask=mask, touch=touch)
+            src_ds = self._ds._crop(mask=mask, touch=touch)
         else:
             src_ds = self._ds
 
@@ -396,9 +401,9 @@ class _Vectorize(_Engine["Dataset"]):
         # Both branches read `src_ds` -- the cropped dataset when a mask was given -- so the
         # values and the geometry attached below come from the same extent.
         if tile:
-            df = src_ds.vectorize._extract_values_tiled(band_names, tile_size)
+            df = src_ds.vector._extract_values_tiled(band_names, tile_size)
         else:
-            df = src_ds.vectorize._extract_values_full(band_names)
+            df = src_ds.vector._extract_values_full(band_names)
 
         df = df.drop(columns=["burn_value", "geometry"], errors="ignore")
         gdf = self._attach_geometry(src_ds, df, geom, location)
@@ -434,7 +439,7 @@ class _Vectorize(_Engine["Dataset"]):
         df_list = []
         offsets = self._ds.io._tile_offsets(tile_size)
         for (x_off, y_off, x_size, y_size), arr in zip(
-            offsets, self._ds.get_tile(tile_size)
+            offsets, self._ds.io.get_tile(tile_size)
         ):
             idx = (1, 2) if arr.ndim > 2 else (0, 1)
             mask_arr = np.ones((arr.shape[idx[0]], arr.shape[idx[1]]))
@@ -481,7 +486,7 @@ class _Vectorize(_Engine["Dataset"]):
         """
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this one-column-per-band
         # reshape expects, not the dimension-preserving default (#1241).
-        arr = self._ds.read_array(squeeze=True)
+        arr = self._ds.io.read_array(squeeze=True)
 
         if self._ds.band_count == 1:
             pixels = arr.flatten()
@@ -716,7 +721,7 @@ class _Vectorize(_Engine["Dataset"]):
 
                 - set the offset to 100.
 
-                    >>> dataset.offset = [100]
+                    >>> dataset.bands.offset = [100]
 
                 - check if the offset has been set.
 
@@ -748,7 +753,7 @@ class _Vectorize(_Engine["Dataset"]):
 
                 - set the offset to 100, and a scale of 0.1.
 
-                    >>> dataset.offset = [100]
+                    >>> dataset.bands.offset = [100]
                     >>> dataset.scale = [0.1]
 
                 - check if the offset has been set.
@@ -854,9 +859,9 @@ class _Vectorize(_Engine["Dataset"]):
 
               ```python
               >>> import numpy as np
-              >>> from pyramids.dataset.engines.vectorize import _Vectorize
+              >>> from pyramids.dataset.engines.vectorize import _Vector
               >>> arr = np.array([[1.0, 2.0, 3.0], [4.0, -9999.0, 6.0], [7.0, 8.0, 9.0]])
-              >>> filled = _Vectorize._nearest_neighbour(arr, -9999.0, [1], [1])
+              >>> filled = _Vector._nearest_neighbour(arr, -9999.0, [1], [1])
               >>> float(filled[1, 1])
               6.0
 
@@ -1036,7 +1041,7 @@ class _Vectorize(_Engine["Dataset"]):
         """
         # `squeeze=True` collapses a single-band read to the 2-D `(rows, cols)` this
         # pixel-walk indexes, not the dimension-preserving default (#1241).
-        data = self._ds.read_array(squeeze=True)
+        data = self._ds.io.read_array(squeeze=True)
         position: list[list[int]] = []
         values: list[Any] = []
         count = 1

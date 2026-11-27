@@ -48,7 +48,7 @@ class TestWebOptimizedCog:
         Test scenario:
             The reopened web-optimized COG reports EPSG:3857.
         """
-        out = big_dataset.to_cog(
+        out = big_dataset.cog.to_cog(
             tmp_path / "web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
         )
         reopened = Dataset.read_file(str(out))
@@ -64,10 +64,10 @@ class TestWebOptimizedCog:
         Test scenario:
             Every overview level decimates by a power of two (zoom-aligned).
         """
-        out = big_dataset.to_cog(
+        out = big_dataset.cog.to_cog(
             tmp_path / "web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
         )
-        info = Dataset.read_file(str(out)).cog_info()
+        info = Dataset.read_file(str(out)).cog.info()
         assert info.overviews, "web-optimized COG should carry overviews"
         for ovr in info.overviews:
             assert ovr.decimation in _POWERS_OF_TWO, (
@@ -84,7 +84,9 @@ class TestWebOptimizedCog:
         Test scenario:
             The GoogleMapsCompatible output passes validate_cog.
         """
-        out = big_dataset.to_cog(
+        out = big_dataset.cog.to_cog(
             tmp_path / "web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
         )
-        assert Dataset.read_file(str(out)).validate_cog().is_valid, "invalid web COG"
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
+            "invalid web COG"
+        )

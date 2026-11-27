@@ -23,9 +23,9 @@ def rich() -> Dataset:
         geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
     )
     ds.band_names = ["a", "b", "c", "d"]
-    ds.band_units = ["m", "s", "kg", "K"]
-    ds.scale = [0.1, 0.2, 0.3, 0.4]
-    ds.offset = [1.0, 2.0, 3.0, 4.0]
+    ds.bands.band_units = ["m", "s", "kg", "K"]
+    ds.bands.scale = [0.1, 0.2, 0.3, 0.4]
+    ds.bands.offset = [1.0, 2.0, 3.0, 4.0]
     ds.no_data_value = [-1.0, -2.0, -3.0, -4.0]
     return ds
 
@@ -39,8 +39,12 @@ class TestSelect:
         sub = ds.bands.select([1, 3])
         assert type(sub) is Dataset
         assert sub.band_count == 2
-        np.testing.assert_array_equal(sub.read_array(band=0), ds.read_array(band=0))
-        np.testing.assert_array_equal(sub.read_array(band=1), ds.read_array(band=2))
+        np.testing.assert_array_equal(
+            sub.io.read_array(band=0), ds.io.read_array(band=0)
+        )
+        np.testing.assert_array_equal(
+            sub.io.read_array(band=1), ds.io.read_array(band=2)
+        )
 
     def test_select_by_name(self, rich):
         """Selecting by band name resolves to the right bands."""
@@ -78,18 +82,18 @@ class TestSelectCarryAcross:
 
     def test_carries_all_per_band_state(self, rich):
         """Names, units, scale, offset, and no-data follow the selected bands."""
-        sub = rich.select_bands([4, 2])
+        sub = rich.bands.select([4, 2])
         assert sub.band_names == ["d", "b"]
-        assert sub.band_units == ["K", "s"], "units must survive the MEM re-apply"
-        assert sub.scale == [0.4, 0.2]
-        assert sub.offset == [4.0, 2.0]
+        assert sub.bands.band_units == ["K", "s"], "units must survive the MEM re-apply"
+        assert sub.bands.scale == [0.4, 0.2]
+        assert sub.bands.offset == [4.0, 2.0]
         assert list(sub.no_data_value) == [-4.0, -2.0]
 
     def test_carries_metadata(self, rich):
         """Band metadata follows the selected bands."""
         rich.bands.set_metadata_item("k", "v0", band=0)
         rich.bands.set_metadata_item("k", "v3", band=3)
-        sub = rich.select_bands([4, 1])
+        sub = rich.bands.select([4, 1])
         assert sub.band_meta_data[0].get("k") == "v3"
         assert sub.band_meta_data[1].get("k") == "v0"
 
@@ -99,10 +103,10 @@ class TestSelectCarryAcross:
             np.array([[0, 1], [1, 0]], dtype="int32"),
             geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
         )
-        ds.set_attribute_table(
+        ds.bands.set_attribute_table(
             pd.DataFrame({"value": [0, 1], "label": ["sea", "land"]}), band=0
         )
-        rat = ds.bands.select([1]).get_attribute_table(band=0)
+        rat = ds.bands.select([1]).bands.get_attribute_table(band=0)
         assert rat is not None, "RAT must survive select"
         assert "label" in rat.columns, "RAT category names must survive select"
 
@@ -159,7 +163,7 @@ class TestSelectLazy:
         eager = ds.bands.select([2, 1])
         lazy = ds.bands.select([2, 1], lazy=True)
         assert lazy.band_count == 2
-        np.testing.assert_array_equal(lazy.read_array(), eager.read_array())
+        np.testing.assert_array_equal(lazy.io.read_array(), eager.io.read_array())
 
 
 class TestSelectNetCDF:
@@ -182,4 +186,4 @@ class TestSelectNetCDF:
 
         container = NetCDF.read_file("tests/data/netcdf/none__4v__1d1-2d2-3d1__curv.nc")
         with pytest.raises(ValueError, match="container"):
-            container.select_bands([1])
+            container.bands.select([1])

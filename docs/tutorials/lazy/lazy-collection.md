@@ -197,7 +197,7 @@ without pyramids:
 
 ```python
 cube = DatasetCollection.from_files(files)
-cube.to_zarr("cube.zarr", mode="w")
+cube.io.to_zarr("cube.zarr", mode="w")
 ```
 
 The root group carries `epsg`, `GeoTransform`, `crs_wkt`, `nodata`,
@@ -207,7 +207,7 @@ source file list.
 Cloud writes via fsspec:
 
 ```python
-cube.to_zarr(
+cube.io.to_zarr(
     "s3://bucket/key.zarr",
     storage_options={"anon": False, "key": "...", "secret": "..."},
 )
@@ -303,7 +303,7 @@ cube = DatasetCollection.from_stac(
 summer_mean = cube.mean()          # numpy (1, H, W)
 
 # Write the cube for reuse.
-cube.to_zarr("s2_nir_summer.zarr")
+cube.io.to_zarr("s2_nir_summer.zarr")
 ```
 
 A full runnable notebook spanning search → cube → reduction →

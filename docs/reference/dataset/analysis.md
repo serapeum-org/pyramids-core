@@ -27,7 +27,7 @@ from pyramids.dataset import Dataset
 surface = Dataset.read_file("copernicus_glo30.tif")   # surface elevation
 bare = Dataset.read_file("fabdem.tif")                # bare-earth elevation
 
-canopy = surface.combine(bare, lambda a, b: a - b)
+canopy = surface.analysis.combine(bare, lambda a, b: a - b)
 canopy = surface - bare                               # the same call
 ```
 
@@ -37,7 +37,7 @@ all work. A scalar takes the same route as a raster operand, with the constant
 folded into the callable, so `ds * 2` and `ds * other` agree on band count, dtype
 and sentinel — including the integer wraparound the warning below describes.
 
-That is deliberately *not* the same as `ds.apply(lambda v: v * 2)`. `apply`
+That is deliberately *not* the same as `ds.analysis.apply(lambda v: v * 2)`. `apply`
 transforms one band and keeps the source's sentinel; `combine` spans every band
 and derives one (`NaN` for a floating result). The two are different tools, and
 the operator matches the operator family — `ds * 2` and `ds * other` are the same
@@ -61,8 +61,8 @@ The operands must already share a grid; `combine` never resamples. Use
 `ds.same_grid(other)` to ask before trying:
 
 ```python
-if not surface.same_grid(bare):
-    bare = bare.align(surface)
+if not surface.spatial.same_grid(bare):
+    bare = bare.spatial.align(surface)
 canopy = surface - bare
 ```
 
@@ -99,8 +99,8 @@ canopy = surface - bare
     overflow:
 
     ```python
-    canopy = surface.combine(bare, lambda a, b: a.astype("int32") - b)
-    canopy = surface.combine(bare, lambda a, b: a.astype("float32") - b)
+    canopy = surface.analysis.combine(bare, lambda a, b: a.astype("int32") - b)
+    canopy = surface.analysis.combine(bare, lambda a, b: a.astype("float32") - b)
     scaled = byte_ds.combine(byte_ds, lambda v, _: v.astype("int16") * 2)
     ```
 
@@ -225,7 +225,7 @@ as its no-data value — a cell that was no-data in *either* operand comes back
 
 `==` and `!=` are deliberately **not** overridden. They stay identity-based, so
 `Dataset` keeps working in `assert a == b`, in sets and as a dict key — ask for
-`a.combine(b, np.equal)` when you want the mask.
+`a.analysis.combine(b, np.equal)` when you want the mask.
 
 ### A raster has no truth value
 
@@ -235,7 +235,7 @@ make for their array types:
 ```python
 if surface >= bare:          # ValueError — a comparison is a raster, not a yes/no
 if ds:                       # ValueError — use `ds is not None`
-if bool(np.asarray((surface >= bare).read_array()).all()):   # the actual question
+if bool(np.asarray((surface >= bare).io.read_array()).all()):   # the actual question
 ```
 
 `sorted`, `min` and `max` over **two or more** rasters raise for the same reason:
@@ -278,24 +278,24 @@ habit transfers. All six are on `Dataset`, so a `NetCDF` variable has them too.
 
 | Member                      | What it does                                                                     |
 |-----------------------------|----------------------------------------------------------------------------------|
-| `ds.where(cond, other)`     | Keeps the cells `cond` selects and masks the rest; `other` writes a number there. |
-| `ds.fillna(value)`          | Writes `value` into every gap, leaving the cells that hold data untouched.        |
-| `ds.isnull()`               | `uint8` flags, `1` at each gap and `0` at each cell that holds data.             |
-| `ds.notnull()`              | Its complement: `1` at each cell that holds data. Reads as a `where` condition.  |
-| `ds.equals(other)`          | Whether two rasters hold the same values on the same grid; a gap equals a gap.    |
-| `ds.identical(other)`       | `equals`, and the band names and dataset tags agree too.                          |
+| `ds.analysis.where(cond, other)`     | Keeps the cells `cond` selects and masks the rest; `other` writes a number there. |
+| `ds.analysis.fillna(value)`          | Writes `value` into every gap, leaving the cells that hold data untouched.        |
+| `ds.analysis.isnull()`               | `uint8` flags, `1` at each gap and `0` at each cell that holds data.             |
+| `ds.analysis.notnull()`              | Its complement: `1` at each cell that holds data. Reads as a `where` condition.  |
+| `ds.analysis.equals(other)`          | Whether two rasters hold the same values on the same grid; a gap equals a gap.    |
+| `ds.analysis.identical(other)`       | `equals`, and the band names and dataset tags agree too.                          |
 
 ```python
 from pyramids.dataset import Dataset
 
 dem = Dataset.read_file("dem.tif")
 
-deep = dem.where(dem > 500)                  # the rest become gaps
-zeroed = dem.where(dem > 500, 0.0)           # the rest become 0.0
-trimmed = dem.where(dem > 500, drop=True)    # and the empty rows/columns go
-filled = dem.fillna(0.0)                     # the gaps become 0.0
-gaps = dem.isnull()                          # 1 where a cell is missing
-dem.equals(dem.copy())                       # True — a method, not `==`
+deep = dem.analysis.where(dem > 500)                  # the rest become gaps
+zeroed = dem.analysis.where(dem > 500, 0.0)           # the rest become 0.0
+trimmed = dem.analysis.where(dem > 500, drop=True)    # and the empty rows/columns go
+filled = dem.analysis.fillna(0.0)                     # the gaps become 0.0
+gaps = dem.analysis.isnull()                          # 1 where a cell is missing
+dem.analysis.equals(dem.copy())                       # True — a method, not `==`
 ```
 
 `where`'s condition may be a boolean array, another raster on the same grid (which is what a comparison
@@ -317,10 +317,10 @@ so a `NetCDF` variable has them too.
 
 | Member                           | What it does                                                             |
 |----------------------------------|--------------------------------------------------------------------------|
-| `ds.clip(min, max)`              | Bounds the values to `[min, max]`; either bound may be left out.          |
-| `ds.round(decimals)`             | Rounds to `decimals` places; halves round to even, as numpy does.         |
-| `ds.astype(dtype, no_data_value)`| Changes the band type; the gaps are re-marked for the new type.           |
-| `ds.isin(values)`                | `uint8` flags, `1` where a cell's value is one of `values`.               |
+| `ds.analysis.clip(min, max)`              | Bounds the values to `[min, max]`; either bound may be left out.          |
+| `ds.analysis.round(decimals)`             | Rounds to `decimals` places; halves round to even, as numpy does.         |
+| `ds.analysis.astype(dtype, no_data_value)`| Changes the band type; the gaps are re-marked for the new type.           |
+| `ds.analysis.isin(values)`                | `uint8` flags, `1` where a cell's value is one of `values`.               |
 
 ```python
 from pyramids.dataset import Dataset
@@ -328,11 +328,11 @@ from pyramids.dataset import Dataset
 dem = Dataset.read_file("dem.tif")
 landcover = Dataset.read_file("landcover.tif")
 
-bounded = dem.clip(0.0, 3000.0)                  # below-sea-level cells to 0
-metres = dem.round()                             # whole metres
-small = dem.clip(0.0, 254.0).astype("uint8", no_data_value=255)  # 255 left free to mark gaps
-water = landcover.isin([80, 90])                 # the water classes, as a condition
-lakes = landcover.where(water)
+bounded = dem.analysis.clip(0.0, 3000.0)                  # below-sea-level cells to 0
+metres = dem.analysis.round()                             # whole metres
+small = dem.analysis.clip(0.0, 254.0).astype("uint8", no_data_value=255)  # 255 left free to mark gaps
+water = landcover.analysis.isin([80, 90])                 # the water classes, as a condition
+lakes = landcover.analysis.where(water)
 ```
 
 !!! note "`clip` means two things in this package"
@@ -374,7 +374,7 @@ from pyramids.dataset import Dataset
 
 dem = Dataset.read_file("dem.tif")
 
-slope_eager = dem.slope()                          # numpy array (default)
+slope_eager = dem.terrain.slope()                          # numpy array (default)
 slope_lazy  = dem.slope(chunks=(1024, 1024))       # dask.array.Array
 ```
 

@@ -53,10 +53,10 @@ from pyramids.dataset import Dataset
 ds = Dataset.read_file("dem.tif")
 
 # bbox in the dataset's own CRS
-ds.crop(bbox=(6.8, 50.3, 7.2, 50.6))
+ds.spatial.crop(bbox=(6.8, 50.3, 7.2, 50.6))
 
 # bbox in WGS84 against a Web-Mercator raster
-ds.crop(bbox=(6.8, 50.3, 7.2, 50.6), epsg=4326)
+ds.spatial.crop(bbox=(6.8, 50.3, 7.2, 50.6), epsg=4326)
 ```
 
 `mask=` and `bbox=` are mutually exclusive. If you need the underlying
@@ -84,9 +84,9 @@ chained virtual pipelines. The view pins its source alive.
 from pyramids.dataset import Dataset
 
 ds = Dataset.read_file("dem.tif")               # e.g. EPSG:4326
-webmerc = ds.to_crs(3857)                       # eager: all pixels warped now
-view = ds.warped_view(3857)                     # lazy: warps only what you read
-tile = view.read_array(bbox=(...), epsg=3857)   # this window is warped on demand
+webmerc = ds.spatial.to_crs(3857)                       # eager: all pixels warped now
+view = ds.spatial.warped_view(3857)                     # lazy: warps only what you read
+tile = view.io.read_array(bbox=(...), epsg=3857)   # this window is warped on demand
 ```
 
 Both accept a `method=` resampling name; `warped_view` also takes `cell_size=`

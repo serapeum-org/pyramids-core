@@ -21,7 +21,7 @@ def constant_raster(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 5.0), cell_size=1.0, epsg=4326),
     )
     path = str(tmp_path / "const.tif")
-    ds.to_file(path)
+    ds.io.to_file(path)
     return Dataset.read_file(path)
 
 
@@ -34,23 +34,23 @@ def ramp_raster(tmp_path):
         geo_ref=GeoReference(top_left_corner=(0.0, 5.0), cell_size=1.0, epsg=4326),
     )
     path = str(tmp_path / "ramp.tif")
-    ds.to_file(path)
+    ds.io.to_file(path)
     return Dataset.read_file(path)
 
 
 class TestFocalMean:
     def test_constant_yields_constant(self, constant_raster):
-        out = constant_raster.focal_mean(radius=1)
+        out = constant_raster.analysis.focal_mean(radius=1)
         assert np.allclose(out, 7.0)
 
     def test_returns_same_shape(self, constant_raster):
-        out = constant_raster.focal_mean(radius=1)
+        out = constant_raster.analysis.focal_mean(radius=1)
         assert out.shape == (5, 5)
 
 
 class TestFocalStd:
     def test_constant_is_zero(self, constant_raster):
-        out = constant_raster.focal_std(radius=1)
+        out = constant_raster.analysis.focal_std(radius=1)
         assert np.allclose(out, 0.0, atol=1e-6)
 
     def test_ramp_matches_numpy_population_std(self, ramp_raster):
@@ -61,7 +61,7 @@ class TestFocalStd:
         because it only asserted ``mean() > 0``. The true 3x3 population std is 0.816497 at
         every interior cell.
         """
-        out = np.asarray(ramp_raster.focal_std(radius=1))
+        out = np.asarray(ramp_raster.analysis.focal_std(radius=1))
         assert out[2, 1:4] == pytest.approx([0.816497, 0.816497, 0.816497], abs=1e-6)
 
     def test_random_data_matches_numpy_window_std(self):
@@ -72,7 +72,7 @@ class TestFocalStd:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 6.0), cell_size=1.0, epsg=32636),
         )
-        out = np.asarray(ds.focal_std(radius=1))
+        out = np.asarray(ds.analysis.focal_std(radius=1))
         for i in range(1, 5):
             for j in range(1, 5):
                 assert out[i, j] == pytest.approx(
@@ -91,7 +91,7 @@ class TestFocalStd:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 9.0), cell_size=1.0, epsg=32636),
         )
-        out = np.asarray(ds.focal_std(radius=1))
+        out = np.asarray(ds.analysis.focal_std(radius=1))
         truth = float(np.std(arr[3:6, 3:6]))
         assert out[4, 4] == pytest.approx(truth, rel=1e-9)
 
@@ -119,43 +119,43 @@ class TestFocalStd:
 
 class TestFocalApply:
     def test_identity_func(self, constant_raster):
-        out = constant_raster.focal_apply(lambda w: w[4], radius=1)
+        out = constant_raster.analysis.focal_apply(lambda w: w[4], radius=1)
         assert np.allclose(out, 7.0)
 
 
 class TestSlope:
     def test_constant_has_zero_slope(self, constant_raster):
-        out = constant_raster.slope()
+        out = constant_raster.terrain.slope()
         assert np.allclose(out, 0.0, atol=1e-6)
 
     def test_ramp_has_positive_slope(self, ramp_raster):
-        out = ramp_raster.slope()
+        out = ramp_raster.terrain.slope()
         inside = out[1:-1, 1:-1]
         assert float(inside.mean()) > 0.0
 
     def test_valid_units_are_unchanged(self, ramp_raster):
         """D7: degrees and radians still produce the same numbers as before."""
-        deg = float(np.nanmax(np.asarray(ramp_raster.slope(units="degrees"))))
-        rad = float(np.nanmax(np.asarray(ramp_raster.slope(units="radians"))))
+        deg = float(np.nanmax(np.asarray(ramp_raster.terrain.slope(units="degrees"))))
+        rad = float(np.nanmax(np.asarray(ramp_raster.terrain.slope(units="radians"))))
         assert deg == pytest.approx(np.degrees(rad))
 
     @pytest.mark.parametrize("units", ["DEGREES", "radian", "deg", "banana"])
     def test_an_unknown_unit_raises_instead_of_silent_radians(self, ramp_raster, units):
         """D7: a bad or miscased ``units`` raises; it used to silently return radians."""
         with pytest.raises(ValueError, match="units must be 'degrees' or 'radians'"):
-            ramp_raster.slope(units=units)
+            ramp_raster.terrain.slope(units=units)
 
 
 class TestAspect:
     def test_returns_degrees(self, ramp_raster):
-        out = ramp_raster.aspect()
+        out = ramp_raster.terrain.aspect()
         assert float(out.min()) >= 0.0
         assert float(out.max()) <= 360.0
 
 
 class TestHillshade:
     def test_values_in_byte_range(self, ramp_raster):
-        out = ramp_raster.hillshade()
+        out = ramp_raster.terrain.hillshade()
         assert float(out.min()) >= 0.0
         assert float(out.max()) <= 255.0
 
@@ -175,7 +175,7 @@ class TestImportError:
         # The lazy focal overlap is assembled by the pyramids-lazy backend, so a missing dask
         # surfaces the backend's branded pyramids-lazy error (install / upgrade / repair) depending on backend state, not core's old message.
         with pytest.raises(ImportError, match="pyramids-lazy"):
-            constant_raster.focal_mean(radius=1, chunks="auto")
+            constant_raster.analysis.focal_mean(radius=1, chunks="auto")
 
 
 class TestFocalNoDataHandling:
@@ -236,8 +236,8 @@ class TestFocalNoDataHandling:
         dirty_array[1, 1] = -9999.0
         dirty = self._write(dirty_array, tmp_path / "dirty.tif")
 
-        clean_slope = np.asarray(clean.slope())
-        dirty_slope = np.asarray(dirty.slope())
+        clean_slope = np.asarray(clean.terrain.slope())
+        dirty_slope = np.asarray(dirty.terrain.slope())
 
         for corner in [(0, 0), (0, 2), (2, 0), (2, 2)]:
             assert clean_slope[corner] == pytest.approx(dirty_slope[corner]), (
@@ -258,7 +258,7 @@ class TestFocalNoDataHandling:
         dirty_array = planar_dem.copy()
         dirty_array[1, 1] = -9999.0
         dataset = self._write(dirty_array, tmp_path / "dirty.tif")
-        slope = np.asarray(dataset.slope())
+        slope = np.asarray(dataset.terrain.slope())
 
         assert slope[1, 1] == -9999.0, (
             f"the no-data cell must stay no-data, got {slope[1, 1]}"
@@ -278,7 +278,7 @@ class TestFocalNoDataHandling:
         """
         array = np.arange(25, dtype="float32").reshape(5, 5)
         dataset = self._write(array, tmp_path / "plain.tif")
-        slope = np.asarray(dataset.slope())
+        slope = np.asarray(dataset.terrain.slope())
         assert np.isfinite(slope).all(), (
             f"a raster with no no-data cells must be all finite, got {slope}"
         )
@@ -295,7 +295,7 @@ class TestFocalNoDataHandling:
         dirty_array = planar_dem.copy()
         dirty_array[1, 1] = -9999.0
         dataset = self._write(dirty_array, tmp_path / "dirty.tif")
-        smoothed = np.asarray(dataset.focal_mean(radius=1))
+        smoothed = np.asarray(dataset.analysis.focal_mean(radius=1))
         assert smoothed[1, 1] == -9999.0, (
             f"the no-data cell must stay no-data, got {smoothed[1, 1]}"
         )
@@ -337,7 +337,7 @@ class TestFocalApplyNoData:
             geo_ref=GeoReference(
                 top_left_corner=(0.0, float(array.shape[0])), cell_size=1.0, epsg=32636
             ),
-        ).to_file(str(path))
+        ).io.to_file(str(path))
         return Dataset.read_file(str(path))
 
     def test_a_nan_aware_reducer_keeps_the_valid_neighbours(self, tmp_path):
@@ -350,7 +350,7 @@ class TestFocalApplyNoData:
         array = np.arange(256, dtype="float64").reshape(16, 16)
         array[8, 8] = -9999.0
         dataset = self._write(array, tmp_path / "void.tif")
-        out = np.asarray(dataset.focal_apply(np.nanmax, radius=1))
+        out = np.asarray(dataset.analysis.focal_apply(np.nanmax, radius=1))
         assert (out == -9999.0).sum() == 1, (
             "a NaN-aware reducer must lose only the no-data cell itself, "
             f"got {(out == -9999.0).sum()} blanked cells"
@@ -369,7 +369,7 @@ class TestFocalApplyNoData:
         array = np.arange(256, dtype="float64").reshape(16, 16)
         array[8, 8] = -9999.0
         dataset = self._write(array, tmp_path / "void.tif")
-        out = np.asarray(dataset.focal_apply(np.max, radius=1))
+        out = np.asarray(dataset.analysis.focal_apply(np.max, radius=1))
         assert (out == -9999.0).sum() == 9, (
             "a NaN-blind reducer blanks the full window; expected 9 cells, got "
             f"{(out == -9999.0).sum()}"
@@ -388,8 +388,10 @@ class TestFocalApplyNoData:
             geo_ref=GeoReference(
                 top_left_corner=(0.0, 16.0), cell_size=1.0, epsg=32636
             ),
-        ).to_file(str(path))
-        out = np.asarray(Dataset.read_file(str(path)).focal_apply(np.max, radius=1))
+        ).io.to_file(str(path))
+        out = np.asarray(
+            Dataset.read_file(str(path)).analysis.focal_apply(np.max, radius=1)
+        )
         assert np.isfinite(out).all(), f"no sentinel means no blanking, got {out}"
 
 
@@ -411,8 +413,8 @@ class TestSentinelMatchingIsExact:
             array,
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=32636),
-        ).to_file(str(path))
-        out = np.asarray(Dataset.read_file(str(path)).focal_mean(radius=1))
+        ).io.to_file(str(path))
+        out = np.asarray(Dataset.read_file(str(path)).analysis.focal_mean(radius=1))
         assert (out == -9999.0).sum() == 0, (
             "a band whose every cell sits 4 units from the sentinel holds no "
             f"no-data at all; got {(out == -9999.0).sum()} blanked cells"
@@ -430,8 +432,8 @@ class TestSentinelMatchingIsExact:
             array.astype("float32"),
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 8.0), cell_size=1.0, epsg=32636),
-        ).to_file(str(path))
-        out = np.asarray(Dataset.read_file(str(path)).focal_mean(radius=1))
+        ).io.to_file(str(path))
+        out = np.asarray(Dataset.read_file(str(path)).analysis.focal_mean(radius=1))
         assert out[4, 4] == -9999.0, (
             f"the exact sentinel must still be recognised, got {out[4, 4]}"
         )

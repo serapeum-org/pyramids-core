@@ -73,14 +73,14 @@ def _cmd_proximity(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    out = ds.proximity(
+    out = ds.analysis.proximity(
         band=args.band,
         target_values=args.target_values,
         distance_units=args.distance_units,
         max_distance=args.max_distance,
         nodata=args.nodata,
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -100,8 +100,8 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    labels, count, _position, _values = ds.cluster(args.lower, args.upper)
-    Dataset.from_array(np.asarray(labels), geo_ref=_georef_like(ds)).to_file(
+    labels, count, _position, _values = ds.vector.cluster(args.lower, args.upper)
+    Dataset.from_array(np.asarray(labels), geo_ref=_georef_like(ds)).io.to_file(
         args.output
     )
     if args.json:
@@ -129,7 +129,7 @@ def _resolve_zonal_table(ds: Dataset, args: argparse.Namespace):
         fc = FeatureCollection.read_file(args.zones)
         if fc.crs is not None and ds.crs and fc.epsg != ds.epsg:
             fc = fc.to_crs(ds.epsg)
-        return ds.zonal_stats(fc, stats=stats, band=args.band)
+        return ds.analysis.zonal_stats(fc, stats=stats, band=args.band)
     raise ValueError("provide a vector 'zones' argument or --classes <class_raster>")
 
 
@@ -181,13 +181,13 @@ def _cmd_match_histogram(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     reference = Dataset.read_file(args.reference)
-    out = ds.match_histogram(
+    out = ds.analysis.match_histogram(
         reference,
         band=args.band,
         reference_band=args.reference_band,
         bins=args.bins,
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -204,8 +204,8 @@ def _cmd_percentile_stretch(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    out = ds.percentile_stretch(args.lower, args.upper, band=args.band)
-    out.to_file(args.output)
+    out = ds.analysis.percentile_stretch(args.lower, args.upper, band=args.band)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -223,7 +223,7 @@ def _cmd_pan_sharpen(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ms = Dataset.read_file(args.multispectral)
     pan = Dataset.read_file(args.pan)
-    out = ms.pan_sharpen(
+    out = ms.analysis.pan_sharpen(
         pan,
         algorithm=args.algorithm,
         weights=args.weights,
@@ -231,7 +231,7 @@ def _cmd_pan_sharpen(args: argparse.Namespace) -> int:
         bands=args.bands,
         nodata=args.nodata,
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -247,7 +247,7 @@ def _cmd_fillna(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    ds.fillna(args.value).to_file(args.output)
+    ds.analysis.fillna(args.value).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -299,14 +299,14 @@ def _cmd_where(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    values = np.asarray(ds.read_array(squeeze=True))
+    values = np.asarray(ds.io.read_array(squeeze=True))
     mask = eval_calc(args.cond, {"A": values})
     given, other = _parse_other(args.other)
     if given:
-        out = ds.where(mask, other, drop=args.drop)
+        out = ds.analysis.where(mask, other, drop=args.drop)
     else:
-        out = ds.where(mask, drop=args.drop)
-    out.to_file(args.output)
+        out = ds.analysis.where(mask, drop=args.drop)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -322,7 +322,7 @@ def _cmd_convert_units(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    ds.convert_units(args.target, band=args.band).to_file(args.output)
+    ds.bands.convert_units(args.target, band=args.band).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -343,7 +343,7 @@ def _cmd_contour(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     driver = _resolve_vector_driver(args.output, args.driver)
     ds = Dataset.read_file(args.input)
-    contours = ds.contour(
+    contours = ds.vector.contour(
         interval=args.interval,
         fixed_levels=args.fixed_levels,
         base=args.base,

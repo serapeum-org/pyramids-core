@@ -179,7 +179,7 @@ def _cmd_from_bytes(args: argparse.Namespace) -> int:
     else:
         raise ValueError("from-bytes needs an input path or --stdin.")
     ds = Dataset.from_bytes(data, suffix=args.suffix, name=args.name)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -210,7 +210,7 @@ def _cmd_from_dataframe(args: argparse.Namespace) -> int:
         if args.value is not None:
             indexed = indexed[[args.value]]
         ds = Dataset.from_dataframe(indexed, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -246,7 +246,7 @@ def _cmd_from_points(args: argparse.Namespace) -> int:
     if args.epsg is not None:
         kwargs["epsg"] = args.epsg
     ds = Dataset.from_points(points, args.value_column, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -274,7 +274,7 @@ def _cmd_from_point_arrays(args: argparse.Namespace) -> int:
         y = frame[args.y].to_numpy()
         z = frame[args.z].to_numpy()
     ds = Dataset.from_point_arrays(x, y, z, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -296,7 +296,7 @@ def _cmd_from_band_files(args: argparse.Namespace) -> int:
     if args.no_data_value is not None:
         kwargs["no_data_value"] = _parse_nodata(args.no_data_value)
     ds = Dataset.from_band_files(args.files, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -321,7 +321,7 @@ def _cmd_from_archive(args: argparse.Namespace) -> int:
     if args.no_data_value is not None:
         kwargs["no_data_value"] = _parse_nodata(args.no_data_value)
     ds = Dataset.from_archive(args.archive, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -375,7 +375,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
         kwargs["no_data_value"] = _parse_nodata(args.no_data_value)
     with map_lookup_errors():
         ds = Dataset.create(args.rows, args.columns, args.dtype, args.bands, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -399,7 +399,7 @@ def _cmd_create_empty(args: argparse.Namespace) -> int:
         kwargs["no_data_value"] = _parse_nodata(args.no_data_value)
     with map_lookup_errors():
         ds = Dataset.create_empty(args.rows, args.cols, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -420,7 +420,7 @@ def _cmd_empty_like(args: argparse.Namespace) -> int:
     if args.no_data_value is not None:
         kwargs["no_data_value"] = _parse_nodata(args.no_data_value)
     ds = Dataset.empty_like(template, **kwargs)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -442,7 +442,7 @@ def _cmd_dataset_like(args: argparse.Namespace) -> int:
     template = Dataset.read_file(args.template)
     array = np.load(args.array, allow_pickle=False)
     ds = Dataset.dataset_like(template, array)
-    ds.to_file(args.output)
+    ds.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

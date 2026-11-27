@@ -262,7 +262,7 @@ class TestFromFilesGlob:
     @staticmethod
     def _write_tif(path: Path, fill: float = 1.0) -> None:
         """Write a small single-band GeoTIFF to ``path``."""
-        _make_mem_dataset(fill_value=fill).to_file(str(path))
+        _make_mem_dataset(fill_value=fill).io.to_file(str(path))
 
     def test_glob_default_reads_tif_and_skips_sidecars(self, tmp_path: Path):
         """The default ``*.tif`` glob reads rasters and skips non-.tif sidecars."""
@@ -301,7 +301,7 @@ class TestFromFilesDateOrdering:
         """Write one dated GeoTIFF per day (fill == day) into ``folder``."""
         for day in days:
             p = folder / f"r_1979.01.{day:02d}.tif"
-            _make_mem_dataset(fill_value=float(day)).to_file(str(p))
+            _make_mem_dataset(fill_value=float(day)).io.to_file(str(p))
 
     def test_date_format_sorts_and_sets_time_axis(self, tmp_path: Path):
         """date_format sorts by the file-name date and makes it the time axis."""
@@ -331,7 +331,7 @@ class TestFromFilesDateOrdering:
     def test_custom_date_regex(self, tmp_path: Path):
         """date_regex locates a non-default date pattern in the names."""
         for day in (2, 1):
-            _make_mem_dataset().to_file(str(tmp_path / f"evap_1979_{day}_1.tif"))
+            _make_mem_dataset().io.to_file(str(tmp_path / f"evap_1979_{day}_1.tif"))
         cube = DatasetCollection.from_files(
             tmp_path, date_regex=r"\d{4}_\d{1,2}_\d{1,2}", date_format="%Y_%m_%d"
         )
@@ -346,7 +346,7 @@ class TestFromFilesDateOrdering:
 
     def test_date_not_found_raises(self, tmp_path: Path):
         """A file name with no matching date raises ValueError."""
-        _make_mem_dataset().to_file(str(tmp_path / "no_date_here.tif"))
+        _make_mem_dataset().io.to_file(str(tmp_path / "no_date_here.tif"))
         with pytest.raises(ValueError, match="matched no date"):
             DatasetCollection.from_files(tmp_path, date_format="%Y.%m.%d")
 
@@ -388,7 +388,7 @@ class TestFromFilesConstruction:
     def test_single_file_list(self, tmp_path: Path):
         """A one-element list builds a one-timestep collection."""
         p = tmp_path / "only.tif"
-        _make_mem_dataset().to_file(str(p))
+        _make_mem_dataset().io.to_file(str(p))
         cube = DatasetCollection.from_files([str(p)])
         assert cube.time_length == 1
         assert cube.files == [str(p)]
@@ -396,7 +396,7 @@ class TestFromFilesConstruction:
     def test_single_file_path_string(self, tmp_path: Path):
         """A single file-path string is read as a one-timestep collection (not globbed)."""
         p = tmp_path / "only.tif"
-        _make_mem_dataset().to_file(str(p))
+        _make_mem_dataset().io.to_file(str(p))
         cube = DatasetCollection.from_files(str(p))
         assert cube.time_length == 1
         assert cube.files == [str(p)]
@@ -404,14 +404,14 @@ class TestFromFilesConstruction:
     def test_validate_passes_for_homogeneous_files(self, tmp_path: Path):
         """validate=True succeeds when every file matches the template."""
         for name in ("a.tif", "b.tif"):
-            _make_mem_dataset(rows=5, cols=6).to_file(str(tmp_path / name))
+            _make_mem_dataset(rows=5, cols=6).io.to_file(str(tmp_path / name))
         cube = DatasetCollection.from_files(tmp_path, validate=True)
         assert cube.time_length == 2
 
     def test_validate_detects_shape_mismatch(self, tmp_path: Path):
         """validate=True raises AlignmentError when a file's shape differs."""
-        _make_mem_dataset(rows=5, cols=6).to_file(str(tmp_path / "a.tif"))
-        _make_mem_dataset(rows=4, cols=4).to_file(str(tmp_path / "b.tif"))
+        _make_mem_dataset(rows=5, cols=6).io.to_file(str(tmp_path / "a.tif"))
+        _make_mem_dataset(rows=4, cols=4).io.to_file(str(tmp_path / "b.tif"))
         with pytest.raises(AlignmentError):
             DatasetCollection.from_files(tmp_path, validate=True)
 
@@ -428,7 +428,7 @@ class TestReadMultipleFilesDeprecated:
     def test_numeric_ordering_empty_range_raises(self, tmp_path: Path):
         """The legacy numeric mode with an out-of-range start/end raises."""
         for name in ("1_r.tif", "2_r.tif"):
-            _make_mem_dataset().to_file(str(tmp_path / name))
+            _make_mem_dataset().io.to_file(str(tmp_path / name))
         with pytest.raises(FileNotFoundError, match="within the given start/end"):
             DatasetCollection.read_multiple_files(
                 tmp_path,
@@ -442,7 +442,7 @@ class TestReadMultipleFilesDeprecated:
     def test_start_end_without_date_format_raises(self, tmp_path: Path):
         """start/end with no parseable date format raises (the old contract)."""
         for name in ("a.tif", "b.tif"):
-            _make_mem_dataset().to_file(str(tmp_path / name))
+            _make_mem_dataset().io.to_file(str(tmp_path / name))
         with pytest.raises(ValueError, match="needs a date format"):
             DatasetCollection.read_multiple_files(
                 tmp_path, start="1979-01-02", end="1979-01-05"
@@ -451,7 +451,7 @@ class TestReadMultipleFilesDeprecated:
     def test_numeric_mode_sets_integer_time_axis(self, tmp_path: Path):
         """date=False leaves the integer order keys on .time (not None)."""
         for name in ("2_r.tif", "1_r.tif"):
-            _make_mem_dataset().to_file(str(tmp_path / name))
+            _make_mem_dataset().io.to_file(str(tmp_path / name))
         with pytest.warns(DeprecationWarning):
             cube = DatasetCollection.read_multiple_files(
                 tmp_path, with_order=True, date=False, regex_string=r"\d+"
@@ -463,7 +463,7 @@ class TestReadMultipleFilesDeprecated:
         paths = []
         for day in (3, 1, 2):  # deliberately unsorted
             p = tmp_path / f"r_1979.01.{day:02d}.tif"
-            _make_mem_dataset().to_file(str(p))
+            _make_mem_dataset().io.to_file(str(p))
             paths.append(str(p))
         with pytest.warns(DeprecationWarning):
             cube = DatasetCollection.read_multiple_files(
@@ -534,14 +534,14 @@ class TestIterationMethods:
 
     def test_first(self, cube_with_values: DatasetCollection):
         """first() should return the first timestep as a Dataset."""
-        result = cube_with_values.first().read_array(band=0)
+        result = cube_with_values.first().io.read_array(band=0)
         assert result.shape == (5, 6), f"Expected (5,6), got {result.shape}"
         expected_first = np.arange(3 * 5 * 6, dtype=np.float64).reshape(3, 5, 6)[0]
         np.testing.assert_array_equal(result, expected_first)
 
     def test_last(self, cube_with_values: DatasetCollection):
         """last() should return the final timestep as a Dataset."""
-        result = cube_with_values.last().read_array(band=0)
+        result = cube_with_values.last().io.read_array(band=0)
         assert result.shape == (5, 6), f"Expected (5,6), got {result.shape}"
         expected_last = np.arange(3 * 5 * 6, dtype=np.float64).reshape(3, 5, 6)[-1]
         np.testing.assert_array_equal(result, expected_last)
@@ -683,7 +683,7 @@ class TestToFile:
             cube_with_values.to_file(out_dir)
             for i in range(3):
                 written = Dataset.read_file(str(out_dir / f"{i}.tif"))
-                np.testing.assert_allclose(written.read_array(), expected[i])
+                np.testing.assert_allclose(written.io.read_array(), expected[i])
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -780,8 +780,8 @@ class TestToFile:
             cube.to_file(out_dir)
             files = sorted(p.name for p in out_dir.iterdir())
             assert files == ["0.tif"], f"expected a single 0.tif, got {files}"
-            written = Dataset.read_file(str(out_dir / "0.tif")).read_array()
-            np.testing.assert_allclose(written, base_dataset.read_array())
+            written = Dataset.read_file(str(out_dir / "0.tif")).io.read_array()
+            np.testing.assert_allclose(written, base_dataset.io.read_array())
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -857,7 +857,7 @@ class TestIloc:
     def test_iloc_array_matches_values(self, cube_with_values: DatasetCollection):
         """The array from iloc should match the corresponding slice."""
         ds = cube_with_values.iloc(1)
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         expected = cube_with_values.values[1, :, :]
         np.testing.assert_array_almost_equal(
             arr, expected, decimal=4, err_msg="iloc array should match values slice"
@@ -891,7 +891,7 @@ class TestReadMultipleFilesErrors:
         paths = []
         for i in range(2):
             p = str(tmp_path / f"raster_{i}.tif")
-            src.to_file(p)
+            src.io.to_file(p)
             paths.append(p)
         md = DatasetCollection.read_multiple_files(paths)
         assert md.time_length == 2, f"Expected time_length=2, got {md.time_length}"
@@ -903,7 +903,7 @@ class TestReadMultipleFilesErrors:
         paths = []
         for name in ["no_date_a.tif", "no_date_b.tif"]:
             p = str(tmp_path / name)
-            src.to_file(p)
+            src.io.to_file(p)
             paths.append(p)
         with pytest.raises(ValueError, match="matched no date"):
             DatasetCollection.read_multiple_files(
@@ -919,7 +919,7 @@ class TestReadMultipleFilesErrors:
         dir_path = tmp_path / "ordered_rasters"
         dir_path.mkdir(exist_ok=True)
         for name in ["2020.01.01.tif", "2020.01.02.tif"]:
-            src.to_file(dir_path / name)
+            src.io.to_file(dir_path / name)
         with pytest.raises(ValueError, match="file_name_data_fmt"):
             DatasetCollection.read_multiple_files(
                 dir_path,
@@ -935,7 +935,7 @@ class TestReadMultipleFilesErrors:
         dir_path = tmp_path / "numeric_rasters"
         dir_path.mkdir(exist_ok=True)
         for name in ["3_raster.tif", "1_raster.tif", "2_raster.tif"]:
-            src.to_file(dir_path / name)
+            src.io.to_file(dir_path / name)
         md = DatasetCollection.read_multiple_files(
             dir_path,
             with_order=True,
@@ -955,7 +955,7 @@ class TestReadMultipleFilesErrors:
             "3_raster.tif",
             "4_raster.tif",
         ]:
-            src.to_file(dir_path / name)
+            src.io.to_file(dir_path / name)
         md = DatasetCollection.read_multiple_files(
             dir_path,
             with_order=True,
@@ -1042,7 +1042,7 @@ class TestMemDatasetFromArray:
         """
         arr = np.arange(12, dtype="float64").reshape(3, 4)
         result = collection._mem_dataset_from_array(arr)
-        assert result.read_array().dtype == np.float64, (
+        assert result.io.read_array().dtype == np.float64, (
             f"input dtype not preserved: {result.read_array().dtype}"
         )
 
@@ -1056,7 +1056,7 @@ class TestMemDatasetFromArray:
         arr = np.arange(12, dtype="float64").reshape(3, 4) * 1.5
         result = collection._mem_dataset_from_array(arr)
         np.testing.assert_array_equal(
-            result.read_array(), arr, err_msg="values not preserved by wrap"
+            result.io.read_array(), arr, err_msg="values not preserved by wrap"
         )
 
     def test_explicit_source_overrides_base_georef(self, collection: DatasetCollection):
@@ -1720,7 +1720,7 @@ class TestDatasetAtLazyHandles:
             f"expected index 0, got {set(col._handle_cache)}"
         )
         np.testing.assert_array_equal(
-            result.read_array(band=0),
+            result.io.read_array(band=0),
             np.arange(20, dtype="int16").reshape(4, 5),
             err_msg="first() returned the wrong timestep array",
         )
@@ -1999,7 +1999,7 @@ class TestCroppedTimestepsAgreeOnOneSentinel:
         cropped = self._stack().crop(self._mask())
 
         agreed = cropped.datasets[0].no_data_value[0]
-        second = np.asarray(cropped.datasets[1].read_array())
+        second = np.asarray(cropped.datasets[1].io.read_array())
         assert (second == -9999).any(), "the real -9999 observation was overwritten"
         assert agreed != -9999
 

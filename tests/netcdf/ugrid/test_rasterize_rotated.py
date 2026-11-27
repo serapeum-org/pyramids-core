@@ -60,7 +60,8 @@ class TestRotatedReferenceGrid:
             mesh.mesh, np.array([1.0, 2.0]), _reference(AXIS_ALIGNED), method="idw"
         )
         assert not np.allclose(
-            np.nan_to_num(rotated.read_array()), np.nan_to_num(aligned.read_array())
+            np.nan_to_num(rotated.io.read_array()),
+            np.nan_to_num(aligned.io.read_array()),
         )
 
 
@@ -69,7 +70,7 @@ class TestAxisAlignedIsUnchanged:
         out = rasterize_like(
             mesh.mesh, np.array([1.0, 2.0]), _reference(AXIS_ALIGNED), method="idw"
         )
-        assert np.isfinite(out.read_array()).any()
+        assert np.isfinite(out.io.read_array()).any()
 
     def test_the_geotransform_round_trips(self, mesh):
         out = rasterize_like(mesh.mesh, np.array([1.0, 2.0]), _reference(AXIS_ALIGNED))
@@ -79,7 +80,7 @@ class TestAxisAlignedIsUnchanged:
         out = rasterize_like(
             mesh.mesh, np.array([1.0, 2.0]), _reference(AXIS_ALIGNED), method="nearest"
         )
-        assert out.read_array().shape == (4, 4)
+        assert out.io.read_array().shape == (4, 4)
 
 
 class TestRotatedSamplePositions:
@@ -133,7 +134,7 @@ class TestRotatedSamplePositions:
         )
         true_x, true_y = self._centres(ROTATED, 4, 4)
 
-        np.testing.assert_allclose(out.read_array(), self._plane(true_x, true_y))
+        np.testing.assert_allclose(out.io.read_array(), self._plane(true_x, true_y))
 
     def test_it_would_fail_against_centres_that_ignore_the_rotation(self, plane_mesh):
         """The same comparison rejects the rotation-ignoring positions.
@@ -159,10 +160,10 @@ class TestRotatedSamplePositions:
         _, flat_y = self._centres((0.0, 0.0, 0.0, ROTATED[3], 0.0, ROTATED[5]), 4, 4)
         unrotated = self._plane(flat_x, flat_y)
 
-        assert not np.allclose(out.read_array(), unrotated), (
+        assert not np.allclose(out.io.read_array(), unrotated), (
             "the sampled values must not match the rotation-ignoring centres"
         )
-        assert np.abs(out.read_array() - unrotated).max() == pytest.approx(6.125), (
+        assert np.abs(out.io.read_array() - unrotated).max() == pytest.approx(6.125), (
             "the two sets of centres differ by 6.125 on this plane, which is the margin the "
             "assertion above relies on"
         )

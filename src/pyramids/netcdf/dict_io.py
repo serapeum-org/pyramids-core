@@ -857,5 +857,5 @@ def cube_from_dict(payload: Any) -> Container:
     # cast to assert what the validation already guarantees.
     (_, first), *rest = pieces
     for later_name, later_cube in rest:
-        first.add_variable(later_cube, later_name)
+        first.variables.add(later_cube, later_name)
     return first

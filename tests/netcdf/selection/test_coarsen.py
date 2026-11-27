@@ -417,7 +417,7 @@ class TestArguments:
     def test_an_empty_container_is_refused(self):
         """A container whose only variable was removed has nothing to coarsen."""
         container = _container()
-        container.remove_variable("v")
+        container.variables.remove("v")
         with pytest.raises(ValueError, match="Cannot coarsen an empty container"):
             container.coarsen("time", 2)
 
@@ -550,7 +550,7 @@ class TestLayoutAndLabels:
         container = NetCDF.from_array(
             np.full((NY, NX), 7.0), geo_ref=GEO, variable_name="elevation"
         )
-        container.set_variable("temperature", _container().get_variable("v"))
+        container.variables.set("temperature", _container().get_variable("v"))
         result = container.coarsen("time", 2)
         assert result.variable_names == ["elevation", "temperature"], (
             result.variable_names

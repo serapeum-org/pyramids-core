@@ -895,9 +895,9 @@ def _finalize(
     else:
         target = None
     if target is not None:
-        ds = ds.to_crs(target, method=resample, cell_size=res)
+        ds = ds.spatial.to_crs(target, method=resample, cell_size=res)
     if output is not None:
-        ds.to_file(output)
+        ds.io.to_file(output)
     return ds
 
 

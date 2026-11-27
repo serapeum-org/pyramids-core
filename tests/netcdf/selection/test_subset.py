@@ -610,7 +610,7 @@ class TestSubsetOffline:
 
     def test_single_timestep_shape_and_north_up(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
-        ds = nc.subset("temp", time=0)
+        ds = nc.selection.subset("temp", time=0)
         assert (ds.rows, ds.columns) == (4, 5)
         assert ds.band_count == 1
         # y ascends [10..13]; north-up output row 0 is the northernmost (y=13),
@@ -624,18 +624,18 @@ class TestSubsetOffline:
 
     def test_time_range_is_multiband_with_labels(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
-        ds = nc.subset("temp", time=(0, 3))
+        ds = nc.selection.subset("temp", time=(0, 3))
         assert ds.band_count == 3
         assert ds.band_names == ["time=0", "time=1", "time=2"]
 
     def test_full_grid_when_bbox_none(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
-        ds = nc.subset("temp", time=0)
+        ds = nc.selection.subset("temp", time=0)
         assert (ds.rows, ds.columns) == (4, 5)
 
     def test_descending_x_axis_normalised_west_to_east(self, tmp_path):
         nc = _synthetic_cube(tmp_path, x_descending=True)
-        ds = nc.subset("temp", time=0)
+        ds = nc.selection.subset("temp", time=0)
         # Stored x descends [4..0]; west-to-east output row 0 (north, y=13) must
         # run x=0..4 -> the stored values reversed: data[0, 3] = [15..19] -> [19..15].
         row0 = np.asarray(ds.read_array())[0]
@@ -646,17 +646,17 @@ class TestSubsetOffline:
         nc = _synthetic_cube(tmp_path)
         classic = NetCDF.read_file(nc.file_name, open_as_multi_dimensional=False)
         with pytest.raises(ValueError, match="requires a multidimensional store"):
-            classic.subset("temp", time=0)
+            classic.selection.subset("temp", time=0)
 
     def test_missing_variable_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
         with pytest.raises(ValueError, match="is not a variable"):
-            nc.subset("does_not_exist", time=0)
+            nc.selection.subset("does_not_exist", time=0)
 
     def test_bbox_crops_in_native_coords(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
         # Keep x in [1, 3] (3 cols) and y in [11, 12] (2 rows).
-        ds = nc.subset("temp", time=0, bbox=(1.0, 11.0, 3.0, 12.0))
+        ds = nc.selection.subset("temp", time=0, bbox=(1.0, 11.0, 3.0, 12.0))
         assert (ds.rows, ds.columns) == (2, 3)
 
     def test_subset_result_survives_source_dataset_gc(self, tmp_path):
@@ -671,7 +671,7 @@ class TestSubsetOffline:
             proving the handle survived the transfer (no dangling pointer / double-close).
         """
         nc = _synthetic_cube(tmp_path)
-        result = nc.subset("temp", time=(0, 3))
+        result = nc.selection.subset("temp", time=(0, 3))
         gc.collect()
 
         arr = np.asarray(result.read_array())
@@ -685,54 +685,54 @@ class TestSubsetOffline:
 
     def test_extra_dim_selection(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_extra=True)
-        ds = nc.subset("flux", time=0, level=1)
+        ds = nc.selection.subset("flux", time=0, level=1)
         assert (ds.rows, ds.columns) == (4, 5)
         assert ds.band_count == 1
 
     def test_unselected_extra_dim_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_extra=True)
         with pytest.raises(ValueError, match="must be selected"):
-            nc.subset("flux", time=0)
+            nc.selection.subset("flux", time=0)
 
     def test_unknown_dim_key_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_extra=True)
         with pytest.raises(ValueError, match="unknown dimension selector"):
-            nc.subset("flux", time=0, levl=1)
+            nc.selection.subset("flux", time=0, levl=1)
 
     def test_out_of_range_time_index_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path)
         with pytest.raises(ValueError, match="out of range"):
-            nc.subset("temp", time=99)
+            nc.selection.subset("temp", time=99)
 
     def test_missing_coordinate_variable_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_coords=False)
         with pytest.raises(ValueError, match="no 1-D coordinate variable"):
-            nc.subset("temp", time=0, bbox=(0.0, 0.0, 1.0, 1.0))
+            nc.selection.subset("temp", time=0, bbox=(0.0, 0.0, 1.0, 1.0))
 
     def test_reversed_time_range_raises(self, tmp_path):
         # L1: an empty/reversed range is rejected with a clear message.
         nc = _synthetic_cube(tmp_path)
         with pytest.raises(ValueError, match="empty index range"):
-            nc.subset("temp", time=(2, 1))
+            nc.selection.subset("temp", time=(2, 1))
 
     def test_non_time_axis_selectable_by_name(self, tmp_path):
         # L2: a non-time leading axis (ens member) is addressable via **dims.
         nc = _synthetic_cube(tmp_path, with_no_time=True)
-        ds = nc.subset("ens", member=1)
+        ds = nc.selection.subset("ens", member=1)
         assert (ds.rows, ds.columns) == (4, 5)
         assert ds.band_count == 1
 
     def test_non_time_axis_also_accepts_time_keyword(self, tmp_path):
         # L2: the dedicated time= keyword still drives that fallback axis.
         nc = _synthetic_cube(tmp_path, with_no_time=True)
-        ds = nc.subset("ens", time=0)
+        ds = nc.selection.subset("ens", time=0)
         assert ds.band_count == 1
 
     def test_multi_range_band_labels_are_cartesian_product(self, tmp_path):
         # L3: ranging two non-spatial axes (time x level, each length 2) labels
         # every band as the Cartesian product, in C-order (level varies fastest).
         nc = _synthetic_cube(tmp_path, with_extra=True)
-        ds = nc.subset("flux", time=(0, 2), level=(0, 2))
+        ds = nc.selection.subset("flux", time=(0, 2), level=(0, 2))
         assert ds.band_count == 4
         assert ds.band_names == [
             "time=0,level=0",
@@ -744,7 +744,7 @@ class TestSubsetOffline:
     def test_single_cell_window_keeps_native_resolution(self, tmp_path):
         # N1: a 1x1 window carries the store's true cell size, not a 1.0 fallback.
         nc = _synthetic_cube(tmp_path, step=1000.0)
-        ds = nc.subset("temp", time=0, bbox=(2000.0, 2010.0, 2000.0, 2010.0))
+        ds = nc.selection.subset("temp", time=0, bbox=(2000.0, 2010.0, 2000.0, 2010.0))
         assert (ds.rows, ds.columns) == (1, 1)
         assert ds.geotransform[1] == pytest.approx(1000.0)
         assert abs(ds.geotransform[5]) == pytest.approx(1000.0)
@@ -815,7 +815,7 @@ class TestSubsetInterleavedLayer:
 
     def test_interleaved_layer_selected_by_name(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_interleaved=True)
-        ds = nc.subset("soil", time=0, level=1)
+        ds = nc.selection.subset("soil", time=0, level=1)
         assert (ds.rows, ds.columns) == (4, 5)
         assert ds.band_count == 1
 
@@ -823,7 +823,7 @@ class TestSubsetInterleavedLayer:
         # soil is (time, y, level, x); y ascends -> output row 0 is the
         # northernmost (y index 3). Values are arange over (t, y, level, x).
         nc = _synthetic_cube(tmp_path, with_interleaved=True)
-        ds = nc.subset("soil", time=0, level=0)
+        ds = nc.selection.subset("soil", time=0, level=0)
         n_y, n_x, n_lev = 4, 5, 2
         full = np.arange(3 * n_y * n_lev * n_x, dtype="float64").reshape(
             3, n_y, n_lev, n_x
@@ -834,18 +834,18 @@ class TestSubsetInterleavedLayer:
     def test_interleaved_unselected_layer_raises(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_interleaved=True)
         with pytest.raises(ValueError, match="must be selected"):
-            nc.subset("soil", time=0)
+            nc.selection.subset("soil", time=0)
 
     def test_explicit_y_x_dim_override(self, tmp_path):
         nc = _synthetic_cube(tmp_path, with_interleaved=True)
-        ds = nc.subset("soil", time=0, level=0, y_dim="y", x_dim="x")
+        ds = nc.selection.subset("soil", time=0, level=0, y_dim="y", x_dim="x")
         assert (ds.rows, ds.columns) == (4, 5)
 
     def test_interleaved_layer_range_is_multiband_in_c_order(self, tmp_path):
         # L3: a ranged interleaved layer -> one band per layer, labelled and
         # ordered to match the C-order band flatten after moveaxis.
         nc = _synthetic_cube(tmp_path, with_interleaved=True)
-        ds = nc.subset("soil", time=0, level=(0, 2))
+        ds = nc.selection.subset("soil", time=0, level=(0, 2))
         assert ds.band_count == 2
         assert ds.band_names == ["level=0", "level=1"]
         n_y, n_x, n_lev = 4, 5, 2

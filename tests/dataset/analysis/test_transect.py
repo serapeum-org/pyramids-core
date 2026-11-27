@@ -88,7 +88,7 @@ class TestTransect:
             is zero.
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
-        tr = ramp.transect(line, n=5)
+        tr = ramp.analysis.transect(line, n=5)
         assert isinstance(tr, FeatureCollection), (
             f"expected FeatureCollection, got {type(tr)}"
         )
@@ -105,7 +105,7 @@ class TestTransect:
             endpoints, confirming the column is cumulative ground metres.
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
-        tr = ramp.transect(line, n=5)
+        tr = ramp.analysis.transect(line, n=5)
         diffs = tr["distance"].diff().iloc[1:]
         assert bool((diffs > 0).all()), (
             f"distance not strictly increasing: {diffs.tolist()}"
@@ -121,7 +121,7 @@ class TestTransect:
         Test scenario:
             A geographic raster yields points whose CRS resolves to EPSG:4326.
         """
-        tr = ramp.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=3)
+        tr = ramp.analysis.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=3)
         assert tr.crs.to_epsg() == 4326, f"expected 4326, got {tr.crs.to_epsg()}"
 
     def test_values_match_sample_and_point(self, ramp):
@@ -132,13 +132,13 @@ class TestTransect:
             reading an endpoint with :meth:`Dataset.point` both reproduce the
             ``value`` column, proving the DoD "values match point/sample".
         """
-        tr = ramp.transect(LineString([(0.5, 4.5), (4.5, 0.5)]), n=5)
-        resampled = ramp.sample(tr, bands=0)
+        tr = ramp.analysis.transect(LineString([(0.5, 4.5), (4.5, 0.5)]), n=5)
+        resampled = ramp.analysis.sample(tr, bands=0)
         assert np.allclose(resampled, tr["value"].to_numpy()), (
             f"sample {resampled} != value column {tr['value'].tolist()}"
         )
         first = tr.geometry.iloc[0]
-        assert float(ramp.point(first.x, first.y, band=0)) == tr["value"].iloc[0], (
+        assert float(ramp.cog.point(first.x, first.y, band=0)) == tr["value"].iloc[0], (
             "point() disagrees with the first transect value"
         )
 
@@ -149,7 +149,7 @@ class TestTransect:
             The NW-SE diagonal with ``n=5`` hits cells (0,0)..(4,4), giving the
             diagonal values ``[0, 6, 12, 18, 24]``.
         """
-        tr = ramp.transect(LineString([(0.5, 4.5), (4.5, 0.5)]), n=5)
+        tr = ramp.analysis.transect(LineString([(0.5, 4.5), (4.5, 0.5)]), n=5)
         values = tr["value"].tolist()
         assert values == [0.0, 6.0, 12.0, 18.0, 24.0], values
 
@@ -159,7 +159,9 @@ class TestTransect:
         Test scenario:
             Band 1 holds 25..49, so row 0 reads ``[25, 26, 27, 28, 29]``.
         """
-        tr = two_band.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=5, band=1)
+        tr = two_band.analysis.transect(
+            LineString([(0.5, 4.5), (4.5, 4.5)]), n=5, band=1
+        )
         values = tr["value"].tolist()
         assert values == [25.0, 26.0, 27.0, 28.0, 29.0], values
 
@@ -172,7 +174,7 @@ class TestTransect:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         total = float(geodesic_distance(0.5, 4.5, 4.5, 4.5, crs=4326))
-        tr = ramp.transect(line, step=total * 0.4)
+        tr = ramp.analysis.transect(line, step=total * 0.4)
         assert float(tr["distance"].iloc[-1]) == pytest.approx(total), (
             f"last distance {tr['distance'].iloc[-1]} != total {total}"
         )
@@ -189,7 +191,7 @@ class TestTransect:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         total = float(geodesic_distance(0.5, 4.5, 4.5, 4.5, crs=4326))
-        tr = ramp.transect(line, step=total / 4)
+        tr = ramp.analysis.transect(line, step=total / 4)
         assert len(tr) == 5, f"expected 5 positions, got {len(tr)}"
         assert tr["distance"].is_monotonic_increasing, tr["distance"].tolist()
         assert tr["distance"].nunique() == 5, "a duplicate endpoint was appended"
@@ -202,7 +204,7 @@ class TestTransect:
             end, never a single point.
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
-        tr = ramp.transect(line, step=1e9)
+        tr = ramp.analysis.transect(line, step=1e9)
         assert len(tr) == 2, f"expected 2 endpoints, got {len(tr)}"
         assert tr["value"].tolist() == [0.0, 4.0], tr["value"].tolist()
 
@@ -215,7 +217,7 @@ class TestTransect:
             keyed to the line length, not to ``step``).
         """
         line = LineString([(50, 499950), (450, 499950)])
-        tr = utm.transect(line, step=1e9)
+        tr = utm.analysis.transect(line, step=1e9)
         assert len(tr) == 2, f"expected 2 endpoints, got {len(tr)}"
         assert tr["value"].tolist() == [0.0, 4.0], tr["value"].tolist()
 
@@ -227,7 +229,7 @@ class TestTransect:
             cell centres (values 0..4) at ~0, 100, 200, 300, 400 m.
         """
         line = LineString([(50, 499950), (450, 499950)])
-        tr = utm.transect(line, step=100.0)
+        tr = utm.analysis.transect(line, step=100.0)
         assert tr["value"].tolist() == [0.0, 1.0, 2.0, 3.0, 4.0], tr["value"].tolist()
         # Ground, not planar: 400 m of UTM ~4.5 deg off the central meridian is
         # ~399 m on the ellipsoid (scale distortion), so allow ~1 % slack.
@@ -243,7 +245,7 @@ class TestTransect:
             A line running east off the raster samples -9999 (the band no-data)
             for the out-of-bounds positions.
         """
-        tr = ramp.transect(LineString([(0.5, 4.5), (100.0, 4.5)]), n=3)
+        tr = ramp.analysis.transect(LineString([(0.5, 4.5), (100.0, 4.5)]), n=3)
         assert tr["value"].iloc[0] == 0.0, tr["value"].iloc[0]
         assert (tr["value"].iloc[1:] == -9999.0).all(), tr["value"].tolist()
 
@@ -255,7 +257,7 @@ class TestTransect:
             geodesic lengths.
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5), (4.5, 0.5)])
-        tr = ramp.transect(line, n=7)
+        tr = ramp.analysis.transect(line, n=7)
         seg1 = float(geodesic_distance(0.5, 4.5, 4.5, 4.5, crs=4326))
         seg2 = float(geodesic_distance(4.5, 4.5, 4.5, 0.5, crs=4326))
         assert float(tr["distance"].iloc[-1]) == pytest.approx(seg1 + seg2), (
@@ -276,7 +278,7 @@ class TestTransect:
             arr,
             geo_ref=GeoReference(top_left_corner=(0, 60), cell_size=1.0, epsg=4326),
         )
-        tr = ds.transect(LineString([(0.0, 0.0), (60.0, 60.0)]), n=3)
+        tr = ds.analysis.transect(LineString([(0.0, 0.0), (60.0, 60.0)]), n=3)
         mid = tr.geometry.iloc[1]
         assert (mid.x, mid.y) == pytest.approx((30.0, 30.0)), (
             f"midpoint {(mid.x, mid.y)}"
@@ -299,7 +301,7 @@ class TestTransect:
             distance stays strictly increasing and the row values are read.
         """
         line = LineString([(0.5, 4.5), (2.5, 4.5), (2.5, 4.5), (4.5, 4.5)])
-        tr = ramp.transect(line, n=5)
+        tr = ramp.analysis.transect(line, n=5)
         assert len(tr) == 5, f"expected 5 positions, got {len(tr)}"
         assert tr["value"].tolist() == [0.0, 1.0, 2.0, 3.0, 4.0], tr["value"].tolist()
         diffs = tr["distance"].diff().iloc[1:]
@@ -320,7 +322,7 @@ class TestTransect:
             geo_ref=GeoReference(top_left_corner=(0, 5), cell_size=1.0, epsg=4326),
         )
         ds.raster.GetRasterBand(1).DeleteNoDataValue()
-        tr = ds.transect(LineString([(0.5, 4.5), (100.0, 4.5)]), n=3)
+        tr = ds.analysis.transect(LineString([(0.5, 4.5), (100.0, 4.5)]), n=3)
         assert tr["value"].iloc[0] == 0.0, tr["value"].iloc[0]
         assert bool(np.isnan(tr["value"].iloc[1:]).all()), tr["value"].tolist()
 
@@ -334,7 +336,7 @@ class TestTransect:
         xs = [50.0, 450.0, 450.0]
         ys = [499950.0, 499950.0, 499550.0]
         line = LineString(list(zip(xs, ys)))
-        tr = utm.transect(line, n=9)
+        tr = utm.analysis.transect(line, n=9)
         lon, lat = reproject_coordinates(
             xs, ys, from_crs=32636, to_crs=4326, precision=None
         )
@@ -351,7 +353,7 @@ class TestTransect:
             The smallest valid count yields the line's start and end only, with
             the start value and the end value of the sampled row.
         """
-        tr = ramp.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=2)
+        tr = ramp.analysis.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=2)
         assert len(tr) == 2, f"expected 2 positions, got {len(tr)}"
         assert tr["value"].tolist() == [0.0, 4.0], tr["value"].tolist()
         d0 = float(tr["distance"].iloc[0])
@@ -365,7 +367,7 @@ class TestTransect:
             values as its 2-D projection.
         """
         line3d = LineString([(0.5, 4.5, 100.0), (4.5, 4.5, 200.0)])
-        tr = ramp.transect(line3d, n=5)
+        tr = ramp.analysis.transect(line3d, n=5)
         assert tr["value"].tolist() == [0.0, 1.0, 2.0, 3.0, 4.0], tr["value"].tolist()
         assert not tr.geometry.iloc[0].has_z, (
             "z should have been dropped from the output"
@@ -380,7 +382,7 @@ class TestTransect:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError):
-            ramp.transect(line, n=3, band=5)
+            ramp.analysis.transect(line, n=3, band=5)
 
 
 class TestTransectValidation:
@@ -394,7 +396,7 @@ class TestTransectValidation:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="exactly one of n= or step=") as exc:
-            ramp.transect(line)
+            ramp.analysis.transect(line)
         assert "neither" in str(exc.value), str(exc.value)
 
     def test_both_n_and_step(self, ramp):
@@ -405,7 +407,7 @@ class TestTransectValidation:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="exactly one of n= or step=") as exc:
-            ramp.transect(line, n=5, step=30)
+            ramp.analysis.transect(line, n=5, step=30)
         assert "both" in str(exc.value), str(exc.value)
 
     def test_n_below_two(self, ramp):
@@ -416,7 +418,7 @@ class TestTransectValidation:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="at least 2"):
-            ramp.transect(line, n=1)
+            ramp.analysis.transect(line, n=1)
 
     def test_non_positive_step(self, ramp):
         """``step <= 0`` raises.
@@ -426,7 +428,7 @@ class TestTransectValidation:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="must be positive"):
-            ramp.transect(line, step=0)
+            ramp.analysis.transect(line, step=0)
 
     def test_non_integer_n(self, ramp):
         """A non-integer ``n`` raises the method's ValueError, not a NumPy TypeError.
@@ -437,7 +439,7 @@ class TestTransectValidation:
         """
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="must be an integer"):
-            ramp.transect(line, n=2.0)
+            ramp.analysis.transect(line, n=2.0)
 
     def test_not_a_linestring(self, ramp):
         """A non-LineString geometry raises.
@@ -447,7 +449,7 @@ class TestTransectValidation:
         """
         point = Point(0.5, 4.5)
         with pytest.raises(ValueError, match="needs a shapely LineString"):
-            ramp.transect(point, n=5)
+            ramp.analysis.transect(point, n=5)
 
     def test_empty_line(self, ramp):
         """An empty LineString raises.
@@ -457,7 +459,7 @@ class TestTransectValidation:
         """
         empty = LineString()
         with pytest.raises(ValueError, match="at least two vertices"):
-            ramp.transect(empty, n=5)
+            ramp.analysis.transect(empty, n=5)
 
     def test_zero_ground_length_line(self, ramp):
         """A line whose vertices are coincident raises on zero ground length.
@@ -467,7 +469,7 @@ class TestTransectValidation:
         """
         line = LineString([(2.5, 2.5), (2.5, 2.5)])
         with pytest.raises(ValueError, match="zero ground length"):
-            ramp.transect(line, n=5)
+            ramp.analysis.transect(line, n=5)
 
     def test_raster_without_crs_raises(self, ramp):
         """A raster with no CRS raises a clear ValueError, not a raw CRSError.
@@ -481,4 +483,4 @@ class TestTransectValidation:
         assert ramp.crs == "", f"precondition failed: crs is {ramp.crs!r}"
         line = LineString([(0.5, 4.5), (4.5, 4.5)])
         with pytest.raises(ValueError, match="needs the raster to have a CRS"):
-            ramp.transect(line, n=5)
+            ramp.analysis.transect(line, n=5)

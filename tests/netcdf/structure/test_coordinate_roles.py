@@ -59,7 +59,7 @@ def _container(**variables: float) -> NetCDF:
         donor = NetCDF.from_array(
             np.full((NY, NX), variables[name]), geo_ref=_geo_ref(), variable_name=name
         ).get_variable(name)
-        container.set_variable(name, donor)
+        container.variables.set(name, donor)
     return container
 
 
@@ -302,7 +302,7 @@ class TestMoreSetCoordsEdges:
         promoted = pair.set_coords("a")
         assert promoted.variable_names == ["b"], "precondition: a is a coordinate"
 
-        promoted.remove_variable("b")
+        promoted.variables.remove("b")
 
         assert promoted.variable_names == ["a"]
         assert _roles(promoted)["a"] == "data"
@@ -597,7 +597,7 @@ class TestResetCoords:
         latecomer = NetCDF.from_array(
             np.full((NY, NX), 9.0), geo_ref=_geo_ref(), variable_name="sst"
         ).get_variable("sst")
-        promoted.set_variable("sst", latecomer)
+        promoted.variables.set("sst", latecomer)
 
         demoted = promoted.reset_coords("expver")
 

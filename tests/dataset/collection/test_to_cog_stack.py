@@ -55,7 +55,7 @@ class TestToCogStackBasics:
         paths = small_collection.to_cog_stack(out)
         for p in paths:
             reopened = Dataset.read_file(p)
-            assert reopened.is_cog is True
+            assert reopened.cog.is_cog is True
             reopened.close()
 
 

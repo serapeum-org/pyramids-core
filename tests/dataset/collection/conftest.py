@@ -23,7 +23,7 @@ def three_files(tmp_path):
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
         )
         p = str(tmp_path / f"f{i}.tif")
-        ds.to_file(p)
+        ds.io.to_file(p)
         paths.append(p)
     return paths
 

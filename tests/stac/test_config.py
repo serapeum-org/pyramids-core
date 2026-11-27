@@ -53,7 +53,9 @@ def _write(tmp_path, name, array, no_data_value):
         str: The written path.
     """
     path = str(tmp_path / name)
-    Dataset.from_array(array, no_data_value=no_data_value, geo_ref=_GEO).to_file(path)
+    Dataset.from_array(array, no_data_value=no_data_value, geo_ref=_GEO).io.to_file(
+        path
+    )
     return path
 
 
@@ -96,8 +98,8 @@ def file_packed_counts(tmp_path):
     source = Dataset.from_array(
         np.array([[0, 100], [200, 300]], dtype="int16"), no_data_value=0, geo_ref=_GEO
     )
-    source.scale = [0.01]
-    source.to_file(path)
+    source.bands.scale = [0.01]
+    source.io.to_file(path)
     return path
 
 
@@ -121,7 +123,7 @@ def sinusoidal_counts(tmp_path):
         geo_ref=GeoReference(geo=(0.0, 1000.0, 0.0, 2000.0, 0.0, -1000.0), epsg=None),
     )
     source.crs = _SINUSOIDAL_WKT
-    source.to_file(path)
+    source.io.to_file(path)
     return path
 
 
@@ -157,7 +159,7 @@ def cf_packed_counts(tmp_path):
             "WAVELENGTH": "665",
         }
     ]
-    source.to_file(path)
+    source.io.to_file(path)
     return path
 
 
@@ -172,8 +174,8 @@ def named_bands(tmp_path):
     )
     source.band_names = ["red", "nir"]
     source.bands.metadata = [{"WAVELENGTH": "665"}, {"WAVELENGTH": "842"}]
-    source.band_units = ["reflectance", "reflectance"]
-    source.to_file(path)
+    source.bands.band_units = ["reflectance", "reflectance"]
+    source.io.to_file(path)
     return path
 
 
@@ -617,7 +619,7 @@ class TestMaterialise:
         """
         dataset = Dataset.read_file(packed_counts)
         result = materialise(dataset, AssetOverrides(scales=(0.01,), offsets=(10.0,)))
-        values = result.read_array()
+        values = result.io.read_array()
         assert np.isnan(values[0, 0]), (
             "mask -> scale must leave the sentinel NaN; scaling first would "
             f"have produced 0 * 0.01 + 10 = 10.0, got {values[0, 0]}"
@@ -635,7 +637,7 @@ class TestMaterialise:
         dataset = Dataset.read_file(packed_counts)
         values = materialise(
             dataset, AssetOverrides(scales=(0.01,), offsets=(10.0,))
-        ).read_array()
+        ).io.read_array()
         assert values[1, 1] == pytest.approx(13.0), f"300 * 0.01 + 10 != {values[1, 1]}"
         assert np.isnan(values[0, 0]), "the sentinel must not pick up the offset"
 
@@ -650,15 +652,17 @@ class TestMaterialise:
             instead of 3.0.
         """
         source = Dataset.read_file(file_packed_counts)
-        assert source.scale == [0.01], (
+        assert source.bands.scale == [0.01], (
             f"fixture must declare the scale in the file, got {source.scale}"
         )
         result = materialise(source, AssetOverrides(scales=(0.01,)))
-        assert result.scale == [1.0], (
+        assert result.bands.scale == [1.0], (
             f"the rebuild must not carry the source scale 0.01, got {result.scale}"
         )
-        assert result.offset == [0.0], f"expected identity offset, got {result.offset}"
-        assert result.read_array(unpack=True)[1, 1] == pytest.approx(3.0), (
+        assert result.bands.offset == [0.0], (
+            f"expected identity offset, got {result.bands.offset}"
+        )
+        assert result.io.read_array(unpack=True)[1, 1] == pytest.approx(3.0), (
             "an unpacking read of the result must not apply a scale a second "
             f"time, got {result.read_array(unpack=True)[1, 1]}"
         )
@@ -729,10 +733,10 @@ class TestMaterialise:
             f"fixture must declare the CF packing, got {source.bands.metadata}"
         )
         result = materialise(source, AssetOverrides(scales=(0.01,), offsets=(5.0,)))
-        assert result.scale == [1.0], (
+        assert result.bands.scale == [1.0], (
             f"the rebuilt raster must declare an identity scale, got scale={result.scale}"
         )
-        assert result.offset == [0.0], (
+        assert result.bands.offset == [0.0], (
             f"the rebuilt raster must declare an identity offset, got offset={result.offset}"
         )
         carried = result.bands.metadata[0]
@@ -831,7 +835,7 @@ class TestMaterialise:
         """
         source = Dataset.read_file(named_bands)
         result = materialise(source, AssetOverrides(scales=(0.01, 0.01)))
-        assert result.band_units == ["reflectance", "reflectance"], (
+        assert result.bands.band_units == ["reflectance", "reflectance"], (
             f"expected the source band units, got {result.band_units}"
         )
 
@@ -850,7 +854,7 @@ class TestMaterialise:
         result = materialise(
             Dataset.read_file(path), AssetOverrides(scales=(0.01, 10.0))
         )
-        values = result.read_array()
+        values = result.io.read_array()
         assert values[0][0, 0] == pytest.approx(1.0), (
             f"band 0 scaled wrong: {values[0]}"
         )
@@ -870,7 +874,7 @@ class TestMaterialise:
         assert result.no_data_value[0] == pytest.approx(1.0), (
             f"expected the configured no-data, got {result.no_data_value}"
         )
-        assert result.read_array().tolist() == [[1, 2], [3, 4]], (
+        assert result.io.read_array().tolist() == [[1, 2], [3, 4]], (
             "stamping no-data must not change any pixel value"
         )
 
@@ -907,7 +911,7 @@ class TestMaterialise:
             An unlabelled raster and cfg unit "K".
         """
         result = materialise(Dataset.read_file(nodataless), AssetOverrides(unit="K"))
-        assert result.band_units == ["K"], (
+        assert result.bands.band_units == ["K"], (
             f"expected the configured unit, got {result.band_units}"
         )
 
@@ -920,11 +924,11 @@ class TestMaterialise:
         dataset = Dataset.from_array(
             np.array([[1, 2], [3, 4]], dtype="int16"), no_data_value=None, geo_ref=_GEO
         )
-        dataset.band_units = ["K"]
+        dataset.bands.band_units = ["K"]
         overrides = AssetOverrides(unit="degC")
         with pytest.warns(AssetMetadataWarning, match="already declares"):
             result = materialise(dataset, overrides)
-        assert result.band_units == ["K"], (
+        assert result.bands.band_units == ["K"], (
             f"the declared unit must win, got {result.band_units}"
         )
 
@@ -955,7 +959,7 @@ class TestMaterialise:
         assert result.dtype == ["float32"], (
             f"expected the configured dtype, got {result.dtype}"
         )
-        assert result.read_array().tolist() == [[1.0, 2.0], [3.0, 4.0]], (
+        assert result.io.read_array().tolist() == [[1.0, 2.0], [3.0, 4.0]], (
             "a dtype cast must preserve the values"
         )
 
@@ -982,7 +986,7 @@ class TestMaterialise:
             np.array([[1, 2], [3, 4]], dtype="int16"),
             no_data_value=None,
             geo_ref=GeoReference(geo=geo, epsg=32633),
-        ).to_file(path)
+        ).io.to_file(path)
         result = materialise(Dataset.read_file(path), AssetOverrides(scales=(2.0,)))
         assert tuple(result.geotransform) == pytest.approx(geo), (
             f"expected the source geotransform, got {result.geotransform}"
@@ -999,8 +1003,8 @@ class TestLoadAssetRescale:
         Test scenario:
             A read-only on-disk asset declaring scale 0.01.
         """
-        raw = load_asset(packed_asset).read_array()
-        physical = load_asset(packed_asset, rescale=True).read_array()
+        raw = load_asset(packed_asset).io.read_array()
+        physical = load_asset(packed_asset, rescale=True).io.read_array()
         assert raw.tolist() == [[0, 100], [200, 300]], (
             f"rescale=False must keep the stored counts, got {raw.tolist()}"
         )
@@ -1020,17 +1024,17 @@ class TestLoadAssetRescale:
             physical value is 3.0.
         """
         raw = load_asset(file_packed_asset)
-        assert raw.scale == [0.01], (
+        assert raw.bands.scale == [0.01], (
             f"the asset's file must declare the scale, got {raw.scale}"
         )
         dataset = load_asset(file_packed_asset, rescale=True)
-        assert dataset.scale == [1.0], (
+        assert dataset.bands.scale == [1.0], (
             f"the rescaled raster must not carry the file scale, got {dataset.scale}"
         )
-        assert dataset.offset == [0.0], (
+        assert dataset.bands.offset == [0.0], (
             f"expected identity offset, got {dataset.offset}"
         )
-        assert dataset.read_array(unpack=True)[1, 1] == pytest.approx(3.0), (
+        assert dataset.io.read_array(unpack=True)[1, 1] == pytest.approx(3.0), (
             "an unpacking read must not apply the scale a second time, got "
             f"{dataset.read_array(unpack=True)[1, 1]}"
         )
@@ -1046,7 +1050,7 @@ class TestLoadAssetRescale:
         assert dataset.dtype == ["int16"], (
             f"nothing to rescale must keep the native dtype, got {dataset.dtype}"
         )
-        assert dataset.read_array().tolist() == [[0, 100], [200, 300]], (
+        assert dataset.io.read_array().tolist() == [[0, 100], [200, 300]], (
             "nothing to rescale must keep the stored counts"
         )
 
@@ -1062,7 +1066,7 @@ class TestLoadAssetRescale:
             geo_ref=_GEO,
         )
         path = str(tmp_path / "cube.nc")
-        source.to_file(path)
+        source.io.to_file(path)
         asset = {
             "href": path,
             "type": "application/x-netcdf",
@@ -1106,7 +1110,7 @@ class TestLoadAssetConfig:
         }
         cfg = {"c": {"aliases": {"rededge": "B05"}}}
         dataset = load_asset(item, "rededge", cfg=cfg)
-        assert dataset.read_array().tolist() == [[1, 2], [3, 4]], (
+        assert dataset.io.read_array().tolist() == [[1, 2], [3, 4]], (
             "the aliased asset must be the one opened"
         )
 
@@ -1121,7 +1125,7 @@ class TestLoadAssetConfig:
             "assets": {"B05": {"href": nodataless, "type": "image/tiff"}},
         }
         cfg = {"c": {"aliases": {"red": "B04"}}}
-        assert load_asset(item, "B05", cfg=cfg).read_array().tolist() == [
+        assert load_asset(item, "B05", cfg=cfg).io.read_array().tolist() == [
             [1, 2],
             [3, 4],
         ], "an unaliased key must still open its own asset"
@@ -1151,7 +1155,7 @@ class TestLoadAssetConfig:
         asset = {"href": nodataless, "type": "image/tiff"}
         cfg = {"c": {"assets": {"*": {"unit": "K"}}}}
         dataset = load_asset(asset, cfg=cfg, collection_id="c")
-        assert dataset.band_units == ["K"], (
+        assert dataset.bands.band_units == ["K"], (
             f"expected the configured unit, got {dataset.band_units}"
         )
 
@@ -1205,9 +1209,9 @@ class TestLoadAssetConfig:
         }
         cfg = {"c": {"assets": {"*": {"unit": "K"}}}}
         dataset = load_asset(item, "data", rescale=True, cfg=cfg)
-        assert dataset.band_units == ["K"], (
+        assert dataset.bands.band_units == ["K"], (
             f"expected the configured unit, got {dataset.band_units}"
         )
-        assert dataset.read_array()[1, 1] == pytest.approx(3.0), (
+        assert dataset.io.read_array()[1, 1] == pytest.approx(3.0), (
             "the packing must still be applied alongside the cfg override"
         )

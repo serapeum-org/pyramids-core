@@ -696,7 +696,7 @@ def _reproject_tail(ds: Dataset, output_crs: str | None, resample: str) -> Datas
     the WMTS path, resample the layer a second time.
     """
     if output_crs is not None:
-        ds = ds.to_crs(output_crs, method=resample)
+        ds = ds.spatial.to_crs(output_crs, method=resample)
     return ds
 
 

@@ -186,7 +186,7 @@ class TestRasterizeLikeGuards:
             method="linear",
             nodata=-9999.0,
         )
-        arr = out.read_array()
+        arr = out.io.read_array()
         assert arr.shape == (4, 4)
         interior = arr[arr != -9999.0]
         assert interior.size > 0
@@ -211,12 +211,12 @@ class TestRasterizeLikeGuards:
             triangles.mesh, FACE_VALUES, reference, method="nearest", nodata=-9999.0
         )
 
-        values = reprojected.read_array()
+        values = reprojected.io.read_array()
         assert set(np.unique(values)) <= {-9999.0, 10.0, 20.0}
         # Top-right cell centre is (100_000, 100_000) m: in range of a projected source point,
         # out of range of an unprojected one.
         assert values[0, 2] in (10.0, 20.0)
-        assert untouched.read_array()[0, 2] == -9999.0
+        assert untouched.io.read_array()[0, 2] == -9999.0
 
     def test_a_single_source_point_idw_fills_every_cell_in_range(self, one_quad):
         """One source point makes `cKDTree.query(k=1)` return 1-D arrays; IDW still fills."""
@@ -228,7 +228,7 @@ class TestRasterizeLikeGuards:
             method="idw",
             nodata=-9999.0,
         )
-        np.testing.assert_allclose(out.read_array(), np.full((2, 2), 7.0))
+        np.testing.assert_allclose(out.io.read_array(), np.full((2, 2), 7.0))
 
     def test_a_single_source_point_idw_honours_max_distance(self, one_quad):
         """The k=1 path still refuses cells whose only source lies beyond `max_distance`."""
@@ -241,7 +241,7 @@ class TestRasterizeLikeGuards:
             nodata=-9999.0,
             max_distance=0.1,
         )
-        np.testing.assert_array_equal(out.read_array(), np.full((2, 2), -9999.0))
+        np.testing.assert_array_equal(out.io.read_array(), np.full((2, 2), -9999.0))
 
 
 class TestInterpTimeGuards:

@@ -83,8 +83,8 @@ def _cmd_align(args: argparse.Namespace) -> int:
     _refuse_existing(args.output, args.overwrite)
     source = Dataset.read_file(args.input)
     reference = Dataset.read_file(args.reference)
-    aligned = source.align(reference, method=args.resampling)
-    aligned.to_file(args.output)
+    aligned = source.spatial.align(reference, method=args.resampling)
+    aligned.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -107,8 +107,8 @@ def _cmd_combine(args: argparse.Namespace) -> int:
     left = Dataset.read_file(args.a)
     right = Dataset.read_file(args.b)
     require_matching_crs(left, right)
-    combined = left.combine(right, _COMBINE_OPS[args.op], band=args.band)
-    combined.to_file(args.output)
+    combined = left.analysis.combine(right, _COMBINE_OPS[args.op], band=args.band)
+    combined.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -129,13 +129,13 @@ def _cmd_warped_view(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    view = ds.warped_view(
+    view = ds.spatial.warped_view(
         args.crs,
         method=args.resampling,
         cell_size=args.cell_size,
         bbox=tuple(args.bbox) if args.bbox else None,
     )
-    view.to_file(args.output)
+    view.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -154,8 +154,8 @@ def _cmd_wrap_longitude(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    wrapped = ds.wrap_longitude()
-    wrapped.to_file(args.output)
+    wrapped = ds.spatial.wrap_longitude()
+    wrapped.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -205,7 +205,7 @@ def _cmd_translate(args: argparse.Namespace) -> int:
     if args.resampling is not None:
         kwargs["resampleAlg"] = args.resampling
     ds = Dataset.read_file(args.input)
-    ds.translate(args.output, **kwargs)
+    ds.vector.translate(args.output, **kwargs)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -297,7 +297,7 @@ def _cmd_transect(args: argparse.Namespace) -> int:
     if not args.json:
         _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    profile = ds.transect(
+    profile = ds.analysis.transect(
         _parse_line(args.line), n=args.n, step=args.step, band=args.band
     )
     _write_transect(args, profile)
@@ -328,7 +328,9 @@ def _cmd_extract(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         values = np.atleast_2d(
             np.asarray(
-                ds.extract(band=args.band, exclude_value=args.exclude_value, mask=mask)
+                ds.analysis.extract(
+                    band=args.band, exclude_value=args.exclude_value, mask=mask
+                )
             )
         )
     rows = [

@@ -87,13 +87,13 @@ class TestDatasetPickle:
         ds = Dataset.read_file(tiny_tif)
         ds2 = copy.deepcopy(ds)
         assert ds2.rows == 4 and ds2.columns == 3
-        assert ds2.read_array().tolist() == ds.read_array().tolist()
+        assert ds2.io.read_array().tolist() == ds.io.read_array().tolist()
 
     def test_unpickled_array_contents_match(self, tiny_tif):
         ds = Dataset.read_file(tiny_tif)
-        original = ds.read_array()
+        original = ds.io.read_array()
         ds2 = pickle.loads(pickle.dumps(ds))
-        roundtripped = ds2.read_array()
+        roundtripped = ds2.io.read_array()
         np.testing.assert_array_equal(original, roundtripped)
 
     def test_roundtrip_on_subprocess(self, tiny_tif):

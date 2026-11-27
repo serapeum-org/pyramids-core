@@ -3793,7 +3793,7 @@ class _Selection(_Engine["NetCDF"]):
                 if tuple(right._band_dim_names) == tuple(left._band_dim_names)
                 else right.transpose(*left._band_dim_names)
             )
-            answer = bool(left.equals(ordered))
+            answer = bool(left.analysis.equals(ordered))
         except (AlignmentError, TypeError, _NotBroadcastable):
             # Only the three ways two cubes can be *incomparable* are answered `False`:
             # a different grid, an operand that is not a cube, and axes that cannot be
@@ -4098,7 +4098,7 @@ class _Selection(_Engine["NetCDF"]):
         items = _donor_variables(other)
         _assert_donors_fit(nc, items)
         for name, variable in items:
-            nc.set_variable(name, variable)
+            nc.variables.set(name, variable)
 
     def interp(self, method: str = "linear", **coords: Any) -> NetCDF:
         """Interpolate a band dimension onto new coordinate values.

@@ -913,7 +913,7 @@ class _IO(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> packed.offset = [1.5]
+              >>> packed.bands.offset = [1.5]
               >>> packed.read_array(unpack=False).tolist()
               [[100, 200], [300, -9999]]
               >>> packed.read_array(masked=True).tolist()
@@ -1969,7 +1969,7 @@ class _IO(_Engine["Dataset"]):
 
         def _read_one(window: Window) -> np.typing.NDArray:
             return np.asarray(
-                self._ds.read_array(band=band, window=window, threadsafe=True)
+                self._ds.io.read_array(band=band, window=window, threadsafe=True)
             )
 
         # The pool threads do not inherit thread-local GDAL config, so a caller
@@ -2235,6 +2235,84 @@ class _IO(_Engine["Dataset"]):
             columns=["x_offset", "y_offset", "window_xsize", "window_ysize"],
         )
         return df
+
+    def to_zarr(self, store, *, chunks=None, **kwargs):
+        """Serialise this Dataset to a Zarr store. See :meth:`Dataset.to_zarr` for the contract."""
+        # Inline to defer the optional lazy compute backend (pyramids-lazy); it raises the
+        # branded OptionalPackageDoesNotExist when no backend is installed.
+        from pyramids.base._compute_backend import require_compute_backend
+
+        resolved_chunks = chunks if chunks is not None else "auto"
+        return require_compute_backend().write_dataset_to_zarr(
+            self._ds, store, chunks=resolved_chunks, **kwargs
+        )
+
+    def to_stac_item(self, *args, **kwargs):
+        """Describe this raster as a STAC Item dict. See :meth:`Dataset.to_stac_item`."""
+        # Inline to avoid the dataset <-> stac import cycle at load time.
+        from pyramids.dataset._stac import to_stac_item
+
+        return to_stac_item(self._ds, *args, **kwargs)
+
+    def to_dataframe(self, *, bands=None, dropna: bool = False) -> pd.DataFrame:
+        """Hand the raster to pandas, one row per cell on a ``(band, y, x)`` MultiIndex.
+
+        See :meth:`Dataset.to_dataframe` for the full contract.
+        """
+        ds = self._ds
+        count = ds.band_count
+        if bands is None:
+            selected = list(range(count))
+        elif isinstance(bands, bool):
+            # bool subclasses int, so guard it before the int branch or True/False
+            # would silently select band 1/0 — almost certainly a caller mistake.
+            raise TypeError(
+                f"Dataset.to_dataframe() got a boolean bands={bands!r}; pass a band index, a "
+                "sequence of indices, or None for every band."
+            )
+        elif isinstance(bands, (int, np.integer)):
+            selected = [int(bands)]
+        else:
+            selected = [int(b) for b in bands]
+        if not selected:
+            raise ValueError(
+                "Dataset.to_dataframe() was given an empty bands= selection; pass "
+                f"bands=None for every band, or indices in 0..{count - 1}."
+            )
+        out_of_range = [b for b in selected if not 0 <= b < count]
+        if out_of_range:
+            raise ValueError(
+                f"Dataset.to_dataframe() got band index/indices {out_of_range} out of range "
+                f"for a {count}-band raster (valid 0..{count - 1})."
+            )
+        # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-indexed
+        # dataframe build expects, not the dimension-preserving default (#1241).
+        array = np.asarray(ds._read_array(squeeze=True), dtype="float64")
+        if array.ndim == 2:
+            array = array[np.newaxis, ...]
+        array = array[selected]
+        sentinels = ds.no_data_value
+        for i, band in enumerate(selected):
+            sentinel = sentinels[band]
+            # A NaN sentinel already reads back as NaN; only a real value needs masking.
+            # Guard the isnan by type — it raises on integer sentinels (e.g. uint64).
+            is_nan_sentinel = isinstance(sentinel, (float, np.floating)) and np.isnan(
+                sentinel
+            )
+            if sentinel is not None and not is_nan_sentinel:
+                array[i] = np.where(array[i] == sentinel, np.nan, array[i])
+        index = pd.MultiIndex.from_product(
+            [
+                selected,
+                list(np.asarray(ds.y, dtype="float64")),
+                list(np.asarray(ds.x, dtype="float64")),
+            ],
+            names=["band", "y", "x"],
+        )
+        frame = pd.DataFrame({"values": array.reshape(-1)}, index=index)
+        if dropna:
+            frame = frame.dropna(subset=["values"])
+        return frame
 
     @under_gdal_env
     def to_file(
@@ -2728,7 +2806,7 @@ class _IO(_Engine["Dataset"]):
 
                 ```
         """
-        raw = np.asarray(self._ds.read_array(band=band, window=window, unpack=False))
+        raw = np.asarray(self._ds.io.read_array(band=band, window=window, unpack=False))
         declared = self._ds.no_data_value
         if raw.ndim == 3:
             domain = np.stack(
@@ -3035,7 +3113,7 @@ class _IO(_Engine["Dataset"]):
                 result = self._repack(
                     result, out_scale, out_offset, out_dtype, sentinels
                 )
-            out.write_array(
+            out.io.write_array(
                 self._restore_gap(result, domain, sentinels),
                 band=band,
                 window=Window(xoff, yoff, xsize, ysize),
@@ -3229,7 +3307,7 @@ class _IO(_Engine["Dataset"]):
         for yoff in range(0, self._ds.rows, strip_rows):
             ysize = min(strip_rows, self._ds.rows - yoff)
             window = [0, yoff, cols, ysize]
-            strip = self._ds.read_array(band=band, window=window, unpack=unpack)
+            strip = self._ds.io.read_array(band=band, window=window, unpack=unpack)
             acc = fold(acc, strip, window)
         return acc
 
@@ -3775,7 +3853,7 @@ class _IO(_Engine["Dataset"]):
         source = (
             self._ds
             if self._ds.epsg == 3857
-            else self._ds.to_crs(3857, method=resampling)
+            else self._ds._to_crs(3857, method=resampling)
         )
         staged = None
         scratch_dir: str | None = None
@@ -3839,7 +3917,7 @@ class _IO(_Engine["Dataset"]):
                 # between the copy and the tiling -- an allocation failure in
                 # `CreateCopy`, an unsupported `BuildOverviews` -- is cleaned up
                 # too.
-                source = None
+                del source
                 if staged is not None:
                     staged.Close()
                     staged = None
@@ -3894,7 +3972,7 @@ class _IO(_Engine["Dataset"]):
                 does not know.
             FailedToSaveError: The resolved driver refused the write.
         """
-        elevation = np.asarray(source.read_array(band=band), dtype=float)
+        elevation = np.asarray(source._read_array(band=band), dtype=float)
         # The sentinel in the units `elevation` is in. The terrain encoder looks for it
         # to make those cells transparent; the stored `-9999` is never present in a
         # packed band's physical read, so the gap was encoded as opaque terrain.
@@ -4981,13 +5059,13 @@ class _IO(_Engine["Dataset"]):
         # time series, and the branch that gets here -- that difference measured in
         # seconds, not milliseconds.
         band_names = self._ds.band_names
-        band_units = self._ds.band_units
-        scale = self._ds.scale
-        offset = self._ds.offset
+        band_units = self._ds.bands.band_units
+        scale = self._ds._band_scale()
+        offset = self._ds._band_offset()
         overview.band_names = [band_names[index] for index in selection]
-        overview.band_units = [band_units[index] for index in selection]
-        overview.scale = [scale[index] for index in selection]
-        overview.offset = [offset[index] for index in selection]
+        overview.bands.band_units = [band_units[index] for index in selection]
+        overview.bands.scale = [scale[index] for index in selection]
+        overview.bands.offset = [offset[index] for index in selection]
         for position, index in enumerate(selection):
             source_band = self._ds._iloc(index)
             target_band = overview._iloc(position)

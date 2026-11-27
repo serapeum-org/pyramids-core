@@ -70,11 +70,11 @@ if TYPE_CHECKING:
 class _Variables(_Engine["NetCDF"]):
     """Variable add / remove / rename / write collaborator for :class:`NetCDF`.
 
-    Owns the bodies of the variable-mutation family. ``NetCDF`` wires one
-    instance per container as ``nc.varops`` (deliberately not ``variables`` —
-    that name is the read-side property returning the lazy variable dict) and
-    exposes thin façades, so ``nc.set_variable(...)`` and
-    ``nc.varops.set_variable(...)`` are equivalent. The companion constructor
+    Owns the bodies of the variable-mutation family. ``NetCDF`` holds one instance per
+    container as the internal ``nc._varops`` and surfaces its operations on the single
+    public ``nc.variables`` accessor: read with ``nc.variables[name]``, mutate with
+    ``nc.variables.add/remove/rename/set``. (``nc.varops`` remains as a deprecating alias
+    for the window.) The companion constructor
     :func:`from_array` is a module-level function (it builds a new
     container rather than mutating an existing one), reached through the
     ``NetCDF.from_array`` classmethod façade.
@@ -206,7 +206,7 @@ class _Variables(_Engine["NetCDF"]):
         # what belongs in it is the counts that recipe describes. `squeeze=True` keeps the
         # classic flattened `(bands, rows, cols)` the MDArray write expects; the band
         # dimensions are rebuilt from `band_dim_values` below, not from the array shape (#1241).
-        arr = dataset.read_array(unpack=False, squeeze=True)
+        arr = dataset._read_array(unpack=False, squeeze=True)
         gt: tuple[float, float, float, float, float, float] = dataset.geotransform
         data_dtype = gdal.ExtendedDataType.Create(numpy_to_gdal_dtype(arr))
         # Spatial coordinate dimensions must always be float64 to avoid

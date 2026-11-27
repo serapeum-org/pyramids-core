@@ -138,7 +138,7 @@ class TestSameGrid:
         """
         a = Dataset.read_file(_make_band(tmp_path, "a.tif", 1))
         b = Dataset.read_file(_make_band(tmp_path, "b.tif", 2))
-        assert a.same_grid(b) is True, "identical grids should compare equal"
+        assert a.spatial.same_grid(b) is True, "identical grids should compare equal"
 
     @pytest.mark.parametrize(
         "kw",
@@ -163,7 +163,7 @@ class TestSameGrid:
         """
         a = Dataset.read_file(_make_band(tmp_path, "a.tif", 1))
         b = Dataset.read_file(_make_band(tmp_path, "b.tif", 2, **kw))
-        assert a.same_grid(b) is False, (
+        assert a.spatial.same_grid(b) is False, (
             f"grids differing in {list(kw)} should be unequal"
         )
 
@@ -185,7 +185,7 @@ class TestFromBandFiles:
         ds = Dataset.from_band_files(band_files)
         assert ds.band_count == 3, f"expected 3 bands, got {ds.band_count}"
         assert ds.band_names == ["B2", "B3", "B4"], f"unexpected names: {ds.band_names}"
-        assert [int(ds.read_array(band=i).flat[0]) for i in range(3)] == [
+        assert [int(ds.io.read_array(band=i).flat[0]) for i in range(3)] == [
             2,
             3,
             4,
@@ -342,7 +342,7 @@ class TestFromBandFiles:
         )
         ds = Dataset.from_band_files([band_files[0], f32])
         assert ds.dtype == ["float32", "float32"], f"unexpected dtypes: {ds.dtype}"
-        assert float(ds.read_array(band=1).flat[0]) == pytest.approx(1.5), (
+        assert float(ds.io.read_array(band=1).flat[0]) == pytest.approx(1.5), (
             "float value truncated"
         )
 
@@ -460,7 +460,7 @@ class TestFromBandFiles:
             "B3",
             "B4",
         ], f"band names lost: {reloaded.band_names}"
-        assert [int(reloaded.read_array(band=i).flat[0]) for i in range(3)] == [
+        assert [int(reloaded.io.read_array(band=i).flat[0]) for i in range(3)] == [
             2,
             3,
             4,
@@ -573,7 +573,7 @@ class TestFromBandFiles:
             template.rows,
             template.columns,
         ), "result not on template grid"
-        assert float(ds.read_array(band=1).flat[0]) == pytest.approx(0.25), (
+        assert float(ds.io.read_array(band=1).flat[0]) == pytest.approx(0.25), (
             "float value lost"
         )
 
@@ -616,7 +616,7 @@ class TestFromBandFiles:
         )
         with pytest.warns(UserWarning, match="disagree on no-data"):
             ds = Dataset.from_band_files([p_a, p_b], align=True)
-        band1 = ds.read_array(band=1)
+        band1 = ds.io.read_array(band=1)
         uniques = sorted(set(band1.flatten().tolist()))
         assert ds.no_data_value == (0.0, 0.0), f"declared no-data: {ds.no_data_value}"
         assert 65535 not in uniques, (
@@ -658,7 +658,7 @@ class TestFromBandFiles:
             no_data_value=0,
         )
         ds = Dataset.from_band_files([p_a, p_b], align=True)
-        band1 = ds.read_array(band=1)
+        band1 = ds.io.read_array(band=1)
         uniques = sorted(set(band1.flatten().tolist()))
         assert ds.no_data_value == (0.0, 0.0), f"declared no-data: {ds.no_data_value}"
         assert uniques == [0, 9], f"aligned-agree case unexpected: {uniques}"
@@ -696,7 +696,7 @@ class TestFromBandFiles:
             no_data_value=0,
         )
         ds = Dataset.from_band_files([p_a, p_b], align=True, no_data_value=42)
-        band1 = ds.read_array(band=1)
+        band1 = ds.io.read_array(band=1)
         uniques = sorted(set(band1.flatten().tolist()))
         assert ds.no_data_value == (42.0, 42.0), f"declared no-data: {ds.no_data_value}"
         assert 0 not in uniques, f"source no-data leaked into fringe: {uniques}"
@@ -741,7 +741,7 @@ class TestFromBandFiles:
         assert not any("disagree on no-data" in str(w.message) for w in caught), (
             "spurious NaN-vs-NaN disagreement warning fired"
         )
-        band1 = ds.read_array(band=1)
+        band1 = ds.io.read_array(band=1)
         # The fringe must still be NaN (declared) and the centre = 2.5 (real).
         assert np.isnan(band1[0, 0]), f"fringe should be NaN, got {band1[0, 0]}"
         assert float(band1[5, 5]) == pytest.approx(2.5), f"centre lost: {band1[5, 5]}"

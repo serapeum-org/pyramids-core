@@ -534,7 +534,7 @@ class TestGribToCog:
             grib_1band_path, output=tmp_path / "var_cog.tif", variable=element or None
         )
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert np.allclose(arr, 280.0), "selected band values should reach the COG"
 
     def test_selects_element_by_string_writes_that_bands_data(
@@ -557,7 +557,7 @@ class TestGribToCog:
         )
         out = grib_to_cog(grib_path, output=tmp_path / "bbb_cog.tif", variable="BBB")
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert np.allclose(arr, 101325.0), "element BBB (band 2) data reaches COG"
 
     def test_int_band_selection_writes_that_bands_data(self, grib_path, tmp_path):
@@ -569,7 +569,7 @@ class TestGribToCog:
         """
         out = grib_to_cog(grib_path, output=tmp_path / "band2_cog.tif", variable=2)
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert cog_info(out).is_cog, "output should be a COG"
         assert np.allclose(arr, 101325.0), "band 2 values (101325) should reach COG"
 
@@ -605,7 +605,7 @@ class TestGribToCog:
                 grib_path, output=tmp_path / "warn_cog.tif", variable="TMP"
             )
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert np.allclose(arr, 280.0), "first matching band (280) should win"
 
     def test_preserves_native_crs(self, grib_1band_path, tmp_path):
@@ -998,7 +998,7 @@ class TestGribToCogFiltered:
             grib_levels_path, output=tmp_path / "lvl.tif", variable="TMP", level=50000
         )
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert np.allclose(arr, 250.0), "500 hPa band (250) should reach the COG"
 
     def test_number_selects_member(self, grib_ensemble_path, tmp_path):
@@ -1010,7 +1010,7 @@ class TestGribToCogFiltered:
         """
         out = grib_to_cog(grib_ensemble_path, output=tmp_path / "mem.tif", number=5)
         with Dataset.read_file(str(out)) as ds:
-            arr = ds.read_array()
+            arr = ds.io.read_array()
         assert np.allclose(arr, 281.0), "member 5 (281) should reach the COG"
 
     def test_no_match_raises(self, grib_levels_path, tmp_path):

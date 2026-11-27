@@ -44,7 +44,7 @@ the pixels they need via HTTP range requests. pyramids provides:
     ```python
     from pyramids.dataset import cog
 
-    ds.to_cog(
+    ds.cog.to_cog(
         "scene.tif",
         compression=cog.Compression(predictor=1),
         overviews=cog.Overviews(resampling="nearest"),
@@ -64,7 +64,7 @@ ds = Dataset.from_array(
     arr,
     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=0.001, epsg=4326),
 )
-ds.to_cog("scene.tif")
+ds.cog.to_cog("scene.tif")
 ```
 
 ### Compression
@@ -74,10 +74,10 @@ Grouped options live under the `cog` namespace; import it once:
 ```python
 from pyramids.dataset import cog
 
-ds.to_cog("scene.tif", compression=cog.Compression(compress="ZSTD", level=18))
-ds.to_cog("scene.tif", compression=cog.Compression(compress="LERC"), extra={"MAX_Z_ERROR": 0.001})
-ds.to_cog("scene.tif", compression=cog.Compression(compress="DEFLATE"))   # predictor auto-resolves per dtype
-ds.to_cog(
+ds.cog.to_cog("scene.tif", compression=cog.Compression(compress="ZSTD", level=18))
+ds.cog.to_cog("scene.tif", compression=cog.Compression(compress="LERC"), extra={"MAX_Z_ERROR": 0.001})
+ds.cog.to_cog("scene.tif", compression=cog.Compression(compress="DEFLATE"))   # predictor auto-resolves per dtype
+ds.cog.to_cog(
     "scene.tif",
     compression=cog.Compression(compress="DEFLATE", predictor=3),   # force the float predictor
 )
@@ -96,11 +96,11 @@ profile as the `compression` string (`deflate`, `zstd`, `lzw`, `packbits`,
 `jpeg`, `webp`, `lerc`, `lerc_deflate`, `lerc_zstd`, `raw`):
 
 ```python
-ds.to_cog("scene.tif", compression="zstd")     # COMPRESS=ZSTD, LEVEL=9
-ds.to_cog("scene.tif", compression="lerc_deflate")
+ds.cog.to_cog("scene.tif", compression="zstd")     # COMPRESS=ZSTD, LEVEL=9
+ds.cog.to_cog("scene.tif", compression="lerc_deflate")
 
 # A full Compression object is used directly (no profile expansion):
-ds.to_cog("scene.tif", compression=cog.Compression(compress="ZSTD", level=22))
+ds.cog.to_cog("scene.tif", compression=cog.Compression(compress="ZSTD", level=22))
 ```
 
 `jpeg` / `webp` enforce their dtype/band constraints (Byte; 1-3 / 3-4
@@ -109,7 +109,7 @@ bands) up-front with a clear error.
 ### Tile size and bigtiff
 
 ```python
-ds.to_cog(
+ds.cog.to_cog(
     "scene.tif",
     layout=cog.Layout(
         blocksize=256,        # power of 2 in [64, 4096]
@@ -125,7 +125,7 @@ The COG driver generates overviews itself; the `cog.Overviews` object
 exposes the knobs:
 
 ```python
-ds.to_cog(
+ds.cog.to_cog(
     "scene.tif",
     overviews=cog.Overviews(
         resampling="bilinear",   # default: dtype-aware (see below)
@@ -150,7 +150,7 @@ ds.to_cog(
 For serving to map/tile consumers:
 
 ```python
-ds.to_cog(
+ds.cog.to_cog(
     "web.tif",
     tiling=cog.Tiling(scheme="GoogleMapsCompatible", resampling="bilinear"),
 )
@@ -282,7 +282,7 @@ threads can see it.
     ```python
     with CloudConfig(extra=cdse_env):
         ds = Dataset.read_file("/vsis3/eodata/scene.jp2")
-        ds.to_file("/vsis3/my-own-bucket/out.tif")   # addressed to CDSE's host
+        ds.io.to_file("/vsis3/my-own-bucket/out.tif")   # addressed to CDSE's host
     ```
 
     The `to_file` runs inside the source's read scope, so the destination bucket
@@ -366,10 +366,10 @@ Or from a `Dataset` instance:
 
 ```python
 ds = Dataset.read_file("scene.tif")
-if ds.is_cog:
+if ds.cog.is_cog:
     print("is a COG")
 
-report = ds.validate_cog(strict=True)
+report = ds.cog.validate_cog(strict=True)
 ```
 
 ## Exporting a `DatasetCollection` as a COG stack
@@ -400,7 +400,7 @@ paths = dc.to_cog_stack(
 
 ```python
 # RGB-from-multiband, cast to uint8, set NoData=0:
-ds.to_cog(
+ds.cog.to_cog(
     "rgb.tif",
     bands=cog.BandSelection(indexes=[3, 2, 1], out_dtype="uint8", nodata=0),
 )
@@ -415,7 +415,7 @@ Useful when the source is a bare array that carries no band
 descriptions or palette:
 
 ```python
-ds.to_cog(
+ds.cog.to_cog(
     "landcover.tif",
     tags=cog.Tags(
         band_tags={0: {"name": "landcover", "units": "class"}},
@@ -434,7 +434,7 @@ To upload a COG straight to an object store without a temp file, use
 `to_cog_bytes` — it accepts the same keywords as `to_cog`:
 
 ```python
-blob = ds.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
+blob = ds.cog.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
 # e.g. boto3:  s3.put_object(Bucket="b", Key="scene.tif", Body=blob)
 ```
 
@@ -444,7 +444,7 @@ blob = ds.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
 even for a large remote COG:
 
 ```python
-info = ds.cog_info()              # or: from pyramids.dataset.cog import cog_info
+info = ds.cog.info()              # or: from pyramids.dataset.cog import cog_info
 info.compression                  # 'DEFLATE'
 info.predictor                    # '3'
 info.blocksize                    # (512, 512)
@@ -462,19 +462,19 @@ fetched:
 
 ```python
 # Whole-image thumbnail (long edge <= 1024 px):
-thumb = ds.preview(max_size=1024)
+thumb = ds.cog.preview(max_size=1024)
 
 # A window, decimated to an explicit output size. `bbox_crs` names the CRS of
 # the bbox; omit it when the bbox is already in the raster's own coordinates.
-part = ds.read_part(
+part = ds.cog.read_part(
     (12.4, 41.8, 12.6, 42.0), dst_width=256, dst_height=256, bbox_crs=4326
 )
 
 # A single coordinate value, reprojected from `point_crs` when it differs:
-value = ds.point(12.5, 41.9, point_crs=4326)
+value = ds.cog.point(12.5, 41.9, point_crs=4326)
 
 # A Web-Mercator XYZ/slippy-map tile (no morecantile dependency):
-tile = ds.read_tile(z=12, x=2191, y=1539, tilesize=256)
+tile = ds.cog.read_tile(z=12, x=2191, y=1539, tilesize=256)
 ```
 
 `read_part` / `read_tile` accept a `resampling` argument (`nearest`,
@@ -572,5 +572,5 @@ from pyramids.dataset import cog
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
-    ds.to_cog("x.tif", overviews=cog.Overviews(resampling="average"))
+    ds.cog.to_cog("x.tif", overviews=cog.Overviews(resampling="average"))
 ```

@@ -31,7 +31,7 @@ def fine_raster(tmp_path):
     Dataset.from_array(
         np.arange(16, dtype="float32").reshape(4, 4),
         geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -54,7 +54,7 @@ def coarse_rasters(tmp_path):
         Dataset.from_array(
             np.array([[0.0, 10.0], [20.0, 30.0]], dtype="float32"),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=2.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         paths.append(path)
     return paths[0], paths[1]
 
@@ -99,7 +99,7 @@ def _band(collection, index):
     Returns:
         np.ndarray: The band's pixels as float64.
     """
-    return np.asarray(collection.iloc(0).read_array(band=index), dtype="float64")
+    return np.asarray(collection.iloc(0).io.read_array(band=index), dtype="float64")
 
 
 class TestFromStacResampling:
@@ -293,7 +293,7 @@ class TestFromBandFilesResampling:
             [fine_raster, b04], align=True, resampling="nearest"
         )
         assert np.array_equal(
-            default.read_array(band=1), explicit.read_array(band=1)
+            default.io.read_array(band=1), explicit.io.read_array(band=1)
         ), "resampling=None must behave exactly like nearest neighbour"
 
     def test_a_scalar_method_resamples_every_band(self, fine_raster, coarse_rasters):
@@ -306,7 +306,7 @@ class TestFromBandFilesResampling:
         stacked = Dataset.from_band_files(
             [fine_raster, b04], align=True, resampling="bilinear"
         )
-        values = np.asarray(stacked.read_array(band=1), dtype="float64")
+        values = np.asarray(stacked.io.read_array(band=1), dtype="float64")
         assert not set(np.unique(values)) <= _DISCRETE, (
             f"the coarse band must be interpolated, got {np.unique(values)}"
         )
@@ -327,8 +327,8 @@ class TestFromBandFilesResampling:
             align=True,
             resampling={"continuous": "bilinear"},
         )
-        continuous = np.asarray(stacked.read_array(band=1), dtype="float64")
-        categorical = np.asarray(stacked.read_array(band=2), dtype="float64")
+        continuous = np.asarray(stacked.io.read_array(band=1), dtype="float64")
+        categorical = np.asarray(stacked.io.read_array(band=2), dtype="float64")
         assert not set(np.unique(continuous)) <= _DISCRETE, (
             f"the mapped band must be interpolated, got {np.unique(continuous)}"
         )
@@ -348,7 +348,7 @@ class TestFromBandFilesResampling:
         stacked = Dataset.from_band_files(
             [fine_raster, b04], align=True, resampling={"B04": "bilinear"}
         )
-        values = np.asarray(stacked.read_array(band=1), dtype="float64")
+        values = np.asarray(stacked.io.read_array(band=1), dtype="float64")
         assert stacked.band_names == ["fine", "B04"], (
             f"expected the derived names, got {stacked.band_names}"
         )

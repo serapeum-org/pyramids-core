@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import logging
 import math
+import os
+import sys
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Real
 from pathlib import Path
+from types import FrameType
 from typing import TYPE_CHECKING, Any, cast
 
 import geopandas as gpd
@@ -43,6 +46,7 @@ from pyramids.base._domain import (
     fits_dtype,
     free_no_data,
     is_nan_sentinel,
+    is_no_data,
     is_stored_no_data,
     occurs_in,
 )
@@ -69,10 +73,13 @@ from pyramids.dataset._plot_helpers import (
     render_array,
 )
 from pyramids.dataset.abstract_dataset import RasterBase
+from pyramids.dataset.ops._focal import focal_apply, focal_mean, focal_std
+from pyramids.dataset.ops._zonal import zonal_stats as _zonal_stats
 from pyramids.dataset.window import Window
 from pyramids.feature import FeatureCollection
 
 if TYPE_CHECKING:
+    import dask.array as da
     from cleopatra.basemap.geo import Basemap
     from cleopatra.glyphs.gridded.array_glyph import ArrayGlyph
     from matplotlib.axes import Axes
@@ -107,6 +114,39 @@ _POINT_WINDOW_MAX_PIXELS = 8_000_000
 # callable raises and falls back to the source type, so the reason has to surface
 # somewhere.
 logger = logging.getLogger(__name__)
+
+# The pyramids package root, used to count past first-party frames when a warning
+# must blame the user. `__file__` is .../pyramids/dataset/engines/analysis.py. The trailing
+# separator stops a sibling like `.../pyramids_app/` from matching, and `normcase` makes the
+# test case-insensitive where the filesystem is (Windows drive-letter case).
+_PYRAMIDS_ROOT = (
+    os.path.normcase(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+    + os.sep
+)
+
+
+def _caller_stacklevel() -> int:
+    """Return the `stacklevel` that makes a warning blame the first non-pyramids frame.
+
+    `combine` reaches the collision warning through a different number of internal frames
+    depending on the entry point (`ds.analysis.combine` directly, or `nc.combine` which adds
+    the `NetCDF.combine` override frame), so a fixed `stacklevel` cannot serve both. Walking
+    out to the first frame whose file is outside the package lands on the caller for every
+    route.
+
+    Returns:
+        int: The `stacklevel` for `warnings.warn`, measured from its caller.
+    """
+    frame: FrameType | None = sys._getframe(1)
+    level = 1
+    while frame is not None and os.path.normcase(
+        os.path.abspath(frame.f_code.co_filename)
+    ).startswith(_PYRAMIDS_ROOT):
+        frame = frame.f_back
+        level += 1
+    return level
 
 
 class _DeriveNoData:
@@ -172,6 +212,33 @@ def _point_sample_fill(gdal_band: gdal.Band) -> tuple[Any, np.dtype]:
 
 class _Analysis(_Engine["Dataset"]):
     """Mixin providing analysis, statistics, and data extraction operations for Dataset."""
+
+    def focal_mean(
+        self, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Focal (moving-window) mean over a square neighbourhood of the given radius."""
+        return focal_mean(self._ds, radius=radius, chunks=chunks, band=band)
+
+    def focal_std(
+        self, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Focal (moving-window) standard deviation over a square neighbourhood."""
+        return focal_std(self._ds, radius=radius, chunks=chunks, band=band)
+
+    def focal_apply(
+        self, func, radius: int = 1, *, chunks=None, band: int = 0
+    ) -> np.ndarray | da.Array:
+        """Apply ``func`` over a square moving window of the given radius."""
+        return focal_apply(self._ds, func, radius=radius, chunks=chunks, band=band)
+
+    def zonal_stats(self, *args: Any, **kwargs: Any) -> Any:
+        """Group this dataset's values by zones and reduce them per zone.
+
+        See :meth:`Dataset.zonal_stats` for the full argument contract (polygon or
+        raster-category ``zones``, ``stats``, ``method``, ``band``, ``exclude_value``,
+        ``raw_values``).
+        """
+        return _zonal_stats(self._ds, *args, **kwargs)
 
     def stats(
         self,
@@ -298,7 +365,7 @@ class _Analysis(_Engine["Dataset"]):
               ...     no_data_value=-9999,
               ... )
               >>> packed.scale = [0.01]
-              >>> packed.offset = [1.5]
+              >>> packed.bands.offset = [1.5]
               >>> packed.stats(band=0, approx_ok=False).loc["Band_1"].round(6).tolist()
               [2.5, 4.5, 3.5, 0.816497]
               >>> float(packed.read_array(masked=True).max())
@@ -313,7 +380,7 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         dst: Dataset | None = None
         if mask is not None:
-            dst = self._ds.crop(mask, touch=True)
+            dst = self._ds._crop(mask, touch=True)
 
         if band is None:
             df = pd.DataFrame(
@@ -990,7 +1057,7 @@ class _Analysis(_Engine["Dataset"]):
             self._ds._update_inplace(dst_obj.raster)
             # The values are physical now, so the recipe is spent (rule 2).
             self._ds._spend_packing()
-            return None
+            return self._ds
         return dst_obj
 
     def _domain_read(self, band: int, **read_kwargs) -> tuple[Any, Any]:
@@ -1016,7 +1083,7 @@ class _Analysis(_Engine["Dataset"]):
             tuple: `(values, domain_mask)` — the physical array, and `True` wherever a
                 cell holds a real measurement.
         """
-        raw = np.asarray(self._ds.read_array(band=band, unpack=False, **read_kwargs))
+        raw = np.asarray(self._ds.io.read_array(band=band, unpack=False, **read_kwargs))
         domain_mask = ~is_stored_no_data(raw, self._ds.no_data_value[band])
         values = apply_unpack(raw, *self._ds._effective_packing(band))
         return values, domain_mask
@@ -1689,14 +1756,14 @@ class _Analysis(_Engine["Dataset"]):
             raise ValueError("calc supports at most 26 input rasters (bound A..Z).")
         template = self._ds
         for other in others:
-            if not template.same_grid(other, compare_crs=bool(other.crs)):
+            if not template.spatial.same_grid(other, compare_crs=bool(other.crs)):
                 raise AlignmentError(
                     "a calc operand does not share this dataset's grid; align the "
                     "inputs first (Dataset.align) and re-run."
                 )
         names = [chr(ord("A") + index) for index in range(len(datasets))]
         variables = {
-            name: np.asarray(ds.read_array(squeeze=True))
+            name: np.asarray(ds._read_array(squeeze=True))
             for name, ds in zip(names, datasets)
         }
         out = np.asarray(eval_calc(expr, variables))
@@ -2086,7 +2153,7 @@ class _Analysis(_Engine["Dataset"]):
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` raster view this
         # band-wise pipeline (and the GDAL write it feeds) relies on, rather than the
         # dimension-preserving default a NetCDF variable now returns (#1241).
-        raw = np.asarray(ds.read_array(band=band, unpack=False, squeeze=True))
+        raw = np.asarray(ds._read_array(band=band, unpack=False, squeeze=True))
         sentinels = (
             [ds.no_data_value[band]] if band is not None else list(ds.no_data_value)
         )
@@ -2241,17 +2308,11 @@ class _Analysis(_Engine["Dataset"]):
                     "`func` computed, so those cells read back as gaps; pass a "
                     "`no_data_value=` the result cannot hold",
                     NoDataCollisionWarning,
-                    # 5 frames out is the caller of `Dataset.combine`: warn ->
-                    # _resolve_combined_no_data -> _Analysis._combine ->
-                    # Analysis.combine -> Dataset.combine -> user. Reached as
-                    # `ds.analysis.combine` the facade frame is absent, so the
-                    # same count lands one frame too far -- on whatever called
-                    # the caller. A single constant cannot serve both entry
-                    # points; the facade is the documented one, so it is the one
-                    # that is right. `_fold`'s callers never reach here: the
-                    # operators always let it derive its sentinel, and only an
-                    # explicit one can collide.
-                    stacklevel=5,
+                    # The number of internal frames between here and the user differs by
+                    # entry point: `ds.analysis.combine` is 4 out, while `nc.combine` routes
+                    # through the `NetCDF.combine` override and is 5. Walk out to the first
+                    # non-pyramids frame so the warning blames the caller on either route.
+                    stacklevel=_caller_stacklevel(),
                 )
         elif np.issubdtype(dtype, np.floating):
             sentinel = np.nan
@@ -2415,7 +2476,7 @@ class _Analysis(_Engine["Dataset"]):
             self._ds._update_inplace(dst.raster)
             # The fill wrote physical values, so the recipe is spent (rule 2).
             self._ds._spend_packing()
-            return None
+            return self._ds
         return dst
 
     def where(
@@ -3573,7 +3634,7 @@ class _Analysis(_Engine["Dataset"]):
         left, right = int(columns[0]), int(columns[-1]) + 1
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # crop-and-rebuild expects, not the dimension-preserving default (#1241).
-        cells = np.asarray(result.read_array(unpack=False, squeeze=True))
+        cells = np.asarray(result._read_array(unpack=False, squeeze=True))
         bands = self._surviving_bands(selected, cells)
         block = np.ascontiguousarray(
             cells[top:bottom, left:right]
@@ -3813,7 +3874,7 @@ class _Analysis(_Engine["Dataset"]):
             exclude_list = build_exclude_list(no_data_value, exclude_value)
             values = self._extract_streamed(band, exclude_list)
         else:
-            arr = self._ds.read_array(band=band)
+            arr = self._ds.io.read_array(band=band)
             geom_types = set(getattr(mask, "geom_type", []))
             # map(str, ...) — missing geometries yield float nan, which is not
             # orderable against the str type names.
@@ -3825,7 +3886,7 @@ class _Analysis(_Engine["Dataset"]):
                     "Dataset.crop(); explode MultiPoint masks into single points "
                     "first."
                 )
-            indices = self._ds.nearest_cell(mask)
+            indices = self._ds.cell.nearest_cell(mask)
             if arr.ndim > 2:
                 values = arr[:, indices[:, 0], indices[:, 1]]
             else:
@@ -4897,7 +4958,7 @@ class _Analysis(_Engine["Dataset"]):
             DeprecationWarning,
             stacklevel=2,
         )
-        gdf = self._ds.zonal_stats(
+        gdf = self._ds._zonal_stats(
             classes_map,
             stats=("count",),
             band=band if band is not None else 0,
@@ -5238,8 +5299,32 @@ class _Analysis(_Engine["Dataset"]):
 
         return gdf
 
+    def normalize(self) -> np.typing.NDArray:
+        """Rescale this raster's values into the `0.0`-`1.0` range, excluding no-data.
+
+        Reads the raster, masks each band's physical no-data to `NaN` first (so stored
+        sentinels neither pollute the global min/max nor appear as data, and stay `NaN`
+        in the result), then rescales against one global min/max across every band.
+
+        Returns:
+            np.ndarray: The values rescaled to `0.0`-`1.0`, with no-data cells as `NaN`.
+        """
+        arr = np.array(self._ds.io.read_array(), dtype="float64")
+        if arr.ndim == 2:
+            no_data = self._physical_no_data(0)
+            if no_data is not None:
+                arr = np.where(is_no_data(arr, no_data), np.nan, arr)
+        else:
+            for band in range(arr.shape[0]):
+                no_data = self._physical_no_data(band)
+                if no_data is not None:
+                    arr[band] = np.where(
+                        is_no_data(arr[band], no_data), np.nan, arr[band]
+                    )
+        return self._normalize_array(arr)
+
     @staticmethod
-    def normalize(array: np.ndarray) -> np.typing.NDArray:
+    def _normalize_array(array: np.ndarray) -> np.typing.NDArray:
         """Normalize a numpy array into the 0.0-1.0 range, ignoring NaNs.
 
         NaN cells are excluded from the min/max (via `np.nanmin` / `np.nanmax`)
@@ -5511,13 +5596,13 @@ class _Analysis(_Engine["Dataset"]):
         cols = self._ds.columns
         total = rows * cols
         if max_samples is None or total <= max_samples:
-            return cast(np.ndarray, self._ds.read_array(band=band, unpack=unpack))
+            return cast(np.ndarray, self._ds.io.read_array(band=band, unpack=unpack))
         factor = (total / max_samples) ** 0.5
         out_rows = max(1, round(rows / factor))
         out_cols = max(1, round(cols / factor))
         return cast(
             np.ndarray,
-            self._ds.read_array(
+            self._ds.io.read_array(
                 band=band,
                 out_shape=(out_rows, out_cols),
                 resampling="nearest",
@@ -5774,10 +5859,10 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         validate_band_index(reference_band, reference.band_count)
 
-        source = np.asarray(self._ds.read_array(band=band), dtype=float).reshape(
+        source = np.asarray(self._ds.io.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
-        ref = np.asarray(reference.read_array(band=reference_band), dtype=float)
+        ref = np.asarray(reference._read_array(band=reference_band), dtype=float)
 
         # The arrays are physical (`read_array`), so the sentinel masked against them must be
         # physical too -- `no_data_value` is stored, and on a CF-packed band it never appears in
@@ -5892,7 +5977,7 @@ class _Analysis(_Engine["Dataset"]):
             )
         validate_band_index(band, self._ds.band_count)
 
-        source = np.asarray(self._ds.read_array(band=band), dtype=float).reshape(
+        source = np.asarray(self._ds.io.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
         # Physical sentinel for a physical read: a stored `no_data_value` never appears in the
@@ -6176,8 +6261,8 @@ class _Analysis(_Engine["Dataset"]):
             # A single colour has no magnitude scale, so a magnitude colorbar
             # would be misleading; default it off (an explicit add_colorbar wins).
             kwargs.setdefault("add_colorbar", False)
-        u = self._ds.read_array(band=u_band)
-        v = self._ds.read_array(band=v_band)
+        u = self._ds.io.read_array(band=u_band)
+        v = self._ds.io.read_array(band=v_band)
         x = self._ds.x
         y = self._ds.y
         # matplotlib's ``streamplot`` requires strictly-increasing 1-D
@@ -6534,7 +6619,7 @@ class _Analysis(_Engine["Dataset"]):
             else list(animation_axis_values)
         )
         require_one_label_per_frame(len(labels), len(selected))
-        full = np.asarray(self._ds.read_array(band=None))
+        full = np.asarray(self._ds.io.read_array(band=None))
         if full.ndim == 2:
             # A single-band raster reads back 2-D, and `bands=[0, 0]` passes the frame-count
             # check above by repeating that band - so this is reachable, not defensive.
@@ -6590,14 +6675,14 @@ class _Analysis(_Engine["Dataset"]):
         else:
             read_band = None if rgb is not None else band
             if overview:
-                arr = self._ds.read_overview_array(
+                arr = self._ds.io.read_overview_array(
                     band=read_band,
                     overview_index=(
                         overview_index if overview_index is not None else 0
                     ),
                 )
             else:
-                arr = self._ds.read_array(band=read_band)
+                arr = self._ds.io.read_array(band=read_band)
         return arr
 
     def _read_plot_lazy_array(self, band: int, chunks: Any) -> np.ndarray:
@@ -6609,6 +6694,9 @@ class _Analysis(_Engine["Dataset"]):
         ``(-1, rows, cols)`` to match the eager ``read_array`` band flattening
         before ``band`` indexes it; only that band's chunks are computed.
         """
+        # NOT `io.read_array`: the `chunks=` lazy routing is `NetCDF.read_array`'s
+        # override (it builds the dask-backed variable read); the IO engine's read
+        # has no lazy backend hook and would raise OptionalPackageDoesNotExist.
         lazy = self._ds.read_array(chunks=chunks)
         if not is_lazy(lazy):
             result = lazy if band is None else lazy[band]

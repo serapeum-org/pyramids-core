@@ -18,8 +18,8 @@ from pyramids.dataset import Dataset
 
 ds = Dataset.read_file("dem.tif")
 ds.shape, ds.band_count, ds.epsg, ds.cell_size   # grid + georeferencing
-arr = ds.read_array()                            # (bands, rows, cols) NumPy array
-ds.to_file("copy.tif")                           # driver inferred from the extension
+arr = ds.io.read_array()                            # (bands, rows, cols) NumPy array
+ds.io.to_file("copy.tif")                           # driver inferred from the extension
 ```
 
 Useful attributes: `shape`, `rows`, `columns`, `band_count`, `band_names`, `epsg`, `crs`,

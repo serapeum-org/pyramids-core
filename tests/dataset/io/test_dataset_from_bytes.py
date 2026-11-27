@@ -60,9 +60,9 @@ class TestDatasetFromBytes:
         assert ds.geotransform == ref.geotransform, "geotransform mismatch"
         assert ds.no_data_value == ref.no_data_value, "no-data mismatch"
         assert ds.band_names == ref.band_names, "band names mismatch"
-        assert np.array_equal(ds.read_array(), ref.read_array(), equal_nan=True), (
-            "pixel values differ from read_file"
-        )
+        assert np.array_equal(
+            ds.io.read_array(), ref.io.read_array(), equal_nan=True
+        ), "pixel values differ from read_file"
 
     def test_round_trip_matches_read_file_multi_band(self, multi_band_bytes: bytes):
         """A multi-band GeoTIFF round-trips identically to ``read_file``.
@@ -77,9 +77,9 @@ class TestDatasetFromBytes:
         ref = Dataset.read_file(MULTI_BAND)
         ds = Dataset.from_bytes(multi_band_bytes)
         assert ds.band_count == ref.band_count, "band count mismatch"
-        assert np.array_equal(ds.read_array(), ref.read_array(), equal_nan=True), (
-            "multi-band pixel values differ from read_file"
-        )
+        assert np.array_equal(
+            ds.io.read_array(), ref.io.read_array(), equal_nan=True
+        ), "multi-band pixel values differ from read_file"
 
     def test_returns_dataset_instance(self, single_band_bytes: bytes):
         """The result is a :class:`Dataset` (not a bare ``gdal.Dataset``).
@@ -168,10 +168,10 @@ class TestDatasetFromBytes:
         """
         ds = Dataset.from_bytes(single_band_bytes, read_only=False)
         assert ds.access == "write", f"expected write, got {ds.access!r}"
-        arr = ds.read_array(band=0)
+        arr = ds.io.read_array(band=0)
         ds.raster.GetRasterBand(1).WriteArray(np.zeros_like(arr))
         ds.raster.FlushCache()
-        assert np.array_equal(ds.read_array(band=0), np.zeros_like(arr)), (
+        assert np.array_equal(ds.io.read_array(band=0), np.zeros_like(arr)), (
             "write did not take effect"
         )
 
@@ -261,11 +261,11 @@ class TestDatasetFromBytes:
         """
         out = tmp_path / "anchored.tif"
         ds = Dataset.from_bytes(single_band_bytes)
-        original = ds.read_array()
-        ds.to_file(str(out))
+        original = ds.io.read_array()
+        ds.io.to_file(str(out))
         assert out.exists(), "to_file did not create the output file"
         reloaded = Dataset.read_file(str(out))
-        assert np.array_equal(reloaded.read_array(), original, equal_nan=True), (
+        assert np.array_equal(reloaded.io.read_array(), original, equal_nan=True), (
             "disk copy differs"
         )
 
@@ -325,7 +325,9 @@ class TestDatasetFromBytes:
         """
         with Dataset.from_bytes(single_band_bytes) as ds:
             vsi_path = ds._vsimem_path
-            assert ds.read_array() is not None, "dataset unusable inside the with-block"
+            assert ds.io.read_array() is not None, (
+                "dataset unusable inside the with-block"
+            )
         assert ds.raster is None, "context manager exit should have closed the dataset"
         del ds
         gc.collect()

@@ -28,6 +28,8 @@ from pyramids.base._utils import (
     numpy_to_gdal_dtype,
     require_cleopatra,
 )
+from pyramids.base.crs import crs_spec
+from pyramids.base.georeference import GeoReference
 from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
 
 if TYPE_CHECKING:
@@ -39,6 +41,7 @@ from pyramids.dataset.engines._validate import (
     validate_band_index,
     validate_one_based_band,
 )
+from pyramids.dataset.ops.units import convert_array
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +80,66 @@ def _is_read_only_error(error: BaseException) -> bool:
 
 
 class _Bands(_Engine["Dataset"]):
+    def convert_units(self, target: str, band: int | None = None) -> Dataset:
+        """Convert band values to ``target`` units, returning a new Dataset.
+
+        Transforms the physical values with the affine conversion table in
+        :func:`pyramids.dataset.ops.units.convert_array` and records the new unit on the
+        result (a new in-memory ``float64`` Dataset; the source is untouched). No-data
+        cells, found in the stored counts, keep their declared ``no_data_value``. See
+        :meth:`Dataset.convert_units` for the full contract.
+        """
+        # Inline import: Dataset lives in the sibling module that imports this engine,
+        # so a top-level import would close the dataset <-> engines cycle.
+        from pyramids.dataset.dataset import Dataset
+
+        ds = self._ds
+        if band is not None and not 0 <= band < ds.band_count:
+            raise ValueError(
+                f"band {band} is out of range for a {ds.band_count}-band dataset."
+            )
+
+        band_indices = range(ds.band_count) if band is None else [band]
+        source_units = list(self.band_units)
+        new_units = list(self.band_units)
+
+        # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this per-band
+        # unit conversion expects, not the dimension-preserving default (#1241).
+        full = ds._read_array(squeeze=True)
+        # Gaps are found in the stored counts, where the sentinel lives; the values
+        # converted are the physical ones.
+        stored = np.asarray(ds._read_array(unpack=False, squeeze=True))
+        single_band = ds.band_count == 1
+        stack = full[np.newaxis, ...] if single_band else full
+        stored_stack = stored[np.newaxis, ...] if single_band else stored
+        out = stack.astype("float64")
+        no_data = ds.no_data_value
+
+        for index in band_indices:
+            layer = out[index]
+            nodata_value = no_data[index]
+            mask = (
+                stored_stack[index] == nodata_value
+                if nodata_value is not None
+                else None
+            )
+            converted = convert_array(layer, source_units[index], target)
+            if mask is not None:
+                converted[mask] = nodata_value
+            out[index] = converted
+            new_units[index] = target
+
+        result_array = out[0] if single_band else out
+        # `Dataset.from_array`, not a subclass override: a unit conversion yields a plain
+        # raster in every case, so the base constructor is the right one to name.
+        result = Dataset.from_array(
+            result_array,
+            no_data_value=list(no_data),
+            geo_ref=GeoReference(geo=ds.geotransform, epsg=crs_spec(ds.epsg, ds.crs)),
+        )
+        result.bands.band_units = new_units
+        return result
+
     """Mixin providing band metadata, attribute table, and color table operations."""
 
     def apply_names(self, names: list | None, *, source: str) -> bool:
@@ -457,7 +520,7 @@ class _Bands(_Engine["Dataset"]):
             - Add the new band to the dataset inplace:
 
               ```python
-              >>> dataset.add_band(array, unit="m", attribute_table=None, inplace=True)
+              >>> _ = dataset.bands.add_band(array, unit="m", attribute_table=None, inplace=True)
               >>> print(dataset)  # doctest: +NORMALIZE_WHITESPACE
               <BLANKLINE>
                           Top Left Corner: (0.0, 0.0)
@@ -488,7 +551,7 @@ class _Bands(_Engine["Dataset"]):
               ...     "Color": ["#008000", "#0000FF", "#808080"],
               ... }
               >>> df = pd.DataFrame(data)
-              >>> dataset.add_band(array, unit="m", attribute_table=df, inplace=True)
+              >>> _ = dataset.bands.add_band(array, unit="m", attribute_table=df, inplace=True)
 
               ```
 
@@ -533,7 +596,7 @@ class _Bands(_Engine["Dataset"]):
 
         if inplace:
             self._ds._update_inplace(src, self._ds.access)
-            return None
+            return self._ds
         else:
             return self._ds.__class__(src, self._ds.access)
 
@@ -676,7 +739,7 @@ class _Bands(_Engine["Dataset"]):
         if not lazy:
             # The MEM path drops the unit type; re-apply it per selected band (a
             # harmless no-op on the VRT path, which carries units natively).
-            src_units = self._ds.band_units
+            src_units = self._ds.bands.band_units
             for position, one_based in enumerate(indices):
                 out.GetRasterBand(position + 1).SetUnitType(
                     src_units[one_based - 1] or ""
@@ -2070,7 +2133,7 @@ class _Bands(_Engine["Dataset"]):
 
         if inplace:
             self._ds._update_inplace(new_dataset.raster)
-            return None
+            return self._ds
         return new_dataset
 
     def _swap_no_data_tiled(
@@ -2104,7 +2167,7 @@ class _Bands(_Engine["Dataset"]):
             # `unpack=False`: the sentinel being located and the one written in its
             # place are both stored values, and the destination band holds the stored
             # dtype -- a physical read would match nothing and truncate on write.
-            tile = self._ds.read_array(
+            tile = self._ds.io.read_array(
                 band=band, window=[xoff, yoff, xsize, ysize], unpack=False
             )
             mask = is_no_data(tile, band_old_value)

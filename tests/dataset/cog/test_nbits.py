@@ -319,9 +319,9 @@ class TestCogWriteNbits:
         """
         src = _nbits_source(value, np_dtype, nbits, no_data_value=0)
         out = tmp_path / "nb.tif"
-        src.to_file(out, driver="COG")
+        src.io.to_file(out, driver="COG")
         reopened = Dataset.read_file(out)
-        peak = int(reopened.read_array().max())
+        peak = int(reopened.io.read_array().max())
         reopened.close()
         src.close()
         assert peak == value, f"value clipped to {peak}; expected {value}"
@@ -341,12 +341,12 @@ class TestCogWriteNbits:
         """
         src = _nbits_source(3000, np.uint16, 12, no_data_value=0)
         out = tmp_path / "nb12_forced.tif"
-        src.to_file(out, driver="COG", creation_options=["NBITS=12"])
+        src.io.to_file(out, driver="COG", creation_options=["NBITS=12"])
         src.close()
         reopened = Dataset.read_file(out)
         band = reopened.raster.GetRasterBand(1)
         applied_nbits = band.GetMetadataItem("NBITS", "IMAGE_STRUCTURE")
-        peak = int(reopened.read_array().max())
+        peak = int(reopened.io.read_array().max())
         reopened.close()
         assert applied_nbits == "12", f"caller NBITS not applied, got {applied_nbits!r}"
         assert peak == 3000, f"in-domain value should round-trip, got {peak}"

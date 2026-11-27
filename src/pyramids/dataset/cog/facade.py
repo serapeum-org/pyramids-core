@@ -494,7 +494,7 @@ def write_cog(
     # there. write_cog only normalises the input and forwards the caller's
     # overrides as `extra`, so write_cog and a direct ds.to_cog(...) produce
     # identical output for identical input.
-    output_path = ds.to_cog(output, extra=options or None)
+    output_path = ds.cog.to_cog(output, extra=options or None)
 
     report: ValidationReport | None = None
     if validate:

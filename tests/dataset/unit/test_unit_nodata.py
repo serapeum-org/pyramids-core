@@ -9,6 +9,8 @@ from pyramids.base._errors import NoDataValueError, ReadOnlyError
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
 from pyramids.dataset.abstract_dataset import DEFAULT_NO_DATA_VALUE
+from pyramids.dataset.engines.bands import _Bands
+from pyramids.dataset.engines.io import _IO
 
 pytestmark = pytest.mark.core
 
@@ -143,7 +145,7 @@ class TestFillGaps:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = src_ds.fill_gaps(mask_ds, src_arr.copy())
+        result = src_ds.spatial.fill_gaps(mask_ds, src_arr.copy())
         # The gap cell should now be filled (not nodata)
         assert not np.isclose(result[1, 1], nd, rtol=0.001), (
             "The gap cell (1,1) should have been filled"
@@ -187,14 +189,14 @@ class TestFill:
     def test_fill_value(self, single_band_dataset):
         """fill should replace all domain cells with the given value."""
         filled = single_band_dataset.fill(42)
-        arr = filled.read_array()
+        arr = filled.io.read_array()
         assert np.all(arr == 42), "All cells should be 42 after fill"
 
     def test_fill_inplace(self, single_band_dataset):
         """fill(inplace=True) should modify the dataset in place."""
         result = single_band_dataset.fill(99, inplace=True)
         assert result is single_band_dataset, "inplace fill should return self"
-        arr = single_band_dataset.read_array()
+        arr = single_band_dataset.io.read_array()
         assert np.all(arr == 99), "All cells should be 99 after inplace fill"
 
 
@@ -245,8 +247,8 @@ class TestChangeNoDataValueNan:
             no_data_value=np.nan,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        new_ds = ds.change_no_data_value(-9999.0, old_value=None)
-        result = new_ds.read_array()
+        new_ds = ds.bands.change_no_data_value(-9999.0, old_value=None)
+        result = new_ds.io.read_array()
         assert np.isclose(result[0, 0], -9999.0), "NaN cells should now be -9999"
         assert np.isclose(result[0, 1], 2.0), "Valid cells should remain unchanged"
 
@@ -258,8 +260,8 @@ class TestChangeNoDataValueNan:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        new_ds = ds.change_no_data_value([-1.0], old_value=-9999.0)
-        result = new_ds.read_array()
+        new_ds = ds.bands.change_no_data_value([-1.0], old_value=-9999.0)
+        result = new_ds.io.read_array()
         assert np.isclose(result[0, 0], -1.0), (
             "Old nodata cells should be replaced with list"
         )
@@ -272,8 +274,8 @@ class TestChangeNoDataValueNan:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        new_ds = ds.change_no_data_value(-1.0, old_value=[-9999.0])
-        result = new_ds.read_array()
+        new_ds = ds.bands.change_no_data_value(-1.0, old_value=[-9999.0])
+        result = new_ds.io.read_array()
         assert np.isclose(result[0, 0], -1.0), (
             "Old nodata cells should be replaced with list old"
         )
@@ -297,8 +299,8 @@ class TestChangeNoDataValueNan:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        new_ds = ds.change_no_data_value(-1.0, old_value=[-9999.0, -8888.0])
-        result = new_ds.read_array()
+        new_ds = ds.bands.change_no_data_value(-1.0, old_value=[-9999.0, -8888.0])
+        result = new_ds.io.read_array()
         assert np.allclose(result[0], [[-1.0, 2.0], [3.0, -1.0]]), (
             "Band 0 replaced by its own sentinel"
         )
@@ -331,7 +333,7 @@ class TestChangeNoDataValueNan:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with pytest.raises(NoDataValueError, match=rf"{expected} must be .* length"):
-            ds.change_no_data_value(**kwargs)
+            ds.bands.change_no_data_value(**kwargs)
 
 
 class TestFillNanNodata:
@@ -346,7 +348,7 @@ class TestFillNanNodata:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         filled = ds.fill(42)
-        result = filled.read_array()
+        result = filled.io.read_array()
         non_nan = result[~np.isnan(result)]
         assert np.all(non_nan == 42), "Non-NaN cells should be 42 after fill"
 
@@ -360,7 +362,7 @@ class TestFillNanNodata:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         filled = ds.fill(10)
-        result = filled.read_array()
+        result = filled.io.read_array()
         assert np.isclose(result[0, 1], 10.0), "Valid cell should be set to 10"
 
 
@@ -379,7 +381,7 @@ class TestFillNoneNodata:
         # fallback branch that infers the sentinel from NaN cells
         ds._no_data_value = [None]
         filled = ds.fill(42)
-        result = filled.read_array()
+        result = filled.io.read_array()
         # Non-NaN cells should be set to 42
         assert np.isclose(result[0, 1], 42.0), (
             "Valid cell should be 42 after fill with None nodata"
@@ -441,7 +443,7 @@ class TestSetNoDataValueMocked:
             "dataset opened in read-only mode."
         )
         with patch.object(
-            ds.bands, "_set_no_data_value_backend", side_effect=RuntimeError(err_msg)
+            _Bands, "_set_no_data_value_backend", side_effect=RuntimeError(err_msg)
         ):
             with pytest.raises(ReadOnlyError):
                 ds.bands._set_no_data_value([-1234.0])
@@ -466,7 +468,7 @@ class TestSetNoDataValueMocked:
             original(band, val)
 
         with patch.object(
-            ds.bands,
+            _Bands,
             "_set_no_data_value_backend",
             side_effect=side_effect,
         ):
@@ -492,7 +494,7 @@ class TestSetNoDataValueMocked:
             original(band, val)
 
         with patch.object(
-            ds.bands,
+            _Bands,
             "_set_no_data_value_backend",
             side_effect=side_effect,
         ):
@@ -577,11 +579,11 @@ class TestChangeNoDataValueTypeError:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Return array that raises TypeError on assignment."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
 
             def raise_type_error(key, value):
@@ -591,9 +593,9 @@ class TestChangeNoDataValueTypeError:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
-                ds.change_no_data_value(-1.0, old_value=-9999.0)
+                ds.bands.change_no_data_value(-1.0, old_value=-9999.0)
 
 
 class TestChangeNoDataValueStreaming:
@@ -617,7 +619,7 @@ class TestChangeNoDataValueStreaming:
                 top_left_corner=(0.0, 300.0), cell_size=0.05, epsg=4326
             ),
         )
-        result = ds.change_no_data_value(-1.0, old_value=-9999.0).read_array()
+        result = ds.bands.change_no_data_value(-1.0, old_value=-9999.0).io.read_array()
         expected = arr.copy()
         expected[expected == -9999.0] = -1.0
         np.testing.assert_array_equal(
@@ -647,7 +649,7 @@ class TestChangeNoDataValueStreaming:
         band.SetColorTable(ct)
         ds = Dataset(mem)
 
-        result = ds.change_no_data_value(255, old_value=0)
+        result = ds.bands.change_no_data_value(255, old_value=0)
         out_band = result.raster.GetRasterBand(1)
         assert out_band.GetDescription() == "classes", "Band description must survive"
         assert out_band.GetScale() == 0.5, "Band scale must survive"
@@ -671,10 +673,10 @@ class TestChangeNoDataValueStreaming:
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
         out = tmp_path / "changed.tif"
-        result = ds.change_no_data_value(-1.0, old_value=-9999.0, path=out)
+        result = ds.bands.change_no_data_value(-1.0, old_value=-9999.0, path=out)
         assert out.exists(), "path= must write a file to disk"
         assert result.no_data_value[0] == -1.0, "Disk result must carry the new no-data"
-        reopened = Dataset.read_file(str(out)).read_array()
+        reopened = Dataset.read_file(str(out)).io.read_array()
         assert reopened[1, 0] == -1.0, "Swapped cell must be persisted on disk"
 
     def test_multi_band_per_band_old_value_list(self):
@@ -692,7 +694,9 @@ class TestChangeNoDataValueStreaming:
             no_data_value=[7.0, 8.0],
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        out = ds.change_no_data_value([-1.0, -2.0], old_value=[7.0, 8.0]).read_array()
+        out = ds.bands.change_no_data_value(
+            [-1.0, -2.0], old_value=[7.0, 8.0]
+        ).io.read_array()
         assert out[0][1, 0] == -1.0, "band 0's old no-data (7) must become -1"
         assert out[1][0, 1] == -2.0, "band 1's old no-data (8) must become -2"
         assert out[0][0, 0] == 1.0, "band 0 non-matching cell must be preserved"
@@ -711,11 +715,11 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment (mimic a bad dtype)."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
             mock_arr.__setitem__ = lambda key, value: (_ for _ in ()).throw(
                 TypeError("incompatible type")
@@ -723,9 +727,9 @@ class TestChangeNoDataValueStreaming:
             mock_arr.__getitem__ = result.__getitem__
             return mock_arr
 
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
-                ds.change_no_data_value(-1.0, old_value=-12345.0)
+                ds.bands.change_no_data_value(-1.0, old_value=-12345.0)
 
     def test_preserves_raster_attribute_table(self):
         """CreateCopy carries the raster attribute table (RAT) across the swap.
@@ -749,7 +753,7 @@ class TestChangeNoDataValueStreaming:
         band.SetDefaultRAT(rat)
         ds = Dataset(mem)
 
-        result = ds.change_no_data_value(255, old_value=0)
+        result = ds.bands.change_no_data_value(255, old_value=0)
         out_rat = result.raster.GetRasterBand(1).GetDefaultRAT()
         assert out_rat is not None, "RAT must survive change_no_data_value"
         assert out_rat.GetRowCount() == 2, "RAT row count must survive"
@@ -769,14 +773,14 @@ class TestChangeNoDataValueStreaming:
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
         out = tmp_path / "inplace.tif"
-        result = ds.change_no_data_value(
+        result = ds.bands.change_no_data_value(
             -1.0, old_value=-9999.0, inplace=True, path=out
         )
         assert result is ds, "inplace should return the source dataset"
         assert out.exists(), "inplace + path must still write the file"
         assert ds.no_data_value[0] == -1.0, "source must report the new no-data"
-        assert np.asarray(ds.read_array(band=0))[1, 0] == -1.0, "source cell swapped"
-        reopened = np.asarray(Dataset.read_file(str(out)).read_array(band=0))
+        assert np.asarray(ds.io.read_array(band=0))[1, 0] == -1.0, "source cell swapped"
+        reopened = np.asarray(Dataset.read_file(str(out)).io.read_array(band=0))
         assert reopened[1, 0] == -1.0, "disk file must hold the swap"
 
     def test_partial_file_removed_when_swap_fails(self, tmp_path):
@@ -792,11 +796,11 @@ class TestChangeNoDataValueStreaming:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        original_read = ds.read_array
+        original_read = _IO.read_array
 
-        def mock_read(band=None, window=None, **kwargs):
+        def mock_read(io_self, band=None, window=None, **kwargs):
             """Wrap the real read but raise on assignment to force a mid-stream failure."""
-            result = original_read(band=band, window=window, **kwargs)
+            result = original_read(io_self, band=band, window=window, **kwargs)
             mock_arr = MagicMock(wraps=result)
             mock_arr.__setitem__ = lambda key, value: (_ for _ in ()).throw(
                 TypeError("incompatible type")
@@ -805,9 +809,9 @@ class TestChangeNoDataValueStreaming:
             return mock_arr
 
         out = tmp_path / "partial.tif"
-        with patch.object(ds, "read_array", mock_read):
+        with patch.object(_IO, "read_array", mock_read):
             with pytest.raises(NoDataValueError):
-                ds.change_no_data_value(-1.0, old_value=-9999.0, path=out)
+                ds.bands.change_no_data_value(-1.0, old_value=-9999.0, path=out)
         assert not out.exists(), "failed disk call must remove the partial file"
 
 
@@ -896,7 +900,7 @@ class TestFillGapsLessNodata:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = src_ds.fill_gaps(mask_ds, src_arr.copy())
+        result = src_ds.spatial.fill_gaps(mask_ds, src_arr.copy())
         # The mask has more valid cells than src, so both src gaps are filled
         # from their valid neighbours (all 10.0) and no nodata should remain.
         assert result[0, 0] == pytest.approx(10.0)
@@ -920,7 +924,7 @@ class TestFillGapsLessNodata:
             no_data_value=nd,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        result = src_ds.fill_gaps(mask_ds, src_arr.copy())
+        result = src_ds.spatial.fill_gaps(mask_ds, src_arr.copy())
         # Equal valid-cell counts, so no interpolation happens and the src gap
         # at (1, 1) is left untouched.
         assert result[1, 1] == pytest.approx(nd), (

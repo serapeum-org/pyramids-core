@@ -30,10 +30,10 @@ class TestTranslate:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        ds.scale = [0.1]
-        ds.offset = [100.0]
-        unscaled = ds.translate(unscale=True)
-        result_arr = unscaled.read_array()
+        ds.bands.scale = [0.1]
+        ds.bands.offset = [100.0]
+        unscaled = ds.vector.translate(unscale=True)
+        result_arr = unscaled.io.read_array()
         expected = arr * 0.1 + 100.0
         np.testing.assert_allclose(
             result_arr,
@@ -55,8 +55,8 @@ class TestWriteArray:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         patch = np.array([[99.0, 99.0], [99.0, 99.0]], dtype=np.float32)
-        ds.write_array(patch, top_left_corner=[0, 0])
-        result = ds.read_array()
+        ds.io.write_array(patch, top_left_corner=[0, 0])
+        result = ds.io.read_array()
         assert result[0, 0] == pytest.approx(99.0), (
             "Top-left cell should be 99 after write"
         )
@@ -73,8 +73,8 @@ class TestWriteArray:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         patch = np.array([[7.0, 8.0], [9.0, 10.0]], dtype=np.float32)
-        ds.write_array(patch, top_left_corner=[1, 1])
-        result = ds.read_array()
+        ds.io.write_array(patch, top_left_corner=[1, 1])
+        result = ds.io.read_array()
         assert result[1, 1] == pytest.approx(7.0), "Offset write failed at (1,1)"
         assert result[2, 2] == pytest.approx(10.0), "Offset write failed at (2,2)"
         assert result[0, 0] == pytest.approx(0.0), (
@@ -96,7 +96,7 @@ class TestWriteArray:
         arr = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
         xoff = 5
         yoff = 3
-        ds.write_array(arr, top_left_corner=[yoff, xoff])
+        ds.io.write_array(arr, top_left_corner=[yoff, xoff])
         retrieved = ds._raster.ReadAsArray(xoff, yoff, 2, 2)
         np.testing.assert_array_equal(arr, retrieved)
 
@@ -112,7 +112,7 @@ class TestToXyz:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_xyz(bands=[0])
+        df = ds.io.to_xyz(bands=[0])
         band_cols = [c for c in df.columns if c not in ("lon", "lat")]
         assert len(band_cols) == 1, f"Expected 1 band column, got {len(band_cols)}"
 
@@ -125,7 +125,7 @@ class TestToXyz:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         with pytest.raises(ValueError, match="integer or a list"):
-            ds.to_xyz(bands="invalid")
+            ds.io.to_xyz(bands="invalid")
 
 
 class TestCreateFromArrayEdgeCases:
@@ -158,11 +158,11 @@ class TestReadArray:
     def test_read_array_invalid_band_raises(self, single_band_dataset):
         """Reading a non-existent band should raise ValueError."""
         with pytest.raises(ValueError, match="is out of range for a"):
-            single_band_dataset.read_array(band=5)
+            single_band_dataset.io.read_array(band=5)
 
     def test_read_array_window(self, single_band_dataset):
         """Reading with a window should return the correct subarray."""
-        arr = single_band_dataset.read_array(band=0, window=[0, 0, 2, 2])
+        arr = single_band_dataset.io.read_array(band=0, window=[0, 0, 2, 2])
         assert arr.shape == (2, 2), f"Expected (2,2) window, got {arr.shape}"
         np.testing.assert_array_equal(
             arr,
@@ -172,7 +172,7 @@ class TestReadArray:
 
     def test_read_array_multi_band_no_band_arg(self, multi_band_dataset):
         """Reading multi-band without band arg should return 3D array."""
-        arr = multi_band_dataset.read_array()
+        arr = multi_band_dataset.io.read_array()
         assert arr.ndim == 3, "Multi-band read should return 3D"
         assert arr.shape[0] == 3, "First dimension should be band count"
 
@@ -185,12 +185,12 @@ class TestReadArray:
         eager path raises a `ValueError` mentioning the valid range.
         """
         with pytest.raises(ValueError, match="is out of range for a"):
-            single_band_dataset.read_array(band=-1)
+            single_band_dataset.io.read_array(band=-1)
 
     def test_read_array_negative_band_lazy_raises(self, single_band_dataset):
         """Lazy path: negative band index rejected with same error."""
         with pytest.raises(ValueError, match="is out of range for a"):
-            single_band_dataset.read_array(band=-1, chunks="auto")
+            single_band_dataset.io.read_array(band=-1, chunks="auto")
 
 
 class TestToFile:
@@ -207,11 +207,11 @@ class TestToFile:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         path = tmp_path / "output.tif"
-        ds.to_file(path)
+        ds.io.to_file(path)
         assert path.exists(), "File should exist after to_file"
         reopened = Dataset.read_file(path)
         np.testing.assert_array_almost_equal(
-            reopened.read_array(),
+            reopened.io.read_array(),
             arr,
             err_msg="File data differs from original",
         )
@@ -236,7 +236,7 @@ class TestToFile:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         path = tmp_path / "output.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         assert path.exists(), "File should exist after to_file"
         # The whole point of the regression: the written file is readable again.
         reopened = NetCDF.read_file(str(path))
@@ -262,14 +262,14 @@ class TestToFile:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         path = tmp_path / "compressed.tif"
-        ds.to_file(path)
+        ds.io.to_file(path)
         info = gdal.Info(str(path))
         assert "COMPRESSION=DEFLATE" in info, "GeoTIFF lost its default DEFLATE"
 
     def test_to_file_wrong_type_raises(self, single_band_dataset):
         """to_file with a non-string path should raise TypeError."""
         with pytest.raises(TypeError, match="string"):
-            single_band_dataset.to_file(123)
+            single_band_dataset.io.to_file(123)
 
 
 class TestCreateDataset:
@@ -337,8 +337,10 @@ class TestAddBand:
     def test_add_band_inplace(self, single_band_dataset):
         """add_band(inplace=True) should modify the dataset in place."""
         new_arr = np.ones((3, 3), dtype=np.float32) * 99
-        result = single_band_dataset.add_band(new_arr, inplace=True)
-        assert result is None, "add_band inplace should return None"
+        result = single_band_dataset.bands.add_band(new_arr, inplace=True)
+        assert result is single_band_dataset, (
+            "add_band inplace returns the dataset (chainable)"
+        )
         assert single_band_dataset.band_count == 2, (
             "Band count should increase after inplace add"
         )
@@ -350,7 +352,7 @@ class TestTranslateWithPath:
     def test_translate_to_path(self, single_band_dataset, tmp_path):
         """translate with a path should save to a GTiff file."""
         path = tmp_path / "translated.tif"
-        result = single_band_dataset.translate(path=path)
+        result = single_band_dataset.vector.translate(path=path)
         assert isinstance(result, Dataset), "translate with path should return Dataset"
         assert path.exists(), "Translated file should exist on disk"
 
@@ -362,18 +364,18 @@ class TestToFileOptions:
         """to_file with invalid tile_length exercises the RuntimeError handler."""
         path = str(tmp_path / "tiled.tif")
         with pytest.raises(FailedToSaveError):
-            single_band_dataset.to_file(path, tile_length=256)
+            single_band_dataset.io.to_file(path, tile_length=256)
 
     def test_to_file_with_creation_options(self, single_band_dataset, tmp_path):
         """to_file with creation_options should pass them to GDAL."""
         path = tmp_path / "opts.tif"
-        single_band_dataset.to_file(path, creation_options=["BIGTIFF=YES"])
+        single_band_dataset.io.to_file(path, creation_options=["BIGTIFF=YES"])
         assert path.exists(), "Output file with creation options should exist"
 
     def test_to_file_runtime_error_raises(self, single_band_dataset):
         """to_file to an invalid path should raise FailedToSaveError."""
         with pytest.raises(FailedToSaveError):
-            single_band_dataset.to_file("/nonexistent/path/to/file.tif")
+            single_band_dataset.io.to_file("/nonexistent/path/to/file.tif")
 
 
 class TestOverviews:
@@ -381,7 +383,7 @@ class TestOverviews:
 
     def test_overview_count_initially_zero(self, single_band_dataset):
         """overview_count should be [0] for a dataset without overviews."""
-        counts = single_band_dataset.overview_count
+        counts = single_band_dataset.io.overview_count
         assert counts == [0], f"Expected [0] overview count, got {counts}"
 
     def test_create_overviews(self, tmp_path):
@@ -395,11 +397,11 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(
+        ds.io.create_overviews(
             resampling_method="nearest",
             overview_levels=[2, 4],
         )
-        counts = ds.overview_count
+        counts = ds.io.overview_count
         assert counts[0] >= 2, f"Expected at least 2 overviews, got {counts[0]}"
 
     def test_create_overviews_invalid_levels_raises(self, tmp_path):
@@ -414,7 +416,7 @@ class TestOverviews:
         )
         ds = Dataset.read_file(path, read_only=False)
         with pytest.raises(ValueError, match="power-of-two"):
-            ds.create_overviews(overview_levels=[3, 5])
+            ds.io.create_overviews(overview_levels=[3, 5])
 
     def test_create_overviews_invalid_levels_type_raises(self, tmp_path):
         """create_overviews with non-list levels should raise TypeError."""
@@ -428,7 +430,7 @@ class TestOverviews:
         )
         ds = Dataset.read_file(path, read_only=False)
         with pytest.raises(TypeError, match="list"):
-            ds.create_overviews(overview_levels=4)
+            ds.io.create_overviews(overview_levels=4)
 
     def test_create_overviews_invalid_method_raises(self, tmp_path):
         """create_overviews with invalid method raises ValueError."""
@@ -442,12 +444,12 @@ class TestOverviews:
         )
         ds = Dataset.read_file(path, read_only=False)
         with pytest.raises(ValueError, match="resampling_method"):
-            ds.create_overviews(resampling_method="INVALID_METHOD")
+            ds.io.create_overviews(resampling_method="INVALID_METHOD")
 
     def test_get_overview_no_overviews_raises(self, single_band_dataset):
         """get_overview should raise if no overviews exist."""
         with pytest.raises(ValueError, match="no overviews"):
-            single_band_dataset.get_overview(band=0, overview_index=0)
+            single_band_dataset.io.get_overview(band=0, overview_index=0)
 
     def test_get_overview_and_read(self, tmp_path):
         """get_overview and read_overview_array should work after creation."""
@@ -460,10 +462,10 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
-        ovr = ds.get_overview(band=0, overview_index=0)
+        ds.io.create_overviews(overview_levels=[2])
+        ovr = ds.io.get_overview(band=0, overview_index=0)
         assert ovr is not None, "Overview should not be None"
-        ovr_arr = ds.read_overview_array(band=0, overview_index=0)
+        ovr_arr = ds.io.read_overview_array(band=0, overview_index=0)
         assert ovr_arr.ndim == 2, "Overview array should be 2D"
         assert ovr_arr.shape[0] == 32, (
             f"Expected 32 rows for 2x overview, got {ovr_arr.shape[0]}"
@@ -480,9 +482,9 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
+        ds.io.create_overviews(overview_levels=[2])
         with pytest.raises(ValueError, match="less than"):
-            ds.get_overview(band=0, overview_index=99)
+            ds.io.get_overview(band=0, overview_index=99)
 
     def test_recreate_overviews(self, tmp_path):
         """recreate_overviews should refresh overview data."""
@@ -495,9 +497,9 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
-        ds.recreate_overviews(resampling_method="nearest")
-        counts = ds.overview_count
+        ds.io.create_overviews(overview_levels=[2])
+        ds.io.recreate_overviews(resampling_method="nearest")
+        counts = ds.io.overview_count
         assert counts[0] >= 1, "Overview count should be >= 1 after recreate"
 
     def test_recreate_overviews_invalid_method_raises(self, tmp_path):
@@ -511,9 +513,9 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
+        ds.io.create_overviews(overview_levels=[2])
         with pytest.raises(ValueError, match="resampling_method"):
-            ds.recreate_overviews(resampling_method="BAD")
+            ds.io.recreate_overviews(resampling_method="BAD")
 
     def test_read_overview_array_multi_band(self, tmp_path):
         """read_overview_array with band=None on multi-band reads all bands."""
@@ -526,8 +528,8 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
-        ovr_arr = ds.read_overview_array(band=None, overview_index=0)
+        ds.io.create_overviews(overview_levels=[2])
+        ovr_arr = ds.io.read_overview_array(band=None, overview_index=0)
         assert ovr_arr.ndim == 3, "Multi-band overview should be 3D"
         assert ovr_arr.shape[0] == 3, "First dimension should be 3 bands"
 
@@ -542,9 +544,9 @@ class TestOverviews:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
+        ds.io.create_overviews(overview_levels=[2])
         with pytest.raises(ValueError, match="is out of range for a"):
-            ds.read_overview_array(band=99, overview_index=0)
+            ds.io.read_overview_array(band=99, overview_index=0)
 
 
 class TestToXyzPath:
@@ -553,7 +555,7 @@ class TestToXyzPath:
     def test_to_xyz_to_file(self, single_band_dataset, tmp_path):
         """to_xyz with a path should write to file and return None."""
         path = tmp_path / "output.xyz"
-        result = single_band_dataset.to_xyz(path=path)
+        result = single_band_dataset.io.to_xyz(path=path)
         assert result is None, "to_xyz with path should return None"
         assert path.exists(), "XYZ output file should exist"
 
@@ -565,7 +567,7 @@ class TestToXyzPath:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        df = ds.to_xyz()
+        df = ds.io.to_xyz()
         band_cols = [c for c in df.columns if c not in ("lon", "lat")]
         assert len(band_cols) == 2, f"Expected 2 band columns, got {len(band_cols)}"
 
@@ -584,8 +586,8 @@ class TestReadOverviewArrayBranches:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds = Dataset.read_file(path, read_only=False)
-        ds.create_overviews(overview_levels=[2])
-        ovr_arr = ds.read_overview_array(band=None)
+        ds.io.create_overviews(overview_levels=[2])
+        ovr_arr = ds.io.read_overview_array(band=None)
         assert ovr_arr.ndim == 2, "Single-band overview should be 2D when band=None"
 
     def test_read_overview_no_band_no_overview_raises(self, tmp_path):
@@ -600,7 +602,7 @@ class TestReadOverviewArrayBranches:
         )
         ds = Dataset.read_file(path, read_only=False)
         with pytest.raises(ValueError, match="overviews"):
-            ds.read_overview_array(band=None)
+            ds.io.read_overview_array(band=None)
 
     def test_read_overview_band_no_overview_raises(self, tmp_path):
         """read_overview_array with band having no overviews raises."""
@@ -614,7 +616,7 @@ class TestReadOverviewArrayBranches:
         )
         ds = Dataset.read_file(path, read_only=False)
         with pytest.raises(ValueError, match="overviews"):
-            ds.read_overview_array(band=0)
+            ds.io.read_overview_array(band=0)
 
 
 class TestRecreateOverviewsReadOnly:
@@ -631,11 +633,11 @@ class TestRecreateOverviewsReadOnly:
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
         ds_rw = Dataset.read_file(path, read_only=False)
-        ds_rw.create_overviews(overview_levels=[2])
+        ds_rw.io.create_overviews(overview_levels=[2])
         ds_rw.close()
         ds_ro = Dataset.read_file(path, read_only=True)
         with pytest.raises(ReadOnlyError):
-            ds_ro.recreate_overviews()
+            ds_ro.io.recreate_overviews()
 
 
 class TestGetTile:
@@ -649,7 +651,7 @@ class TestGetTile:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        tiles = list(ds.get_tile(size=5))
+        tiles = list(ds.io.get_tile(size=5))
         assert len(tiles) > 0, "Should yield at least 1 tile"
         for t in tiles:
             assert isinstance(t, np.ndarray), "Each tile should be a numpy array"
@@ -667,7 +669,7 @@ class TestWriteArrayException:
         )
         bad_arr = np.ones((10, 10), dtype=np.float32)
         with pytest.raises(OutOfBoundsError, match="falls outside"):
-            ds.write_array(bad_arr, top_left_corner=[0, 0])
+            ds.io.write_array(bad_arr, top_left_corner=[0, 0])
 
 
 class TestReadBlockReRaise:
@@ -700,7 +702,7 @@ class TestToFileBlockSize:
         )
         ds._block_size = [(256, 256)]
         path = tmp_path / "block.tif"
-        ds.to_file(path)
+        ds.io.to_file(path)
         assert path.exists(), "File should exist after saving with block_size"
 
 
@@ -719,10 +721,12 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile * 2, tile_size=3)
+        result = ds.io.map_blocks(lambda tile: tile * 2, tile_size=3)
         expected = arr * 2
         np.testing.assert_array_almost_equal(
-            result.read_array(), expected, err_msg="map_blocks should double all values"
+            result.io.read_array(),
+            expected,
+            err_msg="map_blocks should double all values",
         )
 
     def test_map_blocks_preserves_spatial_metadata(self, single_band_dataset):
@@ -732,7 +736,7 @@ class TestMapBlocks:
             The output dataset should inherit all spatial metadata from
             the source.
         """
-        result = single_band_dataset.map_blocks(lambda tile: tile, tile_size=2)
+        result = single_band_dataset.io.map_blocks(lambda tile: tile, tile_size=2)
         assert result.geotransform == single_band_dataset.geotransform, (
             "Geotransform should be preserved"
         )
@@ -753,10 +757,10 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile, tile_size=4)
+        result = ds.io.map_blocks(lambda tile: tile, tile_size=4)
         np.testing.assert_array_equal(
-            result.read_array(),
-            ds.read_array(),
+            result.io.read_array(),
+            ds.io.read_array(),
             err_msg="Identity map_blocks should reproduce the original",
         )
 
@@ -774,9 +778,9 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile + 5, tile_size=2, band=1)
+        result = ds.io.map_blocks(lambda tile: tile + 5, tile_size=2, band=1)
         assert result.band_count == 1, f"Expected 1 band, got {result.band_count}"
-        result_arr = result.read_array()
+        result_arr = result.io.read_array()
         assert np.allclose(result_arr, 25.0), (
             f"Expected all 25.0 (20+5), got {result_arr}"
         )
@@ -793,8 +797,8 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile + 1, tile_size=3)
-        assert np.allclose(result.read_array(), 4.0), (
+        result = ds.io.map_blocks(lambda tile: tile + 1, tile_size=3)
+        assert np.allclose(result.io.read_array(), 4.0), (
             "All cells should be 4.0 (3+1), including edge tiles"
         )
 
@@ -810,10 +814,10 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile**2, tile_size=1000)
+        result = ds.io.map_blocks(lambda tile: tile**2, tile_size=1000)
         expected = np.array([[1.0, 4.0], [9.0, 16.0]], dtype=np.float32)
         np.testing.assert_array_almost_equal(
-            result.read_array(),
+            result.io.read_array(),
             expected,
             err_msg="Single-tile map_blocks should square values",
         )
@@ -833,8 +837,8 @@ class TestMapBlocks:
             arr,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=1.0, epsg=4326),
         )
-        result = ds.map_blocks(lambda tile: tile * 10, tile_size=2)
+        result = ds.io.map_blocks(lambda tile: tile * 10, tile_size=2)
         assert result.band_count == 3, f"Expected 3 bands, got {result.band_count}"
-        assert np.allclose(result.read_array(band=0), 10.0), "Band 0 should be 10"
-        assert np.allclose(result.read_array(band=1), 20.0), "Band 1 should be 20"
-        assert np.allclose(result.read_array(band=2), 30.0), "Band 2 should be 30"
+        assert np.allclose(result.io.read_array(band=0), 10.0), "Band 0 should be 10"
+        assert np.allclose(result.io.read_array(band=1), 20.0), "Band 1 should be 20"
+        assert np.allclose(result.io.read_array(band=2), 30.0), "Band 2 should be 30"

@@ -132,6 +132,6 @@ class TestFullLifecycle:
 
         raster = subset.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
-        arr = raster.read_array()
+        arr = raster.io.read_array()
         valid_count = np.sum(arr != -9999.0)
         assert valid_count > 0, "Raster should have some valid (non-nodata) cells"

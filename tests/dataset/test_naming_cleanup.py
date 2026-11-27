@@ -21,7 +21,7 @@ class TestFillDomainRename:
 
     def test_fill_domain_returns_dataset(self):
         """`fill_domain` writes the domain cells and returns a Dataset."""
-        out = _ds().fill_domain(5)
+        out = _ds().analysis.fill_domain(5)
         assert isinstance(out, Dataset)
 
     def test_fill_is_deprecated_alias(self):
@@ -51,7 +51,7 @@ class TestNearestCellRename:
 
     def test_nearest_cell_resolves_a_point(self):
         """`nearest_cell` maps an (x, y) table to the nearest array index."""
-        located = _ds().nearest_cell(pd.DataFrame({"x": [0.5], "y": [-0.5]}))
+        located = _ds().cell.nearest_cell(pd.DataFrame({"x": [0.5], "y": [-0.5]}))
         assert np.asarray(located).tolist() == [[0, 0]]
 
     def test_map_to_array_coordinates_is_deprecated_alias(self):
@@ -101,7 +101,7 @@ class TestMetadataRename:
 
     def test_band_metadata_is_one_mapping_per_band(self):
         """`band_metadata` returns one mapping per band."""
-        assert _ds().band_metadata == [{}]
+        assert _ds().bands.metadata == [{}]
 
     def test_meta_data_getter_is_deprecated(self):
         """The old `meta_data` attribute warns and points at `metadata`."""
@@ -141,11 +141,11 @@ class TestMetadataRename:
     def test_band_metadata_setter_and_old_setter_is_deprecated(self):
         """The `band_metadata` setter writes per-band tags; the old setter warns."""
         ds = _ds()
-        ds.band_metadata = [{"WAVELENGTH": "443"}]
-        assert ds.band_metadata == [{"WAVELENGTH": "443"}]
+        ds.bands.metadata = [{"WAVELENGTH": "443"}]
+        assert ds.bands.metadata == [{"WAVELENGTH": "443"}]
         with pytest.warns(DeprecationWarning, match="band_metadata"):
             ds.band_meta_data = [{"WAVELENGTH": "490"}]
-        assert ds.band_metadata == [{"WAVELENGTH": "490"}]
+        assert ds.bands.metadata == [{"WAVELENGTH": "490"}]
 
     def test_set_metadata_writes_a_named_domain_and_old_name_is_deprecated(self):
         """`set_metadata` replaces a named domain; `set_meta_data` warns and delegates."""

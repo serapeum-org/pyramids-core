@@ -134,9 +134,9 @@ class TestBboxWindowNonSquare:
         """
         bbox = (10.3, 2.3, 29.7, 7.7)
         xoff, yoff, x_size, y_size = _cover_window(non_square_raster, bbox)
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
         expected = full[yoff : yoff + y_size, xoff : xoff + x_size]
-        got = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        got = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
         assert got.shape == expected.shape, (
             f"transposed: got {got.shape}, expected {expected.shape}"
         )
@@ -153,9 +153,9 @@ class TestBboxWindowNonSquare:
         """
         bbox = (5.3, 0.3, 8.7, 8.7)
         xoff, yoff, x_size, y_size = _cover_window(non_square_raster, bbox)
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
         expected = full[yoff : yoff + y_size, xoff : xoff + x_size]
-        got = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        got = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
         assert got.shape == expected.shape, (
             f"transposed: got {got.shape}, expected {expected.shape}"
         )
@@ -174,11 +174,15 @@ class TestBboxWindowNonSquare:
         """
         bbox = (10.3, 2.3, 29.7, 7.7)
         xoff, yoff, x_size, y_size = _cover_window(non_square_raster, bbox)
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
         expected = full[yoff : yoff + y_size, xoff : xoff + x_size]
         gdf = gpd.GeoDataFrame(geometry=[box(*bbox)], crs=4326)
-        via_polygon = np.squeeze(np.asarray(non_square_raster.read_array(window=gdf)))
-        via_bbox = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        via_polygon = np.squeeze(
+            np.asarray(non_square_raster.io.read_array(window=gdf))
+        )
+        via_bbox = np.squeeze(
+            np.asarray(non_square_raster.io.read_array(bbox=list(bbox)))
+        )
         np.testing.assert_array_equal(via_polygon, expected)
         np.testing.assert_array_equal(via_polygon, via_bbox)
 
@@ -198,8 +202,8 @@ class TestBboxWindowBoundary:
             FeatureCollection.from_bbox(bbox, epsg=4326)
         )
         assert window == [0, 0, 40, 10]
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
-        got = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
+        got = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
         assert got.shape == (10, 40)
         np.testing.assert_array_equal(got, full)
 
@@ -212,8 +216,8 @@ class TestBboxWindowBoundary:
             old nearest-centre window dropped.
         """
         bbox = (10.5, 2.5, 29.5, 7.5)
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
-        got = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
+        got = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
         assert got.shape == (6, 20)
         assert got[-1, -1] == full[7, 29] == 7 * 40 + 29
 
@@ -244,9 +248,11 @@ class TestBboxRounding:
         Test scenario:
             The default must not silently change behaviour: the two reads are byte-equal.
         """
-        default = np.asarray(non_square_raster.read_array(bbox=list(self.WIDE_PARTIAL)))
+        default = np.asarray(
+            non_square_raster.io.read_array(bbox=list(self.WIDE_PARTIAL))
+        )
         cover = np.asarray(
-            non_square_raster.read_array(
+            non_square_raster.io.read_array(
                 bbox=list(self.WIDE_PARTIAL), bbox_rounding="cover"
             )
         )
@@ -259,10 +265,10 @@ class TestBboxRounding:
             The `[11, 3, 18, 4]` window slices `full[3:7, 11:29]`; the read must equal it exactly and
             be a `(4, 18)` array (not its transpose).
         """
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
         got = np.squeeze(
             np.asarray(
-                non_square_raster.read_array(
+                non_square_raster.io.read_array(
                     bbox=list(self.WIDE_PARTIAL), bbox_rounding="nearest"
                 )
             )
@@ -275,7 +281,7 @@ class TestBboxRounding:
         bbox = list(self.WIDE_PARTIAL)
         fc = FeatureCollection.from_bbox(self.WIDE_PARTIAL, epsg=4326)
         with pytest.raises(ValueError, match="cover.*nearest"):
-            non_square_raster.read_array(bbox=bbox, bbox_rounding="bogus")
+            non_square_raster.io.read_array(bbox=bbox, bbox_rounding="bogus")
         with pytest.raises(ValueError, match="cover.*nearest"):
             non_square_raster.io._convert_polygon_to_window(fc, rounding="bogus")
 
@@ -293,9 +299,9 @@ class TestBboxReprojection:
         native_bbox = (10.3, 2.3, 29.7, 7.7)
         foreign = gpd.GeoDataFrame(geometry=[box(*native_bbox)], crs=4326).to_crs(3857)
         foreign_bbox = foreign.total_bounds.tolist()
-        native = np.asarray(non_square_raster.read_array(bbox=native_bbox))
+        native = np.asarray(non_square_raster.io.read_array(bbox=native_bbox))
         reprojected = np.asarray(
-            non_square_raster.read_array(bbox=foreign_bbox, epsg=3857)
+            non_square_raster.io.read_array(bbox=foreign_bbox, epsg=3857)
         )
         np.testing.assert_array_equal(reprojected, native)
 
@@ -314,7 +320,7 @@ class TestBboxReprojection:
         )
         far_bbox = [456968.0, 504007.0, 460968.0, 508007.0]  # zone-32N easting/northing
         with pytest.raises(OutOfBoundsError, match="not finite"):
-            raster.read_array(bbox=far_bbox, epsg=32632)
+            raster.io.read_array(bbox=far_bbox, epsg=32632)
 
 
 class TestBboxWindowMultiBand:
@@ -329,8 +335,8 @@ class TestBboxWindowMultiBand:
         """
         bbox = (10.3, 2.3, 29.7, 7.7)
         xoff, yoff, x_size, y_size = _cover_window(multiband_non_square_raster, bbox)
-        full = np.asarray(multiband_non_square_raster.read_array())
-        got = np.asarray(multiband_non_square_raster.read_array(bbox=list(bbox)))
+        full = np.asarray(multiband_non_square_raster.io.read_array())
+        got = np.asarray(multiband_non_square_raster.io.read_array(bbox=list(bbox)))
         assert got.shape == (3, y_size, x_size)
         np.testing.assert_array_equal(
             got, full[:, yoff : yoff + y_size, xoff : xoff + x_size]
@@ -364,8 +370,8 @@ class TestBboxWindowFloatingPoint:
         # oracle inherits the same FP noise (`3 * 0.05 == 0.15000000000000002`), so only an explicit
         # integer window pins the intended result.
         assert window == [3, 0, 1, 1]
-        full = np.squeeze(np.asarray(fine_raster.read_array()))
-        got = np.squeeze(np.asarray(fine_raster.read_array(bbox=list(bbox))))
+        full = np.squeeze(np.asarray(fine_raster.io.read_array()))
+        got = np.squeeze(np.asarray(fine_raster.io.read_array(bbox=list(bbox))))
         np.testing.assert_array_equal(got, full[0:1, 3:4])
 
 
@@ -384,15 +390,15 @@ class TestBboxWindowClamping:
             FeatureCollection.from_bbox(bbox, epsg=4326)
         )
         assert window == [0, 2, 10, 6]
-        full = np.squeeze(np.asarray(non_square_raster.read_array()))
-        got = np.squeeze(np.asarray(non_square_raster.read_array(bbox=list(bbox))))
+        full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
+        got = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
         assert got.shape == (6, 10)
         np.testing.assert_array_equal(got, full[2:8, 0:10])
 
     def test_bbox_fully_outside_raster_raises(self, non_square_raster):
         """A bbox with no overlap at all raises `OutOfBoundsError`, not an empty read."""
         with pytest.raises(OutOfBoundsError, match="does not overlap"):
-            non_square_raster.read_array(bbox=[100.0, 2.0, 110.0, 8.0])
+            non_square_raster.io.read_array(bbox=[100.0, 2.0, 110.0, 8.0])
 
 
 class TestBboxWindowDegenerate:
@@ -412,7 +418,7 @@ class TestBboxWindowDegenerate:
         assert window[2] >= 1 and window[3] >= 1
         got = np.squeeze(
             np.asarray(
-                non_square_raster.read_array(
+                non_square_raster.io.read_array(
                     bbox=[5.1, 5.1, 5.3, 5.3], bbox_rounding="nearest"
                 )
             )
@@ -452,8 +458,8 @@ class TestBboxWindowFlippedGrid:
         )
         assert window == _cover_window(ds, bbox)
         xoff, yoff, x_size, y_size = window
-        full = np.squeeze(np.asarray(ds.read_array()))
-        got = np.squeeze(np.asarray(ds.read_array(bbox=list(bbox))))
+        full = np.squeeze(np.asarray(ds.io.read_array()))
+        got = np.squeeze(np.asarray(ds.io.read_array(bbox=list(bbox))))
         np.testing.assert_array_equal(
             got, full[yoff : yoff + y_size, xoff : xoff + x_size]
         )

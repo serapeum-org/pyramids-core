@@ -41,7 +41,7 @@ def _mixed_container() -> tuple[NetCDF, np.ndarray, np.ndarray]:
         variable_name="over_time",
         dims=ExtraDimensions(name="time", values=[0.0, 6.0]),
     )
-    container.set_variable("static", Dataset.from_array(flat, geo_ref=GEO))
+    container.variables.set("static", Dataset.from_array(flat, geo_ref=GEO))
     return container, stack, flat
 
 

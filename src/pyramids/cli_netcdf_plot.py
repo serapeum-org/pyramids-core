@@ -11,6 +11,7 @@ components and are better driven from Python, so they are not exposed here.
 from __future__ import annotations
 
 import argparse
+from typing import cast
 
 from pyramids._cli_shared import (
     force_agg_backend,
@@ -61,7 +62,7 @@ def _cmd_nc_plot_histogram(args: argparse.Namespace) -> int:
     variable = NetCDF.read_file(args.file).get_variable(args.var)
     if not hasattr(variable, "plot_histogram"):
         raise ValueError(f"variable {args.var!r} cannot be plotted as a histogram")
-    figure = variable.plot_histogram()[0]
+    figure = cast("NetCDF", variable).glyph.histogram()[0]
     figure.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
     info_print(args, f"wrote {args.output}")
     return 0

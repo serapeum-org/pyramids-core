@@ -53,7 +53,7 @@ from pyramids.base.georeference import GeoReference
 from pyramids.dataset.engines._base import _Engine
 from pyramids.dataset.engines._warp import carry_raster_metadata, warp_to_dataset
 from pyramids.dataset.engines._warp import dst_srs_arg as _dst_srs_arg
-from pyramids.dataset.engines.vectorize import _Vectorize
+from pyramids.dataset.engines.vectorize import _Vector
 from pyramids.dataset.transform import GeoTransform
 from pyramids.dataset.window import Window
 
@@ -424,8 +424,8 @@ def _stitch_lon_halves(
     # below expects, not the dimension-preserving default a variable now returns (#1241).
     merged = np.concatenate(
         [
-            west_part.read_array(unpack=False, squeeze=True),
-            east_part.read_array(unpack=False, squeeze=True),
+            west_part._read_array(unpack=False, squeeze=True),
+            east_part._read_array(unpack=False, squeeze=True),
         ],
         axis=-1,
     )
@@ -1535,7 +1535,7 @@ class _Spatial(_Engine["Dataset"]):
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # count comparison expects, not the dimension-preserving default (#1241).
         mask_array = cast(
-            np.typing.NDArray, mask.read_array(unpack=False, squeeze=True)
+            np.typing.NDArray, mask._read_array(unpack=False, squeeze=True)
         )
         mask_noval = mask.no_data_value[0]
 
@@ -1549,7 +1549,7 @@ class _Spatial(_Engine["Dataset"]):
             # need to be interpolated from neighbors.
             if elem_mask > elem_src:
                 gap_rows, gap_cols = np.nonzero(src_no_data & ~mask_no_data)
-                src_array = _Vectorize._nearest_neighbour(
+                src_array = _Vector._nearest_neighbour(
                     src_array,
                     gap_value,
                     gap_rows.tolist(),
@@ -1667,7 +1667,7 @@ class _Spatial(_Engine["Dataset"]):
                 # `unpack=False`: the sentinel has to fit the stored dtype and be
                 # free of the stored values, which is what gets written.
                 fill = free_no_data(
-                    dtype, [], self._ds.read_array(band=band, unpack=False)
+                    dtype, [], self._ds.io.read_array(band=band, unpack=False)
                 )
             if fill is None:
                 raise NoDataValueError(
@@ -1974,13 +1974,16 @@ class _Spatial(_Engine["Dataset"]):
         # physical values of a packed band would be truncated on the way in, and the
         # fills stamped over the masked cells are stored sentinels.
         if isinstance(mask, RasterBase):
-            mask_array = cast(np.typing.NDArray, mask.read_array(band=0, unpack=False))
+            mask_array = cast(
+                np.typing.NDArray,
+                cast("Dataset", mask)._read_array(band=0, unpack=False),
+            )
         else:
             mask_array = mask.copy()
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # mask-and-write path expects, not the dimension-preserving default (#1241).
         src_array = cast(
-            np.typing.NDArray, self._ds.read_array(unpack=False, squeeze=True)
+            np.typing.NDArray, self._ds.io.read_array(unpack=False, squeeze=True)
         )
 
         mask_no_data = is_no_data(mask_array, mask_noval)
@@ -2021,13 +2024,14 @@ class _Spatial(_Engine["Dataset"]):
             # read_array() is called with no chunks=, so it always returns a
             # plain ndarray here (the dask.Array arm of ArrayLike is unreachable).
             mask_tile = cast(
-                np.typing.NDArray, mask.read_array(band=0, window=window, unpack=False)
+                np.typing.NDArray,
+                cast("Dataset", mask)._read_array(band=0, window=window, unpack=False),
             )
             src_tile = cast(
                 np.typing.NDArray,
                 # `squeeze=True` keeps the classic `(bands, rows, cols)` for this band-wise
                 # tile write, not the dimension-preserving default (#1241).
-                self._ds.read_array(window=window, unpack=False, squeeze=True),
+                self._ds.io.read_array(window=window, unpack=False, squeeze=True),
             )
             mask_no_data = is_no_data(mask_tile, mask_noval)
             self._apply_mask_nodata(src_tile, mask_no_data, band_count, fills)
@@ -2386,7 +2390,7 @@ class _Spatial(_Engine["Dataset"]):
             )
         if not self._check_alignment(mask):
             # first align the mask with the src raster
-            mask = mask.align(self._ds)
+            mask = cast("Dataset", mask).spatial.align(self._ds)
         # crop the src raster with the aligned mask
         dst_obj = self._crop_aligned(mask)
 
@@ -2711,7 +2715,7 @@ class _Spatial(_Engine["Dataset"]):
                 # over it, so it moves counts and carries the recipe with them below.
                 # `squeeze=True` keeps the classic `(bands, rows, cols)` the windowed crop
                 # rebuild expects, not the dimension-preserving default (#1241).
-                array = self._ds.read_array(
+                array = self._ds.io.read_array(
                     window=list(window.to_read_args()), unpack=False, squeeze=True
                 )
                 # `Window.transform` rather than the same arithmetic inline. On
@@ -2910,7 +2914,7 @@ class _Spatial(_Engine["Dataset"]):
         # `carry_packing` hands the recipe to the rebuilt raster below.
         # `squeeze=True` keeps the classic `(bands, rows, cols)` (or 2-D) this trim rebuild
         # expects — it raises on a 4-D+ array — not the dimension-preserving default (#1241).
-        big_array = src.read_array(unpack=False, squeeze=True)
+        big_array = src._read_array(unpack=False, squeeze=True)
         declared = src.no_data_value
         # Not `==`: a NaN sentinel never equals itself, so `==` marks nothing
         # and the all-no-data frame GDAL leaves after a cutline warp survives

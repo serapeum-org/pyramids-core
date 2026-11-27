@@ -412,7 +412,7 @@ def _two_var_cube(stamps):
         variable_name="b",
         dims=ExtraDimensions(name="time", values=list(stamps)),
     )
-    a.set_variable("b", b.get_variable("b"))
+    a.variables.set("b", b.get_variable("b"))
     return a
 
 
@@ -540,7 +540,7 @@ class TestSetVariablePreservesSingleBand:
             variable_name="b",
             dims=ExtraDimensions(name="time", values=[0.0]),
         )
-        a.set_variable("b", b.get_variable("b"))
+        a.variables.set("b", b.get_variable("b"))
         added = a.get_variable("b")
         assert added._band_dim_names == ("time",), added._band_dim_names
         assert added._band_dim_values_map["time"] == [0.0], added._band_dim_values_map
@@ -555,7 +555,7 @@ class TestInterpContainerBranches:
         container = NetCDF.from_array(
             np.full((2, 2), 7.0), geo_ref=ref, variable_name="elevation"
         )
-        container.set_variable(
+        container.variables.set(
             "temperature",
             NetCDF.from_array(
                 np.arange(8.0).reshape(2, 2, 2),

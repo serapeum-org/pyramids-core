@@ -540,7 +540,7 @@ class TestSel4DRoundTrip:
         var = nc.get_variable("temperature")
         subset = var.sel(pressure_level=500)
         expected = subset.read_array()
-        nc.set_variable("temp_sub", subset)
+        nc.variables.set("temp_sub", subset)
 
         rg = nc._raster.GetRootGroup()
         stored = rg.OpenMDArray("temp_sub").ReadAsArray()
@@ -568,7 +568,7 @@ class TestSel4DRoundTrip:
         nc = _make_4d_writable_nc()
         var = nc.get_variable("temperature")
         subset = var.sel(time=12)  # (1, NL) shape after pinning t=2
-        nc.set_variable("temp_t12", subset)
+        nc.variables.set("temp_t12", subset)
 
         reloaded = nc.get_variable("temp_t12")
         assert reloaded._band_dim_name is not None, (

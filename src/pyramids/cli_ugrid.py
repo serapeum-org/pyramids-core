@@ -104,7 +104,7 @@ def _cmd_mesh_extract(args: argparse.Namespace) -> int:
     _validate_variable(mesh, args.var)
     template = Dataset.read_file(args.like)
     raster = mesh.rasterize_like(template, variable_name=args.var, method=args.method)
-    raster.to_file(args.output)
+    raster.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

@@ -25,7 +25,7 @@ def big_cog(tmp_path) -> str:
     """
     arr = (np.random.default_rng(seed=4).random((600, 600)) * 100).astype("float32")
     ds = Dataset.from_array(arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326))
-    return str(ds.to_cog(tmp_path / "big.tif"))
+    return str(ds.cog.to_cog(tmp_path / "big.tif"))
 
 
 class TestValidateOverviewDetails:

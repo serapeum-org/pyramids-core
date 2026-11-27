@@ -170,7 +170,7 @@ class TestResampleAllMethods:
             method raises and the output grid is the expected 4x4.
         """
         src = _checkerboard_dataset(8)
-        dst = src.resample(2.0, method=method)
+        dst = src.spatial.resample(2.0, method=method)
         assert (dst.rows, dst.columns) == (
             4,
             4,
@@ -185,8 +185,8 @@ class TestResampleAllMethods:
             the method string actually reaches GDAL.
         """
         src = _checkerboard_dataset(8)
-        avg = src.resample(2.0, method="average").read_array()
-        near = src.resample(2.0, method="nearest").read_array()
+        avg = src.spatial.resample(2.0, method="average").io.read_array()
+        near = src.spatial.resample(2.0, method="nearest").io.read_array()
         assert np.allclose(avg, 50.0), (
             f"average of 0/100 checkerboard must be 50, got {avg}"
         )
@@ -203,7 +203,7 @@ class TestResampleAllMethods:
             succeeds, proving the resolver is wired into the warp path.
         """
         src = _checkerboard_dataset(8)
-        dst = src.to_crs(3857, method="average")
+        dst = src.spatial.to_crs(3857, method="average")
         assert dst.epsg == 3857, f"expected EPSG:3857 output, got {dst.epsg}"
 
     @pytest.mark.parametrize(
@@ -228,7 +228,7 @@ class TestResampleAllMethods:
             validated but silently dropped before :func:`gdal.Warp`.
         """
         src = _checkerboard_dataset(8)
-        warped = src.to_crs(3857, method=method)
+        warped = src.spatial.to_crs(3857, method=method)
         xml = warped.raster.GetMetadata("xml:VRT")
         xml = xml[0] if isinstance(xml, (list, tuple)) else str(xml)
         assert f"<ResampleAlg>{vrt_alg}</ResampleAlg>" in xml, (
@@ -257,13 +257,13 @@ class TestMergeRastersNewMethods:
             geo_ref=GeoReference(top_left_corner=(2, 4), cell_size=1.0, epsg=4326),
         )
         pa, pb = str(tmp_path / "a.tif"), str(tmp_path / "b.tif")
-        a.to_file(pa)
-        b.to_file(pb)
+        a.io.to_file(pa)
+        b.io.to_file(pb)
         out = tmp_path / "merged.tif"
         merge_rasters([pa, pb], out, dst_crs=3857, resampling="average")
         merged = Dataset.read_file(str(out))
         assert merged.epsg == 3857, f"expected EPSG:3857 output, got {merged.epsg}"
-        assert merged.read_array().size > 0, "merged raster should contain data"
+        assert merged.io.read_array().size > 0, "merged raster should contain data"
 
 
 class TestCogEngineResamplingNames:
@@ -289,7 +289,7 @@ class TestCogEngineResamplingNames:
             The COG engine lowercases/strips the resampling name before the
             registry lookup, mirroring resolve_resampling's behaviour.
         """
-        thumb = ramp.preview(max_size=16, resampling=" Average ")
+        thumb = ramp.cog.preview(max_size=16, resampling=" Average ")
         assert max(thumb.shape) == 16, f"expected 16px long edge, got {thumb.shape}"
 
     def test_preview_accepts_cubic_spline_alias(self, ramp):
@@ -299,8 +299,8 @@ class TestCogEngineResamplingNames:
             Both spellings resolve to GRIORA_CubicSpline; the decimated read
             returns identical arrays for the two names.
         """
-        legacy = ramp.preview(max_size=16, resampling="cubicspline")
-        snake = ramp.preview(max_size=16, resampling="cubic_spline")
+        legacy = ramp.cog.preview(max_size=16, resampling="cubicspline")
+        snake = ramp.cog.preview(max_size=16, resampling="cubic_spline")
         np.testing.assert_array_equal(
             legacy, snake, err_msg="alias must select the same GRIORA algorithm"
         )
@@ -314,7 +314,7 @@ class TestCogEngineResamplingNames:
         """
         bbox = tuple(ramp.bbox)
         with pytest.raises(ValueError, match="unknown resampling") as exc:
-            ramp.read_part(bbox, bbox_crs=4326, resampling="Sinc")
+            ramp.cog.read_part(bbox, bbox_crs=4326, resampling="Sinc")
         assert "bilinear" in str(exc.value), (
             f"error should list valid methods, got: {exc.value}"
         )
@@ -328,7 +328,7 @@ class TestCogEngineResamplingNames:
         """
         bbox = tuple(ramp.bbox)
         with pytest.raises(TypeError, match="must be a string"):
-            ramp.read_part(bbox, bbox_crs=4326, resampling=1)
+            ramp.cog.read_part(bbox, bbox_crs=4326, resampling=1)
 
     def test_preview_rejects_non_string_resampling(self, ramp):
         """``preview`` raises TypeError for a non-string resampling.
@@ -337,7 +337,7 @@ class TestCogEngineResamplingNames:
             Same guard as read_part on the thumbnail path.
         """
         with pytest.raises(TypeError, match="must be a string"):
-            ramp.preview(max_size=16, resampling=2)
+            ramp.cog.preview(max_size=16, resampling=2)
 
     def test_griora_guards_match_gdal(self):
         """``gauss``/``rms`` registration tracks the GDAL build's GRIORA set.

@@ -578,7 +578,7 @@ def _raster_weights(var: NetCDF, weights: Any) -> np.ndarray:
             "weighted() needs weights on the same grid as the variable; the raster passed "
             "has a different grid."
         )
-    values = np.asarray(weights.read_array(), dtype="float64")
+    values = np.asarray(weights._read_array(), dtype="float64")
     return values if values.ndim <= 2 else values[0]
 
 

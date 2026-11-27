@@ -42,7 +42,7 @@ def _level_var(name, length=2):
 def _mixed_container():
     """A container with `temp` along `time` and `geoid` along `level`."""
     cont = _time_var("temp")
-    cont.set_variable("geoid", _level_var("geoid").get_variable("geoid"))
+    cont.variables.set("geoid", _level_var("geoid").get_variable("geoid"))
     return cont
 
 

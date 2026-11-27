@@ -15,7 +15,7 @@ def test_classic_mode_rename_raises(sample):
     try:
         existing = nc.variable_names[-1]
         with pytest.raises(ValueError, match="multidimensional"):
-            nc.rename_variable(existing, "renamed")
+            nc.variables.rename(existing, "renamed")
     finally:
         nc.close()
 

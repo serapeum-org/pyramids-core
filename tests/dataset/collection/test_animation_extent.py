@@ -134,7 +134,7 @@ class TestTheAnimationIsGeoreferenced:
         """
         moved = [
             Dataset.from_array(
-                np.asarray(raster.read_array()),
+                np.asarray(raster.io.read_array()),
                 geo_ref=GeoReference(
                     top_left_corner=(-8.0, 50.0), cell_size=2.0, epsg=4326
                 ),

@@ -62,7 +62,7 @@ def _read(raster: Dataset) -> np.ndarray:
     Returns:
         np.ndarray: The values.
     """
-    values = np.asarray(raster.read_array(), dtype="float64")
+    values = np.asarray(raster.io.read_array(), dtype="float64")
     sentinel = raster.no_data_value[0]
     if sentinel is not None and not np.isnan(sentinel):
         values = np.where(values == sentinel, np.nan, values)
@@ -81,7 +81,7 @@ class TestWhereMatchesXarray:
         """
         exported = _exported()
         np.testing.assert_allclose(
-            _read(_raster().where(VALUES > threshold)),
+            _read(_raster().analysis.where(VALUES > threshold)),
             exported.where(exported > threshold).values,
             equal_nan=True,
         )
@@ -96,7 +96,8 @@ class TestWhereMatchesXarray:
         exported = _exported()
         np.testing.assert_allclose(
             np.asarray(
-                _raster().where(VALUES > 5, other).read_array(), dtype="float64"
+                _raster().analysis.where(VALUES > 5, other).io.read_array(),
+                dtype="float64",
             ),
             exported.where(exported > 5, other).values,
             equal_nan=True,
@@ -106,7 +107,7 @@ class TestWhereMatchesXarray:
         """A callable resolves to the same mask as the array it returns."""
         exported = _exported()
         np.testing.assert_allclose(
-            _read(_raster().where(lambda values: values > 5)),
+            _read(_raster().analysis.where(lambda values: values > 5)),
             exported.where(exported > 5).values,
             equal_nan=True,
         )
@@ -118,7 +119,7 @@ class TestWhereMatchesXarray:
             (VALUES > 5).astype("uint8"), geo_ref=GEO_REF, no_data_value=None
         )
         np.testing.assert_allclose(
-            _read(_raster().where(flags)),
+            _read(_raster().analysis.where(flags)),
             exported.where(exported > 5).values,
             equal_nan=True,
         )
@@ -126,7 +127,7 @@ class TestWhereMatchesXarray:
     def test_the_source_gap_stays_a_gap(self):
         """The cell that was already missing is missing in both answers."""
         exported = _exported()
-        ours = _read(_raster().where(VALUES > 0))
+        ours = _read(_raster().analysis.where(VALUES > 0))
         theirs = exported.where(exported > 0).values
         assert np.isnan(ours[1, 1])
         assert np.isnan(theirs[1, 1])
@@ -144,7 +145,7 @@ class TestDropMatchesXarray:
         """
         exported = _exported()
         theirs = exported.where(exported > threshold, drop=True)
-        ours = _raster().where(VALUES > threshold, drop=True)
+        ours = _raster().analysis.where(VALUES > threshold, drop=True)
         assert ours.rows == theirs.shape[0], (ours.rows, theirs.shape)
         assert ours.columns == theirs.shape[1], (ours.columns, theirs.shape)
         np.testing.assert_allclose(_read(ours), theirs.values, equal_nan=True)
@@ -153,7 +154,7 @@ class TestDropMatchesXarray:
         """The kept rows and columns are the ones xarray kept, read off the geotransform."""
         exported = _exported()
         theirs = exported.where(exported > 9, drop=True)
-        ours = _raster().where(VALUES > 9, drop=True)
+        ours = _raster().analysis.where(VALUES > 9, drop=True)
         geo = ours.geotransform
         centres_x = [geo[0] + (i + 0.5) * geo[1] for i in range(ours.columns)]
         centres_y = [geo[3] + (i + 0.5) * geo[5] for i in range(ours.rows)]
@@ -182,7 +183,7 @@ class TestTheReceivers:
     def test_a_variable_keeps_its_band_dimensions(self):
         """The result still carries `time` and its stamps, so it still selects."""
         variable = self._container().get_variable("v")
-        result = variable.where(variable > 10)
+        result = variable.analysis.where(variable > 10)
         assert tuple(result._band_dim_names) == ("time",)
         assert result._band_dim_values_map["time"] == [0.0, 6.0]
         # #1241: read_array keeps the (size-1) selected band axis, so sel(time=6.0) is (1, 3, 4).
@@ -191,7 +192,9 @@ class TestTheReceivers:
     def test_a_variable_masks_the_right_cells(self):
         """Only the values above the threshold survive, across both steps."""
         variable = self._container().get_variable("v")
-        read = np.asarray(variable.where(variable > 10).read_array(), dtype="float64")
+        read = np.asarray(
+            variable.analysis.where(variable > 10).read_array(), dtype="float64"
+        )
         kept = read[read != NDV]
         np.testing.assert_allclose(kept, np.arange(11.0, 24.0))
 
@@ -206,7 +209,7 @@ class TestTheReceivers:
         container = self._container()
         condition = container.get_variable("v") > 10
         with pytest.raises(ValueError, match="get_variable"):
-            container.where(condition)
+            container.analysis.where(condition)
 
 
 class TestAVariableTakesEveryConditionForm:
@@ -238,25 +241,28 @@ class TestAVariableTakesEveryConditionForm:
             docstring documents first.
         """
         variable = self._variable()
-        result = variable.where(np.arange(8.0).reshape(2, 2, 2) > 3)
+        result = variable.analysis.where(np.arange(8.0).reshape(2, 2, 2) > 3)
         assert tuple(result._band_dim_names) == ("time",)
 
     def test_a_callable_condition(self):
         """The callable form reaches the same place."""
         variable = self._variable()
-        result = variable.where(lambda values: values > 3)
+        result = variable.analysis.where(lambda values: values > 3)
         assert tuple(result._band_dim_names) == ("time",)
 
     def test_every_form_agrees(self):
         """The three forms describing the same cells answer the same raster."""
         variable = self._variable()
         mask = np.arange(8.0).reshape(2, 2, 2) > 3
-        from_array = np.asarray(variable.where(mask).read_array(), dtype="float64")
+        from_array = np.asarray(
+            variable.analysis.where(mask).read_array(), dtype="float64"
+        )
         from_call = np.asarray(
-            variable.where(lambda values: values > 3).read_array(), dtype="float64"
+            variable.analysis.where(lambda values: values > 3).read_array(),
+            dtype="float64",
         )
         from_raster = np.asarray(
-            variable.where(variable > 3).read_array(), dtype="float64"
+            variable.analysis.where(variable > 3).read_array(), dtype="float64"
         )
         np.testing.assert_allclose(from_array, from_call)
         np.testing.assert_allclose(from_array, from_raster)
@@ -264,7 +270,7 @@ class TestAVariableTakesEveryConditionForm:
     def test_the_stamps_survive_an_array_condition(self):
         """The result still selects, which is what the band layout is for."""
         variable = self._variable()
-        result = variable.where(np.arange(8.0).reshape(2, 2, 2) > 3)
+        result = variable.analysis.where(np.arange(8.0).reshape(2, 2, 2) > 3)
         assert result._band_dim_values_map["time"] == [0.0, 6.0]
         # #1241: read_array keeps the (size-1) selected band axis, so sel(time=6.0) is (1, 2, 2).
         assert np.asarray(result.sel(time=6.0).read_array()).shape == (1, 2, 2)
@@ -325,6 +331,6 @@ class TestTheCellWiseMembersKeepAVariablesLayout:
     def test_the_operator_path_is_the_reference(self):
         """Whatever `v + 1` keeps, these keep."""
         variable = self._variable()
-        assert tuple(variable.fillna(0.0)._band_dim_names) == tuple(
+        assert tuple(variable.analysis.fillna(0.0)._band_dim_names) == tuple(
             (variable + 1)._band_dim_names
         )

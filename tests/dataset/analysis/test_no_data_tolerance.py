@@ -69,7 +69,7 @@ class TestTheDomainIsEveryCellButTheSentinel:
             ordinary cells were counted as no-data and the raster reported one
             domain cell too few, twice over.
         """
-        assert _band(_NEAR, -9999.0).count_domain_cells(band=0) == 3
+        assert _band(_NEAR, -9999.0).analysis.count_domain_cells(band=0) == 3
 
     def test_apply_transforms_the_near_sentinel_cells(self):
         """`apply` writes through every cell that is not the sentinel.
@@ -80,7 +80,11 @@ class TestTheDomainIsEveryCellButTheSentinel:
             value while its neighbours were transformed, so the output silently
             mixed transformed and untransformed data.
         """
-        result = _band(_NEAR, -9999.0).apply(lambda v: v * 0.0 + 7.0).read_array()
+        result = (
+            _band(_NEAR, -9999.0)
+            .analysis.apply(lambda v: v * 0.0 + 7.0)
+            .io.read_array()
+        )
 
         assert result[0, 1] == 7.0, "-9998.95 was left untransformed"
         assert result[1, 0] == 7.0, "-9999.05 was left untransformed"
@@ -94,7 +98,7 @@ class TestTheDomainIsEveryCellButTheSentinel:
             near cells were preserved as though they were no-data while the
             rest of the band was overwritten.
         """
-        filled = _band(_NEAR, -9999.0).fill(3.0).read_array()
+        filled = _band(_NEAR, -9999.0).fill(3.0).io.read_array()
 
         assert filled[0, 1] == 3.0, "-9998.95 was treated as no-data"
         assert filled[1, 0] == 3.0, "-9999.05 was treated as no-data"
@@ -114,7 +118,7 @@ class TestTheSentinelIsStillFound:
         """
         values = np.full((2, 2), -9999.0, dtype="float64")
 
-        assert _band(values, -9999.0).count_domain_cells(band=0) == 0
+        assert _band(values, -9999.0).analysis.count_domain_cells(band=0) == 0
 
     def test_a_sentinel_that_went_through_single_precision_is_masked(self):
         """A float32 band whose declared sentinel is the wider double.
@@ -127,7 +131,7 @@ class TestTheSentinelIsStillFound:
         """
         values = np.array([[1e30, 2.0], [3.0, 4.0]], dtype="float32")
 
-        assert _band(values, 1e30).count_domain_cells(band=0) == 3
+        assert _band(values, 1e30).analysis.count_domain_cells(band=0) == 3
 
     def test_a_zero_sentinel_does_not_swallow_small_values(self):
         """A sentinel of `0` has no slack, so nothing near zero is no-data.
@@ -139,7 +143,7 @@ class TestTheSentinelIsStillFound:
         """
         values = np.array([[0.0, 1e-9], [-1e-9, 5.0]], dtype="float64")
 
-        assert _band(values, 0.0).count_domain_cells(band=0) == 3
+        assert _band(values, 0.0).analysis.count_domain_cells(band=0) == 3
 
 
 class TestTheIntegerBandGetsNoToleranceAtAll:
@@ -153,7 +157,7 @@ class TestTheIntegerBandGetsNoToleranceAtAll:
             32-bit band can hold and distinguish -- and were masked as no-data
             by every reader that asked with a relative tolerance.
         """
-        assert _band(_NEAR_INT, 2_000_000_000).count_domain_cells(band=0) == 3
+        assert _band(_NEAR_INT, 2_000_000_000).analysis.count_domain_cells(band=0) == 3
 
     def test_the_integer_sentinel_itself_is_still_masked(self):
         """The exact sentinel is no-data on an integer band too.
@@ -162,7 +166,7 @@ class TestTheIntegerBandGetsNoToleranceAtAll:
             The complement of the test above, so "no tolerance" cannot be
             mistaken for "no masking".
         """
-        footprint = _band(_NEAR_INT, 2_000_000_000).footprint(band=0)
+        footprint = _band(_NEAR_INT, 2_000_000_000).analysis.footprint(band=0)
 
         assert footprint is not None, "an all-no-data band was reported"
         assert len(footprint) >= 1, "the covered cells produced no polygon"
@@ -185,7 +189,7 @@ class TestTheWarningAndTheFootprintReadTheSameCells:
         values = np.array([[-9998.95, -9999.05], [1.0, 2.0]], dtype="float64")
 
         with caplog.at_level("WARNING"):
-            _band(values, -9999.0).footprint(band=0)
+            _band(values, -9999.0).analysis.footprint(band=0)
 
         assert "does not exist in the raster" in caplog.text
 
@@ -196,7 +200,7 @@ class TestTheWarningAndTheFootprintReadTheSameCells:
             `footprint` polygonises the domain mask, so a near-sentinel cell
             wrongly masked became a hole in the reported extent of the data.
         """
-        footprint = _band(_NEAR, -9999.0).footprint(band=0)
+        footprint = _band(_NEAR, -9999.0).analysis.footprint(band=0)
 
         assert footprint is not None, "an all-no-data band was reported"
         covered = float(footprint.geometry.area.sum())

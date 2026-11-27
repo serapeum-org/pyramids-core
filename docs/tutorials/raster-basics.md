@@ -29,11 +29,11 @@ available immediately.
 
 ```python
 # Read all bands into a NumPy array of shape (bands, rows, cols)
-arr = ds.read_array()
+arr = ds.io.read_array()
 print(arr.shape, arr.dtype)
 
 # Read a single band (zero-based) into a 2-D array
-band0 = ds.read_array(band=0)
+band0 = ds.io.read_array(band=0)
 print(band0.shape)
 ```
 
@@ -41,7 +41,7 @@ print(band0.shape)
 
 ```python
 out = "tutorial_dem_copy.tif"
-ds.to_file(out)
+ds.io.to_file(out)
 print("Saved:", out)
 ```
 

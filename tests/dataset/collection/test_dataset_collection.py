@@ -159,7 +159,7 @@ class TestAccessDataset:
         dataset.open_multi_dataset()
         src = dataset.iloc(2)
         assert isinstance(src, Dataset)
-        arr = src.read_array()
+        arr = src.io.read_array()
         assert isinstance(arr, np.ndarray)
 
 
@@ -250,7 +250,7 @@ class TestAlign:
             np.zeros((2, 3), dtype=np.float32),
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=2.0, epsg=4326),
         )
-        ref = ref_4326.to_crs(
+        ref = ref_4326.spatial.to_crs(
             "+proj=ortho +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
         )
         assert ref.epsg is None, "reference must be EPSG-less for this path"
@@ -340,8 +340,8 @@ class TestSaveDatasetCollection:
         cube.to_file(out_dir)
 
         for i in range(cube.time_length):
-            written = Dataset.read_file(str(out_dir / f"{i}.tif")).read_array()
-            expected = cube.iloc(i).read_array()
+            written = Dataset.read_file(str(out_dir / f"{i}.tif")).io.read_array()
+            expected = cube.iloc(i).io.read_array()
             np.testing.assert_array_equal(
                 written, expected, err_msg=f"timestep {i} content differs on disk"
             )
@@ -481,7 +481,7 @@ def test_merge_instance_method_in_memory_collection(tmp_path: Path):
     # The raster is all zeros. Stamping 0 as the marker -- which this test used
     # to assert -- masks every pixel of it (#1086); inheriting the source's own
     # marker keeps the data readable.
-    masked = merged.read_array(masked=True)
+    masked = merged.io.read_array(masked=True)
     masked = masked[0] if masked.ndim == 3 else masked
     assert int(masked.size - masked.count()) == 0, (
         "an all-zero raster must survive a merge, not be masked out entirely"
@@ -494,7 +494,7 @@ def test_overlay(rasters_folder_path: str, germany_classes: Path):
 
     classes_src = Dataset.read_file(germany_classes)
     class_dict = cube.overlay(classes_src)
-    arr = classes_src.read_array()
+    arr = classes_src.io.read_array()
     class_values = np.unique(arr)
     assert len(class_dict.keys()) == len(class_values) - 1
     extracted_classes = list(class_dict.keys())
@@ -581,8 +581,8 @@ class TestProperties:
         cube.open_multi_dataset()
         first = cube.first()
         last = cube.last()
-        assert first.read_array(band=0).shape == rasters_folder_dim
-        assert last.read_array(band=0).shape == rasters_folder_dim
+        assert first.io.read_array(band=0).shape == rasters_folder_dim
+        assert last.io.read_array(band=0).shape == rasters_folder_dim
 
     def test_rows_columns(
         self,

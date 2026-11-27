@@ -34,7 +34,7 @@ class TestGetHistogram:
             no_data_value=-9999,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        hist, ranges = ds.get_histogram(band=0, bins=5)
+        hist, ranges = ds.analysis.get_histogram(band=0, bins=5)
         assert len(hist) == 5, f"Expected 5 bins, got {len(hist)}"
         assert len(ranges) == 5, f"Expected 5 ranges, got {len(ranges)}"
         assert sum(hist) > 0, "Histogram should have some counts"
@@ -47,7 +47,7 @@ class TestGetHistogram:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        hist, _ = ds.get_histogram(band=0, bins=4, min_value=5, max_value=20)
+        hist, _ = ds.analysis.get_histogram(band=0, bins=4, min_value=5, max_value=20)
         assert len(hist) == 4, "Should have 4 bins"
 
 
@@ -93,7 +93,7 @@ class TestStats:
         for the right column layout.
         """
         dataset = Dataset(era5_image)
-        stats = dataset.stats()
+        stats = dataset.analysis.stats()
         assert isinstance(stats, pd.DataFrame), "stats should return DataFrame"
         assert list(stats.columns) == ["min", "max", "mean", "std"]
         assert np.isclose(
@@ -103,7 +103,7 @@ class TestStats:
     def test_stats_specific_band_values(self, era5_image, era5_image_stats):
         """stats(0) values match the first band of the reference statistics."""
         dataset = Dataset(era5_image)
-        stats = dataset.stats(0)
+        stats = dataset.analysis.stats(0)
         assert isinstance(stats, pd.DataFrame), "stats should return DataFrame"
         assert list(stats.columns) == ["min", "max", "mean", "std"]
         assert np.isclose(
@@ -119,7 +119,7 @@ class TestGetAttributeTable:
 
     def test_get_attribute_table_returns_none(self, single_band_dataset):
         """get_attribute_table should return None when no RAT exists."""
-        result = single_band_dataset.get_attribute_table()
+        result = single_band_dataset.bands.get_attribute_table()
         assert result is None, "get_attribute_table should return None when no RAT set"
 
     def test_set_and_get_attribute_table(self, single_band_dataset):
@@ -131,8 +131,8 @@ class TestGetAttributeTable:
                 "label": ["forest", "water", "urban"],
             }
         )
-        single_band_dataset.set_attribute_table(df)
-        result = single_band_dataset.get_attribute_table()
+        single_band_dataset.bands.set_attribute_table(df)
+        result = single_band_dataset.bands.get_attribute_table()
         assert result is not None, (
             "get_attribute_table should return DataFrame after setting RAT"
         )
@@ -206,12 +206,12 @@ class TestStatsWithMask:
         must equal those computed directly from ``arr[:, 1, :]``.
         """
         dataset = Dataset(era5_image)
-        stats = dataset.stats(mask=era5_mask)
+        stats = dataset.analysis.stats(mask=era5_mask)
         assert isinstance(stats, pd.DataFrame), (
             "stats with mask should return DataFrame"
         )
         assert list(stats.columns) == ["min", "max", "mean", "std"]
-        arr = dataset.read_array()
+        arr = dataset.io.read_array()
         mean = arr[:, 1, :].mean(axis=1)
         std = arr[:, 1, :].std(axis=1)
         min_val = arr[:, 1, :].min(axis=1)
@@ -233,7 +233,7 @@ class TestStatsWithMask:
         """stats(band=0, mask=gdf) exercises the combined band-plus-mask path."""
         poly = box(0.0, -0.15, 0.15, 0.0)
         gdf = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
-        df = single_band_dataset.stats(band=0, mask=gdf)
+        df = single_band_dataset.analysis.stats(band=0, mask=gdf)
         assert isinstance(df, pd.DataFrame), "stats with mask should return DataFrame"
         assert len(df) == 1, "Should have 1 row for single band"
 

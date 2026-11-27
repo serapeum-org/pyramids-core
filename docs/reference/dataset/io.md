@@ -94,8 +94,8 @@ packed into the R/G/B channels; no-data pixels become fully transparent
 from pyramids.dataset import Dataset
 
 dem = Dataset.read_file("elevation.tif")          # single-band metres
-dem.to_terrain_rgb("tiles/", encoding="mapbox")   # {z}/{x}/{y}.png pyramid
-dem.to_terrain_rgb("dem_rgb.png", tiles=False)    # one RGB(A) raster
+dem.io.to_terrain_rgb("tiles/", encoding="mapbox")   # {z}/{x}/{y}.png pyramid
+dem.io.to_terrain_rgb("dem_rgb.png", tiles=False)    # one RGB(A) raster
 ```
 
 The decoder is the exact inverse of the encoder — for mapbox,

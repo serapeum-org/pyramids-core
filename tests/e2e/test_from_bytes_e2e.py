@@ -60,10 +60,10 @@ class TestFromBytesDownloadCropPersist:
 
         minx, miny, maxx, maxy = ds.bbox
         mask = gpd.GeoDataFrame(geometry=[box(minx, miny, maxx, maxy)], crs=ds.epsg)
-        cropped = ds.crop(mask)
+        cropped = ds.spatial.crop(mask)
 
         out = tmp_path / "cropped.tif"
-        cropped.to_file(str(out))
+        cropped.io.to_file(str(out))
         assert out.exists(), "crop result was not written to disk"
 
         reloaded = Dataset.read_file(str(out))
@@ -71,7 +71,7 @@ class TestFromBytesDownloadCropPersist:
             f"shape changed on round-trip: {reloaded.shape}"
         )
         assert np.array_equal(
-            reloaded.read_array(), cropped.read_array(), equal_nan=True
+            reloaded.io.read_array(), cropped.io.read_array(), equal_nan=True
         ), "pixels changed on round-trip"
 
         del ds, cropped
@@ -93,7 +93,7 @@ class TestFromBytesDownloadCropPersist:
             "shape differs between bytes and direct read"
         )
         assert np.array_equal(
-            viabytes.read_array(), direct.read_array(), equal_nan=True
+            viabytes.io.read_array(), direct.io.read_array(), equal_nan=True
         ), "array differs between bytes and direct read"
 
     def test_collection_built_from_byte_sourced_tiles(self, tmp_path: Path):
@@ -112,7 +112,7 @@ class TestFromBytesDownloadCropPersist:
         for i in range(3):
             ds = Dataset.from_bytes(_download(GEOTIFF_FIXTURE))
             p = tmp_path / f"t{i}.tif"
-            ds.to_file(str(p))
+            ds.io.to_file(str(p))
             paths.append(str(p))
 
         collection = DatasetCollection.from_files(paths)

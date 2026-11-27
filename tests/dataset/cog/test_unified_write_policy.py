@@ -202,7 +202,7 @@ class TestToCogPredictorResolution:
         Test scenario:
             With predictor=None (default), a float COG carries PREDICTOR=3.
         """
-        out = float_dataset.to_cog(tmp_path / "f.tif")
+        out = float_dataset.cog.to_cog(tmp_path / "f.tif")
         assert _read_predictor(out) == "3", "float source should yield PREDICTOR=3"
 
     def test_int_predictor_auto_2(self, int_dataset, tmp_path):
@@ -215,7 +215,7 @@ class TestToCogPredictorResolution:
         Test scenario:
             With predictor=None (default), an int COG carries PREDICTOR=2.
         """
-        out = int_dataset.to_cog(tmp_path / "i.tif")
+        out = int_dataset.cog.to_cog(tmp_path / "i.tif")
         assert _read_predictor(out) == "2", "int source should yield PREDICTOR=2"
 
     def test_explicit_predictor_wins(self, float_dataset, tmp_path):
@@ -228,7 +228,7 @@ class TestToCogPredictorResolution:
         Test scenario:
             Passing predictor=1 (none) disables the predictor on a float COG.
         """
-        out = float_dataset.to_cog(
+        out = float_dataset.cog.to_cog(
             tmp_path / "f1.tif", compression=cog.Compression(predictor=1)
         )
         assert _read_predictor(out) in ("", "1"), "explicit predictor=1 must win"
@@ -268,7 +268,7 @@ class TestToCogResamplingGuardrail:
         """
         overviews = cog.Overviews(resampling="average")
         with pytest.warns(UserWarning, match="categorical"):
-            int_dataset.to_cog(tmp_path / "i_avg.tif", overviews=overviews)
+            int_dataset.cog.to_cog(tmp_path / "i_avg.tif", overviews=overviews)
 
     def test_default_on_float_emits_no_warning(self, float_dataset, tmp_path):
         """The auto-resolved default on float data emits no categorical warning.
@@ -289,7 +289,7 @@ class TestToCogResamplingGuardrail:
             out = float_dataset.to_cog(tmp_path / "f.tif")
         categorical = [w for w in caught if "categorical" in str(w.message).lower()]
         assert not categorical, "float default must not warn"
-        assert float_dataset.read_file(str(out)).validate_cog().is_valid, (
+        assert float_dataset.read_file(str(out)).cog.validate_cog().is_valid, (
             "float default write must produce a valid COG"
         )
 
@@ -309,7 +309,7 @@ class TestToCogResamplingGuardrail:
         ds = Dataset.from_array(
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
-        out = ds.to_cog(tmp_path / "big.tif")
+        out = ds.cog.to_cog(tmp_path / "big.tif")
         assert _first_overview_decimation(out) >= 2, "large float COG needs overviews"
 
 
@@ -343,7 +343,7 @@ class TestStatisticsRetry:
             return real_translate(src, path, options)
 
         monkeypatch.setattr(cog_engine, "translate_to_cog", fake_translate)
-        out = float_dataset.to_cog(tmp_path / "retry.tif")
+        out = float_dataset.cog.to_cog(tmp_path / "retry.tif")
         assert len(calls) == 2, f"expected initial call + one retry, got {len(calls)}"
         assert "STATISTICS" in calls[0], "first attempt should carry STATISTICS"
         assert "STATISTICS" not in calls[1], "retry should drop STATISTICS"
@@ -377,7 +377,7 @@ class TestStatisticsRetry:
             return real_translate(src, path, options)
 
         monkeypatch.setattr(cog_engine, "translate_to_cog", fake_translate)
-        float_dataset.to_cog(tmp_path / "retry2.tif")
+        float_dataset.cog.to_cog(tmp_path / "retry2.tif")
         assert len(calls) == 2, f"expected initial call + one retry, got {len(calls)}"
 
     def test_unrelated_error_propagates(self, float_dataset, tmp_path, monkeypatch):
@@ -402,7 +402,7 @@ class TestStatisticsRetry:
 
         monkeypatch.setattr(cog_engine, "translate_to_cog", fake_translate)
         with pytest.raises(RuntimeError, match="disk full"):
-            float_dataset.to_cog(tmp_path / "boom.tif")
+            float_dataset.cog.to_cog(tmp_path / "boom.tif")
         assert len(calls) == 1, "unrelated error must not trigger a retry"
 
 
@@ -427,7 +427,7 @@ class TestToCogWriteCogEquivalence:
         p1 = tmp_path / "via_to_cog.tif"
         p2 = tmp_path / "via_write_cog.tif"
 
-        ds.to_cog(p1)
+        ds.cog.to_cog(p1)
         out2, report = write_cog(ds, p2)
 
         assert _read_predictor(p1) == _read_predictor(out2), (
@@ -437,6 +437,6 @@ class TestToCogWriteCogEquivalence:
             "overview decimation must match between to_cog and write_cog"
         )
         assert report is not None and report.is_valid, "write_cog output must validate"
-        assert ds.read_file(str(p1)).validate_cog().is_valid, (
+        assert ds.read_file(str(p1)).cog.validate_cog().is_valid, (
             "to_cog output must validate"
         )

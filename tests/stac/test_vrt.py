@@ -85,7 +85,7 @@ class TestBuildVrtFromStac:
         """
         ds = build_vrt_from_stac(adjacent_tiles, asset="data")
         assert isinstance(ds, Dataset), f"expected a Dataset, got {type(ds)}"
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         assert arr.shape == (4, 8), f"expected union shape (4, 8), got {arr.shape}"
 
     def test_mosaic_values_lazy_read(self, adjacent_tiles):
@@ -95,7 +95,7 @@ class TestBuildVrtFromStac:
             Left half reads as tile A (10), right half as tile B (20).
         """
         ds = build_vrt_from_stac(adjacent_tiles, asset="data")
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         assert float(arr[0, 0]) == pytest.approx(10.0), (
             f"left half should be tile A=10, got {arr[0, 0]}"
         )
@@ -488,7 +488,7 @@ class TestBuildVrtSourceCompleteness:
         """
         with pytest.warns(UserWarning, match="skipped 1 of 2"):
             ds = build_vrt_from_stac(mismatched_band_tiles, asset="data", strict=False)
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         assert arr.shape == (4, 4), f"expected the kept tile only, got {arr.shape}"
 
     def test_complete_mosaic_does_not_raise(self, adjacent_tiles):
@@ -498,7 +498,7 @@ class TestBuildVrtSourceCompleteness:
             Two compatible tiles -> the full 4x8 union, no error, no warning.
         """
         ds = build_vrt_from_stac(adjacent_tiles, asset="data", strict=True)
-        assert ds.read_array().shape == (4, 8), "the complete mosaic must survive"
+        assert ds.io.read_array().shape == (4, 8), "the complete mosaic must survive"
 
     def test_all_sources_unreadable_raises_build_error(self, tmp_path):
         """When nothing is usable, gdal.BuildVRT returns None and that is raised.
@@ -639,7 +639,9 @@ class TestSourceCredentialEmbedding:
 
         items = [{"assets": {"d": {"href": a}}}, {"assets": {"d": {"href": b}}}]
         ds = build_vrt_from_stac(items, asset="d", signer=_HeaderSigner())
-        assert ds.read_array().shape == (2, 4), "the local mosaic should be unaffected"
+        assert ds.io.read_array().shape == (2, 4), (
+            "the local mosaic should be unaffected"
+        )
 
 
 class TestUnembeddableCredentialWarning:
@@ -777,7 +779,7 @@ class TestBuildVrtArtifactCleanup:
         assert len(created) == 1, f"expected exactly one new /vsimem entry: {created}"
         tracked = {path.rsplit("/", 1)[-1] for path in _artifacts._VSIMEM_PATHS}
         assert created <= tracked, f"{created} not tracked for cleanup"
-        assert ds.read_array().shape == (4, 8), "the mosaic should still be readable"
+        assert ds.io.read_array().shape == (4, 8), "the mosaic should still be readable"
 
     def test_vsimem_reclaimed_when_the_dataset_is_collected(self, adjacent_tiles):
         """Dropping the mosaic reclaims its VRT instead of holding it to exit.
@@ -862,7 +864,9 @@ class TestStrictDefault:
         """
         with pytest.warns(UserWarning, match="skipped 1 of 2"):
             ds = build_vrt_from_stac(mismatched_band_tiles, asset="data", strict=False)
-        assert ds.read_array().shape == (4, 4), "the partial mosaic should be returned"
+        assert ds.io.read_array().shape == (4, 4), (
+            "the partial mosaic should be returned"
+        )
 
     def test_no_deprecation_notice_remains(self, mismatched_band_tiles):
         """The migration notice is gone now the default has flipped.

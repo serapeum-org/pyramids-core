@@ -254,7 +254,7 @@ class TestFirstStepIsUsedForAGrid:
     def test_a_temporal_variable_is_rasterized_from_its_first_step(self, temporal):
         """`to_dataset` takes step 0 along the variable's own time axis, not the whole cube."""
         raster = temporal.to_dataset("d", cell_size=0.5, method="nearest")
-        values = raster.read_array()
+        values = raster.io.read_array()
         assert float(np.nanmax(values)) == 2.0
 
 

@@ -35,7 +35,7 @@ class TestStreamTransform:
         """
         ds = _raster()
         out = ds.io.stream_transform(lambda tile: tile * 2, tile_size=3)
-        assert np.array_equal(out.read_array(), ds.read_array() * 2), (
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() * 2), (
             "tiled transform diverged from the whole-array pass"
         )
 
@@ -48,7 +48,7 @@ class TestStreamTransform:
         """
         ds = _raster(rows=7, cols=5)
         out = ds.io.stream_transform(lambda tile: tile + 100, tile_size=3)
-        assert np.array_equal(out.read_array(), ds.read_array() + 100), (
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() + 100), (
             "edge tiles were mishandled"
         )
 
@@ -61,7 +61,7 @@ class TestStreamTransform:
         ds = _raster(bands=3)
         out = ds.io.stream_transform(lambda tile: tile * 2, tile_size=2)
         assert out.band_count == 3, f"expected 3 bands, got {out.band_count}"
-        assert np.array_equal(out.read_array(), ds.read_array() * 2), (
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() * 2), (
             "multi-band tiled transform diverged"
         )
 
@@ -74,9 +74,9 @@ class TestStreamTransform:
         """
         ds = _raster(bands=2)
         out = ds.io.stream_transform(lambda tile: tile * 2, band=0, tile_size=2)
-        assert np.array_equal(out.read_array(band=0), ds.read_array(band=0) * 2), (
-            "selected band was not transformed"
-        )
+        assert np.array_equal(
+            out.io.read_array(band=0), ds.io.read_array(band=0) * 2
+        ), "selected band was not transformed"
 
     def test_dtype_override(self):
         """``dtype=`` allocates the output in a different type.
@@ -89,8 +89,8 @@ class TestStreamTransform:
         out = ds.io.stream_transform(
             lambda tile: tile.astype("float32") / 2, dtype="float32", tile_size=3
         )
-        assert out.read_array().dtype == np.float32, "output dtype not overridden"
-        assert np.allclose(out.read_array(), ds.read_array() / 2), "values wrong"
+        assert out.io.read_array().dtype == np.float32, "output dtype not overridden"
+        assert np.allclose(out.io.read_array(), ds.io.read_array() / 2), "values wrong"
 
     def test_no_data_value_override(self):
         """``no_data_value=`` stamps an explicit sentinel on the output.
@@ -112,9 +112,9 @@ class TestStreamTransform:
             After a tiled transform, the source array equals its original values.
         """
         ds = _raster()
-        before = ds.read_array().copy()
+        before = ds.io.read_array().copy()
         ds.io.stream_transform(lambda tile: tile * 5, tile_size=2)
-        assert np.array_equal(ds.read_array(), before), "source was mutated"
+        assert np.array_equal(ds.io.read_array(), before), "source was mutated"
 
     def test_reads_only_tiles_never_the_whole_source(self, mocker):
         """The source is read only through bounded tile windows, never in full.
@@ -125,12 +125,12 @@ class TestStreamTransform:
             of tile reads must equal the tile count for the chosen tile size.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         ds.io.stream_transform(lambda tile: tile, tile_size=3)
         source_windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0]._ds is ds
         ]
         assert source_windows, "no reads of the source were recorded"
         assert all(w is not None for w in source_windows), (
@@ -153,9 +153,11 @@ class TestStreamTransform:
             lambda tile: tile * 2, tile_size=3, path=str(out_path)
         )
         assert out_path.exists(), "no output file was written"
-        assert np.array_equal(out.read_array(), ds.read_array() * 2), "values wrong"
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() * 2), (
+            "values wrong"
+        )
         assert np.array_equal(
-            Dataset.read_file(str(out_path)).read_array(), ds.read_array() * 2
+            Dataset.read_file(str(out_path)).io.read_array(), ds.io.read_array() * 2
         ), "reopened file has wrong values"
 
     def test_writes_into_a_provided_out_dataset(self):
@@ -170,7 +172,7 @@ class TestStreamTransform:
         out = ds.copy()
         returned = ds.io.stream_transform(lambda tile: tile + 1, out=out, tile_size=2)
         assert returned is out, "stream_transform did not return the provided out"
-        assert np.array_equal(out.read_array(), ds.read_array() + 1), (
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() + 1), (
             "values were not streamed into the provided out"
         )
 
@@ -205,7 +207,7 @@ class TestStreamTransform:
         # traced region so it is already live (not re-allocated) during the measurement; the
         # absolute ceiling below is the load-bearing backstop (see #1047 / #1049).
         streamed_ds = Dataset.read_file(str(src_path))
-        streamed_ds.read_array(window=[0, 0, 128, 128])
+        streamed_ds.io.read_array(window=[0, 0, 128, 128])
         with traced_peak() as peak:
             streamed_ds.io.stream_transform(
                 add_one, tile_size=128, path=str(tmp_path / "big_out.tif")
@@ -234,7 +236,7 @@ class TestStreamReduce:
         got = ds.io.stream_reduce(
             lambda acc, strip, _w: acc + int((strip > 10).sum()), 0, strip_rows=2
         )
-        assert got == int((ds.read_array() > 10).sum()), "strip count diverged"
+        assert got == int((ds.io.read_array() > 10).sum()), "strip count diverged"
 
     def test_row_strips_preserve_row_major_order(self):
         """Collecting values strip-by-strip yields the whole-array row-major order.
@@ -251,7 +253,9 @@ class TestStreamReduce:
             return acc
 
         got = ds.io.stream_reduce(collect, [], strip_rows=2)
-        assert got == ds.read_array().ravel().tolist(), "row-major order not preserved"
+        assert got == ds.io.read_array().ravel().tolist(), (
+            "row-major order not preserved"
+        )
 
     def test_two_source_fold_reads_the_aligned_window(self):
         """The window lets the fold read a second aligned raster over the same cells.
@@ -264,10 +268,10 @@ class TestStreamReduce:
         other = ds.io.stream_transform(lambda tile: tile + 100, tile_size=3)
 
         def dot(acc, strip, window):
-            return acc + int((strip * other.read_array(window=window)).sum())
+            return acc + int((strip * other.io.read_array(window=window)).sum())
 
         got = ds.io.stream_reduce(dot, 0, strip_rows=2)
-        assert got == int((ds.read_array() * other.read_array()).sum()), (
+        assert got == int((ds.io.read_array() * other.io.read_array()).sum()), (
             "two-source strip reduction diverged"
         )
 
@@ -279,12 +283,12 @@ class TestStreamReduce:
             (`xoff == 0`, `xsize == columns`), and there must be one per strip.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
+        spy = mocker.spy(_IO, "read_array")
         ds.io.stream_reduce(lambda acc, strip, _w: acc, None, strip_rows=3)
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0]._ds is ds
         ]
         assert windows, "no reads of the source were recorded"
         assert all(w[0] == 0 and w[2] == 5 for w in windows), (
@@ -396,7 +400,7 @@ class TestStreamedConsumers:
         )
         result = base.overlay(classes)
         reference: dict[int, list[float]] = {}
-        base_arr = base.read_array()
+        base_arr = base.io.read_array()
         for r in range(7):
             for c in range(5):
                 reference.setdefault(int(class_arr[r, c]), []).append(
@@ -417,8 +421,8 @@ class TestStreamedConsumers:
             `get_pixels2(read_array(), [nodata])` element-for-element in order.
         """
         ds = _raster(rows=7, cols=5)
-        got = ds.extract()
-        reference = get_pixels2(ds.read_array(), [ds.no_data_value[0]])
+        got = ds.analysis.extract()
+        reference = get_pixels2(ds.io.read_array(), [ds.no_data_value[0]])
         assert np.array_equal(got, reference), "streamed extract diverged (single band)"
 
     def test_extract_multiband_excludes_from_the_first_band_in_order(self, tiny_strips):
@@ -439,8 +443,8 @@ class TestStreamedConsumers:
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        got = ds.extract()
-        reference = get_pixels2(ds.read_array(), [ds.no_data_value[0]])
+        got = ds.analysis.extract()
+        reference = get_pixels2(ds.io.read_array(), [ds.no_data_value[0]])
         assert np.array_equal(got, reference), "streamed multi-band extract diverged"
 
     def test_extract_with_exclude_value_matches_the_eager(self, tiny_strips):
@@ -452,8 +456,8 @@ class TestStreamedConsumers:
             `get_pixels2` with the same exclude list.
         """
         ds = _raster(rows=7, cols=5)
-        got = ds.extract(exclude_value=3)
-        reference = get_pixels2(ds.read_array(), [ds.no_data_value[0], 3])
+        got = ds.analysis.extract(exclude_value=3)
+        reference = get_pixels2(ds.io.read_array(), [ds.no_data_value[0], 3])
         assert np.array_equal(got, reference), "exclude_value streaming diverged"
 
     def test_extract_reads_only_full_width_strips(self, mocker):
@@ -465,12 +469,12 @@ class TestStreamedConsumers:
             source is range-read strip by strip.
         """
         ds = _raster(rows=7, cols=5)
-        spy = mocker.spy(Dataset, "read_array")
-        ds.extract()
+        spy = mocker.spy(_IO, "read_array")
+        ds.analysis.extract()
         windows = [
             kw.get("window", (a[1] if len(a) > 1 else None))
             for a, kw in spy.call_args_list
-            if a and a[0] is ds
+            if a and a[0]._ds is ds
         ]
         assert windows, "extract recorded no source reads"
         assert all(w is not None and w[0] == 0 and w[2] == 5 for w in windows), (
@@ -509,9 +513,9 @@ class TestStreamedConsumers:
         # traced region so it is already live during the measurement; the absolute ceiling
         # below is the load-bearing backstop (see #1047 / #1049).
         ds = Dataset.read_file(str(src_path))
-        ds.read_array(window=[0, 0, cols, 256])
+        ds.io.read_array(window=[0, 0, cols, 256])
         with traced_peak() as sp:
-            count = ds.count_domain_cells()
+            count = ds.analysis.count_domain_cells()
         stripped_peak = sp[0]
 
         assert count == rows * cols - 2000 * 250, f"wrong domain count {count}"

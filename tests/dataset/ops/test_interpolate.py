@@ -80,7 +80,7 @@ class TestGridPoints:
             interpolated surface whose values stay within that range.
         """
         ds = grid_points(corner_points, "val", Dataset, cell_size=1.0)
-        arr = ds.read_array()
+        arr = ds.io.read_array()
         assert float(np.nanmin(arr)) >= 10.0 - 1e-6, (
             f"min below range: {np.nanmin(arr)}"
         )
@@ -278,7 +278,7 @@ class TestGridArrayFastPath:
             points; the two rasters must be pixel-for-pixel identical.
         """
         fast = np.asarray(
-            grid_points(corner_points, "val", Dataset, cell_size=1.0).read_array()
+            grid_points(corner_points, "val", Dataset, cell_size=1.0).io.read_array()
         )
         options = gdal.GridOptions(
             format="MEM",
@@ -309,7 +309,7 @@ class TestGridArrayFastPath:
         fast = np.asarray(
             grid_points(
                 corner_points, "val", Dataset, algorithm="nearest", cell_size=1.0
-            ).read_array()
+            ).io.read_array()
         )
         options = gdal.GridOptions(
             format="MEM",
@@ -339,7 +339,7 @@ class TestGridArrayFastPath:
             crs="EPSG:4326",
         )
         ds = grid_points(FeatureCollection(gdf), "x", Dataset, cell_size=1.0)
-        arr = np.asarray(ds.read_array())
+        arr = np.asarray(ds.io.read_array())
         assert float(np.nanmin(arr)) >= 10.0 - 1e-6, f"min below range: {arr.min()}"
         assert float(np.nanmax(arr)) <= 40.0 + 1e-6, f"max above range: {arr.max()}"
 
@@ -407,10 +407,10 @@ class TestDatasetFromPointArrays:
         )
         via_fc = Dataset.from_points(
             FeatureCollection(gdf), "z", cell_size=1.0
-        ).read_array()
+        ).io.read_array()
         via_arrays = Dataset.from_point_arrays(
             x, y, z, cell_size=1.0, epsg=4326
-        ).read_array()
+        ).io.read_array()
         assert np.array_equal(np.asarray(via_fc), np.asarray(via_arrays)), (
             "from_point_arrays and from_points produced different grids"
         )
@@ -559,7 +559,9 @@ class TestNonFiniteInputs:
             {"z": z}, geometry=[Point(a, b) for a, b in zip(x, y)], crs="EPSG:4326"
         )
         fast = np.asarray(
-            Dataset.from_points(FeatureCollection(gdf), "z", cell_size=2.0).read_array()
+            Dataset.from_points(
+                FeatureCollection(gdf), "z", cell_size=2.0
+            ).io.read_array()
         )
         options = gdal.GridOptions(
             format="MEM",
@@ -590,14 +592,14 @@ class TestNonFiniteInputs:
             [10.0, 20.0, float("nan"), 40.0],
             cell_size=2.0,
             bbox=bbox,
-        ).read_array()
+        ).io.read_array()
         finite_only = Dataset.from_point_arrays(
             [0.0, 10.0, 10.0],
             [0.0, 0.0, 10.0],
             [10.0, 20.0, 40.0],
             cell_size=2.0,
             bbox=bbox,
-        ).read_array()
+        ).io.read_array()
         assert np.array_equal(np.asarray(with_nan), np.asarray(finite_only)), (
             "dropping a NaN value must equal omitting the point"
         )

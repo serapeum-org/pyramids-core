@@ -131,7 +131,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
         kwargs["compression"] = args.profile
     if args.blocksize:
         kwargs["layout"] = Layout(blocksize=args.blocksize)
-    out = ds.to_cog(args.output, **kwargs)
+    out = ds.cog.to_cog(args.output, **kwargs)
     return _report_cog_create(args, out)
 
 
@@ -348,7 +348,7 @@ def _cmd_clip(args: argparse.Namespace) -> int:
                 f"intersect the raster extent {tuple(ds.total_bounds)}; nothing to clip."
             )
         _refuse_existing(args.output, args.overwrite)
-        clipped = ds.crop(mask)
+        clipped = ds.spatial.crop(mask)
     else:
         if not ds.crs:
             raise ValueError(
@@ -364,8 +364,8 @@ def _cmd_clip(args: argparse.Namespace) -> int:
         _refuse_existing(args.output, args.overwrite)
         # Use crop's native bbox path (epsg defaults to the dataset CRS) rather
         # than hand-wrapping the bbox in a FeatureCollection.
-        clipped = ds.crop(bbox=clip_bbox)
-    clipped.to_file(args.output)
+        clipped = ds.spatial.crop(bbox=clip_bbox)
+    clipped.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -381,8 +381,8 @@ def _cmd_warp(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    warped = ds.to_crs(args.crs, method=args.resampling)
-    warped.to_file(args.output)
+    warped = ds.spatial.to_crs(args.crs, method=args.resampling)
+    warped.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -410,7 +410,7 @@ def _cmd_georeference(args: argparse.Namespace) -> int:
         # `unpack=False`: this rebuild exists only to attach GCPs, so it copies the
         # store -- and it carries the source's no-data, which is a stored value.
         # `squeeze=True` keeps the classic `(bands, rows, cols)` `from_array` expects (#1241).
-        source.read_array(unpack=False, squeeze=True),
+        source.io.read_array(unpack=False, squeeze=True),
         # The epsg here is a scratch placeholder, not a claim about the data, and
         # deliberately unlike `calc` (which refuses a CRS-less input): set_gcps
         # replaces the georeference wholesale with the GCPs and --gcp-crs below,
@@ -424,14 +424,14 @@ def _cmd_georeference(args: argparse.Namespace) -> int:
         no_data_value=source.no_data_value,
     )
     carry_packing(source.raster, working.raster)
-    working.set_gcps(points, args.gcp_crs)
-    out = working.georeference(
+    working.georef.set_gcps(points, args.gcp_crs)
+    out = working.georef.georeference(
         to_epsg=args.to_crs,
         method=args.resampling,
         transform=args.transform,
         order=args.order,
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -448,7 +448,7 @@ def _cmd_orthorectify(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    out = ds.orthorectify(
+    out = ds.georef.orthorectify(
         dem=args.dem,
         rpc_height=args.rpc_height,
         to_epsg=args.to_crs,
@@ -516,7 +516,7 @@ def _cmd_calc(args: argparse.Namespace) -> int:
         # `pyramids raster warp`, which cannot warp a raster that has no source CRS.
         # `compare_crs=False` is the same predicate with that one clause off, so
         # the two questions cannot drift apart.
-        if not template.same_grid(ds, compare_crs=bool(ds.crs)):
+        if not template.spatial.same_grid(ds, compare_crs=bool(ds.crs)):
             raise AlignmentError(
                 f"{path!r} does not share the grid/CRS of {inputs[0]!r}, so the "
                 "expression cannot be evaluated cell by cell; align the inputs "
@@ -536,7 +536,7 @@ def _cmd_calc(args: argparse.Namespace) -> int:
     # `squeeze=True` keeps the classic `(bands, rows, cols)` raster layout the cell-wise
     # expression eval expects, not the dimension-preserving default (#1241).
     variables = {
-        name: np.asarray(ds.read_array(squeeze=True))
+        name: np.asarray(ds.io.read_array(squeeze=True))
         for name, ds in zip(names, datasets)
     }
     result = eval_calc(args.expr, variables)
@@ -553,7 +553,7 @@ def _cmd_calc(args: argparse.Namespace) -> int:
         geo_ref=GeoReference(
             geo=template.geotransform, epsg=crs_spec(template.epsg, template.crs)
         ),
-    ).to_file(output)
+    ).io.to_file(output)
     info_print(args, f"wrote {output}")
     return 0
 
@@ -590,7 +590,7 @@ def _cmd_shapes(args: argparse.Namespace) -> int:
             f"shapes emits one feature per cell ({cells:,} cells here), which can "
             f"exhaust memory; crop/downsample first, or pass --allow-large to proceed."
         )
-    gdf = ds.to_geodataframe(geometry=args.geometry)
+    gdf = ds.vector.to_geodataframe(geometry=args.geometry)
     FeatureCollection(gdf).to_file(args.output, driver=args.driver)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -625,7 +625,7 @@ def _cmd_rasterize(args: argparse.Namespace) -> int:
         template=template,
         column_name=args.column,
     )
-    out.to_file(args.output)
+    out.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -700,7 +700,7 @@ def _cmd_edit_info(args: argparse.Namespace) -> int:
         # *before* touching the file, so an invalid CRS fails cleanly with nothing
         # half-applied, and `set_crs` (which expects WKT) gets what it wants.
         wkt = sr_from_user_input(args.crs).ExportToWkt()
-        ds.set_crs(crs=wkt)
+        ds.spatial.set_crs(crs=wkt)
         edited = True
     if args.nodata is not None:
         _apply_nodata(ds, args.nodata)
@@ -790,8 +790,8 @@ def _cmd_overview(args: argparse.Namespace) -> int:
     resampling = _OVERVIEW_RESAMPLING_ALIASES.get(
         args.resampling.strip().lower(), args.resampling
     )
-    ds.create_overviews(resampling_method=resampling, overview_levels=args.levels)
-    counts = ds.overview_count
+    ds.io.create_overviews(resampling_method=resampling, overview_levels=args.levels)
+    counts = ds.io.overview_count
     info_print(
         args, f"built {counts[0] if counts else 0} overview level(s) for {args.file}"
     )
@@ -830,7 +830,7 @@ def _cmd_sample(args: argparse.Namespace) -> int:
                 f"bad point {chunk.strip()!r}; coordinates must be numeric."
             ) from None
     ds = Dataset.read_file(args.file)
-    values = ds.sample(DataFrame({"x": xs, "y": ys}))
+    values = ds.analysis.sample(DataFrame({"x": xs, "y": ys}))
     # ds.sample returns (bands, points); transpose to one row per point.
     # Out-of-bounds points come back as NaN — emit them as None/null.
     per_point = [[_json_safe(value) for value in row] for row in values.T.tolist()]
@@ -857,7 +857,7 @@ def _cmd_convert(args: argparse.Namespace) -> int:
     """
     _refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
-    ds.to_file(args.output, driver=args.driver)
+    ds.io.to_file(args.output, driver=args.driver)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -900,7 +900,7 @@ def _cmd_subdataset(args: argparse.Namespace) -> int:
     ds = Dataset.read_file(args.input)
     with map_lookup_errors():
         sub = ds.open_subdataset(_parse_subdataset_key(args.key))
-    sub.to_file(args.output)
+    sub.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

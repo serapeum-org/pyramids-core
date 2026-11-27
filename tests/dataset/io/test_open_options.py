@@ -140,7 +140,7 @@ class TestReadFileOpenOptions:
             return real(*args, **kwargs)
 
         mocker.patch.object(io_engine, "gdal_raster_open", side_effect=spy)
-        result = np.asarray(dataset.read_array(threadsafe=True))
+        result = np.asarray(dataset.io.read_array(threadsafe=True))
         assert result.shape == (8, 8), f"unexpected shape {result.shape}"
         assert seen, "the per-thread reopen opener was never called"
         assert all(o == ("GEOREF_SOURCES=NONE",) for o in seen), seen

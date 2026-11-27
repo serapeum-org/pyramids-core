@@ -220,7 +220,7 @@ class TestOperationsRefuseWithoutACrs:
         """
         dataset = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError, match="reproject"):
-            dataset.to_crs(3857)
+            dataset.spatial.to_crs(3857)
 
     def test_align_refuses_when_both_sides_lack_a_crs(self, crs_less_raster: str):
         """Two CRS-less rasters do not slip past the guard by comparing equal.
@@ -233,7 +233,7 @@ class TestOperationsRefuseWithoutACrs:
         first = Dataset.read_file(crs_less_raster)
         second = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError, match="align"):
-            first.align(second)
+            first.spatial.align(second)
 
 
 class TestReadsStillWorkWithoutACrs:
@@ -249,14 +249,16 @@ class TestReadsStillWorkWithoutACrs:
             here the fixture's own extent, x 0..4 and y -4..0.
         """
         dataset = Dataset.read_file(crs_less_raster)
-        assert dataset.read_part((1, -3, 3, -1)) is not None, (
+        assert dataset.cog.read_part((1, -3, 3, -1)) is not None, (
             "a windowed read must not require a CRS"
         )
 
     def test_point_reads_in_the_rasters_own_coordinates(self, crs_less_raster: str):
         """Point sampling likewise needs no CRS when no transform is involved."""
         dataset = Dataset.read_file(crs_less_raster)
-        assert dataset.point(2, -2) is not None, "point sampling must not require a CRS"
+        assert dataset.cog.point(2, -2) is not None, (
+            "point sampling must not require a CRS"
+        )
 
 
 class TestNetCDFCrsResolution:
@@ -347,21 +349,21 @@ class TestDefaultCoordinateReads:
             georeferenced raster.
         """
         dataset = Dataset.read_file(wgs84_raster)
-        assert dataset.point(2, 2) is not None, (
+        assert dataset.cog.point(2, 2) is not None, (
             "point() must work without an explicit CRS"
         )
 
     def test_read_part_without_a_crs_argument(self, wgs84_raster: str):
         """`read_part(bbox)` works on a georeferenced raster with no `bbox_crs`."""
         dataset = Dataset.read_file(wgs84_raster)
-        assert dataset.read_part((1, 1, 4, 4)) is not None, (
+        assert dataset.cog.read_part((1, 1, 4, 4)) is not None, (
             "read_part() must work without an explicit CRS"
         )
 
     def test_explicit_matching_crs_still_works(self, wgs84_raster: str):
         """Passing the raster's own CRS explicitly is still a no-op transform."""
         dataset = Dataset.read_file(wgs84_raster)
-        assert dataset.point(2, 2, point_crs=4326) is not None, (
+        assert dataset.cog.point(2, 2, point_crs=4326) is not None, (
             "an explicit matching CRS must still work"
         )
 
@@ -794,27 +796,27 @@ class TestExplicitCrsAgainstACrsLessRaster:
         """`read_part` refuses an explicit `bbox_crs` it cannot transform into."""
         dataset = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError, match="bbox window"):
-            dataset.read_part((1, -3, 3, -1), bbox_crs=32636)
+            dataset.cog.read_part((1, -3, 3, -1), bbox_crs=32636)
 
     def test_point_refuses(self, crs_less_raster: str):
         """`point` refuses an explicit `point_crs` it cannot transform into."""
         dataset = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError, match="sample a point"):
-            dataset.point(2, -2, point_crs=32636)
+            dataset.cog.point(2, -2, point_crs=32636)
 
     def test_read_tile_refuses(self, crs_less_raster: str):
         """`read_tile` always implies EPSG:3857, so it refuses too."""
         dataset = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError):
-            dataset.read_tile(z=0, x=0, y=0)
+            dataset.cog.read_tile(z=0, x=0, y=0)
 
     def test_omitting_the_crs_still_reads(self, crs_less_raster: str):
         """Omitting the CRS reads in the raster's own coordinates, and works."""
         dataset = Dataset.read_file(crs_less_raster)
-        assert dataset.read_part((1, -3, 3, -1)) is not None, (
+        assert dataset.cog.read_part((1, -3, 3, -1)) is not None, (
             "an unqualified read must work"
         )
-        assert dataset.point(2, -2) is not None, "an unqualified point must work"
+        assert dataset.cog.point(2, -2) is not None, "an unqualified point must work"
 
 
 class TestAuxiliaryCoordinateReferences:
@@ -939,7 +941,9 @@ class TestAlignSkipsAnUnnecessaryWarp:
         )
 
         monkeypatch.setattr(_Spatial, "to_crs", _spy)
-        assert source.align(reference) is not None, "align must return a dataset"
+        assert source.spatial.align(reference) is not None, (
+            "align must return a dataset"
+        )
         assert not calls, "align warped between two spellings of one CRS"
 
     def test_the_spy_does_fire_when_a_warp_is_needed(self, tmp_path, monkeypatch):
@@ -969,7 +973,7 @@ class TestAlignSkipsAnUnnecessaryWarp:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(_Spatial, "to_crs", _spy)
-        source.align(reference)
+        source.spatial.align(reference)
         assert calls, "the spy must fire when a warp is genuinely required"
 
 
@@ -1036,7 +1040,9 @@ class TestAuthorityLessCrsHasNoEpsg:
         assert isinstance(crs_spec(dataset.epsg, dataset.crs), str), (
             "crs_spec must fall back to the WKT"
         )
-        assert dataset.to_crs(4326) is not None, f"{label} must stay reprojectable"
+        assert dataset.spatial.to_crs(4326) is not None, (
+            f"{label} must stay reprojectable"
+        )
 
     def test_a_registered_crs_still_reports_its_code(self, tmp_path):
         """The change is confined to CRSes with no authority.
@@ -1120,4 +1126,4 @@ class TestDerivedStateStaysConsistent:
         georeferenced = Dataset.read_file(path)
         reference = Dataset.read_file(crs_less_raster)
         with pytest.raises(CRSError, match="reference grid"):
-            georeferenced.align(reference)
+            georeferenced.spatial.align(reference)

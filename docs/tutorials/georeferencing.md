@@ -26,7 +26,7 @@ raw = Dataset.from_array(
 )
 
 # four corner tie points in EPSG:4326
-raw.set_gcps(
+raw.georef.set_gcps(
     [
         GroundControlPoint(row=0, col=0, x=10.0, y=50.0),
         GroundControlPoint(row=0, col=8, x=11.0, y=50.0),
@@ -36,9 +36,9 @@ raw.set_gcps(
     projection=4326,
 )
 
-print(raw.gcp_count, raw.has_gcps)          # 4 True
+print(raw.georef.gcp_count, raw.georef.has_gcps)          # 4 True
 
-georeferenced = raw.georeference()          # warp from the GCPs (polynomial order 1)
+georeferenced = raw.georef.georeference()          # warp from the GCPs (polynomial order 1)
 print(georeferenced.epsg)                   # 4326
 print(georeferenced.bbox)                   # ~ [10, 49, 11, 50]
 ```
@@ -64,10 +64,10 @@ ideally against a DEM:
 
 ```python
 ds = Dataset.read_file("scene.tif")     # a scene whose RPCs GDAL read on open
-if ds.has_rpcs:
-    ortho = ds.orthorectify(dem="dem.tif")          # DEM-based orthorectification
+if ds.georef.has_rpcs:
+    ortho = ds.georef.orthorectify(dem="dem.tif")          # DEM-based orthorectification
     # or, with no DEM, a constant elevation:
-    ortho = ds.orthorectify(rpc_height=120.0)
+    ortho = ds.georef.orthorectify(rpc_height=120.0)
 ```
 
 From the command line:

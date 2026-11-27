@@ -30,7 +30,7 @@ def _timestep(collection, index=0):
     Returns:
         np.ndarray: The timestep's first band as floats.
     """
-    values = np.asarray(collection.iloc(index).read_array(), dtype="float64")
+    values = np.asarray(collection.iloc(index).io.read_array(), dtype="float64")
     return values if values.ndim == 2 else values[0]
 
 
@@ -62,7 +62,7 @@ def nodataless_item(tmp_path):
         np.array([[1, 2], [3, 4]], dtype="int16"),
         no_data_value=None,
         geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return {
         "type": "Feature",
         "id": "thin",
@@ -96,8 +96,8 @@ def file_packed_item(tmp_path):
         no_data_value=0,
         geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
     )
-    source.scale = [0.01]
-    source.to_file(path)
+    source.bands.scale = [0.01]
+    source.io.to_file(path)
     return {
         "type": "Feature",
         "id": "file-packed",
@@ -235,7 +235,7 @@ class TestSingleAssetRescale:
             value once — not 0.01x it again.
         """
         source = Dataset.read_file(file_packed_items[0]["assets"]["data"]["href"])
-        assert source.scale == [0.01], (
+        assert source.bands.scale == [0.01], (
             "the fixture must declare the scale in the file, or the result's identity "
             f"packing is vacuous, got {source.scale}"
         )
@@ -243,13 +243,13 @@ class TestSingleAssetRescale:
             file_packed_items, asset="data", read=AssetRead(rescale=True)
         )
         timestep = collection.iloc(0)
-        assert timestep.scale == [1.0], (
+        assert timestep.bands.scale == [1.0], (
             f"the rebuilt timestep must declare identity scale, got {timestep.scale}"
         )
-        assert timestep.offset == [0.0], (
+        assert timestep.bands.offset == [0.0], (
             f"the rebuilt timestep must declare identity offset, got {timestep.offset}"
         )
-        unpacked = np.asarray(timestep.read_array(unpack=True), dtype="float64")
+        unpacked = np.asarray(timestep.io.read_array(unpack=True), dtype="float64")
         values = unpacked if unpacked.ndim == 2 else unpacked[0]
         assert values[1, 1] == pytest.approx(3.0), (
             "300 counts x 0.01 is 3.0; a second application would give 0.03, got "
@@ -364,7 +364,7 @@ class TestMultiAssetRescale:
         assert timestep.band_count == 2, (
             f"expected a 2-band timestep, got {timestep.band_count}"
         )
-        values = np.asarray(timestep.read_array(), dtype="float64")
+        values = np.asarray(timestep.io.read_array(), dtype="float64")
         assert values[0][1, 1] == pytest.approx(3.0), (
             f"band a must use scale 0.01, got {values[0]}"
         )
@@ -424,7 +424,7 @@ class TestFromStacConfig:
         """
         cfg = {"*": {"assets": {"*": {"unit": "K"}}}}
         collection = from_stac(three_local_items, asset="data", read=AssetRead(cfg=cfg))
-        assert collection.iloc(0).band_units == ["K"], (
+        assert collection.iloc(0).bands.band_units == ["K"], (
             f"expected the configured unit, got {collection.iloc(0).band_units}"
         )
 
@@ -612,7 +612,7 @@ def two_packed_items(tmp_path):
             np.array([[0, 100], [200, 300]], dtype="int16"),
             no_data_value=0,
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         items.append(
             {
                 "type": "Feature",
@@ -654,7 +654,7 @@ def two_band_items(tmp_path):
                 geo_ref=GeoReference(
                     top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326
                 ),
-            ).to_file(path)
+            ).io.to_file(path)
             assets[key] = {
                 "href": path,
                 "type": "image/tiff",
@@ -744,7 +744,7 @@ class TestTransientOpenFailureIsNotSilentlyUnrescaled:
         assert collection.time_length == 2, (
             f"both timesteps must survive, got {collection.time_length}"
         )
-        failed = np.asarray(collection.iloc(0).read_array(), dtype="float64")
+        failed = np.asarray(collection.iloc(0).io.read_array(), dtype="float64")
         assert failed.shape[0] == 2, (
             f"the substituted timestep must keep both bands, got {failed.shape}"
         )
@@ -753,7 +753,7 @@ class TestTransientOpenFailureIsNotSilentlyUnrescaled:
             f"plane in every band, got band0={failed[0].ravel().tolist()} "
             f"band1={failed[1].ravel().tolist()}"
         )
-        healthy = np.asarray(collection.iloc(1).read_array(), dtype="float64")
+        healthy = np.asarray(collection.iloc(1).io.read_array(), dtype="float64")
         for band in range(2):
             _assert_physical(healthy[band], f"the healthy timestep's band {band}")
 

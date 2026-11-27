@@ -230,7 +230,7 @@ client = Client()
 ds = Dataset.read_file("s3://bucket/scene.tif")
 
 # safe — the handle isn't shipped, only the open recipe
-future = client.submit(lambda d: d.read_array().shape, ds)
+future = client.submit(lambda d: d.io.read_array().shape, ds)
 future.result()  # (1, H, W)
 ```
 
@@ -305,7 +305,7 @@ zones = FeatureCollection.read_parquet(
 shuffled = zones.spatial_shuffle(by="hilbert").persist()
 
 # 4. Reduce. Single compute materialises the whole DAG.
-stats = dem.zonal_stats(shuffled.compute(), stats=("mean",))
+stats = dem.analysis.zonal_stats(shuffled.compute(), stats=("mean",))
 ```
 
 The four stages each map onto a per-subsystem how-to. Continue to:

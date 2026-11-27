@@ -39,7 +39,7 @@ def build(path: Path, wkt: str) -> Dataset:
     Dataset.from_array(
         np.ones((4, 4), dtype="float32"),
         geo_ref=GeoReference(geo=(0.0, 1000.0, 0.0, 4000.0, 0.0, -1000.0), epsg=wkt),
-    ).to_file(str(path))
+    ).io.to_file(str(path))
     return Dataset.read_file(str(path))
 
 
@@ -52,14 +52,14 @@ class TestSameGridComparesTheCrs:
         second = build(tmp_path / "b.tif", geostationary_wkt(140.0))
 
         assert first.epsg == second.epsg, "premise: neither carries an EPSG code"
-        assert first.same_grid(second) is False
+        assert first.spatial.same_grid(second) is False
 
     def test_the_same_geostationary_crs_is_one_grid(self, tmp_path: Path):
         """The predicate stays true for genuinely identical grids."""
         first = build(tmp_path / "a.tif", geostationary_wkt(0.0))
         second = build(tmp_path / "b.tif", geostationary_wkt(0.0))
 
-        assert first.same_grid(second) is True
+        assert first.spatial.same_grid(second) is True
 
     def test_stacking_mismatched_geostationary_bands_is_refused(self, tmp_path: Path):
         """`from_band_files` raises instead of silently dropping bands."""
@@ -96,4 +96,4 @@ class TestGeotransformToleranceUnchanged:
             ),
         )
 
-        assert first.same_grid(second) is False
+        assert first.spatial.same_grid(second) is False

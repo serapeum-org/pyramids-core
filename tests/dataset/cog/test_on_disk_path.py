@@ -53,7 +53,7 @@ class TestOnDiskPath:
         Test scenario:
             After to_cog the reopened dataset reports a real path.
         """
-        out = mem_dataset.to_cog(tmp_path / "x.tif")
+        out = mem_dataset.cog.to_cog(tmp_path / "x.tif")
         reopened = Dataset.read_file(str(out))
         assert reopened.cog._on_disk_path() == reopened.file_name, "path mismatch"
 
@@ -66,8 +66,8 @@ class TestOnDiskPath:
         Test scenario:
             is_cog is False; validate_cog and info both raise FileNotFoundError.
         """
-        assert mem_dataset.is_cog is False, "MEM dataset is_cog must be False"
+        assert mem_dataset.cog.is_cog is False, "MEM dataset is_cog must be False"
         with pytest.raises(FileNotFoundError):
-            mem_dataset.validate_cog()
+            mem_dataset.cog.validate_cog()
         with pytest.raises(FileNotFoundError):
-            mem_dataset.cog_info()
+            mem_dataset.cog.info()

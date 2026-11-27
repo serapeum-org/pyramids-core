@@ -83,7 +83,7 @@ def test_plot_histogram(sample):
     """``plot_histogram`` renders a histogram of a variable view."""
     nc = NetCDF.read_file(sample("cf__7v__1d3-2d3-3d1__y-asc.nc"))
     try:
-        assert nc.get_variable("tos").plot_histogram() is not None
+        assert nc.get_variable("tos").glyph.histogram() is not None
     finally:
         plt.close("all")
         nc.close()
@@ -93,7 +93,7 @@ def test_plot_vector_field(sample):
     """``plot_vector_field`` renders without raising on a variable view."""
     nc = NetCDF.read_file(sample("cf__7v__1d3-2d3-3d1__y-asc.nc"))
     try:
-        assert nc.get_variable("tos").plot_vector_field() is not None
+        assert nc.get_variable("tos").glyph.vector_field() is not None
     finally:
         plt.close("all")
         nc.close()

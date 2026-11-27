@@ -70,7 +70,7 @@ ds = Dataset.from_array(
 ds.band_names = ["red", "nir"]
 
 # Write — parallel chunk writes, GeoZarr layout (CRS + GeoTransform preserved)
-ds.to_zarr("scene.zarr")
+ds.io.to_zarr("scene.zarr")
 
 # Read back — values, CRS, geotransform, nodata, and band names all round-trip
 rt = Dataset.from_zarr("scene.zarr")
@@ -88,7 +88,7 @@ from pathlib import Path
 from pyramids.dataset import DatasetCollection
 
 cube = DatasetCollection.from_files(sorted(Path("/data/series").glob("*.tif")))   # 4-D (T, B, R, C)
-cube.to_zarr("series.zarr")
+cube.io.to_zarr("series.zarr")
 
 # Reopen lazily — data is read straight from the store via dask, not into memory
 reopened = DatasetCollection.from_zarr("series.zarr")
@@ -99,20 +99,20 @@ print(reopened.time_length)
 
 ```python
 # initial write
-cube_jan.to_zarr("series.zarr")
+cube_jan.io.to_zarr("series.zarr")
 
 # append later timesteps along the time axis (no full rewrite)
-cube_feb.to_zarr("series.zarr", mode="a", append_dim="time")
+cube_feb.io.to_zarr("series.zarr", mode="a", append_dim="time")
 
 # overwrite one existing time slice (e.g. fix a bad month) — a labeled-array-style region write
-cube_fixed.to_zarr("series.zarr", mode="a", region={"time": slice(1, 2)})
+cube_fixed.io.to_zarr("series.zarr", mode="a", region={"time": slice(1, 2)})
 ```
 
 ### Multiscale pyramid levels (fast previews)
 
 ```python
 # write full resolution plus decimated overviews: data_2 / data_4 / data_8
-ds.to_zarr("scene.zarr", overview_factors=[2, 4, 8])
+ds.io.to_zarr("scene.zarr", overview_factors=[2, 4, 8])
 
 # read a coarse level back — its cell size scales by the factor
 preview = Dataset.from_zarr("scene.zarr", level=4)
@@ -125,7 +125,7 @@ print(preview.cell_size == ds.cell_size * 4)   # True
 import zarr
 
 # write to S3 with explicit fsspec options and a zstd Blosc codec
-ds.to_zarr(
+ds.io.to_zarr(
     "s3://my-bucket/scene.zarr",
     compressor=zarr.codecs.BloscCodec(cname="zstd"),
     storage_options={"anon": False},

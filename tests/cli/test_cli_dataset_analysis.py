@@ -53,7 +53,7 @@ def ramp(tmp_path) -> str:
         np.arange(64, dtype="float32").reshape(8, 8),
         no_data_value=-9999.0,
         geo_ref=_GEO,
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 
@@ -67,7 +67,7 @@ def gaps(tmp_path) -> str:
     arr = np.arange(64, dtype="float32").reshape(8, 8)
     arr[0, 0] = -9999.0
     path = str(tmp_path / "gaps.tif")
-    Dataset.from_array(arr, no_data_value=-9999.0, geo_ref=_GEO).to_file(path)
+    Dataset.from_array(arr, no_data_value=-9999.0, geo_ref=_GEO).io.to_file(path)
     return path
 
 
@@ -81,7 +81,7 @@ def target(tmp_path) -> str:
     arr = np.zeros((8, 8), dtype="int32")
     arr[4, 4] = 1
     path = str(tmp_path / "target.tif")
-    Dataset.from_array(arr, geo_ref=_GEO).to_file(path)
+    Dataset.from_array(arr, geo_ref=_GEO).io.to_file(path)
     return path
 
 
@@ -111,9 +111,9 @@ def kelvin(tmp_path) -> str:
         np.array([[273.15, 283.15], [293.15, 303.15]]),
         geo_ref=GeoReference(top_left_corner=(0, 2), cell_size=1.0, epsg=4326),
     )
-    ds.band_units = ["K"]
+    ds.bands.band_units = ["K"]
     path = str(tmp_path / "kelvin.tif")
-    ds.to_file(path)
+    ds.io.to_file(path)
     return path
 
 
@@ -133,12 +133,12 @@ def pan_pair(tmp_path) -> tuple[str, str]:
         rng.integers(0, 4000, size=(3, 32, 32)).astype("uint16"),
         geo_ref=geo_ms,
         no_data_value=None,
-    ).to_file(ms_path)
+    ).io.to_file(ms_path)
     Dataset.from_array(
         rng.integers(0, 4000, size=(128, 128)).astype("uint16"),
         geo_ref=geo_pan,
         no_data_value=None,
-    ).to_file(pan_path)
+    ).io.to_file(pan_path)
     return ms_path, pan_path
 
 
@@ -150,7 +150,7 @@ class TestProximity:
         out = str(tmp_path / "prox.tif")
         rc = main(["raster", "proximity", target, out, "--distance-units", "PIXEL"])
         assert rc == 0, capsys.readouterr().err
-        dist = Dataset.read_file(out).read_array()
+        dist = Dataset.read_file(out).io.read_array()
         assert float(dist[4, 4]) == 0.0, "target cell must be distance 0"
         assert float(dist[4, 6]) == pytest.approx(2.0), "two cells away must be 2"
 
@@ -264,7 +264,7 @@ class TestMatchHistogram:
         reference = str(tmp_path / "ref.tif")
         Dataset.from_array(
             np.arange(64, dtype="float32").reshape(8, 8) * 0.5, geo_ref=_GEO
-        ).to_file(reference)
+        ).io.to_file(reference)
         out = str(tmp_path / "mh.tif")
         rc = main(["raster", "match-histogram", ramp, reference, out])
         assert rc == 0, capsys.readouterr().err
@@ -275,7 +275,7 @@ class TestMatchHistogram:
         reference = str(tmp_path / "ref.tif")
         Dataset.from_array(
             np.arange(64, dtype="float32").reshape(8, 8) * 0.5, geo_ref=_GEO
-        ).to_file(reference)
+        ).io.to_file(reference)
         out = str(tmp_path / "mh.tif")
         rc = main(["raster", "match-histogram", ramp, reference, out, "--bins", "0"])
         _assert_one_line_error(rc, capsys.readouterr().err)
@@ -300,7 +300,7 @@ class TestPercentileStretch:
             ]
         )
         assert rc == 0, capsys.readouterr().err
-        values = Dataset.read_file(out).read_array()
+        values = Dataset.read_file(out).io.read_array()
         assert float(values.min()) >= 0.0, "stretched minimum below 0"
         assert float(values.max()) <= 1.0, "stretched maximum above 1"
 
@@ -352,7 +352,9 @@ class TestFillna:
         out = str(tmp_path / "filled.tif")
         rc = main(["raster", "fillna", gaps, out, "--value", "0"])
         assert rc == 0, capsys.readouterr().err
-        assert float(Dataset.read_file(out).read_array()[0, 0]) == 0.0, "gap not filled"
+        assert float(Dataset.read_file(out).io.read_array()[0, 0]) == 0.0, (
+            "gap not filled"
+        )
 
     def test_overwrite_without_flag_errors(self, gaps, tmp_path, capsys):
         """Writing over an existing file without --overwrite is refused."""
@@ -370,7 +372,7 @@ class TestWhere:
         out = str(tmp_path / "where.tif")
         rc = main(["raster", "where", ramp, out, "--cond", "A > 30"])
         assert rc == 0, capsys.readouterr().err
-        values = Dataset.read_file(out).read_array()
+        values = Dataset.read_file(out).io.read_array()
         assert float(values[0, 0]) == -9999.0, "unselected cell must be masked"
         assert float(values[7, 7]) == pytest.approx(63.0), "selected cell kept"
 
@@ -385,7 +387,7 @@ class TestWhere:
         out = str(tmp_path / "where.tif")
         rc = main(["raster", "where", ramp, out, "--cond", "A > 30", "--other", "5"])
         assert rc == 0, capsys.readouterr().err
-        values = Dataset.read_file(out).read_array()
+        values = Dataset.read_file(out).io.read_array()
         assert float(values[0, 0]) == pytest.approx(5.0), "unselected cell must be 5"
         assert float(values[7, 7]) == pytest.approx(63.0), "selected cell kept"
 
@@ -394,7 +396,7 @@ class TestWhere:
         out = str(tmp_path / "where_nan.tif")
         rc = main(["raster", "where", ramp, out, "--cond", "A > 30", "--other", "nan"])
         assert rc == 0, capsys.readouterr().err
-        values = Dataset.read_file(out).read_array()
+        values = Dataset.read_file(out).io.read_array()
         assert np.isnan(float(values[0, 0])), "unselected cell must be NaN"
 
     def test_other_none_token(self, ramp, tmp_path, capsys):
@@ -421,7 +423,7 @@ class TestConvertUnits:
         out = str(tmp_path / "celsius.tif")
         rc = main(["raster", "convert-units", kelvin, out, "--target", "celsius"])
         assert rc == 0, capsys.readouterr().err
-        values = Dataset.read_file(out).read_array()
+        values = Dataset.read_file(out).io.read_array()
         assert values.tolist() == [[0.0, 10.0], [20.0, 30.0]], "bad conversion"
 
     def test_unsupported_target_errors(self, kelvin, tmp_path, capsys):

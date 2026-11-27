@@ -291,7 +291,9 @@ def _cmd_nc_subset(args: argparse.Namespace) -> int:
     bbox = tuple(args.bbox) if args.bbox else None
     nc = NetCDF.read_file(args.file)
     result = _selected(
-        lambda: nc.subset(args.var, time=args.time, bbox=bbox, crs=args.crs, **dims)
+        lambda: nc.selection.subset(
+            args.var, time=args.time, bbox=bbox, crs=args.crs, **dims
+        )
     )
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")

@@ -59,7 +59,7 @@ def three_tifs(tmp_path):
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
         )
         p = str(tmp_path / f"tile_{i}.tif")
-        ds.to_file(p)
+        ds.io.to_file(p)
         paths.append(p)
     return paths
 
@@ -376,7 +376,7 @@ class TestSkipMissingSingleAsset:
             items, asset="data", tolerance=ReadTolerance(skip_missing=True)
         )
         values = [
-            float(np.asarray(collection.iloc(i).read_array())[0, 0]) for i in (0, 1)
+            float(np.asarray(collection.iloc(i).io.read_array())[0, 0]) for i in (0, 1)
         ]
         assert values == [1.0, 3.0], (
             f"the kept items' own values must survive in order, got {values}"
@@ -817,7 +817,7 @@ def multi_asset_items(tmp_path):
                 ),
             )
             p = str(tmp_path / f"scene{scene}_{name}.tif")
-            ds.to_file(p)
+            ds.io.to_file(p)
             assets[name] = {"href": p}
         items.append(
             {"id": f"scene-{scene}", "bbox": [0.0, 0.0, 1.0, 1.0], "assets": assets}
@@ -856,7 +856,7 @@ class TestFromStacMultiAsset:
         coll = DatasetCollection.from_stac(
             multi_asset_items, asset=["red", "green", "blue"]
         )
-        arr = coll.datasets[0].read_array()
+        arr = coll.datasets[0].io.read_array()
         assert arr.shape[0] == 3, f"expected 3 bands, got {arr.shape}"
         assert float(arr[0, 0, 0]) == pytest.approx(1.0), (
             f"band1 should be red=1, got {arr[0, 0, 0]}"
@@ -877,7 +877,7 @@ class TestFromStacMultiAsset:
         coll = DatasetCollection.from_stac(multi_asset_items, asset=["blue", "red"])
         first = coll.datasets[0]
         assert first.band_names == ["blue", "red"], f"band names: {first.band_names}"
-        arr = first.read_array()
+        arr = first.io.read_array()
         assert float(arr[0, 0, 0]) == pytest.approx(3.0), (
             f"band1 should be blue=3, got {arr[:, 0, 0]}"
         )
@@ -952,15 +952,15 @@ class TestFromStacMultiAsset:
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=2.0, epsg=4326),
         )
         rp, gp = str(tmp_path / "r.tif"), str(tmp_path / "g.tif")
-        red.to_file(rp)
-        green.to_file(gp)
+        red.io.to_file(rp)
+        green.io.to_file(gp)
         items = [{"assets": {"red": {"href": rp}, "green": {"href": gp}}}]
         coll = DatasetCollection.from_stac(
             items, asset=["red", "green"], alignment=Alignment(align=True)
         )
         out = coll.datasets[0]
         assert out.band_count == 2, f"expected 2 bands, got {out.band_count}"
-        assert out.read_array().shape[1:] == (
+        assert out.io.read_array().shape[1:] == (
             4,
             4,
         ), f"should be on red's 4x4 grid, got {out.read_array().shape}"
@@ -980,8 +980,8 @@ class TestFromStacMultiAsset:
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=2.0, epsg=4326),
         )
         rp, gp = str(tmp_path / "r.tif"), str(tmp_path / "g.tif")
-        red.to_file(rp)
-        green.to_file(gp)
+        red.io.to_file(rp)
+        green.io.to_file(gp)
         items = [{"assets": {"red": {"href": rp}, "green": {"href": gp}}}]
         alignment = Alignment(align=False)
         with pytest.raises(AlignmentError):
@@ -1010,7 +1010,7 @@ def solar_day_items(tmp_path):
             geo_ref=GeoReference(top_left_corner=(0.0, 4.0), cell_size=1.0, epsg=4326),
         )
         p = str(tmp_path / f"t{i}.tif")
-        ds.to_file(p)
+        ds.io.to_file(p)
         items.append(
             {
                 "id": f"item-{i}",
@@ -1075,8 +1075,8 @@ class TestFromStacSolarDay:
         coll = DatasetCollection.from_stac(
             solar_day_items, asset="data", groupby="solar_day"
         )
-        first = coll.datasets[0].read_array()
-        last = coll.datasets[1].read_array()
+        first = coll.datasets[0].io.read_array()
+        last = coll.datasets[1].io.read_array()
         assert float(first[0, 0]) == pytest.approx(10.0), (
             f"first day should be first-valid 10, got {first[0, 0]}"
         )
@@ -1220,8 +1220,8 @@ class TestFromStacMultiAssetUint16:
             ),
         )
         p10, p20 = str(tmp_path / "B04.tif"), str(tmp_path / "B05.tif")
-        b10.to_file(p10)
-        b20.to_file(p20)
+        b10.io.to_file(p10)
+        b20.io.to_file(p20)
         items = [{"assets": {"B04": {"href": p10}, "B05": {"href": p20}}}]
         coll = DatasetCollection.from_stac(
             items, asset=["B04", "B05"], alignment=Alignment(align=True)
@@ -1423,7 +1423,7 @@ class TestItemWarningsBlameTheCaller:
             np.full((3, 3), np.nan, dtype="float32"),
             no_data_value=np.nan,
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         dataset = Dataset.read_file(path)
 
         footprint = Footprint(mode="data")
@@ -1453,7 +1453,7 @@ class TestItemWarningsBlameTheCaller:
             np.full((3, 3), np.nan, dtype="float32"),
             no_data_value=np.nan,
             geo_ref=GeoReference(top_left_corner=(0.0, 3.0), cell_size=1.0, epsg=4326),
-        ).to_file(path)
+        ).io.to_file(path)
         dataset = Dataset.read_file(path)
 
         bands = BandMetadata(with_stats=True)

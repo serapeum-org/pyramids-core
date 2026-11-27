@@ -34,7 +34,7 @@ def uv_raster(tmp_path) -> str:
     Dataset.from_array(
         rng.standard_normal((2, 8, 8)).astype("float32"),
         geo_ref=GeoReference(top_left_corner=(0, 8), cell_size=1.0, epsg=4326),
-    ).to_file(path)
+    ).io.to_file(path)
     return path
 
 

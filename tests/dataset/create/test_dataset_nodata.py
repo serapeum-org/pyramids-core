@@ -59,10 +59,10 @@ class TestNoDataValue:
         src_no_data_value: float,
     ):
         src = Dataset(src)
-        arr = src.read_array()
+        arr = src.io.read_array()
         old_value = arr[0, 0]
         new_val = -6666
-        src = src.change_no_data_value(new_val, old_value)
+        src = src.bands.change_no_data_value(new_val, old_value)
         # check if the no_data_value in the Datacube object is set
         assert src.raster.GetRasterBand(1).GetNoDataValue() == new_val
         # check if the no_data_value of the Dataset object is set
@@ -70,7 +70,7 @@ class TestNoDataValue:
         # check that the no_data_value type has changed to float like the band dtype
         assert isinstance(src.no_data_value[0], float)
         # check if the new_val for the no_data_value is set in the bands
-        arr = src.read_array(0)
+        arr = src.io.read_array(0)
         val = arr[0, 0]
         assert val == new_val
 
@@ -98,7 +98,7 @@ class TestNoDataValue:
         # try to store None in the array (int)
         dataset = Dataset(int_none_nodatavalue_attr_0_stored)
         with pytest.raises(NoDataValueError):
-            dataset.change_no_data_value(None, 0)
+            dataset.bands.change_no_data_value(None, 0)
 
     def test_change_no_data_nan_into_int_band_raises(self):
         """A NaN no-data into an integer band is a dtype mismatch -> NoDataValueError.
@@ -114,7 +114,7 @@ class TestNoDataValue:
             geo_ref=GeoReference(geo=(0, 1, 0, 3, 0, -1), epsg=4326),
         )
         with pytest.raises(NoDataValueError):
-            dataset.change_no_data_value(np.nan, 0)
+            dataset.bands.change_no_data_value(np.nan, 0)
 
     @pytest.mark.parametrize(
         "dtype, expected",

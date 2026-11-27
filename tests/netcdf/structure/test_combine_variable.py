@@ -154,7 +154,7 @@ class TestCombineNetCDFVariable:
         right = _variable(tmp_path, "b.nc", 4.0)
 
         combined = left - right
-        applied = left.apply(np.abs)
+        applied = left.analysis.apply(np.abs)
 
         assert type(combined) is type(applied), "combine must not diverge from apply"
         assert combined.variable_names == applied.variable_names
@@ -176,10 +176,10 @@ class TestCombineNetCDFVariable:
         Dataset.from_array(
             np.asarray(combined.read_array()),
             geo_ref=GeoReference(geo=combined.geotransform, epsg=combined.epsg),
-        ).to_file(destination)
+        ).io.to_file(destination)
 
         written = Dataset.read_file(destination)
-        assert np.allclose(np.asarray(written.read_array()), 6.0)
+        assert np.allclose(np.asarray(written.io.read_array()), 6.0)
         assert written.geotransform == left.geotransform
 
     def test_a_root_container_is_refused_by_the_read(self, tmp_path):

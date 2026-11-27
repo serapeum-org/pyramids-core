@@ -104,7 +104,7 @@ class TestAnisotropicReference:
         reference = _reference((0.0, 1.0, 0.0, 20.0, 0.0, -10.0), 4326, shape=(3, 3))
 
         out = rasterize_like(mesh, np.array([1.0, 2.0]), reference, nodata=-9999.0)
-        filled = int(np.count_nonzero(out.read_array() != -9999.0))
+        filled = int(np.count_nonzero(out.io.read_array() != -9999.0))
 
         assert filled > 3, (
             f"only {filled} of 9 cells were sampled; the row-direction-only cutoff left "
@@ -123,7 +123,7 @@ class TestAnisotropicReference:
         out = rasterize_like(
             mesh, np.array([1.0, 2.0]), reference, nodata=-9999.0, max_distance=1e-9
         )
-        filled = int(np.count_nonzero(out.read_array() != -9999.0))
+        filled = int(np.count_nonzero(out.io.read_array() != -9999.0))
 
         assert filled == 0, (
             f"a 1e-9 cutoff should reach nothing, yet filled {filled} cells"
@@ -187,7 +187,7 @@ class TestReferenceWithACrsButNoEpsgCode:
         out = rasterize_like(
             mesh, np.array([1.0, 2.0]), geostationary, source_epsg=4326, nodata=-9999.0
         )
-        filled = int(np.count_nonzero(out.read_array() != -9999.0))
+        filled = int(np.count_nonzero(out.io.read_array() != -9999.0))
 
         assert filled == 0, (
             f"the reprojected mesh is nowhere near this grid, so no cell should be sampled; "
@@ -221,7 +221,7 @@ class TestAnisotropicDefaultReachIsBounded:
             np.count_nonzero(
                 rasterize_like(
                     mesh, np.array([1.0, 2.0]), starved, nodata=-9999.0
-                ).read_array()
+                ).io.read_array()
                 != -9999.0
             )
         )
@@ -245,7 +245,7 @@ class TestAnisotropicDefaultReachIsBounded:
             np.count_nonzero(
                 rasterize_like(
                     mesh, np.array([1.0, 2.0]), wide, nodata=-9999.0
-                ).read_array()
+                ).io.read_array()
                 != -9999.0
             )
         )
@@ -253,7 +253,7 @@ class TestAnisotropicDefaultReachIsBounded:
             np.count_nonzero(
                 rasterize_like(
                     mesh, np.array([1.0, 2.0]), wide, nodata=-9999.0, max_distance=2.0
-                ).read_array()
+                ).io.read_array()
                 != -9999.0
             )
         )

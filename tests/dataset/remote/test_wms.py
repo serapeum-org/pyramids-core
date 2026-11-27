@@ -116,7 +116,7 @@ def fake_wms(monkeypatch):
 
 def _bands_rows_columns(ds: Dataset) -> np.ndarray:
     """`ds.read_array()` as ``(bands, rows, columns)`` whatever the band count."""
-    return np.asarray(ds.read_array()).reshape(-1, ds.rows, ds.columns)
+    return np.asarray(ds.io.read_array()).reshape(-1, ds.rows, ds.columns)
 
 
 class TestOutputSize:

@@ -27,17 +27,17 @@ ds.band_count      # -> 1
 ds.no_data_value   # -> (-3.4e+38,)  (per band)
 
 # 3. Read the values as a NumPy array
-arr = np.asarray(ds.read_array())        # (13, 14) float32
+arr = np.asarray(ds.io.read_array())        # (13, 14) float32
 
 # 4. Reproject to WGS84 (EPSG:4326)
-wgs84 = ds.to_crs(4326)
+wgs84 = ds.spatial.to_crs(4326)
 
 # 5. Crop to a bounding box (in the dataset's CRS)
-inner = ds.crop(bbox=(440000, 475000, 480000, 515000), epsg=ds.epsg)
+inner = ds.spatial.crop(bbox=(440000, 475000, 480000, 515000), epsg=ds.epsg)
 
 # 6. Write back out — the driver is inferred from the extension
-wgs84.to_file("acc_wgs84.tif")           # GeoTIFF
-ds.to_cog("acc.cog.tif")                 # Cloud-Optimized GeoTIFF
+wgs84.io.to_file("acc_wgs84.tif")           # GeoTIFF
+ds.cog.to_cog("acc.cog.tif")                 # Cloud-Optimized GeoTIFF
 
 # 7. Plot (needs the [viz] extra — cleopatra)
 ds.plot(band=0, title="flow accumulation")
@@ -66,7 +66,7 @@ Round-trip vectors and rasters:
 from pyramids.dataset import Dataset
 
 raster = Dataset.from_features(fc, cell_size=200)  # rasterize the polygons onto a grid
-polys  = raster.to_geodataframe()            # vectorize a raster back to polygons
+polys  = raster.vector.to_geodataframe()            # vectorize a raster back to polygons
 ```
 
 ## NetCDF / CF datacubes
@@ -82,7 +82,7 @@ nc.variable_names          # -> ['values']
 values = nc.get_variable("values")   # a Variable — one raster
 values.shape               # -> (3, 13, 14)  (time, rows, cols)
 values.plot(variable="values")
-values.to_file("values.tif")
+values.io.to_file("values.tif")
 ```
 
 See [Core concepts](concepts.md#container-vs-variable-netcdf) for the container-vs-variable model, and the
@@ -97,7 +97,7 @@ from pyramids.dataset import DatasetCollection
 
 cube = DatasetCollection.from_files(sorted_list_of_geotiffs)
 cube.time_length           # number of timesteps
-cube.to_zarr("cube.zarr")  # parallel, chunked write
+cube.io.to_zarr("cube.zarr")  # parallel, chunked write
 ```
 
 ## Common one-liners (cheat-sheet)

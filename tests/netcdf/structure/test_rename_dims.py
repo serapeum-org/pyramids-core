@@ -82,7 +82,7 @@ def _make_multi_nc():
         variable_name="pressure",
         dims=ExtraDimensions(name="time", values=[0, 6, 12]),
     )
-    nc.set_variable("pressure", second.get_variable("pressure"))
+    nc.variables.set("pressure", second.get_variable("pressure"))
     return nc
 
 
