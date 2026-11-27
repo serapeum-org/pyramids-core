@@ -1205,7 +1205,7 @@ class TestNormalizeRescale:
     def test_normalize(self):
         """normalize should scale array to [0, 1] range."""
         arr = np.array([0.0, 50.0, 100.0])
-        result = _Analysis.normalize(arr)
+        result = _Analysis._normalize_array(arr)
         assert abs(result[0] - 0.0) < 1e-6, "Min should be normalized to 0.0"
         assert abs(result[2] - 1.0) < 1e-6, "Max should be normalized to 1.0"
         assert abs(result[1] - 0.5) < 1e-6, "Middle should be 0.5"

@@ -406,7 +406,7 @@ class TestAnalysisNormalize:
             Input ``[0, 5, 10]`` with min=0 and max=10 should produce
             ``[0.0, 0.5, 1.0]``.
         """
-        out = _Analysis.normalize(np.array([0.0, 5.0, 10.0]))
+        out = _Analysis._normalize_array(np.array([0.0, 5.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -420,7 +420,7 @@ class TestAnalysisNormalize:
             A 2x2 array ``[[2, 4], [6, 8]]`` should normalize to a 2x2 array
             with min=0.0 and max=1.0 (linear scaling preserves rank).
         """
-        out = _Analysis.normalize(np.array([[2.0, 4.0], [6.0, 8.0]]))
+        out = _Analysis._normalize_array(np.array([[2.0, 4.0], [6.0, 8.0]]))
         assert float(out.min()) == pytest.approx(0.0), (
             f"Expected min 0.0, got {out.min()}"
         )
@@ -436,7 +436,7 @@ class TestAnalysisNormalize:
             Input ``[-10, 0, 10]`` (range 20, min -10) should map to
             ``[0.0, 0.5, 1.0]``.
         """
-        out = _Analysis.normalize(np.array([-10.0, 0.0, 10.0]))
+        out = _Analysis._normalize_array(np.array([-10.0, 0.0, 10.0]))
         np.testing.assert_array_equal(
             out,
             np.array([0.0, 0.5, 1.0]),
@@ -450,7 +450,7 @@ class TestAnalysisNormalize:
             Integer input should not be returned as a Python list or
             Python scalar; the staticmethod always returns ``np.ndarray``.
         """
-        out = _Analysis.normalize(np.array([1, 2, 3, 4]))
+        out = _Analysis._normalize_array(np.array([1, 2, 3, 4]))
         assert isinstance(out, np.ndarray), (
             f"Expected numpy ndarray, got {type(out).__name__}"
         )
