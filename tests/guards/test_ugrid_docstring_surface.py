@@ -1,11 +1,18 @@
-"""Guard meta-test: a `MeshDataset` method documents the parameters it actually takes.
+"""Guard meta-test: every mesh public method documents the parameters it actually takes.
 
 A parameter added to a signature without a matching `Args:` entry is invisible: the method
 works, every behaviour test passes, and the rendered reference page simply never mentions
-the knob. This branch added `groupby` to `reduce`, `dim` to the fill family and `fixed` to
-both morphology facades, and each arrived undocumented.
+the knob.
 
-Static reflection over the live class, so it needs no docs build and no optional dependency.
+Since #1650 the mesh public API lives on engine accessors (`mesh.io`, `mesh.spatial`,
+`mesh.analysis`, ...), and the historical flat `MeshDataset.<name>` methods are thin
+`DeprecationWarning` facades that just delegate. So the real documented surface this guard
+must police is the **engine** methods; the flat facades are exempt (their one-line docstring
+points at the engine, where the parameters are documented). `MeshDataset`'s own non-facade
+public methods -- constructors, the `Mapping` protocol, `copy`/`summary`/attribute mutation --
+are still checked directly.
+
+Static reflection over the live classes, so it needs no docs build and no optional dependency.
 """
 
 from __future__ import annotations
@@ -16,10 +23,33 @@ import re
 import pytest
 
 from pyramids.netcdf.ugrid import MeshDataset
+from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
+from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
+from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+from pyramids.netcdf.ugrid.engines.io import _MeshIO
+from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
+from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
+from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
+from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
+from pyramids.netcdf.ugrid.engines.vector import _MeshVector
 
 pytestmark = pytest.mark.core
 
 _ARG_LINE = re.compile(r"\s*\*{0,2}(\w+)\s*(?:\([^)]*\))?\s*:")
+
+_ENGINES = [
+    _MeshIO,
+    _MeshInterop,
+    _MeshSpatial,
+    _MeshSelection,
+    _MeshAnalysis,
+    _MeshTerrain,
+    _MeshVector,
+    _MeshGlyph,
+    _MeshVariables,
+    _MeshTopology,
+]
 
 
 def _documented_parameters(doc: str) -> set[str]:
@@ -62,8 +92,21 @@ def _declared_parameters(member) -> set[str]:
     }
 
 
-def _public_callables(cls: type) -> list[tuple[str, object]]:
-    """Every public callable attribute of `cls`, inherited members included."""
+def _is_deprecated_facade(member) -> bool:
+    """True when the callable is a flat deprecation facade that delegates to an engine.
+
+    A facade's body emits a `DeprecationWarning`; its parameters are documented on the engine
+    method it forwards to, so this guard checks the engine, not the facade.
+    """
+    try:
+        source = inspect.getsource(member)
+    except (OSError, TypeError):
+        return False
+    return "DeprecationWarning" in source
+
+
+def _public_callables(cls: type, *, skip_facades: bool) -> list[tuple[str, object]]:
+    """Public callables of `cls` (inherited included); optionally drop deprecation facades."""
     found = []
     for name, member in inspect.getmembers(cls, callable):
         if name.startswith("_"):
@@ -72,51 +115,71 @@ def _public_callables(cls: type) -> list[tuple[str, object]]:
             inspect.signature(member)
         except (TypeError, ValueError):
             continue
+        if skip_facades and _is_deprecated_facade(member):
+            continue
         found.append((name, member))
     return found
 
 
-_CALLABLES = _public_callables(MeshDataset)
+def _surface() -> list[tuple[str, object]]:
+    """The documented mesh surface: engine methods, plus non-facade MeshDataset methods."""
+    items: list[tuple[str, object]] = [
+        (f"MeshDataset.{name}", member)
+        for name, member in _public_callables(MeshDataset, skip_facades=True)
+    ]
+    for engine in _ENGINES:
+        label = engine.__name__.lstrip("_")
+        items.extend(
+            (f"{label}.{name}", member)
+            for name, member in _public_callables(engine, skip_facades=False)
+        )
+    return items
+
+
+_CALLABLES = _surface()
 
 
 class TestUgridDatasetDocstringSurface:
-    """Every public `MeshDataset` entry point against its own signature."""
+    """Every documented mesh entry point against its own signature."""
 
     def test_the_sweep_sees_the_whole_surface(self):
         """The sweep below is only as good as the surface it walks.
 
         Test scenario:
-            `MeshDataset` is assembled from a mixin, so a sweep that forgot
-            `inspect.getmembers`' inherited members would silently check a fraction of the
-            API and pass. Pin a floor and two names that only the mixin supplies.
+            The mesh API spans `MeshDataset` (constructors, the `Mapping` protocol) plus ten
+            engine classes. A sweep that forgot the engines, or forgot the mixin-supplied
+            members, would silently check a fraction of the API and pass. Pin a floor and
+            representative names from both the class and an engine.
         """
         names = {name for name, _ in _CALLABLES}
 
         assert len(names) >= 90, (
-            f"expected at least 90 public callables, got {len(names)}"
+            f"expected at least 90 documented callables, got {len(names)}"
         )
-        assert {"regrid", "binary_dilation"} <= names, (
-            "the sweep must reach the mixin's facades, not only the class body"
+        assert {
+            "MeshDataset.from_arrays",
+            "MeshSpatial.crop",
+            "MeshAnalysis.where",
+        } <= names, (
+            "the sweep must reach both MeshDataset constructors and the engine methods"
         )
 
     @pytest.mark.parametrize("name,member", _CALLABLES, ids=[n for n, _ in _CALLABLES])
     def test_every_parameter_is_documented(self, name, member):
-        """A parameter in the signature has an `Args:` entry.
+        """A parameter in the signature has an `Args:` entry on the documented method.
 
         Args:
-            name: The attribute name on `MeshDataset`.
+            name: The `<owner>.<attr>` label of the callable.
             member: The callable itself.
 
         Test scenario:
-            Six entry points failed this when it was written -- `reduce(groupby=)`,
-            `ffill(dim=)`, `bfill(dim=)`, `dropna(dim=)`, `binary_dilation(fixed=)` and
-            `binary_erosion(fixed=)` -- each a parameter this branch added to a signature
-            whose docstring was never extended to match.
+            A parameter added to an engine method (or a non-facade MeshDataset method) must be
+            listed in that method's own `Args:` block; the flat deprecation facades are exempt
+            because their parameters are documented on the engine they delegate to.
         """
         doc = inspect.getdoc(member) or ""
         missing = sorted(_declared_parameters(member) - _documented_parameters(doc))
 
         assert not missing, (
-            f"MeshDataset.{name} takes {missing} but its docstring's Args section does "
-            f"not list them"
+            f"{name} takes {missing} but its docstring's Args section does not list them"
         )
