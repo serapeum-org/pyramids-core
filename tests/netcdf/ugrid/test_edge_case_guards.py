@@ -76,7 +76,9 @@ class TestTidyFrameAxisCollisions:
             data={"anchor": np.array([1.0, 2.0])},
             data_locations={"anchor": "face"},
         )
-        dataset = dataset.with_variable("v", np.asarray(values), location="face")
+        dataset = dataset.variables.with_variable(
+            "v", np.asarray(values), location="face"
+        )
         dataset["v"].dimensions = dimensions
         return dataset
 

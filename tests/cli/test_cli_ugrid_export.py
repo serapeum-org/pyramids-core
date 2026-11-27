@@ -65,7 +65,7 @@ def _face_mesh(tmp_path: Path) -> str:
     mesh = MeshDataset.read_file(str(_MESH))
     values = np.arange(mesh.n_face, dtype="float64") % 3
     out = str(tmp_path / "face_mesh.nc")
-    mesh.with_variable("fv", values, location="face").to_file(out)
+    mesh.variables.with_variable("fv", values, location="face").to_file(out)
     return out
 
 

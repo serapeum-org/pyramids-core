@@ -411,7 +411,7 @@ def _cmd_mesh_drop_variables(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.drop_variables(args.names)
+        result = mesh.variables.drop_variables(args.names)
     return _write(args, result)
 
 

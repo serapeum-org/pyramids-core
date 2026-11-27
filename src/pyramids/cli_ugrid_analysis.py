@@ -104,7 +104,7 @@ def _cmd_slope(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.terrain.slope(units=args.units, variable_name=args.var)
-    mesh.with_variable("slope", np.asarray(values), location="face").to_file(
+    mesh.variables.with_variable("slope", np.asarray(values), location="face").to_file(
         args.output
     )
     info_print(args, f"wrote {args.output}")
@@ -124,7 +124,7 @@ def _cmd_aspect(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.terrain.aspect(variable_name=args.var)
-    mesh.with_variable("aspect", np.asarray(values), location="face").to_file(
+    mesh.variables.with_variable("aspect", np.asarray(values), location="face").to_file(
         args.output
     )
     info_print(args, f"wrote {args.output}")
@@ -147,9 +147,9 @@ def _cmd_hillshade(args: argparse.Namespace) -> int:
         values = mesh.terrain.hillshade(
             azimuth=args.azimuth, altitude=args.altitude, variable_name=args.var
         )
-    mesh.with_variable("hillshade", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "hillshade", np.asarray(values), location="face"
+    ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -168,9 +168,9 @@ def _cmd_focal_mean(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.focal_mean(rings=args.rings, variable_name=args.var)
-    mesh.with_variable("focal_mean", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "focal_mean", np.asarray(values), location="face"
+    ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -189,9 +189,9 @@ def _cmd_focal_std(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.focal_std(rings=args.rings, variable_name=args.var)
-    mesh.with_variable("focal_std", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "focal_std", np.asarray(values), location="face"
+    ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -215,7 +215,7 @@ def _cmd_focal_reduce(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
         values = mesh.focal_apply(reducer, rings=args.rings, variable_name=args.var)
-    mesh.with_variable(
+    mesh.variables.with_variable(
         f"focal_{args.reducer}", np.asarray(values), location="face"
     ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
@@ -238,9 +238,9 @@ def _cmd_proximity(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     distances = mesh.proximity(np.asarray(args.target_faces))
-    mesh.with_variable("proximity", np.asarray(distances), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "proximity", np.asarray(distances), location="face"
+    ).to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

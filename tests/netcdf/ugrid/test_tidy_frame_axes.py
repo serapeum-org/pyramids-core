@@ -41,7 +41,7 @@ def two_faces():
 
 def _with_dims(dataset, name, values, dimensions):
     """Add `name` to `dataset` with explicit `dimensions`, returning the new dataset."""
-    result = dataset.with_variable(name, np.asarray(values), location="face")
+    result = dataset.variables.with_variable(name, np.asarray(values), location="face")
     result[name].dimensions = dimensions
     return result
 

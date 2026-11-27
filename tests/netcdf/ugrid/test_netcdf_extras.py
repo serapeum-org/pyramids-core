@@ -63,7 +63,9 @@ class TestToDataFrame:
         assert sorted(set(frame["time"].tolist())) == [10.0, 20.0]
 
     def test_selecting_variables(self, mesh):
-        two = mesh.with_variable("other", np.array([9.0, 9.0]), location="face")
+        two = mesh.variables.with_variable(
+            "other", np.array([9.0, 9.0]), location="face"
+        )
         frame = two.interop.to_dataframe(variables=["other"])
         assert set(frame["variable"]) == {"other"}
 
@@ -72,7 +74,9 @@ class TestToDataFrame:
             mesh.interop.to_dataframe(variables=["nope"])
 
     def test_dropna_removes_gaps(self, mesh):
-        gappy = mesh.with_variable("g", np.array([1.0, np.nan]), location="face")
+        gappy = mesh.variables.with_variable(
+            "g", np.array([1.0, np.nan]), location="face"
+        )
         assert len(gappy.interop.to_dataframe(variables=["g"], dropna=True)) == 1
 
 

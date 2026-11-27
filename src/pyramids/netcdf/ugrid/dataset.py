@@ -104,6 +104,7 @@ from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
 from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
 from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
 from pyramids.netcdf.ugrid.engines.vector import _MeshVector
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
@@ -553,6 +554,11 @@ class MeshDataset(_MeshFacades):
         return _MeshGlyph(self)
 
     @property
+    def variables(self) -> _MeshVariables:
+        """Variables engine: with_variable, attach_data, rename_variable, drop_variables (``mesh.variables``)."""
+        return _MeshVariables(self)
+
+    @property
     def variable_names(self) -> list[str]:
         """Names of all data variables, in insertion order.
 
@@ -918,86 +924,36 @@ class MeshDataset(_MeshFacades):
         location: str = "face",
         nodata: float | None = None,
     ) -> MeshDataset:
-        """Return a new dataset with ``name`` added or replaced.
-
-        UGRID derivations are immutable — unlike ``NetCDF.set_variable`` this does not mutate
-        in place but returns a fresh dataset. A 2-D ``data`` array is treated as temporal
-        (leading axis = time); a 1-D array is a static per-element variable.
-
-        Args:
-            name: Variable name to add or replace.
-            data: The values; ``(n_elements,)`` static or ``(n_time, n_elements)`` temporal.
-            location: Mesh location — ``"face"``, ``"node"`` or ``"edge"``. Defaults to
-                ``"face"``.
-            nodata: Optional no-data value for the new variable.
-
-        Returns:
-            MeshDataset: A new dataset carrying the variable.
-        """
-        arr = np.asarray(data)
-        variable = MeshVariable(
-            name=name,
-            location=location,
-            mesh_name=self.mesh_name,
-            shape=arr.shape,
-            nodata=nodata,
-            _data=arr,
+        """Facade -- delegates to :meth:`_MeshVariables.with_variable`."""
+        warnings.warn(
+            "`mesh.with_variable` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.with_variable`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        new_vars = dict(self._data_variables)
-        new_vars[name] = variable
-        return self._rebuild(new_vars)
+        return self.variables.with_variable(
+            name, data, location=location, nodata=nodata
+        )
 
     def drop_variables(self, names: str | list[str]) -> MeshDataset:
-        """Return a new dataset without the named variable(s).
-
-        Args:
-            names: A variable name, or a list of them, to drop.
-
-        Returns:
-            MeshDataset: A new dataset without those variables.
-
-        Raises:
-            KeyError: A named variable is not present.
-        """
-        drop = [names] if isinstance(names, str) else list(names)
-        new_vars = dict(self._data_variables)
-        for name in drop:
-            if name not in new_vars:
-                raise KeyError(
-                    f"Variable {name!r} not found. Available: {self.variable_names}"
-                )
-            del new_vars[name]
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshVariables.drop_variables`."""
+        warnings.warn(
+            "`mesh.drop_variables` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.drop_variables`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.drop_variables(names)
 
     def rename_variable(self, old: str, new: str) -> MeshDataset:
-        """Return a new dataset with variable ``old`` renamed to ``new``.
-
-        Args:
-            old: The current variable name.
-            new: The new name.
-
-        Returns:
-            MeshDataset: A new dataset with the variable renamed.
-
-        Raises:
-            KeyError: ``old`` is not present.
-            ValueError: ``new`` already names a different variable.
-        """
-        if old not in self._data_variables:
-            raise KeyError(
-                f"Variable {old!r} not found. Available: {self.variable_names}"
-            )
-        if new in self._data_variables and new != old:
-            raise ValueError(f"Variable {new!r} already exists.")
-        new_vars: dict[str, MeshVariable] = {}
-        for name, var in self._data_variables.items():
-            if name == old:
-                # `replace` keeps the lazy loader and every other field, only re-labelling
-                # the variable, so a rename never forces a read.
-                new_vars[new] = replace(var, name=new)
-            else:
-                new_vars[name] = var
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshVariables.rename_variable`."""
+        warnings.warn(
+            "`mesh.rename_variable` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.rename_variable`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.rename_variable(old, new)
 
     @property
     def metadata(self) -> MeshMetadata:
@@ -1469,14 +1425,32 @@ class MeshDataset(_MeshFacades):
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True
     ) -> MeshDataset:
-        """Attach a results-only file's variables to this mesh.
+        """Facade -- delegates to :meth:`_MeshVariables.attach_data`."""
+        warnings.warn(
+            "`mesh.attach_data` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.attach_data`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.attach_data(path, driver, lazy)
+
+    def _attach_data_impl(
+        self, path: str | Path, driver: str | None = None, lazy: bool = True
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshVariables.attach_data`.
+
+        Kept on ``MeshDataset`` rather than moved onto the variables engine: the body reads the
+        results file through the module-level ``_require_existing_file`` /
+        ``_resolve_attach_driver`` / ``_read_data_through_driver`` helpers in this module, which
+        the engine cannot import without a cycle (``dataset`` imports the engine for its
+        ``variables`` accessor).
 
         Some formats carry values but no topology — an SMS ``.dat``, an XMDF, an XDMF — and must
         be paired with a mesh read from elsewhere. Those drivers declare ``needs_mesh``, and
         :meth:`read_file` refuses them, pointing here.
 
             >>> mesh = MeshDataset.read_file("domain.2dm")       # doctest: +SKIP
-            >>> result = mesh.attach_data("velocity.dat")         # doctest: +SKIP
+            >>> result = mesh.variables.attach_data("velocity.dat")  # doctest: +SKIP
 
         The driver returns **only the variables it read**; this method merges them onto the
         dataset. That division is deliberate — it makes a name the dataset already defines an

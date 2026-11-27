@@ -62,19 +62,25 @@ class TestGraphFacades:
             strip.to_location("bogus")
 
     def test_binary_dilation_grows_a_mask(self, strip):
-        masked = strip.with_variable("m", np.array([True, False]), location="face")
+        masked = strip.variables.with_variable(
+            "m", np.array([True, False]), location="face"
+        )
         out = masked.binary_dilation("m")
         assert out["m"].data.tolist() == [True, True]
 
     def test_binary_erosion_shrinks_a_mask(self, strip):
-        masked = strip.with_variable("m", np.array([True, True]), location="face")
+        masked = strip.variables.with_variable(
+            "m", np.array([True, True]), location="face"
+        )
         out = masked.binary_erosion("m")
         assert out["m"].data.tolist() == [False, False]
 
 
 class TestFillFacades:
     def test_fill_na_spatial_fills_from_the_neighbour(self, strip):
-        gappy = strip.with_variable("g", np.array([5.0, np.nan]), location="face")
+        gappy = strip.variables.with_variable(
+            "g", np.array([5.0, np.nan]), location="face"
+        )
         assert gappy.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
 
     def test_laplace_interpolate_fills_a_hole(self):
@@ -163,7 +169,7 @@ class TestVariableResolution:
         assert strip.fill_na_spatial()["d"].data.tolist() == [1.0, 2.0]
 
     def test_several_variables_require_a_name(self, strip):
-        two = strip.with_variable("e", np.array([3.0, 4.0]), location="face")
+        two = strip.variables.with_variable("e", np.array([3.0, 4.0]), location="face")
         with pytest.raises(ValueError, match="name the one to use"):
             two.fill_na_spatial()
 

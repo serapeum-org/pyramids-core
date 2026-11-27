@@ -35,6 +35,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+    from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
     from pyramids.netcdf.ugrid.engines.vector import _MeshVector
     from pyramids.netcdf.ugrid.models import MeshVariable
 
@@ -202,6 +203,9 @@ class _MeshFacades:
 
         @property
         def glyph(self) -> _MeshGlyph: ...
+
+        @property
+        def variables(self) -> _MeshVariables: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -907,7 +911,7 @@ class _MeshFacades:
         # reduction discard the unburned faces.
         burned = np.asarray(values)
         declared = float(fill) if np.isnan(fill) else None
-        return self.with_variable(  # type: ignore[attr-defined]
+        return self.variables.with_variable(  # type: ignore[attr-defined]
             name, burned, location="face", nodata=declared
         )
 
@@ -1031,7 +1035,7 @@ class _MeshFacades:
         # A target element the source does not cover comes back NaN, so the regridded variable
         # has to declare NaN as its no-data value -- otherwise `to_file` writes those NaNs with
         # no `_FillValue` and a reader cannot tell them from data.
-        return target.with_variable(
+        return target.variables.with_variable(
             var.name, np.asarray(values), location="face", nodata=float("nan")
         )
 

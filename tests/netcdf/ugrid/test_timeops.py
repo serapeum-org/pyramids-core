@@ -299,32 +299,34 @@ class TestVariableManagement:
         )
 
     def test_with_variable_is_immutable(self, mesh):
-        out = mesh.with_variable("e", np.array([5.0, 6.0]))
+        out = mesh.variables.with_variable("e", np.array([5.0, 6.0]))
         assert sorted(out.variable_names) == ["d", "e"]
         assert mesh.variable_names == ["d"]  # original untouched
 
     def test_with_variable_temporal(self, mesh):
-        out = mesh.with_variable("t", np.array([[1.0, 2.0], [3.0, 4.0]]))
+        out = mesh.variables.with_variable("t", np.array([[1.0, 2.0], [3.0, 4.0]]))
         assert out["t"].has_time is True
 
     def test_drop_variables(self, mesh):
-        out = mesh.with_variable("e", np.array([5.0, 6.0])).drop_variables("d")
+        out = mesh.variables.with_variable(
+            "e", np.array([5.0, 6.0])
+        ).variables.drop_variables("d")
         assert out.variable_names == ["e"]
 
     def test_drop_missing_raises(self, mesh):
         with pytest.raises(KeyError, match="not found"):
-            mesh.drop_variables("zzz")
+            mesh.variables.drop_variables("zzz")
 
     def test_rename_preserves_lazy_and_relabels(self, mesh):
-        out = mesh.rename_variable("d", "depth")
+        out = mesh.variables.rename_variable("d", "depth")
         assert out.variable_names == ["depth"]
         assert out["depth"].name == "depth"
         assert out["depth"].data.tolist() == [1.0, 2.0]
 
     def test_rename_conflict_raises(self, mesh):
-        two = mesh.with_variable("e", np.array([5.0, 6.0]))
+        two = mesh.variables.with_variable("e", np.array([5.0, 6.0]))
         with pytest.raises(ValueError, match="already exists"):
-            two.rename_variable("d", "e")
+            two.variables.rename_variable("d", "e")
 
 
 class TestLabelSelection:

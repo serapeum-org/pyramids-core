@@ -383,7 +383,7 @@ def _cmd_mesh_attach_data(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    attached = mesh.attach_data(args.data, driver=args.driver, lazy=args.lazy)
+    attached = mesh.variables.attach_data(args.data, driver=args.driver, lazy=args.lazy)
     attached.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -405,7 +405,7 @@ def _cmd_mesh_with_variable(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     values = np.load(args.data)
-    updated = mesh.with_variable(
+    updated = mesh.variables.with_variable(
         args.name, values, location=args.location, nodata=args.nodata
     )
     updated.to_file(args.output)
@@ -426,7 +426,7 @@ def _cmd_mesh_rename_variable(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        renamed = mesh.rename_variable(args.old, args.new)
+        renamed = mesh.variables.rename_variable(args.old, args.new)
     renamed.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

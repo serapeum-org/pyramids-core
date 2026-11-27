@@ -90,7 +90,7 @@ class TestRasterFacade:
 class TestInterpTimeCarriesStaticVariables:
     def test_a_variable_without_time_is_passed_through_untouched(self, triangles):
         """`interp_time` relabels the temporal variables and leaves a static one alone."""
-        both = triangles.with_variable(
+        both = triangles.variables.with_variable(
             "d", np.array([[0.0, 0.0], [10.0, 10.0]]), location="face"
         )
         both["d"].attributes = {**both["d"].attributes, "time_values": [0.0, 10.0]}

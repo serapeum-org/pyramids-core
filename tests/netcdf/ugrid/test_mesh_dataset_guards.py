@@ -115,12 +115,14 @@ class TestRenameVariable:
     def test_renaming_an_absent_variable_is_refused(self, mesh):
         """The rename names the missing variable and lists what is available."""
         with pytest.raises(KeyError, match="not found"):
-            mesh.rename_variable("nope", "other")
+            mesh.variables.rename_variable("nope", "other")
 
     def test_the_untouched_variables_are_carried_over(self, mesh):
         """A rename rebuilds the mapping, so every other variable survives it unchanged."""
-        two = mesh.with_variable("extra", np.array([5.0, 6.0]), location="face")
-        renamed = two.rename_variable("depth", "bed_level")
+        two = mesh.variables.with_variable(
+            "extra", np.array([5.0, 6.0]), location="face"
+        )
+        renamed = two.variables.rename_variable("depth", "bed_level")
         assert sorted(renamed.variable_names) == ["bed_level", "extra"]
         assert renamed["extra"].data.tolist() == [5.0, 6.0]
 
@@ -353,7 +355,9 @@ class TestMeshNames:
 class TestLayerCoordinates:
     def test_layer_values_skips_an_unlayered_variable(self, mesh):
         """The layer coordinate is read from the first *layered* variable, not the first one."""
-        layered = mesh.with_variable("p", np.arange(6.0).reshape(3, 2), location="face")
+        layered = mesh.variables.with_variable(
+            "p", np.arange(6.0).reshape(3, 2), location="face"
+        )
         layered["p"].dimensions = ("mesh2d_nLayers", "mesh2d_nFaces")
         layered["p"].attributes = {
             **layered["p"].attributes,
@@ -384,7 +388,9 @@ class TestToDataFrameCoordinates:
 
     def test_an_edge_variable_without_edge_coordinates_gets_nan_coordinates(self, mesh):
         """A mesh with no edge centres cannot address edge rows, so their coordinates are NaN."""
-        edgy = mesh.with_variable("e", np.array([1.0, 2.0, 3.0]), location="edge")
+        edgy = mesh.variables.with_variable(
+            "e", np.array([1.0, 2.0, 3.0]), location="edge"
+        )
         frame = edgy.interop.to_dataframe(variables=["e"])
         assert len(frame) == 3
         assert frame["x"].isna().all()
@@ -394,14 +400,18 @@ class TestToDataFrameCoordinates:
 class TestSummaryGuards:
     def test_a_non_numeric_variable_is_skipped_with_a_warning(self, mesh):
         """Summarising everything steps over a text variable instead of failing on it."""
-        texts = mesh.with_variable("label", np.array(["a", "b"]), location="face")
+        texts = mesh.variables.with_variable(
+            "label", np.array(["a", "b"]), location="face"
+        )
         with pytest.warns(UserWarning, match="skipping non-numeric variable"):
             table = texts.summary()
         assert table.index.tolist() == ["depth"]
 
     def test_naming_a_non_numeric_variable_raises(self, mesh):
         """Asked for that variable explicitly, the refusal is an error rather than a warning."""
-        texts = mesh.with_variable("label", np.array(["a", "b"]), location="face")
+        texts = mesh.variables.with_variable(
+            "label", np.array(["a", "b"]), location="face"
+        )
         with pytest.raises(TypeError, match="non-numeric"):
             texts.summary(variables=["label"])
 
@@ -409,13 +419,17 @@ class TestSummaryGuards:
 class TestSampleGuards:
     def test_an_unknown_method_on_a_node_variable_is_refused(self, mesh):
         """A node variable supports `nearest` only, and any other method is named back."""
-        nodal = mesh.with_variable("z", np.array([1.0, 2.0, 3.0, 4.0]), location="node")
+        nodal = mesh.variables.with_variable(
+            "z", np.array([1.0, 2.0, 3.0, 4.0]), location="node"
+        )
         with pytest.raises(ValueError, match="must be 'contains' or 'nearest'"):
             nodal.sample("z", 0.1, 0.1, method="bogus")
 
     def test_an_edge_variable_is_unsupported(self, mesh):
         """Sampling resolves points to faces or nodes; an edge variable has no lookup."""
-        edgy = mesh.with_variable("e", np.array([1.0, 2.0, 3.0]), location="edge")
+        edgy = mesh.variables.with_variable(
+            "e", np.array([1.0, 2.0, 3.0]), location="edge"
+        )
         with pytest.raises(ValueError, match="supports 'face' and 'node'"):
             edgy.sample("e", 0.1, 0.1, method="nearest")
 
@@ -423,13 +437,17 @@ class TestSampleGuards:
 class TestWeightedGuards:
     def test_a_node_variable_is_refused(self, mesh):
         """Area weights are per face, so a node variable cannot be area-weighted."""
-        nodal = mesh.with_variable("z", np.array([1.0, 2.0, 3.0, 4.0]), location="node")
+        nodal = mesh.variables.with_variable(
+            "z", np.array([1.0, 2.0, 3.0, 4.0]), location="node"
+        )
         with pytest.raises(ValueError, match="need a face-located variable"):
             nodal.weighted("z")
 
     def test_a_face_count_mismatch_is_refused(self, mesh):
         """A face variable whose length is not the face count cannot be paired with the areas."""
-        wrong = mesh.with_variable("x", np.array([1.0, 2.0, 3.0]), location="face")
+        wrong = mesh.variables.with_variable(
+            "x", np.array([1.0, 2.0, 3.0]), location="face"
+        )
         with pytest.raises(ValueError, match="face value"):
             wrong.weighted("x")
 
@@ -437,7 +455,9 @@ class TestWeightedGuards:
 class TestZonalStatsGuards:
     def test_a_node_variable_is_refused(self, mesh):
         """Zones collect face centroids, so the variable has to be face-located."""
-        nodal = mesh.with_variable("z", np.array([1.0, 2.0, 3.0, 4.0]), location="node")
+        nodal = mesh.variables.with_variable(
+            "z", np.array([1.0, 2.0, 3.0, 4.0]), location="node"
+        )
         zones = gpd.GeoDataFrame({"id": [1]}, geometry=[box(0.0, 0.0, 1.0, 1.0)])
         with pytest.raises(ValueError, match="needs a face-located variable"):
             nodal.zonal_stats(zones, variable_name="z")

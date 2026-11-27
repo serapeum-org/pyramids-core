@@ -156,7 +156,9 @@ class TestLayerSelection:
 
     def test_static_variables_are_carried_through(self):
         mesh = _layered(np.array([[1.0, 2.0], [3.0, 4.0]]))
-        both = mesh.with_variable("flat", np.array([7.0, 8.0]), location="face")
+        both = mesh.variables.with_variable(
+            "flat", np.array([7.0, 8.0]), location="face"
+        )
         out = both.isel_layer(0)
         assert out["flat"].data.tolist() == [7.0, 8.0]
         assert out["t"].data.tolist() == [1.0, 2.0]
