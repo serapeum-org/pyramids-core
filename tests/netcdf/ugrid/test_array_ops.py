@@ -34,80 +34,80 @@ def _make_ds(
 class TestFillna:
     def test_replaces_nan(self):
         ds = _make_ds(np.array([1.0, np.nan]))
-        filled = ds.fillna(0.0)
+        filled = ds.analysis.fillna(0.0)
         np.testing.assert_array_equal(filled["depth"].data, [1.0, 0.0])
 
     def test_replaces_nodata_sentinel(self):
         ds = _make_ds(np.array([1.0, -9999.0]), nodata=-9999.0)
-        filled = ds.fillna(0.0)
+        filled = ds.analysis.fillna(0.0)
         np.testing.assert_array_equal(filled["depth"].data, [1.0, 0.0])
 
     def test_no_missing_unchanged(self):
         ds = _make_ds(np.array([5.0, 10.0]))
-        filled = ds.fillna(0.0)
+        filled = ds.analysis.fillna(0.0)
         np.testing.assert_array_equal(filled["depth"].data, [5.0, 10.0])
 
 
 class TestIsnull:
     def test_nan_detected(self):
         ds = _make_ds(np.array([1.0, np.nan]))
-        result = ds.isnull()
+        result = ds.analysis.isnull()
         np.testing.assert_array_equal(result["depth"].data, [False, True])
 
     def test_nodata_detected(self):
         ds = _make_ds(np.array([1.0, -9999.0]), nodata=-9999.0)
-        result = ds.isnull()
+        result = ds.analysis.isnull()
         np.testing.assert_array_equal(result["depth"].data, [False, True])
 
 
 class TestNotnull:
     def test_inverse_of_isnull(self):
         ds = _make_ds(np.array([1.0, np.nan]))
-        result = ds.notnull()
+        result = ds.analysis.notnull()
         np.testing.assert_array_equal(result["depth"].data, [True, False])
 
 
 class TestClipValues:
     def test_clamps_values(self):
         ds = _make_ds(np.array([5.0, 25.0]))
-        result = ds.clip_values(8.0, 22.0)
+        result = ds.analysis.clip_values(8.0, 22.0)
         np.testing.assert_array_equal(result["depth"].data, [8.0, 22.0])
 
     def test_within_range_unchanged(self):
         ds = _make_ds(np.array([10.0, 20.0]))
-        result = ds.clip_values(0.0, 100.0)
+        result = ds.analysis.clip_values(0.0, 100.0)
         np.testing.assert_array_equal(result["depth"].data, [10.0, 20.0])
 
 
 class TestRound:
     def test_rounds_to_integer(self):
         ds = _make_ds(np.array([1.567, 2.345]))
-        result = ds.round(0)
+        result = ds.analysis.round(0)
         np.testing.assert_array_equal(result["depth"].data, [2.0, 2.0])
 
     def test_rounds_to_one_decimal(self):
         ds = _make_ds(np.array([1.567, 2.345]))
-        result = ds.round(1)
+        result = ds.analysis.round(1)
         np.testing.assert_array_almost_equal(result["depth"].data, [1.6, 2.3])
 
 
 class TestAstype:
     def test_float_to_int(self):
         ds = _make_ds(np.array([1.0, 2.0]))
-        result = ds.astype(np.int32)
+        result = ds.analysis.astype(np.int32)
         assert result["depth"].data.dtype == np.int32
         np.testing.assert_array_equal(result["depth"].data, [1, 2])
 
     def test_preserves_values(self):
         ds = _make_ds(np.array([1.5, 2.5]))
-        result = ds.astype(np.float32)
+        result = ds.analysis.astype(np.float32)
         assert result["depth"].data.dtype == np.float32
 
 
 class TestIsin:
     def test_membership(self):
         ds = _make_ds(np.array([10.0, 20.0]))
-        result = ds.isin([10.0, 30.0])
+        result = ds.analysis.isin([10.0, 30.0])
         np.testing.assert_array_equal(result["depth"].data, [True, False])
 
 
@@ -195,7 +195,9 @@ class TestCellwiseKernelsHonourTheSentinel:
     """
 
     def test_clip_preserves_the_gap(self):
-        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).clip_values(8.0, 22.0)
+        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).analysis.clip_values(
+            8.0, 22.0
+        )
         assert out["depth"].data.tolist() == [8.0, -9999.0]  # was [8.0, 8.0]
 
     @pytest.mark.parametrize(
@@ -209,39 +211,45 @@ class TestCellwiseKernelsHonourTheSentinel:
     def test_clip_validates_its_bounds(self, lower, upper, exc):
         ds = _make_ds(np.array([5.0, 25.0]))
         with pytest.raises(exc):
-            ds.clip_values(lower, upper)
+            ds.analysis.clip_values(lower, upper)
 
     def test_round_preserves_a_fractional_sentinel(self):
-        out = _make_ds(np.array([5.0, -9999.5]), nodata=-9999.5).round(0)
+        out = _make_ds(np.array([5.0, -9999.5]), nodata=-9999.5).analysis.round(0)
         assert out["depth"].data.tolist() == [5.0, -9999.5]  # was [5.0, -10000.0]
 
     def test_isin_excludes_the_gap(self):
-        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).isin([-9999.0])
+        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).analysis.isin(
+            [-9999.0]
+        )
         assert out["depth"].data.tolist() == [False, False]  # was [False, True]
 
     def test_apply_leaves_the_gap_untouched(self):
-        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).apply(lambda a: a * 2)
+        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).analysis.apply(
+            lambda a: a * 2
+        )
         assert out["depth"].data.tolist() == [10.0, -9999.0]  # was [10.0, -19998.0]
 
     def test_astype_refuses_to_erase_a_gap(self):
         ds = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0)
         with pytest.raises(ValueError, match="cannot mark a gap"):
-            ds.astype(np.uint8)
+            ds.analysis.astype(np.uint8)
 
     def test_astype_is_fine_when_the_target_holds_the_sentinel(self):
-        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).astype(np.int32)
+        out = _make_ds(np.array([5.0, -9999.0]), nodata=-9999.0).analysis.astype(
+            np.int32
+        )
         assert out["depth"].data.tolist() == [5, -9999]
 
     def test_fillna_widens_an_integer_band_for_a_fractional_fill(self):
         ds = make_two_triangle_ds(values=np.array([5, -9999], dtype="int16"))
         ds["depth"].nodata = -9999
-        out = ds.fillna(2.5)
+        out = ds.analysis.fillna(2.5)
         assert out["depth"].data.tolist() == [5.0, 2.5]  # was [5, 2] int16
         assert out["depth"].data.dtype == np.float64
 
     def test_fillna_widens_a_float32_band_for_an_overflowing_fill(self):
         ds = make_two_triangle_ds(values=np.array([5.0, -9999.0], dtype="float32"))
         ds["depth"].nodata = -9999.0
-        out = ds.fillna(1e300)
+        out = ds.analysis.fillna(1e300)
         assert out["depth"].data[1] == 1e300  # was inf, behind a RuntimeWarning
         assert out["depth"].data.dtype == np.float64

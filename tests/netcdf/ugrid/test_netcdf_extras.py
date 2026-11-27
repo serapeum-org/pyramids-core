@@ -96,14 +96,14 @@ class TestCopy:
 class TestFromBytes:
     def test_round_trips_through_memory(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
-        mesh.to_file(path)
+        mesh.io.to_file(path)
         back = MeshDataset.from_bytes(path.read_bytes())
         assert (back.n_face, back.n_node) == (mesh.n_face, mesh.n_node)
         assert back["depth"].data.tolist() == [2.0, 4.0]
 
     def test_result_survives_the_buffer(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
-        mesh.to_file(path)
+        mesh.io.to_file(path)
         back = MeshDataset.from_bytes(path.read_bytes())
         # The vsimem file is unlinked inside from_bytes; the values must still be readable.
         assert float(np.asarray(back["depth"].data).sum()) == 6.0
@@ -150,6 +150,6 @@ class TestGlobalAttributes:
         self, mesh, tmp_path: Path
     ):
         path = tmp_path / "m.nc"
-        mesh.set_global_attribute("bounds", [1.0, 2.0, 3.0]).to_file(path)
+        mesh.set_global_attribute("bounds", [1.0, 2.0, 3.0]).io.to_file(path)
         back = MeshDataset.read_file(path)
         assert list(np.atleast_1d(back.global_attributes["bounds"])) == [1.0, 2.0, 3.0]

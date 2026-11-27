@@ -81,7 +81,7 @@ class TestFillFacades:
         gappy = strip.variables.with_variable(
             "g", np.array([5.0, np.nan]), location="face"
         )
-        assert gappy.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
+        assert gappy.analysis.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
 
     def test_laplace_interpolate_fills_a_hole(self):
         mesh = MeshDataset.from_arrays(
@@ -90,7 +90,7 @@ class TestFillFacades:
             face_node_connectivity=np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6]]),
             data={"d": np.array([0.0, np.nan, 2.0])},
         )
-        filled = mesh.laplace_interpolate("d")["d"].data
+        filled = mesh.analysis.laplace_interpolate("d")["d"].data
         assert filled[1] == pytest.approx(1.0, abs=1e-6)
 
 
@@ -101,7 +101,7 @@ class TestVectorFacades:
         assert len(out) == 2
 
     def test_sample_line_crosses_both_faces(self, strip):
-        distances, values, faces = strip.sample_line(
+        distances, values, faces = strip.analysis.sample_line(
             LineString([(0.1, 0.5), (1.9, 0.5)]), "d"
         )
         assert values.tolist() == [1.0, 2.0]
@@ -109,7 +109,7 @@ class TestVectorFacades:
         assert distances[0] < distances[1]
 
     def test_burn_adds_a_variable(self, strip):
-        out = strip.burn(box(-1.0, -1.0, 1.05, 2.0), 9.0, name="b")
+        out = strip.io.burn(box(-1.0, -1.0, 1.05, 2.0), 9.0, name="b")
         assert out["b"].data[0] == 9.0
         assert "b" in out.variable_names
 
@@ -135,7 +135,7 @@ class TestRegridFacades:
             data_locations={"d": "face"},
         )
         mesh["d"].attributes = {**mesh["d"].attributes, "time_values": [0.0, 10.0]}
-        out = mesh.interp_time([5.0])
+        out = mesh.selection.interp_time([5.0])
         assert out["d"].data.shape == (1, 2)
         assert out["d"].data[0].tolist() == pytest.approx([5.0, 5.0])
         assert out["d"].attributes["time_values"] == [5.0]
@@ -166,13 +166,13 @@ class TestConstructors:
 
 class TestVariableResolution:
     def test_single_variable_needs_no_name(self, strip):
-        assert strip.fill_na_spatial()["d"].data.tolist() == [1.0, 2.0]
+        assert strip.analysis.fill_na_spatial()["d"].data.tolist() == [1.0, 2.0]
 
     def test_several_variables_require_a_name(self, strip):
         two = strip.variables.with_variable("e", np.array([3.0, 4.0]), location="face")
         with pytest.raises(ValueError, match="name the one to use"):
-            two.fill_na_spatial()
+            two.analysis.fill_na_spatial()
 
     def test_unknown_name_raises_keyerror(self, strip):
         with pytest.raises(KeyError):
-            strip.fill_na_spatial("nope")
+            strip.analysis.fill_na_spatial("nope")

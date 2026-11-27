@@ -227,7 +227,7 @@ class TestFacadeVariable:
         """
         ds = _two_var_ds()
         with pytest.raises(ValueError, match="2 data variable"):
-            ds.fillna(0.0)
+            ds.analysis.fillna(0.0)
 
     def test_missing_variable_raises(self):
         """Naming a non-existent variable raises KeyError.
@@ -237,7 +237,7 @@ class TestFacadeVariable:
         """
         ds = _two_var_ds()
         with pytest.raises(KeyError, match="nonexistent"):
-            ds.fillna(0.0, variable_name="nonexistent")
+            ds.analysis.fillna(0.0, variable_name="nonexistent")
 
     def test_no_loaded_data_raises(self):
         """A variable with no data raises ValueError.
@@ -248,7 +248,7 @@ class TestFacadeVariable:
         """
         ds = _no_data_var_ds()
         with pytest.raises(ValueError, match="no loaded data"):
-            ds.fillna(0.0)
+            ds.analysis.fillna(0.0)
 
 
 class TestCountDomainCellsTwoDimMask:
@@ -263,7 +263,7 @@ class TestCountDomainCellsTwoDimMask:
         """
         ds = make_two_triangle_ds()
         ds["depth"].active = np.array([[True, True], [True, False]])
-        count = ds.count_domain_cells("depth")
+        count = ds.analysis.count_domain_cells("depth")
         assert count == 1, f"Expected 1 active face from last time step, got {count}"
 
 
@@ -302,7 +302,7 @@ class TestRewrapStripsBoolNodata:
             data_variables={"depth": var},
             global_attributes={},
         )
-        result = ds.isnull()
+        result = ds.analysis.isnull()
         assert result["depth"].nodata is None, (
             f"Boolean result should have nodata=None, got {result['depth'].nodata}"
         )

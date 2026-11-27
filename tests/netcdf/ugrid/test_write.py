@@ -44,11 +44,11 @@ class TestWriteUgrid:
             `RuntimeError: Illegal numpy array rank 2`. The result must now write and read
             back with the coefficient axis and values intact.
         """
-        fit = self._temporal_ramp().polyfit(1)
+        fit = self._temporal_ramp().selection.polyfit(1)
         assert fit["v"].dimensions == ("coefficient", "face")
         out = tmp_path / "polyfit.nc"
 
-        fit.to_file(out)
+        fit.io.to_file(out)
 
         back = MeshDataset.read_file(out)
         read = back["v"]
@@ -60,11 +60,11 @@ class TestWriteUgrid:
 
     def test_to_file_round_trips_a_curvefit_parameter_dim(self, tmp_path):
         """The sibling case: `curvefit`'s non-time `parameter` axis also writes."""
-        fit = self._temporal_ramp().curvefit(lambda x, a, b: a * x + b)
+        fit = self._temporal_ramp().selection.curvefit(lambda x, a, b: a * x + b)
         assert fit["v"].dimensions == ("parameter", "face")
         out = tmp_path / "curvefit.nc"
 
-        fit.to_file(out)
+        fit.io.to_file(out)
 
         read = MeshDataset.read_file(out)["v"]
         assert np.asarray(read.data).shape == (2, 2)
@@ -86,7 +86,7 @@ class TestWriteUgrid:
             epsg=4326,
         )
         out_path = tmp_path / "test_ugrid.nc"
-        ds.to_file(out_path)
+        ds.io.to_file(out_path)
         assert out_path.exists(), "Output file should exist"
 
         ds2 = MeshDataset.read_file(out_path)
@@ -138,7 +138,7 @@ class TestWriteUgrid:
             topology_info=topo,
         )
         out_path = tmp_path / "mixed.nc"
-        ds.to_file(out_path)
+        ds.io.to_file(out_path)
 
         ds2 = MeshDataset.read_file(out_path)
         assert ds2.n_face == 3, f"Expected 3 faces, got {ds2.n_face}"
@@ -156,7 +156,7 @@ class TestWriteUgrid:
         """
         ds1 = MeshDataset.read_file(ugrid_convention_nc_path)
         out_path = tmp_path / "ws_roundtrip.nc"
-        ds1.to_file(out_path)
+        ds1.io.to_file(out_path)
 
         ds2 = MeshDataset.read_file(out_path)
         assert ds2.n_node == ds1.n_node, (
@@ -393,7 +393,7 @@ class TestTemporalWrite:
             data_locations={"wl": "face"},
         )
         out_path = tmp_path / "temporal.nc"
-        ds.to_file(out_path)
+        ds.io.to_file(out_path)
 
         ds2 = MeshDataset.read_file(out_path)
         assert "wl" in ds2.variable_names, "Should have wl variable"
@@ -575,7 +575,7 @@ class TestExtraDimension:
             }
         out = tmp_path / "twofit.nc"
 
-        ds.polyfit(1).to_file(out)
+        ds.selection.polyfit(1).io.to_file(out)
 
         back = MeshDataset.read_file(out)
         assert back["a"].dimensions[0] == "coefficient"
@@ -616,9 +616,9 @@ class TestExtraDimension:
         )
         out = tmp_path / "unnamed_axis.nc"
 
-        MeshDataset(mesh=mesh, data_variables={"v": var}, global_attributes={}).to_file(
-            out
-        )
+        MeshDataset(
+            mesh=mesh, data_variables={"v": var}, global_attributes={}
+        ).io.to_file(out)
 
         ds = gdal.OpenEx(str(out), gdal.OF_MULTIDIM_RASTER)
         names = [

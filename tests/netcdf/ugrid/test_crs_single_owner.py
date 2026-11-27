@@ -45,7 +45,7 @@ class TestCrsSingleOwner:
 
     def test_clip_keeps_the_crs_on_contour(self):
         """A spatial subset's contour is not CRS-less."""
-        clipped = _square_mesh(epsg=4326).clip(box(0.0, 0.0, 1.0, 1.0))
+        clipped = _square_mesh(epsg=4326).analysis.clip(box(0.0, 0.0, 1.0, 1.0))
         assert clipped.vector.contour(3, "depth").crs.to_epsg() == 4326
 
     def test_set_crs_refreshes_topology_info(self):

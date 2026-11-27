@@ -81,5 +81,5 @@ class TestSamplingOnABoundary:
         assert got[0] == pytest.approx(3.0)
 
     def test_the_dataset_facade_samples_a_boundary_point(self, mesh):
-        got = mesh.sample("v", 0.5, 0.5, method="contains")
+        got = mesh.analysis.sample("v", 0.5, 0.5, method="contains")
         assert np.isfinite(np.asarray(got, dtype="float64")).all()

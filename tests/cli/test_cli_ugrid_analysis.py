@@ -50,7 +50,7 @@ def _build(values, *, nodata=None):
 def mesh_file(tmp_path):
     """A written four-face mesh NetCDF with values ``[5, 0, 0, 7]``."""
     path = tmp_path / "mesh.nc"
-    _build([5.0, 0.0, 0.0, 7.0]).to_file(str(path))
+    _build([5.0, 0.0, 0.0, 7.0]).io.to_file(str(path))
     return str(path)
 
 
@@ -58,7 +58,7 @@ def mesh_file(tmp_path):
 def ramp_file(tmp_path):
     """A written four-face mesh NetCDF with a monotonic ramp ``[1, 2, 3, 4]``."""
     path = tmp_path / "ramp.nc"
-    _build([1.0, 2.0, 3.0, 4.0]).to_file(str(path))
+    _build([1.0, 2.0, 3.0, 4.0]).io.to_file(str(path))
     return str(path)
 
 
@@ -66,7 +66,7 @@ def ramp_file(tmp_path):
 def mask_file(tmp_path):
     """A written four-face boolean mask mesh ``[1, 0, 0, 0]`` for morphology verbs."""
     path = tmp_path / "mask.nc"
-    _build([1.0, 0.0, 0.0, 0.0]).to_file(str(path))
+    _build([1.0, 0.0, 0.0, 0.0]).io.to_file(str(path))
     return str(path)
 
 
@@ -357,7 +357,7 @@ class TestSummaries:
         mesh = MeshDataset.read_file(ramp_file)
         mesh.spatial.set_crs(epsg=4326)
         geo_mesh = str(tmp_path / "geo.nc")
-        mesh.to_file(geo_mesh)
+        mesh.io.to_file(geo_mesh)
         zones = str(tmp_path / "zones3857.geojson")
         poly = Polygon([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
         FeatureCollection(gpd.GeoDataFrame(geometry=[poly], crs=3857)).to_file(
@@ -702,7 +702,7 @@ class TestPolyfit:
         )
         ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
         path = tmp_path / "ramp_t.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         return str(path)
 
     def test_polyfit_writes_a_coefficient_mesh(self, tmp_path):
@@ -849,7 +849,7 @@ class TestCurvefit:
         )
         ds["v"].attributes = {**ds["v"].attributes, "time_values": [0.0, 1.0, 2.0]}
         path = tmp_path / "ramp_t.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         return str(path)
 
     def test_writes_a_parameter_axis(self, tmp_path):

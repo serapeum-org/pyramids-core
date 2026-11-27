@@ -50,8 +50,8 @@ def _two_copies(tmp_path) -> tuple[str, str]:
     """
     first = str(tmp_path / "a.nc")
     second = str(tmp_path / "b.nc")
-    MeshDataset.read_file(str(_MESH)).to_file(first)
-    MeshDataset.read_file(str(_MESH)).to_file(second)
+    MeshDataset.read_file(str(_MESH)).io.to_file(first)
+    MeshDataset.read_file(str(_MESH)).io.to_file(second)
     return first, second
 
 

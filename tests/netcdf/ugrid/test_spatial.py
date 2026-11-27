@@ -297,7 +297,7 @@ class TestClipMesh:
         """
 
         mask = box(-0.1, -0.1, 1.1, 2.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert clipped.n_face == 2, f"Expected 2 faces, got {clipped.n_face}"
 
     def test_clip_touch_true(self, unit_square_dataset):
@@ -309,7 +309,7 @@ class TestClipMesh:
         """
 
         mask = box(0.0, 0.0, 1.0, 2.0)
-        clipped = unit_square_dataset.clip(mask, touch=True)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=True)
         assert clipped.n_face >= 2, (
             f"Expected >= 2 faces with touch=True, got {clipped.n_face}"
         )
@@ -323,7 +323,7 @@ class TestClipMesh:
         """
 
         mask = box(-0.1, -0.1, 1.1, 1.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert "temperature" in clipped.variable_names, (
             f"temperature should be in clipped data, got {clipped.variable_names}"
         )
@@ -341,7 +341,7 @@ class TestClipMesh:
         """
 
         mask = box(0.0, 0.0, 1.1, 1.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         fnc = clipped.mesh.face_node_connectivity
         max_node = fnc.data[fnc.data != -1].max()
         assert max_node < clipped.n_node, (
@@ -388,7 +388,7 @@ class TestSubsetByBounds:
         """
 
         mask = box(-0.1, -0.1, 2.1, 2.1)
-        result = unit_square_dataset.clip(mask)
+        result = unit_square_dataset.analysis.clip(mask)
         assert result.n_face == 4, f"Expected 4 faces, got {result.n_face}"
 
 
@@ -442,7 +442,7 @@ class TestSpatialEdgeCases:
         """
 
         mask = box(100.0, 100.0, 200.0, 200.0)
-        result = unit_square_dataset.clip(mask, touch=True)
+        result = unit_square_dataset.analysis.clip(mask, touch=True)
         assert result.n_face == 0, f"Expected 0 faces, got {result.n_face}"
 
     def test_subset_fully_outside_bounds(self, unit_square_dataset):
@@ -491,7 +491,7 @@ class TestSpatialEdgeCases:
             data_locations={"altitude": "node"},
         )
         mask = box(-0.1, -0.1, 1.1, 1.1)
-        clipped = ds.clip(mask, touch=False)
+        clipped = ds.analysis.clip(mask, touch=False)
         var = clipped["altitude"]
         assert var.n_elements == clipped.n_node, (
             f"Node data length {var.n_elements} should match n_node {clipped.n_node}"
@@ -509,7 +509,7 @@ class TestCrop:
         """
         mask = box(-0.1, -0.1, 1.1, 2.1)
         cropped = unit_square_dataset.spatial.crop(mask, touch=False)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert cropped.n_face == clipped.n_face == 2, (
             f"crop/clip disagree: {cropped.n_face} vs {clipped.n_face}"
         )
@@ -558,7 +558,7 @@ class TestCrop:
         """
         mask = box(-0.1, -0.1, 1.1, 2.1)
         cropped = unit_square_dataset.spatial.crop(mask, touch=touch)
-        clipped = unit_square_dataset.clip(mask, touch=touch)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=touch)
         assert cropped.n_face == clipped.n_face, (
             f"crop(touch={touch}) kept {cropped.n_face} faces, clip kept {clipped.n_face}"
         )

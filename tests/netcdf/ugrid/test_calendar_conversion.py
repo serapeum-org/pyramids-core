@@ -59,7 +59,7 @@ class TestConvertCalendar:
         """Only the coordinate changes - that is the whole contract."""
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2), (2001, 1, 3))
         ds = _mesh(stamps)
-        converted = ds.convert_calendar("noleap")
+        converted = ds.selection.convert_calendar("noleap")
         assert np.array_equal(converted["depth"].data, ds["depth"].data)
 
     @pytest.mark.parametrize(
@@ -79,26 +79,26 @@ class TestConvertCalendar:
         stamps = _days("standard", (2001, 3, 1), (2001, 3, 2), (2001, 3, 3))
         ds = _mesh(stamps, units=units)
         with pytest.raises(ValueError, match="reference date must exist"):
-            ds.convert_calendar(target)
+            ds.selection.convert_calendar(target)
 
     def test_the_target_calendar_is_carried(self):
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2))
-        converted = _mesh(stamps).convert_calendar("360_day")
+        converted = _mesh(stamps).selection.convert_calendar("360_day")
         assert converted["depth"].attributes[TIME_CALENDAR_ATTR] == "360_day"
         assert all(s.calendar == "360_day" for s in converted.time_values)
 
     def test_the_units_string_is_kept(self):
         """The offsets are re-counted in the same unit and epoch."""
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2))
-        converted = _mesh(stamps, units="days since 1990-01-01").convert_calendar(
-            "noleap"
-        )
+        converted = _mesh(
+            stamps, units="days since 1990-01-01"
+        ).selection.convert_calendar("noleap")
         assert converted["depth"].attributes[TIME_UNITS_ATTR] == "days since 1990-01-01"
 
     def test_29_february_is_dropped_moving_to_noleap(self):
         """The documented loss: noleap has no 29 February, so that step goes with the date."""
         stamps = _days("standard", (2004, 2, 28), (2004, 2, 29), (2004, 3, 1))
-        converted = _mesh(stamps).convert_calendar("noleap")
+        converted = _mesh(stamps).selection.convert_calendar("noleap")
         assert converted["depth"].n_time_steps == 2, "the leap day's step is dropped"
         assert [(s.month, s.day) for s in converted.time_values] == [(2, 28), (3, 1)]
 
@@ -106,19 +106,19 @@ class TestConvertCalendar:
         """The dropped step must take ITS row with it, not shift the others."""
         stamps = _days("standard", (2004, 2, 28), (2004, 2, 29), (2004, 3, 1))
         values = [[10.0, 11.0], [20.0, 21.0], [30.0, 31.0]]
-        converted = _mesh(stamps, values=values).convert_calendar("noleap")
+        converted = _mesh(stamps, values=values).selection.convert_calendar("noleap")
         assert converted["depth"].data.tolist() == [[10.0, 11.0], [30.0, 31.0]]
 
     def test_31_december_is_dropped_moving_to_360_day(self):
         """A 360-day year has no month longer than 30 days."""
         stamps = _days("standard", (2001, 12, 30), (2001, 12, 31))
-        converted = _mesh(stamps).convert_calendar("360_day")
+        converted = _mesh(stamps).selection.convert_calendar("360_day")
         assert converted["depth"].n_time_steps == 1
 
     def test_align_on_year_keeps_the_position_in_the_year(self):
         """Model bookkeeping: the day's place in the year matters, not its date."""
         stamps = _days("standard", (2001, 1, 1), (2001, 7, 2), (2001, 12, 31))
-        converted = _mesh(stamps).convert_calendar("360_day", align_on="year")
+        converted = _mesh(stamps).selection.convert_calendar("360_day", align_on="year")
         assert converted["depth"].n_time_steps == 3, (
             "align_on='year' drops nothing here"
         )
@@ -131,7 +131,7 @@ class TestConvertCalendar:
         dropped to keep the axis strictly monotonic, which the docstring states."""
         # 366 days of a leap year onto a 360-day calendar: six days have nowhere distinct to go.
         stamps = _days("standard", *[(2004, 1, day) for day in range(1, 32)])
-        converted = _mesh(stamps).convert_calendar("360_day", align_on="year")
+        converted = _mesh(stamps).selection.convert_calendar("360_day", align_on="year")
         assert converted["depth"].n_time_steps < len(stamps), (
             "collapsed days were dropped"
         )
@@ -145,32 +145,32 @@ class TestConvertCalendar:
         stamps = _days("standard", (2001, 1, 31), (2001, 12, 31))
         subject = _mesh(stamps)
         with pytest.raises(ValueError, match="would drop every step"):
-            subject.convert_calendar("360_day")
+            subject.selection.convert_calendar("360_day")
 
     def test_an_unknown_calendar_is_refused(self):
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2))
         subject = _mesh(stamps)
         with pytest.raises(ValueError, match="cftime does not know"):
-            subject.convert_calendar("mayan")
+            subject.selection.convert_calendar("mayan")
 
     def test_an_unknown_alignment_is_refused(self):
         stamps = _days("standard", (2001, 1, 1), (2001, 1, 2))
         subject = _mesh(stamps)
         with pytest.raises(ValueError, match="align_on"):
-            subject.convert_calendar("noleap", align_on="month")
+            subject.selection.convert_calendar("noleap", align_on="month")
 
     def test_a_positional_axis_is_refused_with_a_reason(self):
         """No CF units means the steps are positions, so there is no calendar to convert."""
         ds = _mesh([0, 1, 2], units=None)
         with pytest.raises(ValueError, match="no 'units' attribute"):
-            ds.convert_calendar("noleap")
+            ds.selection.convert_calendar("noleap")
 
     def test_a_datetime64_axis_is_accepted(self):
         """The reader yields datetime64 for the Gregorian family; it must still convert."""
         stamps = np.array(
             ["2001-01-01", "2001-01-02", "2001-01-03"], dtype="datetime64[ns]"
         )
-        converted = _mesh(list(stamps)).convert_calendar("360_day")
+        converted = _mesh(list(stamps)).selection.convert_calendar("360_day")
         assert converted["depth"].n_time_steps == 3
         assert all(s.calendar == "360_day" for s in converted.time_values)
 
@@ -181,7 +181,7 @@ class TestConvertCalendar:
         ds["depth"].active = np.array(
             [[True, True], [False, False], [True, False]], dtype=bool
         )
-        converted = ds.convert_calendar("noleap")
+        converted = ds.selection.convert_calendar("noleap")
         assert converted["depth"].active.tolist() == [[True, True], [True, False]]
 
 
@@ -191,7 +191,7 @@ class TestInterpCalendar:
     def test_it_lands_on_the_targets_stamps(self):
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 3), (2001, 1, 5)))
         target = _mesh(_days("noleap", (2001, 1, 1), (2001, 1, 5)), calendar="noleap")
-        result = source.interp_calendar(target)
+        result = source.selection.interp_calendar(target)
         assert result["depth"].n_time_steps == 2
         assert [(s.month, s.day) for s in result.time_values] == [(1, 1), (1, 5)]
 
@@ -199,8 +199,8 @@ class TestInterpCalendar:
         """The point of the method: 29 February survives as an interpolated value."""
         source = _mesh(_days("standard", (2004, 2, 28), (2004, 2, 29), (2004, 3, 1)))
         target = _mesh(_days("noleap", (2004, 2, 28), (2004, 3, 1)), calendar="noleap")
-        assert source.convert_calendar("noleap")["depth"].n_time_steps == 2
-        assert source.interp_calendar(target)["depth"].n_time_steps == 2
+        assert source.selection.convert_calendar("noleap")["depth"].n_time_steps == 2
+        assert source.selection.interp_calendar(target)["depth"].n_time_steps == 2
 
     def test_the_interpolation_is_linear_in_decimal_years(self):
         """Mid-way between two stamps is the mean of their values."""
@@ -209,7 +209,7 @@ class TestInterpCalendar:
             values=[[0.0, 0.0], [10.0, 20.0]],
         )
         target = _mesh(_days("standard", (2001, 1, 2)), values=[[0.0, 0.0]])
-        result = source.interp_calendar(target)["depth"].data
+        result = source.selection.interp_calendar(target)["depth"].data
         assert np.allclose(result, [[5.0, 10.0]]), "2 Jan is midway between 1 and 3 Jan"
 
     def test_the_targets_calendar_and_units_are_carried(self):
@@ -219,14 +219,14 @@ class TestInterpCalendar:
             calendar="noleap",
             units="hours since 1999-01-01",
         )
-        result = source.interp_calendar(target)
+        result = source.selection.interp_calendar(target)
         assert result["depth"].attributes[TIME_CALENDAR_ATTR] == "noleap"
         assert result["depth"].attributes[TIME_UNITS_ATTR] == "hours since 1999-01-01"
 
     def test_a_stamp_outside_the_span_is_a_gap_not_an_extrapolation(self):
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 5)))
         target = _mesh(_days("standard", (2001, 1, 3), (2009, 1, 1)))
-        result = source.interp_calendar(target)["depth"].data
+        result = source.selection.interp_calendar(target)["depth"].data
         assert np.isfinite(result[0]).all(), "inside the span"
         assert np.isnan(result[1]).all(), "outside it"
 
@@ -239,7 +239,7 @@ class TestInterpCalendar:
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 5)))
         target = _mesh(_days("standard", (2050, 1, 1), (2050, 1, 5)))
         with pytest.raises(ValueError, match="found no overlap") as raised:
-            source.interp_calendar(target)
+            source.selection.interp_calendar(target)
         message = str(raised.value)
         assert "2001.0000" in message, "the message names the source span"
         assert "2050.0000" in message, "the message names the target span"
@@ -248,7 +248,7 @@ class TestInterpCalendar:
         source = _mesh(_days("standard", (2001, 1, 1)))
         target = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 2)))
         with pytest.raises(ValueError, match="at least 2 steps"):
-            source.interp_calendar(target)
+            source.selection.interp_calendar(target)
 
     def test_a_different_mesh_is_refused(self):
         source = _mesh(_days("standard", (2001, 1, 1), (2001, 1, 5)))
@@ -260,7 +260,7 @@ class TestInterpCalendar:
             data_locations={"depth": "face"},
         )
         with pytest.raises(Exception, match="(?i)mesh|topolog|align"):
-            source.interp_calendar(other)
+            source.selection.interp_calendar(other)
 
 
 class TestStaticVariablesPassThrough:
@@ -293,14 +293,14 @@ class TestStaticVariablesPassThrough:
         return ds
 
     def test_convert_calendar_leaves_a_static_variable_alone(self):
-        result = self._mixed().convert_calendar("noleap")
+        result = self._mixed().selection.convert_calendar("noleap")
         assert result["bed_level"].data.tolist() == pytest.approx([-5.0, -7.0])
         assert not result["bed_level"].has_time
 
     def test_interp_calendar_leaves_a_static_variable_alone(self):
         source = self._mixed()
         target = _mesh(_days("noleap", (2001, 1, 2), (2001, 1, 4)), calendar="noleap")
-        result = source.interp_calendar(target)
+        result = source.selection.interp_calendar(target)
         assert result["bed_level"].data.tolist() == pytest.approx([-5.0, -7.0])
 
     def test_interp_like_leaves_a_static_variable_alone(self):
@@ -310,7 +310,7 @@ class TestStaticVariablesPassThrough:
             **target["depth"].attributes,
             "time_values": _days("standard", (2001, 1, 2), (2001, 1, 4)),
         }
-        result = source.interp_like(target)
+        result = source.selection.interp_like(target)
         assert result["bed_level"].data.tolist() == pytest.approx([-5.0, -7.0])
 
 
@@ -331,13 +331,13 @@ class TestUnloadedDataGuards:
     @pytest.mark.parametrize(
         "operation",
         [
-            lambda ds: ds.polyfit(1),
-            lambda ds: ds.integrate(),
-            lambda ds: ds.coarsen(2),
-            lambda ds: ds.differentiate(),
-            lambda ds: ds.rank(),
-            lambda ds: ds.convert_calendar("noleap"),
-            lambda ds: ds.cumulative_integrate(),
+            lambda ds: ds.selection.polyfit(1),
+            lambda ds: ds.selection.integrate(),
+            lambda ds: ds.selection.coarsen(2),
+            lambda ds: ds.selection.differentiate(),
+            lambda ds: ds.selection.rank(),
+            lambda ds: ds.selection.convert_calendar("noleap"),
+            lambda ds: ds.selection.cumulative_integrate(),
         ],
         ids=[
             "polyfit",
@@ -416,12 +416,12 @@ class TestInterpLikeCalendarMetadata:
         """cftime refuses to subtract dates on different calendars, so the shared-origin
         trick in `interp_axis` could not span two calendars."""
         source, target = self._cross()
-        result = source.interp_like(target)
+        result = source.selection.interp_like(target)
         assert result["d"].n_time_steps == 2
 
     def test_the_declared_calendar_matches_the_stamps(self):
         source, target = self._cross()
-        result = source.interp_like(target)["d"]
+        result = source.selection.interp_like(target)["d"]
         assert result.attributes[TIME_CALENDAR_ATTR] == "noleap"
         assert result.attributes["time_values"][0].calendar == "noleap", (
             "the stamps and the declared calendar must agree"
@@ -429,14 +429,14 @@ class TestInterpLikeCalendarMetadata:
 
     def test_the_declared_units_come_from_the_target(self):
         source, target = self._cross()
-        result = source.interp_like(target)["d"]
+        result = source.selection.interp_like(target)["d"]
         assert result.attributes[TIME_UNITS_ATTR] == "hours since 1990-01-01"
 
     def test_it_agrees_with_interp_calendar(self):
         """The two siblings do the same thing; they must declare the same metadata."""
         source, target = self._cross()
-        by_like = source.interp_like(target)["d"]
-        by_calendar = source.interp_calendar(target)["d"]
+        by_like = source.selection.interp_like(target)["d"]
+        by_calendar = source.selection.interp_calendar(target)["d"]
         assert (
             by_like.attributes[TIME_CALENDAR_ATTR]
             == (by_calendar.attributes[TIME_CALENDAR_ATTR])
@@ -455,7 +455,7 @@ class TestInterpLikeCalendarMetadata:
         source, _ = self._cross()
         target = self._undated(3)
         with pytest.raises(ValueError, match="(?i)dated.*positional|positional.*dated"):
-            source.interp_like(target)
+            source.selection.interp_like(target)
 
     def test_a_same_calendar_interpolation_still_works(self):
         """The ordinary path must be unaffected."""
@@ -472,7 +472,7 @@ class TestInterpLikeCalendarMetadata:
             "days since 2000-01-01",
             "standard",
         )
-        assert source.interp_like(target)["d"].n_time_steps == 1
+        assert source.selection.interp_like(target)["d"].n_time_steps == 1
 
 
 class TestInterpLikeRefusesMixedScales:
@@ -523,28 +523,28 @@ class TestInterpLikeRefusesMixedScales:
         subject = self._dated(3)
         target = self._positional(3)
         with pytest.raises(ValueError, match="(?i)dated.*positional|positional.*dated"):
-            subject.interp_like(target)
+            subject.selection.interp_like(target)
 
     def test_a_positional_source_onto_a_dated_target_is_refused(self):
         """The mirror case, equally meaningless."""
         subject = self._positional(3)
         target = self._dated(3)
         with pytest.raises(ValueError, match="(?i)dated.*positional|positional.*dated"):
-            subject.interp_like(target)
+            subject.selection.interp_like(target)
 
     def test_the_message_points_at_the_alternatives(self):
         subject = self._dated(3)
         target = self._positional(3)
         with pytest.raises(ValueError, match="interp_time"):
-            subject.interp_like(target)
+            subject.selection.interp_like(target)
 
     def test_two_dated_axes_still_interpolate(self):
         source = self._dated(3)
         target = self._dated(2)
-        assert source.interp_like(target)["d"].n_time_steps == 2
+        assert source.selection.interp_like(target)["d"].n_time_steps == 2
 
     def test_two_positional_axes_still_interpolate(self):
         """Both on step indices is coherent - they mean the same thing."""
         source = self._positional(4)
         target = self._positional(2)
-        assert source.interp_like(target)["d"].n_time_steps == 2
+        assert source.selection.interp_like(target)["d"].n_time_steps == 2

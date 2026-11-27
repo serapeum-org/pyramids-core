@@ -46,7 +46,7 @@ def _mesh(values, nodata=None, offset=0.0):
 def _round_trip(dataset, tmp_path, name="m.nc"):
     """Write `dataset` to a file and read it back."""
     path = tmp_path / name
-    dataset.to_file(str(path))
+    dataset.io.to_file(str(path))
     return MeshDataset.read_file(str(path))
 
 
@@ -217,7 +217,7 @@ class TestNodataSurvivesEveryDtype:
         )
         dataset["v"].nodata = -999.0
         path = tmp_path / "typed.nc"
-        dataset.to_file(str(path))
+        dataset.io.to_file(str(path))
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)

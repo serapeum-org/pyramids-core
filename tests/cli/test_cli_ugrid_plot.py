@@ -78,7 +78,7 @@ def _write_mesh(path: Path, data: dict, locations: dict) -> str:
         },
         data_locations=locations,
         epsg=4326,
-    ).to_file(str(path))
+    ).io.to_file(str(path))
     return str(path)
 
 

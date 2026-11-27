@@ -105,7 +105,7 @@ class TestWktOnlyMeshIsUsable:
         The old fallback stamped EPSG:4326 -- degrees -- onto coordinates in
         metres, producing a raster that claimed a CRS it did not have.
         """
-        result = wkt_only_projected_mesh.to_dataset("h", cell_size=0.5)
+        result = wkt_only_projected_mesh.io.to_dataset("h", cell_size=0.5)
 
         assert result.epsg != 4326, "projected mesh was relabelled as WGS84"
 
@@ -166,7 +166,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
         assert dataset.epsg is None, "the fixture mesh must not declare an EPSG code"
         assert dataset.crs_wkt is None, "the fixture mesh must not declare a WKT"
 
-        raster = dataset.to_dataset("h", cell_size=0.25)
+        raster = dataset.io.to_dataset("h", cell_size=0.25)
 
         assert raster.epsg == 4326
         assert raster.crs, "the raster must carry a CRS, not an empty string"
@@ -193,7 +193,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             global_attributes={},
         )
 
-        raster = dataset.to_dataset("h", cell_size=0.25, epsg=3857)
+        raster = dataset.io.to_dataset("h", cell_size=0.25, epsg=3857)
 
         assert raster.epsg == 3857
 
@@ -208,7 +208,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             plain `self.epsg or 4326` the metre grid would be relabelled
             degrees again.
         """
-        raster = wkt_only_projected_mesh.to_dataset("h", cell_size=1000.0)
+        raster = wkt_only_projected_mesh.io.to_dataset("h", cell_size=1000.0)
 
         assert raster.epsg != 4326
         assert "Orthographic" in raster.crs

@@ -165,7 +165,7 @@ class TestSetCrsWktNormalization:
         ds_epsg.spatial.set_crs(epsg=4326)
         ds_wkt = _crs_less_dataset()
         ds_wkt.spatial.set_crs(crs=CRS.from_epsg(4326).to_wkt())
-        assert ds_epsg.identical(ds_wkt)
+        assert ds_epsg.analysis.identical(ds_wkt)
 
 
 class TestMesh2dCrsSetter:

@@ -131,16 +131,16 @@ class TestUnreadableVariable:
     @pytest.mark.parametrize(
         ("call", "message"),
         [
-            (lambda d: d.reduce("mean"), "no loaded data to reduce"),
-            (lambda d: d.cumsum(), "no loaded data for cumsum"),
-            (lambda d: d.isel(time=0), "no loaded data to select"),
-            (lambda d: d.head(1), "no loaded data to select"),
-            (lambda d: d.diff(), "no loaded data to diff"),
-            (lambda d: d.argmin(), "has no loaded data"),
-            (lambda d: d.dropna(), "no loaded data to dropna"),
+            (lambda d: d.selection.reduce("mean"), "no loaded data to reduce"),
+            (lambda d: d.selection.cumsum(), "no loaded data for cumsum"),
+            (lambda d: d.selection.isel(time=0), "no loaded data to select"),
+            (lambda d: d.selection.head(1), "no loaded data to select"),
+            (lambda d: d.selection.diff(), "no loaded data to diff"),
+            (lambda d: d.selection.argmin(), "has no loaded data"),
+            (lambda d: d.selection.dropna(), "no loaded data to dropna"),
             (lambda d: d.summary(), "has no loaded data"),
-            (lambda d: d.to_dataset("v", cell_size=0.5), "has no data loaded"),
-            (lambda d: d.sample("v", 0.5, 0.5), "has no loaded data"),
+            (lambda d: d.io.to_dataset("v", cell_size=0.5), "has no data loaded"),
+            (lambda d: d.analysis.sample("v", 0.5, 0.5), "has no loaded data"),
             (lambda d: d.glyph.plot("v"), "no loaded data to plot"),
             (lambda d: d.concat(d), "no loaded data to concat"),
         ],
@@ -186,7 +186,7 @@ class TestUnreadableVariable:
         """A one-step variable is squeezed by reading it, so an unreadable one is refused."""
         unreadable = _unreadable(mesh, (1, 2))
         with pytest.raises(ValueError, match="no loaded data to squeeze"):
-            unreadable.squeeze()
+            unreadable.selection.squeeze()
 
 
 class TestStaticVariablesSurviveTheAlongTimeMembers:
@@ -204,38 +204,38 @@ class TestStaticVariablesSurviveTheAlongTimeMembers:
 
     def test_isel_on_a_single_step_keeps_it(self, mixed):
         """An integer `isel` collapses the time axis of the temporal variable only."""
-        picked = mixed.isel(time=0)
+        picked = mixed.selection.isel(time=0)
         assert picked["d"].data.tolist() == [1.0, 2.0]
         assert picked["s"].data.tolist() == [7.0, 8.0]
 
     def test_head_keeps_it(self, mixed):
         """The positional step selectors carry a static variable through untouched."""
-        first = mixed.head(1)
+        first = mixed.selection.head(1)
         assert first["d"].data.shape == (1, 2)
         assert first["s"].data.tolist() == [7.0, 8.0]
 
     def test_diff_keeps_it(self, mixed):
         """Differencing shortens the temporal variable and leaves the static one alone."""
-        differenced = mixed.diff()
+        differenced = mixed.selection.diff()
         assert differenced["d"].data.tolist() == [[2.0, 2.0]]
         assert differenced["s"].data.tolist() == [7.0, 8.0]
 
     def test_argmin_keeps_it(self, mixed):
         """The extremum search answers per element for the temporal variable only."""
-        located = mixed.argmin()
+        located = mixed.selection.argmin()
         assert located["d"].data.tolist() == [0, 0]
         assert located["s"].data.tolist() == [7.0, 8.0]
 
     def test_reduce_keeps_it(self, mixed):
         """A time reduction collapses the temporal variable and copies the static one."""
-        reduced = mixed.reduce("mean")
+        reduced = mixed.selection.reduce("mean")
         assert reduced["d"].data.tolist() == [2.0, 3.0]
         assert reduced["s"].data.tolist() == [7.0, 8.0]
         assert reduced["s"].has_time is False
 
     def test_cumsum_keeps_it(self, mixed):
         """The shape-preserving transforms skip a variable with no time axis."""
-        running = mixed.cumsum()
+        running = mixed.selection.cumsum()
         assert running["d"].data.tolist() == [[1.0, 2.0], [4.0, 6.0]]
         assert running["s"].data.tolist() == [7.0, 8.0]
 
@@ -243,19 +243,19 @@ class TestStaticVariablesSurviveTheAlongTimeMembers:
 class TestTimeReductionWrappers:
     def test_mean_collapses_the_time_axis(self, temporal):
         """`mean()` is `reduce("mean")`, so the variable becomes static."""
-        reduced = temporal.mean()
+        reduced = temporal.analysis.mean()
         assert reduced["d"].data.tolist() == [2.0, 3.0]
         assert reduced["d"].has_time is False
 
     def test_var_collapses_the_time_axis(self, temporal):
         """`var()` is `reduce("var")` with the population convention (ddof 0)."""
-        assert temporal.var()["d"].data.tolist() == [1.0, 1.0]
+        assert temporal.analysis.var()["d"].data.tolist() == [1.0, 1.0]
 
 
 class TestFirstStepIsUsedForAGrid:
     def test_a_temporal_variable_is_rasterized_from_its_first_step(self, temporal):
         """`to_dataset` takes step 0 along the variable's own time axis, not the whole cube."""
-        raster = temporal.to_dataset("d", cell_size=0.5, method="nearest")
+        raster = temporal.io.to_dataset("d", cell_size=0.5, method="nearest")
         values = raster.io.read_array()
         assert float(np.nanmax(values)) == 2.0
 
@@ -266,7 +266,7 @@ class TestFileWriting:
         bare = mesh.delete_global_attribute("Conventions")
         assert "Conventions" not in bare.global_attributes
         path = tmp_path / "bare.nc"
-        bare.to_file(path)
+        bare.io.to_file(path)
         assert MeshDataset.read_file(path).global_attributes["Conventions"] == (
             "CF-1.8 UGRID-1.0"
         )
@@ -343,7 +343,7 @@ class TestMeshNames:
     def test_a_virtual_filesystem_path_is_handed_straight_to_gdal(self, mesh, tmp_path):
         """A `/vsimem/` name has no on-disk existence check — GDAL resolves it itself."""
         path = tmp_path / "m.nc"
-        mesh.to_file(path)
+        mesh.io.to_file(path)
         name = f"/vsimem/pyramids_mesh_names_{uuid4().hex}.nc"
         gdal.FileFromMemBuffer(name, path.read_bytes())
         try:
@@ -368,7 +368,7 @@ class TestLayerCoordinates:
     def test_sel_layer_without_a_layer_dimension_is_refused(self, mesh):
         """Selecting a layer on a flat dataset says so rather than selecting nothing."""
         with pytest.raises(ValueError, match="sel_layer needs at least one variable"):
-            mesh.sel_layer(0)
+            mesh.selection.sel_layer(0)
 
 
 class TestToDataFrameCoordinates:
@@ -423,7 +423,7 @@ class TestSampleGuards:
             "z", np.array([1.0, 2.0, 3.0, 4.0]), location="node"
         )
         with pytest.raises(ValueError, match="must be 'contains' or 'nearest'"):
-            nodal.sample("z", 0.1, 0.1, method="bogus")
+            nodal.analysis.sample("z", 0.1, 0.1, method="bogus")
 
     def test_an_edge_variable_is_unsupported(self, mesh):
         """Sampling resolves points to faces or nodes; an edge variable has no lookup."""
@@ -431,7 +431,7 @@ class TestSampleGuards:
             "e", np.array([1.0, 2.0, 3.0]), location="edge"
         )
         with pytest.raises(ValueError, match="supports 'face' and 'node'"):
-            edgy.sample("e", 0.1, 0.1, method="nearest")
+            edgy.analysis.sample("e", 0.1, 0.1, method="nearest")
 
 
 class TestWeightedGuards:
@@ -441,7 +441,7 @@ class TestWeightedGuards:
             "z", np.array([1.0, 2.0, 3.0, 4.0]), location="node"
         )
         with pytest.raises(ValueError, match="need a face-located variable"):
-            nodal.weighted("z")
+            nodal.selection.weighted("z")
 
     def test_a_face_count_mismatch_is_refused(self, mesh):
         """A face variable whose length is not the face count cannot be paired with the areas."""
@@ -449,7 +449,7 @@ class TestWeightedGuards:
             "x", np.array([1.0, 2.0, 3.0]), location="face"
         )
         with pytest.raises(ValueError, match="face value"):
-            wrong.weighted("x")
+            wrong.selection.weighted("x")
 
 
 class TestZonalStatsGuards:
@@ -460,13 +460,15 @@ class TestZonalStatsGuards:
         )
         zones = gpd.GeoDataFrame({"id": [1]}, geometry=[box(0.0, 0.0, 1.0, 1.0)])
         with pytest.raises(ValueError, match="needs a face-located variable"):
-            nodal.zonal_stats(zones, variable_name="z")
+            nodal.analysis.zonal_stats(zones, variable_name="z")
 
     def test_zones_without_a_crs_skip_the_crs_check(self, mesh):
         """With no CRS declared on the zones there is nothing to compare, so the zones are used."""
         zones = gpd.GeoDataFrame({"id": [1]}, geometry=[box(0.0, 0.0, 1.0, 1.0)])
         assert zones.crs is None
-        table = mesh.zonal_stats(zones, variable_name="depth", stats=("mean", "count"))
+        table = mesh.analysis.zonal_stats(
+            zones, variable_name="depth", stats=("mean", "count")
+        )
         assert table["mean"].tolist() == [3.0]
         assert table["count"].tolist() == [2.0]
 
@@ -475,7 +477,7 @@ class TestTimeCoordinateGuards:
     def test_sel_without_a_time_dimension_is_refused(self, mesh):
         """Selecting by time coordinate needs a time axis; a static dataset has none."""
         with pytest.raises(ValueError, match="sel needs a time dimension"):
-            mesh.sel(0.0)
+            mesh.selection.sel(0.0)
 
     def test_nearest_needs_numeric_coordinates(self, temporal):
         """Snapping is a distance, so a date-like coordinate cannot be snapped against."""
@@ -486,7 +488,7 @@ class TestTimeCoordinateGuards:
         }
         wanted = pd.Timestamp("2020-01-01 06:00")
         with pytest.raises(ValueError, match="needs numeric time coordinates"):
-            dated.sel(wanted, method="nearest")
+            dated.selection.sel(wanted, method="nearest")
 
 
 class TestJoins:

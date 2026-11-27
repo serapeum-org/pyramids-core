@@ -150,12 +150,12 @@ class TestTimeDimension:
         """
         with pytest.warns(DeprecationWarning, match=r"use isel\(time=index\)"):
             dep = temporal_dataset.sel_time(1)
-        new = temporal_dataset.isel(time=1)
+        new = temporal_dataset.selection.isel(time=1)
         assert np.array_equal(dep["water_level"].data, new["water_level"].data)
 
         with pytest.warns(DeprecationWarning, match=r"isel\(time=slice"):
             dep_range = temporal_dataset.sel_time_range(0, 2)
-        new_range = temporal_dataset.isel(time=slice(0, 2))
+        new_range = temporal_dataset.selection.isel(time=slice(0, 2))
         assert np.array_equal(
             dep_range["water_level"].data, new_range["water_level"].data
         )
@@ -333,7 +333,7 @@ class TestTimeDimension:
             ``(face, time)`` data+mask, isel(time=[0, 2]): the mask keeps columns 0 and 2
             (``mask[:, [0, 2]]``).
         """
-        picked = self._trailing_time_mesh_with_mask().isel(time=[0, 2])["wl"]
+        picked = self._trailing_time_mesh_with_mask().selection.isel(time=[0, 2])["wl"]
         np.testing.assert_array_equal(picked.data, [[10.0, 12.0], [20.0, 22.0]])
         np.testing.assert_array_equal(picked.active, [[True, False], [True, False]])
 
@@ -459,6 +459,6 @@ class TestEdgeNodeData:
             data={"altitude": np.array([0.0, 5.0, 10.0])},
             data_locations={"altitude": "node"},
         )
-        raster = ds.to_dataset("altitude", cell_size=0.25)
+        raster = ds.io.to_dataset("altitude", cell_size=0.25)
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
         assert raster.columns > 0, f"Expected positive cols, got {raster.columns}"

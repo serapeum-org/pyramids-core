@@ -66,7 +66,7 @@ class TestPositionalAxisIsRefused:
 
     def test_reduce_with_an_offset_alias_is_refused_too(self, positional):
         with pytest.raises(ValueError, match="date-like"):
-            positional.reduce("mean", groupby="1MS")
+            positional.selection.reduce("mean", groupby="1MS")
 
     def test_a_float_positional_axis_is_refused(self):
         dataset = _dataset([0.0, 1.0, 2.0])
@@ -86,5 +86,5 @@ class TestDateLikeAxisStillWorks:
         assert np.asarray(resampled["v"].data)[1].tolist() == pytest.approx([5.0, 6.0])
 
     def test_a_label_sequence_works_on_a_positional_axis(self, positional):
-        grouped = positional.reduce("mean", groupby=["a", "a", "b"])
+        grouped = positional.selection.reduce("mean", groupby=["a", "a", "b"])
         assert np.asarray(grouped["v"].data).shape[0] == 2

@@ -74,4 +74,4 @@ def test_volume_topology_round_trips_through_xarray():
     assert back.volume_topology.layer_count.tolist() == [3, 1, 2]
     np.testing.assert_allclose(back.volume_topology.layer_z, topology.layer_z)
     np.testing.assert_allclose(back.volume_topology.interface_z, topology.interface_z)
-    assert back.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]
+    assert back.selection.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]

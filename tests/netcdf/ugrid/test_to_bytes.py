@@ -19,13 +19,13 @@ def _make_ds() -> MeshDataset:
 class TestToBytes:
     def test_returns_bytes(self):
         ds = _make_ds()
-        data = ds.to_bytes()
+        data = ds.io.to_bytes()
         assert isinstance(data, bytes)
         assert len(data) > 0
 
     def test_roundtrip(self, tmp_path):
         ds = _make_ds()
-        data = ds.to_bytes()
+        data = ds.io.to_bytes()
         out = tmp_path / "roundtrip.nc"
         out.write_bytes(data)
         loaded = MeshDataset.read_file(str(out))

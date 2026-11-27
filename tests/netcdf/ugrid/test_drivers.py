@@ -704,7 +704,7 @@ class TestWriteDispatch:
     def test_default_write_is_unchanged(self, tmp_path):
         """No driver means the built-in UGRID writer, byte for byte as before."""
         target = tmp_path / "mesh.nc"
-        _square_mesh().to_file(target)
+        _square_mesh().io.to_file(target)
         assert target.exists()
         assert MeshDataset.read_file(target).n_face == 1
 
@@ -712,7 +712,7 @@ class TestWriteDispatch:
         """pyramids must not interpret or rename a format's own settings."""
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.fake"
-        _square_mesh().to_file(target, driver="fake", endian=">", precision="double")
+        _square_mesh().io.to_file(target, driver="fake", endian=">", precision="double")
         assert driver.write_calls == [
             (str(target), {"endian": ">", "precision": "double"})
         ]
@@ -722,7 +722,7 @@ class TestWriteDispatch:
         registered(ReadOnlyDriver())
         mesh = _square_mesh()
         with pytest.raises(UnsupportedMeshFormatError, match="cannot write"):
-            mesh.to_file(tmp_path / "mesh.ro", driver="readonly")
+            mesh.io.to_file(tmp_path / "mesh.ro", driver="readonly")
 
     def test_frame_only_driver_warns_that_variables_are_dropped(
         self, tmp_path, registered
@@ -731,7 +731,7 @@ class TestWriteDispatch:
         registered(FrameOnlyDriver())
         mesh = _square_mesh()
         with pytest.warns(RuntimeWarning, match="no data"):
-            mesh.to_file(tmp_path / "mesh.frm", driver="frame")
+            mesh.io.to_file(tmp_path / "mesh.frm", driver="frame")
 
     def test_a_failed_frame_only_write_does_not_warn(self, tmp_path, registered):
         """The warning follows the write, so a failed write does not claim a file exists.
@@ -769,7 +769,7 @@ class TestWriteDispatch:
         """Inferring Selafin from `.slf` would change behaviour for existing callers."""
         driver = registered(FakeDriver())
         target = tmp_path / "mesh.fake"
-        _square_mesh().to_file(target)
+        _square_mesh().io.to_file(target)
         assert driver.write_calls == []
         assert MeshDataset.read_file(target, driver="fake").n_face == 1
 
@@ -777,7 +777,7 @@ class TestWriteDispatch:
         """Dropping them silently would hide a caller's mistake."""
         mesh = _square_mesh()
         with pytest.raises(TypeError, match="driver="):
-            mesh.to_file(tmp_path / "mesh.nc", endian=">")
+            mesh.io.to_file(tmp_path / "mesh.nc", endian=">")
 
     def test_driver_write_failure_names_the_driver(self, tmp_path, registered):
         """A driver's own bug on write is attributed to it, as on the read path.
@@ -794,7 +794,7 @@ class TestWriteDispatch:
         registered(Failing())
         mesh = _square_mesh()
         with pytest.raises(UnsupportedMeshFormatError, match="'fake' driver failed"):
-            mesh.to_file(tmp_path / "mesh.fake", driver="fake")
+            mesh.io.to_file(tmp_path / "mesh.fake", driver="fake")
 
     def test_driver_write_oserror_passes_through(self, tmp_path, registered):
         """A filesystem failure on write stays a filesystem failure.
@@ -815,7 +815,7 @@ class TestWriteDispatch:
         registered(DiskFull())
         mesh = _square_mesh()
         with pytest.raises(OSError, match="No space left") as caught:
-            mesh.to_file(tmp_path / "mesh.fake", driver="fake")
+            mesh.io.to_file(tmp_path / "mesh.fake", driver="fake")
         assert not isinstance(caught.value, UnsupportedMeshFormatError), (
             "A disk-full error must not be reported as an unsupported format"
         )
@@ -825,7 +825,7 @@ class TestWriteDispatch:
         registered(FakeDriver())
         mesh = _square_mesh()
         with pytest.raises(DriverNotExistError):
-            mesh.to_file(tmp_path / "mesh.fake", driver="nope")
+            mesh.io.to_file(tmp_path / "mesh.fake", driver="nope")
 
 
 class TestIntrospection:
@@ -954,7 +954,7 @@ class TestBareInstall:
         """
         mesh = _square_mesh()
         with pytest.raises(DriverNotExistError, match="none"):
-            mesh.to_file(tmp_path / "mesh.slf", driver="selafin")
+            mesh.io.to_file(tmp_path / "mesh.slf", driver="selafin")
 
 
 class TestErrorPassthrough:
@@ -1013,7 +1013,7 @@ class TestErrorPassthrough:
         registered(RefusesQuads())
         mesh = _square_mesh()
         with pytest.raises(UnsupportedMeshFormatError) as caught:
-            mesh.to_file(tmp_path / "mesh.fake", driver="fake")
+            mesh.io.to_file(tmp_path / "mesh.fake", driver="fake")
         message = str(caught.value)
         assert message == "this format stores triangles only", (
             f"The driver's own message should survive unwrapped, got: {message}"
@@ -1035,7 +1035,7 @@ class TestErrorPassthrough:
         registered(Delegating())
         mesh = _square_mesh()
         with pytest.raises(DriverNotExistError, match="sub-driver"):
-            mesh.to_file(tmp_path / "mesh.fake", driver="fake")
+            mesh.io.to_file(tmp_path / "mesh.fake", driver="fake")
 
 
 class TestAttachThroughVirtualFilesystem:
@@ -2238,7 +2238,7 @@ class TestContractTruth:
         """
         registered(FakeDriver())
         target = tmp_path / "mesh.nc"
-        _square_mesh().to_file(target, driver="ugrid")
+        _square_mesh().io.to_file(target, driver="ugrid")
         assert MeshDataset.read_file(target).n_face == 1, (
             "driver='ugrid' should write through the built-in writer"
         )

@@ -167,7 +167,7 @@ class TestRasterizeLike:
     def test_co_registered_with_reference(self):
         """Output matches the reference grid's geotransform, shape, CRS and values."""
         ds = _grid_2x2(face_values=[1.0, 2.0, 3.0, 4.0])
-        reference = ds.to_dataset("v", cell_size=0.5, method="nearest")
+        reference = ds.io.to_dataset("v", cell_size=0.5, method="nearest")
         out = rasterize_like(
             ds.mesh, ds["v"].data, reference, location="face", method="nearest"
         )
@@ -180,7 +180,7 @@ class TestRasterizeLike:
     def test_nodata_honored(self):
         """With a tiny max_distance every cell falls outside and is filled with nodata."""
         ds = _grid_2x2(face_values=[1.0, 2.0, 3.0, 4.0])
-        reference = ds.to_dataset("v", cell_size=0.5, method="nearest")
+        reference = ds.io.to_dataset("v", cell_size=0.5, method="nearest")
         out = rasterize_like(
             ds.mesh,
             ds["v"].data,
@@ -197,7 +197,7 @@ class TestRasterizeLike:
     def test_idw_method_runs(self):
         """The optional IDW method produces a co-registered raster with finite interior values."""
         ds = _grid_2x2(face_values=[1.0, 2.0, 3.0, 4.0])
-        reference = ds.to_dataset("v", cell_size=0.5, method="nearest")
+        reference = ds.io.to_dataset("v", cell_size=0.5, method="nearest")
         out = rasterize_like(
             ds.mesh, ds["v"].data, reference, location="face", method="idw"
         )
@@ -210,7 +210,7 @@ class TestRasterizeLike:
     def test_temporal_uses_first_step(self):
         """A temporal variable rasterizes its first time step (the to_dataset convention)."""
         ds = _grid_2x2(face_values=[1.0, 2.0, 3.0, 4.0])
-        reference = ds.to_dataset("v", cell_size=0.5, method="nearest")
+        reference = ds.io.to_dataset("v", cell_size=0.5, method="nearest")
         temporal = np.stack([ds["v"].data, ds["v"].data + 100.0])
         out = rasterize_like(
             ds.mesh, temporal, reference, location="face", method="nearest"
@@ -220,7 +220,7 @@ class TestRasterizeLike:
     def test_same_epsg_reproject_is_noop(self):
         """Passing source_epsg equal to the reference EPSG changes nothing (reproject no-op)."""
         ds = _grid_2x2(face_values=[1.0, 2.0, 3.0, 4.0])
-        reference = ds.to_dataset("v", cell_size=0.5, method="nearest")
+        reference = ds.io.to_dataset("v", cell_size=0.5, method="nearest")
         out = rasterize_like(
             ds.mesh,
             ds["v"].data,

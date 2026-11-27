@@ -115,7 +115,7 @@ class TestFaceIndicesAreNotUnique:
             [(0.25, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5), (0.5, 0.25), (0.75, 0.25)]
         )
 
-        distances, values, face_indices = mesh.sample_line(line)
+        distances, values, face_indices = mesh.analysis.sample_line(line)
         faces = np.asarray(face_indices).tolist()
 
         assert len(faces) > len(set(faces)), (

@@ -81,8 +81,8 @@ class TestDualGeometryFacades:
 class TestRasterFacade:
     def test_rasterize_like_reproduces_the_reference_grid(self, grid):
         """Snapping onto a grid the mesh itself produced returns that grid's own values."""
-        reference = grid.to_dataset("v", cell_size=0.5, method="nearest")
-        out = grid.rasterize_like(reference, "v")
+        reference = grid.io.to_dataset("v", cell_size=0.5, method="nearest")
+        out = grid.io.rasterize_like(reference, "v")
         assert tuple(out.geotransform) == tuple(reference.geotransform)
         np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
@@ -94,7 +94,7 @@ class TestInterpTimeCarriesStaticVariables:
             "d", np.array([[0.0, 0.0], [10.0, 10.0]]), location="face"
         )
         both["d"].attributes = {**both["d"].attributes, "time_values": [0.0, 10.0]}
-        out = both.interp_time([5.0])
+        out = both.selection.interp_time([5.0])
         assert out["d"].data[0].tolist() == pytest.approx([5.0, 5.0])
         assert out["depth"].data.tolist() == [2.0, 4.0]
         assert "time_values" not in out["depth"].attributes
@@ -106,7 +106,7 @@ class TestUnloadedVariableIsRefusedByName:
         with pytest.raises(
             ValueError, match="fill_na_spatial: variable 'v' has no loaded data"
         ):
-            unloaded.fill_na_spatial()
+            unloaded.analysis.fill_na_spatial()
 
     def test_the_refusal_is_shared_by_every_facade(self, unloaded):
         """The guard lives in `_facade_variable`, so a second facade reports it the same way."""

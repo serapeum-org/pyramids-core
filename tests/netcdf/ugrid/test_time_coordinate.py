@@ -84,7 +84,7 @@ class TestRoundTrip:
         )
         ds = _temporal_mesh(stamps, "seconds since 2020-03-01 00:00:00")
         path = tmp_path / "stamped.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert [str(v) for v in back.time_values] == [str(v) for v in stamps]
 
@@ -96,7 +96,7 @@ class TestRoundTrip:
         )
         ds = _temporal_mesh(stamps, "days since 2020-01-01 00:00:00")
         path = tmp_path / "units.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         attrs = back["depth"].attributes
         assert "days since" in str(attrs.get(TIME_UNITS_ATTR))
@@ -113,7 +113,7 @@ class TestRoundTrip:
         ]
         ds = _temporal_mesh(stamps, "days since 2020-01-01 00:00:00", calendar="noleap")
         path = tmp_path / "noleap.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back["depth"].attributes.get(TIME_CALENDAR_ATTR) == "noleap"
         assert len(back.time_values) == 3
@@ -126,7 +126,7 @@ class TestPositionalFallback:
         """Decoding is additive: it must never become a new way for read_file to fail."""
         ds = _temporal_mesh()  # no stamps, no units
         path = tmp_path / "plain.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.time_values == [0, 1, 2]
 
@@ -140,7 +140,7 @@ class TestPositionalFallback:
             data_locations={"bed": "face"},
         )
         path = tmp_path / "static.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.time_values is None
 
@@ -157,7 +157,7 @@ class TestResampleUnblocked:
         )
         ds = _temporal_mesh(stamps, "seconds since 2020-01-01 00:00:00")
         path = tmp_path / "resample.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         hourly = back.spatial.resample("1h", how="mean")
         assert hourly["depth"].n_time_steps == 2
@@ -226,7 +226,7 @@ class TestFittedDimensionNames:
             data_locations={"d": "face"},
         )
         assert ds["d"].has_time, "the input is a time series"
-        assert not ds.polyfit(1)["d"].has_time, "the fit is not"
+        assert not ds.selection.polyfit(1)["d"].has_time, "the fit is not"
 
 
 class TestDecodingIsBestEffort:
@@ -252,7 +252,7 @@ class TestDecodingIsBestEffort:
             units="days since 2001-01-01",
         )
         path = tmp_path / "temporal.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         return path
 
     def test_the_decode_path_really_runs_on_this_file(self, tmp_path):
@@ -313,7 +313,7 @@ class TestWritingIsBestEffortToo:
         """The file must still be written, and still be readable."""
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 2001-01-01")
         path = tmp_path / "unencodable.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         assert path.stat().st_size > 0, "the mesh still wrote"
         read = MeshDataset.read_file(str(path))
         assert read["depth"].n_time_steps == 3, "the data survived"
@@ -326,7 +326,7 @@ class TestWritingIsBestEffortToo:
         """A time-metadata problem must not touch the measurements."""
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 2001-01-01")
         path = tmp_path / "unencodable2.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         read = MeshDataset.read_file(str(path))
         assert np.allclose(read["depth"].data, [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
 
@@ -343,20 +343,20 @@ class TestSilentLossIsWarned:
     def test_an_unencodable_stamp_warns(self, tmp_path):
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 2001-01-01")
         with pytest.warns(UserWarning, match="could not write the time coordinate"):
-            ds.to_file(str(tmp_path / "unencodable.nc"))
+            ds.io.to_file(str(tmp_path / "unencodable.nc"))
 
     def test_the_warning_names_the_units_it_could_not_use(self, tmp_path):
         """So the user can see which attribute is the problem."""
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 1999-05-05")
         with pytest.warns(UserWarning, match="days since 1999-05-05"):
-            ds.to_file(str(tmp_path / "named.nc"))
+            ds.io.to_file(str(tmp_path / "named.nc"))
 
     def test_the_write_still_succeeds(self, tmp_path):
         """Warning, not raising: the mesh and its data must still be written."""
         path = tmp_path / "still_written.nc"
         ds = _temporal_mesh(stamps=["not-a-date"] * 3, units="days since 2001-01-01")
         with pytest.warns(UserWarning):
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
         assert path.stat().st_size > 0
         assert MeshDataset.read_file(str(path))["depth"].n_time_steps == 3
 
@@ -368,7 +368,7 @@ class TestSilentLossIsWarned:
         ds = _temporal_mesh(stamps=list(stamps), units="days since 2001-01-01")
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)
-            ds.to_file(str(tmp_path / "clean.nc"))
+            ds.io.to_file(str(tmp_path / "clean.nc"))
 
 
 class TestWriterTimeDimensionName:
@@ -403,7 +403,7 @@ class TestWriterTimeDimensionName:
         )
         ds = _temporal_mesh(stamps=list(stamps), units="days since 2001-01-01")
         path = tmp_path / "default_axis.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         read = MeshDataset.read_file(str(path))
         assert [str(value)[:10] for value in read.time_values] == [
             "2001-01-01",
@@ -512,7 +512,7 @@ class TestRoundTripWithoutHandSetDimensions:
     def test_the_stamps_survive_a_round_trip(self, tmp_path):
         """Was `[0, 1, 2]`, with nothing written and nothing warned."""
         path = tmp_path / "from_arrays.nc"
-        self._from_arrays_with_stamps().to_file(str(path))
+        self._from_arrays_with_stamps().io.to_file(str(path))
         read = MeshDataset.read_file(str(path))
         assert [str(value)[:10] for value in read.time_values] == [
             "2020-03-01",

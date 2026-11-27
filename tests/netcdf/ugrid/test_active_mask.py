@@ -151,13 +151,15 @@ class TestTimeSelectionCarry:
     def test_isel_time_slice_and_list(self):
         mask = np.array([[True, True, False], [True, False, False]])
         ds = _dataset(_temporal_var(mask))
-        assert ds.isel(time=slice(1, 2))["wl"].active.shape == (1, 3)
-        np.testing.assert_array_equal(ds.isel(time=[1, 0])["wl"].active, mask[[1, 0]])
+        assert ds.selection.isel(time=slice(1, 2))["wl"].active.shape == (1, 3)
+        np.testing.assert_array_equal(
+            ds.selection.isel(time=[1, 0])["wl"].active, mask[[1, 0]]
+        )
 
     def test_isel_time_int_collapses_mask(self):
         mask = np.array([[True, True, False], [True, False, False]])
         ds = _dataset(_temporal_var(mask))
-        collapsed = ds.isel(time=1)["wl"]
+        collapsed = ds.selection.isel(time=1)["wl"]
         assert collapsed.active.tolist() == [True, False, False]
 
 
@@ -167,7 +169,7 @@ class TestElementSelectionCarry:
     def test_isel_element_slices_face_mask(self):
         mask = np.array([[True, True, False], [True, False, False]])
         ds = _dataset(_temporal_var(mask))
-        sub = ds.isel(element=[0, 2])["wl"]
+        sub = ds.selection.isel(element=[0, 2])["wl"]
         assert sub.active.shape == (2, 2)
         np.testing.assert_array_equal(sub.active, mask[:, [0, 2]])
 
@@ -185,7 +187,7 @@ class TestElementSelectionCarry:
         )
         ds = _dataset(node_var)
         # Keep only face 0 (nodes 0,1,2): the node mask must shrink to those nodes.
-        sub = ds.isel(element=0)["nd"]
+        sub = ds.selection.isel(element=0)["nd"]
         assert sub.active.tolist() == [True, False, True]
 
 
@@ -202,7 +204,7 @@ class TestAccessors:
 
     def test_masked_values_blanks_dry_to_nan_per_step(self):
         mask = np.array([[True, True, False], [True, False, False]])
-        mv = _dataset(_temporal_var(mask)).masked_values("wl")
+        mv = _dataset(_temporal_var(mask)).analysis.masked_values("wl")
         assert np.isnan(mv[0, 2])
         assert np.isnan(mv[1, 1])
         assert np.isnan(mv[1, 2])
@@ -210,14 +212,16 @@ class TestAccessors:
         assert mv[1, 0] == 4.0
 
     def test_masked_values_static_mask_broadcasts_over_time(self):
-        mv = _dataset(_temporal_var(np.array([True, False, True]))).masked_values("wl")
+        mv = _dataset(
+            _temporal_var(np.array([True, False, True]))
+        ).analysis.masked_values("wl")
         assert np.isnan(mv[:, 1]).all()
         assert mv[:, 0].tolist() == [1.0, 4.0]
 
     def test_masked_values_no_mask_is_just_nodata_blanking(self):
         var = _temporal_var()
         var.nodata = 5.0
-        mv = _dataset(var).masked_values("wl")
+        mv = _dataset(var).analysis.masked_values("wl")
         assert np.isnan(mv[1, 1])  # the 5.0 value
         assert mv[0, 0] == 1.0
 
@@ -227,7 +231,7 @@ class TestAccessors:
         )
         ds = _dataset(var)
         with pytest.raises(ValueError, match="no loaded data"):
-            ds.masked_values("empty")
+            ds.analysis.masked_values("empty")
 
     def test_masked_values_trailing_time_layout(self):
         """Regression (M2): a trailing-time ``(n_face, time)`` variable must mask correctly.
@@ -256,7 +260,7 @@ class TestAccessors:
         )
         ds = MeshDataset(base.mesh, {"wl": var}, {})
         assert var.time_axis_index == 1, "this variable stores time trailing"
-        out = ds.masked_values("wl")
+        out = ds.analysis.masked_values("wl")
         np.testing.assert_array_equal(
             np.isnan(out), [[False, True, False], [True, False, False]]
         )
@@ -277,7 +281,7 @@ class TestAccessors:
             active=mask,
             _data=data,
         )
-        mv = _dataset(var).masked_values("v")
+        mv = _dataset(var).analysis.masked_values("v")
         # Face 1 is dry at t=0 across both layers.
         assert np.isnan(mv[0, :, 1]).all()
         assert not np.isnan(mv[0, :, 0]).any()
@@ -305,12 +309,12 @@ class TestReductionDropsPerStepMask:
 
     def test_mean_drops_per_step_mask(self):
         mask = np.array([[True, True, False], [True, False, False]])
-        reduced = _dataset(_temporal_var(mask)).mean()
+        reduced = _dataset(_temporal_var(mask)).analysis.mean()
         assert reduced["wl"].active is None
 
     def test_mean_keeps_static_mask(self):
         static = np.array([True, False, True])
-        reduced = _dataset(_temporal_var(static)).mean()
+        reduced = _dataset(_temporal_var(static)).analysis.mean()
         np.testing.assert_array_equal(reduced["wl"].active, static)
 
     def test_grouped_reduce_drops_per_step_mask_when_square(self):
@@ -330,7 +334,7 @@ class TestReductionDropsPerStepMask:
             _data=data,
         )
         # labels [0, 1, 2] -> one group per step -> result stays (3, 3), square coincidence.
-        grouped = _dataset(var).reduce("mean", groupby=[0, 1, 2])
+        grouped = _dataset(var).selection.reduce("mean", groupby=[0, 1, 2])
         assert grouped["wl"].active is None
         static_var = MeshVariable(
             name="wl",
@@ -341,7 +345,9 @@ class TestReductionDropsPerStepMask:
             active=np.array([True, False, True]),
             _data=data,
         )
-        grouped_static = _dataset(static_var).reduce("mean", groupby=[0, 1, 2])
+        grouped_static = _dataset(static_var).selection.reduce(
+            "mean", groupby=[0, 1, 2]
+        )
         np.testing.assert_array_equal(grouped_static["wl"].active, [True, False, True])
 
     def test_squeeze_collapses_single_step_mask(self):
@@ -358,7 +364,7 @@ class TestReductionDropsPerStepMask:
             active=mask,
             _data=data,
         )
-        squeezed = _dataset(var).squeeze()
+        squeezed = _dataset(var).selection.squeeze()
         np.testing.assert_array_equal(squeezed["wl"].active, [True, False, True])
         assert squeezed["wl"].data.shape == (3,)
 
@@ -379,10 +385,10 @@ class TestReductionDropsPerStepMask:
             active=mask,
             _data=data,
         )
-        reduced = _dataset(var).mean()
+        reduced = _dataset(var).analysis.mean()
         assert reduced["wl"].active is None, "square per-step mask must be dropped"
         # Must not raise: with the bug the (3, 3) mask survived onto (3,) data.
-        assert reduced.masked_values("wl").shape == (3,)
+        assert reduced.analysis.masked_values("wl").shape == (3,)
 
 
 class TestShiftMask:
@@ -411,12 +417,12 @@ class TestShiftMask:
         at row t must be the step-(t-1) mask (vacated step inactive), not the original step t."""
         data = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
         mask = np.array([[True, False], [False, True], [True, True]])
-        shifted_ds = self._two_face_masked(data, mask).shift(1)
+        shifted_ds = self._two_face_masked(data, mask).selection.shift(1)
         np.testing.assert_array_equal(
             shifted_ds["wl"].active,
             [[False, False], [True, False], [False, True]],
         )
-        mv = shifted_ds.masked_values("wl")
+        mv = shifted_ds.analysis.masked_values("wl")
         assert np.isnan(mv[0]).all()
         assert mv[1, 0] == 1.0
         assert np.isnan(mv[1, 1])
@@ -441,7 +447,7 @@ class TestShiftMask:
             active=np.array([True, False]),
             _data=data,
         )
-        shifted_ds = MeshDataset(base.mesh, {"wl": var}, {}).shift(1)
+        shifted_ds = MeshDataset(base.mesh, {"wl": var}, {}).selection.shift(1)
         np.testing.assert_array_equal(shifted_ds["wl"].active, [True, False])
 
 
@@ -468,7 +474,7 @@ class TestNetcdfRoundTrip:
         mask = np.array([[True, True, False], [True, False, False]])
         ds = _dataset(_temporal_var(mask))
         path = tmp_path / "per_step.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.topology.active_mask("wl") is not None
         np.testing.assert_array_equal(back.topology.active_mask("wl"), mask)
@@ -478,7 +484,7 @@ class TestNetcdfRoundTrip:
         var.nodata = -999.0
         ds = _dataset(var)
         path = tmp_path / "static.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         np.testing.assert_array_equal(
             back.topology.active_mask("wl"), [True, False, True]
@@ -488,7 +494,7 @@ class TestNetcdfRoundTrip:
     def test_a_mesh_with_no_mask_reads_exactly_as_before(self, tmp_path):
         ds = _dataset(_temporal_var())
         path = tmp_path / "plain.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.topology.active_mask("wl") is None
 
@@ -498,7 +504,7 @@ class TestNetcdfRoundTrip:
         docs and the ``ACTIVE_MASK_ATTR`` comment claim it does."""
         ds = _dataset(_temporal_var(np.array([True, False, True])))
         path = tmp_path / "anc.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back["wl"].attributes.get("ancillary_variables") == "wl_active"
 
@@ -506,6 +512,6 @@ class TestNetcdfRoundTrip:
         """A variable with no mask must not gain a dangling ``ancillary_variables`` link."""
         ds = _dataset(_temporal_var())
         path = tmp_path / "plain_anc.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert "ancillary_variables" not in back["wl"].attributes

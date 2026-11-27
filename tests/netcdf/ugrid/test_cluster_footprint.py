@@ -99,23 +99,25 @@ class TestFootprint:
 
     def test_all_valid_matches_the_domain(self):
         ds = _strip([1.0, 2.0, 3.0, 4.0])
-        assert ds.footprint().area == pytest.approx(ds.topology.bounding_polygon().area)
+        assert ds.analysis.footprint().area == pytest.approx(
+            ds.topology.bounding_polygon().area
+        )
 
     def test_nodata_shrinks_it_below_the_domain(self):
         """Regression (#1379): `bounding_polygon` describes the mesh, so it could never
         answer where the data actually is."""
         ds = _strip([1.0, -999.0, -999.0, 4.0], nodata=-999.0)
-        footprint = ds.footprint()
+        footprint = ds.analysis.footprint()
         assert footprint.area < ds.topology.bounding_polygon().area
         assert footprint.area == pytest.approx(2.0)
 
     def test_nan_counts_as_absent(self):
         ds = _strip([1.0, np.nan, np.nan, 4.0])
-        assert ds.footprint().area < ds.topology.bounding_polygon().area
+        assert ds.analysis.footprint().area < ds.topology.bounding_polygon().area
 
     def test_no_valid_face_gives_an_empty_geometry(self):
         ds = _strip([-999.0, -999.0, -999.0, -999.0], nodata=-999.0)
-        assert ds.footprint().is_empty
+        assert ds.analysis.footprint().is_empty
 
     def test_the_active_mask_does_not_shrink_it(self):
         """Settled in #1379: footprint excludes `nodata` only.
@@ -127,7 +129,9 @@ class TestFootprint:
         """
         ds = _strip([1.0, 2.0, 3.0, 4.0])
         ds["v"].active = np.array([True, False, False, True])
-        assert ds.footprint().area == pytest.approx(ds.topology.bounding_polygon().area)
+        assert ds.analysis.footprint().area == pytest.approx(
+            ds.topology.bounding_polygon().area
+        )
 
     def test_refuses_a_temporal_variable(self):
         ds = MeshDataset.from_arrays(
@@ -138,7 +142,7 @@ class TestFootprint:
             data_locations={"v": "face"},
         )
         with pytest.raises(ValueError, match="one value per face"):
-            ds.footprint()
+            ds.analysis.footprint()
 
 
 class TestClusterLabelsDeclareNoSentinel:

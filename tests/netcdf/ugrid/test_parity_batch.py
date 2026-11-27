@@ -149,7 +149,7 @@ class TestOpenMfdataset:
                     TIME_CALENDAR_ATTR: "standard",
                 }
             path = directory / f"run_{label}.nc"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             paths.append(path)
         return paths
 
@@ -205,7 +205,7 @@ class TestOpenMfdataset:
             data_locations={"d": "face"},
         )
         other["d"].dimensions = ("time", "mesh2d_nFaces")
-        other.to_file(str(tmp_path / "other.nc"))
+        other.io.to_file(str(tmp_path / "other.nc"))
         with pytest.raises(Exception, match="(?i)mesh|topolog|align"):
             MeshDataset.open_mfdataset(str(tmp_path / "*.nc"))
 
@@ -224,7 +224,7 @@ class TestOpenMfdataset:
             data_locations={"d": "face"},
         )
         ds["d"].dimensions = ("time", "mesh2d_nFaces")
-        ds.to_file(str(undated))
+        ds.io.to_file(str(undated))
 
         dated = tmp_path / "aa_dated.nc"
         stamped = MeshDataset.from_arrays(
@@ -241,7 +241,7 @@ class TestOpenMfdataset:
             TIME_UNITS_ATTR: "days since 2001-01-01",
             TIME_CALENDAR_ATTR: "standard",
         }
-        stamped.to_file(str(dated))
+        stamped.io.to_file(str(dated))
 
         stacked = MeshDataset.open_mfdataset([str(undated), str(dated)])
         assert stacked["d"].data[:, 0].tolist() == [1.0, 9.0], (
@@ -267,7 +267,7 @@ class TestOpenMfdataset:
                 TIME_CALENDAR_ATTR: "standard",
             }
             path = tmp_path / f"dated_{label}.nc"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             paths.append(str(path))
         stacked = MeshDataset.open_mfdataset(paths)
         assert stacked["d"].data[:, 0].tolist() == [2.0, 9.0], (

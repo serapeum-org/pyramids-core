@@ -77,7 +77,7 @@ class TestMorphologyResultNodata:
         )
         mesh["v"].nodata = float("nan")
 
-        filled = mesh.fill_na_spatial("v")
+        filled = mesh.analysis.fill_na_spatial("v")
 
         assert np.isnan(filled["v"].nodata), (
             f"a float result keeps its NaN no-data value, got {filled['v'].nodata!r}"
@@ -121,7 +121,7 @@ class TestBurnFillDeclaration:
         """
         square = Polygon([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
 
-        out = strip.burn(square, 1.0, fill=0.0, all_touched=False, name="mask")
+        out = strip.io.burn(square, 1.0, fill=0.0, all_touched=False, name="mask")
 
         assert np.asarray(out["mask"].data).tolist() == [1.0, 0.0, 0.0]
         assert out["mask"].nodata is None, (
@@ -138,7 +138,7 @@ class TestBurnFillDeclaration:
         """
         square = Polygon([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
 
-        out = strip.burn(square, 1.0, all_touched=False, name="nanmask")
+        out = strip.io.burn(square, 1.0, all_touched=False, name="nanmask")
         values = np.asarray(out["nanmask"].data)
 
         assert values[0] == 1.0
@@ -167,7 +167,7 @@ class TestInterpTimeDocumentedValues:
 
     def test_bounds_nan_leaves_an_outside_label_empty(self, timed):
         """`"nan"`, the default, answers NaN past the ends."""
-        out = timed.interp_time([0.5, 9.0], bounds="nan")
+        out = timed.selection.interp_time([0.5, 9.0], bounds="nan")
 
         values = np.asarray(out["v"].data)
         np.testing.assert_allclose(values[0], [3.0, 4.0])
@@ -182,7 +182,7 @@ class TestInterpTimeDocumentedValues:
             The docstring named `"extrapolate"`, which raises, and omitted `"clamp"` -- so the
             only non-default value a reader could find was the invalid one.
         """
-        out = timed.interp_time([0.5, 9.0], bounds="clamp")
+        out = timed.selection.interp_time([0.5, 9.0], bounds="clamp")
 
         values = np.asarray(out["v"].data)
         np.testing.assert_allclose(values[1], [4.0, 5.0])
@@ -190,7 +190,7 @@ class TestInterpTimeDocumentedValues:
     def test_the_value_the_docstring_used_to_name_is_refused(self, timed):
         """`"extrapolate"` raises, which is why it no longer appears in the Args block."""
         with pytest.raises(ValueError, match="'nan' or 'clamp'"):
-            timed.interp_time([0.5], bounds="extrapolate")
+            timed.selection.interp_time([0.5], bounds="extrapolate")
 
     @pytest.mark.parametrize("method", ["linear", "nearest"])
     def test_both_documented_methods_work(self, method, timed):
@@ -200,11 +200,11 @@ class TestInterpTimeDocumentedValues:
             method: The interpolation kind.
             timed: The fixture mesh.
         """
-        out = timed.interp_time([0.5], method=method)
+        out = timed.selection.interp_time([0.5], method=method)
 
         assert np.asarray(out["v"].data).shape == (1, 2)
 
     def test_another_scipy_kind_is_refused(self, timed):
         """The docstring said "a `scipy.interpolate.interp1d` kind", which overstates it."""
         with pytest.raises(ValueError, match="'linear' or 'nearest'"):
-            timed.interp_time([0.5], method="cubic")
+            timed.selection.interp_time([0.5], method="cubic")

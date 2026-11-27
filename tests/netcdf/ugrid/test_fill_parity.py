@@ -31,14 +31,14 @@ class TestDimGuard:
     )
     def test_time_is_accepted(self, operation):
         mesh = _temporal(GAPPY)
-        getattr(mesh, operation)(dim="time")
+        getattr(mesh.selection, operation)(dim="time")
 
     @pytest.mark.parametrize(
         "operation", ["ffill", "bfill", "interpolate_na", "dropna"]
     )
     def test_element_dim_is_refused(self, operation):
         mesh = _temporal(GAPPY)
-        along = getattr(mesh, operation)
+        along = getattr(mesh.selection, operation)
         with pytest.raises(ValueError, match="one along-able dimension, 'time'"):
             along(dim="nMesh2d_face")
 
@@ -48,10 +48,10 @@ class TestDropnaAllGuard:
         allnan = np.array([[np.nan, np.nan], [np.nan, np.nan]])
         mesh = _temporal(allnan)
         with pytest.raises(ValueError, match="would drop every one of the"):
-            mesh.dropna()
+            mesh.selection.dropna()
 
     def test_partial_drop_still_works(self):
-        out = _temporal(GAPPY).dropna()
+        out = _temporal(GAPPY).selection.dropna()
         assert out["d"].data.tolist() == [[1.0, 1.0], [3.0, 3.0]]
 
 
@@ -59,19 +59,19 @@ class TestUseCoordinate:
     def test_uneven_coordinate_weights_the_gap(self):
         # Stamps 0, 1, 5: the gap at t=1 sits one unit from 1.0 and four from 3.0, so a
         # distance-weighted fill gives 1.4, where even spacing would give 2.0.
-        out = _temporal(GAPPY, stamps=[0.0, 1.0, 5.0]).interpolate_na()
+        out = _temporal(GAPPY, stamps=[0.0, 1.0, 5.0]).selection.interpolate_na()
         assert out["d"].data[1].tolist() == pytest.approx([1.4, 1.4])
 
     def test_use_coordinate_false_uses_positions(self):
-        out = _temporal(GAPPY, stamps=[0.0, 1.0, 5.0]).interpolate_na(
+        out = _temporal(GAPPY, stamps=[0.0, 1.0, 5.0]).selection.interpolate_na(
             use_coordinate=False
         )
         assert out["d"].data[1].tolist() == pytest.approx([2.0, 2.0])
 
     def test_even_coordinate_matches_positions(self):
-        out = _temporal(GAPPY, stamps=[0.0, 1.0, 2.0]).interpolate_na()
+        out = _temporal(GAPPY, stamps=[0.0, 1.0, 2.0]).selection.interpolate_na()
         assert out["d"].data[1].tolist() == pytest.approx([2.0, 2.0])
 
     def test_non_numeric_stamps_fall_back_to_positions(self):
-        out = _temporal(GAPPY, stamps=["a", "b", "c"]).interpolate_na()
+        out = _temporal(GAPPY, stamps=["a", "b", "c"]).selection.interpolate_na()
         assert out["d"].data[1].tolist() == pytest.approx([2.0, 2.0])

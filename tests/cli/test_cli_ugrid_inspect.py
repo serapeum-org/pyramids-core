@@ -52,7 +52,7 @@ def _triangle_mesh(tmp_path) -> str:
         epsg=4326,
     )
     path = str(tmp_path / "tri.nc")
-    mesh.to_file(path)
+    mesh.io.to_file(path)
     return path
 
 
