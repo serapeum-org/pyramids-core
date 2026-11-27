@@ -2271,17 +2271,16 @@ class _Analysis(_Engine["Dataset"]):
                     "`func` computed, so those cells read back as gaps; pass a "
                     "`no_data_value=` the result cannot hold",
                     NoDataCollisionWarning,
-                    # 5 frames out is the caller of `Dataset.combine`: warn ->
+                    # 4 frames out is the caller of `ds.analysis.combine`: warn ->
                     # _resolve_combined_no_data -> _Analysis._combine ->
-                    # Analysis.combine -> Dataset.combine -> user. Reached as
-                    # `ds.analysis.combine` the facade frame is absent, so the
-                    # same count lands one frame too far -- on whatever called
-                    # the caller. A single constant cannot serve both entry
-                    # points; the facade is the documented one, so it is the one
-                    # that is right. `_fold`'s callers never reach here: the
-                    # operators always let it derive its sentinel, and only an
-                    # explicit one can collide.
-                    stacklevel=5,
+                    # _Analysis.combine -> user. The accessor is now the sole public
+                    # entry point, so it is the one the count must land on; the
+                    # deprecated `ds.combine` facade adds one frame and so reports
+                    # its own line instead, which is acceptable for a facade on its
+                    # way out. `_fold`'s callers never reach here: the operators
+                    # always let it derive its sentinel, and only an explicit one
+                    # can collide.
+                    stacklevel=4,
                 )
         elif np.issubdtype(dtype, np.floating):
             sentinel = np.nan

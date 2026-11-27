@@ -1807,7 +1807,7 @@ class Dataset(RasterBase):
     def to_image(self, *args, **kwargs):
         """Facade — delegates to :meth:`Analysis.to_image <pyramids.dataset.engines.Analysis.to_image>`."""
         warnings.warn(
-            "`ds.plot_histogram` is deprecated and will be removed in a future release; use "
+            "`ds.to_image` is deprecated and will be removed in a future release; use "
             "`ds.analysis.to_image`.",
             DeprecationWarning,
             stacklevel=2,
