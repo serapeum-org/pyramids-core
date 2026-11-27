@@ -24,9 +24,9 @@ class TestUgridDataset:
         assert ug.mesh_name
 
     def test_to_geodataframe_and_feature_collection(self, ug):
-        gdf = ug.to_geodataframe()
+        gdf = ug.vector.to_geodataframe()
         assert len(gdf) == 4  # one polygon per face
-        assert ug.to_feature_collection() is not None
+        assert ug.vector.to_feature_collection() is not None
 
     def test_to_file_roundtrip(self, ug, tmp_path):
         out = str(tmp_path / "mesh.nc")

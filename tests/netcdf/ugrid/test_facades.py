@@ -90,7 +90,7 @@ class TestFillFacades:
 
 class TestVectorFacades:
     def test_polygonize_returns_a_geodataframe(self, strip):
-        out = strip.polygonize("d")
+        out = strip.vector.polygonize("d")
         assert isinstance(out, gpd.GeoDataFrame)
         assert len(out) == 2
 

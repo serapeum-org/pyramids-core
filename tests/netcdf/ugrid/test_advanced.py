@@ -441,7 +441,7 @@ class TestEdgeNodeData:
             data={"altitude": np.array([0.0, 5.0, 10.0])},
             data_locations={"altitude": "node"},
         )
-        gdf = ds.to_geodataframe("altitude", location="node")
+        gdf = ds.vector.to_geodataframe("altitude", location="node")
         assert len(gdf) == 3, f"Expected 3 rows, got {len(gdf)}"
         assert gdf.geometry.iloc[0].geom_type == "Point", "Expected Point geometry"
         assert "altitude" in gdf.columns, "Should have altitude column"

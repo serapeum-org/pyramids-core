@@ -178,7 +178,7 @@ class TestWriteUgrid:
 
 
 class TestToGeoDataFrame:
-    """Tests for MeshDataset.to_geodataframe() (UGRID-16)."""
+    """Tests for MeshDataset.vector.to_geodataframe() (UGRID-16)."""
 
     def test_face_geodataframe(self):
         """Test converting faces to GeoDataFrame.
@@ -193,7 +193,7 @@ class TestToGeoDataFrame:
             data={"temp": np.array([25.0])},
             data_locations={"temp": "face"},
         )
-        gdf = ds.to_geodataframe("temp", location="face")
+        gdf = ds.vector.to_geodataframe("temp", location="face")
         assert len(gdf) == 1, f"Expected 1 row, got {len(gdf)}"
         assert gdf.geometry.iloc[0].geom_type == "Polygon", (
             f"Expected Polygon, got {gdf.geometry.iloc[0].geom_type}"
@@ -211,7 +211,7 @@ class TestToGeoDataFrame:
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
-        gdf = ds.to_geodataframe(location="node")
+        gdf = ds.vector.to_geodataframe(location="node")
         assert len(gdf) == 3, f"Expected 3 rows, got {len(gdf)}"
         assert gdf.geometry.iloc[0].geom_type == "Point", (
             f"Expected Point, got {gdf.geometry.iloc[0].geom_type}"
@@ -228,7 +228,7 @@ class TestToGeoDataFrame:
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
-        gdf = ds.to_geodataframe(location="face")
+        gdf = ds.vector.to_geodataframe(location="face")
         assert len(gdf) == 1, f"Expected 1 row, got {len(gdf)}"
         assert "geometry" in gdf.columns, "Should have geometry column"
 
@@ -244,7 +244,7 @@ class TestToGeoDataFrame:
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
         with pytest.raises(ValueError, match="Unknown location"):
-            ds.to_geodataframe(location="invalid")
+            ds.vector.to_geodataframe(location="invalid")
 
 
 class TestCreateFromArrays:
@@ -331,7 +331,7 @@ class TestEdgeGeoDataFrame:
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
         ds.mesh.build_edge_connectivity()
-        gdf = ds.to_geodataframe(location="edge")
+        gdf = ds.vector.to_geodataframe(location="edge")
         assert len(gdf) == 3, f"Expected 3 edge rows, got {len(gdf)}"
         assert gdf.geometry.iloc[0].geom_type == "LineString", (
             f"Expected LineString, got {gdf.geometry.iloc[0].geom_type}"
@@ -349,7 +349,7 @@ class TestEdgeGeoDataFrame:
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
         with pytest.raises(ValueError, match="Edge connectivity"):
-            ds.to_geodataframe(location="edge")
+            ds.vector.to_geodataframe(location="edge")
 
 
 class TestToFeatureCollection:
@@ -368,7 +368,7 @@ class TestToFeatureCollection:
             data={"elev": np.array([5.0])},
             data_locations={"elev": "face"},
         )
-        fc = ds.to_feature_collection("elev", location="face")
+        fc = ds.vector.to_feature_collection("elev", location="face")
         assert isinstance(fc, FeatureCollection), (
             f"Expected FeatureCollection, got {type(fc)}"
         )
@@ -428,7 +428,7 @@ class TestVoronoiPolygons:
             `voronoi_polygons()` returns a `FeatureCollection` of the dual cells so the result
             has a CRS and a vector geometry.
         """
-        cells = self._strip_mesh().voronoi_polygons()
+        cells = self._strip_mesh().vector.voronoi_polygons()
 
         assert isinstance(cells, FeatureCollection), f"got {type(cells).__name__}"
         assert len(cells) == 4, "one cell per distinct node"
@@ -454,7 +454,7 @@ class TestVoronoiPolygons:
             epsg=4326,
         )
 
-        cells = mesh.voronoi_polygons()
+        cells = mesh.vector.voronoi_polygons()
 
         assert len(cells) == 4, "the coincident node must not produce its own cell"
         assert set(cells["node"].tolist()) == {0, 2, 3, 4}, (
@@ -472,7 +472,7 @@ class TestVoronoiPolygons:
         """
         out = tmp_path / "voronoi.gpkg"
 
-        self._strip_mesh().voronoi_polygons().to_file(str(out))
+        self._strip_mesh().vector.voronoi_polygons().to_file(str(out))
 
         assert out.exists(), "the cells must write to a file"
         assert out.stat().st_size > 0, "the written file must not be empty"
@@ -481,7 +481,7 @@ class TestVoronoiPolygons:
         """`voronoi()` still returns the low-level scipy tessellation (non-breaking)."""
         from scipy.spatial import Voronoi
 
-        assert isinstance(self._strip_mesh().voronoi(), Voronoi)
+        assert isinstance(self._strip_mesh().vector.voronoi(), Voronoi)
 
 
 class TestExtraDimension:

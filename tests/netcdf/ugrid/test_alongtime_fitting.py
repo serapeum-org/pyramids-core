@@ -821,7 +821,7 @@ class TestUnknownVariableMessageParity:
             lambda ds: ds.focal_std(variable_name="nope"),
             lambda ds: ds.focal_apply(np.median, variable_name="nope"),
             lambda ds: ds.get_histogram(variable_name="nope"),
-            lambda ds: ds.cluster(1, 2, variable_name="nope"),
+            lambda ds: ds.vector.cluster(1, 2, variable_name="nope"),
             lambda ds: ds.footprint(variable_name="nope"),
             lambda ds: ds.where(np.array([True, True]), variable_name="nope"),
             lambda ds: ds.apply(np.abs, variable_name="nope"),

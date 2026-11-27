@@ -273,7 +273,7 @@ class TestFileWriting:
 class TestGeoDataFrameLocations:
     def test_a_variable_on_another_facet_is_not_tabulated(self, mesh):
         """Asked for node geometries, a face variable is left out rather than mis-aligned."""
-        gdf = mesh.to_geodataframe("depth", location="node")
+        gdf = mesh.vector.to_geodataframe("depth", location="node")
         assert len(gdf) == 4
         assert "depth" not in gdf.columns
 
@@ -293,7 +293,7 @@ class TestGeoDataFrameLocations:
             global_attributes={},
             crs_wkt=mesh.crs_wkt,
         )
-        geometries = ragged.to_geodataframe(location="edge").geometry
+        geometries = ragged.vector.to_geodataframe(location="edge").geometry
         assert len(geometries) == 2
         assert list(geometries.iloc[0].coords) == [(0.0, 0.0), (1.0, 0.0)]
 

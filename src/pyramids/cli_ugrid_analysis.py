@@ -277,7 +277,7 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.cluster(args.lower, args.upper, variable_name=args.var)
+        result = mesh.vector.cluster(args.lower, args.upper, variable_name=args.var)
     result.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -595,7 +595,7 @@ def _cmd_contour(args: argparse.Namespace) -> int:
         levels = int(args.levels[0]) if len(args.levels) == 1 else list(args.levels)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        gdf = mesh.contour(levels=levels, variable_name=args.var)
+        gdf = mesh.vector.contour(levels=levels, variable_name=args.var)
     FeatureCollection(gdf).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0

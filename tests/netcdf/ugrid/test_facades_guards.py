@@ -75,7 +75,7 @@ class TestDualGeometryFacades:
 
     def test_voronoi_tessellates_the_nodes(self, triangles):
         """The dual is built over the node coordinates, so it carries one point per node."""
-        assert triangles.voronoi().points.shape == (4, 2)
+        assert triangles.vector.voronoi().points.shape == (4, 2)
 
 
 class TestRasterFacade:

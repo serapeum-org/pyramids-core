@@ -107,6 +107,7 @@ from pyramids.netcdf.ugrid._facades import _axis_distances, _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
 from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+from pyramids.netcdf.ugrid.engines.vector import _MeshVector
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
 from pyramids.netcdf.ugrid.io import (
@@ -543,6 +544,11 @@ class MeshDataset(_MeshFacades):
     def interop(self) -> _MeshInterop:
         """Interop engine: ``to_xarray`` / ``to_dataframe`` / ``to_dask_dataframe`` (``mesh.interop``)."""
         return _MeshInterop(self)
+
+    @property
+    def vector(self) -> _MeshVector:
+        """Vector engine: geodataframe/feature-collection, contour, cluster, voronoi (``mesh.vector``)."""
+        return _MeshVector(self)
 
     @property
     def variable_names(self) -> list[str]:
@@ -1685,47 +1691,14 @@ class MeshDataset(_MeshFacades):
         variable_name: str | None = None,
         location: str = "face",
     ) -> gpd.GeoDataFrame:
-        """Convert mesh to a GeoDataFrame.
-
-        For faces: each row is a Polygon with data columns.
-        For nodes: each row is a Point.
-        For edges: each row is a LineString.
-
-        Args:
-            variable_name: Optional data variable to include as a column.
-            location: Mesh location ("face", "node", or "edge").
-
-        Returns:
-            geopandas GeoDataFrame.
-        """
-        geometries = self._build_geometries(location)
-
-        data_dict: dict[str, Any] = {}
-        if variable_name is not None:
-            var = self[variable_name]
-            if var.location == location:
-                # For a temporal variable only the first step is tabulated; the windowed read
-                # pulls just that slab instead of loading every step to slice `[0]` (#982).
-                # `has_data_source` keeps a variable with no readable data to the `None` branch
-                # below (checked without forcing a load — review L3).
-                if var.has_time:
-                    var_data = (
-                        var._read_time_window(0, None) if var.has_data_source else None
-                    )
-                else:
-                    var_data = var.data
-                # A variable with no readable data becomes a length-correct null column rather than
-                # raising — pandas rejects a scalar `None` column ("must pass an index") (review L3).
-                if var_data is None:
-                    var_data = np.full(len(geometries), np.nan)
-                data_dict[variable_name] = var_data
-
-        gdf = gpd.GeoDataFrame(data_dict, geometry=geometries)
-        if self.crs is not None:
-            gdf = gdf.set_crs(self.crs)
-
-        result = gdf
-        return result
+        """Facade -- delegates to :meth:`_MeshVector.to_geodataframe`."""
+        warnings.warn(
+            "`mesh.to_geodataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.to_geodataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector.to_geodataframe(variable_name, location)
 
     def _build_geometries(self, location: str) -> list:
         """Build the geometry list for a mesh location.
@@ -1787,89 +1760,26 @@ class MeshDataset(_MeshFacades):
         variable_name: str | None = None,
         location: str = "face",
     ) -> FeatureCollection:
-        """Convert mesh to a pyramids FeatureCollection.
-
-        Args:
-            variable_name: Optional data variable to include.
-            location: Mesh location ("face", "node", or "edge").
-
-        Returns:
-            pyramids FeatureCollection.
-        """
-        gdf = self.to_geodataframe(variable_name, location)
-        result = FeatureCollection(gdf)
-        return result
+        """Facade -- delegates to :meth:`_MeshVector.to_feature_collection`."""
+        warnings.warn(
+            "`mesh.to_feature_collection` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.to_feature_collection`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector.to_feature_collection(variable_name, location)
 
     def voronoi_polygons(
         self, *, clip: FeatureCollection | None = None
     ) -> FeatureCollection:
-        """Voronoi (Thiessen) cells of the mesh nodes as a vector `FeatureCollection`.
-
-        The file-serializable counterpart of :meth:`voronoi`, which returns a bare
-        :class:`scipy.spatial.Voronoi` with no geospatial form. This returns the Thiessen
-        (Voronoi) cells of the mesh nodes as polygons in the mesh CRS, so unlike the raw
-        tessellation it can be written with :meth:`FeatureCollection.to_file` and wrapped as a
-        CLI verb.
-
-        The cells come from :meth:`FeatureCollection.voronoi`, so the outer (unbounded) cells
-        are bounded to an envelope by default; pass `clip` to intersect every cell with a
-        boundary instead (e.g. the mesh domain). Each cell carries a `node` column with the
-        index of the node it belongs to.
-
-        One cell per **distinct** node: coincident nodes, and cells emptied by `clip`, are
-        dropped, so the result can have fewer rows than the mesh has nodes -- use the `node`
-        column, not row position, to map a cell back to its node. A `clip` boundary that
-        splits one cell into disjoint pieces yields several rows that share a single `node`
-        value, so with such a `clip` the result can instead have *more* rows than nodes and
-        `node` is not unique; without `clip` (or with a convex one) each surviving node has
-        exactly one row. If the mesh has no CRS (:attr:`crs` is `None`) the output carries
-        none either.
-
-        Args:
-            clip: A boundary `FeatureCollection` each cell is intersected with, or `None` for
-                shapely's default bounded cells.
-
-        Returns:
-            FeatureCollection: One polygon per surviving node cell, in the mesh CRS, each
-            carrying a `node` column with its source node index.
-
-        Raises:
-            InvalidGeometryError: Fewer than two distinct nodes with finite coordinates.
-
-        Examples:
-            - Tessellate a four-node mesh and inspect the cells:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     epsg=4326,
-                ... )
-                >>> cells = mesh.voronoi_polygons()
-                >>> len(cells)
-                4
-                >>> sorted(set(cells.geometry.geom_type))
-                ['Polygon']
-                >>> cells.epsg
-                4326
-
-                ```
-
-        See Also:
-            voronoi: The low-level `scipy.spatial.Voronoi` primitive this builds on.
-        """
-        node_index = np.arange(self._mesh.node_x.size)
-        nodes = gpd.GeoDataFrame(
-            {"node": node_index},
-            geometry=list(shapely.points(self._mesh.node_x, self._mesh.node_y)),
-            crs=self.crs,
+        """Facade -- delegates to :meth:`_MeshVector.voronoi_polygons`."""
+        warnings.warn(
+            "`mesh.voronoi_polygons` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.voronoi_polygons`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        # Carry the source node index onto each cell (`values="node"`), so a caller can map a
-        # surviving cell back to its node -- positional alignment is NOT safe, because the
-        # tessellation drops coincident nodes and any cell emptied by `clip`.
-        return FeatureCollection(nodes).voronoi(values="node", clip=clip)
+        return self.vector.voronoi_polygons(clip=clip)
 
     @classmethod
     def from_arrays(

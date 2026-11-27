@@ -348,6 +348,6 @@ class TestGeoDataFrameTolerance:
             shape=(3, 2),
             dimensions=("time", "mesh2d_nFaces"),
         )
-        gdf = ds.to_geodataframe(variable_name="h", location="face")
+        gdf = ds.vector.to_geodataframe(variable_name="h", location="face")
         assert "h" in gdf.columns
         assert gdf["h"].isna().all()

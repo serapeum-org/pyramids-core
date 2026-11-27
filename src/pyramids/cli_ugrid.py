@@ -123,7 +123,9 @@ def _cmd_mesh_convert(args: argparse.Namespace) -> int:
     driver = resolve_vector_driver(args.output, args.driver)
     mesh = MeshDataset.read_file(args.file)
     _validate_variable(mesh, args.var)
-    fc = mesh.to_feature_collection(variable_name=args.var, location=args.location)
+    fc = mesh.vector.to_feature_collection(
+        variable_name=args.var, location=args.location
+    )
     fc.to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0

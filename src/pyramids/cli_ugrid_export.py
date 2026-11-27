@@ -78,7 +78,9 @@ def _cmd_mesh_to_geodataframe(args: argparse.Namespace) -> int:
     driver = resolve_vector_driver(args.output, args.driver)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        gdf = mesh.to_geodataframe(variable_name=args.var, location=args.location)
+        gdf = mesh.vector.to_geodataframe(
+            variable_name=args.var, location=args.location
+        )
     FeatureCollection(gdf).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -100,7 +102,7 @@ def _cmd_mesh_voronoi_polygons(args: argparse.Namespace) -> int:
     driver = resolve_vector_driver(args.output, args.driver)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        cells = mesh.voronoi_polygons()
+        cells = mesh.vector.voronoi_polygons()
     cells.to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -360,7 +362,7 @@ def _cmd_mesh_polygonize(args: argparse.Namespace) -> int:
     driver = resolve_vector_driver(args.output, args.driver)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        gdf = mesh.polygonize(variable_name=args.var, decimals=args.decimals)
+        gdf = mesh.vector.polygonize(variable_name=args.var, decimals=args.decimals)
     FeatureCollection(gdf).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0

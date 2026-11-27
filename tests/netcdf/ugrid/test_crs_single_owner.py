@@ -27,26 +27,26 @@ class TestCrsSingleOwner:
         """``from_arrays(epsg=)`` gives the dataset a CRS, so contour is not CRS-less."""
         ds = _square_mesh(epsg=4326)
         assert ds.epsg == 4326
-        assert ds.contour(3, "depth").crs is not None
-        assert ds.contour(3, "depth").crs.to_epsg() == 4326
+        assert ds.vector.contour(3, "depth").crs is not None
+        assert ds.vector.contour(3, "depth").crs.to_epsg() == 4326
 
     def test_two_public_exports_agree(self):
         """``to_geodataframe`` and ``contour`` report the same CRS, not 4326 vs None."""
         ds = _square_mesh(epsg=4326)
-        gdf_epsg = ds.to_geodataframe().crs.to_epsg()
-        contour_epsg = ds.contour(3, "depth").crs.to_epsg()
+        gdf_epsg = ds.vector.to_geodataframe().crs.to_epsg()
+        contour_epsg = ds.vector.contour(3, "depth").crs.to_epsg()
         assert gdf_epsg == contour_epsg == 4326
 
     def test_to_crs_carries_the_crs_to_contour(self):
         """Reprojection's new CRS reaches the geometry exports."""
         reprojected = _square_mesh(epsg=4326).to_crs(3857)
         assert reprojected.epsg == 3857
-        assert reprojected.contour(3, "depth").crs.to_epsg() == 3857
+        assert reprojected.vector.contour(3, "depth").crs.to_epsg() == 3857
 
     def test_clip_keeps_the_crs_on_contour(self):
         """A spatial subset's contour is not CRS-less."""
         clipped = _square_mesh(epsg=4326).clip(box(0.0, 0.0, 1.0, 1.0))
-        assert clipped.contour(3, "depth").crs.to_epsg() == 4326
+        assert clipped.vector.contour(3, "depth").crs.to_epsg() == 4326
 
     def test_set_crs_refreshes_topology_info(self):
         """``set_crs`` updates the fourth slot, so topo_info does not go stale."""
@@ -124,6 +124,6 @@ class TestCrsSingleOwner:
         )
         ds = _square_mesh(epsg=4326)
         ds.mesh.crs = laea  # a different, no-EPSG CRS sitting on the mesh
-        gdf_epsg = ds.to_geodataframe().crs.to_epsg()
-        contour_epsg = ds.contour(3, "depth").crs.to_epsg()
+        gdf_epsg = ds.vector.to_geodataframe().crs.to_epsg()
+        contour_epsg = ds.vector.contour(3, "depth").crs.to_epsg()
         assert gdf_epsg == contour_epsg == ds.epsg == 4326

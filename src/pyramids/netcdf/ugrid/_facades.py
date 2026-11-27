@@ -34,6 +34,7 @@ from pyramids.netcdf.ugrid.messages import unknown_variable_message
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+    from pyramids.netcdf.ugrid.engines.vector import _MeshVector
     from pyramids.netcdf.ugrid.models import MeshVariable
 
 _KEEP = object()
@@ -194,6 +195,9 @@ class _MeshFacades:
 
         @property
         def interop(self) -> _MeshInterop: ...
+
+        @property
+        def vector(self) -> _MeshVector: ...
 
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
@@ -541,15 +545,13 @@ class _MeshFacades:
             connected_components: Topology-only labelling, ignoring values.
             footprint: The dissolved outline of the faces carrying valid values.
         """
-        var = self._facade_variable("cluster", variable_name)
-        labels = _graph.value_clusters(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            lower,
-            upper,
-            var.nodata,
+        warnings.warn(
+            "`mesh.cluster` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.cluster`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._rewrap(var, labels, nodata=None)
+        return self.vector.cluster(lower, upper, variable_name=variable_name)
 
     def footprint(self, variable_name: str | None = None) -> Any:
         """The dissolved outline of the faces carrying valid values (#1379).
@@ -622,12 +624,14 @@ class _MeshFacades:
         return _graph.circumcenters(self._mesh)  # type: ignore[attr-defined]
 
     def voronoi(self) -> Any:
-        """The Voronoi tesselation of the mesh nodes (the mesh dual).
-
-        Returns:
-            scipy.spatial.Voronoi: The tesselation.
-        """
-        return _graph.voronoi(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshVector.voronoi`."""
+        warnings.warn(
+            "`mesh.voronoi` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.voronoi`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector.voronoi()
 
     def sparse_adjacency(self, kind: str = "face") -> Any:
         """The mesh adjacency as a sparse matrix.
@@ -826,13 +830,13 @@ class _MeshFacades:
         Returns:
             geopandas.GeoDataFrame: One row per merged region, with its value and geometry.
         """
-        var = self._facade_variable("polygonize", variable_name)
-        return _vector_ops.polygonize(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            decimals=decimals,
-            crs=self.crs,  # type: ignore[attr-defined]
+        warnings.warn(
+            "`mesh.polygonize` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.polygonize`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.vector.polygonize(variable_name, decimals=decimals)
 
     def sample_line(self, line: Any, variable_name: str | None = None) -> Any:
         """Sample a variable along a line, ordered by distance along it.
@@ -1440,21 +1444,13 @@ class _MeshFacades:
                 histogram.
 
         """
-        var = self._facade_variable("contour", variable_name)
-        data = np.asarray(var.data)
-        if data.ndim > 1:
-            raise ValueError(
-                "contour requires a single time step; select a time "
-                "step first to reduce temporal data to 1-D."
-            )
-        result = _analysis.contour_lines(
-            self._mesh,  # type: ignore[attr-defined]
-            data,
-            levels,
-            var.location,
-            crs=self.crs,  # type: ignore[attr-defined]
+        warnings.warn(
+            "`mesh.contour` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.contour`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return result
+        return self.vector.contour(levels, variable_name=variable_name)
 
     def plot_histogram(
         self,

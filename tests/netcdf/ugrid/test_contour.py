@@ -22,13 +22,13 @@ pytestmark = [pytest.mark.core, pytest.mark.plot]
 class TestContour:
     def test_returns_geodataframe(self):
         ds = _make_ds()
-        gdf = ds.contour(levels=3)
+        gdf = ds.vector.contour(levels=3)
         assert hasattr(gdf, "geometry")
         assert "level" in gdf.columns
 
     def test_explicit_levels(self):
         ds = _make_ds()
-        gdf = ds.contour(levels=[1.5, 2.5, 3.5])
+        gdf = ds.vector.contour(levels=[1.5, 2.5, 3.5])
         assert hasattr(gdf, "geometry")
 
     def test_default_levels(self):
@@ -39,7 +39,7 @@ class TestContour:
             default (10), producing a valid GeoDataFrame.
         """
         ds = _make_ds()
-        gdf = ds.contour()
+        gdf = ds.vector.contour()
         assert hasattr(gdf, "geometry"), (
             "Default-levels contour should return a GeoDataFrame"
         )
@@ -62,7 +62,7 @@ class TestContour:
         """Contour output GeoDataFrame carries the mesh CRS."""
         ds = _make_ds()
         ds.set_crs(epsg=4326)
-        gdf = ds.contour(levels=3)
+        gdf = ds.vector.contour(levels=3)
         assert gdf.crs is not None
         assert CRS(gdf.crs).to_epsg() == 4326
 
@@ -82,4 +82,4 @@ class TestContour:
             global_attributes={},
         )
         with pytest.raises(ValueError, match="temporal"):
-            ds.contour(levels=3)
+            ds.vector.contour(levels=3)

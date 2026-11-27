@@ -45,20 +45,22 @@ class TestCluster:
         """
         ds = _strip([5.0, 0.0, 0.0, 7.0])
         assert ds.connected_components().tolist() == [0, 0, 0, 0]
-        labels = ds.cluster(1.0, 10.0)["v"].data
+        labels = ds.vector.cluster(1.0, 10.0)["v"].data
         assert labels.tolist() == [1, 0, 0, 2]
 
     def test_excluded_faces_do_not_bridge_two_clusters(self):
         """Regression: masking the adjacency left explicit stored zeros, which csgraph still
         treated as edges — so the out-of-range faces silently joined the pools into one."""
         ds = _strip([5.0, 0.0, 0.0, 7.0])
-        labels = ds.cluster(1.0, 10.0)["v"].data
+        labels = ds.vector.cluster(1.0, 10.0)["v"].data
         assert len(set(labels[labels > 0].tolist())) == 2, (
             "the two pools must stay separate, not be bridged by the excluded faces"
         )
 
     def test_all_in_range_is_one_cluster(self):
-        assert _strip([1.0, 2.0, 3.0, 4.0]).cluster(0.0, 10.0)["v"].data.tolist() == [
+        assert _strip([1.0, 2.0, 3.0, 4.0]).vector.cluster(0.0, 10.0)[
+            "v"
+        ].data.tolist() == [
             1,
             1,
             1,
@@ -66,18 +68,18 @@ class TestCluster:
         ]
 
     def test_none_in_range_labels_nothing(self):
-        assert _strip([1.0, 2.0, 3.0, 4.0]).cluster(100.0, 200.0)[
+        assert _strip([1.0, 2.0, 3.0, 4.0]).vector.cluster(100.0, 200.0)[
             "v"
         ].data.tolist() == [0, 0, 0, 0]
 
     def test_bounds_are_inclusive(self):
-        labels = _strip([1.0, 2.0, 3.0, 4.0]).cluster(2.0, 3.0)["v"].data
+        labels = _strip([1.0, 2.0, 3.0, 4.0]).vector.cluster(2.0, 3.0)["v"].data
         assert labels.tolist() == [0, 1, 1, 0]
 
     def test_nodata_is_never_in_range(self):
         """A missing value cannot be inside a value range."""
         ds = _strip([-999.0, 2.0, 3.0, -999.0], nodata=-999.0)
-        labels = ds.cluster(-1000.0, 1000.0)["v"].data
+        labels = ds.vector.cluster(-1000.0, 1000.0)["v"].data
         assert labels.tolist() == [0, 1, 1, 0]
 
     def test_refuses_a_temporal_variable(self):
@@ -89,7 +91,7 @@ class TestCluster:
             data_locations={"v": "face"},
         )
         with pytest.raises(ValueError, match="one value per face"):
-            ds.cluster(0.0, 1.0)
+            ds.vector.cluster(0.0, 1.0)
 
 
 class TestFootprint:
@@ -157,7 +159,7 @@ class TestClusterLabelsDeclareNoSentinel:
             data_locations={"v": "face"},
         )
         ds["v"].nodata = -9999.0
-        labels = ds.cluster(1, 10)["v"]
+        labels = ds.vector.cluster(1, 10)["v"]
         assert labels.nodata is None, f"labels declared nodata={labels.nodata}"
         assert np.asarray(labels.data).tolist() == [1, 0, 0, 2]
 
@@ -170,5 +172,5 @@ class TestClusterLabelsDeclareNoSentinel:
             data_locations={"v": "face"},
         )
         ds["v"].nodata = -9999.0
-        ds.cluster(1, 10)
+        ds.vector.cluster(1, 10)
         assert ds["v"].nodata == -9999.0

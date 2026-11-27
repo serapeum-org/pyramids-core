@@ -257,7 +257,7 @@ class TestEdgeLinestringsNoneFill:
         )
         dataset = MeshDataset(mesh=mesh, data_variables={}, global_attributes={})
 
-        gdf = dataset.to_geodataframe(location="edge")
+        gdf = dataset.vector.to_geodataframe(location="edge")
 
         assert len(gdf) == 4, f"expected 4 edge geometries, got {len(gdf)}"
         assert all(isinstance(g, LineString) for g in gdf.geometry), (
