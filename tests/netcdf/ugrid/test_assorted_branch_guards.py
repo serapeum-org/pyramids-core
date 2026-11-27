@@ -215,7 +215,7 @@ class TestRepresentableNodata:
         )
         mesh["m"].nodata = "-9999"
 
-        grown = mesh.binary_dilation("m")
+        grown = mesh.topology.binary_dilation("m")
 
         assert grown["m"].nodata is None, (
             f"an unusable declaration is dropped, got {grown['m'].nodata!r}"

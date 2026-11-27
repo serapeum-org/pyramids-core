@@ -104,6 +104,7 @@ from pyramids.netcdf.ugrid.connectivity import Connectivity
 from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
 from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
 from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
 from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
 from pyramids.netcdf.ugrid.engines.vector import _MeshVector
 from pyramids.netcdf.ugrid.fill import _location_coords
@@ -557,6 +558,12 @@ class MeshDataset(_MeshFacades):
     def variables(self) -> _MeshVariables:
         """Variables engine: with_variable, attach_data, rename_variable, drop_variables (``mesh.variables``)."""
         return _MeshVariables(self)
+
+    @property
+    def topology(self) -> _MeshTopology:
+        """Topology engine: circumcenters, exterior edges/faces, bounding_polygon, components, \
+morphology, adjacency, active_mask (``mesh.topology``)."""
+        return _MeshTopology(self)
 
     @property
     def variable_names(self) -> list[str]:
@@ -3411,45 +3418,14 @@ class MeshDataset(_MeshFacades):
         )
 
     def active_mask(self, variable_name: str) -> np.typing.NDArray | None:
-        """The variable's per-element active (wet/dry) mask, or ``None`` when it has none.
-
-        The first-class companion of the data (issue #1331): ``True`` marks an active/wet
-        element, ``False`` a dry one, kept separate from ``nodata``/NaN so a consumer can tell
-        a dry element from a missing value. The mask is element-indexed — ``(n_element,)``
-        when it is static or ``(n_time, n_element)`` when it varies per step — and is returned
-        as read, never applied to the values. Use :meth:`masked_values` to get the values with
-        it applied.
-
-        Args:
-            variable_name: Name of the data variable.
-
-        Returns:
-            np.ndarray | None: The boolean mask, or ``None`` when the variable carries none.
-
-        Raises:
-            KeyError: ``variable_name`` is not a data variable of this dataset.
-
-        Examples:
-            - A variable with a mask reports it; one without answers ``None``:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"depth": np.array([2.0, 4.0])},
-                ... )
-                >>> ds["depth"].active = np.array([True, False])
-                >>> ds.active_mask("depth").tolist()
-                [True, False]
-                >>> ds.active_mask("depth") is not None
-                True
-
-                ```
-        """
-        var = self[variable_name]
-        return None if var.active is None else np.asarray(var.active, dtype=bool)
+        """Facade -- delegates to :meth:`_MeshTopology.active_mask`."""
+        warnings.warn(
+            "`mesh.active_mask` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.active_mask`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.active_mask(variable_name)
 
     def masked_values(self, variable_name: str) -> np.typing.NDArray:
         """The variable's values with both ``nodata`` **and** the active mask blanked to NaN.

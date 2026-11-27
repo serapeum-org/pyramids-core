@@ -296,7 +296,7 @@ def _cmd_binary_dilation(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.binary_dilation(
+        result = mesh.topology.binary_dilation(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
     result.to_file(args.output)
@@ -317,7 +317,7 @@ def _cmd_binary_erosion(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.binary_erosion(
+        result = mesh.topology.binary_erosion(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
     result.to_file(args.output)

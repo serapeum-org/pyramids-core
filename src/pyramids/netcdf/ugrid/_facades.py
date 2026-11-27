@@ -35,6 +35,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
     from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
     from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+    from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
     from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
     from pyramids.netcdf.ugrid.engines.vector import _MeshVector
     from pyramids.netcdf.ugrid.models import MeshVariable
@@ -207,6 +208,9 @@ class _MeshFacades:
         @property
         def variables(self) -> _MeshVariables: ...
 
+        @property
+        def topology(self) -> _MeshTopology: ...
+
     def _facade_variable(self, operation: str, variable_name: str | None) -> Any:
         """The variable ``operation`` acts on, defaulting to the only data variable.
 
@@ -279,12 +283,14 @@ class _MeshFacades:
         return self._rebuild(new_vars)  # type: ignore[attr-defined]
 
     def connected_components(self) -> np.ndarray:
-        """Label the mesh's connected face components.
-
-        Returns:
-            numpy.ndarray: One component label per face.
-        """
-        return _graph.connected_components(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.connected_components`."""
+        warnings.warn(
+            "`mesh.connected_components` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.connected_components`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.connected_components()
 
     def _focal_inputs(
         self, operation: str, variable_name: str | None
@@ -597,39 +603,44 @@ class _MeshFacades:
         )
 
     def exterior_edges(self) -> np.ndarray:
-        """The indices of the edges on the mesh boundary.
-
-        Returns:
-            numpy.ndarray: Boundary edge indices.
-        """
-        return _graph.exterior_edges(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.exterior_edges`."""
+        warnings.warn(
+            "`mesh.exterior_edges` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.exterior_edges`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.exterior_edges()
 
     def exterior_faces(self) -> np.ndarray:
-        """The indices of the faces touching the mesh boundary.
-
-        Returns:
-            numpy.ndarray: Boundary face indices.
-        """
-        return _graph.exterior_faces(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.exterior_faces`."""
+        warnings.warn(
+            "`mesh.exterior_faces` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.exterior_faces`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.exterior_faces()
 
     def bounding_polygon(self) -> Any:
-        """The mesh footprint as one dissolved polygon, holes preserved.
-
-        Returns:
-            shapely.geometry.base.BaseGeometry: The (multi)polygon of the mesh outline.
-        """
-        return _graph.bounding_polygon(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.bounding_polygon`."""
+        warnings.warn(
+            "`mesh.bounding_polygon` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.bounding_polygon`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.bounding_polygon()
 
     def circumcenters(self) -> np.ndarray:
-        """The circumcentre of every face (triangular meshes only).
-
-        Returns:
-            numpy.ndarray: ``(n_face, 2)`` circumcentre coordinates.
-
-        Raises:
-            ValueError: The mesh is not triangular.
-        """
-        return _graph.circumcenters(self._mesh)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.circumcenters`."""
+        warnings.warn(
+            "`mesh.circumcenters` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.circumcenters`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.circumcenters()
 
     def voronoi(self) -> Any:
         """Facade -- delegates to :meth:`_MeshVector.voronoi`."""
@@ -642,15 +653,14 @@ class _MeshFacades:
         return self.vector.voronoi()
 
     def sparse_adjacency(self, kind: str = "face") -> Any:
-        """The mesh adjacency as a sparse matrix.
-
-        Args:
-            kind: ``"face"`` (faces sharing an edge) or ``"node"`` (nodes sharing an edge).
-
-        Returns:
-            scipy.sparse.csr_matrix: The symmetric adjacency.
-        """
-        return _graph.sparse_adjacency(self._mesh, kind)  # type: ignore[attr-defined]
+        """Facade -- delegates to :meth:`_MeshTopology.sparse_adjacency`."""
+        warnings.warn(
+            "`mesh.sparse_adjacency` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.sparse_adjacency`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.sparse_adjacency(kind)
 
     def binary_dilation(
         self,
@@ -660,28 +670,19 @@ class _MeshFacades:
         border_value: bool = False,
         fixed: np.ndarray | None = None,
     ) -> Any:
-        """Grow a boolean face mask over its neighbours.
-
-        Args:
-            variable_name: The boolean face variable to dilate, or ``None`` for the only one.
-            iterations: How many times to grow. Defaults to 1.
-            border_value: What lies outside the mesh. Defaults to False.
-            fixed: A boolean per-face mask of the cells the result must preserve, whatever the
-                dilation would do to them — scipy's ``mask`` argument. ``None`` leaves every
-                face free to change. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with the dilated mask.
-        """
-        var = self._facade_variable("binary_dilation", variable_name)
-        grown = _graph.binary_dilation(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data).astype(bool),
+        """Facade -- delegates to :meth:`_MeshTopology.binary_dilation`."""
+        warnings.warn(
+            "`mesh.binary_dilation` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.binary_dilation`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.binary_dilation(
+            variable_name,
             iterations=iterations,
             border_value=border_value,
             fixed=fixed,
         )
-        return self._rewrap(var, grown)
 
     def binary_erosion(
         self,
@@ -691,29 +692,19 @@ class _MeshFacades:
         border_value: bool = False,
         fixed: np.ndarray | None = None,
     ) -> Any:
-        """Shrink a boolean face mask away from its boundary.
-
-        Args:
-            variable_name: The boolean face variable to erode, or ``None`` for the only one.
-            iterations: How many times to shrink. Defaults to 1.
-            border_value: What lies outside the mesh. Defaults to False, which erodes the
-                boundary; pass True to erode only the interior.
-            fixed: A boolean per-face mask of the cells the result must preserve, whatever the
-                erosion would do to them — scipy's ``mask`` argument. ``None`` leaves every
-                face free to change. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with the eroded mask.
-        """
-        var = self._facade_variable("binary_erosion", variable_name)
-        shrunk = _graph.binary_erosion(
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data).astype(bool),
+        """Facade -- delegates to :meth:`_MeshTopology.binary_erosion`."""
+        warnings.warn(
+            "`mesh.binary_erosion` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.binary_erosion`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.binary_erosion(
+            variable_name,
             iterations=iterations,
             border_value=border_value,
             fixed=fixed,
         )
-        return self._rewrap(var, shrunk)
 
     def to_location(self, location: str, variable_name: str | None = None) -> Any:
         """Remap a variable onto another facet of the mesh.
@@ -1355,7 +1346,7 @@ class _MeshFacades:
         """
         result = int(self._mesh.n_face)  # type: ignore[attr-defined]
         if variable_name is not None:
-            mask = self.active_mask(variable_name)  # type: ignore[attr-defined]
+            mask = self.topology.active_mask(variable_name)
             if mask is not None:
                 if mask.ndim > 1:
                     mask = mask[-1]

@@ -194,8 +194,11 @@ class TestAccessors:
 
     def test_active_mask_returns_the_mask_or_none(self):
         mask = np.array([True, False, True])
-        assert _dataset(_temporal_var(mask)).active_mask("wl").tolist() == mask.tolist()
-        assert _dataset(_temporal_var()).active_mask("wl") is None
+        assert (
+            _dataset(_temporal_var(mask)).topology.active_mask("wl").tolist()
+            == mask.tolist()
+        )
+        assert _dataset(_temporal_var()).topology.active_mask("wl") is None
 
     def test_masked_values_blanks_dry_to_nan_per_step(self):
         mask = np.array([[True, True, False], [True, False, False]])
@@ -467,8 +470,8 @@ class TestNetcdfRoundTrip:
         path = tmp_path / "per_step.nc"
         ds.to_file(path)
         back = MeshDataset.read_file(path)
-        assert back.active_mask("wl") is not None
-        np.testing.assert_array_equal(back.active_mask("wl"), mask)
+        assert back.topology.active_mask("wl") is not None
+        np.testing.assert_array_equal(back.topology.active_mask("wl"), mask)
 
     def test_static_mask_round_trips_and_is_distinct_from_nodata(self, tmp_path):
         var = _temporal_var(np.array([True, False, True]))
@@ -477,7 +480,9 @@ class TestNetcdfRoundTrip:
         path = tmp_path / "static.nc"
         ds.to_file(path)
         back = MeshDataset.read_file(path)
-        np.testing.assert_array_equal(back.active_mask("wl"), [True, False, True])
+        np.testing.assert_array_equal(
+            back.topology.active_mask("wl"), [True, False, True]
+        )
         assert back["wl"].nodata == -999.0  # mask did not become the fill value
 
     def test_a_mesh_with_no_mask_reads_exactly_as_before(self, tmp_path):
@@ -485,7 +490,7 @@ class TestNetcdfRoundTrip:
         path = tmp_path / "plain.nc"
         ds.to_file(path)
         back = MeshDataset.read_file(path)
-        assert back.active_mask("wl") is None
+        assert back.topology.active_mask("wl") is None
 
     def test_main_variable_gains_ancillary_variables_on_disk(self, tmp_path):
         """Regression (L2): the NetCDF writer must stamp the CF ``ancillary_variables``

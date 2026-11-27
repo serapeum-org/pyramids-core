@@ -42,7 +42,7 @@ class TestMorphologyResultNodata:
             declaration would mark every set element as missing if anything ever compared
             against it, and writes a `_FillValue` no element can equal.
         """
-        grown = mask_with_nodata.binary_dilation("m")
+        grown = mask_with_nodata.topology.binary_dilation("m")
 
         assert np.asarray(grown["m"].data).dtype == np.bool_, (
             f"the result is a boolean mask, got {np.asarray(grown['m'].data).dtype}"
@@ -54,7 +54,7 @@ class TestMorphologyResultNodata:
 
     def test_erosion_drops_it_too(self, mask_with_nodata):
         """The sibling facade behaves the same way."""
-        shrunk = mask_with_nodata.binary_erosion("m")
+        shrunk = mask_with_nodata.topology.binary_erosion("m")
 
         assert shrunk["m"].nodata is None, (
             f"a boolean mask has no representable no-data value, yet it declares "
@@ -89,7 +89,7 @@ class TestMorphologyResultNodata:
         Test scenario:
             Face 0 is set and face 1 shares an edge with it, so one dilation pass sets both.
         """
-        grown = mask_with_nodata.binary_dilation("m")
+        grown = mask_with_nodata.topology.binary_dilation("m")
 
         assert np.asarray(grown["m"].data).tolist() == [True, True], (
             f"both faces should be set after one pass, got "

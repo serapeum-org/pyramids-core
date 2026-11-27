@@ -40,17 +40,17 @@ def split() -> MeshDataset:
 
 class TestGraphFacades:
     def test_connected_components(self, split):
-        assert sorted(set(split.connected_components().tolist())) == [0, 1]
+        assert sorted(set(split.topology.connected_components().tolist())) == [0, 1]
 
     def test_exterior_faces_and_edges(self, strip):
-        assert strip.exterior_faces().tolist() == [0, 1]
-        assert len(strip.exterior_edges()) > 0
+        assert strip.topology.exterior_faces().tolist() == [0, 1]
+        assert len(strip.topology.exterior_edges()) > 0
 
     def test_bounding_polygon_covers_the_mesh(self, strip):
-        assert strip.bounding_polygon().area == pytest.approx(2.0)
+        assert strip.topology.bounding_polygon().area == pytest.approx(2.0)
 
     def test_sparse_adjacency_shape(self, strip):
-        assert strip.sparse_adjacency("face").shape == (2, 2)
+        assert strip.topology.sparse_adjacency("face").shape == (2, 2)
 
     def test_to_location_moves_the_variable(self, strip):
         out = strip.to_location("node")
@@ -65,14 +65,14 @@ class TestGraphFacades:
         masked = strip.variables.with_variable(
             "m", np.array([True, False]), location="face"
         )
-        out = masked.binary_dilation("m")
+        out = masked.topology.binary_dilation("m")
         assert out["m"].data.tolist() == [True, True]
 
     def test_binary_erosion_shrinks_a_mask(self, strip):
         masked = strip.variables.with_variable(
             "m", np.array([True, True]), location="face"
         )
-        out = masked.binary_erosion("m")
+        out = masked.topology.binary_erosion("m")
         assert out["m"].data.tolist() == [False, False]
 
 

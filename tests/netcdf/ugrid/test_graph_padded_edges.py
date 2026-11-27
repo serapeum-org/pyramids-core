@@ -141,4 +141,4 @@ class TestFaceSideIsStillCorrect:
             cf_role="edge_node_connectivity",
             original_start_index=0,
         )
-        assert dataset.sparse_adjacency(kind="node").shape == (9, 9)
+        assert dataset.topology.sparse_adjacency(kind="node").shape == (9, 9)

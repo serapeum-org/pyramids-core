@@ -48,7 +48,7 @@ def test_active_mask_round_trips_through_xarray():
     exported = ds.interop.to_xarray()
     assert "wl_active" in exported.data_vars
     back = MeshDataset.from_xarray(exported)
-    np.testing.assert_array_equal(back.active_mask("wl"), mask)
+    np.testing.assert_array_equal(back.topology.active_mask("wl"), mask)
 
 
 def test_volume_topology_round_trips_through_xarray():

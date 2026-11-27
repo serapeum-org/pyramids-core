@@ -69,7 +69,7 @@ def unloaded(triangles) -> MeshDataset:
 class TestDualGeometryFacades:
     def test_circumcenters_sit_on_each_hypotenuse(self, triangles):
         """Both right triangles of the unit square circumscribe the diagonal's midpoint."""
-        centres = triangles.circumcenters()
+        centres = triangles.topology.circumcenters()
         assert centres.shape == (2, 2)
         assert centres[0].tolist() == pytest.approx([0.5, 0.5])
 

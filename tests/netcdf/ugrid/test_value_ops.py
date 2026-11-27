@@ -71,7 +71,7 @@ class TestWhere:
         ds = _mesh([1.0, 5.0, 9.0])
         ds["v"].active = np.array([True, False, True])
         values = np.asarray(ds["v"].data)
-        out = ds.where(ds.active_mask("v") & (values > 0))["v"].data
+        out = ds.where(ds.topology.active_mask("v") & (values > 0))["v"].data
         assert out[0] == 1.0
         assert np.isnan(out[1]), (
             "the dry element was excluded by the explicit condition"
