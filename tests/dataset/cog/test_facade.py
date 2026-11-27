@@ -10,6 +10,7 @@ import pytest
 from osgeo import gdal
 
 from pyramids.base.georeference import GeoReference
+from pyramids.dataset.engines.cog import _COG
 from pyramids.dataset.cog import facade
 from pyramids.dataset.cog.facade import (
     PYRAMIDS_COG_DEFAULTS,
@@ -356,7 +357,7 @@ class TestWriteCog:
             calls.append({"output": Path(output), "extra": extra})
             return Path(output)
 
-        monkeypatch.setattr(Dataset, "to_cog", fake_to_cog)
+        monkeypatch.setattr(_COG, "to_cog", fake_to_cog)
         path, report = write_cog(
             float_array,
             out,
@@ -390,7 +391,7 @@ class TestWriteCog:
         def fake_to_cog(self, output, *, extra=None):
             raise RuntimeError("disk full")
 
-        monkeypatch.setattr(Dataset, "to_cog", fake_to_cog)
+        monkeypatch.setattr(_COG, "to_cog", fake_to_cog)
         with pytest.raises(RuntimeError, match="disk full"):
             write_cog(
                 float_array,
