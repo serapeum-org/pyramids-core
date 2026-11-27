@@ -1157,7 +1157,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.selection.isel(time=index)
+        return self.isel(time=index)
 
     def sel_time_range(self, start: int, stop: int) -> MeshDataset:
         """Deprecated: use ``isel(time=slice(start, stop))``.
@@ -1179,7 +1179,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.selection.isel(time=slice(start, stop))
+        return self.isel(time=slice(start, stop))
 
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True
