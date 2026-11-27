@@ -5316,6 +5316,30 @@ class NetCDF(Dataset):
         self._check_not_container("sample")
         return self.analysis.sample(*args, **kwargs)
 
+    def _read_array(self, *args, **kwargs):
+        """Non-deprecated internal read — routes to NetCDF's variable/dimension/lazy override."""
+        return self.read_array(*args, **kwargs)
+
+    def _band_scale(self) -> list[float]:
+        """Non-deprecated internal band-scale read — NetCDF's CF-packing getter."""
+        return self.scale
+
+    def _band_offset(self) -> list[float]:
+        """Non-deprecated internal band-offset read — NetCDF's CF-packing getter."""
+        return self.offset
+
+    def _crop(self, *args, **kwargs):
+        """Non-deprecated internal crop — routes to NetCDF's multidim/curvilinear override."""
+        return self.crop(*args, **kwargs)
+
+    def _to_crs(self, *args, **kwargs):
+        """Non-deprecated internal reproject — routes to NetCDF's multidim override."""
+        return self.to_crs(*args, **kwargs)
+
+    def _zonal_stats(self, *args, **kwargs):
+        """Non-deprecated internal zonal stats — routes to NetCDF's container-guarded override."""
+        return self.zonal_stats(*args, **kwargs)
+
     # NetCDF intentionally exposes a richer, variable/selector-oriented plot
     # signature than the band-oriented Dataset/RasterBase one; the override
     # is deliberate and not Liskov-substitutable.

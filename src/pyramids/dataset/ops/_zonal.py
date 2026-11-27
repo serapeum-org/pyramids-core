@@ -123,7 +123,7 @@ def _prep_band(
     Returns:
         np.ndarray: `float64`, shaped like the band, with invalid cells as `NaN`.
     """
-    stored = np.asarray(ds.read_array(band=band, unpack=False))
+    stored = np.asarray(ds._read_array(band=band, unpack=False))
     raster = np.asarray(
         apply_unpack(stored, *ds._effective_packing(band)), dtype=np.float64
     )
@@ -189,7 +189,7 @@ def _raster_zones(
     The class raster must be aligned with `ds` (same grid). Each distinct class value (excluding the class
     raster's no-data) becomes a zone; the class footprints are vectorised per label for the geometry.
     """
-    class_arr = np.asarray(classes_ds.read_array(band=0, unpack=False))
+    class_arr = np.asarray(classes_ds._read_array(band=0, unpack=False))
     cls_no_data_list = classes_ds.no_data_value
     cls_no_data = cls_no_data_list[0] if cls_no_data_list else None
     class_valid = np.ones(class_arr.shape, dtype=bool)

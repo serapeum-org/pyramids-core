@@ -162,7 +162,7 @@ def _band_face_variables(
     else:
         names = list(band_names)
 
-    arr = np.asarray(dataset.read_array())
+    arr = np.asarray(dataset._read_array())
     if arr.ndim == 2:
         arr = arr[np.newaxis, :, :]
 

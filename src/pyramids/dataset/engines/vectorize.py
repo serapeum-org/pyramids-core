@@ -335,7 +335,7 @@ class _Vector(_Engine["Dataset"]):
         # a masked `values=False` call must return the AOI's cell footprints, not silently the
         # whole raster.
         if mask is not None:
-            src_ds = self._ds.crop(mask=mask, touch=touch)
+            src_ds = self._ds._crop(mask=mask, touch=touch)
         else:
             src_ds = self._ds
 

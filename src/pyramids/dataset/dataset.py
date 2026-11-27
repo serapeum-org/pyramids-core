@@ -963,6 +963,36 @@ class Dataset(RasterBase):
         )
         return self.vector
 
+    def _read_array(self, *args, **kwargs):
+        """Internal, non-deprecated polymorphic read.
+
+        First-party code that may hold either a `Dataset` or a `NetCDF` must not call the
+        deprecated `read_array` facade (it would warn) nor `io.read_array` directly (it would
+        skip the `NetCDF.read_array` variable/dimension/lazy override). A plain `Dataset` reads
+        through its io engine; `NetCDF` overrides this to route to its own `read_array`.
+        """
+        return self.io.read_array(*args, **kwargs)
+
+    def _band_scale(self) -> list[float]:
+        """Internal, non-deprecated band-scale read (`NetCDF` overrides for CF-packing)."""
+        return self.bands.scale
+
+    def _band_offset(self) -> list[float]:
+        """Internal, non-deprecated band-offset read (`NetCDF` overrides for CF-packing)."""
+        return self.bands.offset
+
+    def _crop(self, *args, **kwargs):
+        """Internal, non-deprecated crop (`NetCDF` overrides for multidim/curvilinear grids)."""
+        return self.spatial.crop(*args, **kwargs)
+
+    def _to_crs(self, *args, **kwargs):
+        """Internal, non-deprecated reproject (`NetCDF` overrides to materialize a multidim view)."""
+        return self.spatial.to_crs(*args, **kwargs)
+
+    def _zonal_stats(self, *args, **kwargs):
+        """Internal, non-deprecated zonal stats (`NetCDF` overrides with its container guard)."""
+        return self.analysis.zonal_stats(*args, **kwargs)
+
     def _update_inplace(self, src: gdal.Dataset, access: str | None = None) -> None:
         """Swap internal state from a new GDAL dataset.
 
@@ -8181,7 +8211,7 @@ class Dataset(RasterBase):
                 # `convert_units`. On a NetCDF subclass the override returns a
                 # bandless Container, and this template is then read band-wise.
                 grid_template = Dataset.from_array(
-                    template.read_array(band=0, unpack=False).astype(
+                    template._read_array(band=0, unpack=False).astype(
                         target_np_dtype, copy=False
                     ),
                     # epsg is None only for a no-EPSG CRS reported as such (a NetCDF
@@ -8217,11 +8247,11 @@ class Dataset(RasterBase):
                     )  # set above whenever `align` is true
                     arr = ds_i.spatial.align(
                         grid_template, method=band_methods[band_i]
-                    ).read_array(band=0, unpack=False)
+                    )._read_array(band=0, unpack=False)
                 else:
                     # Same grid (or the non-align mixed-dtype path): just cast to
                     # the promoted dtype, which is lossless.
-                    arr = ds_i.read_array(band=0, unpack=False).astype(
+                    arr = ds_i._read_array(band=0, unpack=False).astype(
                         target_np_dtype, copy=False
                     )
                 if align:

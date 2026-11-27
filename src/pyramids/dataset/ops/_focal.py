@@ -192,14 +192,14 @@ def _apply_eager_or_lazy(
         return np.where(undefined, fill, out)
 
     if chunks is None:
-        arr = np.asarray(ds.read_array(band=band), dtype=dtype)
+        arr = np.asarray(ds._read_array(band=band), dtype=dtype)
         result = _guarded(arr)
     else:
         # The lazy arm (dask.array.map_overlap over `_guarded`, which runs per block inside the
         # overlap so each block blanks neighbouring no-data before filtering) lives in the
         # pyramids-lazy backend; core builds the kernel + reads the lazy band and delegates.
         result = require_backend_method("focal_lazy", "focal filters (chunks=)")(
-            ds.read_array(band=band, chunks=chunks),
+            ds._read_array(band=band, chunks=chunks),
             _guarded,
             depth=radius if depth is None else depth,
             dtype=dtype,

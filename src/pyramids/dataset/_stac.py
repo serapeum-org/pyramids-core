@@ -3697,8 +3697,8 @@ class _BandMetadata:
         """
         self.nodata = dataset.no_data_value
         self.dtypes = dataset.dtype
-        self.scales = dataset.scale
-        self.offsets = dataset.offset
+        self.scales = dataset._band_scale()
+        self.offsets = dataset._band_offset()
 
     @staticmethod
     def _at(values: Sequence[Any], index: int) -> Any:

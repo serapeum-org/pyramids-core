@@ -2287,7 +2287,7 @@ class _IO(_Engine["Dataset"]):
             )
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-indexed
         # dataframe build expects, not the dimension-preserving default (#1241).
-        array = np.asarray(ds.read_array(squeeze=True), dtype="float64")
+        array = np.asarray(ds._read_array(squeeze=True), dtype="float64")
         if array.ndim == 2:
             array = array[np.newaxis, ...]
         array = array[selected]
@@ -3853,7 +3853,7 @@ class _IO(_Engine["Dataset"]):
         source = (
             self._ds
             if self._ds.epsg == 3857
-            else self._ds.to_crs(3857, method=resampling)
+            else self._ds._to_crs(3857, method=resampling)
         )
         staged = None
         scratch_dir: str | None = None
@@ -3972,7 +3972,7 @@ class _IO(_Engine["Dataset"]):
                 does not know.
             FailedToSaveError: The resolved driver refused the write.
         """
-        elevation = np.asarray(source.read_array(band=band), dtype=float)
+        elevation = np.asarray(source._read_array(band=band), dtype=float)
         # The sentinel in the units `elevation` is in. The terrain encoder looks for it
         # to make those cells transparent; the stored `-9999` is never present in a
         # packed band's physical read, so the gap was encoded as opaque terrain.
@@ -5060,8 +5060,8 @@ class _IO(_Engine["Dataset"]):
         # seconds, not milliseconds.
         band_names = self._ds.band_names
         band_units = self._ds.bands.band_units
-        scale = self._ds.scale
-        offset = self._ds.offset
+        scale = self._ds._band_scale()
+        offset = self._ds._band_offset()
         overview.band_names = [band_names[index] for index in selection]
         overview.bands.band_units = [band_units[index] for index in selection]
         overview.bands.scale = [scale[index] for index in selection]

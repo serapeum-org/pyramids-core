@@ -424,8 +424,8 @@ def _stitch_lon_halves(
     # below expects, not the dimension-preserving default a variable now returns (#1241).
     merged = np.concatenate(
         [
-            west_part.read_array(unpack=False, squeeze=True),
-            east_part.read_array(unpack=False, squeeze=True),
+            west_part._read_array(unpack=False, squeeze=True),
+            east_part._read_array(unpack=False, squeeze=True),
         ],
         axis=-1,
     )
@@ -1535,7 +1535,7 @@ class _Spatial(_Engine["Dataset"]):
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # count comparison expects, not the dimension-preserving default (#1241).
         mask_array = cast(
-            np.typing.NDArray, mask.read_array(unpack=False, squeeze=True)
+            np.typing.NDArray, mask._read_array(unpack=False, squeeze=True)
         )
         mask_noval = mask.no_data_value[0]
 
@@ -1974,7 +1974,10 @@ class _Spatial(_Engine["Dataset"]):
         # physical values of a packed band would be truncated on the way in, and the
         # fills stamped over the masked cells are stored sentinels.
         if isinstance(mask, RasterBase):
-            mask_array = cast(np.typing.NDArray, mask.read_array(band=0, unpack=False))
+            mask_array = cast(
+                np.typing.NDArray,
+                cast("Dataset", mask)._read_array(band=0, unpack=False),
+            )
         else:
             mask_array = mask.copy()
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
@@ -2021,7 +2024,8 @@ class _Spatial(_Engine["Dataset"]):
             # read_array() is called with no chunks=, so it always returns a
             # plain ndarray here (the dask.Array arm of ArrayLike is unreachable).
             mask_tile = cast(
-                np.typing.NDArray, mask.read_array(band=0, window=window, unpack=False)
+                np.typing.NDArray,
+                cast("Dataset", mask)._read_array(band=0, window=window, unpack=False),
             )
             src_tile = cast(
                 np.typing.NDArray,
@@ -2910,7 +2914,7 @@ class _Spatial(_Engine["Dataset"]):
         # `carry_packing` hands the recipe to the rebuilt raster below.
         # `squeeze=True` keeps the classic `(bands, rows, cols)` (or 2-D) this trim rebuild
         # expects — it raises on a 4-D+ array — not the dimension-preserving default (#1241).
-        big_array = src.read_array(unpack=False, squeeze=True)
+        big_array = src._read_array(unpack=False, squeeze=True)
         declared = src.no_data_value
         # Not `==`: a NaN sentinel never equals itself, so `==` marks nothing
         # and the all-no-data frame GDAL leaves after a cutline warp survives

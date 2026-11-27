@@ -2025,7 +2025,7 @@ class DatasetCollection:
         expected = tuple(self._meta.shape)
         per_step = []
         for index, ds in enumerate(datasets):
-            arr = np.asarray(ds.read_array())
+            arr = np.asarray(ds._read_array())
             if arr.ndim == 2:
                 # A single-band read drops the band axis; restore it rather than
                 # blind-reshaping, so a transposed scene cannot be silently

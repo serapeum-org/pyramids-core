@@ -16,6 +16,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Real
 from pathlib import Path
+from types import FrameType
 from typing import TYPE_CHECKING, Any, cast
 
 import geopandas as gpd
@@ -115,7 +116,9 @@ logger = logging.getLogger(__name__)
 
 # The pyramids package root, used to count past first-party frames when a warning
 # must blame the user. `__file__` is .../pyramids/dataset/engines/analysis.py.
-_PYRAMIDS_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_PYRAMIDS_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 
 def _caller_stacklevel() -> int:
@@ -130,9 +133,11 @@ def _caller_stacklevel() -> int:
     Returns:
         int: The `stacklevel` for `warnings.warn`, measured from its caller.
     """
-    frame = sys._getframe(1)
+    frame: FrameType | None = sys._getframe(1)
     level = 1
-    while frame is not None and os.path.abspath(frame.f_code.co_filename).startswith(_PYRAMIDS_ROOT):
+    while frame is not None and os.path.abspath(frame.f_code.co_filename).startswith(
+        _PYRAMIDS_ROOT
+    ):
         frame = frame.f_back
         level += 1
     return level
@@ -369,7 +374,7 @@ class _Analysis(_Engine["Dataset"]):
         validate_band_index(band, self._ds.band_count)
         dst: Dataset | None = None
         if mask is not None:
-            dst = self._ds.crop(mask, touch=True)
+            dst = self._ds._crop(mask, touch=True)
 
         if band is None:
             df = pd.DataFrame(
@@ -1752,7 +1757,7 @@ class _Analysis(_Engine["Dataset"]):
                 )
         names = [chr(ord("A") + index) for index in range(len(datasets))]
         variables = {
-            name: np.asarray(ds.read_array(squeeze=True))
+            name: np.asarray(ds._read_array(squeeze=True))
             for name, ds in zip(names, datasets)
         }
         out = np.asarray(eval_calc(expr, variables))
@@ -2142,7 +2147,7 @@ class _Analysis(_Engine["Dataset"]):
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` raster view this
         # band-wise pipeline (and the GDAL write it feeds) relies on, rather than the
         # dimension-preserving default a NetCDF variable now returns (#1241).
-        raw = np.asarray(ds.read_array(band=band, unpack=False, squeeze=True))
+        raw = np.asarray(ds._read_array(band=band, unpack=False, squeeze=True))
         sentinels = (
             [ds.no_data_value[band]] if band is not None else list(ds.no_data_value)
         )
@@ -3623,7 +3628,7 @@ class _Analysis(_Engine["Dataset"]):
         left, right = int(columns[0]), int(columns[-1]) + 1
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-wise
         # crop-and-rebuild expects, not the dimension-preserving default (#1241).
-        cells = np.asarray(result.read_array(unpack=False, squeeze=True))
+        cells = np.asarray(result._read_array(unpack=False, squeeze=True))
         bands = self._surviving_bands(selected, cells)
         block = np.ascontiguousarray(
             cells[top:bottom, left:right]
@@ -4947,7 +4952,7 @@ class _Analysis(_Engine["Dataset"]):
             DeprecationWarning,
             stacklevel=2,
         )
-        gdf = self._ds.zonal_stats(
+        gdf = self._ds._zonal_stats(
             classes_map,
             stats=("count",),
             band=band if band is not None else 0,
@@ -5827,7 +5832,7 @@ class _Analysis(_Engine["Dataset"]):
         source = np.asarray(self._ds.io.read_array(band=band), dtype=float).reshape(
             self._ds.rows, self._ds.columns
         )
-        ref = np.asarray(reference.read_array(band=reference_band), dtype=float)
+        ref = np.asarray(reference._read_array(band=reference_band), dtype=float)
 
         # The arrays are physical (`read_array`), so the sentinel masked against them must be
         # physical too -- `no_data_value` is stored, and on a CF-packed band it never appears in

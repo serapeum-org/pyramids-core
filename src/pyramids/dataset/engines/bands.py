@@ -105,10 +105,10 @@ class _Bands(_Engine["Dataset"]):
 
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this per-band
         # unit conversion expects, not the dimension-preserving default (#1241).
-        full = ds.read_array(squeeze=True)
+        full = ds._read_array(squeeze=True)
         # Gaps are found in the stored counts, where the sentinel lives; the values
         # converted are the physical ones.
-        stored = np.asarray(ds.read_array(unpack=False, squeeze=True))
+        stored = np.asarray(ds._read_array(unpack=False, squeeze=True))
         single_band = ds.band_count == 1
         stack = full[np.newaxis, ...] if single_band else full
         stored_stack = stored[np.newaxis, ...] if single_band else stored

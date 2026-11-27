@@ -1170,7 +1170,10 @@ class RasterBase(ABC):
         for block in self.block_windows(band, window=window):
             # This iterator never passes chunks=, so read_array always returns a
             # plain ndarray here (the dask.Array arm of ArrayLike is unreachable).
-            array = cast(np.typing.NDArray, self.read_array(band=band, window=block))
+            array = cast(
+                np.typing.NDArray,
+                cast("Dataset", self)._read_array(band=band, window=block),
+            )
             yield block, array
 
     @property

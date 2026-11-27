@@ -206,7 +206,7 @@ class _Variables(_Engine["NetCDF"]):
         # what belongs in it is the counts that recipe describes. `squeeze=True` keeps the
         # classic flattened `(bands, rows, cols)` the MDArray write expects; the band
         # dimensions are rebuilt from `band_dim_values` below, not from the array shape (#1241).
-        arr = dataset.read_array(unpack=False, squeeze=True)
+        arr = dataset._read_array(unpack=False, squeeze=True)
         gt: tuple[float, float, float, float, float, float] = dataset.geotransform
         data_dtype = gdal.ExtendedDataType.Create(numpy_to_gdal_dtype(arr))
         # Spatial coordinate dimensions must always be float64 to avoid
