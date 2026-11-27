@@ -139,7 +139,9 @@ class TestBoundlessReads:
     def test_bbox_with_boundless_rejected(self, ramp_dataset):
         """A bbox (a geometry window internally) with boundless=True is rejected."""
         with pytest.raises(ValueError, match="pixel window"):
-            ramp_dataset.io.read_array(band=0, bbox=(1.0, 1.0, 3.0, 3.0), boundless=True)
+            ramp_dataset.io.read_array(
+                band=0, bbox=(1.0, 1.0, 3.0, 3.0), boundless=True
+            )
 
     def test_dtype_zero_fallback_without_nodata(self):
         """No fill_value and no band nodata falls back to the dtype's zero."""

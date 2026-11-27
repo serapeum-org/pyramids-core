@@ -328,7 +328,9 @@ def _cmd_extract(args: argparse.Namespace) -> int:
     with map_lookup_errors():
         values = np.atleast_2d(
             np.asarray(
-                ds.analysis.extract(band=args.band, exclude_value=args.exclude_value, mask=mask)
+                ds.analysis.extract(
+                    band=args.band, exclude_value=args.exclude_value, mask=mask
+                )
             )
         )
     rows = [

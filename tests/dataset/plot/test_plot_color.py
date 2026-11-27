@@ -425,7 +425,9 @@ class TestColorRamp:
             value 5 its yellow end, and the band is paletted.
         """
         dataset = self._dataset()
-        dataset.glyph.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
+        dataset.glyph.set_color_ramp(
+            band=1, start_value=1, end_value=5, colormap="viridis"
+        )
         table = dataset.bands.color_table.set_index("values")
         assert tuple(table.loc[1, ["red", "green", "blue"]]) == (68, 1, 84), (
             "value 1 must be viridis' start"
@@ -447,7 +449,9 @@ class TestColorRamp:
         from matplotlib import colormaps
 
         dataset = self._dataset()
-        dataset.glyph.set_color_ramp(band=1, start_value=1, end_value=5, colormap="viridis")
+        dataset.glyph.set_color_ramp(
+            band=1, start_value=1, end_value=5, colormap="viridis"
+        )
         table = dataset.bands.color_table.set_index("values")
         red, green, blue, _ = colormaps["viridis"](0.5)
         assert tuple(table.loc[3, ["red", "green", "blue"]]) == (
@@ -509,7 +513,9 @@ class TestColorRamp:
             start_color="#709959",
             end_color="#f2ce85",
         )
-        pd.testing.assert_frame_equal(enumerated.bands.color_table, ramped.bands.color_table)
+        pd.testing.assert_frame_equal(
+            enumerated.bands.color_table, ramped.bands.color_table
+        )
 
     def test_an_integral_float_value_is_accepted(self):
         """An integer-valued float (5.0) is coerced and builds the full range."""

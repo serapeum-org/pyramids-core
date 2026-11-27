@@ -321,7 +321,9 @@ def _cmd_to_stac_item(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     ds = Dataset.read_file(args.input)
     asset_href = args.asset_href or args.input
-    item = ds.io.to_stac_item(args.item_id, asset_href=asset_href, datetime=args.datetime)
+    item = ds.io.to_stac_item(
+        args.item_id, asset_href=asset_href, datetime=args.datetime
+    )
     with open(args.output, "w", encoding="utf-8") as handle:
         json.dump(json_sanitize(item), handle)
     info_print(args, f"wrote {args.output}")

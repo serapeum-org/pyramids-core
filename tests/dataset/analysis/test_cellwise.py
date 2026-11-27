@@ -113,7 +113,10 @@ class TestClip:
     def test_the_band_keeps_its_type(self):
         """Bounds the band can hold do not widen it."""
         raster = _raster(CELLS.astype("float32"))
-        assert np.asarray(raster.analysis.clip(2.0, 6.0).io.read_array()).dtype == np.float32
+        assert (
+            np.asarray(raster.analysis.clip(2.0, 6.0).io.read_array()).dtype
+            == np.float32
+        )
 
     def test_numpy_scalar_bounds_keep_the_band_type(self):
         """Percentiles and statistics arrive as numpy scalars, and must not widen the band.
@@ -130,7 +133,9 @@ class TestClip:
         bytes_ = Dataset.from_array(
             np.array([[1, 5, 9]], dtype="uint8"), geo_ref=GEO, no_data_value=None
         )
-        assert floats.analysis.clip(np.float64(2.0), np.float64(6.0)).dtype == ["float32"]
+        assert floats.analysis.clip(np.float64(2.0), np.float64(6.0)).dtype == [
+            "float32"
+        ]
         assert bytes_.analysis.clip(np.int64(2), np.int64(6)).dtype == ["uint8"]
 
     def test_a_bound_the_band_cannot_hold_still_widens_it(self):
@@ -185,7 +190,9 @@ class TestClip:
         """
         variable = _store_variable()
         before = np.asarray(variable.read_array(), dtype="float64")
-        clipped = np.asarray(variable.analysis.clip(100.0, 1000.0).read_array(), dtype="float64")
+        clipped = np.asarray(
+            variable.analysis.clip(100.0, 1000.0).read_array(), dtype="float64"
+        )
         assert (before < 100.0).any(), "the fixture must hold cells below the bound"
         assert clipped.min() == 100.0, (
             f"cells below 100 were not raised: {clipped.min()}"
@@ -226,7 +233,10 @@ class TestRound:
         """
         cells = np.array([[1.4, -9999.5], [2.6, 3.5]])
         raster = _raster(cells, no_data_value=-9999.5)
-        assert np.asarray(raster.analysis.round().analysis.isnull().io.read_array()).sum() == 1
+        assert (
+            np.asarray(raster.analysis.round().analysis.isnull().io.read_array()).sum()
+            == 1
+        )
 
     def test_an_integer_band_is_widened_rather_than_wrapped(self):
         """numpy wraps `uint8` 255 to 4 when rounding to tens; clip widens instead.
@@ -334,7 +344,9 @@ class TestAstype:
     def test_a_sentinel_outside_the_data_is_accepted(self):
         """Bounding one below the sentinel is the fix the refusal asks for."""
         dem = _raster(np.array([[12.0, 254.0, 255.0, 300.0], [1200.0, NDV, 0.5, 80.0]]))
-        small = dem.analysis.clip(0.0, 254.0).analysis.astype("uint8", no_data_value=255)
+        small = dem.analysis.clip(0.0, 254.0).analysis.astype(
+            "uint8", no_data_value=255
+        )
         assert np.asarray(small.io.read_array()).ravel().tolist() == [
             12,
             254,
@@ -411,7 +423,9 @@ class TestAstype:
 
     def test_a_gapless_raster_casts_with_no_sentinel(self):
         """`no_data_value=None` is fine when there is no gap to mark."""
-        cast = _raster(np.array([[1.0, 2.0, 3.0]])).analysis.astype("int32", no_data_value=None)
+        cast = _raster(np.array([[1.0, 2.0, 3.0]])).analysis.astype(
+            "int32", no_data_value=None
+        )
         assert np.asarray(cast.io.read_array()).ravel().tolist() == [1, 2, 3]
         assert cast.no_data_value[0] is None
 
@@ -476,7 +490,9 @@ class TestABandKeepsItsOwnSentinel:
             member: The member under test.
             call: How to call it.
         """
-        flags = np.asarray(call(self._stack()).analysis.isnull().io.read_array()).tolist()
+        flags = np.asarray(
+            call(self._stack()).analysis.isnull().io.read_array()
+        ).tolist()
         assert flags == [[[0, 0], [1, 0]], [[1, 0], [0, 0]]], (
             f"{member} changed which cells read as gaps: {flags}"
         )
@@ -492,7 +508,9 @@ class TestIsin:
 
     def test_the_flags_are_uint8(self):
         """GDAL has no boolean band, so the flags are `uint8`, like `isnull`'s."""
-        assert np.asarray(_raster().analysis.isin([2.0]).io.read_array()).dtype == np.uint8
+        assert (
+            np.asarray(_raster().analysis.isin([2.0]).io.read_array()).dtype == np.uint8
+        )
 
     def test_a_gap_is_in_no_set_even_its_own_sentinel(self):
         """Asking for `-9999` does not flag the gap that happens to hold it.
@@ -648,7 +666,9 @@ class TestAPackedStoreVariable:
         variable = self._variable()
         physical = np.asarray(variable.read_array(), dtype="float64")
         bound = float(np.median(physical))
-        clipped = np.asarray(variable.analysis.clip(min=bound).read_array(), dtype="float64")
+        clipped = np.asarray(
+            variable.analysis.clip(min=bound).read_array(), dtype="float64"
+        )
         assert np.allclose(clipped, np.clip(physical, bound, None))
 
 
@@ -781,9 +801,10 @@ class TestASentinelSnappedToTheNewType:
         assert declared == float(np.float32(sentinel)), (
             f"the declaration should be the snapped value, got {declared}"
         )
-        assert np.asarray(cast.analysis.isnull().io.read_array()).ravel().tolist() == [0, 1], (
-            "the snapped sentinel must still mark exactly the gap cell"
-        )
+        assert np.asarray(cast.analysis.isnull().io.read_array()).ravel().tolist() == [
+            0,
+            1,
+        ], "the snapped sentinel must still mark exactly the gap cell"
 
     def test_a_sentinel_that_snaps_onto_data_is_still_refused(self):
         """`1e-50` snaps to `0.0`, and this raster holds a real `0.0`."""
@@ -822,7 +843,9 @@ class TestAstypeIntoAFloat:
         assert cast.no_data_value[0] == NDV, (
             f"the sentinel changed: {cast.no_data_value}"
         )
-        assert np.asarray(cast.analysis.isnull().io.read_array()).sum() == 1, "the gap was lost"
+        assert np.asarray(cast.analysis.isnull().io.read_array()).sum() == 1, (
+            "the gap was lost"
+        )
 
     def test_float16_refuses_a_sentinel_past_its_range(self):
         """`float16` tops out at 65504, so `-99999` cannot mark its gaps."""

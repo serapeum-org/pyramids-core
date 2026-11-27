@@ -61,7 +61,9 @@ class TestRasterZones:
         Test scenario:
             Class 1 = {10, 20, 40}, class 2 = {30, 50, 60}, class 3 = {70, 80, 90}.
         """
-        result = _values().analysis.zonal_stats(_classes(), stats=("mean", "count", "min"))
+        result = _values().analysis.zonal_stats(
+            _classes(), stats=("mean", "count", "min")
+        )
         assert result.loc[1, "mean"] == pytest.approx(70 / 3), "class 1 mean"
         assert result.loc[2, "count"] == 3.0, "class 2 count"
         assert result.loc[3, "min"] == 70.0, "class 3 min"
@@ -113,7 +115,9 @@ class TestRawValues:
         Test scenario:
             Class 1 covers (r0c0, r0c1, r1c0) = 10, 20, 40 in that row-major order.
         """
-        result = _values().analysis.zonal_stats(_classes(), stats=("count",), raw_values=True)
+        result = _values().analysis.zonal_stats(
+            _classes(), stats=("count",), raw_values=True
+        )
         class_one = result.loc[1, "raw_values"]
         assert isinstance(class_one, np.ndarray), "raw_values cell must be an ndarray"
         np.testing.assert_array_equal(

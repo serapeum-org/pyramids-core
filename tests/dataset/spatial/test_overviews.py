@@ -1670,7 +1670,9 @@ class TestRecreateOverviewsContract:
         work = shutil.copy(era5_internal_overviews_path, tmp_path / "ro_internal.tif")
         dataset = Dataset.read_file(str(work), read_only=True)
         try:
-            assert any(dataset.io.overview_count), "fixture must carry internal overviews"
+            assert any(dataset.io.overview_count), (
+                "fixture must carry internal overviews"
+            )
             with pytest.raises(ReadOnlyError, match="opened read-only"):
                 dataset.io.recreate_overviews()
         finally:
@@ -2628,8 +2630,12 @@ class TestGetOverviewDataset:
             assert overview.band_names == ["red", "green", "nir"], (
                 f"band names lost: {overview.band_names}"
             )
-            assert overview.bands.scale == [0.5, 0.5, 0.5], f"scale lost: {overview.bands.scale}"
-            assert overview.bands.offset == [3.0, 3.0, 3.0], f"offset lost: {overview.bands.offset}"
+            assert overview.bands.scale == [0.5, 0.5, 0.5], (
+                f"scale lost: {overview.bands.scale}"
+            )
+            assert overview.bands.offset == [3.0, 3.0, 3.0], (
+                f"offset lost: {overview.bands.offset}"
+            )
             single = dataset.io.get_overview_dataset(band=2)
             assert single.band_names == ["nir"], (
                 f"a band subset should keep that band's name, got {single.band_names}"

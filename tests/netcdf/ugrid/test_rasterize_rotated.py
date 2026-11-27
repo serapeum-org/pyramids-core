@@ -60,7 +60,8 @@ class TestRotatedReferenceGrid:
             mesh.mesh, np.array([1.0, 2.0]), _reference(AXIS_ALIGNED), method="idw"
         )
         assert not np.allclose(
-            np.nan_to_num(rotated.io.read_array()), np.nan_to_num(aligned.io.read_array())
+            np.nan_to_num(rotated.io.read_array()),
+            np.nan_to_num(aligned.io.read_array()),
         )
 
 

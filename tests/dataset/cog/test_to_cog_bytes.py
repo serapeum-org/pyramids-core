@@ -88,7 +88,9 @@ class TestToCogBytes:
             Passing compression=Compression(compress="ZSTD") produces a COG whose
             IMAGE_STRUCTURE compression is ZSTD.
         """
-        blob = float_dataset.cog.to_cog_bytes(compression=cog.Compression(compress="ZSTD"))
+        blob = float_dataset.cog.to_cog_bytes(
+            compression=cog.Compression(compress="ZSTD")
+        )
         out = tmp_path / "zstd.tif"
         out.write_bytes(blob)
         ds = gdal.Open(str(out))

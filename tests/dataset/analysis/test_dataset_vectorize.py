@@ -53,7 +53,9 @@ class TestToGeodataframeNewParams:
         """A garbage location raises for both point and polygon, not silently ignored."""
         ds = self._raster()
         with pytest.raises(ValueError, match="expected 'center' or 'corner'"):
-            ds.vector.to_geodataframe(geometry=geometry, location="garbage", values=False)
+            ds.vector.to_geodataframe(
+                geometry=geometry, location="garbage", values=False
+            )
 
     def test_crs_overrides_the_labelled_crs_geometry_only(self):
         """`crs=` relabels the geometry-only frame and warns it does not reproject."""
@@ -97,8 +99,12 @@ class TestToGeodataframeNewParams:
             geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 3.0, 0.0, -1.0), epsg=4326),
         )
         tri = gpd.GeoDataFrame(geometry=[Polygon([(0, 0), (3, 0), (0, 3)])], crs=4326)
-        geom_only = ds.vector.to_geodataframe(geometry="polygon", values=False, mask=tri)
-        with_values = ds.vector.to_geodataframe(geometry="polygon", values=True, mask=tri)
+        geom_only = ds.vector.to_geodataframe(
+            geometry="polygon", values=False, mask=tri
+        )
+        with_values = ds.vector.to_geodataframe(
+            geometry="polygon", values=True, mask=tri
+        )
         assert len(geom_only) == len(with_values), (
             f"geometry-only ({len(geom_only)}) must match values path ({len(with_values)})"
         )
@@ -684,7 +690,9 @@ class TestToFeatureCollectionMaskTiling:
             non-tiled branch produced 16 — and the geometry attached afterwards
             came from the cropped extent, so values and geometry disagreed.
         """
-        tiled = masked_dataset.vector.to_geodataframe(mask=box_mask, tile=True, tile_size=4)
+        tiled = masked_dataset.vector.to_geodataframe(
+            mask=box_mask, tile=True, tile_size=4
+        )
         untiled = masked_dataset.vector.to_geodataframe(mask=box_mask, tile=False)
         assert len(tiled) == len(untiled), (
             f"tiled returned {len(tiled)} rows, non-tiled {len(untiled)}; the mask "

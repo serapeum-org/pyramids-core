@@ -674,7 +674,9 @@ def _agree_on_one_sentinel(datasets: list[Dataset]) -> None:
         # read matched no sentinel (so the reconciliation silently did nothing) and
         # then rounded the physical values into the stored band, destroying the
         # counts of every packed timestep it touched.
-        arrays = [np.asarray(ds.io.read_array(band=band, unpack=False)) for ds in datasets]
+        arrays = [
+            np.asarray(ds.io.read_array(band=band, unpack=False)) for ds in datasets
+        ]
         # Judged against real observations only: each step's own fill cells are
         # the thing being replaced, so counting them would rule out every
         # candidate already in use and force a needless third value.

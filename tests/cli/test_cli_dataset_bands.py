@@ -246,7 +246,9 @@ class TestCreateMaskBand:
         out = str(tmp_path / "masked.tif")
         rc = main(["raster", "advanced", "create-mask-band", single_band, out])
         assert rc == 0, "create-mask-band must exit 0"
-        assert Dataset.read_file(out).analysis.mask_flags().per_dataset, "mask must persist"
+        assert Dataset.read_file(out).analysis.mask_flags().per_dataset, (
+            "mask must persist"
+        )
 
     def test_overwrite_without_flag_error(self, single_band, three_band, capsys):
         """Writing over an existing output without --overwrite exits 1."""

@@ -39,8 +39,12 @@ class TestSelect:
         sub = ds.bands.select([1, 3])
         assert type(sub) is Dataset
         assert sub.band_count == 2
-        np.testing.assert_array_equal(sub.io.read_array(band=0), ds.io.read_array(band=0))
-        np.testing.assert_array_equal(sub.io.read_array(band=1), ds.io.read_array(band=2))
+        np.testing.assert_array_equal(
+            sub.io.read_array(band=0), ds.io.read_array(band=0)
+        )
+        np.testing.assert_array_equal(
+            sub.io.read_array(band=1), ds.io.read_array(band=2)
+        )
 
     def test_select_by_name(self, rich):
         """Selecting by band name resolves to the right bands."""

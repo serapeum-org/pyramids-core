@@ -694,7 +694,9 @@ class TestChangeNoDataValueStreaming:
             no_data_value=[7.0, 8.0],
             geo_ref=GeoReference(top_left_corner=(0.0, 2.0), cell_size=1.0, epsg=4326),
         )
-        out = ds.bands.change_no_data_value([-1.0, -2.0], old_value=[7.0, 8.0]).io.read_array()
+        out = ds.bands.change_no_data_value(
+            [-1.0, -2.0], old_value=[7.0, 8.0]
+        ).io.read_array()
         assert out[0][1, 0] == -1.0, "band 0's old no-data (7) must become -1"
         assert out[1][0, 1] == -2.0, "band 1's old no-data (8) must become -2"
         assert out[0][0, 0] == 1.0, "band 0 non-matching cell must be preserved"

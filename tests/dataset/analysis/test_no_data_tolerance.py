@@ -80,7 +80,11 @@ class TestTheDomainIsEveryCellButTheSentinel:
             value while its neighbours were transformed, so the output silently
             mixed transformed and untransformed data.
         """
-        result = _band(_NEAR, -9999.0).analysis.apply(lambda v: v * 0.0 + 7.0).io.read_array()
+        result = (
+            _band(_NEAR, -9999.0)
+            .analysis.apply(lambda v: v * 0.0 + 7.0)
+            .io.read_array()
+        )
 
         assert result[0, 1] == 7.0, "-9998.95 was left untransformed"
         assert result[1, 0] == 7.0, "-9999.05 was left untransformed"

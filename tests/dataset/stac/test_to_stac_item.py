@@ -473,9 +473,9 @@ class TestToStacItemBandMetadata:
         assert "offset" not in band, f"an unpacked band must emit no offset: {band}"
         ramp_dataset.bands.scale = [0.01]
         ramp_dataset.bands.offset = [5.0]
-        packed = ramp_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"]["data"][
-            "raster:bands"
-        ][0]
+        packed = ramp_dataset.io.to_stac_item("x", asset_href="s.tif")["assets"][
+            "data"
+        ]["raster:bands"][0]
         assert packed["scale"] == 0.01, f"scale: {packed}"
         assert packed["offset"] == 5.0, f"offset: {packed}"
 
@@ -621,9 +621,9 @@ class TestToStacItemDataFootprint:
             ),
         )
         data_geom = shape(
-            ds.io.to_stac_item("x", asset_href="s.tif", footprint=Footprint(mode="data"))[
-                "geometry"
-            ]
+            ds.io.to_stac_item(
+                "x", asset_href="s.tif", footprint=Footprint(mode="data")
+            )["geometry"]
         )
         bbox_geom = shape(ds.io.to_stac_item("x", asset_href="s.tif")["geometry"])
         assert data_geom.intersection(bbox_geom).area > 0, (
@@ -1305,9 +1305,9 @@ class TestDefaultPayloadChanges:
         )
         source.bands.scale = [0.01]
         source.io.to_file(path)
-        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
-            "data"
-        ]["raster:bands"][0]
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")[
+            "assets"
+        ]["data"]["raster:bands"][0]
         assert band["scale"] == 0.01, (
             f"a non-identity scale belongs in the default payload, got {band}"
         )
@@ -1368,9 +1368,9 @@ class TestPackingFieldsAreMeaningful:
         )
         source.bands.scale = [0.0]
         source.io.to_file(path)
-        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
-            "data"
-        ]["raster:bands"][0]
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")[
+            "assets"
+        ]["data"]["raster:bands"][0]
         assert "scale" not in band, (
             f"a zero scale must be omitted, not published, got {band}"
         )
@@ -1390,9 +1390,9 @@ class TestPackingFieldsAreMeaningful:
         )
         source.bands.scale = [0.01]
         source.io.to_file(path)
-        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")["assets"][
-            "data"
-        ]["raster:bands"][0]
+        band = Dataset.read_file(path).io.to_stac_item("x", asset_href="s.tif")[
+            "assets"
+        ]["data"]["raster:bands"][0]
         assert band["scale"] == 0.01, f"a real scale must survive the guard, got {band}"
 
 

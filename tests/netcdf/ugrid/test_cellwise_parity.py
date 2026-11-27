@@ -43,9 +43,17 @@ def _mesh_out(ds):
 
 # (name, (values, nodata, dtype), raster-call, mesh-call)
 _OPS = [
-    ("clip", lambda ds: ds.analysis.clip(8.0, 22.0), lambda ds: ds.clip_values(8.0, 22.0)),
+    (
+        "clip",
+        lambda ds: ds.analysis.clip(8.0, 22.0),
+        lambda ds: ds.clip_values(8.0, 22.0),
+    ),
     ("round", lambda ds: ds.analysis.round(0), lambda ds: ds.analysis.round(0)),
-    ("astype_int32", lambda ds: ds.analysis.astype(np.int32), lambda ds: ds.analysis.astype(np.int32)),
+    (
+        "astype_int32",
+        lambda ds: ds.analysis.astype(np.int32),
+        lambda ds: ds.analysis.astype(np.int32),
+    ),
     (
         "astype_float16",
         lambda ds: ds.analysis.astype(np.float16),

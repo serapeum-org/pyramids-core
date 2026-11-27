@@ -505,7 +505,9 @@ class TestWindowedBboxCropFastPath:
             f"shape differs: fast={fast.shape}, warp={warp.shape}"
         )
         assert fast.geotransform == warp.geotransform, "geotransform differs"
-        assert np.array_equal(fast.io.read_array(), warp.io.read_array()), "pixels differ"
+        assert np.array_equal(fast.io.read_array(), warp.io.read_array()), (
+            "pixels differ"
+        )
 
     def test_overlap_semantics_keep_every_touched_pixel(self, dataset):
         """A box straddling pixel boundaries keeps every pixel it overlaps (floor/ceil).
@@ -573,7 +575,9 @@ class TestAntimeridianCrop:
         assert strip.bbox == pytest.approx([170.0, -10.0, 190.0, 10.0]), (
             "170..190 extent"
         )
-        assert np.array_equal(strip.io.read_array(), arr[80:100, 170:190]), "0..360 values"
+        assert np.array_equal(strip.io.read_array(), arr[80:100, 170:190]), (
+            "0..360 values"
+        )
 
     def test_multiband_keeps_all_bands(self):
         """A multi-band grid keeps all bands with correct stitched values."""
@@ -598,7 +602,9 @@ class TestAntimeridianCrop:
         )
         strip = ds.spatial.crop(bbox=(170.0, -10.0, -170.0, 10.0))
         assert strip.shape == (2, 20, 20), "both bands retained"
-        assert np.array_equal(strip.io.read_array(band=0), arr[80:100, 170:190]), "band 1"
+        assert np.array_equal(strip.io.read_array(band=0), arr[80:100, 170:190]), (
+            "band 1"
+        )
         assert np.array_equal(
             strip.io.read_array(band=1), arr[80:100, 170:190] + 1000.0
         ), "band 2"

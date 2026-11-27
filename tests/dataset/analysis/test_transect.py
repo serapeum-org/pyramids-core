@@ -159,7 +159,9 @@ class TestTransect:
         Test scenario:
             Band 1 holds 25..49, so row 0 reads ``[25, 26, 27, 28, 29]``.
         """
-        tr = two_band.analysis.transect(LineString([(0.5, 4.5), (4.5, 4.5)]), n=5, band=1)
+        tr = two_band.analysis.transect(
+            LineString([(0.5, 4.5), (4.5, 4.5)]), n=5, band=1
+        )
         values = tr["value"].tolist()
         assert values == [25.0, 26.0, 27.0, 28.0, 29.0], values
 

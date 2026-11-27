@@ -145,7 +145,9 @@ class TestReadArrayUnpack:
         ds = Dataset.read_file(str(path))
         out = ds.io.read_array(band=0, threadsafe=True)
         assert out.dtype == np.float64
-        np.testing.assert_allclose(out, ds.io.read_array(band=0, unpack=False) * 0.1 + 5.0)
+        np.testing.assert_allclose(
+            out, ds.io.read_array(band=0, unpack=False) * 0.1 + 5.0
+        )
 
     def test_unpack_false_reaches_the_stored_counts(self, packed_single, packed_multi):
         """`unpack=False` answers in the band's own dtype, below the transform.

@@ -157,8 +157,16 @@ class TestBboxCollectionE2E:
             2,
             2,
         ), f"unexpected template shape: {cropped.base.shape}"
-        expected0 = Dataset.read_file(p0).spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1)).io.read_array()
-        expected1 = Dataset.read_file(p1).spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1)).io.read_array()
+        expected0 = (
+            Dataset.read_file(p0)
+            .spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+            .io.read_array()
+        )
+        expected1 = (
+            Dataset.read_file(p1)
+            .spatial.crop(bbox=(0.1, -0.2, 0.2, -0.1))
+            .io.read_array()
+        )
         assert np.array_equal(cropped[0], expected0), "timestep 0 mismatch"
         assert np.array_equal(cropped[1], expected1), "timestep 1 mismatch"
 

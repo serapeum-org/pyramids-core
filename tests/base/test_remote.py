@@ -619,7 +619,9 @@ class TestHttpCogRead:
             f"remote source must be read once, windowed to the AOI; saw {source_windows}"
         )
 
-        local = Dataset.read_file(str(http_cog_dir / "valid.tif")).spatial.crop(bbox=bbox)
+        local = Dataset.read_file(str(http_cog_dir / "valid.tif")).spatial.crop(
+            bbox=bbox
+        )
         assert remote.shape == local.shape, (
             f"remote crop shape {remote.shape} != local {local.shape}"
         )

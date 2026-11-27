@@ -639,7 +639,9 @@ class TestSourceCredentialEmbedding:
 
         items = [{"assets": {"d": {"href": a}}}, {"assets": {"d": {"href": b}}}]
         ds = build_vrt_from_stac(items, asset="d", signer=_HeaderSigner())
-        assert ds.io.read_array().shape == (2, 4), "the local mosaic should be unaffected"
+        assert ds.io.read_array().shape == (2, 4), (
+            "the local mosaic should be unaffected"
+        )
 
 
 class TestUnembeddableCredentialWarning:
@@ -862,7 +864,9 @@ class TestStrictDefault:
         """
         with pytest.warns(UserWarning, match="skipped 1 of 2"):
             ds = build_vrt_from_stac(mismatched_band_tiles, asset="data", strict=False)
-        assert ds.io.read_array().shape == (4, 4), "the partial mosaic should be returned"
+        assert ds.io.read_array().shape == (4, 4), (
+            "the partial mosaic should be returned"
+        )
 
     def test_no_deprecation_notice_remains(self, mismatched_band_tiles):
         """The migration notice is gone now the default has flipped.

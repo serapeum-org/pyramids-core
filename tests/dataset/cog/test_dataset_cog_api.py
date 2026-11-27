@@ -64,7 +64,9 @@ class TestToCogBasics:
     def test_roundtrip_array_equality(self, small_float_dataset, tmp_path):
         out = small_float_dataset.cog.to_cog(tmp_path / "out.tif")
         reopened = Dataset.read_file(out)
-        assert np.array_equal(small_float_dataset.io.read_array(), reopened.io.read_array())
+        assert np.array_equal(
+            small_float_dataset.io.read_array(), reopened.io.read_array()
+        )
         reopened.close()
 
     def test_default_compression_is_deflate(self, small_float_dataset, tmp_path):
@@ -151,7 +153,9 @@ class TestToCogExtra:
 
     def test_extra_invalid_key_raises(self, small_float_dataset, tmp_path):
         with pytest.raises(ValueError, match="NONSENSE"):
-            small_float_dataset.cog.to_cog(tmp_path / "out.tif", extra={"NONSENSE": "x"})
+            small_float_dataset.cog.to_cog(
+                tmp_path / "out.tif", extra={"NONSENSE": "x"}
+            )
 
 
 class TestToCogWebOptimized:

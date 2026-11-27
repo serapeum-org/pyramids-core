@@ -722,7 +722,9 @@ class TestMapBlocks:
         result = ds.io.map_blocks(lambda tile: tile * 2, tile_size=3)
         expected = arr * 2
         np.testing.assert_array_almost_equal(
-            result.io.read_array(), expected, err_msg="map_blocks should double all values"
+            result.io.read_array(),
+            expected,
+            err_msg="map_blocks should double all values",
         )
 
     def test_map_blocks_preserves_spatial_metadata(self, single_band_dataset):

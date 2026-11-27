@@ -87,4 +87,6 @@ class TestWebOptimizedCog:
         out = big_dataset.cog.to_cog(
             tmp_path / "web.tif", tiling=cog.Tiling(scheme="GoogleMapsCompatible")
         )
-        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, "invalid web COG"
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
+            "invalid web COG"
+        )

@@ -251,7 +251,8 @@ class TestAttributesTable:
 
     def test_overwrite_attribute_table(self, writable_dataset):
         assert (
-            writable_dataset.bands.set_attribute_table(self.attribute_table, band=1) is None
+            writable_dataset.bands.set_attribute_table(self.attribute_table, band=1)
+            is None
         )
 
 

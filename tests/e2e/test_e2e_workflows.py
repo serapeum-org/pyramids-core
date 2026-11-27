@@ -1083,10 +1083,14 @@ class TestDatasetCollectionProcessingPipeline:
 
         # Verify first/last content
         np.testing.assert_array_equal(
-            md.first().io.read_array(band=0), values[0], err_msg="first() content mismatch"
+            md.first().io.read_array(band=0),
+            values[0],
+            err_msg="first() content mismatch",
         )
         np.testing.assert_array_equal(
-            md.last().io.read_array(band=0), values[-1], err_msg="last() content mismatch"
+            md.last().io.read_array(band=0),
+            values[-1],
+            err_msg="last() content mismatch",
         )
 
 

@@ -177,8 +177,12 @@ class TestBboxWindowNonSquare:
         full = np.squeeze(np.asarray(non_square_raster.io.read_array()))
         expected = full[yoff : yoff + y_size, xoff : xoff + x_size]
         gdf = gpd.GeoDataFrame(geometry=[box(*bbox)], crs=4326)
-        via_polygon = np.squeeze(np.asarray(non_square_raster.io.read_array(window=gdf)))
-        via_bbox = np.squeeze(np.asarray(non_square_raster.io.read_array(bbox=list(bbox))))
+        via_polygon = np.squeeze(
+            np.asarray(non_square_raster.io.read_array(window=gdf))
+        )
+        via_bbox = np.squeeze(
+            np.asarray(non_square_raster.io.read_array(bbox=list(bbox)))
+        )
         np.testing.assert_array_equal(via_polygon, expected)
         np.testing.assert_array_equal(via_polygon, via_bbox)
 
@@ -244,7 +248,9 @@ class TestBboxRounding:
         Test scenario:
             The default must not silently change behaviour: the two reads are byte-equal.
         """
-        default = np.asarray(non_square_raster.io.read_array(bbox=list(self.WIDE_PARTIAL)))
+        default = np.asarray(
+            non_square_raster.io.read_array(bbox=list(self.WIDE_PARTIAL))
+        )
         cover = np.asarray(
             non_square_raster.io.read_array(
                 bbox=list(self.WIDE_PARTIAL), bbox_rounding="cover"

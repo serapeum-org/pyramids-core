@@ -650,7 +650,9 @@ def _real_geotiff(tmp_path) -> str:
         str: The path to the written GeoTIFF.
     """
     real = tmp_path / "real.tif"
-    Dataset.from_array(np.ones((3, 3), dtype="float32"), geo_ref=GEO).io.to_file(str(real))
+    Dataset.from_array(np.ones((3, 3), dtype="float32"), geo_ref=GEO).io.to_file(
+        str(real)
+    )
     return str(real)
 
 

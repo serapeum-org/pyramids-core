@@ -95,7 +95,9 @@ class TestReproject:
         src_shape: tuple,
     ):
         src = Dataset(src)
-        dst = src.spatial.to_crs(to_epsg=project_raster_to_epsg, maintain_alignment=True)
+        dst = src.spatial.to_crs(
+            to_epsg=project_raster_to_epsg, maintain_alignment=True
+        )
 
         proj = dst.raster.GetProjection()
         sr = osr.SpatialReference(wkt=proj)
@@ -123,7 +125,9 @@ class TestReproject:
         src_shape: tuple,
     ):
         src = Dataset(src)
-        dst = src.spatial.to_crs(to_epsg=project_raster_to_epsg, maintain_alignment=False)
+        dst = src.spatial.to_crs(
+            to_epsg=project_raster_to_epsg, maintain_alignment=False
+        )
 
         proj = dst.crs
         sr = osr.SpatialReference(wkt=proj)
@@ -728,7 +732,9 @@ class TestAlign:
                 top_left_corner=(0.0, 0.0), cell_size=0.025, epsg=4326
             ),
         )
-        aligned_int = source.spatial.align(int_template, method="bilinear").io.read_array()
+        aligned_int = source.spatial.align(
+            int_template, method="bilinear"
+        ).io.read_array()
         assert np.issubdtype(aligned_int.dtype, np.integer), (
             f"output must adopt the template's integer dtype, got {aligned_int.dtype}"
         )
@@ -742,7 +748,9 @@ class TestAlign:
                 top_left_corner=(0.0, 0.0), cell_size=0.025, epsg=4326
             ),
         )
-        aligned_float = source.spatial.align(float_template, method="bilinear").io.read_array()
+        aligned_float = source.spatial.align(
+            float_template, method="bilinear"
+        ).io.read_array()
         assert not np.array_equal(aligned_float, np.floor(aligned_float)), (
             "the float-template align should keep fractional interpolated values"
         )

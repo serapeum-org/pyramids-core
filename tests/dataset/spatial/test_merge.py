@@ -876,9 +876,9 @@ class TestMergeRastersInheritsNoData:
             f"the sources' -9999 should be inherited, got {ds.no_data_value[0]}"
         )
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.analysis.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "stats() must report the true minimum of 0.0, not 3.0"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "stats() must report the true minimum of 0.0, not 3.0"
 
     def test_sources_declaring_none_still_leave_real_zeros_readable(self, tmp_path):
         """No source declaring one must not cost the caller their real 0 cells.
@@ -896,9 +896,9 @@ class TestMergeRastersInheritsNoData:
         assert raw is not None, "a float mosaic should declare a marker"
         assert np.isnan(raw), f"it should be the NaN its gaps hold, got {raw}"
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.analysis.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "stats() must still report the true minimum of 0.0"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "stats() must still report the true minimum of 0.0"
 
     def test_a_contiguous_integer_mosaic_is_left_unmarked_never_nan(self, tmp_path):
         """Tiles that leave no gap need no marker, and must not be given a NaN one.
@@ -917,9 +917,9 @@ class TestMergeRastersInheritsNoData:
         masked, ds = self._masked_count(out)
         assert raw is None, f"a gapless mosaic needs no marker, got {raw}"
         assert masked == 0, f"no real cell should be masked, {masked} were"
-        assert float(ds.analysis.stats(approx_ok=False)["min"].iloc[0]) == pytest.approx(0.0), (
-            "the genuine 0 cells must still be readable"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["min"].iloc[0]
+        ) == pytest.approx(0.0), "the genuine 0 cells must still be readable"
 
     def test_a_gapless_mosaic_is_not_surveyed(self, tmp_path, monkeypatch):
         """Choosing a marker reads every source, so it is not done when unnecessary.
@@ -1230,9 +1230,9 @@ class TestMergeRastersInheritsNoData:
             "the sources' own value should still be inherited"
         )
         assert masked == 4, f"the four gap cells should be masked, {masked} were"
-        assert float(ds.analysis.stats(approx_ok=False)["mean"].iloc[0]) == pytest.approx(4.5), (
-            "the gaps leaked into stats()"
-        )
+        assert float(
+            ds.analysis.stats(approx_ok=False)["mean"].iloc[0]
+        ) == pytest.approx(4.5), "the gaps leaked into stats()"
 
     def test_an_unstorable_inherited_marker_is_replaced_and_warns(self, tmp_path):
         """A NaN inherited onto an integer band is refused by GDAL, so it is not used.

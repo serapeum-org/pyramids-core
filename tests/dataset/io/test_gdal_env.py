@@ -337,7 +337,9 @@ class TestGdalEnvOnEveryReadPath:
         cog_path = str(source.cog.to_cog(tmp_path / "c.tif"))
         ds = Dataset.read_file(cog_path, gdal_env=ENV)
         payer = self._payer_during(
-            lambda: ds.cog.read_part((10.0, 10.0, 40.0, 40.0), dst_width=8, dst_height=8)
+            lambda: ds.cog.read_part(
+                (10.0, 10.0, 40.0, 40.0), dst_width=8, dst_height=8
+            )
         )
         assert payer == "requester", f"COG read_part ran without the config: {payer}"
 

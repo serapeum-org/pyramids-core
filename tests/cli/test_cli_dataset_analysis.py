@@ -352,7 +352,9 @@ class TestFillna:
         out = str(tmp_path / "filled.tif")
         rc = main(["raster", "fillna", gaps, out, "--value", "0"])
         assert rc == 0, capsys.readouterr().err
-        assert float(Dataset.read_file(out).io.read_array()[0, 0]) == 0.0, "gap not filled"
+        assert float(Dataset.read_file(out).io.read_array()[0, 0]) == 0.0, (
+            "gap not filled"
+        )
 
     def test_overwrite_without_flag_errors(self, gaps, tmp_path, capsys):
         """Writing over an existing file without --overwrite is refused."""

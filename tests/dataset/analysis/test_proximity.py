@@ -60,7 +60,9 @@ class TestProximity:
         Test scenario:
             Pixel (2,2) is the target, so its proximity is 0.
         """
-        result = single_target.analysis.proximity(distance_units="PIXEL").io.read_array()
+        result = single_target.analysis.proximity(
+            distance_units="PIXEL"
+        ).io.read_array()
         assert float(result[2, 2]) == pytest.approx(0.0), (
             f"Target pixel should be 0, got {result[2, 2]}"
         )
@@ -71,7 +73,9 @@ class TestProximity:
         Test scenario:
             Two cells left of the target is 2.0; the diagonal corner is 2*sqrt2.
         """
-        result = single_target.analysis.proximity(distance_units="PIXEL").io.read_array()
+        result = single_target.analysis.proximity(
+            distance_units="PIXEL"
+        ).io.read_array()
         assert float(result[2, 0]) == pytest.approx(2.0), f"Got {result[2, 0]}"
         assert float(result[4, 4]) == pytest.approx(2 * math.sqrt(2)), (
             f"Got {result[4, 4]}"

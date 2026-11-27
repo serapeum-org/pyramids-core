@@ -114,7 +114,9 @@ class TestApplyElementwise:
         result = ds.analysis.apply(lambda v: v * 2, inplace=True, elementwise=True)
         assert result is ds, "inplace streaming apply should return self"
         np.testing.assert_array_equal(
-            ds.io.read_array(), arr * 2, err_msg="In-place streamed result must be doubled"
+            ds.io.read_array(),
+            arr * 2,
+            err_msg="In-place streamed result must be doubled",
         )
 
     def test_all_nodata_tile_with_vectorize_fallback_func(self):

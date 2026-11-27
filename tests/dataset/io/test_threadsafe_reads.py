@@ -242,7 +242,9 @@ class TestThreadsafeEagerReads:
         """boundless=True + threadsafe=True raises, not a silent shared-handle read (L4)."""
         ds, _ = tiled_raster
         with pytest.raises(NotImplementedError, match="boundless=True.*threadsafe"):
-            ds.io.read_array(band=0, window=[0, 0, 4, 4], boundless=True, threadsafe=True)
+            ds.io.read_array(
+                band=0, window=[0, 0, 4, 4], boundless=True, threadsafe=True
+            )
 
     def test_out_shape_with_threadsafe_rejected(self, tiled_raster):
         """out_shape + threadsafe=True raises, not a silent shared-handle read (L12)."""

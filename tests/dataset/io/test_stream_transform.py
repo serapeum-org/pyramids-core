@@ -74,9 +74,9 @@ class TestStreamTransform:
         """
         ds = _raster(bands=2)
         out = ds.io.stream_transform(lambda tile: tile * 2, band=0, tile_size=2)
-        assert np.array_equal(out.io.read_array(band=0), ds.io.read_array(band=0) * 2), (
-            "selected band was not transformed"
-        )
+        assert np.array_equal(
+            out.io.read_array(band=0), ds.io.read_array(band=0) * 2
+        ), "selected band was not transformed"
 
     def test_dtype_override(self):
         """``dtype=`` allocates the output in a different type.
@@ -153,7 +153,9 @@ class TestStreamTransform:
             lambda tile: tile * 2, tile_size=3, path=str(out_path)
         )
         assert out_path.exists(), "no output file was written"
-        assert np.array_equal(out.io.read_array(), ds.io.read_array() * 2), "values wrong"
+        assert np.array_equal(out.io.read_array(), ds.io.read_array() * 2), (
+            "values wrong"
+        )
         assert np.array_equal(
             Dataset.read_file(str(out_path)).io.read_array(), ds.io.read_array() * 2
         ), "reopened file has wrong values"
@@ -251,7 +253,9 @@ class TestStreamReduce:
             return acc
 
         got = ds.io.stream_reduce(collect, [], strip_rows=2)
-        assert got == ds.io.read_array().ravel().tolist(), "row-major order not preserved"
+        assert got == ds.io.read_array().ravel().tolist(), (
+            "row-major order not preserved"
+        )
 
     def test_two_source_fold_reads_the_aligned_window(self):
         """The window lets the fold read a second aligned raster over the same cells.

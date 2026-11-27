@@ -212,7 +212,9 @@ class TestXY:
             2.0-wide, 0.5-tall pixels anchored at (10, 8): cell (1, 2) centre
             is (10 + 2*2 + 1, 8 - 1*0.5 - 0.25) = (15.0, 7.25).
         """
-        assert rect_dataset.cell.xy(1, 2) == pytest.approx((15.0, 7.25)), "rect centre wrong"
+        assert rect_dataset.cell.xy(1, 2) == pytest.approx((15.0, 7.25)), (
+            "rect centre wrong"
+        )
 
     def test_rotated_grid(self, rotated_dataset):
         """xy applies the rotation terms of a skewed geotransform.
@@ -265,7 +267,9 @@ class TestRowCol:
         Test scenario:
             The centre computed by xy maps back to the same cell.
         """
-        assert rect_dataset.cell.rowcol(*rect_dataset.cell.xy(2, 1)) == (2, 1), "rect round-trip"
+        assert rect_dataset.cell.rowcol(*rect_dataset.cell.xy(2, 1)) == (2, 1), (
+            "rect round-trip"
+        )
 
     def test_rotated_grid(self, rotated_dataset):
         """rowcol inverts the full affine, including rotation terms.

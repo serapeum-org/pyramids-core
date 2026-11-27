@@ -50,9 +50,13 @@ def _stub_base(rows, cols, *, bands=1, scale=None, offset=None):
         geo_ref=GeoReference(top_left_corner=(0, rows), cell_size=1.0, epsg=4326),
     )
     if scale is not None:
-        dataset.bands.scale = list(scale) if isinstance(scale, list) else [scale] * bands
+        dataset.bands.scale = (
+            list(scale) if isinstance(scale, list) else [scale] * bands
+        )
     if offset is not None:
-        dataset.bands.offset = list(offset) if isinstance(offset, list) else [offset] * bands
+        dataset.bands.offset = (
+            list(offset) if isinstance(offset, list) else [offset] * bands
+        )
     return dataset
 
 

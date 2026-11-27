@@ -512,7 +512,9 @@ class TestDomainArea:
 
         areas = cap.cell.cell_area(unit="km2")
         expected = float(areas[latitudes >= 60.0, :].sum())
-        assert cap.analysis.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
+        assert cap.analysis.domain_area(unit="km2") == pytest.approx(
+            expected, rel=1e-12
+        )
 
     def test_the_unweighted_count_overstates_a_polar_domain(self):
         """The defect the issue is about, stated as a ratio.
@@ -584,7 +586,9 @@ class TestDomainArea:
 
         areas = grid.cell.cell_area(unit="km2")
         expected = float(areas[:600, :].sum())
-        assert grid.analysis.domain_area(unit="km2") == pytest.approx(expected, rel=1e-12)
+        assert grid.analysis.domain_area(unit="km2") == pytest.approx(
+            expected, rel=1e-12
+        )
 
     def test_it_matches_a_whole_band_sum_despite_streaming(self):
         """The strips must line up with the rows they weigh.
@@ -638,7 +642,9 @@ class TestTheEdgesTheHappyPathMisses:
         raster = Dataset.from_array(np.ones((2, 2), "float32"), geo_ref=geo_ref)
 
         side_m = 100.0 * CRS.from_epsg(2225).axis_info[0].unit_conversion_factor
-        assert float(raster.cell.cell_area()[0, 0]) == pytest.approx(side_m**2, rel=1e-12)
+        assert float(raster.cell.cell_area()[0, 0]) == pytest.approx(
+            side_m**2, rel=1e-12
+        )
 
     def test_each_band_is_weighed_by_its_own_domain(self):
         """`band=` selects which mask is applied, as it does for the count.
@@ -657,7 +663,9 @@ class TestTheEdgesTheHappyPathMisses:
         # `band1 < band0` while being entirely wrong.
         areas = raster.cell.cell_area()
         assert raster.analysis.domain_area(band=0) == pytest.approx(float(areas.sum()))
-        assert raster.analysis.domain_area(band=1) == pytest.approx(float(areas[1:, :].sum()))
+        assert raster.analysis.domain_area(band=1) == pytest.approx(
+            float(areas[1:, :].sum())
+        )
 
     def test_each_band_is_masked_by_its_own_sentinel(self):
         """`band=` selects the sentinel too, not only which pixels are read.
@@ -681,8 +689,12 @@ class TestTheEdgesTheHappyPathMisses:
         )
 
         areas = raster.cell.cell_area()
-        assert raster.analysis.domain_area(band=0) == pytest.approx(float(areas[1:, :].sum()))
-        assert raster.analysis.domain_area(band=1) == pytest.approx(float(areas[:3, :].sum()))
+        assert raster.analysis.domain_area(band=0) == pytest.approx(
+            float(areas[1:, :].sum())
+        )
+        assert raster.analysis.domain_area(band=1) == pytest.approx(
+            float(areas[:3, :].sum())
+        )
 
     def test_an_east_to_west_grid_has_positive_areas(self):
         """A negative `dx` walks the columns the other way; area has no sign.
@@ -722,7 +734,9 @@ class TestTheEdgesTheHappyPathMisses:
         )
 
         assert raster.analysis.count_domain_cells() == 9
-        assert raster.analysis.domain_area() == pytest.approx(float(raster.cell.cell_area().sum()))
+        assert raster.analysis.domain_area() == pytest.approx(
+            float(raster.cell.cell_area().sum())
+        )
 
     def test_a_south_up_grid_has_positive_areas(self):
         """A positive `dy` walks the rows the other way; area has no sign.

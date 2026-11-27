@@ -147,7 +147,9 @@ class TestTheStreamedReductionStitchesStrips:
         values[10, 2] = 1.0
         values[500, 1] = 2.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.analysis.data_extent(), np.array([1.0, 99.0, 3.0, 590.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([1.0, 99.0, 3.0, 590.0])
+        )
 
 
 class TestBandSelectionAndTheFacade:
@@ -159,8 +161,12 @@ class TestBandSelectionAndTheFacade:
         values[0, 0, 0] = 1.0
         values[1, 3, 3] = 2.0
         ds = _raster(values, no_data_value=-9999.0)
-        assert np.array_equal(ds.analysis.data_extent(band=0), np.array([0.0, 3.0, 1.0, 4.0]))
-        assert np.array_equal(ds.analysis.data_extent(band=1), np.array([3.0, 0.0, 4.0, 1.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(band=0), np.array([0.0, 3.0, 1.0, 4.0])
+        )
+        assert np.array_equal(
+            ds.analysis.data_extent(band=1), np.array([3.0, 0.0, 4.0, 1.0])
+        )
 
     def test_the_facade_delegates_to_the_engine(self):
         """`ds.data_extent()` returns what `ds.analysis.data_extent()` returns."""
@@ -186,14 +192,18 @@ class TestOrientationHandling:
         """A gap-free band on a south-up, non-square grid has the whole-grid box."""
         ds = Dataset.from_array(np.ones((4, 5), dtype="float32"), geo_ref=self.SOUTH_UP)
         assert np.array_equal(ds.analysis.data_extent(), ds.total_bounds)
-        assert np.array_equal(ds.analysis.data_extent(), np.array([100.0, 50.0, 110.0, 62.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([100.0, 50.0, 110.0, 62.0])
+        )
 
     def test_a_gappy_south_up_non_square_band_has_the_shrunk_box(self):
         """A rows-1-2, cols-1-3 block projects to its tight box on the south-up grid."""
         values = np.full((4, 5), -9999.0, dtype="float32")
         values[1:3, 1:4] = 1.0
         ds = Dataset.from_array(values, geo_ref=self.SOUTH_UP, no_data_value=-9999.0)
-        assert np.array_equal(ds.analysis.data_extent(), np.array([102.0, 53.0, 108.0, 59.0]))
+        assert np.array_equal(
+            ds.analysis.data_extent(), np.array([102.0, 53.0, 108.0, 59.0])
+        )
 
     def test_a_gap_free_rotated_band_equals_total_bounds(self):
         """A gap-free band on a rotated grid still reduces to the whole-grid box."""

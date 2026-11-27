@@ -520,7 +520,10 @@ class TestWrapLongitudePaths:
         assert result.raster.GetDriver().ShortName == "VRT"
         assert result.top_left_corner == (-180.0, 90.0)
         # the VRT still reads back real data
-        assert result.io.read_array(band=0).shape == (noah.RasterYSize, noah.RasterXSize)
+        assert result.io.read_array(band=0).shape == (
+            noah.RasterYSize,
+            noah.RasterXSize,
+        )
 
     def test_in_memory_rolls_columns_exactly(self):
         """An in-memory source is rolled exactly (eager path), preserving the no-data value."""

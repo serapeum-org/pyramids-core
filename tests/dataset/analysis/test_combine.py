@@ -599,7 +599,9 @@ class TestCombine:
 
         assert np.isnan(ndvi.no_data_value[0]), "a float result always declares NaN"
         assert np.isnan(np.asarray(ndvi.io.read_array())[0, 0]), "0/0 has no value"
-        assert ndvi.analysis.count_domain_cells() == 8, "the undefined cell leaves the domain"
+        assert ndvi.analysis.count_domain_cells() == 8, (
+            "the undefined cell leaves the domain"
+        )
 
     def test_an_all_masked_pair_agrees_on_dtype_whichever_way_func_is_spelled(self):
         """The empty-domain path must not depend on how the caller wrote `func`.
@@ -699,7 +701,9 @@ class TestCombine:
         right = _raster(np.full((4, 4), 1.0, "float32"))
 
         as_python = left.analysis.combine(right, np.subtract, no_data_value=0.1)
-        as_numpy = left.analysis.combine(right, np.subtract, no_data_value=np.float64(0.1))
+        as_numpy = left.analysis.combine(
+            right, np.subtract, no_data_value=np.float64(0.1)
+        )
 
         assert as_python.no_data_value[0] == pytest.approx(as_numpy.no_data_value[0])
 
@@ -718,7 +722,9 @@ class TestCombine:
         )
 
         assert result.no_data_value[0] is None
-        assert np.asarray(result.io.read_array())[0, 0] == -10003, "the sentinel is data"
+        assert np.asarray(result.io.read_array())[0, 0] == -10003, (
+            "the sentinel is data"
+        )
         assert np.asarray(result.io.read_array())[1, 1] == 6
 
     def test_a_result_that_leaves_no_free_value_is_refused(self):
@@ -832,9 +838,9 @@ class TestCombine:
         assert (np.asarray((left - right).io.read_array()) == wrapped).all()
 
         promoted = left.analysis.combine(right, lambda a, b: a.astype("int32") - b)
-        assert (np.asarray(promoted.io.read_array()) == left_value - right_value).all(), (
-            "promoting inside func is the documented way out"
-        )
+        assert (
+            np.asarray(promoted.io.read_array()) == left_value - right_value
+        ).all(), "promoting inside func is the documented way out"
 
     def test_dataset_metadata_travels_with_the_result(self):
         """A result that forgot its scene tags is harder to use than the arrays.
@@ -1517,7 +1523,9 @@ class TestSameGrid:
         other = _raster(np.zeros((5, 5), "float32"), geo_ref=projected)
 
         assert not lonlat.spatial.same_grid(other), "the CRSes differ"
-        assert lonlat.spatial.same_grid(other, compare_crs=False), "the pixel grids match"
+        assert lonlat.spatial.same_grid(other, compare_crs=False), (
+            "the pixel grids match"
+        )
 
     def test_a_non_dataset_argument_is_refused(self):
         """The public predicate says what it wants instead of failing on a property read.
@@ -1910,7 +1918,10 @@ class TestOneOperandIsReadOnce:
     def test_combining_a_raster_with_itself_is_still_correct(self):
         """`ds.combine(ds, add)` doubles the values — the two-operand path, twice read."""
         ds = _raster(np.full((4, 4), 3.0, "float32"))
-        assert float(np.asarray(ds.analysis.combine(ds, np.add).io.read_array()).mean()) == 6.0
+        assert (
+            float(np.asarray(ds.analysis.combine(ds, np.add).io.read_array()).mean())
+            == 6.0
+        )
 
     def test_the_shared_path_is_declared_not_inferred(self, monkeypatch):
         """`ds.combine(ds, …)` reads twice; only `_fold` declares the single read.

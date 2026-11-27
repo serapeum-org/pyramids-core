@@ -389,7 +389,9 @@ class TestFocalApplyNoData:
                 top_left_corner=(0.0, 16.0), cell_size=1.0, epsg=32636
             ),
         ).io.to_file(str(path))
-        out = np.asarray(Dataset.read_file(str(path)).analysis.focal_apply(np.max, radius=1))
+        out = np.asarray(
+            Dataset.read_file(str(path)).analysis.focal_apply(np.max, radius=1)
+        )
         assert np.isfinite(out).all(), f"no sentinel means no blanking, got {out}"
 
 

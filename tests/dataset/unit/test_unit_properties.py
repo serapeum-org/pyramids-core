@@ -346,9 +346,9 @@ class TestBandFamilyEngineFacades:
     def test_band_units_facade_matches_engine(self, multi_band_dataset):
         """Dataset.band_units delegates to Bands.band_units in both directions."""
         multi_band_dataset.bands.band_units = ["m", "kg", "s"]
-        assert multi_band_dataset.bands.band_units == multi_band_dataset.bands.band_units, (
-            "band_units facade and engine disagree"
-        )
+        assert (
+            multi_band_dataset.bands.band_units == multi_band_dataset.bands.band_units
+        ), "band_units facade and engine disagree"
         multi_band_dataset.bands.band_units = ["a", "b", "c"]
         assert multi_band_dataset.bands.band_units == ["a", "b", "c"], (
             "setting via the engine is not visible on the facade"
@@ -514,7 +514,9 @@ class TestConvertUnits:
             rtol=1e-6,
             err_msg="m->mm values wrong",
         )
-        assert result.bands.band_units == ["mm", "mm", "mm"], f"Units: {result.bands.band_units}"
+        assert result.bands.band_units == ["mm", "mm", "mm"], (
+            f"Units: {result.bands.band_units}"
+        )
 
     def test_band_argument_converts_one_band_only(self, multi_band_dataset):
         """convert_units with band= converts only the selected band.
@@ -536,7 +538,9 @@ class TestConvertUnits:
         np.testing.assert_array_equal(
             converted[2], source[2], err_msg="band 2 should be untouched"
         )
-        assert result.bands.band_units == ["mm", "m", "m"], f"Units: {result.bands.band_units}"
+        assert result.bands.band_units == ["mm", "m", "m"], (
+            f"Units: {result.bands.band_units}"
+        )
 
     def test_nodata_cells_preserved(self):
         """convert_units leaves no-data cells at their sentinel value.
@@ -861,7 +865,9 @@ class TestCellGeometryMethods:
         """to_geodataframe(geometry="polygon") returns polygons covering each cell."""
         import geopandas as gpd
 
-        gdf = single_band_dataset.vector.to_geodataframe(geometry="polygon", values=False)
+        gdf = single_band_dataset.vector.to_geodataframe(
+            geometry="polygon", values=False
+        )
         assert isinstance(gdf, gpd.GeoDataFrame), "Should return GeoDataFrame"
         assert len(gdf) == 9, f"Expected 9 polygons, got {len(gdf)}"
         poly = gdf.geometry.iloc[0]

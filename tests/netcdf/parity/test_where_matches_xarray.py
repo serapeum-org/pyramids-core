@@ -96,7 +96,8 @@ class TestWhereMatchesXarray:
         exported = _exported()
         np.testing.assert_allclose(
             np.asarray(
-                _raster().analysis.where(VALUES > 5, other).io.read_array(), dtype="float64"
+                _raster().analysis.where(VALUES > 5, other).io.read_array(),
+                dtype="float64",
             ),
             exported.where(exported > 5, other).values,
             equal_nan=True,
@@ -191,7 +192,9 @@ class TestTheReceivers:
     def test_a_variable_masks_the_right_cells(self):
         """Only the values above the threshold survive, across both steps."""
         variable = self._container().get_variable("v")
-        read = np.asarray(variable.analysis.where(variable > 10).read_array(), dtype="float64")
+        read = np.asarray(
+            variable.analysis.where(variable > 10).read_array(), dtype="float64"
+        )
         kept = read[read != NDV]
         np.testing.assert_allclose(kept, np.arange(11.0, 24.0))
 
@@ -251,9 +254,12 @@ class TestAVariableTakesEveryConditionForm:
         """The three forms describing the same cells answer the same raster."""
         variable = self._variable()
         mask = np.arange(8.0).reshape(2, 2, 2) > 3
-        from_array = np.asarray(variable.analysis.where(mask).read_array(), dtype="float64")
+        from_array = np.asarray(
+            variable.analysis.where(mask).read_array(), dtype="float64"
+        )
         from_call = np.asarray(
-            variable.analysis.where(lambda values: values > 3).read_array(), dtype="float64"
+            variable.analysis.where(lambda values: values > 3).read_array(),
+            dtype="float64",
         )
         from_raster = np.asarray(
             variable.analysis.where(variable > 3).read_array(), dtype="float64"

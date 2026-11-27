@@ -116,7 +116,9 @@ class TestSample:
         Test scenario:
             (100,100) snaps to the top-right cell (0,4) = value 4.
         """
-        result = two_band.analysis.sample(mixed_points, bands=0, on_out_of_bounds="snap")
+        result = two_band.analysis.sample(
+            mixed_points, bands=0, on_out_of_bounds="snap"
+        )
         assert result.tolist() == [12.0, 4.0], f"Wrong values: {result.tolist()}"
 
     def test_out_of_bounds_raise(self, two_band, mixed_points):
@@ -283,7 +285,9 @@ class TestHistogramEdgesAndStatsPrecision:
             returned edges describing buckets `GetHistogram` never filled.
         """
         dataset = self._ramp()
-        _, ranges = dataset.analysis.get_histogram(band=0, bins=5, min_value=50, max_value=100)
+        _, ranges = dataset.analysis.get_histogram(
+            band=0, bins=5, min_value=50, max_value=100
+        )
         assert ranges[0][0] == pytest.approx(50.0), (
             f"first edge should be the requested min_value 50, got {ranges[0][0]}"
         )
@@ -387,7 +391,9 @@ class TestWindowedAndPerPointStrategiesAgree:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(gdal.Band, "ReadAsArray", counting_read)
-        wide.analysis.sample(_points([(10.5, 50.5), (11.5, 50.5), (10.5, 49.5), (11.5, 49.5)]))
+        wide.analysis.sample(
+            _points([(10.5, 50.5), (11.5, 50.5), (10.5, 49.5), (11.5, 49.5)])
+        )
         assert len(calls) == 1, (
             f"a dense batch must collapse into one windowed read, got {len(calls)}"
         )
@@ -516,7 +522,8 @@ class TestStatsRecoveryPath:
         self._force_the_recovery(monkeypatch)
         dataset = Dataset.read_file(sparse_on_disk)
         np.testing.assert_array_equal(
-            dataset.analysis.stats(approx_ok=False).to_numpy(), dataset.analysis.stats().to_numpy()
+            dataset.analysis.stats(approx_ok=False).to_numpy(),
+            dataset.analysis.stats().to_numpy(),
         )
 
     def test_a_healthy_band_still_answers_from_the_estimate(self, two_band):

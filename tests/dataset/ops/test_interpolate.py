@@ -559,7 +559,9 @@ class TestNonFiniteInputs:
             {"z": z}, geometry=[Point(a, b) for a, b in zip(x, y)], crs="EPSG:4326"
         )
         fast = np.asarray(
-            Dataset.from_points(FeatureCollection(gdf), "z", cell_size=2.0).io.read_array()
+            Dataset.from_points(
+                FeatureCollection(gdf), "z", cell_size=2.0
+            ).io.read_array()
         )
         options = gdal.GridOptions(
             format="MEM",

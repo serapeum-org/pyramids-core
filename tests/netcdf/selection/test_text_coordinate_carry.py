@@ -273,7 +273,9 @@ class TestSetVariableCreatesATextBandDimension:
         )
         gappy = np.array([TIME_STAMPS[0], None, TIME_STAMPS[2]], dtype=object)
         with pytest.raises(ValueError, match="mixes text with non-text") as caught:
-            base.variables.set("SM", raster, band_dim_name="Time", band_dim_values=gappy)
+            base.variables.set(
+                "SM", raster, band_dim_name="Time", band_dim_values=gappy
+            )
         assert "could not convert string to float" not in str(caught.value)
 
 

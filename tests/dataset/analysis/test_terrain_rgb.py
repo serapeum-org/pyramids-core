@@ -54,7 +54,9 @@ class TestToTerrainRgbRoundtrip:
     def test_mapbox_roundtrip_within_interval(self, tmp_path):
         """Mapbox decode recovers each height to within one ``interval``."""
         dem = _dem_3857()
-        out = dem.io.to_terrain_rgb(tmp_path / "dem.png", tiles=False, encoding="mapbox")
+        out = dem.io.to_terrain_rgb(
+            tmp_path / "dem.png", tiles=False, encoding="mapbox"
+        )
         count, (r, g, b) = _read_bands(out)
         assert count == 3, f"no-nodata source must yield 3-band RGB, got {count}"
         decoded = _decode_mapbox(
@@ -68,7 +70,9 @@ class TestToTerrainRgbRoundtrip:
     def test_terrarium_roundtrip_within_quantum(self, tmp_path):
         """Terrarium decode recovers each height to within 1/256 m."""
         dem = _dem_3857()
-        out = dem.io.to_terrain_rgb(tmp_path / "t.png", tiles=False, encoding="terrarium")
+        out = dem.io.to_terrain_rgb(
+            tmp_path / "t.png", tiles=False, encoding="terrarium"
+        )
         _, (r, g, b) = _read_bands(out)
         decoded = (r.astype("int64") * 256 + g + b / 256.0) - 32768
         source = np.array([[0.0, 100.0], [2000.0, 8848.0]])
@@ -532,7 +536,9 @@ class TestTilingScratchCleanup:
 
         monkeypatch.setattr(gdal.Dataset, "BuildOverviews", explode)
         with pytest.raises(RuntimeError, match="synthetic BuildOverviews failure"):
-            dem.io.to_terrain_rgb(tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4)
+            dem.io.to_terrain_rgb(
+                tmp_path / "tiles", tiles=True, min_zoom=3, max_zoom=4
+            )
         assert self._scratch_dirs() == before, (
             f"a failed staging left {self._scratch_dirs() - before} behind"
         )

@@ -93,13 +93,18 @@ class TestGeolocate:
 
     def test_geolocate_cell_size_honored(self, tmp_path):
         """A requested cell_size sets the output resolution."""
-        out = _make_geoloc_dataset(tmp_path).georef.geolocate(to_epsg=4326, cell_size=0.5)
+        out = _make_geoloc_dataset(tmp_path).georef.geolocate(
+            to_epsg=4326, cell_size=0.5
+        )
         assert out.geotransform[1] == pytest.approx(0.5)
 
     def test_facade_parity(self, tmp_path):
         """`ds.geolocate` mirrors `ds.georef.geolocate`."""
         ds = _make_geoloc_dataset(tmp_path)
-        assert ds.georef.geolocate(to_epsg=4326).epsg == ds.georef.geolocate(to_epsg=4326).epsg
+        assert (
+            ds.georef.geolocate(to_epsg=4326).epsg
+            == ds.georef.geolocate(to_epsg=4326).epsg
+        )
 
     def test_no_domain_raises(self):
         """geolocate on a plain raster raises GeolocationArrayError."""
@@ -225,7 +230,9 @@ class TestGeolocateFromBytes:
 
         on_disk = NetCDF.read_file(CURV).get_variable("Tair")
         var = NetCDF.from_bytes(self._bytes()).get_variable("Tair")
-        assert on_disk.georef.has_geolocation is True, "fixture must carry geolocation arrays"
+        assert on_disk.georef.has_geolocation is True, (
+            "fixture must carry geolocation arrays"
+        )
         assert var.georef.has_geolocation is True, (
             "an in-memory swath must expose its GEOLOCATION domain (#1053)"
         )

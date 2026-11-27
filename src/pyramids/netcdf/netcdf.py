@@ -12693,7 +12693,9 @@ class NetCDF(Dataset):
 
               ```
         """
-        return self.analysis.combine(other, func, band=band, no_data_value=no_data_value)
+        return self.analysis.combine(
+            other, func, band=band, no_data_value=no_data_value
+        )
 
     def _combine_layout_source(
         self, other: Any, band: int | None

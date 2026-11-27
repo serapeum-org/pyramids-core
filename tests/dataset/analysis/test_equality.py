@@ -187,7 +187,9 @@ class TestOnANetCDFVariable:
             Only the band dimensions' coordinates differ, so a comparison that read the
             values alone would call these equal.
         """
-        assert not self._variable([0.0, 6.0]).analysis.equals(self._variable([0.0, 12.0]))
+        assert not self._variable([0.0, 6.0]).analysis.equals(
+            self._variable([0.0, 12.0])
+        )
 
     def test_a_variable_and_a_plain_raster_of_the_same_values(self):
         """A cube with a `time` dimension is not a plain raster of the same cells."""

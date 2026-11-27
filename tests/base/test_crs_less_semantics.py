@@ -256,7 +256,9 @@ class TestReadsStillWorkWithoutACrs:
     def test_point_reads_in_the_rasters_own_coordinates(self, crs_less_raster: str):
         """Point sampling likewise needs no CRS when no transform is involved."""
         dataset = Dataset.read_file(crs_less_raster)
-        assert dataset.cog.point(2, -2) is not None, "point sampling must not require a CRS"
+        assert dataset.cog.point(2, -2) is not None, (
+            "point sampling must not require a CRS"
+        )
 
 
 class TestNetCDFCrsResolution:
@@ -939,7 +941,9 @@ class TestAlignSkipsAnUnnecessaryWarp:
         )
 
         monkeypatch.setattr(_Spatial, "to_crs", _spy)
-        assert source.spatial.align(reference) is not None, "align must return a dataset"
+        assert source.spatial.align(reference) is not None, (
+            "align must return a dataset"
+        )
         assert not calls, "align warped between two spellings of one CRS"
 
     def test_the_spy_does_fire_when_a_warp_is_needed(self, tmp_path, monkeypatch):
@@ -1036,7 +1040,9 @@ class TestAuthorityLessCrsHasNoEpsg:
         assert isinstance(crs_spec(dataset.epsg, dataset.crs), str), (
             "crs_spec must fall back to the WKT"
         )
-        assert dataset.spatial.to_crs(4326) is not None, f"{label} must stay reprojectable"
+        assert dataset.spatial.to_crs(4326) is not None, (
+            f"{label} must stay reprojectable"
+        )
 
     def test_a_registered_crs_still_reports_its_code(self, tmp_path):
         """The change is confined to CRSes with no authority.

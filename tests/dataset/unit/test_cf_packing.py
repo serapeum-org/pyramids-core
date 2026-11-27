@@ -549,7 +549,9 @@ class TestApplyDoesNotCorrupt:
     def test_a_result_gdal_cannot_store_keeps_the_source_type(self):
         """An `object`-valued function falls back rather than refusing to run."""
         dataset = _int_raster([[1, 2, 3]])
-        result = dataset.analysis.apply(lambda a: np.array([str(v) for v in a], dtype=object))
+        result = dataset.analysis.apply(
+            lambda a: np.array([str(v) for v in a], dtype=object)
+        )
         assert result.dtype == ["int16"], result.dtype
 
     def test_the_identity_leaves_a_packed_raster_alone(self):
@@ -705,7 +707,9 @@ class TestStreamingRespectsTheDestination:
     def test_map_blocks_honours_an_explicit_dtype_too(self):
         """`map_blocks` shares the rule, and the same escape from it."""
         source = _packed_raster([[100, -100], [0, 50]], 0.01, 1.5)
-        result = source.io.map_blocks(lambda tile: tile * 2, tile_size=2, dtype="float32")
+        result = source.io.map_blocks(
+            lambda tile: tile * 2, tile_size=2, dtype="float32"
+        )
         assert result.dtype == ["float32"], result.dtype
 
     def test_map_blocks_reads_every_band_physically(self):
@@ -817,7 +821,9 @@ class TestStreamingRespectsTheDestination:
         source.io.stream_transform(lambda tile: tile, out=destination, tile_size=2)
 
         np.testing.assert_allclose(
-            np.asarray(destination.io.read_array(unpack=False), dtype="float64").ravel(),
+            np.asarray(
+                destination.io.read_array(unpack=False), dtype="float64"
+            ).ravel(),
             [2.5, 5.0, 7.5, 10.0],
             err_msg="the float destination's counts were rounded",
         )
@@ -882,7 +888,9 @@ class TestStreamingRespectsTheDestination:
             restore now unwraps a one-band sentinel tuple.
         """
         result = operation(_bare_raster())
-        np.testing.assert_array_equal(np.asarray(result.io.read_array()).ravel(), expected)
+        np.testing.assert_array_equal(
+            np.asarray(result.io.read_array()).ravel(), expected
+        )
 
 
 class TestTheTileAndItsDomain:
@@ -1169,7 +1177,9 @@ class TestTheSentinelStaysOutOfTheDomain:
             the stored sentinel found no no-data at all, so the gap was doubled along
             with the real cells and silently became data.
         """
-        result = self._with_a_gap().analysis.apply(lambda a: a * 2, elementwise=elementwise)
+        result = self._with_a_gap().analysis.apply(
+            lambda a: a * 2, elementwise=elementwise
+        )
         got = np.asarray(result.io.read_array(), dtype="float64").ravel()
         np.testing.assert_allclose(got[:3], [5.0, 1.0, 3.0])
         assert got[-1] == pytest.approx(-9999.0), (
@@ -1178,7 +1188,9 @@ class TestTheSentinelStaysOutOfTheDomain:
 
     def test_extract_skips_the_sentinel_cell(self):
         """`extract` returns the measurements, not the gaps."""
-        values = np.asarray(self._with_a_gap().analysis.extract(), dtype="float64").ravel()
+        values = np.asarray(
+            self._with_a_gap().analysis.extract(), dtype="float64"
+        ).ravel()
         assert values.size == 3, f"expected the 3 real cells, got {values}"
         np.testing.assert_allclose(np.sort(values), [0.5, 1.5, 2.5])
 
@@ -1225,10 +1237,14 @@ class TestEveryReadOnOneBandAgrees:
     @pytest.mark.parametrize(
         "read",
         [
-            pytest.param(lambda ds: np.asarray(ds.io.read_array())[0, 0], id="read_array"),
+            pytest.param(
+                lambda ds: np.asarray(ds.io.read_array())[0, 0], id="read_array"
+            ),
             pytest.param(lambda ds: float(ds.cog.point(0.5, 1.5, band=0)), id="point"),
             pytest.param(
-                lambda ds: np.asarray(ds.cog.read_part((0, 0, 2, 2), band=0)).ravel()[0],
+                lambda ds: np.asarray(ds.cog.read_part((0, 0, 2, 2), band=0)).ravel()[
+                    0
+                ],
                 id="read_part",
             ),
             pytest.param(
@@ -1628,8 +1644,12 @@ class TestStoreCopiesKeepTheRecipe:
 
         cropped = dataset.spatial.crop(mask)
 
-        assert cropped.bands.scale[0] == pytest.approx(0.01), f"scale={cropped.bands.scale}"
-        stored = np.asarray(cropped.io.read_array(unpack=False), dtype="float64").ravel()
+        assert cropped.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={cropped.bands.scale}"
+        )
+        stored = np.asarray(
+            cropped.io.read_array(unpack=False), dtype="float64"
+        ).ravel()
         np.testing.assert_allclose(stored, [100.0, -100.0, -9999.0, 50.0, 25.0, 75.0])
 
     def test_an_array_mask_crop_takes_the_same_route(self):
@@ -1640,8 +1660,12 @@ class TestStoreCopiesKeepTheRecipe:
             np.array([[1, 1, -9999], [1, 1, 1]], dtype="int16"), mask_noval=-9999
         )
 
-        assert cropped.bands.scale[0] == pytest.approx(0.01), f"scale={cropped.bands.scale}"
-        stored = np.asarray(cropped.io.read_array(unpack=False), dtype="float64").ravel()
+        assert cropped.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={cropped.bands.scale}"
+        )
+        stored = np.asarray(
+            cropped.io.read_array(unpack=False), dtype="float64"
+        ).ravel()
         np.testing.assert_allclose(stored, [100.0, -100.0, -9999.0, 50.0, 25.0, 75.0])
 
     def test_a_seam_crossing_crop_keeps_the_packing(self):
@@ -1663,7 +1687,9 @@ class TestStoreCopiesKeepTheRecipe:
 
         stitched = dataset.spatial.crop(bbox=(170.0, -10.0, -170.0, 10.0))
 
-        assert stitched.bands.scale[0] == pytest.approx(0.01), f"scale={stitched.bands.scale}"
+        assert stitched.bands.scale[0] == pytest.approx(0.01), (
+            f"scale={stitched.bands.scale}"
+        )
         peak = float(np.nanmax(np.asarray(stitched.io.read_array(), dtype="float64")))
         assert peak == pytest.approx(2.5), f"the stitch returned raw counts: {peak}"
 
@@ -1899,9 +1925,9 @@ class TestPythonHeldPackingReachesEveryReader:
                 id="read_part",
             ),
             pytest.param(
-                lambda v, x, y: np.asarray(v.cog.preview(band=0), dtype="float64").ravel()[
-                    0
-                ],
+                lambda v, x, y: np.asarray(
+                    v.cog.preview(band=0), dtype="float64"
+                ).ravel()[0],
                 id="preview",
             ),
         ],
@@ -1940,7 +1966,9 @@ class TestAnInPlaceComputeSpendsThePacking:
     @pytest.mark.parametrize(
         ("operation", "expected"),
         [
-            pytest.param(lambda v: v.analysis.apply(lambda a: a, inplace=True), 2.5, id="apply"),
+            pytest.param(
+                lambda v: v.analysis.apply(lambda a: a, inplace=True), 2.5, id="apply"
+            ),
             pytest.param(lambda v: v.fill(7.0, inplace=True), 7.0, id="fill"),
         ],
     )
@@ -1986,7 +2014,9 @@ class TestAnInPlaceComputeSpendsThePacking:
         ("operation", "expected"),
         [
             pytest.param(
-                lambda ds: ds.analysis.apply(lambda a: a, inplace=True), [2.5, 3.5], id="apply"
+                lambda ds: ds.analysis.apply(lambda a: a, inplace=True),
+                [2.5, 3.5],
+                id="apply",
             ),
             pytest.param(lambda ds: ds.fill(7.0, inplace=True), [7.0, 7.0], id="fill"),
         ],

@@ -345,7 +345,9 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        result = grid.cog.read_part((1.5, 1.5, 4.5, 4.5), dst_width=3, dst_height=3, band=0)
+        result = grid.cog.read_part(
+            (1.5, 1.5, 4.5, 4.5), dst_width=3, dst_height=3, band=0
+        )
 
         assert isinstance(result, np.ndarray), (
             f"expected a bare array, got {type(result)}"
@@ -458,7 +460,9 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.cog.read_part((-1.0, 5.0, 5.0, 9.0), band=0, return_transform=True)
+        array, gt = grid.cog.read_part(
+            (-1.0, 5.0, 5.0, 9.0), band=0, return_transform=True
+        )
 
         assert self._worst_cell_offset(array, gt) == pytest.approx(0.0, abs=1e-9)
 
@@ -560,7 +564,9 @@ class TestReadPartReturnTransform:
         """
         grid = self._col_index_grid()
 
-        array, gt = grid.cog.read_part((1.5, 1.5, 4.5, 4.5), band=0, return_transform=True)
+        array, gt = grid.cog.read_part(
+            (1.5, 1.5, 4.5, 4.5), band=0, return_transform=True
+        )
 
         assert array.shape == (4, 4), f"native-size snapped window, got {array.shape}"
         assert gt == pytest.approx((1.0, 1.0, 0.0, 5.0, 0.0, -1.0)), (

@@ -1047,7 +1047,10 @@ class TestEveryRouteToCombineSharesTheLayout:
             pytest.param(
                 lambda v: v.analysis.combine(v, np.add), id="analysis.combine"
             ),
-            pytest.param(lambda v: Dataset.analysis.combine(v, v, np.add), id="Dataset.analysis.combine"),
+            pytest.param(
+                lambda v: Dataset.analysis.combine(v, v, np.add),
+                id="Dataset.analysis.combine",
+            ),
             pytest.param(
                 lambda v: v.analysis._fold(lambda values: values * 2), id="_fold"
             ),

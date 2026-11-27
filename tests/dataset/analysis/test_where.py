@@ -149,7 +149,9 @@ class TestConditionForms:
     def test_a_callable_receives_the_values(self):
         """The callable is handed the raster's array and returns the condition."""
         read = _read(_raster().analysis.where(lambda values: values > 5))
-        assert_allclose(read, _read(_raster().analysis.where(VALUES > 5)), equal_nan=True)
+        assert_allclose(
+            read, _read(_raster().analysis.where(VALUES > 5)), equal_nan=True
+        )
 
     def test_a_raster_condition(self):
         """A `Dataset` of flags on the same grid selects the same cells as its array."""
@@ -550,7 +552,9 @@ class TestBandsAndLayout:
     def test_every_band_is_masked_by_a_two_dimensional_condition(self):
         """One condition plane broadcasts across the bands."""
         raster = Dataset.from_array(self._stack(), geo_ref=GEO_REF, no_data_value=NDV)
-        read = np.asarray(raster.analysis.where(VALUES > 9).io.read_array(), dtype="float64")
+        read = np.asarray(
+            raster.analysis.where(VALUES > 9).io.read_array(), dtype="float64"
+        )
         assert read.shape == (2, 3, 4)
         assert read[1, 2, 1] == pytest.approx(20.0)
         assert np.isnan(_read(raster.analysis.where(VALUES > 9))[1, 2, 0])
@@ -626,12 +630,16 @@ class TestTheResultKeepsItsIdentity:
 
     def test_where_keeps_the_metadata(self):
         """A result that has forgotten its scene is harder to use than the array it came from."""
-        assert self._labelled().analysis.where(VALUES > 2).meta_data == {"source": "sentinel"}
+        assert self._labelled().analysis.where(VALUES > 2).meta_data == {
+            "source": "sentinel"
+        }
 
     def test_the_operator_path_is_the_reference(self):
         """Whatever an operator carries, `where` carries — that is the promise."""
         labelled = self._labelled()
-        assert labelled.analysis.where(VALUES > 2).band_names == (labelled + 1).band_names
+        assert (
+            labelled.analysis.where(VALUES > 2).band_names == (labelled + 1).band_names
+        )
         assert labelled.analysis.where(VALUES > 2).meta_data == (labelled + 1).meta_data
 
     def test_fillna_keeps_them_too(self):
@@ -738,23 +746,33 @@ class TestANanOtherIsDeclared:
             missing: `isnull` all zero, `fillna` filling nothing, and the result not even
             equal to its own copy.
         """
-        result = self._flagged().analysis.where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
         assert np.isnan(result.no_data_value[0])
 
     def test_it_knows_its_own_gaps(self):
         """`isnull` finds the cells the mask removed."""
-        result = self._flagged().analysis.where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
         assert np.asarray(result.analysis.isnull().io.read_array()).sum() == 4
 
     def test_it_equals_its_own_copy(self):
         """A raster that does not equal its own copy is broken by definition."""
-        result = self._flagged().analysis.where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
         assert result.analysis.equals(result.copy())
 
     def test_fillna_can_reach_those_cells(self):
         """The gaps are real gaps, so `fillna` writes to them."""
-        result = self._flagged().analysis.where(np.arange(1, 10).reshape(3, 3) > 4, np.nan)
-        filled = np.asarray(result.analysis.fillna(0.0).io.read_array(), dtype="float64")
+        result = self._flagged().analysis.where(
+            np.arange(1, 10).reshape(3, 3) > 4, np.nan
+        )
+        filled = np.asarray(
+            result.analysis.fillna(0.0).io.read_array(), dtype="float64"
+        )
         assert not np.isnan(filled).any()
 
     def test_a_gap_the_condition_selected_stays_a_gap(self):
@@ -768,10 +786,16 @@ class TestANanOtherIsDeclared:
             to `[[0, 0], [0, 1]]`. xarray answers `[[1.0, nan], [3.0, nan]]` here.
         """
         raster = _raster(np.array([[1.0, NDV], [3.0, 4.0]]))
-        assert np.asarray(raster.analysis.isnull().io.read_array()).tolist() == [[0, 1], [0, 0]]
+        assert np.asarray(raster.analysis.isnull().io.read_array()).tolist() == [
+            [0, 1],
+            [0, 0],
+        ]
         result = raster.analysis.where(np.array([[True, True], [True, False]]), np.nan)
         assert np.isnan(result.no_data_value[0])
-        assert np.asarray(result.analysis.isnull().io.read_array()).tolist() == [[0, 1], [0, 1]]
+        assert np.asarray(result.analysis.isnull().io.read_array()).tolist() == [
+            [0, 1],
+            [0, 1],
+        ]
         assert_allclose(
             _read(result), np.array([[1.0, np.nan], [3.0, np.nan]]), equal_nan=True
         )
@@ -936,7 +960,8 @@ class TestTheResultKeepsItsType:
         values = np.arange(1, 10, dtype="float32").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=-9999.0)
         assert (
-            np.asarray(raster.analysis.where(values > 4, fill).io.read_array()).dtype == np.float32
+            np.asarray(raster.analysis.where(values > 4, fill).io.read_array()).dtype
+            == np.float32
         )
 
     @pytest.mark.parametrize("fill", [2.5, np.inf, -np.inf, 1e300])
@@ -982,7 +1007,8 @@ class TestTheResultKeepsItsType:
         values = np.arange(1, 10, dtype="int16").reshape(3, 3)
         raster = Dataset.from_array(values, geo_ref=GEO_REF, no_data_value=None)
         assert (
-            np.asarray(raster.analysis.where(values > 4, 0.5).io.read_array()).dtype == np.float64
+            np.asarray(raster.analysis.where(values > 4, 0.5).io.read_array()).dtype
+            == np.float64
         )
 
     def test_a_float_band_widens_for_a_magnitude_it_cannot_hold(self):

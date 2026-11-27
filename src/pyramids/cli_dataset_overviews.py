@@ -270,7 +270,9 @@ def _cmd_preview(args: argparse.Namespace) -> int:
     _check_band(ds, args.band)
     _refuse_existing(args.output, args.overwrite)
     array = np.asarray(
-        ds.cog.preview(max_size=args.max_size, resampling=args.resampling, band=args.band)
+        ds.cog.preview(
+            max_size=args.max_size, resampling=args.resampling, band=args.band
+        )
     )
     geotransform = _scaled_geotransform(ds, array.shape[-2], array.shape[-1])
     _write_raster(

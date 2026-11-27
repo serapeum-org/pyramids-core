@@ -70,7 +70,9 @@ class TestWriteArrayWindow:
         Test scenario:
             A 2x2 patch at [2,2] lands at rows/cols 2..3.
         """
-        blank.io.write_array(np.array([[7.0, 8.0], [9.0, 10.0]]), top_left_corner=[2, 2])
+        blank.io.write_array(
+            np.array([[7.0, 8.0], [9.0, 10.0]]), top_left_corner=[2, 2]
+        )
         arr = blank.io.read_array()
         assert arr[2:4, 2:4].tolist() == [
             [7.0, 8.0],

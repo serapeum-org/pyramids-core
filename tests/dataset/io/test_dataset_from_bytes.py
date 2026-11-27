@@ -60,9 +60,9 @@ class TestDatasetFromBytes:
         assert ds.geotransform == ref.geotransform, "geotransform mismatch"
         assert ds.no_data_value == ref.no_data_value, "no-data mismatch"
         assert ds.band_names == ref.band_names, "band names mismatch"
-        assert np.array_equal(ds.io.read_array(), ref.io.read_array(), equal_nan=True), (
-            "pixel values differ from read_file"
-        )
+        assert np.array_equal(
+            ds.io.read_array(), ref.io.read_array(), equal_nan=True
+        ), "pixel values differ from read_file"
 
     def test_round_trip_matches_read_file_multi_band(self, multi_band_bytes: bytes):
         """A multi-band GeoTIFF round-trips identically to ``read_file``.
@@ -77,9 +77,9 @@ class TestDatasetFromBytes:
         ref = Dataset.read_file(MULTI_BAND)
         ds = Dataset.from_bytes(multi_band_bytes)
         assert ds.band_count == ref.band_count, "band count mismatch"
-        assert np.array_equal(ds.io.read_array(), ref.io.read_array(), equal_nan=True), (
-            "multi-band pixel values differ from read_file"
-        )
+        assert np.array_equal(
+            ds.io.read_array(), ref.io.read_array(), equal_nan=True
+        ), "multi-band pixel values differ from read_file"
 
     def test_returns_dataset_instance(self, single_band_bytes: bytes):
         """The result is a :class:`Dataset` (not a bare ``gdal.Dataset``).
@@ -325,7 +325,9 @@ class TestDatasetFromBytes:
         """
         with Dataset.from_bytes(single_band_bytes) as ds:
             vsi_path = ds._vsimem_path
-            assert ds.io.read_array() is not None, "dataset unusable inside the with-block"
+            assert ds.io.read_array() is not None, (
+                "dataset unusable inside the with-block"
+            )
         assert ds.raster is None, "context manager exit should have closed the dataset"
         del ds
         gc.collect()

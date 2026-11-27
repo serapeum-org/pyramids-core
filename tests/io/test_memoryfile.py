@@ -13,7 +13,9 @@ REF = GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326)
 
 def _raster_bytes():
     """Encoded GeoTIFF bytes of a small 1-band raster."""
-    return Dataset.from_array(np.arange(12.0).reshape(1, 3, 4), geo_ref=REF).io.to_bytes()
+    return Dataset.from_array(
+        np.arange(12.0).reshape(1, 3, 4), geo_ref=REF
+    ).io.to_bytes()
 
 
 class TestMemoryFile:

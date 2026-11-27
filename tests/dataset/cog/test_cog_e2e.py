@@ -96,7 +96,9 @@ class TestEveryCompression:
         reopened_arr = reopened.io.read_array()
         if method == "LERC":
             # Default LERC max_z_error=0 -> near-lossless
-            assert np.allclose(float_dataset_128.io.read_array(), reopened_arr, atol=1e-3)
+            assert np.allclose(
+                float_dataset_128.io.read_array(), reopened_arr, atol=1e-3
+            )
         elif method in {"WEBP", "JPEG"}:
             # Lossy — only compare shape
             assert reopened_arr.shape == float_dataset_128.read_array().shape

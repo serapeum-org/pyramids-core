@@ -785,7 +785,12 @@ class TestJoiningCubesThatMarkGapsDifferently:
             dims=ExtraDimensions(name="time", values=[12.0, 18.0]),
         )
         joined = NetCDF.concat([first, second], "time").get_variable("t")
-        assert np.asarray(joined.analysis.isnull().read_array()).ravel().tolist() == [0, 1, 0, 0]
+        assert np.asarray(joined.analysis.isnull().read_array()).ravel().tolist() == [
+            0,
+            1,
+            0,
+            0,
+        ]
 
     def test_two_cubes_that_both_mark_gaps_with_nan_agree(self):
         """Two NaN sentinels mean the same thing, so the join rewrites nothing.

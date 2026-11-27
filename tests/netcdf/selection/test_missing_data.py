@@ -86,7 +86,9 @@ class TestFillna:
 
     def test_it_fills_the_gaps(self):
         """The gap takes the value; the cells that held data keep theirs."""
-        read = np.asarray(self._raster().analysis.fillna(0.0).io.read_array(), dtype="float64")
+        read = np.asarray(
+            self._raster().analysis.fillna(0.0).io.read_array(), dtype="float64"
+        )
         assert_allclose(read, np.array([[1.0, 0.0], [3.0, 4.0]]))
 
     def test_it_is_the_inverse_of_fill(self):
@@ -111,7 +113,8 @@ class TestFillna:
         values = np.array([[1.0, 2.0], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=RASTER_GEO, no_data_value=NDV)
         assert_allclose(
-            np.asarray(raster.analysis.fillna(0.0).io.read_array(), dtype="float64"), values
+            np.asarray(raster.analysis.fillna(0.0).io.read_array(), dtype="float64"),
+            values,
         )
 
     def test_a_raster_declaring_no_sentinel_has_no_gaps_to_fill(self):
@@ -168,7 +171,10 @@ class TestNullFlags:
 
     def test_the_flags_are_uint8(self):
         """GDAL has no boolean band type, so the flags come back as a comparison's do."""
-        assert np.asarray(self._raster().analysis.isnull().io.read_array()).dtype == np.uint8
+        assert (
+            np.asarray(self._raster().analysis.isnull().io.read_array()).dtype
+            == np.uint8
+        )
 
     def test_the_flags_declare_no_no_data_value(self):
         """Every cell is either missing or not, so no flag could fail to be judged."""
@@ -177,14 +183,18 @@ class TestNullFlags:
     def test_they_read_as_a_condition_for_where(self):
         """`where(notnull())` keeps exactly the cells that hold data."""
         raster = self._raster()
-        kept = np.asarray(raster.analysis.where(raster.analysis.notnull()).io.read_array(), dtype="float64")
+        kept = np.asarray(
+            raster.analysis.where(raster.analysis.notnull()).io.read_array(),
+            dtype="float64",
+        )
         assert_allclose(kept, np.array([[1.0, NDV], [3.0, 4.0]]))
 
     def test_isnull_selects_the_gaps_for_where(self):
         """`where(isnull(), 0.0)` writes into the cells that hold data, keeping the gaps."""
         raster = self._raster()
         read = np.asarray(
-            raster.analysis.where(raster.analysis.isnull(), 0.0).io.read_array(), dtype="float64"
+            raster.analysis.where(raster.analysis.isnull(), 0.0).io.read_array(),
+            dtype="float64",
         )
         assert read[0, 1] == pytest.approx(NDV)
         assert read[0, 0] == pytest.approx(0.0)
@@ -205,10 +215,12 @@ class TestNullFlags:
         values = np.array([[1.0, 2.0], [3.0, 4.0]])
         raster = Dataset.from_array(values, geo_ref=RASTER_GEO, no_data_value=None)
         assert_array_equal(
-            np.asarray(raster.analysis.isnull().io.read_array()), np.zeros((2, 2), dtype="uint8")
+            np.asarray(raster.analysis.isnull().io.read_array()),
+            np.zeros((2, 2), dtype="uint8"),
         )
         assert_array_equal(
-            np.asarray(raster.analysis.notnull().io.read_array()), np.ones((2, 2), dtype="uint8")
+            np.asarray(raster.analysis.notnull().io.read_array()),
+            np.ones((2, 2), dtype="uint8"),
         )
 
 

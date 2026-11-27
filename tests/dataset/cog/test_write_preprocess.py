@@ -160,4 +160,6 @@ class TestToCogPreprocess:
             tmp_path / "combo.tif",
             bands=cog.BandSelection(indexes=[1, 0], out_dtype="int16", nodata=0),
         )
-        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, "combo COG invalid"
+        assert Dataset.read_file(str(out)).cog.validate_cog().is_valid, (
+            "combo COG invalid"
+        )

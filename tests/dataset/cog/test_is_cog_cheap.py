@@ -72,7 +72,9 @@ class TestIsCogCheap:
             arr, geo_ref=GeoReference(geo=COG_GEOTRANSFORM, epsg=4326)
         )
         out = ds.cog.to_cog(tmp_path / "s.tif")
-        assert Dataset.read_file(str(out)).cog.is_cog is True, "small COG should be True"
+        assert Dataset.read_file(str(out)).cog.is_cog is True, (
+            "small COG should be True"
+        )
 
     def test_large_stripped_plain_false(self, tmp_path):
         """A large stripped plain GeoTIFF is rejected.
@@ -84,7 +86,9 @@ class TestIsCogCheap:
             A 600x600 stripped GTiff -> is_cog False (block is (W, small)).
         """
         path = _make(np.ones((600, 600), dtype="float32"), tmp_path / "plain.tif")
-        assert Dataset.read_file(path).cog.is_cog is False, "stripped plain must be False"
+        assert Dataset.read_file(path).cog.is_cog is False, (
+            "stripped plain must be False"
+        )
 
     def test_external_overviews_false(self, tmp_path):
         """A GeoTIFF with an external .ovr sidecar is rejected.
@@ -99,4 +103,6 @@ class TestIsCogCheap:
         ds = gdal.Open(path, gdal.GA_ReadOnly)
         ds.BuildOverviews("NEAREST", [2, 4])
         ds = None
-        assert Dataset.read_file(path).cog.is_cog is False, "external .ovr must be False"
+        assert Dataset.read_file(path).cog.is_cog is False, (
+            "external .ovr must be False"
+        )

@@ -190,7 +190,9 @@ class TestMaskedReads:
             must mask exactly that cell, proving the mask band is read with
             the same pixel offsets as the data.
         """
-        result = mask_band_dataset.io.read_array(band=0, window=[0, 0, 2, 1], masked=True)
+        result = mask_band_dataset.io.read_array(
+            band=0, window=[0, 0, 2, 1], masked=True
+        )
         assert result.shape == (1, 2), f"unexpected window shape {result.shape}"
         assert result.mask.sum() == 1, f"mask band ignored in window: {result.mask}"
         assert result.mask[0, 1], "the mask-band-zeroed cell must be masked"

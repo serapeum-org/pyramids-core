@@ -127,8 +127,16 @@ def _overlaid(dataset: Dataset) -> np.ndarray:
 CASES: list[tuple[str, Callable[[Dataset], Any]]] = [
     ("count_domain_cells", lambda ds: ds.analysis.count_domain_cells()),
     ("domain_area", lambda ds: ds.analysis.domain_area()),
-    ("stats", lambda ds: ds.analysis.stats(approx_ok=False)[["min", "max", "mean"]].to_numpy()),
-    ("extract", lambda ds: np.sort(np.asarray(ds.analysis.extract(), dtype="float64").ravel())),
+    (
+        "stats",
+        lambda ds: ds.analysis.stats(approx_ok=False)[
+            ["min", "max", "mean"]
+        ].to_numpy(),
+    ),
+    (
+        "extract",
+        lambda ds: np.sort(np.asarray(ds.analysis.extract(), dtype="float64").ravel()),
+    ),
     ("get_cell_coords", lambda ds: len(ds.cell.get_cell_coords(domain_only=True))),
     (
         "to_geodataframe",
@@ -143,11 +151,15 @@ CASES: list[tuple[str, Callable[[Dataset], Any]]] = [
     ("apply", lambda ds: _domain(ds.analysis.apply(lambda a: a * 2).io.read_array())),
     (
         "apply-tiled",
-        lambda ds: _domain(ds.analysis.apply(lambda a: a * 2, elementwise=True).io.read_array()),
+        lambda ds: _domain(
+            ds.analysis.apply(lambda a: a * 2, elementwise=True).io.read_array()
+        ),
     ),
     (
         "map_blocks",
-        lambda ds: _domain(ds.io.map_blocks(lambda t: t * 2, tile_size=2).io.read_array()),
+        lambda ds: _domain(
+            ds.io.map_blocks(lambda t: t * 2, tile_size=2).io.read_array()
+        ),
     ),
     (
         "stream_transform",

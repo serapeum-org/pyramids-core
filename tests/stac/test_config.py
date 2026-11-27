@@ -53,7 +53,9 @@ def _write(tmp_path, name, array, no_data_value):
         str: The written path.
     """
     path = str(tmp_path / name)
-    Dataset.from_array(array, no_data_value=no_data_value, geo_ref=_GEO).io.to_file(path)
+    Dataset.from_array(array, no_data_value=no_data_value, geo_ref=_GEO).io.to_file(
+        path
+    )
     return path
 
 
@@ -657,7 +659,9 @@ class TestMaterialise:
         assert result.bands.scale == [1.0], (
             f"the rebuild must not carry the source scale 0.01, got {result.scale}"
         )
-        assert result.bands.offset == [0.0], f"expected identity offset, got {result.bands.offset}"
+        assert result.bands.offset == [0.0], (
+            f"expected identity offset, got {result.bands.offset}"
+        )
         assert result.io.read_array(unpack=True)[1, 1] == pytest.approx(3.0), (
             "an unpacking read of the result must not apply a scale a second "
             f"time, got {result.read_array(unpack=True)[1, 1]}"
