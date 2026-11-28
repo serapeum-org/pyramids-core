@@ -46,6 +46,7 @@ from pyramids.base._locks import DummyLock, default_lock
 from pyramids.base._utils import (
     _is_identity_packing,
     apply_unpack,
+    normalize_band_selection,
     numpy_to_gdal_dtype,
     resolve_resampling,
 )
@@ -2260,31 +2261,9 @@ class _IO(_Engine["Dataset"]):
         See :meth:`Dataset.to_dataframe` for the full contract.
         """
         ds = self._ds
-        count = ds.band_count
-        if bands is None:
-            selected = list(range(count))
-        elif isinstance(bands, bool):
-            # bool subclasses int, so guard it before the int branch or True/False
-            # would silently select band 1/0 — almost certainly a caller mistake.
-            raise TypeError(
-                f"Dataset.to_dataframe() got a boolean bands={bands!r}; pass a band index, a "
-                "sequence of indices, or None for every band."
-            )
-        elif isinstance(bands, (int, np.integer)):
-            selected = [int(bands)]
-        else:
-            selected = [int(b) for b in bands]
-        if not selected:
-            raise ValueError(
-                "Dataset.to_dataframe() was given an empty bands= selection; pass "
-                f"bands=None for every band, or indices in 0..{count - 1}."
-            )
-        out_of_range = [b for b in selected if not 0 <= b < count]
-        if out_of_range:
-            raise ValueError(
-                f"Dataset.to_dataframe() got band index/indices {out_of_range} out of range "
-                f"for a {count}-band raster (valid 0..{count - 1})."
-            )
+        selected = normalize_band_selection(
+            bands, ds.band_count, caller="Dataset.to_dataframe"
+        )
         # `squeeze=True` keeps the classic flattened `(bands, rows, cols)` this band-indexed
         # dataframe build expects, not the dimension-preserving default (#1241).
         array = np.asarray(ds._read_array(squeeze=True), dtype="float64")
@@ -3688,16 +3667,12 @@ class _IO(_Engine["Dataset"]):
 
                 ```
         """
-        if bands is None:
-            bands = list(range(1, self._ds.band_count + 1))
-        elif isinstance(bands, int):
-            bands = [bands + 1]
-        elif isinstance(bands, list):
-            bands = [band + 1 for band in bands]
-        else:
-            raise ValueError("bands must be an integer or a list of integers.")
-
-        band_nums = bands
+        selected = normalize_band_selection(
+            bands, self._ds.band_count, caller="Dataset.to_xyz"
+        )
+        # `gdal2xyz` numbers bands from 1; the public `bands=` is 0-based like the other
+        # exporters, so shift here at the GDAL boundary.
+        band_nums = [b + 1 for b in selected]
         arr = gdal2xyz.gdal2xyz(
             self._ds.raster,
             str(path) if path is not None else None,
@@ -3706,13 +3681,7 @@ class _IO(_Engine["Dataset"]):
             band_nums=band_nums,
         )
         if path is None:
-            band_names = []
-            if bands is not None:
-                for band in bands:
-                    band_names.append(self._ds.band_names[band - 1])
-            else:
-                band_names = self._ds.band_names
-
+            band_names = [self._ds.band_names[b] for b in selected]
             df = pd.DataFrame(columns=["lon", "lat"] + band_names)
             df["lon"] = arr[0]
             df["lat"] = arr[1]
