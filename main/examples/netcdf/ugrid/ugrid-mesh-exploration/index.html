@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9567,7 +9567,7 @@ uses <code>tripcolor</code>, node data uses <code>tricontourf</code>.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Plot face-centered bathymetry</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"terrain"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"UGRID convention NC Bathymetry (synthetic)"</span><span class="p">,</span>
@@ -9575,7 +9575,7 @@ uses <code>tripcolor</code>, node data uses <code>tricontourf</code>.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-12"># Plot face-centered bathymetry
-glyph = synth_ds.plot(
+glyph = synth_ds.glyph.plot(
     "bathymetry",
     cmap="terrain",
     title="UGRID convention NC Bathymetry (synthetic)",
@@ -9606,7 +9606,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Plot node-centered velocity with smooth contours</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"velocity"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"YlOrRd"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Flow Velocity (synthetic)"</span><span class="p">,</span>
@@ -9614,7 +9614,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-13"># Plot node-centered velocity with smooth contours
-glyph = synth_ds.plot(
+glyph = synth_ds.glyph.plot(
     "velocity",
     cmap="YlOrRd",
     title="Flow Velocity (synthetic)",
@@ -9645,7 +9645,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Wireframe overlay on bathymetry</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"ocean_r"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Bathymetry with Mesh Wireframe"</span><span class="p">,</span>
@@ -9654,7 +9654,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-14"># Wireframe overlay on bathymetry
-glyph = synth_ds.plot(
+glyph = synth_ds.glyph.plot(
     "bathymetry",
     cmap="ocean_r",
     title="Bathymetry with Mesh Wireframe",
@@ -9686,12 +9686,12 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Wireframe only</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">plot_outline</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">"steelblue"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot_outline</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">"steelblue"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">"UGRID convention NC Mesh Structure"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-15"># Wireframe only
-glyph = synth_ds.plot_outline(color="steelblue", linewidth=0.2)
+glyph = synth_ds.glyph.plot_outline(color="steelblue", linewidth=0.2)
 plt.title("UGRID convention NC Mesh Structure")
 plt.show()</div>
 </div>
@@ -9804,11 +9804,11 @@ print(f"Faces in box [40k-60k, 375k-385k]: {len(faces_in_box)}")</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Subset to the central part of the estuary</span>
-<span class="n">subset</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">subset_by_bounds</span><span class="p">(</span><span class="mi">35000</span><span class="p">,</span> <span class="mi">370000</span><span class="p">,</span> <span class="mi">65000</span><span class="p">,</span> <span class="mi">390000</span><span class="p">)</span>
+<span class="n">subset</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">subset_by_bounds</span><span class="p">(</span><span class="mi">35000</span><span class="p">,</span> <span class="mi">370000</span><span class="p">,</span> <span class="mi">65000</span><span class="p">,</span> <span class="mi">390000</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original: </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces, </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2"> nodes"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Subset:   </span><span class="si">{</span><span class="n">subset</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces, </span><span class="si">{</span><span class="n">subset</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2"> nodes"</span><span class="p">)</span>
 
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"terrain"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Central Estuary Subset"</span><span class="p">,</span>
@@ -9816,11 +9816,11 @@ print(f"Faces in box [40k-60k, 375k-385k]: {len(faces_in_box)}")</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-17"># Subset to the central part of the estuary
-subset = synth_ds.subset_by_bounds(35000, 370000, 65000, 390000)
+subset = synth_ds.spatial.subset_by_bounds(35000, 370000, 65000, 390000)
 print(f"Original: {synth_ds.n_face} faces, {synth_ds.n_node} nodes")
 print(f"Subset:   {subset.n_face} faces, {subset.n_node} nodes")
 
-glyph = subset.plot(
+glyph = subset.glyph.plot(
     "bathymetry",
     cmap="terrain",
     title="Central Estuary Subset",
@@ -9873,10 +9873,10 @@ plt.show()</div>
     <span class="p">]</span>
 <span class="p">)</span>
 
-<span class="n">clipped</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">clip_poly</span><span class="p">,</span> <span class="n">touch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">clipped</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">clip_poly</span><span class="p">,</span> <span class="n">touch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Clipped: </span><span class="si">{</span><span class="n">clipped</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces, </span><span class="si">{</span><span class="n">clipped</span><span class="o">.</span><span class="n">n_node</span><span class="si">}</span><span class="s2"> nodes"</span><span class="p">)</span>
 
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">clipped</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">clipped</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"terrain"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Diamond-Clipped Region"</span><span class="p">,</span>
@@ -9895,10 +9895,10 @@ clip_poly = Polygon(
     ]
 )
 
-clipped = synth_ds.clip(clip_poly, touch=True)
+clipped = synth_ds.analysis.clip(clip_poly, touch=True)
 print(f"Clipped: {clipped.n_face} faces, {clipped.n_node} nodes")
 
-glyph = clipped.plot(
+glyph = clipped.glyph.plot(
     "bathymetry",
     cmap="terrain",
     title="Diamond-Clipped Region",
@@ -9941,7 +9941,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Convert bathymetry to a 200m resolution raster</span>
-<span class="n">raster</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span>
+<span class="n">raster</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cell_size</span><span class="o">=</span><span class="mf">200.0</span><span class="p">,</span>
     <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
@@ -9954,7 +9954,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-19"># Convert bathymetry to a 200m resolution raster
-raster = synth_ds.to_dataset(
+raster = synth_ds.io.to_dataset(
     "bathymetry",
     cell_size=200.0,
     method="nearest",
@@ -9990,7 +9990,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Linear interpolation for smoother result</span>
-<span class="n">raster_lin</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span>
+<span class="n">raster_lin</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span>
     <span class="s2">"velocity"</span><span class="p">,</span>
     <span class="n">cell_size</span><span class="o">=</span><span class="mf">200.0</span><span class="p">,</span>
     <span class="n">method</span><span class="o">=</span><span class="s2">"linear"</span><span class="p">,</span>
@@ -9999,7 +9999,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-20"># Linear interpolation for smoother result
-raster_lin = synth_ds.to_dataset(
+raster_lin = synth_ds.io.to_dataset(
     "velocity",
     cell_size=200.0,
     method="linear",
@@ -10073,14 +10073,14 @@ print("Saved bathymetry_raster.tif")</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Faces as Polygons with bathymetry column</span>
-<span class="n">gdf_faces</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
+<span class="n">gdf_faces</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"GeoDataFrame: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gdf_faces</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">gdf_faces</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Geometry type: </span><span class="si">{</span><span class="n">gdf_faces</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">geom_type</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="n">gdf_faces</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-22"># Faces as Polygons with bathymetry column
-gdf_faces = subset.to_geodataframe("bathymetry", location="face")
+gdf_faces = subset.vector.to_geodataframe("bathymetry", location="face")
 print(f"GeoDataFrame: {len(gdf_faces)} rows")
 print(f"Columns: {list(gdf_faces.columns)}")
 print(f"Geometry type: {gdf_faces.geometry.iloc[0].geom_type}")
@@ -10163,12 +10163,12 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Nodes as Points</span>
-<span class="n">gdf_nodes</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"node"</span><span class="p">)</span>
+<span class="n">gdf_nodes</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"node"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Node GeoDataFrame: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gdf_nodes</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
 <span class="n">gdf_nodes</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-24"># Nodes as Points
-gdf_nodes = subset.to_geodataframe("velocity", location="node")
+gdf_nodes = subset.vector.to_geodataframe("velocity", location="node")
 print(f"Node GeoDataFrame: {len(gdf_nodes)} points")
 gdf_nodes.head()</div>
 </div>
@@ -10196,13 +10196,13 @@ gdf_nodes.head()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># FeatureCollection (pyramids native vector type)</span>
-<span class="n">fc</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">to_feature_collection</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
+<span class="n">fc</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_feature_collection</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
 <span class="n">fc</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"FeatureCollection: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fc</span><span class="p">)</span><span class="si">}</span><span class="s2"> features"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">fc</span><span class="p">))</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-25"># FeatureCollection (pyramids native vector type)
-fc = subset.to_feature_collection("bathymetry", location="face")
+fc = subset.vector.to_feature_collection("bathymetry", location="face")
 fc
 print(f"FeatureCollection: {len(fc)} features")
 print(type(fc))</div>
@@ -10242,7 +10242,7 @@ print(type(fc))</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Reproject from Dutch national grid (EPSG:28992) to WGS84 (EPSG:4326)</span>
-<span class="n">ds_wgs84</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
+<span class="n">ds_wgs84</span> <span class="o">=</span> <span class="n">synth_ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original EPSG: </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reprojected EPSG: </span><span class="si">{</span><span class="n">ds_wgs84</span><span class="o">.</span><span class="n">epsg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original bounds: </span><span class="si">{</span><span class="n">synth_ds</span><span class="o">.</span><span class="n">bounds</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -10253,7 +10253,7 @@ print(type(fc))</div>
 <span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-26"># Reproject from Dutch national grid (EPSG:28992) to WGS84 (EPSG:4326)
-ds_wgs84 = synth_ds.to_crs(4326)
+ds_wgs84 = synth_ds.spatial.to_crs(4326)
 print(f"Original EPSG: {synth_ds.epsg}")
 print(f"Reprojected EPSG: {ds_wgs84.epsg}")
 print(f"Original bounds: {synth_ds.bounds}")
@@ -10299,7 +10299,7 @@ print(
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Write the synthetic dataset to a new UGRID NetCDF file</span>
 <span class="n">out_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"ugrid_convention_nc_synthetic.nc"</span><span class="p">)</span>
-<span class="n">synth_ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
+<span class="n">synth_ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Written to </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">out_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> KB)"</span><span class="p">)</span>
 
 <span class="c1"># Read it back and verify</span>
@@ -10311,7 +10311,7 @@ print(
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-27"># Write the synthetic dataset to a new UGRID NetCDF file
 out_path = Path("ugrid_convention_nc_synthetic.nc")
-synth_ds.to_file(out_path)
+synth_ds.io.to_file(out_path)
 print(f"Written to {out_path} ({out_path.stat().st_size / 1024:.0f} KB)")
 
 # Read it back and verify
@@ -10470,12 +10470,12 @@ print(f"Shape: {wl_var.shape}")</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Select a single time step</span>
-<span class="n">ds_t3</span> <span class="o">=</span> <span class="n">temporal_ds</span><span class="o">.</span><span class="n">sel_time</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">ds_t3</span> <span class="o">=</span> <span class="n">temporal_ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Time step 3: </span><span class="si">{</span><span class="n">ds_t3</span><span class="p">[</span><span class="s1">'water_level'</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Has time: </span><span class="si">{</span><span class="n">ds_t3</span><span class="p">[</span><span class="s1">'water_level'</span><span class="p">]</span><span class="o">.</span><span class="n">has_time</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-30"># Select a single time step
-ds_t3 = temporal_ds.sel_time(3)
+ds_t3 = temporal_ds.selection.isel(time=3)
 print(f"Time step 3: {ds_t3['water_level'].shape}")
 print(f"Has time: {ds_t3['water_level'].has_time}")</div>
 </div>
@@ -10708,7 +10708,7 @@ HTML(anim.to_jshtml())</div>
 </tr>
 <tr>
 <td>Time</td>
-<td><code>.sel_time()</code>, <code>.sel_time_range()</code></td>
+<td><code>.selection.isel(time=i)</code>, <code>.selection.isel(time=slice(a, b))</code></td>
 <td>Temporal subsetting</td>
 </tr>
 <tr>

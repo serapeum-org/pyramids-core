@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -8849,7 +8849,7 @@ white background the water spreads across.</p>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 <span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span><span class="o">.</span><span class="n">n_time_steps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
         <span class="s2">"mesh2d_waterdepth"</span><span class="p">,</span>
         <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
         <span class="n">cmap</span><span class="o">=</span><span class="s2">"Blues"</span><span class="p">,</span>
@@ -8861,7 +8861,7 @@ white background the water spreads across.</p>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 for ax, step in zip(axes, (0, ds["mesh2d_waterdepth"].n_time_steps - 1)):
-    ds.isel(time=step).plot(
+    ds.selection.isel(time=step).glyph.plot(
         "mesh2d_waterdepth",
         ax=ax,
         cmap="Blues",
@@ -8881,7 +8881,7 @@ plt.show()</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3802/245703939.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+<pre>/tmp/ipykernel_3821/4293888642.py:10: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre>
 </div>
@@ -8935,7 +8935,7 @@ variable through its first-class <code>active</code> field.</p>
 <span class="c1"># `active` is a first-class field on the variable; set it in place.</span>
 <span class="n">ds</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span><span class="o">.</span><span class="n">active</span> <span class="o">=</span> <span class="n">wet</span>
 
-<span class="n">mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>
+<span class="n">mask</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"mask shape:"</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">"(per-step: n_time x n_face)"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"wet cells per step:"</span><span class="p">,</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">mask</span><span class="p">])</span>
 </pre></div>
@@ -8946,7 +8946,7 @@ wet = depths &gt; DRYING  # (n_time, n_face) boolean — a per-step mask
 # `active` is a first-class field on the variable; set it in place.
 ds["mesh2d_waterdepth"].active = wet
 
-mask = ds.active_mask("mesh2d_waterdepth")
+mask = ds.topology.active_mask("mesh2d_waterdepth")
 print("mask shape:", mask.shape, "(per-step: n_time x n_face)")
 print("wet cells per step:", [int(w.sum()) for w in mask])</div>
 </div>
@@ -9001,7 +9001,7 @@ two stay distinguishable.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">masked</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">masked_values</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>  <span class="c1"># dry -&gt; NaN, on demand</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">masked</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">masked_values</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>  <span class="c1"># dry -&gt; NaN, on demand</span>
 <span class="n">raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># the untouched values</span>
 <span class="n">last</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"dry cells blanked at last step:"</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">masked</span><span class="p">[</span><span class="n">last</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
@@ -9013,7 +9013,7 @@ two stay distinguishable.</p>
     <span class="nb">float</span><span class="p">(</span><span class="n">masked</span><span class="p">[</span><span class="n">last</span><span class="p">][</span><span class="o">~</span><span class="n">wet</span><span class="p">[</span><span class="n">last</span><span class="p">]][</span><span class="mi">0</span><span class="p">]),</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">masked = ds.masked_values("mesh2d_waterdepth")  # dry -&gt; NaN, on demand
+<div class="clipboard-copy-txt" id="cell-4">masked = ds.analysis.masked_values("mesh2d_waterdepth")  # dry -&gt; NaN, on demand
 raw = np.asarray(ds["mesh2d_waterdepth"].data)  # the untouched values
 last = raw.shape[0] - 1
 print("dry cells blanked at last step:", int(np.isnan(masked[last]).sum()))
@@ -9152,16 +9152,19 @@ the mask as a companion variable — distinct from the fill value — so a read 
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">one</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">last</span><span class="p">)</span>  <span class="c1"># collapse to the last step</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"after isel(time): mask -&gt;"</span><span class="p">,</span> <span class="n">one</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<span class="n">rng</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel_time_range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"after sel_time_range(1, 4): mask -&gt;"</span><span class="p">,</span> <span class="n">rng</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">one</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">last</span><span class="p">)</span>  <span class="c1"># collapse to the last step</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"after isel(time): mask -&gt;"</span><span class="p">,</span> <span class="n">one</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">rng</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"after isel(time=slice(1, 4)): mask -&gt;"</span><span class="p">,</span>
+    <span class="n">rng</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"manzese_masked.nc"</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
     <span class="n">back</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
-    <span class="n">rt</span> <span class="o">=</span> <span class="n">back</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>
+    <span class="n">rt</span> <span class="o">=</span> <span class="n">back</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">active_mask</span><span class="p">(</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s2">"round-trip mask preserved:"</span><span class="p">,</span>
         <span class="n">rt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
@@ -9173,16 +9176,19 @@ the mask as a companion variable — distinct from the fill value — so a read 
         <span class="n">back</span><span class="p">[</span><span class="s2">"mesh2d_waterdepth"</span><span class="p">]</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ancillary_variables"</span><span class="p">),</span>
     <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">one = ds.isel(time=last)  # collapse to the last step
-print("after isel(time): mask -&gt;", one.active_mask("mesh2d_waterdepth").shape)
-rng = ds.sel_time_range(1, 4)
-print("after sel_time_range(1, 4): mask -&gt;", rng.active_mask("mesh2d_waterdepth").shape)
+<div class="clipboard-copy-txt" id="cell-6">one = ds.selection.isel(time=last)  # collapse to the last step
+print("after isel(time): mask -&gt;", one.topology.active_mask("mesh2d_waterdepth").shape)
+rng = ds.selection.isel(time=slice(1, 4))
+print(
+    "after isel(time=slice(1, 4)): mask -&gt;",
+    rng.topology.active_mask("mesh2d_waterdepth").shape,
+)
 
 with tempfile.TemporaryDirectory() as tmp:
     out = Path(tmp) / "manzese_masked.nc"
-    ds.to_file(out)
+    ds.io.to_file(out)
     back = MeshDataset.read_file(out)
-    rt = back.active_mask("mesh2d_waterdepth")
+    rt = back.topology.active_mask("mesh2d_waterdepth")
     print(
         "round-trip mask preserved:",
         rt is not None,
@@ -9205,17 +9211,9 @@ with tempfile.TemporaryDirectory() as tmp:
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>after isel(time): mask -&gt; (1824,)
-after sel_time_range(1, 4): mask -&gt; (3, 1824)
+after isel(time=slice(1, 4)): mask -&gt; (3, 1824)
 round-trip mask preserved: True | identical: True
 the main variable now advertises its mask companion: mesh2d_waterdepth_active
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3802/2762037098.py:3: DeprecationWarning: MeshDataset.sel_time_range is deprecated; use isel(time=slice(start, stop)) instead.
-  rng = ds.sel_time_range(1, 4)
 </pre>
 </div>
 </div>
@@ -9358,8 +9356,8 @@ shallower than <code>k + 1</code> layers has no such layer, so it comes back <co
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">surface</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">isel_layer</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>  <span class="c1"># layer 0 exists in every column</span>
-<span class="n">deep</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">isel_layer</span><span class="p">(</span><span class="mi">4</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>  <span class="c1"># only columns with &gt;=5 layers have it</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">surface</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel_layer</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>  <span class="c1"># layer 0 exists in every column</span>
+<span class="n">deep</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel_layer</span><span class="p">(</span><span class="mi">4</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>  <span class="c1"># only columns with &gt;=5 layers have it</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"surface layer -&gt; location:"</span><span class="p">,</span> <span class="n">surface</span><span class="o">.</span><span class="n">location</span><span class="p">,</span> <span class="s2">"shape:"</span><span class="p">,</span> <span class="n">surface</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">"columns present at layer 4:"</span><span class="p">,</span>
@@ -9370,14 +9368,14 @@ shallower than <code>k + 1</code> layers has no such layer, so it comes back <co
 <span class="p">)</span>
 
 <span class="c1"># `collapse_layer` is the same operation under a name that says 'give me a 2-D slice'.</span>
-<span class="n">bed_slice</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">collapse_layer</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>
+<span class="n">bed_slice</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">collapse_layer</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="s2">"salinity"</span><span class="p">]</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">"collapse_layer(0) matches isel_layer(0):"</span><span class="p">,</span>
     <span class="nb">bool</span><span class="p">((</span><span class="n">bed_slice</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="n">surface</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()),</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">surface = vol3d.isel_layer(0)["salinity"]  # layer 0 exists in every column
-deep = vol3d.isel_layer(4)["salinity"]  # only columns with &gt;=5 layers have it
+<div class="clipboard-copy-txt" id="cell-8">surface = vol3d.selection.isel_layer(0)["salinity"]  # layer 0 exists in every column
+deep = vol3d.selection.isel_layer(4)["salinity"]  # only columns with &gt;=5 layers have it
 print("surface layer -&gt; location:", surface.location, "shape:", surface.data.shape)
 print(
     "columns present at layer 4:",
@@ -9388,7 +9386,7 @@ print(
 )
 
 # `collapse_layer` is the same operation under a name that says 'give me a 2-D slice'.
-bed_slice = vol3d.collapse_layer(0)["salinity"]
+bed_slice = vol3d.selection.collapse_layer(0)["salinity"]
 print(
     "collapse_layer(0) matches isel_layer(0):",
     bool((bed_slice.data == surface.data).all()),
@@ -9445,13 +9443,13 @@ the whole topology round-trips through NetCDF.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">frame</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">frame</span> <span class="o">=</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">interop</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"tidy rows:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">),</span> <span class="s2">"== n_volume:"</span><span class="p">,</span> <span class="n">vol3d</span><span class="o">.</span><span class="n">n_volume</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">frame</span><span class="p">[[</span><span class="s2">"variable"</span><span class="p">,</span> <span class="s2">"element"</span><span class="p">,</span> <span class="s2">"layer"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
 <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"manzese_3d.nc"</span>
-    <span class="n">vol3d</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">vol3d</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
     <span class="n">back</span> <span class="o">=</span> <span class="n">MeshDataset</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
     <span class="n">vt</span> <span class="o">=</span> <span class="n">back</span><span class="o">.</span><span class="n">volume_topology</span>
     <span class="nb">print</span><span class="p">(</span>
@@ -9463,13 +9461,13 @@ the whole topology round-trips through NetCDF.</p>
         <span class="n">vt</span><span class="o">.</span><span class="n">n_volume</span> <span class="o">==</span> <span class="n">topology</span><span class="o">.</span><span class="n">n_volume</span><span class="p">,</span>
     <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9">frame = vol3d.to_dataframe()
+<div class="clipboard-copy-txt" id="cell-9">frame = vol3d.interop.to_dataframe()
 print("tidy rows:", len(frame), "== n_volume:", vol3d.n_volume)
 print(frame[["variable", "element", "layer", "value"]].head(8).to_string(index=False))
 
 with tempfile.TemporaryDirectory() as tmp:
     out = Path(tmp) / "manzese_3d.nc"
-    vol3d.to_file(out)
+    vol3d.io.to_file(out)
     back = MeshDataset.read_file(out)
     vt = back.volume_topology
     print(

@@ -64,7 +64,7 @@
     
     
   <meta name="panzoom-theme" content="material">
-<meta name="panzoom-data" content='{"selectors": [".mermaid", ".d2"], "initial_zoom_level": 1.0}'> </head>
+<meta name="panzoom-data" content='{"selectors": [".d2", ".mermaid"], "initial_zoom_level": 1.0}'> </head>
   
   
     
@@ -9056,7 +9056,7 @@ Face areas: min=8538, max=9774, mean=9299 m²
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Bathymetry (face-centered): deeper blue = deeper water</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"ocean_r"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"River Channel Bathymetry"</span><span class="p">,</span>
@@ -9065,7 +9065,7 @@ Face areas: min=8538, max=9774, mean=9299 m²
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-5"># Bathymetry (face-centered): deeper blue = deeper water
-glyph = ds.plot(
+glyph = ds.glyph.plot(
     "bathymetry",
     cmap="ocean_r",
     title="River Channel Bathymetry",
@@ -9109,7 +9109,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Velocity (node-centered): smooth contour interpolation</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"velocity"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"YlOrRd"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Flow Velocity (parabolic cross-section)"</span><span class="p">,</span>
@@ -9118,7 +9118,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-6"># Velocity (node-centered): smooth contour interpolation
-glyph = ds.plot(
+glyph = ds.glyph.plot(
     "velocity",
     cmap="YlOrRd",
     title="Flow Velocity (parabolic cross-section)",
@@ -9162,14 +9162,14 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Wireframe: mesh structure</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">plot_outline</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">"steelblue"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot_outline</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">"steelblue"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">"Channel Mesh Structure (273 quad faces)"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">"Easting (m)"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">"Northing (m)"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7"># Wireframe: mesh structure
-glyph = ds.plot_outline(color="steelblue", linewidth=0.4)
+glyph = ds.glyph.plot_outline(color="steelblue", linewidth=0.4)
 plt.title("Channel Mesh Structure (273 quad faces)")
 plt.xlabel("Easting (m)")
 plt.ylabel("Northing (m)")
@@ -9211,7 +9211,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Overlay: bathymetry with mesh edges visible</span>
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"terrain"</span><span class="p">,</span>
     <span class="n">edgecolor</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span>
@@ -9220,7 +9220,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-8"># Overlay: bathymetry with mesh edges visible
-glyph = ds.plot(
+glyph = ds.glyph.plot(
     "bathymetry",
     cmap="terrain",
     edgecolor="gray",
@@ -9327,14 +9327,14 @@ Range: [-1.48, 1.42] m
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Select individual time steps</span>
-<span class="n">ds_t0</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel_time</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">ds_t3</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel_time</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">ds_t0</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">ds_t3</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Time step 0: water_level shape = </span><span class="si">{</span><span class="n">ds_t0</span><span class="p">[</span><span class="s1">'water_level'</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Time step 3: water_level shape = </span><span class="si">{</span><span class="n">ds_t3</span><span class="p">[</span><span class="s1">'water_level'</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10"># Select individual time steps
-ds_t0 = ds.sel_time(0)
-ds_t3 = ds.sel_time(3)
+ds_t0 = ds.selection.isel(time=0)
+ds_t3 = ds.selection.isel(time=3)
 print(f"Time step 0: water_level shape = {ds_t0['water_level'].shape}")
 print(f"Time step 3: water_level shape = {ds_t3['water_level'].shape}")</div>
 </div>
@@ -9350,16 +9350,6 @@ print(f"Time step 3: water_level shape = {ds_t3['water_level'].shape}")</div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Time step 0: water_level shape = (273,)
 Time step 3: water_level shape = (273,)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3862/2128985135.py:2: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
-  ds_t0 = ds.sel_time(0)
-/tmp/ipykernel_3862/2128985135.py:3: DeprecationWarning: MeshDataset.sel_time is deprecated; use isel(time=index) instead.
-  ds_t3 = ds.sel_time(3)
 </pre>
 </div>
 </div>
@@ -9573,11 +9563,11 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Bounding box subset: extract the meander bend (roughly x=1000-3500)</span>
-<span class="n">bend</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">subset_by_bounds</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="o">-</span><span class="mi">500</span><span class="p">,</span> <span class="mi">3500</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+<span class="n">bend</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">subset_by_bounds</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="o">-</span><span class="mi">500</span><span class="p">,</span> <span class="mi">3500</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Original: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Bend:     </span><span class="si">{</span><span class="n">bend</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces"</span><span class="p">)</span>
 
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"ocean_r"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">"Meander Bend — Bathymetry"</span><span class="p">,</span>
@@ -9586,11 +9576,11 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-13"># Bounding box subset: extract the meander bend (roughly x=1000-3500)
-bend = ds.subset_by_bounds(1000, -500, 3500, 500)
+bend = ds.spatial.subset_by_bounds(1000, -500, 3500, 500)
 print(f"Original: {ds.n_face} faces")
 print(f"Bend:     {bend.n_face} faces")
 
-glyph = bend.plot(
+glyph = bend.glyph.plot(
     "bathymetry",
     cmap="ocean_r",
     title="Meander Bend — Bathymetry",
@@ -9648,10 +9638,10 @@ Bend:     133 faces
 <span class="n">deep_x</span><span class="p">,</span> <span class="n">deep_y</span> <span class="o">=</span> <span class="n">cx</span><span class="p">[</span><span class="n">deepest_face</span><span class="p">],</span> <span class="n">cy</span><span class="p">[</span><span class="n">deepest_face</span><span class="p">]</span>
 <span class="n">clip_region</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">deep_x</span><span class="p">,</span> <span class="n">deep_y</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="mi">800</span><span class="p">)</span>  <span class="c1"># 800m radius circle</span>
 
-<span class="n">clipped</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">clip_region</span><span class="p">,</span> <span class="n">touch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">clipped</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">clip_region</span><span class="p">,</span> <span class="n">touch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Clipped to circle: </span><span class="si">{</span><span class="n">clipped</span><span class="o">.</span><span class="n">n_face</span><span class="si">}</span><span class="s2"> faces around deepest point"</span><span class="p">)</span>
 
-<span class="n">glyph</span> <span class="o">=</span> <span class="n">clipped</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+<span class="n">glyph</span> <span class="o">=</span> <span class="n">clipped</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
     <span class="s2">"bathymetry"</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">"ocean_r"</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"800m Radius Around Deepest Point (</span><span class="si">{</span><span class="n">ds</span><span class="p">[</span><span class="s1">'bathymetry'</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">deepest_face</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">m)"</span><span class="p">,</span>
@@ -9665,10 +9655,10 @@ deepest_face = np.argmin(ds["bathymetry"].data)
 deep_x, deep_y = cx[deepest_face], cy[deepest_face]
 clip_region = Point(deep_x, deep_y).buffer(800)  # 800m radius circle
 
-clipped = ds.clip(clip_region, touch=True)
+clipped = ds.analysis.clip(clip_region, touch=True)
 print(f"Clipped to circle: {clipped.n_face} faces around deepest point")
 
-glyph = clipped.plot(
+glyph = clipped.glyph.plot(
     "bathymetry",
     cmap="ocean_r",
     title=f"800m Radius Around Deepest Point ({ds['bathymetry'].data[deepest_face]:.1f}m)",
@@ -9730,23 +9720,23 @@ producing a standard pyramids <code>Dataset</code> for raster operations.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Nearest-neighbor rasterization</span>
-<span class="n">raster_nn</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
+<span class="n">raster_nn</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="sa">f</span><span class="s2">"Nearest: </span><span class="si">{</span><span class="n">raster_nn</span><span class="o">.</span><span class="n">rows</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">raster_nn</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s2">, cell_size=</span><span class="si">{</span><span class="n">raster_nn</span><span class="o">.</span><span class="n">cell_size</span><span class="si">}</span><span class="s2">m"</span>
 <span class="p">)</span>
 
 <span class="c1"># Linear interpolation (smoother)</span>
-<span class="n">raster_lin</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"linear"</span><span class="p">)</span>
+<span class="n">raster_lin</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"linear"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Linear:  </span><span class="si">{</span><span class="n">raster_lin</span><span class="o">.</span><span class="n">rows</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">raster_lin</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-15"># Nearest-neighbor rasterization
-raster_nn = ds.to_dataset("bathymetry", cell_size=50.0, method="nearest")
+raster_nn = ds.io.to_dataset("bathymetry", cell_size=50.0, method="nearest")
 print(
     f"Nearest: {raster_nn.rows} x {raster_nn.columns}, cell_size={raster_nn.cell_size}m"
 )
 
 # Linear interpolation (smoother)
-raster_lin = ds.to_dataset("velocity", cell_size=50.0, method="linear")
+raster_lin = ds.io.to_dataset("velocity", cell_size=50.0, method="linear")
 print(f"Linear:  {raster_lin.rows} x {raster_lin.columns}")</div>
 </div>
 </div>
@@ -9812,7 +9802,7 @@ plt.show()</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/tmp/ipykernel_3862/618950163.py:6: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+<pre>/tmp/ipykernel_3879/618950163.py:6: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre>
 </div>
@@ -9901,14 +9891,14 @@ print("Saved river_bathymetry.tif")</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Export faces as polygons with bathymetry data</span>
-<span class="n">gdf</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
+<span class="n">gdf</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"bathymetry"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"face"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"GeoDataFrame: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gdf</span><span class="p">)</span><span class="si">}</span><span class="s2"> polygons"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CRS: </span><span class="si">{</span><span class="n">gdf</span><span class="o">.</span><span class="n">crs</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="n">gdf</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-18"># Export faces as polygons with bathymetry data
-gdf = bend.to_geodataframe("bathymetry", location="face")
+gdf = bend.vector.to_geodataframe("bathymetry", location="face")
 print(f"GeoDataFrame: {len(gdf)} polygons")
 print(f"Columns: {list(gdf.columns)}")
 print(f"CRS: {gdf.crs}")
@@ -10076,7 +10066,7 @@ plt.show()</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Nodes as points with velocity</span>
-<span class="n">gdf_nodes</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"node"</span><span class="p">)</span>
+<span class="n">gdf_nodes</span> <span class="o">=</span> <span class="n">bend</span><span class="o">.</span><span class="n">vector</span><span class="o">.</span><span class="n">to_geodataframe</span><span class="p">(</span><span class="s2">"velocity"</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">"node"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Node GeoDataFrame: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gdf_nodes</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
@@ -10094,7 +10084,7 @@ plt.show()</div>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-20"># Nodes as points with velocity
-gdf_nodes = bend.to_geodataframe("velocity", location="node")
+gdf_nodes = bend.vector.to_geodataframe("velocity", location="node")
 print(f"Node GeoDataFrame: {len(gdf_nodes)} points")
 
 fig, ax = plt.subplots(figsize=(10, 4))
@@ -10393,36 +10383,36 @@ input[type=range].anim-slider {
 }
 </style>
 <div class="animation">
-<img alt="No description has been provided for this image" id="_anim_img67d9f10c33054b84a131625ccda3fd5c"/>
+<img alt="No description has been provided for this image" id="_anim_img592fbc6a93f7486a8f0d06814371cf02"/>
 <div class="anim-controls">
-<input class="anim-slider" id="_anim_slider67d9f10c33054b84a131625ccda3fd5c" max="1" min="0" name="points" oninput="anim67d9f10c33054b84a131625ccda3fd5c.set_frame(parseInt(this.value));" step="1" type="range" value="0"/>
+<input class="anim-slider" id="_anim_slider592fbc6a93f7486a8f0d06814371cf02" max="1" min="0" name="points" oninput="anim592fbc6a93f7486a8f0d06814371cf02.set_frame(parseInt(this.value));" step="1" type="range" value="0"/>
 <div class="anim-buttons">
-<button aria-label="Decrease speed" onclick="anim67d9f10c33054b84a131625ccda3fd5c.slower()" title="Decrease speed">
+<button aria-label="Decrease speed" onclick="anim592fbc6a93f7486a8f0d06814371cf02.slower()" title="Decrease speed">
 <i class="fa fa-minus"></i></button>
-<button aria-label="First frame" onclick="anim67d9f10c33054b84a131625ccda3fd5c.first_frame()" title="First frame">
+<button aria-label="First frame" onclick="anim592fbc6a93f7486a8f0d06814371cf02.first_frame()" title="First frame">
 <i class="fa fa-fast-backward"></i></button>
-<button aria-label="Previous frame" onclick="anim67d9f10c33054b84a131625ccda3fd5c.previous_frame()" title="Previous frame">
+<button aria-label="Previous frame" onclick="anim592fbc6a93f7486a8f0d06814371cf02.previous_frame()" title="Previous frame">
 <i class="fa fa-step-backward"></i></button>
-<button aria-label="Play backwards" onclick="anim67d9f10c33054b84a131625ccda3fd5c.reverse_animation()" title="Play backwards">
+<button aria-label="Play backwards" onclick="anim592fbc6a93f7486a8f0d06814371cf02.reverse_animation()" title="Play backwards">
 <i class="fa fa-play fa-flip-horizontal"></i></button>
-<button aria-label="Pause" onclick="anim67d9f10c33054b84a131625ccda3fd5c.pause_animation()" title="Pause">
+<button aria-label="Pause" onclick="anim592fbc6a93f7486a8f0d06814371cf02.pause_animation()" title="Pause">
 <i class="fa fa-pause"></i></button>
-<button aria-label="Play" onclick="anim67d9f10c33054b84a131625ccda3fd5c.play_animation()" title="Play">
+<button aria-label="Play" onclick="anim592fbc6a93f7486a8f0d06814371cf02.play_animation()" title="Play">
 <i class="fa fa-play"></i></button>
-<button aria-label="Next frame" onclick="anim67d9f10c33054b84a131625ccda3fd5c.next_frame()" title="Next frame">
+<button aria-label="Next frame" onclick="anim592fbc6a93f7486a8f0d06814371cf02.next_frame()" title="Next frame">
 <i class="fa fa-step-forward"></i></button>
-<button aria-label="Last frame" onclick="anim67d9f10c33054b84a131625ccda3fd5c.last_frame()" title="Last frame">
+<button aria-label="Last frame" onclick="anim592fbc6a93f7486a8f0d06814371cf02.last_frame()" title="Last frame">
 <i class="fa fa-fast-forward"></i></button>
-<button aria-label="Increase speed" onclick="anim67d9f10c33054b84a131625ccda3fd5c.faster()" title="Increase speed">
+<button aria-label="Increase speed" onclick="anim592fbc6a93f7486a8f0d06814371cf02.faster()" title="Increase speed">
 <i class="fa fa-plus"></i></button>
 </div>
-<form action="#n" aria-label="Repetition mode" class="anim-state" name="_anim_loop_select67d9f10c33054b84a131625ccda3fd5c" title="Repetition mode">
-<input id="_anim_radio1_67d9f10c33054b84a131625ccda3fd5c" name="state" type="radio" value="once"/>
-<label for="_anim_radio1_67d9f10c33054b84a131625ccda3fd5c">Once</label>
-<input checked="" id="_anim_radio2_67d9f10c33054b84a131625ccda3fd5c" name="state" type="radio" value="loop"/>
-<label for="_anim_radio2_67d9f10c33054b84a131625ccda3fd5c">Loop</label>
-<input id="_anim_radio3_67d9f10c33054b84a131625ccda3fd5c" name="state" type="radio" value="reflect"/>
-<label for="_anim_radio3_67d9f10c33054b84a131625ccda3fd5c">Reflect</label>
+<form action="#n" aria-label="Repetition mode" class="anim-state" name="_anim_loop_select592fbc6a93f7486a8f0d06814371cf02" title="Repetition mode">
+<input id="_anim_radio1_592fbc6a93f7486a8f0d06814371cf02" name="state" type="radio" value="once"/>
+<label for="_anim_radio1_592fbc6a93f7486a8f0d06814371cf02">Once</label>
+<input checked="" id="_anim_radio2_592fbc6a93f7486a8f0d06814371cf02" name="state" type="radio" value="loop"/>
+<label for="_anim_radio2_592fbc6a93f7486a8f0d06814371cf02">Loop</label>
+<input id="_anim_radio3_592fbc6a93f7486a8f0d06814371cf02" name="state" type="radio" value="reflect"/>
+<label for="_anim_radio3_592fbc6a93f7486a8f0d06814371cf02">Reflect</label>
 </form>
 </div>
 </div>
@@ -10430,9 +10420,9 @@ input[type=range].anim-slider {
   /* Instantiate the Animation class. */
   /* The IDs given should match those used in the template above. */
   (function() {
-    var img_id = "_anim_img67d9f10c33054b84a131625ccda3fd5c";
-    var slider_id = "_anim_slider67d9f10c33054b84a131625ccda3fd5c";
-    var loop_select_id = "_anim_loop_select67d9f10c33054b84a131625ccda3fd5c";
+    var img_id = "_anim_img592fbc6a93f7486a8f0d06814371cf02";
+    var slider_id = "_anim_slider592fbc6a93f7486a8f0d06814371cf02";
+    var loop_select_id = "_anim_loop_select592fbc6a93f7486a8f0d06814371cf02";
     var frames = new Array(6);
     
   frames[0] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAMgCAYAAADbcAZoAAAAOnRFWHRTb2Z0d2FyZQBNYXRwbG90\
@@ -13969,7 +13959,7 @@ GEMAAQAAAGAMAQQAAACAMQQQAAAAAMb8P9BW0P8DADqbAAAAAElFTkSuQmCC\
     /* set a timeout to make sure all the above elements are created before
        the object is initialized. */
     setTimeout(function() {
-        anim67d9f10c33054b84a131625ccda3fd5c = new Animation(frames, img_id, slider_id, 800.0,
+        anim592fbc6a93f7486a8f0d06814371cf02 = new Animation(frames, img_id, slider_id, 800.0,
                                  loop_select_id);
     }, 0);
   })()
