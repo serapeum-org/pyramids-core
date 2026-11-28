@@ -20,10 +20,10 @@ from pyramids.netcdf.ugrid import MeshDataset
 ds = MeshDataset.read_file("flood_map.nc")
 
 # The mask as read — True = active/wet, never applied to the values on its own.
-mask = ds.active_mask("water_depth")        # (n_element,) or (n_time, n_element), or None
+mask = ds.topology.active_mask("water_depth")        # (n_element,) or (n_time, n_element), or None
 
 # Opt in to treat dry as missing: dry cells become NaN on top of the nodata blanking.
-wet_only = ds.masked_values("water_depth")  # dry AND missing are NaN; still distinguishable
+wet_only = ds.analysis.masked_values("water_depth")  # dry AND missing are NaN; still distinguishable
 ```
 
 Key properties:
@@ -56,8 +56,8 @@ ds.n_layer                  # the MAX layer count over the columns (documented),
 
 # The k-th layer per column as a 2-D face field; columns shallower than k+1 layers are NaN,
 # never silently padded.
-surface = ds.isel_layer(0)              # -> location="face", shape (time?, n_face)
-bed_slice = ds.collapse_layer(2)        # the explicit 2-D collapse (alias of isel_layer for faces)
+surface = ds.selection.isel_layer(0)              # -> location="face", shape (time?, n_face)
+bed_slice = ds.selection.collapse_layer(2)        # the explicit 2-D collapse (alias of isel_layer for faces)
 ```
 
 `VolumeTopology` is the CSR layout the finite-volume codes use:

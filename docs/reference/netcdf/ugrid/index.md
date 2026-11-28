@@ -82,17 +82,17 @@ water_level = ds["water_level"]
 print(f"Location: {water_level.location}, Shape: {water_level.shape}")
 
 # Convert to regular grid (raster)
-raster = ds.to_dataset("water_level", cell_size=100.0)
+raster = ds.io.to_dataset("water_level", cell_size=100.0)
 raster.io.to_file("water_level.tif")
 
 # Convert to GeoDataFrame
-gdf = ds.to_geodataframe("water_level", location="face")
+gdf = ds.vector.to_geodataframe("water_level", location="face")
 
 # Clip to a polygon
 clipped = ds.analysis.clip(polygon_mask)
 
 # Reproject
-reprojected = ds.to_crs(4326)
+reprojected = ds.spatial.to_crs(4326)
 ```
 
 ## Module Reference
