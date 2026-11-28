@@ -160,6 +160,29 @@ def test_to_image_accessor_matches_flat_facade():
     assert accessor.size == flat.size
 
 
+def test_plot_dispatches_to_a_non_matplotlib_backend():
+    """``backend != "matplotlib"`` marshals the kwargs and hands the mesh to the resolved backend.
+
+    A fake backend is registered in the shared plot-backend cache so the dispatch path runs
+    without needing an interactive renderer; it is torn down afterwards. The call carries only
+    default (matplotlib-agnostic) parameters, so nothing is rejected, and the engine form emits
+    no deprecation.
+    """
+    from pyramids.base import _plot_backends
+
+    mesh = _mesh()
+    _plot_backends._CACHE = {"demo": lambda obj, *, backend, **kw: (obj, backend, kw)}
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            obj, backend, forwarded = mesh.glyph.plot("v", backend="demo")
+    finally:
+        _plot_backends.clear_plot_backend_cache()
+    assert obj is mesh
+    assert backend == "demo"
+    assert forwarded["variable_name"] == "v"
+
+
 def test_accessor_form_does_not_warn():
     """The engine call is the non-deprecated path -- it emits no ``mesh.*`` deprecation.
 

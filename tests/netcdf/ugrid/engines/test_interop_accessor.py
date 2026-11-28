@@ -77,6 +77,13 @@ def test_npartitions_forwarded_through_accessor():
     assert mesh.interop.to_dask_dataframe(npartitions=3).npartitions == 3
 
 
+def test_to_dask_dataframe_rejects_bad_npartitions():
+    """``npartitions < 1`` is refused before any optional-dask import is attempted."""
+    mesh = _mesh()
+    with pytest.raises(ValueError, match="npartitions=0"):
+        mesh.interop.to_dask_dataframe(npartitions=0)
+
+
 def test_accessor_form_does_not_warn():
     """The engine call is the non-deprecated path -- no ``DeprecationWarning``."""
     pytest.importorskip("xarray")
