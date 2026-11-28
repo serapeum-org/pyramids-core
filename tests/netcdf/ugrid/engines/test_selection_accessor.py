@@ -141,8 +141,9 @@ def test_accessor_is_a_selection_engine():
 @pytest.mark.parametrize("name,builder,invoke", _CASES, ids=[c[0] for c in _CASES])
 def test_accessor_matches_flat_facade(name, builder, invoke):
     """``mesh.selection.<name>()`` equals the deprecated flat ``mesh.<name>()``."""
+    subject = builder()
     with pytest.warns(DeprecationWarning, match=rf"mesh\.{name}\b"):
-        flat = invoke(builder())
+        flat = invoke(subject)
     accessor = invoke(builder().selection)
     _assert_equal(accessor, flat)
 

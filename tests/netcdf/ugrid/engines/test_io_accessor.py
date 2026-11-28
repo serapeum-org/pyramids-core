@@ -47,8 +47,9 @@ def test_to_file_matches_flat_facade(tmp_path):
     """``mesh.io.to_file`` round-trips to the same variables as the deprecated flat form."""
     flat_path = tmp_path / "flat.nc"
     engine_path = tmp_path / "engine.nc"
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.to_file\b"):
-        _static().to_file(flat_path)
+        subject.to_file(flat_path)
     _static().io.to_file(engine_path)
     flat = MeshDataset.read_file(flat_path)
     engine = MeshDataset.read_file(engine_path)
@@ -57,8 +58,9 @@ def test_to_file_matches_flat_facade(tmp_path):
 
 def test_to_bytes_matches_flat_facade(tmp_path):
     """``mesh.io.to_bytes`` serialises to a buffer that reads back like the flat form."""
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.to_bytes\b"):
-        flat = _static().to_bytes()
+        flat = subject.to_bytes()
     engine = _static().io.to_bytes()
     assert isinstance(engine, bytes)
     assert isinstance(flat, bytes)
@@ -74,8 +76,9 @@ def test_to_bytes_matches_flat_facade(tmp_path):
 
 def test_to_dataset_matches_flat_facade():
     """``mesh.io.to_dataset`` rasterises to the same grid as the deprecated flat form."""
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.to_dataset\b"):
-        flat = _static().to_dataset("v", cell_size=0.5, method="nearest")
+        flat = subject.to_dataset("v", cell_size=0.5, method="nearest")
     engine = _static().io.to_dataset("v", cell_size=0.5, method="nearest")
     assert isinstance(engine, Dataset)
     np.testing.assert_array_equal(engine.io.read_array(), flat.io.read_array())
@@ -84,8 +87,9 @@ def test_to_dataset_matches_flat_facade():
 def test_rasterize_like_matches_flat_facade():
     """``mesh.io.rasterize_like`` snaps to the reference grid like the flat form."""
     reference = _static().io.to_dataset("v", cell_size=0.5, method="nearest")
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.rasterize_like\b"):
-        flat = _static().rasterize_like(reference, "v")
+        flat = subject.rasterize_like(reference, "v")
     engine = _static().io.rasterize_like(reference, "v")
     np.testing.assert_array_equal(engine.io.read_array(), flat.io.read_array())
 
@@ -93,8 +97,9 @@ def test_rasterize_like_matches_flat_facade():
 def test_burn_matches_flat_facade():
     """``mesh.io.burn`` burns the geometry onto the faces like the flat form."""
     geom = box(-1.0, -1.0, 1.05, 2.0)
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.burn\b"):
-        flat = _static().burn(geom, 9.0, name="b")
+        flat = subject.burn(geom, 9.0, name="b")
     engine = _static().io.burn(geom, 9.0, name="b")
     assert isinstance(engine, MeshDataset)
     np.testing.assert_array_equal(engine["b"].data, flat["b"].data)
@@ -106,8 +111,9 @@ def test_to_zarr_matches_flat_facade(tmp_path):
     xr = pytest.importorskip("xarray")
     flat_store = tmp_path / "flat.zarr"
     engine_store = tmp_path / "engine.zarr"
+    subject = _static()
     with pytest.warns(DeprecationWarning, match=r"mesh\.to_zarr\b"):
-        _static().to_zarr(flat_store)
+        subject.to_zarr(flat_store)
     _static().io.to_zarr(engine_store)
     flat = xr.open_dataset(flat_store, engine="zarr")
     engine = xr.open_dataset(engine_store, engine="zarr")

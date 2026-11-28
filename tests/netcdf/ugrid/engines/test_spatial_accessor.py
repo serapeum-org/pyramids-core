@@ -77,8 +77,9 @@ def test_set_crs_accessor_matches_flat_facade():
 
 def test_to_crs_accessor_matches_flat_facade():
     """``mesh.spatial.to_crs()`` equals the deprecated ``mesh.to_crs()``."""
+    subject = _crs_mesh()
     with pytest.warns(DeprecationWarning, match="mesh.to_crs"):
-        flat = _crs_mesh().to_crs(3857)
+        flat = subject.to_crs(3857)
     accessor = _crs_mesh().spatial.to_crs(3857)
     assert accessor.epsg == flat.epsg == 3857
     np.testing.assert_array_equal(accessor.mesh.node_x, flat.mesh.node_x)
@@ -87,8 +88,9 @@ def test_to_crs_accessor_matches_flat_facade():
 
 def test_subset_by_bounds_accessor_matches_flat_facade():
     """``mesh.spatial.subset_by_bounds()`` equals the deprecated ``mesh.subset_by_bounds()``."""
+    subject = _mesh()
     with pytest.warns(DeprecationWarning, match="mesh.subset_by_bounds"):
-        flat = _mesh().subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
+        flat = subject.subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
     accessor = _mesh().spatial.subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
     assert accessor.n_face == flat.n_face
     assert accessor.equals(flat)
@@ -96,8 +98,9 @@ def test_subset_by_bounds_accessor_matches_flat_facade():
 
 def test_crop_accessor_matches_flat_facade():
     """``mesh.spatial.crop()`` equals the deprecated ``mesh.crop()``."""
+    subject = _mesh()
     with pytest.warns(DeprecationWarning, match="mesh.crop"):
-        flat = _mesh().crop(bbox=(-0.5, -0.5, 1.5, 1.5))
+        flat = subject.crop(bbox=(-0.5, -0.5, 1.5, 1.5))
     accessor = _mesh().spatial.crop(bbox=(-0.5, -0.5, 1.5, 1.5))
     assert accessor.n_face == flat.n_face
     assert accessor.equals(flat)
@@ -105,8 +108,9 @@ def test_crop_accessor_matches_flat_facade():
 
 def test_resample_accessor_matches_flat_facade():
     """``mesh.spatial.resample()`` equals the deprecated ``mesh.resample()``."""
+    subject = _dated_mesh()
     with pytest.warns(DeprecationWarning, match="mesh.resample"):
-        flat = _dated_mesh().resample("1MS")
+        flat = subject.resample("1MS")
     accessor = _dated_mesh().spatial.resample("1MS")
     np.testing.assert_array_equal(
         np.asarray(accessor["v"].data), np.asarray(flat["v"].data)
@@ -127,8 +131,9 @@ def test_accessor_form_does_not_warn():
 def test_regrid_accessor_matches_flat_facade():
     """`mesh.spatial.regrid()` equals the deprecated flat `mesh.regrid()`."""
     target = _mesh()
+    subject = _mesh()
     with pytest.warns(DeprecationWarning, match=r"mesh\.regrid"):
-        flat = _mesh().regrid(target, method="overlap", variable_name="v")
+        flat = subject.regrid(target, method="overlap", variable_name="v")
     accessor = _mesh().spatial.regrid(target, method="overlap", variable_name="v")
     np.testing.assert_array_equal(
         np.asarray(accessor["v"].data), np.asarray(flat["v"].data)

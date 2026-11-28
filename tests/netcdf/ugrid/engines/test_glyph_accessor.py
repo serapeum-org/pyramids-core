@@ -125,7 +125,8 @@ def test_plot_outline_accessor_matches_flat_facade():
         flat = mesh.plot_outline()
     accessor = mesh.glyph.plot_outline()
     assert isinstance(accessor, MeshGlyph)
-    assert accessor.im is None and flat.im is None
+    assert accessor.im is None
+    assert flat.im is None
 
 
 def test_animate_accessor_matches_flat_facade():

@@ -65,7 +65,8 @@ def test_to_dask_dataframe_accessor_matches_flat_facade():
 
     mesh = _mesh()
     with pytest.warns(DeprecationWarning, match="mesh.to_dask_dataframe"):
-        flat = mesh.to_dask_dataframe(npartitions=2).compute()
+        lazy_flat = mesh.to_dask_dataframe(npartitions=2)
+    flat = lazy_flat.compute()
     accessor = mesh.interop.to_dask_dataframe(npartitions=2).compute()
     pd.testing.assert_frame_equal(accessor, flat)
 
