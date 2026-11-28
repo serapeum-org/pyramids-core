@@ -252,7 +252,7 @@ def _cmd_mesh_to_location(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        moved = mesh.to_location(args.location, variable_name=args.var)
+        moved = mesh.analysis.to_location(args.location, variable_name=args.var)
     moved.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -339,7 +339,9 @@ def _cmd_mesh_regrid(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     target = MeshDataset.read_file(args.target)
     with map_lookup_errors():
-        regridded = mesh.regrid(target, method=args.method, variable_name=args.var)
+        regridded = mesh.spatial.regrid(
+            target, method=args.method, variable_name=args.var
+        )
     regridded.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0

@@ -122,3 +122,22 @@ def test_accessor_form_does_not_warn():
         _mesh().spatial.subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
         _mesh().spatial.crop(bbox=(-0.5, -0.5, 1.5, 1.5))
         _dated_mesh().spatial.resample("1MS")
+
+
+def test_regrid_accessor_matches_flat_facade():
+    """`mesh.spatial.regrid()` equals the deprecated flat `mesh.regrid()`."""
+    target = _mesh()
+    with pytest.warns(DeprecationWarning, match=r"mesh\.regrid"):
+        flat = _mesh().regrid(target, method="overlap", variable_name="v")
+    accessor = _mesh().spatial.regrid(target, method="overlap", variable_name="v")
+    np.testing.assert_array_equal(
+        np.asarray(accessor["v"].data), np.asarray(flat["v"].data)
+    )
+
+
+def test_regrid_accessor_form_does_not_warn():
+    """The `mesh.spatial.regrid` path emits no deprecation."""
+    target = _mesh()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        _mesh().spatial.regrid(target, method="overlap", variable_name="v")

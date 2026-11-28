@@ -40,7 +40,7 @@ from pyramids.netcdf.ugrid import fill as _fill
 from pyramids.netcdf.ugrid import focal as _focal
 from pyramids.netcdf.ugrid import graph as _graph
 from pyramids.netcdf.ugrid import vector_ops as _vector_ops
-from pyramids.netcdf.ugrid._facades import _KEEP
+from pyramids.netcdf.ugrid._facades import _KEEP, _representable
 from pyramids.netcdf.ugrid.engines._base import _MeshEngine
 from pyramids.netcdf.ugrid.spatial import MeshSpatialIndex, clip_mesh
 
@@ -1051,3 +1051,59 @@ class _MeshAnalysis(_MeshEngine):
             ValueError: No variable has a time dimension.
         """
         return self._ds.selection.reduce("var", skipna=skipna)
+
+    def to_location(self, location: str, variable_name: str | None = None) -> Any:
+        """Remap a variable onto another facet of the mesh.
+
+        Averages the values of the contributing elements, so a face field asked for on the
+        nodes becomes each node's mean of the faces around it.
+
+        Args:
+            location: The facet to remap onto — ``"node"``, ``"edge"`` or ``"face"``.
+            variable_name: The variable to remap, or ``None`` for the only one.
+
+        Returns:
+            MeshDataset: A new dataset whose variable sits on ``location``.
+
+        Raises:
+            ValueError: An unknown ``location``, or a remap the kernel does not offer.
+        """
+        var = self._ds._facade_variable("to_location", variable_name)
+        remap = {"node": _graph.to_node, "edge": _graph.to_edge, "face": _graph.to_face}
+        if location not in remap:
+            raise ValueError(
+                f"to_location: location must be one of {sorted(remap)}, got {location!r}."
+            )
+        if var.location == location:
+            # Already there. The averaging kernels only accept the two *other* facets as a
+            # source, so without this an identity remap failed with "source must be 'node' or
+            # 'edge'" -- a confusing answer to a request that is trivially already satisfied.
+            return self._ds._rebuild(dict(self._ds._data_variables))
+        values = remap[location](
+            self._ds._mesh,
+            np.asarray(var.data),
+            source=var.location,
+        )
+        moved = var.with_data(np.asarray(values))
+        moved.location = location
+        # An element with no contributor (an orphan node, say) averages to NaN, so the remapped
+        # variable has to declare NaN as its no-data value -- the same reasoning the regrid facade
+        # already applies. Otherwise `to_file` writes those NaNs under the old `_FillValue`.
+        # Through the same check `_rewrap` applies, rather than declared unconditionally.
+        # `graph._average_over` answers float64 today, so NaN is always representable -- but a
+        # future integer-preserving remap would reintroduce exactly the defect `_rewrap` guards.
+        moved_values = np.asarray(moved.data)
+        if _representable(float("nan"), moved_values.dtype):
+            moved.nodata = float("nan")
+        if moved.dimensions:
+            # The element axis is the last dimension, by the mesh-variable invariant. Renaming it
+            # to the new facet matters because a file-read variable carries real dimension names
+            # and the xarray bridge prefers them: leaving the old facet's name on an axis that now
+            # has the new facet's length makes the export fail on conflicting dimension sizes.
+            mesh_name = self._ds.mesh_name
+            moved.dimensions = moved.dimensions[:-1] + (
+                f"{mesh_name}_n{location.capitalize()}s",
+            )
+        new_vars = dict(self._ds._data_variables)
+        new_vars[var.name] = moved
+        return self._ds._rebuild(new_vars)

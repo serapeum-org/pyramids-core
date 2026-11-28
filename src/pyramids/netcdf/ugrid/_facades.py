@@ -22,7 +22,6 @@ import pandas as pd
 
 from pyramids.base._array_ops import nodata_mask
 from pyramids.netcdf.ugrid import analysis as _analysis
-from pyramids.netcdf.ugrid import graph as _graph
 from pyramids.netcdf.ugrid import regrid as _regrid
 from pyramids.netcdf.ugrid.messages import unknown_variable_message
 
@@ -589,60 +588,14 @@ class _MeshFacades:
         )
 
     def to_location(self, location: str, variable_name: str | None = None) -> Any:
-        """Remap a variable onto another facet of the mesh.
-
-        Averages the values of the contributing elements, so a face field asked for on the
-        nodes becomes each node's mean of the faces around it.
-
-        Args:
-            location: The facet to remap onto — ``"node"``, ``"edge"`` or ``"face"``.
-            variable_name: The variable to remap, or ``None`` for the only one.
-
-        Returns:
-            MeshDataset: A new dataset whose variable sits on ``location``.
-
-        Raises:
-            ValueError: An unknown ``location``, or a remap the kernel does not offer.
-        """
-        var = self._facade_variable("to_location", variable_name)
-        remap = {"node": _graph.to_node, "edge": _graph.to_edge, "face": _graph.to_face}
-        if location not in remap:
-            raise ValueError(
-                f"to_location: location must be one of {sorted(remap)}, got {location!r}."
-            )
-        if var.location == location:
-            # Already there. The averaging kernels only accept the two *other* facets as a
-            # source, so without this an identity remap failed with "source must be 'node' or
-            # 'edge'" -- a confusing answer to a request that is trivially already satisfied.
-            return self._rebuild(dict(self._data_variables))  # type: ignore[attr-defined]
-        values = remap[location](
-            self._mesh,  # type: ignore[attr-defined]
-            np.asarray(var.data),
-            source=var.location,
+        """Facade -- delegates to :meth:`_MeshAnalysis.to_location`."""
+        warnings.warn(
+            "`mesh.to_location` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.to_location`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        moved = var.with_data(np.asarray(values))
-        moved.location = location
-        # An element with no contributor (an orphan node, say) averages to NaN, so the remapped
-        # variable has to declare NaN as its no-data value -- the same reasoning the regrid facade
-        # already applies. Otherwise `to_file` writes those NaNs under the old `_FillValue`.
-        # Through the same check `_rewrap` applies, rather than declared unconditionally.
-        # `graph._average_over` answers float64 today, so NaN is always representable -- but a
-        # future integer-preserving remap would reintroduce exactly the defect `_rewrap` guards.
-        moved_values = np.asarray(moved.data)
-        if _representable(float("nan"), moved_values.dtype):
-            moved.nodata = float("nan")
-        if moved.dimensions:
-            # The element axis is the last dimension, by the mesh-variable invariant. Renaming it
-            # to the new facet matters because a file-read variable carries real dimension names
-            # and the xarray bridge prefers them: leaving the old facet's name on an axis that now
-            # has the new facet's length makes the export fail on conflicting dimension sizes.
-            mesh_name = self.mesh_name  # type: ignore[attr-defined]
-            moved.dimensions = moved.dimensions[:-1] + (
-                f"{mesh_name}_n{location.capitalize()}s",
-            )
-        new_vars = dict(self._data_variables)  # type: ignore[attr-defined]
-        new_vars[var.name] = moved
-        return self._rebuild(new_vars)  # type: ignore[attr-defined]
+        return self.analysis.to_location(location, variable_name)
 
     def fill_na_spatial(
         self, variable_name: str | None = None, *, max_distance: float | None = None
@@ -784,36 +737,14 @@ class _MeshFacades:
     def regrid(
         self, target: Any, *, method: str = "overlap", variable_name: str | None = None
     ) -> Any:
-        """Regrid a variable onto another mesh.
-
-        Args:
-            target: The destination ``MeshDataset`` (its mesh is the target).
-            method: ``"overlap"`` (area-weighted mean), ``"conservative"`` (integral
-                preserving), ``"centroid"`` or ``"barycentric"``. Defaults to ``"overlap"``.
-            variable_name: The variable to regrid, or ``None`` for the only one.
-
-        Returns:
-            MeshDataset: ``target``'s mesh carrying the regridded variable.
-
-        Raises:
-            ValueError: An unknown ``method``; the variable does not sit on faces (only
-                ``"face"`` source data is weighted); or ``variable_name`` is ``None`` while the
-                dataset holds no variable or more than one.
-        """
-        var = self._facade_variable("regrid", variable_name)
-        regridder = _regrid.Regridder(
-            self._mesh,  # type: ignore[attr-defined]
-            target.mesh,
-            method=method,
-            source_location=var.location,
+        """Facade -- delegates to :meth:`_MeshSpatial.regrid`."""
+        warnings.warn(
+            "`mesh.regrid` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.regrid`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        values = regridder.regrid(np.asarray(var.data))
-        # A target element the source does not cover comes back NaN, so the regridded variable
-        # has to declare NaN as its no-data value -- otherwise `to_file` writes those NaNs with
-        # no `_FillValue` and a reader cannot tell them from data.
-        return target.variables.with_variable(
-            var.name, np.asarray(values), location="face", nodata=float("nan")
-        )
+        return self.spatial.regrid(target, method=method, variable_name=variable_name)
 
     def to_xarray(self) -> Any:
         """Facade -- delegates to :meth:`_MeshInterop.to_xarray`."""

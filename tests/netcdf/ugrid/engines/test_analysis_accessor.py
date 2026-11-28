@@ -134,6 +134,7 @@ _CASES = [
     ("sum", _temporal, lambda o: o.sum()),
     ("max", _temporal, lambda o: o.max()),
     ("equals", _static, lambda o: o.equals(_static())),
+    ("to_location", _static, lambda o: o.to_location("node")["v"].data),
 ]
 
 

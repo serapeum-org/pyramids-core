@@ -15,6 +15,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import geopandas as gpd
+import numpy as np
 from pyproj import Transformer
 from shapely.geometry import box
 
@@ -26,6 +27,7 @@ from pyramids.base.crs import (
     sr_from_epsg,
     sr_from_wkt,
 )
+from pyramids.netcdf.ugrid import regrid as _regrid
 from pyramids.netcdf.ugrid.engines._base import _MeshEngine
 from pyramids.netcdf.ugrid.mesh import Mesh2d
 from pyramids.netcdf.ugrid.spatial import resolve_crs, subset_by_bounds
@@ -379,3 +381,37 @@ class _MeshSpatial(_MeshEngine):
         # Call the selection engine, not the deprecated flat `reduce` facade, so a resample
         # does not emit the `reduce` deprecation warning from inside `spatial.resample`.
         return self._ds.selection.reduce(how, skipna=skipna, q=q, groupby=freq)
+
+    def regrid(
+        self, target: Any, *, method: str = "overlap", variable_name: str | None = None
+    ) -> Any:
+        """Regrid a variable onto another mesh.
+
+        Args:
+            target: The destination ``MeshDataset`` (its mesh is the target).
+            method: ``"overlap"`` (area-weighted mean), ``"conservative"`` (integral
+                preserving), ``"centroid"`` or ``"barycentric"``. Defaults to ``"overlap"``.
+            variable_name: The variable to regrid, or ``None`` for the only one.
+
+        Returns:
+            MeshDataset: ``target``'s mesh carrying the regridded variable.
+
+        Raises:
+            ValueError: An unknown ``method``; the variable does not sit on faces (only
+                ``"face"`` source data is weighted); or ``variable_name`` is ``None`` while the
+                dataset holds no variable or more than one.
+        """
+        var = self._ds._facade_variable("regrid", variable_name)
+        regridder = _regrid.Regridder(
+            self._ds._mesh,
+            target.mesh,
+            method=method,
+            source_location=var.location,
+        )
+        values = regridder.regrid(np.asarray(var.data))
+        # A target element the source does not cover comes back NaN, so the regridded variable
+        # has to declare NaN as its no-data value -- otherwise `to_file` writes those NaNs with
+        # no `_FillValue` and a reader cannot tell them from data.
+        return target.variables.with_variable(
+            var.name, np.asarray(values), location="face", nodata=float("nan")
+        )
