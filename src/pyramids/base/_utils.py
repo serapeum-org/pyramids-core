@@ -2077,3 +2077,78 @@ def reshape_as_raster(arr: np.ndarray) -> np.ndarray:
             f"expected a 3-D (rows, cols, bands) array, got ndim={arr.ndim}"
         )
     return np.moveaxis(arr, -1, 0)
+
+
+def normalize_band_selection(
+    bands: int | Sequence[int] | None,
+    band_count: int,
+    *,
+    caller: str,
+) -> list[int]:
+    """Normalise a ``bands=`` argument to a validated list of 0-based band indices.
+
+    The raster->table exporters (:meth:`Dataset.to_dataframe`, :meth:`Dataset.to_xyz`,
+    :meth:`Dataset.to_geodataframe`) share this so a band subset is selected the same way
+    everywhere: ``None`` means every band, an ``int`` one band, and any other sequence the
+    listed bands -- all **0-based**. The returned list is always explicit (``None`` expands
+    to ``range(band_count)``), so callers never special-case ``None`` again.
+
+    Args:
+        bands: The selection -- ``None`` (every band), an ``int`` (one band), or a sequence
+            of ``int`` indices. All indices are 0-based.
+        band_count: The raster's band count, used to expand ``None`` and to bound-check.
+        caller: The public method name (e.g. ``"Dataset.to_xyz"``) woven into the error
+            messages so a bad call names the method the user actually invoked.
+
+    Returns:
+        list[int]: The explicit, validated 0-based band indices, in the order given.
+
+    Raises:
+        TypeError: ``bands`` is a ``bool`` or a ``str``. A ``bool`` subclasses ``int`` and a
+            ``str`` is iterable, so both would otherwise silently select band 1/0 or iterate
+            characters -- almost always a caller mistake, so they are rejected up front.
+        ValueError: the selection is empty, or any index is outside ``0..band_count - 1``.
+
+    Examples:
+        ```python
+        >>> from pyramids.base._utils import normalize_band_selection
+        >>> normalize_band_selection(None, 3, caller="Dataset.to_xyz")
+        [0, 1, 2]
+        >>> normalize_band_selection(2, 3, caller="Dataset.to_xyz")
+        [2]
+        >>> normalize_band_selection([0, 2], 3, caller="Dataset.to_xyz")
+        [0, 2]
+
+        ```
+    """
+    if bands is None:
+        return list(range(band_count))
+    # bool subclasses int, so guard it before the int branch or True/False would silently
+    # select band 1/0; a str is a Sequence, so guard it before the sequence branch or it
+    # would iterate characters -- both are almost certainly a caller mistake.
+    if isinstance(bands, bool):
+        raise TypeError(
+            f"{caller}() got a boolean bands={bands!r}; pass a band index, a "
+            "sequence of indices, or None for every band."
+        )
+    if isinstance(bands, str):
+        raise TypeError(
+            f"{caller}() got a string bands={bands!r}; pass a band index, a "
+            "sequence of indices, or None for every band."
+        )
+    if isinstance(bands, (int, np.integer)):
+        selected = [int(bands)]
+    else:
+        selected = [int(b) for b in bands]
+    if not selected:
+        raise ValueError(
+            f"{caller}() was given an empty bands= selection; pass bands=None "
+            f"for every band, or indices in 0..{band_count - 1}."
+        )
+    out_of_range = [b for b in selected if not 0 <= b < band_count]
+    if out_of_range:
+        raise ValueError(
+            f"{caller}() got band index/indices {out_of_range} out of range for "
+            f"a {band_count}-band raster (valid 0..{band_count - 1})."
+        )
+    return selected

@@ -117,14 +117,14 @@ class TestToXyz:
         assert len(band_cols) == 1, f"Expected 1 band column, got {len(band_cols)}"
 
     def test_to_xyz_invalid_bands_raises(self):
-        """to_xyz with an invalid bands type raises ValueError with a guiding message."""
+        """to_xyz with a string bands= raises TypeError via the shared band-selection guard."""
         arr = np.ones((3, 3), dtype=np.float32)
         ds = Dataset.from_array(
             arr,
             no_data_value=-9999.0,
             geo_ref=GeoReference(top_left_corner=(0.0, 0.0), cell_size=0.05, epsg=4326),
         )
-        with pytest.raises(ValueError, match="integer or a list"):
+        with pytest.raises(TypeError, match="string bands="):
             ds.io.to_xyz(bands="invalid")
 
 

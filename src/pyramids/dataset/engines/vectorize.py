@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import collections
 import warnings
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -21,7 +22,7 @@ from osgeo import gdal, ogr
 from pyproj import CRS
 
 from pyramids.base._domain import is_no_data
-from pyramids.base._utils import gdal_to_ogr_dtype
+from pyramids.base._utils import gdal_to_ogr_dtype, normalize_band_selection
 from pyramids.base.crs import sr_from_wkt
 from pyramids.feature import FeatureCollection
 from pyramids.feature import _ogr as _feature_ogr
@@ -224,6 +225,7 @@ class _Vector(_Engine["Dataset"]):
     def to_geodataframe(
         self,
         *,
+        bands: int | Sequence[int] | None = None,
         geometry: str = "point",
         location: str = "center",
         values: bool = True,
@@ -238,7 +240,7 @@ class _Vector(_Engine["Dataset"]):
 
         Each cell becomes a row carrying a `geometry` column — a point at the cell centre
         (or corner) or a polygon covering the cell — plus, when `values=True`, one column per
-        band (`Band_N`, or the band's name) holding its physical value. This is the vector/GIS
+        selected band (`Band_N`, or the band's name) holding its physical value. This is the vector/GIS
         view of the raster; for the coordinate-keyed, invertible pandas frame use
         :meth:`Dataset.to_dataframe`. Values are physical, as `read_array` returns them: a
         CF-packed band (`scale_factor` / `add_offset`) is unpacked, and a cell holding band 0's
@@ -246,6 +248,12 @@ class _Vector(_Engine["Dataset"]):
         and whole-array paths.
 
         Args:
+            bands: Which band value columns to attach, 0-based — `None` (default) every band,
+                an `int` one band, or a sequence the listed bands (like `to_dataframe` and
+                `to_xyz`). Honoured only when `values=True`; the rows stay band 0's domain
+                regardless (the geometry and the no-data drop are keyed on band 0), so a subset
+                that omits band 0 still returns band 0's cells, each carrying only the requested
+                band columns. Combining `bands=` with `values=False` is refused.
             geometry: The cell geometry, `"point"` (default) or `"polygon"` (case-insensitive).
             location: For `geometry="point"`, the point position — `"center"` (default) or
                 `"corner"` (the cell's top-left corner). Ignored for polygons.
@@ -273,15 +281,18 @@ class _Vector(_Engine["Dataset"]):
                 raster's own CRS.
 
         Returns:
-            FeatureCollection: One row per cell — a `geometry` column, plus `Band_N` value
-            columns (`values=True`) or an `id` column (`values=False`), in north-up row-major
-            order. A `FeatureCollection` is a `geopandas.GeoDataFrame` subclass, so it is
+            FeatureCollection: One row per cell — a `geometry` column, plus one `Band_N` value
+            column per selected band (`values=True`) or an `id` column (`values=False`), in
+            north-up row-major order. A `FeatureCollection` is a `geopandas.GeoDataFrame` subclass, so it is
             usable as one and also carries pyramids' GIS methods (`to_file`, `to_crs`, …).
 
         Raises:
             ValueError: `geometry` is neither `"point"` nor `"polygon"`; `location` is neither
-                `"center"` nor `"corner"`; or `values=True` was combined with an explicit
-                `dropna=False`.
+                `"center"` nor `"corner"`; `values=True` was combined with an explicit
+                `dropna=False`; `bands=` was combined with `values=False`; or a `bands=` index
+                is empty or out of range.
+            TypeError: `bands=` is a `bool` or a `str` (see
+                :func:`~pyramids.base._utils.normalize_band_selection`).
 
         Examples:
             - Cell centres carrying their band values:
@@ -297,6 +308,21 @@ class _Vector(_Engine["Dataset"]):
                 [1.0, 2.0, 3.0, 4.0]
                 >>> gdf.geometry.iloc[0].wkt
                 'POINT (0.5 1.5)'
+
+                ```
+            - A band subset — only the requested band's column, over band 0's cells:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.dataset import Dataset, GeoReference
+                >>> ds = Dataset.from_array(
+                ...     np.array([[[1.0, 2.0], [3.0, 4.0]], [[10.0, 20.0], [30.0, 40.0]]]),
+                ...     geo_ref=GeoReference(top_left_corner=(0, 0), cell_size=1.0, epsg=4326),
+                ... )
+                >>> gdf = ds.to_geodataframe(geometry="point", bands=[1])
+                >>> list(gdf.columns)
+                ['Band_2', 'geometry']
+                >>> gdf["Band_2"].tolist()
+                [10.0, 20.0, 30.0, 40.0]
 
                 ```
             - Geometry only — the cell polygons, no values:
@@ -331,6 +357,15 @@ class _Vector(_Engine["Dataset"]):
         """
         geom = self._validate_geodataframe_args(geometry, location, values, dropna)
 
+        if not values and bands is not None:
+            raise ValueError(
+                "to_geodataframe(values=False) returns geometry only, so bands= selects "
+                "no columns; omit bands= or pass values=True to get the band value columns."
+            )
+        selected = normalize_band_selection(
+            bands, self._ds.band_count, caller="Dataset.to_geodataframe"
+        )
+
         # Crop to the mask up front so both the geometry-only and the values path honour it:
         # a masked `values=False` call must return the AOI's cell footprints, not silently the
         # whole raster.
@@ -353,7 +388,9 @@ class _Vector(_Engine["Dataset"]):
                 gdf = self._relabel_crs(gdf, crs)
             return FeatureCollection(gdf)
 
-        return self._values_geodataframe(src_ds, geom, location, tile, tile_size, crs)
+        return self._values_geodataframe(
+            src_ds, geom, location, tile, tile_size, crs, selected
+        )
 
     @staticmethod
     def _validate_geodataframe_args(
@@ -384,8 +421,16 @@ class _Vector(_Engine["Dataset"]):
         tile: bool | None,
         tile_size: int,
         crs: Any,
+        selected: list[int],
     ) -> FeatureCollection:
-        """Build the `Band_N` value table + cell geometry — the `values=True` path."""
+        """Build the `Band_N` value table + cell geometry — the `values=True` path.
+
+        `selected` is the 0-based band subset from `bands=`. The read and the no-data drop
+        still run over band 0 (the geometry and the drop are keyed on band 0, so the rows are
+        band 0's domain), and only the surviving value columns are narrowed to `selected`
+        before the geometry is attached — a subset that omits band 0 still returns band 0's
+        cells, each carrying only the requested band columns.
+        """
         band_names = src_ds.band_names
 
         # None auto-selects on the array's byte size: keep the fast whole-array read for
@@ -406,6 +451,9 @@ class _Vector(_Engine["Dataset"]):
             df = src_ds.vector._extract_values_full(band_names)
 
         df = df.drop(columns=["burn_value", "geometry"], errors="ignore")
+        # Narrow to the requested bands by position (the columns are in band order), so a
+        # band subset keeps band 0's rows but only its value columns.
+        df = df.iloc[:, selected]
         gdf = self._attach_geometry(src_ds, df, geom, location)
         if crs is not None:
             gdf = self._relabel_crs(gdf, crs)
