@@ -566,7 +566,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
 
     @property
     def selection(self) -> _MeshSelection:
-        """Selection/reduction engine: sel, isel, reduce, rolling, head, layers, fits, calendars (``mesh.selection``)."""
+        """Selection/reduction engine: sel, isel, reduce, rolling, layers, fits (``mesh.selection``)."""
         return _MeshSelection(self)
 
     @property

@@ -467,7 +467,8 @@ class _MeshGlyph(_MeshEngine):
         """Export a mesh variable as a colour-mapped RGB image (issue #1378).
 
         An image is a grid of pixels, so the mesh is rasterised first and the raster's own
-        :meth:`Dataset.to_image` does the colour mapping — which keeps the colours going
+        :meth:`Dataset.analysis.to_image <pyramids.dataset.engines.analysis._Analysis.to_image>`
+        does the colour mapping — which keeps the colours going
         through cleopatra, as all pyramids rendering does, and keeps one implementation of the
         mapping rather than two that can drift.
 

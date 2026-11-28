@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 class _MeshVariables(_MeshEngine):
-    """Data-variable editing for a mesh: with_variable, attach_data, rename_variable, drop_variables (``mesh.variables``)."""
+    """Data-variable editing for a mesh: add, attach, rename, drop (``mesh.variables``)."""
 
     __slots__ = ()
 
