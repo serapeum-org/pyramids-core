@@ -248,7 +248,7 @@ class MeshDataset(_MeshFacades):
 
     def __init__(
         self,
-        mesh: Mesh2d,
+        mesh: Mesh2d | Mesh1d,
         data_variables: dict[str, MeshVariable],
         global_attributes: dict[str, Any],
         topology_info: MeshTopologyInfo | None = None,
@@ -511,9 +511,34 @@ class MeshDataset(_MeshFacades):
         return result
 
     @property
-    def mesh(self) -> Mesh2d:
-        """The mesh topology."""
+    def mesh(self) -> Mesh2d | Mesh1d:
+        """The mesh topology -- a :class:`Mesh2d` (2D) or :class:`Mesh1d` (1D)."""
         return self._mesh
+
+    def _require_mesh2d(self, operation: str) -> Mesh2d:
+        """Return the mesh narrowed to :class:`Mesh2d`, or raise for a 1D mesh.
+
+        A handful of operations are defined over faces and have no 1D meaning -- rasterising
+        to a grid, the UGRID file writer, the face spatial index, plane-fill coordinates and
+        animation. Each routes through here so a 1D mesh is refused with a clear message
+        rather than an ``AttributeError`` deep inside a face-only helper (issue #1652).
+
+        Args:
+            operation: The user-facing operation name, for the message.
+
+        Returns:
+            Mesh2d: The mesh, when it is 2D.
+
+        Raises:
+            TypeError: The dataset carries a 1D (:class:`Mesh1d`) mesh.
+        """
+        mesh = self._mesh
+        if not isinstance(mesh, Mesh2d):
+            raise TypeError(
+                f"{operation} is not available on a 1D mesh "
+                f"({type(mesh).__name__}); it is defined over faces."
+            )
+        return mesh
 
     @property
     def mesh_name(self) -> str:
@@ -1004,7 +1029,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             data = np.take(np.asarray(data), 0, axis=cast("int", var.time_axis_index))
 
         grid_array, geotransform = mesh_to_grid(
-            mesh=self._mesh,
+            mesh=self._require_mesh2d("rasterising to a grid (to_dataset)"),
             data=data,
             location=var.location,
             cell_size=cell_size,
@@ -1321,7 +1346,9 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         rg = ds.GetRootGroup()
 
         mesh_name = self.mesh_name
-        dims = write_ugrid_topology(rg, self._mesh, mesh_name, self._crs_wkt)
+        dims = write_ugrid_topology(
+            rg, self._require_mesh2d("writing a UGRID file"), mesh_name, self._crs_wkt
+        )
         if self._volume_topology is not None:
             # Before the data variables, so the `nVolumes` dimension exists when a
             # `location="volume"` variable is written against it (issue #1330).
@@ -1429,7 +1456,9 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
                 unavailable for an edge conversion.
         """
         if location == "face":
-            geometries = MeshSpatialIndex(self._mesh).face_polygons
+            geometries = MeshSpatialIndex(
+                self._require_mesh2d("the face spatial index")
+            ).face_polygons
         elif location == "node":
             # Vectorized point construction — meshes routinely have 1e5-1e7 nodes, so a per-node
             # Python `Point(...)` loop is a hot spot (ARC-59). `list(...)` keeps the return type
@@ -1602,6 +1631,110 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             node_x_var=f"{mesh_name}_node_x",
             node_y_var=f"{mesh_name}_node_y",
             face_node_var=f"{mesh_name}_face_nodes",
+            data_variables=topo_data_vars,
+            crs_wkt=crs_wkt,
+        )
+
+        result = cls(
+            mesh=mesh,
+            data_variables=data_variables,
+            global_attributes={"Conventions": UGRID_CONVENTIONS},
+            topology_info=topo_info,
+            crs_wkt=crs_wkt,
+        )
+        return result
+
+    @classmethod
+    def from_mesh1d(
+        cls,
+        node_x: np.ndarray,
+        node_y: np.ndarray,
+        edge_node_connectivity: np.ndarray,
+        data: dict[str, np.ndarray] | None = None,
+        data_locations: dict[str, str] | None = None,
+        directed: bool = False,
+        epsg: int = 4326,
+        mesh_name: str = DEFAULT_MESH_NAME,
+    ) -> MeshDataset:
+        """Build a dataset on a 1D topology (:class:`Mesh1d`) from raw arrays (issue #1652).
+
+        The 1D counterpart of :meth:`from_arrays`: that one takes ``face_node_connectivity``
+        and builds a :class:`Mesh2d`; this takes ``edge_node_connectivity`` and builds a
+        :class:`Mesh1d` (nodes + edges, no faces), so a 1D mesh gets the same data container
+        the 2D path has. Data variables default to the ``"node"`` location rather than
+        ``"face"`` -- a 1D mesh has no faces.
+
+        Args:
+            node_x: Node x-coordinates, shape ``(n_node,)``.
+            node_y: Node y-coordinates, shape ``(n_node,)``.
+            edge_node_connectivity: ``(n_edge, 2)`` node indices, one pair per edge.
+            data: Optional ``{name: array}`` of data variables. A 1-D array is static (one
+                value per element); a 2-D array is temporal (leading axis = time).
+            data_locations: Optional ``{name: location}`` with ``"node"`` or ``"edge"``.
+                Defaults to ``"node"``.
+            directed: Whether the edges carry a flow direction. Defaults to False.
+            epsg: EPSG code for the mesh CRS. Defaults to 4326.
+            mesh_name: Name of the topology variable. Defaults to the package default.
+
+        Returns:
+            MeshDataset: The dataset carrying the 1D mesh and its variables.
+
+        Examples:
+            - Attach a per-node variable to a 1D chain and read it back:
+                ```python
+                >>> import numpy as np
+                >>> from pyramids.netcdf.ugrid import MeshDataset
+                >>> ds = MeshDataset.from_mesh1d(
+                ...     node_x=np.array([0.0, 1.0, 2.0]),
+                ...     node_y=np.array([0.0, 0.0, 0.0]),
+                ...     edge_node_connectivity=np.array([[0, 1], [1, 2]]),
+                ...     data={"s1": np.array([1.0, 2.0, 3.0])},
+                ...     data_locations={"s1": "node"},
+                ... )
+                >>> (ds.n_node, ds.n_edge)
+                (3, 2)
+                >>> ds["s1"].location
+                'node'
+
+                ```
+        """
+        # Local import: `mesh1d` imports from this module (the built-in reader builds a
+        # MeshDataset), so a module-level import here would be a cycle.
+        from pyramids.netcdf.ugrid.mesh1d import Mesh1d
+
+        mesh = Mesh1d.from_arrays(
+            node_x=np.asarray(node_x, dtype=np.float64),
+            node_y=np.asarray(node_y, dtype=np.float64),
+            edge_node_connectivity=np.asarray(edge_node_connectivity, dtype=np.intp),
+            directed=directed,
+            epsg=epsg,
+        )
+
+        data_variables: dict[str, MeshVariable] = {}
+        topo_data_vars: dict[str, str] = {}
+        if data is not None:
+            if data_locations is None:
+                data_locations = {}
+            for name, arr in data.items():
+                loc = data_locations.get(name, "node")
+                topo_data_vars[name] = loc
+                data_variables[name] = MeshVariable(
+                    name=name,
+                    location=loc,
+                    mesh_name=mesh_name,
+                    shape=arr.shape,
+                    _data=arr,
+                )
+
+        srs = sr_from_epsg(epsg)
+        crs_wkt = srs.ExportToWkt()
+
+        topo_info = MeshTopologyInfo(
+            mesh_name=mesh_name,
+            topology_dimension=1,
+            node_x_var=f"{mesh_name}_node_x",
+            node_y_var=f"{mesh_name}_node_y",
+            edge_node_var=f"{mesh_name}_edge_nodes",
             data_variables=topo_data_vars,
             crs_wkt=crs_wkt,
         )
@@ -2860,7 +2993,9 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
             coordinates), which leaves those rows with a NaN coordinate.
         """
         try:
-            table = _location_coords(self._mesh, location)
+            table = _location_coords(
+                self._require_mesh2d("location coordinates"), location
+            )
         except ValueError:
             table = np.empty((0, 2), dtype="float64")
         return np.asarray(table, dtype="float64")
@@ -5102,7 +5237,7 @@ morphology, adjacency, active_mask (``mesh.topology``)."""
         # _glyph_with_crs). If this ever hands back a glyph or composes a basemap, route
         # it through _glyph_with_crs or issue #1560 reopens on this surface.
         return _ugrid_plot.animate_mesh_data(
-            self._mesh,
+            self._require_mesh2d("animate"),
             frames,
             labels,
             location=var.location,
