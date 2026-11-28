@@ -327,37 +327,7 @@ class _MeshFacades:
         variable_name: str | None = None,
         reach: Any = None,
     ) -> np.ndarray:
-        """The mean of each face's k-ring neighbourhood, centre included (issue #1376).
-
-        The mesh counterpart of the raster ``focal_mean``. The raster version aggregates over a
-        ``(2*radius+1)`` **pixel window**, which has no meaning here — faces have neither a
-        row/column address nor a fixed neighbour count. This aggregates over the faces within
-        ``rings`` hops of the face adjacency instead, which is why the parameter is ``rings``
-        and not ``radius``.
-
-        Boundary faces aggregate over whatever neighbours they have: no padding, no fabricated
-        values. ``nodata`` faces are excluded, and so are inactive ones when the variable
-        carries an active mask — a dry neighbour should not drag a wet face's mean down.
-
-        Args:
-            rings: Adjacency hops the neighbourhood spans. Defaults to 1.
-            variable_name: Variable to act on (default: the only one).
-            reach: A neighbourhood matrix to reuse across calls, built with
-                ``pyramids.netcdf.ugrid.focal.neighbourhood(ds.mesh, rings)``. Without it each
-                call builds its own, so a sweep over many variables or steps rebuilds the same
-                sparse power every time. Leave ``rings`` at its default when passing it.
-
-        Returns:
-            numpy.ndarray: Per-face mean of length ``n_face``; ``NaN`` where the neighbourhood
-            holds no usable value.
-
-        Raises:
-            ValueError: ``rings`` is less than 1, or the variable is not one value per face.
-
-        See Also:
-            focal_std: Spread over the same neighbourhood.
-            focal_apply: An arbitrary aggregation over the same neighbourhood.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.focal_mean`."""
         warnings.warn(
             "`mesh.focal_mean` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.focal_mean`.",
@@ -374,29 +344,7 @@ class _MeshFacades:
         variable_name: str | None = None,
         reach: Any = None,
     ) -> np.ndarray:
-        """The standard deviation of each face's k-ring neighbourhood (issue #1376).
-
-        The spread counterpart of :meth:`focal_mean`, with the same neighbourhood, exclusion
-        and boundary conventions.
-
-        Args:
-            rings: Adjacency hops the neighbourhood spans. Defaults to 1.
-            variable_name: Variable to act on (default: the only one).
-            reach: A neighbourhood matrix to reuse across calls, built with
-                ``pyramids.netcdf.ugrid.focal.neighbourhood(ds.mesh, rings)``. Without it each
-                call builds its own, so a sweep over many variables or steps rebuilds the same
-                sparse power every time. Leave ``rings`` at its default when passing it.
-
-        Returns:
-            numpy.ndarray: Per-face population standard deviation; ``NaN`` where the
-            neighbourhood holds no usable value.
-
-        Raises:
-            ValueError: ``rings`` is less than 1, or the variable is not one value per face.
-
-        See Also:
-            focal_mean: The mean over the same neighbourhood.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.focal_std`."""
         warnings.warn(
             "`mesh.focal_std` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.focal_std`.",
@@ -414,33 +362,7 @@ class _MeshFacades:
         variable_name: str | None = None,
         reach: Any = None,
     ) -> np.ndarray:
-        """Aggregate each face's k-ring neighbourhood with ``func`` (issue #1376).
-
-        ``func`` receives the 1-D array of usable values in one neighbourhood and returns a
-        scalar, so ``np.ptp``, ``np.median`` or a lambda all work. Unlike :meth:`focal_mean`
-        and :meth:`focal_std` this cannot be expressed as a sparse product, so it visits each
-        face in turn — noticeably slower on a large mesh, which is the price of an arbitrary
-        aggregation.
-
-        Args:
-            func: Callable taking a 1-D array and returning a scalar.
-            rings: Adjacency hops the neighbourhood spans. Defaults to 1.
-            variable_name: Variable to act on (default: the only one).
-            reach: A neighbourhood matrix to reuse across calls, built with
-                ``pyramids.netcdf.ugrid.focal.neighbourhood(ds.mesh, rings)``. Without it each
-                call builds its own, so a sweep over many variables or steps rebuilds the same
-                sparse power every time. Leave ``rings`` at its default when passing it.
-
-        Returns:
-            numpy.ndarray: Per-face aggregate; ``NaN`` where the neighbourhood holds no usable
-            value, so ``func`` is never handed an empty array.
-
-        Raises:
-            ValueError: ``rings`` is less than 1, or the variable is not one value per face.
-
-        See Also:
-            focal_mean: The vectorised mean, when that is all you need.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.focal_apply`."""
         warnings.warn(
             "`mesh.focal_apply` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.focal_apply`.",
@@ -543,32 +465,7 @@ class _MeshFacades:
         upper: float,
         variable_name: str | None = None,
     ) -> Any:
-        """Label connected groups of faces whose values fall in ``[lower, upper]`` (#1379).
-
-        The value-aware sibling of :meth:`connected_components`, and the mesh counterpart of
-        the raster ``cluster``. :meth:`connected_components` labels by **topology alone**, so
-        it cannot answer "which separate pools of flooded cells are there"; this restricts the
-        face adjacency to the faces inside the range before labelling.
-
-        Faces outside the range — and no-data faces, which cannot be inside one — are labelled
-        ``0``, so a label is truthy exactly when the face belongs to a cluster. Clusters are
-        numbered ``1..k``.
-
-        Args:
-            lower: Inclusive lower bound.
-            upper: Inclusive upper bound.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset whose variable carries the per-face cluster labels.
-
-        Raises:
-            ValueError: The variable is not one value per face (select a step first).
-
-        See Also:
-            connected_components: Topology-only labelling, ignoring values.
-            footprint: The dissolved outline of the faces carrying valid values.
-        """
+        """Facade -- delegates to :meth:`_MeshVector.cluster`."""
         warnings.warn(
             "`mesh.cluster` is deprecated and will be removed in 0.90.0; use "
             "`mesh.vector.cluster`.",
@@ -578,33 +475,7 @@ class _MeshFacades:
         return self.vector.cluster(lower, upper, variable_name=variable_name)
 
     def footprint(self, variable_name: str | None = None) -> Any:
-        """The dissolved outline of the faces carrying valid values (#1379).
-
-        The mesh counterpart of the raster ``footprint`` — "the real coverage of the values".
-        Distinct from :meth:`bounding_polygon`, which dissolves **every** face and so describes
-        the mesh *domain* rather than where data exists, and from :meth:`polygonize`, which
-        returns one polygon per distinct value.
-
-        "Valid" means not ``nodata`` and not NaN. It deliberately does **not** consult the
-        per-timestep active mask: a dry element has a real value and is still covered by the
-        data, so excluding it would conflate "no data here" with "dry here", which is the
-        distinction issue #1331 exists to preserve. For the wet extent, mask first
-        (:meth:`masked_values` or :meth:`where`) and take the footprint of that.
-
-        Args:
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            shapely.Polygon | shapely.MultiPolygon: The dissolved coverage, empty when no face
-            carries a valid value. Carries no CRS — attach one if you need it.
-
-        Raises:
-            ValueError: The variable is not one value per face (select a step first).
-
-        See Also:
-            bounding_polygon: The whole mesh outline, data or not.
-            polygonize: One polygon per distinct value.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.footprint`."""
         warnings.warn(
             "`mesh.footprint` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.footprint`.",
@@ -776,19 +647,7 @@ class _MeshFacades:
     def fill_na_spatial(
         self, variable_name: str | None = None, *, max_distance: float | None = None
     ) -> Any:
-        """Fill each gap from the nearest valid element in space.
-
-        Where :meth:`interpolate_na` fills along time, this fills across the mesh: a gap takes
-        the value of the closest element that has one.
-
-        Args:
-            variable_name: The variable to fill, or ``None`` for the only one.
-            max_distance: Leave a gap unfilled when no valid element is this close. ``None``
-                (the default) is unbounded.
-
-        Returns:
-            MeshDataset: A new dataset with the gaps filled.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.fill_na_spatial`."""
         warnings.warn(
             "`mesh.fill_na_spatial` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.fill_na_spatial`.",
@@ -804,19 +663,7 @@ class _MeshFacades:
         use_weights: bool = True,
         direct_solve: bool = False,
     ) -> Any:
-        """Fill the interior gaps by solving Laplace's equation over the mesh.
-
-        The valid values are the boundary condition and each gap becomes the smooth solution
-        between them — a better hole-filler than nearest when the field varies smoothly.
-
-        Args:
-            variable_name: The variable to fill, or ``None`` for the only one.
-            use_weights: Weight the graph Laplacian by inverse distance. Defaults to True.
-            direct_solve: Solve directly rather than iteratively. Defaults to False.
-
-        Returns:
-            MeshDataset: A new dataset with the interior gaps filled.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.laplace_interpolate`."""
         warnings.warn(
             "`mesh.laplace_interpolate` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.laplace_interpolate`.",
@@ -830,15 +677,7 @@ class _MeshFacades:
     def polygonize(
         self, variable_name: str | None = None, *, decimals: int | None = None
     ) -> Any:
-        """Dissolve adjacent faces of equal value into polygons.
-
-        Args:
-            variable_name: The face variable to dissolve by, or ``None`` for the only one.
-            decimals: Round to this many decimals before grouping, for approximate equality.
-
-        Returns:
-            geopandas.GeoDataFrame: One row per merged region, with its value and geometry.
-        """
+        """Facade -- delegates to :meth:`_MeshVector.polygonize`."""
         warnings.warn(
             "`mesh.polygonize` is deprecated and will be removed in 0.90.0; use "
             "`mesh.vector.polygonize`.",
@@ -848,24 +687,7 @@ class _MeshFacades:
         return self.vector.polygonize(variable_name, decimals=decimals)
 
     def sample_line(self, line: Any, variable_name: str | None = None) -> Any:
-        """Sample a variable along a line, ordered by distance along it.
-
-        One sample per *crossing*, at the midpoint of each part of the line-face intersection.
-        A line that leaves a face and re-enters it is sampled once per entry, so
-        ``face_indices`` can repeat -- see :func:`pyramids.netcdf.ugrid.vector_ops.sample_line`.
-
-        Args:
-            line: A shapely ``LineString``, or a sequence of coordinates.
-            variable_name: The variable to sample, or ``None`` for the only one.
-
-        Returns:
-            tuple: ``(distances, values, face_indices)``, one entry per crossing in
-            along-line order. ``face_indices`` is not unique when the line re-enters a face.
-
-        Raises:
-            ValueError: ``variable_name`` is ``None`` while the dataset holds no variable or
-                more than one, or the variable's last axis does not match ``n_face``.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.sample_line`."""
         warnings.warn(
             "`mesh.sample_line` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.sample_line`.",
@@ -883,22 +705,7 @@ class _MeshFacades:
         fill: float = float("nan"),
         all_touched: bool = True,
     ) -> Any:
-        """Burn vector geometry onto the faces as a new variable.
-
-        The mesh analogue of rasterising a vector layer: every face the geometry covers takes
-        ``value``, the rest take ``fill``.
-
-        Args:
-            geometry: A shapely geometry, GeoDataFrame, FeatureCollection, or iterable of them.
-            value: The value burned into the covered faces.
-            name: The new variable's name. Defaults to ``"burned"``.
-            fill: The value for the faces the geometry misses. Defaults to NaN.
-            all_touched: Burn every face the geometry touches, rather than only those whose
-                centroid falls inside. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset carrying the burned variable.
-        """
+        """Facade -- delegates to :meth:`_MeshIO.burn`."""
         warnings.warn(
             "`mesh.burn` is deprecated and will be removed in 0.90.0; use "
             "`mesh.io.burn`.",
@@ -918,27 +725,7 @@ class _MeshFacades:
         nodata: float = -9999.0,
         max_distance: float | None = None,
     ) -> Any:
-        """Interpolate a variable onto an existing raster's grid.
-
-        Where :meth:`to_dataset` builds its own grid from a cell size, this snaps to the
-        geotransform, shape and CRS of a raster you already have, so the result is
-        co-registered with it.
-
-        Args:
-            reference: The raster whose grid to match (a pyramids ``Dataset`` / ``NetCDF``).
-            variable_name: The variable to interpolate, or ``None`` for the only one.
-            method: ``"nearest"``, ``"linear"`` or ``"idw"``. Defaults to ``"nearest"``.
-            nodata: The value for cells the mesh does not cover.
-            max_distance: How far a ``"nearest"`` / ``"idw"`` sample may reach. ``None`` uses
-                twice the longer of the reference's two cell edges. Defaults to ``None``.
-
-        Returns:
-            Dataset: A raster on ``reference``'s grid.
-
-        Raises:
-            ValueError: An unknown ``method``, or the mesh declares an EPSG while
-                ``reference`` declares no CRS to reproject into.
-        """
+        """Facade -- delegates to :meth:`_MeshIO.rasterize_like`."""
         warnings.warn(
             "`mesh.rasterize_like` is deprecated and will be removed in 0.90.0; use "
             "`mesh.io.rasterize_like`.",
@@ -1039,18 +826,7 @@ class _MeshFacades:
         return self.interop.to_xarray()
 
     def to_zarr(self, store: Any, **kwargs: Any) -> Any:
-        """Write the mesh and its variables to a zarr store, through xarray.
-
-        Args:
-            store: The zarr store (a path or a mapping).
-            **kwargs: Passed to ``xarray.Dataset.to_zarr``.
-
-        Returns:
-            The value ``xarray.Dataset.to_zarr`` returns.
-
-        Raises:
-            OptionalPackageDoesNotExist: xarray or zarr is not installed.
-        """
+        """Facade -- delegates to :meth:`_MeshIO.to_zarr`."""
         warnings.warn(
             "`mesh.to_zarr` is deprecated and will be removed in 0.90.0; use "
             "`mesh.io.to_zarr`.",
@@ -1060,21 +836,7 @@ class _MeshFacades:
         return self.io.to_zarr(store, **kwargs)  # type: ignore[attr-defined]
 
     def fillna(self, value: Any, variable_name: str | None = None) -> Any:
-        """Replace missing values with *value*.
-
-        Args:
-            value: The fill value.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with missing values replaced.
-
-        See Also:
-            isnull: Boolean mask of missing positions.
-            fill_na_spatial: Fill gaps from the nearest valid spatial
-                element.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.fillna`."""
         warnings.warn(
             "`mesh.fillna` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.fillna`.",
@@ -1084,19 +846,7 @@ class _MeshFacades:
         return self.analysis.fillna(value, variable_name)
 
     def isnull(self, variable_name: str | None = None) -> Any:
-        """Boolean mask of missing positions.
-
-        Args:
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with boolean data.
-
-        See Also:
-            notnull: Inverse mask (non-missing positions).
-            fillna: Replace missing values with a constant.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.isnull`."""
         warnings.warn(
             "`mesh.isnull` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.isnull`.",
@@ -1106,18 +856,7 @@ class _MeshFacades:
         return self.analysis.isnull(variable_name)
 
     def notnull(self, variable_name: str | None = None) -> Any:
-        """Boolean mask of non-missing positions.
-
-        Args:
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with boolean data.
-
-        See Also:
-            isnull: Inverse mask (missing positions).
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.notnull`."""
         warnings.warn(
             "`mesh.notnull` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.notnull`.",
@@ -1129,23 +868,7 @@ class _MeshFacades:
     def clip_values(
         self, lower: Any, upper: Any, variable_name: str | None = None
     ) -> Any:
-        """Clamp variable values to ``[lower, upper]``.
-
-        Named ``clip_values`` to avoid collision with the spatial
-        :meth:`~pyramids.netcdf.ugrid.dataset.MeshDataset.clip` method.
-
-        Args:
-            lower: Minimum allowed value.
-            upper: Maximum allowed value.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with clamped values.
-
-        See Also:
-            round: Round values to a number of decimal places.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.clip_values`."""
         warnings.warn(
             "`mesh.clip_values` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.clip_values`.",
@@ -1155,19 +878,7 @@ class _MeshFacades:
         return self.analysis.clip_values(lower, upper, variable_name)
 
     def round(self, decimals: int = 0, variable_name: str | None = None) -> Any:
-        """Round variable values to *decimals* decimal places.
-
-        Args:
-            decimals: Number of decimal places.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with rounded values.
-
-        See Also:
-            clip_values: Clamp values to a range.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.round`."""
         warnings.warn(
             "`mesh.round` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.round`.",
@@ -1177,19 +888,7 @@ class _MeshFacades:
         return self.analysis.round(decimals, variable_name)
 
     def astype(self, dtype: Any, variable_name: str | None = None) -> Any:
-        """Cast variable values to a different dtype.
-
-        Args:
-            dtype: Target numpy dtype.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with the new dtype.
-
-        See Also:
-            round: Round floating-point values before an integer cast.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.astype`."""
         warnings.warn(
             "`mesh.astype` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.astype`.",
@@ -1204,29 +903,7 @@ class _MeshFacades:
         other: Any = np.nan,
         variable_name: str | None = None,
     ) -> Any:
-        """Keep the elements ``cond`` selects and mask the rest (issue #1375).
-
-        The mesh counterpart of the raster ``where``. A ``nodata`` / NaN element is never
-        selected — there is no value there to keep — so it goes to ``other`` whatever ``cond``
-        says, leaving the result with one masking convention rather than two.
-
-        The per-timestep active mask (:attr:`~pyramids.netcdf.ugrid.models.MeshVariable.active`)
-        is **not** applied here. Keeping "dry" distinct from "missing" is the whole point of
-        that field (issue #1331), so activity-aware masking is something a caller composes
-        explicitly: ``ds.where(ds.active_mask(name) & (values > 0))``.
-
-        Args:
-            cond: A boolean array broadcastable to the variable's values.
-            other: What an unselected element holds. Defaults to NaN.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with the unselected elements masked.
-
-        See Also:
-            clip_values: Clamp values to a range instead of masking outside it.
-            masked_values: Apply the active mask to the values, on demand.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.where`."""
         warnings.warn(
             "`mesh.where` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.where`.",
@@ -1236,26 +913,7 @@ class _MeshFacades:
         return self.analysis.where(cond, other, variable_name)
 
     def apply(self, func: Any, variable_name: str | None = None) -> Any:
-        """Apply ``func`` to every element of a variable (issue #1375).
-
-        The mesh counterpart of the raster ``apply``. ``func`` receives the whole array, so a
-        numpy ufunc runs vectorised rather than once per element. The shape must survive, since
-        the result still has to line up with the mesh elements it describes.
-
-        Args:
-            func: A callable taking and returning an array of the same shape.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset carrying the transformed values.
-
-        Raises:
-            ValueError: ``func`` changed the array shape.
-
-        See Also:
-            astype: Cast values to another dtype.
-            round: Round values to a number of decimal places.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.apply`."""
         warnings.warn(
             "`mesh.apply` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.apply`.",
@@ -1270,28 +928,7 @@ class _MeshFacades:
         value_range: tuple[float, float] | None = None,
         variable_name: str | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """The variable's value distribution as data (issue #1375).
-
-        The mesh counterpart of the raster ``get_histogram``. :meth:`plot_histogram` could
-        already *draw* the distribution but gave no way to obtain it; both mask no-data through
-        the same helper, so these counts describe exactly the samples those bars show.
-
-        Args:
-            bins: Number of equal-width bins. Defaults to 256.
-            value_range: ``(low, high)`` to bin within, or ``None`` to span the data.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            tuple: ``(counts, edges)`` -- per-bin counts and the ``bins + 1`` edges, in the
-            variable's own units.
-
-        Raises:
-            ValueError: Nothing survives the no-data masking, so there is no distribution.
-
-        See Also:
-            plot_histogram: The same distribution, drawn.
-            summary: Per-variable min / max / mean / std over the whole mesh.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.get_histogram`."""
         warnings.warn(
             "`mesh.get_histogram` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.get_histogram`.",
@@ -1301,15 +938,7 @@ class _MeshFacades:
         return self.analysis.get_histogram(bins, value_range, variable_name)
 
     def isin(self, test_values: Any, variable_name: str | None = None) -> Any:
-        """Boolean mask where variable values are in *test_values*.
-
-        Args:
-            test_values: Values to test membership against.
-            variable_name: Variable to act on (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with boolean data.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.isin`."""
         warnings.warn(
             "`mesh.isin` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.isin`.",
@@ -1338,21 +967,7 @@ class _MeshFacades:
         return self.analysis.domain_area()
 
     def count_domain_cells(self, variable_name: str | None = None) -> int:
-        """Number of active (non-masked) mesh faces.
-
-        When the variable carries no active mask, all faces are counted.
-
-        Args:
-            variable_name: Variable whose active mask to consult.
-                ``None`` counts all faces.
-
-        Returns:
-            int: Active face count.
-
-        See Also:
-            domain_area: Total area rather than face count.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.count_domain_cells`."""
         warnings.warn(
             "`mesh.count_domain_cells` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.count_domain_cells`.",
@@ -1367,26 +982,7 @@ class _MeshFacades:
         y: Any,
         variable_name: str | None = None,
     ) -> Any:
-        """Sample variable values at arbitrary (x, y) coordinates.
-
-        Uses an STRtree spatial index to locate the containing face
-        for each query point.
-
-        Args:
-            x: Query x-coordinates (scalar or array).
-            y: Query y-coordinates (scalar or array).
-            variable_name: Variable to extract (default: the only one).
-
-        Returns:
-            numpy array of extracted values.  Points outside the mesh
-            get ``NaN``.
-
-        See Also:
-            sample_random: Draw spatially random samples instead of
-                querying specific coordinates.
-            sample: Interpolated point sampling (existing method on
-                MeshDataset).
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.extract`."""
         warnings.warn(
             "`mesh.extract` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.extract`.",
@@ -1401,21 +997,7 @@ class _MeshFacades:
         variable_name: str | None = None,
         seed: int | None = None,
     ) -> tuple:
-        """Draw *n* spatially random samples from the mesh domain.
-
-        Args:
-            n: Number of samples.
-            variable_name: Variable to sample (default: the only one).
-            seed: RNG seed for reproducibility.
-
-        Returns:
-            ``(x, y, values)`` — arrays of length *n*.
-
-        See Also:
-            extract: Sample at specific coordinates rather than random
-                ones.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.sample_random`."""
         warnings.warn(
             "`mesh.sample_random` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.sample_random`.",
@@ -1429,25 +1011,7 @@ class _MeshFacades:
         levels: Any = None,
         variable_name: str | None = None,
     ) -> Any:
-        """Generate contour lines from face/node values.
-
-        Args:
-            levels: Contour levels (int for count, array for explicit).
-            variable_name: Variable to contour (default: the only one).
-
-        Returns:
-            GeoDataFrame with contour ``LineString`` geometries and a
-            ``level`` column.
-
-        Raises:
-            ValueError: If the variable has more than one time step;
-                select a single step first.
-
-        See Also:
-            plot_histogram: Distribution of the same variable as a
-                histogram.
-
-        """
+        """Facade -- delegates to :meth:`_MeshVector.contour`."""
         warnings.warn(
             "`mesh.contour` is deprecated and will be removed in 0.90.0; use "
             "`mesh.vector.contour`.",
@@ -1475,21 +1039,7 @@ class _MeshFacades:
         )
 
     def proximity(self, target_faces: Any) -> Any:
-        """Graph distance from every face to the nearest target face.
-
-        Uses BFS over the face adjacency graph.
-
-        Args:
-            target_faces: 1-D array of face indices that are targets
-                (distance zero).
-
-        Returns:
-            numpy array of per-face integer distances.  ``-1`` for
-            faces in disconnected components with no target.
-
-        See Also:
-            sieve: Remove small connected regions by area threshold.
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.proximity`."""
         warnings.warn(
             "`mesh.proximity` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.proximity`.",
@@ -1503,27 +1053,7 @@ class _MeshFacades:
         threshold: int,
         variable_name: str | None = None,
     ) -> Any:
-        """Remove small connected regions below *threshold* faces.
-
-        Faces in a connected component smaller than *threshold* are
-        blanked to NaN.  Operates on the face adjacency graph.
-
-        Args:
-            threshold: Minimum component size (face count) to keep.
-            variable_name: Variable to sieve (default: the only one).
-
-        Returns:
-            MeshDataset: A new dataset with small-region faces
-                replaced by NaN.
-
-        Raises:
-            ValueError: If the variable has more than one time step;
-                select a single step first.
-
-        See Also:
-            proximity: Compute graph distances from target faces.
-
-        """
+        """Facade -- delegates to :meth:`_MeshAnalysis.sieve`."""
         warnings.warn(
             "`mesh.sieve` is deprecated and will be removed in 0.90.0; use "
             "`mesh.analysis.sieve`.",
