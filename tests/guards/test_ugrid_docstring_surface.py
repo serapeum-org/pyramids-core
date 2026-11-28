@@ -17,8 +17,10 @@ Static reflection over the live classes, so it needs no docs build and no option
 
 from __future__ import annotations
 
+import ast
 import inspect
 import re
+import textwrap
 
 import pytest
 
@@ -92,17 +94,47 @@ def _declared_parameters(member) -> set[str]:
     }
 
 
-def _is_deprecated_facade(member) -> bool:
-    """True when the callable is a flat deprecation facade that delegates to an engine.
+def _warns_deprecation(call: ast.Call) -> bool:
+    """True when `call` passes `DeprecationWarning` positionally or as `category=`."""
+    nodes = list(call.args) + [kw.value for kw in call.keywords]
+    return any(isinstance(n, ast.Name) and n.id == "DeprecationWarning" for n in nodes)
 
-    A facade's body emits a `DeprecationWarning`; its parameters are documented on the engine
-    method it forwards to, so this guard checks the engine, not the facade.
+
+def _is_deprecated_facade(member) -> bool:
+    """True when the callable's body is *exactly* a deprecation warning plus a delegation.
+
+    Structural, not a substring match: a method is exempt from the parameter-docs sweep only
+    when its body (docstring aside) is a single `warnings.warn(..., DeprecationWarning, ...)`
+    followed by a single `return`. A real method that merely mentions `DeprecationWarning` --
+    in a `Raises:` note, a comment, or a conditional warning on some other axis -- is therefore
+    still checked, which is the hole a substring match left open.
     """
     try:
-        source = inspect.getsource(member)
+        source = textwrap.dedent(inspect.getsource(member))
     except (OSError, TypeError):
         return False
-    return "DeprecationWarning" in source
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    if not tree.body or not isinstance(
+        tree.body[0], (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        return False
+    body = list(tree.body[0].body)
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    if len(body) != 2:
+        return False
+    warn, delegate = body
+    if not (isinstance(warn, ast.Expr) and isinstance(warn.value, ast.Call)):
+        return False
+    return _warns_deprecation(warn.value) and isinstance(delegate, ast.Return)
 
 
 def _public_callables(cls: type, *, skip_facades: bool) -> list[tuple[str, object]]:
