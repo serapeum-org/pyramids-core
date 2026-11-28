@@ -343,7 +343,7 @@ class TestNanProducingFacadesDeclareIt:
     def test_to_location_declares_nan(self, with_nodata):
         # An element with no contributor averages to NaN, so carrying the old sentinel through
         # left `to_file` writing NaN under the wrong _FillValue.
-        assert np.isnan(with_nodata.to_location("node")["v"].nodata)
+        assert np.isnan(with_nodata.analysis.to_location("node")["v"].nodata)
 
     def test_burn_declares_its_fill(self, with_nodata):
         burned = with_nodata.io.burn(shapely.box(0.0, 0.0, 1.0, 1.0), 1.0)

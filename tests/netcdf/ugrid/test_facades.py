@@ -53,13 +53,13 @@ class TestGraphFacades:
         assert strip.topology.sparse_adjacency("face").shape == (2, 2)
 
     def test_to_location_moves_the_variable(self, strip):
-        out = strip.to_location("node")
+        out = strip.analysis.to_location("node")
         assert out["d"].location == "node"
         assert out["d"].data.shape == (6,)
 
     def test_to_location_rejects_unknown(self, strip):
         with pytest.raises(ValueError, match="location must be one of"):
-            strip.to_location("bogus")
+            strip.analysis.to_location("bogus")
 
     def test_binary_dilation_grows_a_mask(self, strip):
         masked = strip.variables.with_variable(
@@ -122,7 +122,7 @@ class TestRegridFacades:
             face_node_connectivity=np.array([[0, 1, 2, 3]]),
             data={"t": np.array([0.0])},
         )
-        out = strip.regrid(target, method="overlap", variable_name="d")
+        out = strip.spatial.regrid(target, method="overlap", variable_name="d")
         # One target cell covering both sources of equal area -> their mean.
         assert out["d"].data.tolist() == pytest.approx([1.5])
 

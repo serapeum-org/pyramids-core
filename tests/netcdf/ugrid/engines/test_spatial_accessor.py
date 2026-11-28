@@ -93,7 +93,7 @@ def test_subset_by_bounds_accessor_matches_flat_facade():
         flat = subject.subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
     accessor = _mesh().spatial.subset_by_bounds(-0.5, -0.5, 1.5, 1.5)
     assert accessor.n_face == flat.n_face
-    assert accessor.equals(flat)
+    assert accessor.analysis.equals(flat)
 
 
 def test_crop_accessor_matches_flat_facade():
@@ -103,7 +103,7 @@ def test_crop_accessor_matches_flat_facade():
         flat = subject.crop(bbox=(-0.5, -0.5, 1.5, 1.5))
     accessor = _mesh().spatial.crop(bbox=(-0.5, -0.5, 1.5, 1.5))
     assert accessor.n_face == flat.n_face
-    assert accessor.equals(flat)
+    assert accessor.analysis.equals(flat)
 
 
 def test_resample_accessor_matches_flat_facade():

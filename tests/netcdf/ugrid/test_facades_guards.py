@@ -113,4 +113,4 @@ class TestUnloadedVariableIsRefusedByName:
         with pytest.raises(
             ValueError, match="to_location: variable 'v' has no loaded data"
         ):
-            unloaded.to_location("node")
+            unloaded.analysis.to_location("node")

@@ -126,7 +126,7 @@ class TestFacadeNodataSurvives:
         source = _mesh([1.0, 2.0])
         target = _mesh([0.0, 0.0], offset=10.0)
 
-        regridded = source.regrid(target)
+        regridded = source.spatial.regrid(target)
         before_write = regridded["v"].nodata
         assert before_write is not None, (
             "precondition: the regrid facade declares a fill"
@@ -144,7 +144,7 @@ class TestFacadeNodataSurvives:
 
     def test_a_remapped_variable_keeps_its_nan_declaration(self, tmp_path):
         """`to_location` declares NaN for the same reason, and that survives too."""
-        moved = _mesh([1.0, 2.0]).to_location("node")
+        moved = _mesh([1.0, 2.0]).analysis.to_location("node")
 
         read_back = _round_trip(moved, tmp_path, name="moved.nc")
         declared = read_back["v"].nodata

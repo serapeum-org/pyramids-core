@@ -59,10 +59,10 @@ class TestDerivationsKeepTheSubclass:
         assert type(with_attr.delete_global_attribute("a")) is _Derived
 
     def test_the_shared_rebuild_keeps_it(self, derived):
-        assert type(derived.to_location("node")) is _Derived
+        assert type(derived.analysis.to_location("node")) is _Derived
 
     def test_the_rebuild_carries_the_file_name(self, derived):
-        assert derived.to_location("node")._file_name == "source.nc"
+        assert derived.analysis.to_location("node")._file_name == "source.nc"
 
 
 class TestPublicCrs:
