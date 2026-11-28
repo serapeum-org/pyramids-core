@@ -134,7 +134,7 @@ class TestUgridDatasetPlotMethods:
             data={"depth": np.array([5.0])},
             data_locations={"depth": "face"},
         )
-        result = ds.plot("depth")
+        result = ds.glyph.plot("depth")
         assert isinstance(result, MeshGlyph), f"Expected MeshGlyph, got {type(result)}"
 
     def test_dataset_plot_outline_returns_mesh_glyph(self):
@@ -144,7 +144,7 @@ class TestUgridDatasetPlotMethods:
             node_y=np.array([0.0, 0.0, 1.0]),
             face_node_connectivity=np.array([[0, 1, 2]]),
         )
-        result = ds.plot_outline()
+        result = ds.glyph.plot_outline()
         assert isinstance(result, MeshGlyph), f"Expected MeshGlyph, got {type(result)}"
 
     def test_dataset_plot_routes_through_mesh_render(self):
@@ -168,10 +168,10 @@ class TestUgridDatasetPlotMethods:
             data_locations={"depth": "face"},
         )
         with patch(
-            "pyramids.netcdf.ugrid.dataset._mesh_render",
+            "pyramids.netcdf.ugrid.engines.glyph._mesh_render",
             return_value="sentinel",
         ) as mock_render:
-            result = ds.plot("depth")
+            result = ds.glyph.plot("depth")
         assert result == "sentinel", (
             f"MeshDataset.plot must return mesh_render result, got {result!r}"
         )
@@ -201,10 +201,10 @@ class TestUgridDatasetPlotMethods:
             epsg=4326,
         )
         with patch(
-            "pyramids.netcdf.ugrid.dataset._mesh_render",
+            "pyramids.netcdf.ugrid.engines.glyph._mesh_render",
             return_value="sentinel",
         ) as mock_render:
-            ds.plot("depth", cmap="plasma", basemap=True)
+            ds.glyph.plot("depth", cmap="plasma", basemap=True)
         kw = mock_render.call_args.kwargs
         assert kw.get("cmap") == "plasma", f"`cmap` must reach mesh_render; got {kw}"
         assert kw.get("basemap") is True, (
@@ -249,10 +249,10 @@ class TestUgridDatasetPlotMethods:
             ),
         ):
             with patch(
-                "pyramids.netcdf.ugrid.dataset._mesh_render",
+                "pyramids.netcdf.ugrid.engines.glyph._mesh_render",
             ) as mock_render:
                 with pytest.raises(ValueError, match=r"CRS"):
-                    ds.plot("depth", basemap=True)
+                    ds.glyph.plot("depth", basemap=True)
             mock_render.assert_not_called()
 
 
@@ -288,7 +288,7 @@ class TestMeshStyleHillshade:
         """``MeshDataset.plot(data_style=DataStyle(style=...))`` renders a styled mesh."""
         from cleopatra.styling.params import DataStyle
 
-        result = self._dataset("face").plot(
+        result = self._dataset("face").glyph.plot(
             "depth", data_style=DataStyle(style="flow_accumulation")
         )
         assert isinstance(result, MeshGlyph)
@@ -304,7 +304,7 @@ class TestMeshStyleHillshade:
         """
         from cleopatra.styling.params import DataStyle
 
-        result = self._dataset("node").plot(
+        result = self._dataset("node").glyph.plot(
             "depth", data_style=DataStyle(hillshade=True)
         )
         assert isinstance(result, MeshGlyph)
@@ -326,7 +326,7 @@ class TestMeshStyleHillshade:
 
         ds = self._dataset("face")
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            ds.plot(
+            ds.glyph.plot(
                 "depth",
                 data_style=DataStyle(style="flow_accumulation", hillshade=True),
             )
@@ -347,16 +347,16 @@ class TestMeshStyleHillshade:
         ds = self._dataset("face")
         data_style = DataStyle(style="topography", hillshade=True)
         with patch(
-            "pyramids.netcdf.ugrid.dataset._mesh_render", return_value="sentinel"
+            "pyramids.netcdf.ugrid.engines.glyph._mesh_render", return_value="sentinel"
         ) as mock_render:
-            ds.plot("depth", data_style=data_style)
+            ds.glyph.plot("depth", data_style=data_style)
         assert mock_render.call_args.kwargs.get("data_style") is data_style
 
     def test_falsy_hillshade_is_dropped(self):
         """``hillshade=False`` is dropped — no ``DataStyle`` is built for it."""
         ds = self._dataset("face")
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            ds.plot("depth", hillshade=False)
+            ds.glyph.plot("depth", hillshade=False)
         assert mock_plot.call_args.kwargs.get("data_style") is None, (
             "a falsy hillshade must not build a DataStyle"
         )
@@ -376,7 +376,7 @@ class TestMeshStyleHillshade:
         """
         from cleopatra.styling.params import DataStyle
 
-        result = self._dataset("face").plot(
+        result = self._dataset("face").glyph.plot(
             "depth", data_style=DataStyle(style="flow_accumulation")
         )
         assert result.style == "flow_accumulation"
@@ -415,7 +415,7 @@ class TestUgridPlotAlignment:
 
         bar = ColorBar(label="depth")
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            self._dataset("face").plot("depth", colorbar=bar)
+            self._dataset("face").glyph.plot("depth", colorbar=bar)
         assert mock_plot.call_args.kwargs.get("colorbar") is bar, (
             "an explicit colorbar must reach MeshGlyph.plot"
         )
@@ -429,7 +429,7 @@ class TestUgridPlotAlignment:
             rather than a pyramids-injected ``None``.
         """
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            self._dataset("face").plot("depth")
+            self._dataset("face").glyph.plot("depth")
         assert mock_plot.call_args.kwargs.get("colorbar") is True, (
             "the mesh default (bar drawn) must survive an omitted colorbar"
         )
@@ -437,7 +437,7 @@ class TestUgridPlotAlignment:
     def test_explicit_false_colorbar_reaches_mesh_glyph_plot(self):
         """An explicit ``colorbar=False`` hides the bar via ``MeshGlyph.plot``."""
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            self._dataset("face").plot("depth", colorbar=False)
+            self._dataset("face").glyph.plot("depth", colorbar=False)
         assert mock_plot.call_args.kwargs.get("colorbar") is False, (
             "colorbar=False must reach MeshGlyph.plot"
         )
@@ -450,7 +450,7 @@ class TestUgridPlotAlignment:
             ``MeshGlyph.plot`` (the mesh has no point overlay and a fixed renderer).
         """
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            self._dataset("face").plot(
+            self._dataset("face").glyph.plot(
                 "depth", points=np.array([[1.0, 0, 0]]), kind="contourf"
             )
         kw = mock_plot.call_args.kwargs
@@ -485,7 +485,9 @@ class TestUgridGroupParams:
         color = ColorScaling.power(gamma=0.8)
         data_style = DataStyle(style="flow_accumulation")
         with patch.object(MeshGlyph, "plot") as mock_plot:
-            self._dataset("face").plot("depth", color=color, data_style=data_style)
+            self._dataset("face").glyph.plot(
+                "depth", color=color, data_style=data_style
+            )
         kw = mock_plot.call_args.kwargs
         assert kw.get("color") is color, "explicit color must reach MeshGlyph.plot"
         assert kw.get("data_style") is data_style, "explicit data_style must reach it"

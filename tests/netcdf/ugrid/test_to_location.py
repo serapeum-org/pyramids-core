@@ -41,24 +41,24 @@ def face_variable() -> MeshDataset:
 
 class TestDimensionNamesFollowTheLocation:
     def test_the_element_dimension_is_renamed(self, face_variable):
-        moved = face_variable.to_location("node")
+        moved = face_variable.analysis.to_location("node")
         assert moved["v"].dimensions == ("mesh2d_nNodes",)
 
     def test_the_export_no_longer_conflicts(self, face_variable):
         pytest.importorskip("xarray")
-        exported = face_variable.to_location("node").to_xarray()
+        exported = face_variable.analysis.to_location("node").interop.to_xarray()
         assert exported["v"].shape == (4,)
 
     def test_remapping_to_edges_renames_too(self, face_variable):
-        moved = face_variable.to_location("edge")
+        moved = face_variable.analysis.to_location("edge")
         assert moved["v"].dimensions == ("mesh2d_nEdges",)
 
     def test_a_variable_without_dimensions_is_left_alone(self):
-        moved = _dataset([10.0, 20.0], "face").to_location("node")
+        moved = _dataset([10.0, 20.0], "face").analysis.to_location("node")
         assert moved["v"].dimensions == ()
 
     def test_the_values_are_the_element_averages(self, face_variable):
-        moved = face_variable.to_location("node")
+        moved = face_variable.analysis.to_location("node")
         # Node 0 and node 2 touch both triangles; nodes 1 and 3 touch one each.
         assert np.asarray(moved["v"].data)[1] == pytest.approx(10.0)
         assert np.asarray(moved["v"].data)[3] == pytest.approx(20.0)
@@ -67,20 +67,20 @@ class TestDimensionNamesFollowTheLocation:
 class TestIdentityRemapIsANoOp:
     def test_face_to_face_keeps_the_values(self):
         dataset = _dataset([10.0, 20.0], "face")
-        same = dataset.to_location("face")
+        same = dataset.analysis.to_location("face")
         assert np.asarray(same["v"].data).tolist() == [10.0, 20.0]
         assert same["v"].location == "face"
 
     def test_node_to_node_keeps_the_values(self):
         dataset = _dataset([1.0, 2.0, 3.0, 4.0], "node")
-        same = dataset.to_location("node")
+        same = dataset.analysis.to_location("node")
         assert np.asarray(same["v"].data).tolist() == [1.0, 2.0, 3.0, 4.0]
 
     def test_the_result_is_a_new_dataset(self):
         dataset = _dataset([10.0, 20.0], "face")
-        assert dataset.to_location("face") is not dataset
+        assert dataset.analysis.to_location("face") is not dataset
 
     def test_an_unknown_location_is_still_refused(self):
         dataset = _dataset([10.0, 20.0], "face")
         with pytest.raises(ValueError, match="location must be one of"):
-            dataset.to_location("vertex")
+            dataset.analysis.to_location("vertex")

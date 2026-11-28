@@ -243,7 +243,7 @@ class TestMeshEdgeLinestringsHalfPaddedRow:
             original_start_index=0,
         )
 
-        frame = mesh.to_feature_collection(location="edge")
+        frame = mesh.vector.to_feature_collection(location="edge")
 
         assert len(frame) == 2, f"one row per declared edge, got {len(frame)}"
         assert frame.geometry.iloc[1].is_empty, (

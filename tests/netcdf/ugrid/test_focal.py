@@ -67,36 +67,38 @@ class TestFocalMean:
 
     def test_one_ring(self):
         """mean{0,10}=5, mean{0,10,20}=10, mean{10,20,30}=20, mean{20,30}=25."""
-        assert _strip([0.0, 10.0, 20.0, 30.0]).focal_mean().tolist() == pytest.approx(
-            [5.0, 10.0, 20.0, 25.0]
-        )
+        assert _strip(
+            [0.0, 10.0, 20.0, 30.0]
+        ).analysis.focal_mean().tolist() == pytest.approx([5.0, 10.0, 20.0, 25.0])
 
     def test_boundary_faces_use_only_what_they_have(self):
         """No padding: face 0 averages over two faces, not a fabricated three."""
-        result = _strip([0.0, 10.0, 20.0, 30.0]).focal_mean()
+        result = _strip([0.0, 10.0, 20.0, 30.0]).analysis.focal_mean()
         assert result[0] == pytest.approx(5.0), "padding would have skewed this"
 
     def test_two_rings(self):
-        assert _strip([0.0, 10.0, 20.0, 30.0]).focal_mean(2).tolist() == pytest.approx(
-            [10.0, 15.0, 15.0, 20.0]
-        )
+        assert _strip([0.0, 10.0, 20.0, 30.0]).analysis.focal_mean(
+            2
+        ).tolist() == pytest.approx([10.0, 15.0, 15.0, 20.0])
 
     def test_a_constant_field_is_unchanged(self):
-        assert _strip([7.0] * 4).focal_mean().tolist() == pytest.approx([7.0] * 4)
+        assert _strip([7.0] * 4).analysis.focal_mean().tolist() == pytest.approx(
+            [7.0] * 4
+        )
 
     def test_nodata_neighbours_are_excluded(self):
         """Face 1's neighbourhood is {0,1,2}; with face 0 nodata it averages {10,20}."""
         ds = _strip([-999.0, 10.0, 20.0, 30.0], nodata=-999.0)
-        assert ds.focal_mean()[1] == pytest.approx(15.0)
+        assert ds.analysis.focal_mean()[1] == pytest.approx(15.0)
 
     def test_an_all_nodata_neighbourhood_is_nan(self):
         ds = _strip([-999.0, -999.0, 20.0, 30.0], nodata=-999.0)
-        assert np.isnan(ds.focal_mean()[0]), "nothing usable to average"
+        assert np.isnan(ds.analysis.focal_mean()[0]), "nothing usable to average"
 
     def test_inactive_neighbours_are_excluded(self):
         """A dry neighbour should not drag a wet face's mean down."""
         ds = _strip([0.0, 10.0, 20.0, 30.0], active=[False, True, True, True])
-        assert ds.focal_mean()[1] == pytest.approx(15.0)
+        assert ds.analysis.focal_mean()[1] == pytest.approx(15.0)
 
     def test_refuses_a_temporal_variable(self):
         ds = MeshDataset.from_arrays(
@@ -107,7 +109,7 @@ class TestFocalMean:
             data_locations={"v": "face"},
         )
         with pytest.raises(ValueError, match="one value per face"):
-            ds.focal_mean()
+            ds.analysis.focal_mean()
 
 
 class TestFocalStd:
@@ -115,20 +117,20 @@ class TestFocalStd:
 
     def test_one_ring(self):
         """std{0,10}=5, std{0,10,20}=8.165 (population, not sample)."""
-        result = _strip([0.0, 10.0, 20.0, 30.0]).focal_std()
+        result = _strip([0.0, 10.0, 20.0, 30.0]).analysis.focal_std()
         assert result[0] == pytest.approx(5.0)
         assert result[1] == pytest.approx(np.std([0.0, 10.0, 20.0]))
 
     def test_a_constant_neighbourhood_is_exactly_zero(self):
         """The sums identity can land a hair below zero on a constant field; it is clamped,
         so the square root never sees a negative."""
-        result = _strip([7.0] * 4).focal_std()
+        result = _strip([7.0] * 4).analysis.focal_std()
         assert result.tolist() == pytest.approx([0.0] * 4)
         assert not np.isnan(result).any()
 
     def test_all_nodata_is_nan(self):
         ds = _strip([-999.0, -999.0, -999.0, -999.0], nodata=-999.0)
-        assert np.isnan(ds.focal_std()).all()
+        assert np.isnan(ds.analysis.focal_std()).all()
 
 
 class TestFocalApply:
@@ -136,20 +138,20 @@ class TestFocalApply:
 
     def test_peak_to_peak(self):
         """ptp{0,10}=10, ptp{0,10,20}=20, ptp{10,20,30}=20, ptp{20,30}=10."""
-        assert _strip([0.0, 10.0, 20.0, 30.0]).focal_apply(
+        assert _strip([0.0, 10.0, 20.0, 30.0]).analysis.focal_apply(
             np.ptp
         ).tolist() == pytest.approx([10.0, 20.0, 20.0, 10.0])
 
     def test_median(self):
-        assert _strip([0.0, 10.0, 20.0, 30.0]).focal_apply(np.median)[
+        assert _strip([0.0, 10.0, 20.0, 30.0]).analysis.focal_apply(np.median)[
             1
         ] == pytest.approx(10.0)
 
     def test_matches_focal_mean_when_given_mean(self):
         """The arbitrary path and the vectorised one must agree on the same statistic."""
         ds = _strip([0.0, 10.0, 20.0, 30.0])
-        assert ds.focal_apply(np.mean).tolist() == pytest.approx(
-            ds.focal_mean().tolist()
+        assert ds.analysis.focal_apply(np.mean).tolist() == pytest.approx(
+            ds.analysis.focal_mean().tolist()
         )
 
     def test_func_never_sees_an_empty_array(self):
@@ -159,7 +161,7 @@ class TestFocalApply:
         def explode(_values):
             raise AssertionError("func must not be called on an empty neighbourhood")
 
-        assert np.isnan(ds.focal_apply(explode)).all()
+        assert np.isnan(ds.analysis.focal_apply(explode)).all()
 
 
 class TestKernelGuards:
@@ -233,10 +235,12 @@ class TestNeighbourhoodCost:
         ds = _strip([0.0, 10.0, 20.0, 30.0])
         reach = neighbourhood(ds.mesh, 1)
         values = np.array([0.0, 10.0, 20.0, 30.0])
-        assert np.allclose(focal_mean(ds.mesh, values, reach=reach), ds.focal_mean()), (
-            "the shared matrix must give the same answer"
+        assert np.allclose(
+            focal_mean(ds.mesh, values, reach=reach), ds.analysis.focal_mean()
+        ), "the shared matrix must give the same answer"
+        assert np.allclose(
+            focal_std(ds.mesh, values, reach=reach), ds.analysis.focal_std()
         )
-        assert np.allclose(focal_std(ds.mesh, values, reach=reach), ds.focal_std())
 
 
 class TestFocalApplyContract:
@@ -247,12 +251,12 @@ class TestFocalApplyContract:
         mentions neither func nor the documented contract."""
         ds = _strip([0.0, 10.0, 20.0, 30.0])
         with pytest.raises(TypeError, match="func must return one scalar"):
-            ds.focal_apply(lambda neighbourhood: neighbourhood)
+            ds.analysis.focal_apply(lambda neighbourhood: neighbourhood)
 
     def test_the_message_suggests_a_reducing_function(self):
         ds = _strip([0.0, 10.0, 20.0, 30.0])
         with pytest.raises(TypeError, match="np.median|np.ptp"):
-            ds.focal_apply(lambda neighbourhood: neighbourhood * 2.0)
+            ds.analysis.focal_apply(lambda neighbourhood: neighbourhood * 2.0)
 
 
 class TestReachIsValidated:
@@ -334,10 +338,13 @@ class TestReachReachableFromTheFacade:
     def test_the_facade_accepts_a_precomputed_reach(self):
         ds = _strip([0.0, 10.0, 20.0, 30.0])
         reach = neighbourhood(ds.mesh, 1)
-        assert np.allclose(ds.focal_mean(reach=reach), ds.focal_mean())
-        assert np.allclose(ds.focal_std(reach=reach), ds.focal_std())
         assert np.allclose(
-            ds.focal_apply(np.median, reach=reach), ds.focal_apply(np.median)
+            ds.analysis.focal_mean(reach=reach), ds.analysis.focal_mean()
+        )
+        assert np.allclose(ds.analysis.focal_std(reach=reach), ds.analysis.focal_std())
+        assert np.allclose(
+            ds.analysis.focal_apply(np.median, reach=reach),
+            ds.analysis.focal_apply(np.median),
         )
 
     def test_the_facade_refuses_a_wrong_sized_reach_too(self):
@@ -346,4 +353,4 @@ class TestReachReachableFromTheFacade:
         ds = _strip([0.0, 10.0, 20.0, 30.0])
         wrong = sparse.identity(9, dtype=bool, format="csr")
         with pytest.raises(ValueError, match="reach matrix is"):
-            ds.focal_mean(reach=wrong)
+            ds.analysis.focal_mean(reach=wrong)

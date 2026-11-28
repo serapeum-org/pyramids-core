@@ -147,41 +147,41 @@ class TestIselLayerRagged:
     """``isel_layer`` selects per column and makes absent layers explicit."""
 
     def test_layer_present_in_every_column(self):
-        out = _volume_dataset().isel_layer(0)["sal"]
+        out = _volume_dataset().selection.isel_layer(0)["sal"]
         assert out.location == "face"
         assert out.data.tolist() == [0.0, 3.0, 4.0]
 
     def test_absent_layers_become_nan_not_padded(self):
-        out = _volume_dataset().isel_layer(2)["sal"]
+        out = _volume_dataset().selection.isel_layer(2)["sal"]
         # Only column 0 (3 layers) has a layer 2; columns 1 and 2 are NaN.
         assert out.data[0] == 2.0
         assert np.isnan(out.data[1])
         assert np.isnan(out.data[2])
 
     def test_result_drops_the_volume_topology(self):
-        out = _volume_dataset().isel_layer(0)
+        out = _volume_dataset().selection.isel_layer(0)
         assert out.volume_topology is None  # it is a plain 2-D dataset now
 
     def test_temporal_volume_variable(self):
         data = np.stack([np.arange(6.0), np.arange(6.0) + 10])  # (time=2, volume=6)
-        out = _volume_dataset(data=data).isel_layer(0)["sal"]
+        out = _volume_dataset(data=data).selection.isel_layer(0)["sal"]
         assert out.data.shape == (2, 3)
         assert out.data[1].tolist() == [10.0, 13.0, 14.0]
 
     def test_non_int_index_is_refused(self):
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="int layer position"):
-            ds.isel_layer(slice(0, 2))
+            ds.selection.isel_layer(slice(0, 2))
 
     def test_negative_layer_is_refused(self):
         """Regression (L1): a negative layer must raise, not wrap into another column's
         volumes the way a bare ``offset + layer`` index would."""
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="non-negative"):
-            ds.isel_layer(-1)
+            ds.selection.isel_layer(-1)
 
     def test_sel_layer_by_position(self):
-        out = _volume_dataset().sel_layer(1)["sal"]
+        out = _volume_dataset().selection.sel_layer(1)["sal"]
         assert out.data[0] == 1.0
         assert np.isnan(out.data[1])
         assert out.data[2] == 5.0
@@ -191,12 +191,12 @@ class TestCollapseLayer:
     """The explicit 2-D collapse."""
 
     def test_face_at_a_layer(self):
-        out = _volume_dataset().collapse_layer(0, location="face")["sal"]
+        out = _volume_dataset().selection.collapse_layer(0, location="face")["sal"]
         assert out.location == "face"
         assert out.data.tolist() == [0.0, 3.0, 4.0]
 
     def test_default_location_is_face(self):
-        out = _volume_dataset().collapse_layer(0)["sal"]
+        out = _volume_dataset().selection.collapse_layer(0)["sal"]
         assert out.data.tolist() == [0.0, 3.0, 4.0]
 
     def test_requires_a_volume_topology(self):
@@ -207,19 +207,19 @@ class TestCollapseLayer:
             data={"depth": np.array([2.0, 4.0])},
         )
         with pytest.raises(ValueError, match="needs a ragged volume topology"):
-            ds.collapse_layer(0)
+            ds.selection.collapse_layer(0)
 
     def test_rejects_non_face_location(self):
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="only 'face'"):
-            ds.collapse_layer(0, location="node")
+            ds.selection.collapse_layer(0, location="node")
 
 
 class TestToDataFrame:
     """The tidy frame lays a ragged variable out one row per volume, no fabrication."""
 
     def test_one_row_per_volume_with_column_and_layer(self):
-        df = _volume_dataset().to_dataframe()
+        df = _volume_dataset().interop.to_dataframe()
         assert len(df) == 6
         assert df["element"].tolist() == [0, 0, 0, 1, 2, 2]
         assert df["layer"].tolist() == [0, 1, 2, 0, 0, 1]
@@ -235,13 +235,13 @@ class TestSpatialSubsetRefused:
         dataset whose mesh, volume variable and (dropped) topology disagree."""
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="ragged"):
-            ds.isel(element=[0, 1])
+            ds.selection.isel(element=[0, 1])
 
     def test_subset_by_bounds_is_refused(self):
         """Regression (M3): subset_by_bounds on a ragged mesh must raise too."""
         ds = _volume_dataset()
         with pytest.raises(ValueError, match="ragged"):
-            ds.subset_by_bounds(0.0, 0.0, 2.5, 1.0)
+            ds.spatial.subset_by_bounds(0.0, 0.0, 2.5, 1.0)
 
 
 class TestNetcdfRoundTrip:
@@ -250,19 +250,19 @@ class TestNetcdfRoundTrip:
     def test_topology_and_variable_round_trip(self, tmp_path):
         ds = _volume_dataset()
         path = tmp_path / "ragged.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.volume_topology is not None
         assert back.volume_topology.layer_count.tolist() == [3, 1, 2]
         assert back.volume_topology.volume_offset.tolist() == [0, 3, 4, 6]
-        assert back.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]
+        assert back.selection.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]
 
     def test_reader_requires_the_role_not_just_the_name(self, tmp_path):
         """Regression (L1): a data variable colliding with a reserved topology name but
         lacking the ``pyramids_role`` must not be mistaken for the volume topology."""
         ds = _volume_dataset()
         path = tmp_path / "ragged_role.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         from osgeo import gdal
 
         from pyramids.netcdf.ugrid.io import parse_volume_topology
@@ -281,7 +281,7 @@ class TestNetcdfRoundTrip:
         int32 (which would truncate a mesh whose offsets exceed 2^31-1)."""
         ds = _volume_dataset()
         path = tmp_path / "ragged_i64.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         assert back.volume_topology.layer_count.dtype == np.int64
         assert back.volume_topology.volume_offset.dtype == np.int64
@@ -295,7 +295,7 @@ class TestNetcdfRoundTrip:
         )
         ds = _volume_dataset(topology=topology)
         path = tmp_path / "ragged_z.nc"
-        ds.to_file(path)
+        ds.io.to_file(path)
         back = MeshDataset.read_file(path)
         np.testing.assert_allclose(back.volume_topology.layer_z, topology.layer_z)
         np.testing.assert_allclose(

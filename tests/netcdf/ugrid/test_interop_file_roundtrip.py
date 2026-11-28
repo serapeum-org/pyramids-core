@@ -138,7 +138,7 @@ class TestNonDefaultMeshName:
         return dataset
 
     def test_the_export_names_the_dataset_topology(self, named):
-        exported = named.to_xarray()
+        exported = named.interop.to_xarray()
         topologies = [
             name
             for name, var in exported.variables.items()
@@ -147,29 +147,31 @@ class TestNonDefaultMeshName:
         assert topologies == ["rivers2d"]
 
     def test_the_data_variable_points_at_that_topology(self, named):
-        assert named.to_xarray()["v"].attrs["mesh"] == "rivers2d"
+        assert named.interop.to_xarray()["v"].attrs["mesh"] == "rivers2d"
 
     def test_there_is_only_one_element_dimension(self, named):
         # Exporting under the default name left the connectivity on mesh2d_nFaces and the data
         # on rivers2d_nFaces — two unrelated dimensions of the same length in one file.
-        dimensions = sorted(dict(named.to_xarray().sizes))
+        dimensions = sorted(dict(named.interop.to_xarray().sizes))
         assert not any(name.startswith("mesh2d") for name in dimensions)
         assert "rivers2d_nFaces" in dimensions
 
     def test_the_name_survives_a_round_trip(self, named):
-        assert MeshDataset.from_xarray(named.to_xarray()).mesh_name == "rivers2d"
+        assert (
+            MeshDataset.from_xarray(named.interop.to_xarray()).mesh_name == "rivers2d"
+        )
 
     def test_a_re_export_still_names_it(self, named):
-        back = MeshDataset.from_xarray(named.to_xarray())
-        again = back.to_xarray()
+        back = MeshDataset.from_xarray(named.interop.to_xarray())
+        again = back.interop.to_xarray()
         assert again["v"].attrs["mesh"] == "rivers2d"
 
     def test_the_values_and_crs_survive_too(self, named):
-        back = MeshDataset.from_xarray(named.to_xarray())
+        back = MeshDataset.from_xarray(named.interop.to_xarray())
         assert np.asarray(back["v"].data).tolist() == [1.0, 2.0]
         assert back.epsg == 3857
 
     def test_the_file_round_trip_keeps_the_name(self, named, tmp_path):
         path = tmp_path / "named.nc"
-        named.to_xarray().to_netcdf(path)
+        named.interop.to_xarray().to_netcdf(path)
         assert MeshDataset.mesh_names(path) == ["rivers2d"]

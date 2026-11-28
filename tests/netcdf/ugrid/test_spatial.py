@@ -297,7 +297,7 @@ class TestClipMesh:
         """
 
         mask = box(-0.1, -0.1, 1.1, 2.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert clipped.n_face == 2, f"Expected 2 faces, got {clipped.n_face}"
 
     def test_clip_touch_true(self, unit_square_dataset):
@@ -309,7 +309,7 @@ class TestClipMesh:
         """
 
         mask = box(0.0, 0.0, 1.0, 2.0)
-        clipped = unit_square_dataset.clip(mask, touch=True)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=True)
         assert clipped.n_face >= 2, (
             f"Expected >= 2 faces with touch=True, got {clipped.n_face}"
         )
@@ -323,7 +323,7 @@ class TestClipMesh:
         """
 
         mask = box(-0.1, -0.1, 1.1, 1.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert "temperature" in clipped.variable_names, (
             f"temperature should be in clipped data, got {clipped.variable_names}"
         )
@@ -341,7 +341,7 @@ class TestClipMesh:
         """
 
         mask = box(0.0, 0.0, 1.1, 1.1)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         fnc = clipped.mesh.face_node_connectivity
         max_node = fnc.data[fnc.data != -1].max()
         assert max_node < clipped.n_node, (
@@ -358,7 +358,7 @@ class TestSubsetByBounds:
         Test scenario:
             Full bounds should keep all faces.
         """
-        result = unit_square_dataset.subset_by_bounds(-1.0, -1.0, 3.0, 3.0)
+        result = unit_square_dataset.spatial.subset_by_bounds(-1.0, -1.0, 3.0, 3.0)
         assert result.n_face == 4, f"Expected 4 faces, got {result.n_face}"
 
     def test_subset_partial(self, unit_square_dataset):
@@ -367,7 +367,7 @@ class TestSubsetByBounds:
         Test scenario:
             Bounds covering only bottom-left cell should keep 1 face.
         """
-        result = unit_square_dataset.subset_by_bounds(-0.1, -0.1, 0.9, 0.9)
+        result = unit_square_dataset.spatial.subset_by_bounds(-0.1, -0.1, 0.9, 0.9)
         assert result.n_face < 4, f"Expected fewer than 4 faces, got {result.n_face}"
         assert result.n_face >= 1, f"Expected at least 1 face, got {result.n_face}"
 
@@ -377,7 +377,7 @@ class TestSubsetByBounds:
         Test scenario:
             Method on dataset should produce same result as standalone function.
         """
-        result = unit_square_dataset.subset_by_bounds(-1.0, -1.0, 3.0, 3.0)
+        result = unit_square_dataset.spatial.subset_by_bounds(-1.0, -1.0, 3.0, 3.0)
         assert result.n_face == 4, f"Expected 4 faces, got {result.n_face}"
 
     def test_clip_via_dataset_method(self, unit_square_dataset):
@@ -388,7 +388,7 @@ class TestSubsetByBounds:
         """
 
         mask = box(-0.1, -0.1, 2.1, 2.1)
-        result = unit_square_dataset.clip(mask)
+        result = unit_square_dataset.analysis.clip(mask)
         assert result.n_face == 4, f"Expected 4 faces, got {result.n_face}"
 
 
@@ -424,7 +424,7 @@ class TestSpatialWithUgridConventionNc:
         xmin, ymin, xmax, ymax = ugrid_ds.bounds
         mid_x = (xmin + xmax) / 2
         mid_y = (ymin + ymax) / 2
-        result = ugrid_ds.subset_by_bounds(xmin, ymin, mid_x, mid_y)
+        result = ugrid_ds.spatial.subset_by_bounds(xmin, ymin, mid_x, mid_y)
         assert result.n_face < ugrid_ds.n_face, (
             f"Subset should have fewer faces: {result.n_face} vs {ugrid_ds.n_face}"
         )
@@ -442,7 +442,7 @@ class TestSpatialEdgeCases:
         """
 
         mask = box(100.0, 100.0, 200.0, 200.0)
-        result = unit_square_dataset.clip(mask, touch=True)
+        result = unit_square_dataset.analysis.clip(mask, touch=True)
         assert result.n_face == 0, f"Expected 0 faces, got {result.n_face}"
 
     def test_subset_fully_outside_bounds(self, unit_square_dataset):
@@ -451,7 +451,9 @@ class TestSpatialEdgeCases:
         Test scenario:
             Bounds far from mesh should produce 0 faces.
         """
-        result = unit_square_dataset.subset_by_bounds(100.0, 100.0, 200.0, 200.0)
+        result = unit_square_dataset.spatial.subset_by_bounds(
+            100.0, 100.0, 200.0, 200.0
+        )
         assert result.n_face == 0, f"Expected 0 faces, got {result.n_face}"
 
     def test_locate_faces_all_outside(self, unit_square_mesh):
@@ -489,7 +491,7 @@ class TestSpatialEdgeCases:
             data_locations={"altitude": "node"},
         )
         mask = box(-0.1, -0.1, 1.1, 1.1)
-        clipped = ds.clip(mask, touch=False)
+        clipped = ds.analysis.clip(mask, touch=False)
         var = clipped["altitude"]
         assert var.n_elements == clipped.n_node, (
             f"Node data length {var.n_elements} should match n_node {clipped.n_node}"
@@ -506,8 +508,8 @@ class TestCrop:
             A box over the left column yields the same sub-mesh whether called via crop or clip.
         """
         mask = box(-0.1, -0.1, 1.1, 2.1)
-        cropped = unit_square_dataset.crop(mask, touch=False)
-        clipped = unit_square_dataset.clip(mask, touch=False)
+        cropped = unit_square_dataset.spatial.crop(mask, touch=False)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=False)
         assert cropped.n_face == clipped.n_face == 2, (
             f"crop/clip disagree: {cropped.n_face} vs {clipped.n_face}"
         )
@@ -519,8 +521,8 @@ class TestCrop:
             Contained-only selection is a subset of the boundary-touching selection.
         """
         mask = box(0.0, 0.0, 1.0, 2.0)
-        n_false = unit_square_dataset.crop(mask, touch=False).n_face
-        n_true = unit_square_dataset.crop(mask, touch=True).n_face
+        n_false = unit_square_dataset.spatial.crop(mask, touch=False).n_face
+        n_true = unit_square_dataset.spatial.crop(mask, touch=True).n_face
         assert n_false <= n_true, (
             f"touch=False ({n_false}) should be <= touch=True ({n_true})"
         )
@@ -537,8 +539,8 @@ class TestCrop:
             and a list bbox.
         """
         bounds = as_type([-0.1, -0.1, 1.1, 2.1])
-        cropped = unit_square_dataset.crop(bbox=bounds)
-        subset = unit_square_dataset.subset_by_bounds(*bounds)
+        cropped = unit_square_dataset.spatial.crop(bbox=bounds)
+        subset = unit_square_dataset.spatial.subset_by_bounds(*bounds)
         assert cropped.n_face == subset.n_face, (
             f"crop(bbox)/subset_by_bounds disagree: {cropped.n_face} vs {subset.n_face}"
         )
@@ -555,8 +557,8 @@ class TestCrop:
             does — proving touch is forwarded (not dropped) on the mask path.
         """
         mask = box(-0.1, -0.1, 1.1, 2.1)
-        cropped = unit_square_dataset.crop(mask, touch=touch)
-        clipped = unit_square_dataset.clip(mask, touch=touch)
+        cropped = unit_square_dataset.spatial.crop(mask, touch=touch)
+        clipped = unit_square_dataset.analysis.clip(mask, touch=touch)
         assert cropped.n_face == clipped.n_face, (
             f"crop(touch={touch}) kept {cropped.n_face} faces, clip kept {clipped.n_face}"
         )
@@ -569,8 +571,8 @@ class TestCrop:
             bbox path always routes through subset_by_bounds regardless of touch.
         """
         bounds = (-0.1, -0.1, 1.1, 2.1)
-        n_true = unit_square_dataset.crop(bbox=bounds, touch=True).n_face
-        n_false = unit_square_dataset.crop(bbox=bounds, touch=False).n_face
+        n_true = unit_square_dataset.spatial.crop(bbox=bounds, touch=True).n_face
+        n_false = unit_square_dataset.spatial.crop(bbox=bounds, touch=False).n_face
         assert n_true == n_false, (
             f"touch changed the bbox result: touch=True kept {n_true}, touch=False kept {n_false}"
         )
@@ -581,7 +583,9 @@ class TestCrop:
         Test scenario:
             The 'temperature' face variable survives and its length matches the new face count.
         """
-        cropped = unit_square_dataset.crop(box(-0.1, -0.1, 1.1, 1.1), touch=False)
+        cropped = unit_square_dataset.spatial.crop(
+            box(-0.1, -0.1, 1.1, 1.1), touch=False
+        )
         assert "temperature" in cropped.variable_names, "data variable dropped by crop"
         assert len(cropped["temperature"].data) == cropped.n_face, (
             "data length must match the cropped face count"
@@ -598,8 +602,8 @@ class TestCrop:
         """
         native = (0.0, 0.0, 2.0, 2.0)
         merc = tuple(gpd.GeoSeries([box(*native)], crs=4326).to_crs(3857).total_bounds)
-        reprojected = unit_square_dataset_4326.crop(bbox=merc, epsg=3857)
-        direct = unit_square_dataset_4326.crop(bbox=native)
+        reprojected = unit_square_dataset_4326.spatial.crop(bbox=merc, epsg=3857)
+        direct = unit_square_dataset_4326.spatial.crop(bbox=native)
         assert reprojected.n_face == direct.n_face, (
             f"reprojected bbox selected {reprojected.n_face} faces, native selected {direct.n_face}"
         )
@@ -611,8 +615,8 @@ class TestCrop:
             crop(bbox=b, epsg=4326) on a 4326 mesh equals crop(bbox=b).
         """
         bounds = (-0.1, -0.1, 1.1, 2.1)
-        with_epsg = unit_square_dataset_4326.crop(bbox=bounds, epsg=4326)
-        without = unit_square_dataset_4326.crop(bbox=bounds)
+        with_epsg = unit_square_dataset_4326.spatial.crop(bbox=bounds, epsg=4326)
+        without = unit_square_dataset_4326.spatial.crop(bbox=bounds)
         assert with_epsg.n_face == without.n_face, (
             f"epsg=4326 changed the result: {with_epsg.n_face} vs {without.n_face}"
         )
@@ -625,7 +629,7 @@ class TestCrop:
             than silently treated as native coordinates.
         """
         with pytest.raises(ValueError, match="no .*CRS"):
-            unit_square_dataset.crop(bbox=(0.0, 0.0, 1.0, 1.0), epsg=3857)
+            unit_square_dataset.spatial.crop(bbox=(0.0, 0.0, 1.0, 1.0), epsg=3857)
 
     def test_crop_mask_and_bbox_together_raises(self, unit_square_dataset):
         """Supplying both mask and bbox raises ValueError.
@@ -635,7 +639,7 @@ class TestCrop:
         """
         mask = box(0, 0, 1, 1)
         with pytest.raises(ValueError, match="not both"):
-            unit_square_dataset.crop(mask, bbox=(0, 0, 1, 1))
+            unit_square_dataset.spatial.crop(mask, bbox=(0, 0, 1, 1))
 
     @pytest.mark.parametrize("bad_bbox", [(0.0, 0.0, 1.0), (0.0, 0.0, 1.0, 1.0, 2.0)])
     def test_crop_bad_bbox_length_raises(self, unit_square_dataset, bad_bbox):
@@ -649,7 +653,7 @@ class TestCrop:
             report the offending count, instead of a cryptic unpack error.
         """
         with pytest.raises(ValueError, match="4-tuple") as exc:
-            unit_square_dataset.crop(bbox=bad_bbox)
+            unit_square_dataset.spatial.crop(bbox=bad_bbox)
         assert str(len(bad_bbox)) in str(exc.value), (
             f"message should report the bad length {len(bad_bbox)}: {exc.value}"
         )
@@ -661,7 +665,9 @@ class TestCrop:
             Cropping does not alter the original face count and returns a distinct object.
         """
         before = unit_square_dataset.n_face
-        cropped = unit_square_dataset.crop(box(-0.1, -0.1, 1.1, 1.1), touch=False)
+        cropped = unit_square_dataset.spatial.crop(
+            box(-0.1, -0.1, 1.1, 1.1), touch=False
+        )
         assert unit_square_dataset.n_face == before, (
             f"source face count changed from {before} to {unit_square_dataset.n_face}"
         )
@@ -676,4 +682,4 @@ class TestCrop:
             crop needs one of mask / bbox.
         """
         with pytest.raises(TypeError, match="requires"):
-            unit_square_dataset.crop()
+            unit_square_dataset.spatial.crop()

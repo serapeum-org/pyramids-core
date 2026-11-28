@@ -126,7 +126,7 @@ def _write_mesh(mesh: MeshDataset, tmp_path, name: str = "src.nc") -> str:
         str: The absolute path of the written mesh.
     """
     path = str(tmp_path / name)
-    mesh.to_file(path)
+    mesh.io.to_file(path)
     return path
 
 

@@ -49,16 +49,16 @@ class TestMixedLayerCounts:
         assert centres_and_interfaces.n_layer == 3
 
     def test_sel_layer_works(self, centres_and_interfaces):
-        picked = centres_and_interfaces.sel_layer(1)
+        picked = centres_and_interfaces.selection.sel_layer(1)
         assert np.asarray(picked["salinity"].data).shape == (2,)
 
     def test_isel_layer_still_indexes_each_variable(self, centres_and_interfaces):
-        picked = centres_and_interfaces.isel_layer(0)
+        picked = centres_and_interfaces.selection.isel_layer(0)
         assert np.asarray(picked["salinity"].data).shape == (2,)
         assert np.asarray(picked["w"].data).shape == (2,)
 
     def test_a_slice_trims_both_variables(self, centres_and_interfaces):
-        trimmed = centres_and_interfaces.isel_layer(slice(0, 2))
+        trimmed = centres_and_interfaces.selection.isel_layer(slice(0, 2))
         assert np.asarray(trimmed["salinity"].data).shape == (2, 2)
         assert np.asarray(trimmed["w"].data).shape == (2, 2)
 

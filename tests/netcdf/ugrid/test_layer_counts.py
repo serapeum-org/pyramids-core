@@ -30,7 +30,9 @@ def _layered(counts):
         data_locations={"anchor": "face"},
     )
     for name, n_layers in counts.items():
-        dataset = dataset.with_variable(name, np.zeros((n_layers, 2)), location="face")
+        dataset = dataset.variables.with_variable(
+            name, np.zeros((n_layers, 2)), location="face"
+        )
         dataset[name].dimensions = ("nLayers", "mesh2d_nFaces")
     return dataset
 

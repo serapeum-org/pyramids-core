@@ -125,7 +125,7 @@ class TestBasemapWktCrs:
         ds = _wkt_mesh()
         assert ds.epsg is None, "precondition: the custom CRS has no EPSG code"
         with patch("pyramids.basemap.basemap.add_basemap") as mock_add:
-            ds.plot("d", basemap=True)
+            ds.glyph.plot("d", basemap=True)
         assert mock_add.call_args.kwargs["crs"] == ds.crs_wkt, (
             f"basemap tile fetch must use the mesh WKT, got {mock_add.call_args.kwargs.get('crs')!r}"
         )
@@ -135,7 +135,7 @@ class TestBasemapWktCrs:
         ds = _wkt_mesh()
         assert ds.epsg is None, "precondition: the custom CRS has no EPSG code"
         with patch("pyramids.basemap.basemap.add_basemap") as mock_add:
-            ds.plot_outline(basemap=True)
+            ds.glyph.plot_outline(basemap=True)
         assert mock_add.call_args.kwargs["crs"] == ds.crs_wkt, (
             f"basemap tile fetch must use the mesh WKT, got {mock_add.call_args.kwargs.get('crs')!r}"
         )

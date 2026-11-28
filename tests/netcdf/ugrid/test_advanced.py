@@ -47,7 +47,7 @@ class TestCrsHandling:
             face_node_connectivity=np.array([[0, 1, 2]]),
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.epsg == 4326, f"Expected EPSG 4326, got {reprojected.epsg}"
         assert reprojected.mesh.node_x[0] < 180, (
             f"Expected longitude < 180, got {reprojected.mesh.node_x[0]}"
@@ -70,7 +70,7 @@ class TestCrsHandling:
             data_locations={"temp": "face"},
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected["temp"].data[0] == pytest.approx(25.0), (
             f"Data should be preserved, got {reprojected['temp'].data[0]}"
         )
@@ -87,7 +87,7 @@ class TestCrsHandling:
             face_node_connectivity=np.array([[0, 1, 2]]),
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.n_node == ds.n_node, "n_node should be preserved"
         assert reprojected.n_face == ds.n_face, "n_face should be preserved"
 
@@ -114,7 +114,7 @@ class TestCrsHandling:
             global_attributes={},
         )
         with pytest.raises(ValueError, match="source CRS is unknown"):
-            ds.to_crs(4326)
+            ds.spatial.to_crs(4326)
 
 
 class TestTimeDimension:
@@ -150,12 +150,12 @@ class TestTimeDimension:
         """
         with pytest.warns(DeprecationWarning, match=r"use isel\(time=index\)"):
             dep = temporal_dataset.sel_time(1)
-        new = temporal_dataset.isel(time=1)
+        new = temporal_dataset.selection.isel(time=1)
         assert np.array_equal(dep["water_level"].data, new["water_level"].data)
 
         with pytest.warns(DeprecationWarning, match=r"isel\(time=slice"):
             dep_range = temporal_dataset.sel_time_range(0, 2)
-        new_range = temporal_dataset.isel(time=slice(0, 2))
+        new_range = temporal_dataset.selection.isel(time=slice(0, 2))
         assert np.array_equal(
             dep_range["water_level"].data, new_range["water_level"].data
         )
@@ -333,7 +333,7 @@ class TestTimeDimension:
             ``(face, time)`` data+mask, isel(time=[0, 2]): the mask keeps columns 0 and 2
             (``mask[:, [0, 2]]``).
         """
-        picked = self._trailing_time_mesh_with_mask().isel(time=[0, 2])["wl"]
+        picked = self._trailing_time_mesh_with_mask().selection.isel(time=[0, 2])["wl"]
         np.testing.assert_array_equal(picked.data, [[10.0, 12.0], [20.0, 22.0]])
         np.testing.assert_array_equal(picked.active, [[True, False], [True, False]])
 
@@ -441,7 +441,7 @@ class TestEdgeNodeData:
             data={"altitude": np.array([0.0, 5.0, 10.0])},
             data_locations={"altitude": "node"},
         )
-        gdf = ds.to_geodataframe("altitude", location="node")
+        gdf = ds.vector.to_geodataframe("altitude", location="node")
         assert len(gdf) == 3, f"Expected 3 rows, got {len(gdf)}"
         assert gdf.geometry.iloc[0].geom_type == "Point", "Expected Point geometry"
         assert "altitude" in gdf.columns, "Should have altitude column"
@@ -459,6 +459,6 @@ class TestEdgeNodeData:
             data={"altitude": np.array([0.0, 5.0, 10.0])},
             data_locations={"altitude": "node"},
         )
-        raster = ds.to_dataset("altitude", cell_size=0.25)
+        raster = ds.io.to_dataset("altitude", cell_size=0.25)
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
         assert raster.columns > 0, f"Expected positive cols, got {raster.columns}"

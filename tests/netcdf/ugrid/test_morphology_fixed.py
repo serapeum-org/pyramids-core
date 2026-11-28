@@ -41,7 +41,7 @@ def _mask(dataset: MeshDataset) -> list[int]:
 
 class TestFixedMask:
     def test_dilation_grows_without_a_fixed_mask(self, grid):
-        assert _mask(grid.binary_dilation("m", iterations=1)) == [
+        assert _mask(grid.topology.binary_dilation("m", iterations=1)) == [
             1,
             1,
             0,
@@ -56,7 +56,7 @@ class TestFixedMask:
     def test_a_fixed_face_is_held_at_its_input(self, grid):
         held = np.zeros(9, dtype=bool)
         held[1] = True
-        assert _mask(grid.binary_dilation("m", iterations=1, fixed=held)) == [
+        assert _mask(grid.topology.binary_dilation("m", iterations=1, fixed=held)) == [
             1,
             0,
             0,
@@ -71,8 +71,12 @@ class TestFixedMask:
     def test_erosion_accepts_a_fixed_mask(self, grid):
         held = np.zeros(9, dtype=bool)
         held[0] = True
-        assert _mask(grid.binary_erosion("m", iterations=1, fixed=held))[0] == 1
+        assert (
+            _mask(grid.topology.binary_erosion("m", iterations=1, fixed=held))[0] == 1
+        )
 
     def test_fixing_every_face_is_a_no_op(self, grid):
         held = np.ones(9, dtype=bool)
-        assert _mask(grid.binary_dilation("m", iterations=2, fixed=held)) == _mask(grid)
+        assert _mask(
+            grid.topology.binary_dilation("m", iterations=2, fixed=held)
+        ) == _mask(grid)

@@ -65,7 +65,7 @@ def _face_mesh(tmp_path: Path) -> str:
     mesh = MeshDataset.read_file(str(_MESH))
     values = np.arange(mesh.n_face, dtype="float64") % 3
     out = str(tmp_path / "face_mesh.nc")
-    mesh.with_variable("fv", values, location="face").to_file(out)
+    mesh.variables.with_variable("fv", values, location="face").io.to_file(out)
     return out
 
 
@@ -79,9 +79,9 @@ def _crs_mesh(tmp_path: Path) -> str:
         str: Path to the written mesh.
     """
     mesh = MeshDataset.read_file(str(_MESH))
-    mesh.set_crs(epsg=4326)
+    mesh.spatial.set_crs(epsg=4326)
     out = str(tmp_path / "crs_mesh.nc")
-    mesh.to_file(out)
+    mesh.io.to_file(out)
     return out
 
 
@@ -673,7 +673,7 @@ class TestVoronoiPolygons:
             epsg=4326,
         )
         path = tmp_path / "m.nc"
-        ds.to_file(str(path))
+        ds.io.to_file(str(path))
         return str(path)
 
     def test_voronoi_polygons_writes_a_vector_file(self, tmp_path):

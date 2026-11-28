@@ -235,7 +235,7 @@ class TestWriteUgridTopology:
             crs_wkt=crs_wkt,
         )
         nc_path = tmp_path / f"{mesh_name}.nc"
-        ds.to_file(nc_path)
+        ds.io.to_file(nc_path)
 
         ds2 = gdal.OpenEx(str(nc_path), gdal.OF_MULTIDIM_RASTER)
         rg2 = ds2.GetRootGroup()

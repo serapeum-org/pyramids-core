@@ -208,7 +208,7 @@ class TestToDataset:
         """
 
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
-        raster = ds.to_dataset("mesh2d_node_z", cell_size=500.0)
+        raster = ds.io.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert isinstance(raster, Dataset), f"Expected Dataset, got {type(raster)}"
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
         assert raster.columns > 0, f"Expected positive cols, got {raster.columns}"
@@ -220,7 +220,7 @@ class TestToDataset:
             cell_size=500 should be reflected in the Dataset.
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
-        raster = ds.to_dataset("mesh2d_node_z", cell_size=500.0)
+        raster = ds.io.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert abs(raster.cell_size - 500.0) < 1e-6, (
             f"Expected cell_size 500, got {raster.cell_size}"
         )
@@ -233,7 +233,7 @@ class TestToDataset:
         """
 
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
-        raster = ds.to_dataset("mesh2d_node_z", cell_size=1000.0, method="linear")
+        raster = ds.io.to_dataset("mesh2d_node_z", cell_size=1000.0, method="linear")
         assert isinstance(raster, Dataset), f"Expected Dataset, got {type(raster)}"
 
     def test_to_dataset_invalid_variable(self, ugrid_convention_nc_path):
@@ -244,7 +244,7 @@ class TestToDataset:
         """
         ds = MeshDataset.read_file(ugrid_convention_nc_path)
         with pytest.raises(KeyError):
-            ds.to_dataset("nonexistent", cell_size=500.0)
+            ds.io.to_dataset("nonexistent", cell_size=500.0)
 
 
 class TestInterpolationEdgeCases:

@@ -224,7 +224,7 @@ def _cmd_exterior_edges(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     topology = mesh.mesh
     with map_lookup_errors():
-        edges = mesh.exterior_edges()
+        edges = mesh.topology.exterior_edges()
         geometry = [
             LineString(list(zip(*topology.get_edge_coords(int(edge)))))
             for edge in edges
@@ -245,7 +245,7 @@ def _cmd_exterior_faces(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     topology = mesh.mesh
     with map_lookup_errors():
-        faces = mesh.exterior_faces()
+        faces = mesh.topology.exterior_faces()
         geometry = [Polygon(topology.get_face_polygon(int(face))) for face in faces]
     rows = [{"face": int(face)} for face in faces]
     return _write_vector(rows, geometry, mesh.crs, args)
@@ -263,7 +263,7 @@ def _cmd_circumcenters(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     mesh = MeshDataset.read_file(args.file)
-    centers = mesh.circumcenters()
+    centers = mesh.topology.circumcenters()
     geometry = [Point(float(x), float(y)) for x, y in centers]
     rows = [{"face": index} for index in range(len(geometry))]
     return _write_vector(rows, geometry, mesh.crs, args)
@@ -279,7 +279,7 @@ def _cmd_bounding_polygon(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     mesh = MeshDataset.read_file(args.file)
-    polygon = mesh.bounding_polygon()
+    polygon = mesh.topology.bounding_polygon()
     return _write_vector([{"mesh": mesh.mesh_name}], [polygon], mesh.crs, args)
 
 
@@ -297,7 +297,7 @@ def _cmd_sparse_adjacency(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        matrix = mesh.sparse_adjacency(kind=args.kind)
+        matrix = mesh.topology.sparse_adjacency(kind=args.kind)
     payload = {"kind": args.kind, "shape": list(matrix.shape), "nnz": int(matrix.nnz)}
     if args.output:
         refuse_existing(args.output, args.overwrite)
@@ -324,7 +324,7 @@ def _cmd_connected_components(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     mesh = MeshDataset.read_file(args.file)
-    labels = mesh.connected_components()
+    labels = mesh.topology.connected_components()
     payload = {
         "n_elements": int(labels.size),
         "n_components": int(np.unique(labels).size),
@@ -355,7 +355,7 @@ def _cmd_active_mask(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        mask = mesh.active_mask(args.variable)
+        mask = mesh.topology.active_mask(args.variable)
     if mask is None:
         payload = {"variable": args.variable, "active_mask": None}
     else:
@@ -392,7 +392,7 @@ def _cmd_masked_values(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.masked_values(args.variable)
+        values = mesh.analysis.masked_values(args.variable)
     finite = np.isfinite(values)
     payload = {
         "variable": args.variable,

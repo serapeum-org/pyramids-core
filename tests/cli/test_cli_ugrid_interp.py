@@ -117,7 +117,7 @@ def _reopen_has_depth(path: str) -> bool:
 def plain(tmp_path) -> str:
     """A written three-step mesh with finite values."""
     path = str(tmp_path / "plain.nc")
-    _temporal([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).to_file(path)
+    _temporal([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).io.to_file(path)
     return path
 
 
@@ -125,7 +125,7 @@ def plain(tmp_path) -> str:
 def gappy(tmp_path) -> str:
     """A written three-step mesh whose middle step is all missing."""
     path = str(tmp_path / "gappy.nc")
-    _temporal([[1.0, 2.0], [np.nan, np.nan], [5.0, 6.0]]).to_file(path)
+    _temporal([[1.0, 2.0], [np.nan, np.nan], [5.0, 6.0]]).io.to_file(path)
     return path
 
 
@@ -133,7 +133,7 @@ def gappy(tmp_path) -> str:
 def cf(tmp_path) -> str:
     """A written three-step mesh carrying a CF (dated) time axis."""
     path = str(tmp_path / "cf.nc")
-    _cf([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).to_file(path)
+    _cf([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).io.to_file(path)
     return path
 
 
@@ -143,7 +143,7 @@ def unitful(tmp_path) -> str:
     path = str(tmp_path / "unit.nc")
     mesh = _temporal([[300.0, 301.0], [302.0, 303.0], [304.0, 305.0]])
     mesh["depth"].units = "K"
-    mesh.to_file(path)
+    mesh.io.to_file(path)
     return path
 
 

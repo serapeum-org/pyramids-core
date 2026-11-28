@@ -136,7 +136,7 @@ def _write(args: argparse.Namespace, result: MeshDataset) -> int:
     Returns:
         int: ``0`` on success.
     """
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -155,7 +155,7 @@ def _cmd_mesh_sel(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     time = _scalar_or_list(args.time)
     with map_lookup_errors():
-        result = mesh.sel(time, method=args.method, tolerance=args.tolerance)
+        result = mesh.selection.sel(time, method=args.method, tolerance=args.tolerance)
     return _write(args, result)
 
 
@@ -171,7 +171,7 @@ def _cmd_mesh_isel(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.isel(
+        result = mesh.selection.isel(
             time=_scalar_or_list(args.time), element=_scalar_or_list(args.element)
         )
     return _write(args, result)
@@ -192,7 +192,7 @@ def _cmd_mesh_sel_time(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.isel(time=args.index)
+        result = mesh.selection.isel(time=args.index)
     return _write(args, result)
 
 
@@ -208,7 +208,7 @@ def _cmd_mesh_sel_layer(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.sel_layer(args.value)
+        result = mesh.selection.sel_layer(args.value)
     return _write(args, result)
 
 
@@ -224,7 +224,7 @@ def _cmd_mesh_isel_layer(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.isel_layer(args.index)
+        result = mesh.selection.isel_layer(args.index)
     return _write(args, result)
 
 
@@ -240,7 +240,7 @@ def _cmd_mesh_sel_time_range(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.isel(time=slice(args.start, args.stop))
+        result = mesh.selection.isel(time=slice(args.start, args.stop))
     return _write(args, result)
 
 
@@ -256,7 +256,7 @@ def _cmd_mesh_collapse_layer(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.collapse_layer(args.layer, location=args.location)
+        result = mesh.selection.collapse_layer(args.layer, location=args.location)
     return _write(args, result)
 
 
@@ -273,7 +273,7 @@ def _cmd_mesh_subset_by_bounds(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     minx, miny, maxx, maxy = args.bbox
     with map_lookup_errors():
-        result = mesh.subset_by_bounds(minx, miny, maxx, maxy)
+        result = mesh.spatial.subset_by_bounds(minx, miny, maxx, maxy)
     return _write(args, result)
 
 
@@ -292,7 +292,9 @@ def _cmd_mesh_crop(args: argparse.Namespace) -> int:
     mask = None if args.mask is None else FeatureCollection.read_file(args.mask)
     bbox = None if args.bbox is None else tuple(args.bbox)
     with map_lookup_errors():
-        result = mesh.crop(mask=mask, touch=args.touch, bbox=bbox, epsg=args.epsg)
+        result = mesh.spatial.crop(
+            mask=mask, touch=args.touch, bbox=bbox, epsg=args.epsg
+        )
     return _write(args, result)
 
 
@@ -309,7 +311,7 @@ def _cmd_mesh_clip(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     mask = FeatureCollection.read_file(args.mask)
     with map_lookup_errors():
-        result = mesh.clip(mask, touch=args.touch)
+        result = mesh.analysis.clip(mask, touch=args.touch)
     return _write(args, result)
 
 
@@ -326,7 +328,9 @@ def _cmd_mesh_clip_values(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.clip_values(args.lower, args.upper, variable_name=args.var)
+        result = mesh.analysis.clip_values(
+            args.lower, args.upper, variable_name=args.var
+        )
     return _write(args, result)
 
 
@@ -342,7 +346,7 @@ def _cmd_mesh_thin(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.thin(args.step)
+        result = mesh.selection.thin(args.step)
     return _write(args, result)
 
 
@@ -363,7 +367,9 @@ def _cmd_mesh_where(args: argparse.Namespace) -> int:
     variable_name = _resolve_variable(mesh, cond_var or args.var)
     cond = _build_condition(mesh, variable_name, args.cond)
     with map_lookup_errors():
-        result = mesh.where(cond, other=args.other, variable_name=variable_name)
+        result = mesh.analysis.where(
+            cond, other=args.other, variable_name=variable_name
+        )
     return _write(args, result)
 
 
@@ -411,7 +417,7 @@ def _cmd_mesh_drop_variables(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.drop_variables(args.names)
+        result = mesh.variables.drop_variables(args.names)
     return _write(args, result)
 
 
@@ -443,7 +449,7 @@ def _cmd_mesh_head(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.head(args.n)
+        result = mesh.selection.head(args.n)
     return _write(args, result)
 
 
@@ -459,7 +465,7 @@ def _cmd_mesh_tail(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.tail(args.n)
+        result = mesh.selection.tail(args.n)
     return _write(args, result)
 
 
@@ -475,7 +481,7 @@ def _cmd_mesh_squeeze(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.squeeze()
+        result = mesh.selection.squeeze()
     return _write(args, result)
 
 

@@ -42,7 +42,7 @@ class TestMorphologyResultNodata:
             declaration would mark every set element as missing if anything ever compared
             against it, and writes a `_FillValue` no element can equal.
         """
-        grown = mask_with_nodata.binary_dilation("m")
+        grown = mask_with_nodata.topology.binary_dilation("m")
 
         assert np.asarray(grown["m"].data).dtype == np.bool_, (
             f"the result is a boolean mask, got {np.asarray(grown['m'].data).dtype}"
@@ -54,7 +54,7 @@ class TestMorphologyResultNodata:
 
     def test_erosion_drops_it_too(self, mask_with_nodata):
         """The sibling facade behaves the same way."""
-        shrunk = mask_with_nodata.binary_erosion("m")
+        shrunk = mask_with_nodata.topology.binary_erosion("m")
 
         assert shrunk["m"].nodata is None, (
             f"a boolean mask has no representable no-data value, yet it declares "
@@ -77,7 +77,7 @@ class TestMorphologyResultNodata:
         )
         mesh["v"].nodata = float("nan")
 
-        filled = mesh.fill_na_spatial("v")
+        filled = mesh.analysis.fill_na_spatial("v")
 
         assert np.isnan(filled["v"].nodata), (
             f"a float result keeps its NaN no-data value, got {filled['v'].nodata!r}"
@@ -89,7 +89,7 @@ class TestMorphologyResultNodata:
         Test scenario:
             Face 0 is set and face 1 shares an edge with it, so one dilation pass sets both.
         """
-        grown = mask_with_nodata.binary_dilation("m")
+        grown = mask_with_nodata.topology.binary_dilation("m")
 
         assert np.asarray(grown["m"].data).tolist() == [True, True], (
             f"both faces should be set after one pass, got "
@@ -121,7 +121,7 @@ class TestBurnFillDeclaration:
         """
         square = Polygon([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
 
-        out = strip.burn(square, 1.0, fill=0.0, all_touched=False, name="mask")
+        out = strip.io.burn(square, 1.0, fill=0.0, all_touched=False, name="mask")
 
         assert np.asarray(out["mask"].data).tolist() == [1.0, 0.0, 0.0]
         assert out["mask"].nodata is None, (
@@ -138,7 +138,7 @@ class TestBurnFillDeclaration:
         """
         square = Polygon([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
 
-        out = strip.burn(square, 1.0, all_touched=False, name="nanmask")
+        out = strip.io.burn(square, 1.0, all_touched=False, name="nanmask")
         values = np.asarray(out["nanmask"].data)
 
         assert values[0] == 1.0
@@ -167,7 +167,7 @@ class TestInterpTimeDocumentedValues:
 
     def test_bounds_nan_leaves_an_outside_label_empty(self, timed):
         """`"nan"`, the default, answers NaN past the ends."""
-        out = timed.interp_time([0.5, 9.0], bounds="nan")
+        out = timed.selection.interp_time([0.5, 9.0], bounds="nan")
 
         values = np.asarray(out["v"].data)
         np.testing.assert_allclose(values[0], [3.0, 4.0])
@@ -182,7 +182,7 @@ class TestInterpTimeDocumentedValues:
             The docstring named `"extrapolate"`, which raises, and omitted `"clamp"` -- so the
             only non-default value a reader could find was the invalid one.
         """
-        out = timed.interp_time([0.5, 9.0], bounds="clamp")
+        out = timed.selection.interp_time([0.5, 9.0], bounds="clamp")
 
         values = np.asarray(out["v"].data)
         np.testing.assert_allclose(values[1], [4.0, 5.0])
@@ -190,7 +190,7 @@ class TestInterpTimeDocumentedValues:
     def test_the_value_the_docstring_used_to_name_is_refused(self, timed):
         """`"extrapolate"` raises, which is why it no longer appears in the Args block."""
         with pytest.raises(ValueError, match="'nan' or 'clamp'"):
-            timed.interp_time([0.5], bounds="extrapolate")
+            timed.selection.interp_time([0.5], bounds="extrapolate")
 
     @pytest.mark.parametrize("method", ["linear", "nearest"])
     def test_both_documented_methods_work(self, method, timed):
@@ -200,11 +200,11 @@ class TestInterpTimeDocumentedValues:
             method: The interpolation kind.
             timed: The fixture mesh.
         """
-        out = timed.interp_time([0.5], method=method)
+        out = timed.selection.interp_time([0.5], method=method)
 
         assert np.asarray(out["v"].data).shape == (1, 2)
 
     def test_another_scipy_kind_is_refused(self, timed):
         """The docstring said "a `scipy.interpolate.interp1d` kind", which overstates it."""
         with pytest.raises(ValueError, match="'linear' or 'nearest'"):
-            timed.interp_time([0.5], method="cubic")
+            timed.selection.interp_time([0.5], method="cubic")

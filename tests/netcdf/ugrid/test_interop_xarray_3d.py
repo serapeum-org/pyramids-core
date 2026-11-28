@@ -45,10 +45,10 @@ def test_active_mask_round_trips_through_xarray():
         _data=np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
     )
     ds = MeshDataset(_mesh(), {"wl": var}, {})
-    exported = ds.to_xarray()
+    exported = ds.interop.to_xarray()
     assert "wl_active" in exported.data_vars
     back = MeshDataset.from_xarray(exported)
-    np.testing.assert_array_equal(back.active_mask("wl"), mask)
+    np.testing.assert_array_equal(back.topology.active_mask("wl"), mask)
 
 
 def test_volume_topology_round_trips_through_xarray():
@@ -67,11 +67,11 @@ def test_volume_topology_round_trips_through_xarray():
         _data=np.arange(6.0),
     )
     ds = MeshDataset(_mesh(), {"sal": var}, {}, volume_topology=topology)
-    exported = ds.to_xarray()
+    exported = ds.interop.to_xarray()
     assert "mesh2d_layer_count" in exported.data_vars
     back = MeshDataset.from_xarray(exported)
     assert back.volume_topology is not None
     assert back.volume_topology.layer_count.tolist() == [3, 1, 2]
     np.testing.assert_allclose(back.volume_topology.layer_z, topology.layer_z)
     np.testing.assert_allclose(back.volume_topology.interface_z, topology.interface_z)
-    assert back.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]
+    assert back.selection.isel_layer(0)["sal"].data.tolist() == [0.0, 3.0, 4.0]

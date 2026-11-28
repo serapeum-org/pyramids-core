@@ -18,13 +18,13 @@ pytestmark = [pytest.mark.core, pytest.mark.plot]
 class TestPlotHistogram:
     def test_returns_fig_ax_hist(self):
         ds = _make_ds()
-        fig, ax, hist = ds.plot_histogram(bins=3)
+        fig, ax, hist = ds.glyph.plot_histogram(bins=3)
         assert fig is not None
         assert ax is not None
 
     def test_custom_bins(self):
         ds = _make_ds()
-        fig, ax, hist = ds.plot_histogram(bins=2)
+        fig, ax, hist = ds.glyph.plot_histogram(bins=2)
         assert fig is not None
 
 

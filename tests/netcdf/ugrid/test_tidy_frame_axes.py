@@ -41,7 +41,7 @@ def two_faces():
 
 def _with_dims(dataset, name, values, dimensions):
     """Add `name` to `dataset` with explicit `dimensions`, returning the new dataset."""
-    result = dataset.with_variable(name, np.asarray(values), location="face")
+    result = dataset.variables.with_variable(name, np.asarray(values), location="face")
     result[name].dimensions = dimensions
     return result
 
@@ -60,7 +60,7 @@ class TestElementAxisNotLast:
         values = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])  # (face, time)
         dataset = _with_dims(two_faces, "v", values, ("mesh2d_nFaces", "time"))
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
 
         assert len(frame) == 6, f"2 faces x 3 steps = 6 rows, got {len(frame)}"
         assert sorted(frame["value"].tolist()) == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], (
@@ -72,7 +72,7 @@ class TestElementAxisNotLast:
         values = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         dataset = _with_dims(two_faces, "v", values, ("mesh2d_nFaces", "time"))
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
 
         assert sorted(frame["element"].unique().tolist()) == [0, 1], (
             f"a 2-face mesh has elements 0 and 1, got "
@@ -89,7 +89,7 @@ class TestElementAxisNotLast:
         values = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         dataset = _with_dims(two_faces, "v", values, ("mesh2d_nFaces", "time"))
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
 
         assert not frame["x"].isna().any(), (
             f"no row should have a NaN x, got {frame['x'].isna().sum()} of {len(frame)}"
@@ -106,7 +106,7 @@ class TestElementAxisNotLast:
         values = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         dataset = _with_dims(two_faces, "v", values, ("mesh2d_nFaces", "time"))
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
         face0 = frame[frame["element"] == 0].sort_values("time")["value"].tolist()
         face1 = frame[frame["element"] == 1].sort_values("time")["value"].tolist()
 
@@ -135,7 +135,7 @@ class TestUnaddressableExtraAxis:
         )
 
         with pytest.raises(ValueError, match="extra") as exc:
-            dataset.to_dataframe(variables=["v"])
+            dataset.interop.to_dataframe(variables=["v"])
 
         assert "to_dataframe" in str(exc.value), (
             f"the message should name the operation, got {exc.value}"
@@ -152,7 +152,7 @@ class TestUnaddressableExtraAxis:
         )
 
         with pytest.raises(ValueError, match="wide"):
-            dataset.to_dataframe(variables=["wide"])
+            dataset.interop.to_dataframe(variables=["wide"])
 
 
 class TestSupportedLayoutsUnchanged:
@@ -160,7 +160,7 @@ class TestSupportedLayoutsUnchanged:
 
     def test_a_static_variable(self, two_faces):
         """One row per element."""
-        frame = two_faces.to_dataframe(variables=["anchor"])
+        frame = two_faces.interop.to_dataframe(variables=["anchor"])
 
         assert len(frame) == 2
         assert frame["value"].tolist() == [1.0, 2.0]
@@ -174,7 +174,7 @@ class TestSupportedLayoutsUnchanged:
             ("time", "mesh2d_nFaces"),
         )
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
 
         assert len(frame) == 4
         assert sorted(frame["value"].tolist()) == [1.0, 2.0, 3.0, 4.0]
@@ -188,7 +188,7 @@ class TestSupportedLayoutsUnchanged:
             ("time", "mesh2d_nLayers", "mesh2d_nFaces"),
         )
 
-        frame = dataset.to_dataframe(variables=["v"])
+        frame = dataset.interop.to_dataframe(variables=["v"])
 
         assert len(frame) == 8, f"2 steps x 2 layers x 2 faces = 8, got {len(frame)}"
         assert sorted(frame["value"].tolist()) == [

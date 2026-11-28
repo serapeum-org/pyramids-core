@@ -17,17 +17,17 @@ pytestmark = pytest.mark.core
 class TestProximity:
     def test_target_face_is_zero(self):
         ds = _make_ds()
-        dist = ds.proximity(np.array([0]))
+        dist = ds.analysis.proximity(np.array([0]))
         assert dist[0] == 0
 
     def test_neighbor_is_one(self):
         ds = _make_ds()
-        dist = ds.proximity(np.array([0]))
+        dist = ds.analysis.proximity(np.array([0]))
         assert dist[1] == 1
 
     def test_all_targets_are_zero(self):
         ds = _make_ds()
-        dist = ds.proximity(np.array([0, 1]))
+        dist = ds.analysis.proximity(np.array([0, 1]))
         np.testing.assert_array_equal(dist, [0, 0])
 
 
@@ -42,7 +42,7 @@ class TestProximityEdgeCases:
             leave all distances at -1 (no valid targets seeded).
         """
         ds = _make_ds()
-        dist = ds.proximity(np.array([-1, 999]))
+        dist = ds.analysis.proximity(np.array([-1, 999]))
         assert np.all(dist == -1), (
             f"Expected all -1 for out-of-range targets, got {dist}"
         )
@@ -78,7 +78,7 @@ class TestProximityEdgeCases:
             data_variables={"depth": var},
             global_attributes={},
         )
-        dist = ds.proximity(np.array([0]))
+        dist = ds.analysis.proximity(np.array([0]))
         assert dist[0] == 0, f"Target face should be 0, got {dist[0]}"
         assert dist[1] == -1, f"Disconnected face should be -1, got {dist[1]}"
 
@@ -86,16 +86,16 @@ class TestProximityEdgeCases:
 class TestSieve:
     def test_small_region_blanked(self):
         ds = _make_ds(np.array([10.0, 20.0]))
-        result = ds.sieve(threshold=3)
+        result = ds.analysis.sieve(threshold=3)
         assert np.all(np.isnan(result["depth"].data))
 
     def test_large_region_kept(self):
         ds = _make_ds(np.array([10.0, 20.0]))
-        result = ds.sieve(threshold=1)
+        result = ds.analysis.sieve(threshold=1)
         assert not np.any(np.isnan(result["depth"].data))
 
     def test_temporal_data_raises(self):
         """sieve must reject temporal (2-D) data."""
         ds = _make_ds(np.array([[10.0, 20.0], [30.0, 40.0]]))
         with pytest.raises(ValueError, match="temporal"):
-            ds.sieve(threshold=3)
+            ds.analysis.sieve(threshold=3)

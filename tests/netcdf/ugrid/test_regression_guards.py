@@ -81,7 +81,7 @@ class TestTidyFrameAxisOrder:
         """A `(n_faces, time)` variable gives one row per element per step."""
         frame = _with_dimensions(
             np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), ("mesh2d_nFaces", "time")
-        ).to_dataframe()
+        ).interop.to_dataframe()
 
         assert len(frame) == 6, f"2 faces x 3 steps, got {len(frame)}"
         assert sorted(set(frame["element"].tolist())) == [0, 1], (
@@ -97,19 +97,19 @@ class TestTidyFrameAxisOrder:
         )
 
         with pytest.raises(ValueError, match="extra"):
-            dataset.to_dataframe()
+            dataset.interop.to_dataframe()
 
     def test_the_ordinary_temporal_shape_is_unchanged(self):
         frame = _with_dimensions(
             np.array([[1.0, 2.0], [3.0, 4.0]]), ("time", "mesh2d_nFaces")
-        ).to_dataframe()
+        ).interop.to_dataframe()
         assert len(frame) == 4
         assert sorted(set(frame["element"].tolist())) == [0, 1]
 
     def test_the_layered_shape_is_unchanged(self):
         frame = _with_dimensions(
             np.arange(6.0).reshape(3, 2), ("mesh2d_nLayers", "mesh2d_nFaces")
-        ).to_dataframe()
+        ).interop.to_dataframe()
         assert len(frame) == 6
         assert sorted(set(frame["layer"].tolist())) == [0, 1, 2]
 
@@ -167,10 +167,10 @@ class TestElementSubsetKeepsTheSubclass:
         )
 
     def test_isel_element_keeps_the_class(self, derived):
-        assert type(derived.isel(element=[0])) is _Derived
+        assert type(derived.selection.isel(element=[0])) is _Derived
 
     def test_isel_element_keeps_the_file_name(self, derived):
-        assert derived.isel(element=[0])._file_name == "source.nc"
+        assert derived.selection.isel(element=[0])._file_name == "source.nc"
 
     def test_isel_time_still_keeps_the_class(self, base):
         temporal = _Derived(
@@ -183,7 +183,7 @@ class TestElementSubsetKeepsTheSubclass:
             crs_wkt=None,
             file_name="source.nc",
         )
-        assert type(temporal.isel(time=0)) is _Derived
+        assert type(temporal.selection.isel(time=0)) is _Derived
 
 
 class TestGeoDataFrameCrsIsNotInvented:
@@ -237,11 +237,13 @@ class TestInterpolateNaHonoursDates:
     def test_the_coordinate_reading_uses_the_dates(self, dated):
         # Day 2 of a day-1 to day-11 span is one tenth of the way, so 1.0 — not the 5.0 an
         # evenly spaced reading gives. The default silently gave the positional answer.
-        filled = np.asarray(dated.interpolate_na()["v"].data)[1]
+        filled = np.asarray(dated.selection.interpolate_na()["v"].data)[1]
         assert filled.tolist() == pytest.approx([1.0, 1.0])
 
     def test_the_positional_reading_still_differs(self, dated):
-        filled = np.asarray(dated.interpolate_na(use_coordinate=False)["v"].data)[1]
+        filled = np.asarray(
+            dated.selection.interpolate_na(use_coordinate=False)["v"].data
+        )[1]
         assert filled.tolist() == pytest.approx([5.0, 5.0])
 
     def test_numeric_coordinates_are_unchanged(self):
@@ -253,7 +255,7 @@ class TestInterpolateNaHonoursDates:
             data_locations={"v": "face"},
         )
         dataset["v"].attributes["time_values"] = [0.0, 1.0, 10.0]
-        filled = np.asarray(dataset.interpolate_na()["v"].data)[1]
+        filled = np.asarray(dataset.selection.interpolate_na()["v"].data)[1]
         assert filled.tolist() == pytest.approx([1.0, 1.0])
 
     def test_unmeasurable_labels_fall_back_to_positions(self):
@@ -265,7 +267,7 @@ class TestInterpolateNaHonoursDates:
             data_locations={"v": "face"},
         )
         dataset["v"].attributes["time_values"] = ["early", "middle", "late"]
-        filled = np.asarray(dataset.interpolate_na()["v"].data)[1]
+        filled = np.asarray(dataset.selection.interpolate_na()["v"].data)[1]
         assert filled.tolist() == pytest.approx([5.0, 5.0])
 
 
@@ -283,12 +285,12 @@ class TestSelectionConventions:
     def test_a_negative_element_index_counts_from_the_end(self, faces):
         # isel(time=-1) already wrapped via np.take; the element axis refused it, leaving one
         # method with two index conventions.
-        picked = faces.isel(element=-1)
+        picked = faces.selection.isel(element=-1)
         assert np.asarray(picked["v"].data).tolist() == [20.0]
 
     def test_an_out_of_range_element_is_still_refused(self, faces):
         with pytest.raises(IndexError, match="out of range"):
-            faces.isel(element=5)
+            faces.selection.isel(element=5)
 
     def test_sel_without_a_value_says_so(self):
         temporal = MeshDataset.from_arrays(
@@ -299,7 +301,7 @@ class TestSelectionConventions:
             data_locations={"v": "face"},
         )
         with pytest.raises(ValueError, match="needs a time value"):
-            temporal.sel()
+            temporal.selection.sel()
 
 
 class TestTidyFrameDtypes:
@@ -310,7 +312,7 @@ class TestTidyFrameDtypes:
             face_node_connectivity=TRIANGLES,
             data={"c": np.array(["a", "b"], dtype=object)},
         )
-        assert labelled.to_dataframe()["value"].tolist() == ["a", "b"]
+        assert labelled.interop.to_dataframe()["value"].tolist() == ["a", "b"]
 
     def test_the_empty_frame_matches_the_populated_schema(self):
         dataset = MeshDataset.from_arrays(
@@ -319,8 +321,8 @@ class TestTidyFrameDtypes:
             face_node_connectivity=TRIANGLES,
             data={"v": np.array([10.0, 20.0])},
         )
-        empty = dataset.to_dataframe(variables=[])
-        populated = dataset.to_dataframe()
+        empty = dataset.interop.to_dataframe(variables=[])
+        populated = dataset.interop.to_dataframe()
         assert list(empty.columns) == list(populated.columns)
         assert [str(d) for d in empty.dtypes] == [str(d) for d in populated.dtypes]
 
@@ -341,10 +343,10 @@ class TestNanProducingFacadesDeclareIt:
     def test_to_location_declares_nan(self, with_nodata):
         # An element with no contributor averages to NaN, so carrying the old sentinel through
         # left `to_file` writing NaN under the wrong _FillValue.
-        assert np.isnan(with_nodata.to_location("node")["v"].nodata)
+        assert np.isnan(with_nodata.analysis.to_location("node")["v"].nodata)
 
     def test_burn_declares_its_fill(self, with_nodata):
-        burned = with_nodata.burn(shapely.box(0.0, 0.0, 1.0, 1.0), 1.0)
+        burned = with_nodata.io.burn(shapely.box(0.0, 0.0, 1.0, 1.0), 1.0)
         assert np.isnan(burned["burned"].nodata)
 
     def test_burn_does_not_declare_an_explicit_numeric_fill(self, with_nodata):
@@ -356,7 +358,7 @@ class TestNanProducingFacadesDeclareIt:
             `skipna` reduction discarded the unburned faces. Only a NaN fill means "untouched",
             and the test above keeps that half pinned.
         """
-        burned = with_nodata.burn(shapely.box(0.0, 0.0, 1.0, 1.0), 1.0, fill=0.0)
+        burned = with_nodata.io.burn(shapely.box(0.0, 0.0, 1.0, 1.0), 1.0, fill=0.0)
 
         assert burned["burned"].nodata is None, (
             f"a 0/1 mask has no missing values, got nodata={burned['burned'].nodata!r}"
@@ -390,7 +392,7 @@ class TestInterpTimeTimeCoordinates:
         """Midway between two days is the mean of the two steps."""
         dataset = self._dated([pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-03")])
 
-        out = dataset.interp_time([pd.Timestamp("2020-01-02")])
+        out = dataset.selection.interp_time([pd.Timestamp("2020-01-02")])
 
         np.testing.assert_allclose(np.asarray(out["v"].data)[0], [2.0, 3.0])
 
@@ -399,4 +401,4 @@ class TestInterpTimeTimeCoordinates:
         dataset = self._dated(["spring", "summer"])
 
         with pytest.raises(ValueError, match="interp_time"):
-            dataset.interp_time([1.0])
+            dataset.selection.interp_time([1.0])

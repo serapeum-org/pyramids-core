@@ -64,7 +64,7 @@ class TestDateCoordinatesAreAccepted:
         mesh = _dated(stamps)
         midpoint = pd.Timestamp("2020-01-02")
 
-        out = mesh.interp_time([midpoint])
+        out = mesh.selection.interp_time([midpoint])
         values = np.asarray(out["v"].data)
 
         assert values.shape == (1, 2), f"one step, two faces, got {values.shape}"
@@ -80,7 +80,7 @@ class TestDateCoordinatesAreAccepted:
         """
         midpoint = pd.Timestamp("2020-01-02")
         answers = [
-            np.asarray(_dated(stamps).interp_time([midpoint])["v"].data)
+            np.asarray(_dated(stamps).selection.interp_time([midpoint])["v"].data)
             for stamps in (
                 list(pd.to_datetime(_STAMPS)),
                 pd.DatetimeIndex(pd.to_datetime(_STAMPS)),
@@ -95,7 +95,7 @@ class TestDateCoordinatesAreAccepted:
         """The `bounds="nan"` default survives the date conversion."""
         mesh = _dated(list(pd.to_datetime(_STAMPS)))
 
-        out = mesh.interp_time([pd.Timestamp("2021-06-01")])
+        out = mesh.selection.interp_time([pd.Timestamp("2021-06-01")])
 
         assert np.isnan(np.asarray(out["v"].data)).all()
 
@@ -107,7 +107,7 @@ class TestNumericCoordinatesUnchanged:
         """The ordinary case, which must not regress."""
         mesh = _dated([0.0, 2.0])
 
-        out = mesh.interp_time([1.0])
+        out = mesh.selection.interp_time([1.0])
 
         np.testing.assert_allclose(np.asarray(out["v"].data)[0], [1.0, 11.0])
 
@@ -125,4 +125,4 @@ class TestCoordinatesThatCarryNoOrder:
         mesh = _dated(["spring", "summer"])
 
         with pytest.raises(ValueError, match="interp_time"):
-            mesh.interp_time([1.0])
+            mesh.selection.interp_time([1.0])

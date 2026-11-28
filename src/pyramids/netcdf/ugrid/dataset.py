@@ -14,7 +14,6 @@ import sys
 import tempfile
 import warnings
 from collections.abc import Sequence
-from dataclasses import replace
 from glob import glob
 from pathlib import Path
 from types import MethodType
@@ -35,57 +34,41 @@ if TYPE_CHECKING:
 
     from pyramids.netcdf.ugrid.mesh1d import Mesh1d
 from osgeo import gdal
-from pyproj import CRS, Transformer
-from shapely.geometry import LineString, box
+from pyproj import CRS
+from shapely.geometry import LineString
 
 from pyramids.base import _timeseries
 from pyramids.base._array_ops import array_equals, array_identical
 from pyramids.base._compute_backend import accepts_keyword, require_compute_backend
 from pyramids.base._errors import (
     AlignmentError,
-    CRSError,
     DriverNotExistError,
     OptionalPackageDoesNotExist,
 )
 from pyramids.base._plot_backends import (
     forward_kwargs,
-    is_colorbar_spec,
-    reject_mpl_only_params,
     render_via_backend,
 )
 from pyramids.base._reductions import (
     COUNTING_REDUCERS,
     FLAG_NO_DATA,
-    INTERP_METHODS,
     REDUCERS,
-    WEIGHTED_HOWS,
     _check_min_periods,
     _check_window,
     gaps_as_nan,
-    interpolated,
-    pushed,
     reduce_axis,
-    reduce_by_label,
     reduce_groups,
-    shifted,
     validate_min_count,
-    weighted_statistic,
     window_members,
     window_positions,
 )
 from pyramids.base._summary import DEFAULT_METRICS, variable_summary
-from pyramids.base._utils import import_dask, require_optional
 from pyramids.base.crs import (
-    crs_from_user_input,
     crs_spec,
-    epsg_from_user_input,
     sr_from_epsg,
-    sr_from_wkt,
 )
 from pyramids.base.georeference import GeoReference
 from pyramids.dataset import Dataset
-from pyramids.dataset._plot_helpers import mesh_render as _mesh_render
-from pyramids.dataset._plot_helpers import nonnull_group_kwargs as _nonnull_group_kwargs
 from pyramids.dataset.ops.units import convert_array
 from pyramids.feature import FeatureCollection
 from pyramids.netcdf._mdim import no_data_value_of, open_mdarray
@@ -104,8 +87,18 @@ from pyramids.netcdf.ugrid._drivers import (
     mesh_drivers,
     unsupported_format_message,
 )
-from pyramids.netcdf.ugrid._facades import _axis_distances, _MeshFacades
+from pyramids.netcdf.ugrid._facades import _MeshFacades
 from pyramids.netcdf.ugrid.connectivity import Connectivity
+from pyramids.netcdf.ugrid.engines.analysis import _MeshAnalysis
+from pyramids.netcdf.ugrid.engines.glyph import _MeshGlyph
+from pyramids.netcdf.ugrid.engines.interop import _MeshInterop
+from pyramids.netcdf.ugrid.engines.io import _MeshIO
+from pyramids.netcdf.ugrid.engines.selection import _MeshSelection
+from pyramids.netcdf.ugrid.engines.spatial import _MeshSpatial
+from pyramids.netcdf.ugrid.engines.terrain import _MeshTerrain
+from pyramids.netcdf.ugrid.engines.topology import _MeshTopology
+from pyramids.netcdf.ugrid.engines.variables import _MeshVariables
+from pyramids.netcdf.ugrid.engines.vector import _MeshVector
 from pyramids.netcdf.ugrid.fill import _location_coords
 from pyramids.netcdf.ugrid.interpolation import mesh_to_grid
 from pyramids.netcdf.ugrid.io import (
@@ -133,9 +126,6 @@ from pyramids.netcdf.ugrid.models import (
 )
 from pyramids.netcdf.ugrid.spatial import (
     MeshSpatialIndex,
-    clip_mesh,
-    resolve_crs,
-    subset_by_bounds,
     subset_mesh_by_faces,
 )
 from pyramids.netcdf.utils import (
@@ -534,6 +524,57 @@ class MeshDataset(_MeshFacades):
         return result
 
     @property
+    def analysis(self) -> _MeshAnalysis:
+        """Analysis engine: cell-wise transforms, focal, sampling, reductions (``mesh.analysis``)."""
+        return _MeshAnalysis(self)
+
+    @property
+    def terrain(self) -> _MeshTerrain:
+        """Terrain engine: DEM derivatives -- slope, aspect, hillshade (``mesh.terrain``)."""
+        return _MeshTerrain(self)
+
+    @property
+    def interop(self) -> _MeshInterop:
+        """Interop engine: ``to_xarray`` / ``to_dataframe`` / ``to_dask_dataframe`` (``mesh.interop``)."""
+        return _MeshInterop(self)
+
+    @property
+    def vector(self) -> _MeshVector:
+        """Vector engine: geodataframe/feature-collection, contour, cluster, voronoi (``mesh.vector``)."""
+        return _MeshVector(self)
+
+    @property
+    def glyph(self) -> _MeshGlyph:
+        """Glyph engine: plot, histogram, vector field, outline, animate, to_image (``mesh.glyph``)."""
+        return _MeshGlyph(self)
+
+    @property
+    def variables(self) -> _MeshVariables:
+        """Variables engine: with_variable, attach_data, rename_variable, drop_variables (``mesh.variables``)."""
+        return _MeshVariables(self)
+
+    @property
+    def topology(self) -> _MeshTopology:
+        """Topology engine: circumcenters, exterior edges/faces, bounding_polygon, components, \
+morphology, adjacency, active_mask (``mesh.topology``)."""
+        return _MeshTopology(self)
+
+    @property
+    def spatial(self) -> _MeshSpatial:
+        """Spatial engine: crop, subset_by_bounds, to_crs, set_crs, resample (``mesh.spatial``)."""
+        return _MeshSpatial(self)
+
+    @property
+    def selection(self) -> _MeshSelection:
+        """Selection/reduction engine: sel, isel, reduce, rolling, layers, fits (``mesh.selection``)."""
+        return _MeshSelection(self)
+
+    @property
+    def io(self) -> _MeshIO:
+        """I/O engine: to_file, to_bytes, to_zarr, to_dataset, rasterize_like, burn (``mesh.io``)."""
+        return _MeshIO(self)
+
+    @property
     def variable_names(self) -> list[str]:
         """Names of all data variables, in insertion order.
 
@@ -594,32 +635,14 @@ class MeshDataset(_MeshFacades):
         return self._crs_wkt if self.crs is not None else None
 
     def set_crs(self, crs: str | None = None, epsg: int | None = None) -> None:
-        """Assign a CRS to a mesh that has none — no reprojection.
-
-        Exactly one of *crs* or *epsg* must be given. The CRS is written
-        in place to the dataset **and** the underlying :class:`Mesh2d`,
-        so :attr:`epsg`, :attr:`crs_wkt`, and :attr:`crs` all reflect
-        the new value immediately.
-
-        This is the complement of :meth:`to_crs`, which *reprojects*
-        coordinates. ``set_crs`` only declares the coordinate system the
-        existing coordinates are already in.
-
-        Args:
-            crs: WKT string describing the CRS.
-            epsg: EPSG code (e.g. ``4326``).
-
-        Raises:
-            ValueError: If neither *crs* nor *epsg* is provided, or if
-                both are provided.
-        """
-        wkt, crs_obj = resolve_crs(self._mesh, crs=crs, epsg=epsg)
-        self._crs_wkt = wkt
-        self._cached_crs = crs_obj
-        # Keep the fourth slot from going stale (D4): topo_info.crs_wkt is only read back
-        # on the read path, but leaving it behind after set_crs is a loaded gun.
-        if self._topology_info is not None:
-            self._topology_info = replace(self._topology_info, crs_wkt=wkt)
+        """Facade -- delegates to :meth:`_MeshSpatial.set_crs`."""
+        warnings.warn(
+            "`mesh.set_crs` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.set_crs`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.spatial.set_crs(crs=crs, epsg=epsg)
 
     def _mesh_equals(self, other: MeshDataset) -> bool:
         """Compare mesh topology and coordinate arrays."""
@@ -655,23 +678,17 @@ class MeshDataset(_MeshFacades):
         return True
 
     def equals(self, other: object) -> bool:
-        """Value equality — same mesh, same variable values at non-missing positions.
+        """Facade -- delegates to :meth:`_MeshAnalysis.equals`."""
+        warnings.warn(
+            "`mesh.equals` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.equals`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.equals(other)
 
-        Compares node coordinates, face connectivity, CRS (by EPSG),
-        variable names, and per-variable values (ignoring positions
-        where either side is nodata/NaN).
-
-        Args:
-            other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``MeshDataset``.
-
-        Returns:
-            ``True`` when the two datasets are value-equal.
-
-        See Also:
-            identical: Strict comparison that also checks dtype,
-                nodata sentinels, CRS WKT, and global attributes.
-        """
+    def _equals_impl(self, other: object) -> bool:
+        """Implementation of :meth:`_MeshAnalysis.equals`; see that method for the contract."""
         if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
@@ -718,22 +735,17 @@ class MeshDataset(_MeshFacades):
         return self._crs_wkt == other._crs_wkt
 
     def identical(self, other: object) -> bool:
-        """Strict equality — same dtype, same values, same nodata, same attributes.
+        """Facade -- delegates to :meth:`_MeshAnalysis.identical`."""
+        warnings.warn(
+            "`mesh.identical` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.identical`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.identical(other)
 
-        Everything must match exactly, including NaN positions, dtypes,
-        nodata sentinels, CRS WKT, and global attributes.
-
-        Args:
-            other: The object to compare against.  Returns ``False``
-                immediately if *other* is not a ``MeshDataset``.
-
-        Returns:
-            ``True`` when the two datasets are bitwise-identical.
-
-        See Also:
-            equals: Looser comparison that ignores nodata positions,
-                dtype differences, and attribute mismatches.
-        """
+    def _identical_impl(self, other: object) -> bool:
+        """Implementation of :meth:`_MeshAnalysis.identical`; see that method for the contract."""
         if not isinstance(other, MeshDataset):
             return False
         result = self._mesh_equals(other)
@@ -899,86 +911,36 @@ class MeshDataset(_MeshFacades):
         location: str = "face",
         nodata: float | None = None,
     ) -> MeshDataset:
-        """Return a new dataset with ``name`` added or replaced.
-
-        UGRID derivations are immutable — unlike ``NetCDF.set_variable`` this does not mutate
-        in place but returns a fresh dataset. A 2-D ``data`` array is treated as temporal
-        (leading axis = time); a 1-D array is a static per-element variable.
-
-        Args:
-            name: Variable name to add or replace.
-            data: The values; ``(n_elements,)`` static or ``(n_time, n_elements)`` temporal.
-            location: Mesh location — ``"face"``, ``"node"`` or ``"edge"``. Defaults to
-                ``"face"``.
-            nodata: Optional no-data value for the new variable.
-
-        Returns:
-            MeshDataset: A new dataset carrying the variable.
-        """
-        arr = np.asarray(data)
-        variable = MeshVariable(
-            name=name,
-            location=location,
-            mesh_name=self.mesh_name,
-            shape=arr.shape,
-            nodata=nodata,
-            _data=arr,
+        """Facade -- delegates to :meth:`_MeshVariables.with_variable`."""
+        warnings.warn(
+            "`mesh.with_variable` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.with_variable`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        new_vars = dict(self._data_variables)
-        new_vars[name] = variable
-        return self._rebuild(new_vars)
+        return self.variables.with_variable(
+            name, data, location=location, nodata=nodata
+        )
 
     def drop_variables(self, names: str | list[str]) -> MeshDataset:
-        """Return a new dataset without the named variable(s).
-
-        Args:
-            names: A variable name, or a list of them, to drop.
-
-        Returns:
-            MeshDataset: A new dataset without those variables.
-
-        Raises:
-            KeyError: A named variable is not present.
-        """
-        drop = [names] if isinstance(names, str) else list(names)
-        new_vars = dict(self._data_variables)
-        for name in drop:
-            if name not in new_vars:
-                raise KeyError(
-                    f"Variable {name!r} not found. Available: {self.variable_names}"
-                )
-            del new_vars[name]
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshVariables.drop_variables`."""
+        warnings.warn(
+            "`mesh.drop_variables` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.drop_variables`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.drop_variables(names)
 
     def rename_variable(self, old: str, new: str) -> MeshDataset:
-        """Return a new dataset with variable ``old`` renamed to ``new``.
-
-        Args:
-            old: The current variable name.
-            new: The new name.
-
-        Returns:
-            MeshDataset: A new dataset with the variable renamed.
-
-        Raises:
-            KeyError: ``old`` is not present.
-            ValueError: ``new`` already names a different variable.
-        """
-        if old not in self._data_variables:
-            raise KeyError(
-                f"Variable {old!r} not found. Available: {self.variable_names}"
-            )
-        if new in self._data_variables and new != old:
-            raise ValueError(f"Variable {new!r} already exists.")
-        new_vars: dict[str, MeshVariable] = {}
-        for name, var in self._data_variables.items():
-            if name == old:
-                # `replace` keeps the lazy loader and every other field, only re-labelling
-                # the variable, so a rename never forces a read.
-                new_vars[new] = replace(var, name=new)
-            else:
-                new_vars[name] = var
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshVariables.rename_variable`."""
+        warnings.warn(
+            "`mesh.rename_variable` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.rename_variable`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.rename_variable(old, new)
 
     @property
     def metadata(self) -> MeshMetadata:
@@ -1006,28 +968,32 @@ class MeshDataset(_MeshFacades):
         epsg: int | None = None,
         nodata: float = -9999.0,
     ) -> Dataset:
-        """Convert a mesh variable to a regular-grid Dataset.
+        """Facade -- delegates to :meth:`_MeshIO.to_dataset`."""
+        warnings.warn(
+            "`mesh.to_dataset` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_dataset`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_dataset(
+            variable_name,
+            cell_size,
+            method=method,
+            bounds=bounds,
+            epsg=epsg,
+            nodata=nodata,
+        )
 
-        Interpolates mesh data onto a regular grid and returns a
-        standard pyramids Dataset. This is the bridge between
-        unstructured (UGRID) and structured (raster) worlds.
-
-        Args:
-            variable_name: Name of the data variable to rasterize.
-            cell_size: Target grid cell size in coordinate units.
-            method: Interpolation method ("nearest" or "linear").
-            bounds: Target (xmin, ymin, xmax, ymax). Defaults to mesh bounds.
-            epsg: Target EPSG code. Defaults to mesh CRS.
-            nodata: No-data value for the output raster.
-
-        Returns:
-            pyramids Dataset with the interpolated data.
-
-        Raises:
-            KeyError: No variable is named ``variable_name``.
-            ValueError: The variable exists but holds no data (nothing was loaded and it
-                carries no lazy loader), so there is nothing to interpolate.
-        """
+    def _to_dataset_impl(
+        self,
+        variable_name: str,
+        cell_size: float,
+        method: str = "nearest",
+        bounds: tuple[float, float, float, float] | None = None,
+        epsg: int | None = None,
+        nodata: float = -9999.0,
+    ) -> Dataset:
+        """Implementation of :meth:`_MeshIO.to_dataset`; see that method for the contract."""
         var = self[variable_name]
         data = var.data
         if data is None:
@@ -1080,94 +1046,14 @@ class MeshDataset(_MeshFacades):
         bbox: tuple[float, float, float, float] | list[float] | None = None,
         epsg: int | None = None,
     ) -> MeshDataset:
-        """Crop the mesh to a polygon mask or a bbox — the unstructured-mesh analogue of crop.
-
-        The mesh equivalent of :meth:`pyramids.dataset.Dataset.crop` / :meth:`NetCDF.crop`. Rather
-        than warping a raster, it selects the **faces** that fall inside the region (renumbering the
-        node connectivity for the resulting sub-mesh) and keeps the data on the surviving elements.
-        Delegates to :meth:`clip` for a polygon and :meth:`subset_by_bounds` for a bbox; this method
-        exists so the spatial-subset call is named ``crop`` across the raster and mesh classes alike.
-
-        Args:
-            mask (Any):
-                Polygon mask — a shapely geometry, ``GeoDataFrame``, or ``FeatureCollection``.
-                Mutually exclusive with ``bbox``.
-            touch (bool):
-                Applies only to a polygon ``mask``: if ``True`` (default), keep faces that touch the
-                mask boundary; if ``False``, keep only faces fully inside it. Ignored for ``bbox``,
-                which always selects faces by its axis-aligned envelope (``subset_by_bounds``).
-                Defaults to True.
-            bbox (tuple or list of 4 floats, keyword-only):
-                ``(west, south, east, north)`` in the mesh CRS, or in ``epsg`` when supplied. Accepts
-                a tuple or a list. Selects faces by the axis-aligned envelope; not affected by
-                ``touch``. Mutually exclusive with ``mask``.
-            epsg (int, keyword-only):
-                CRS of ``bbox``. When it differs from the mesh CRS the box is reprojected to the mesh
-                CRS and subset by its envelope; when it equals the mesh CRS it is a no-op. Defaults to
-                the mesh CRS.
-
-        Returns:
-            MeshDataset: A new sub-mesh — faces inside the region, connectivity renumbered, and data
-                variables subset to the surviving elements.
-
-        Raises:
-            ValueError: If both ``mask`` and ``bbox`` are supplied, if ``bbox`` is not a 4-tuple, or
-                if ``epsg`` is given for a ``bbox`` but the mesh has no CRS to reproject into.
-            TypeError: If neither ``mask`` nor ``bbox`` is supplied.
-
-        Examples:
-            - Crop a mesh to a polygon (faces intersecting it survive):
-                ```python
-                >>> from shapely.geometry import Polygon
-                >>> from pyramids.netcdf import MeshDataset
-                >>> ug = MeshDataset.read_file("mesh.nc")                        # doctest: +SKIP
-                >>> sub = ug.crop(Polygon([(-1, -1), (0, -1), (0, 1), (-1, 1)]))  # doctest: +SKIP
-                >>> sub.n_face <= ug.n_face                                       # doctest: +SKIP
-                True
-
-                ```
-            - Crop to a bounding box in the mesh's own CRS:
-                ```python
-                >>> sub = ug.crop(bbox=(-1.0, -1.0, 0.0, 1.0))                    # doctest: +SKIP
-
-                ```
-
-        See Also:
-            clip: Polygon-mask subsetting that ``crop`` delegates to when ``mask`` is given.
-            subset_by_bounds: Bounding-box subsetting that ``crop`` delegates to when ``bbox`` is
-                given.
-            pyramids.dataset.Dataset.crop: The raster equivalent on a gridded dataset.
-        """
-        if bbox is not None:
-            if mask is not None:
-                raise ValueError("crop accepts either `mask` or `bbox`, not both")
-            if len(bbox) != 4:
-                raise ValueError(
-                    "bbox must be a 4-tuple of (west, south, east, north), "
-                    f"got {len(bbox)} value(s)"
-                )
-            west, south, east, north = bbox
-            if epsg is not None and (self.epsg is None or int(epsg) != int(self.epsg)):
-                if self.epsg is None:
-                    raise ValueError(
-                        f"cannot reproject a bbox given in EPSG:{int(epsg)} into a mesh that has no "
-                        "CRS; drop epsg to treat the bbox as native coordinates"
-                    )
-                # Reproject the bbox to the mesh CRS and subset by its envelope, so the bbox path
-                # selects faces with the same rule (subset_by_bounds) regardless of the source CRS.
-                west, south, east, north = (
-                    gpd.GeoSeries([box(west, south, east, north)], crs=epsg)
-                    .to_crs(self.epsg)
-                    .total_bounds
-                )
-            result = self.subset_by_bounds(west, south, east, north)
-        elif mask is not None:
-            result = self.clip(mask, touch=touch)
-        else:
-            raise TypeError(
-                "crop requires a `mask` (polygon) or a `bbox` (west, south, east, north) tuple"
-            )
-        return result
+        """Facade -- delegates to :meth:`_MeshSpatial.crop`."""
+        warnings.warn(
+            "`mesh.crop` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.crop`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.spatial.crop(mask, touch, bbox=bbox, epsg=epsg)
 
     def _wrap_subset(
         self, mesh: Mesh2d, data_variables: dict[str, MeshVariable]
@@ -1196,21 +1082,14 @@ class MeshDataset(_MeshFacades):
         )
 
     def clip(self, mask: Any, touch: bool = True) -> MeshDataset:
-        """Clip the mesh to a polygon mask.
-
-        Selects faces that intersect (touch=True) or are fully
-        contained within (touch=False) the mask polygon.
-
-        Args:
-            mask: Polygon mask (GeoDataFrame, FeatureCollection,
-                or Shapely geometry).
-            touch: If True, include faces touching the boundary.
-
-        Returns:
-            New MeshDataset with clipped mesh and data.
-        """
-        mesh, data_variables = clip_mesh(self, mask, touch=touch)
-        return self._wrap_subset(mesh, data_variables)
+        """Facade -- delegates to :meth:`_MeshAnalysis.clip`."""
+        warnings.warn(
+            "`mesh.clip` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.clip`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.clip(mask, touch=touch)
 
     def subset_by_bounds(
         self,
@@ -1219,173 +1098,24 @@ class MeshDataset(_MeshFacades):
         xmax: float,
         ymax: float,
     ) -> MeshDataset:
-        """Subset mesh to faces within a bounding box.
-
-        Args:
-            xmin: Minimum x-coordinate.
-            ymin: Minimum y-coordinate.
-            xmax: Maximum x-coordinate.
-            ymax: Maximum y-coordinate.
-
-        Returns:
-            New MeshDataset with subset mesh and data.
-        """
-        mesh, data_variables = subset_by_bounds(self, xmin, ymin, xmax, ymax)
-        return self._wrap_subset(mesh, data_variables)
+        """Facade -- delegates to :meth:`_MeshSpatial.subset_by_bounds`."""
+        warnings.warn(
+            "`mesh.subset_by_bounds` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.subset_by_bounds`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.spatial.subset_by_bounds(xmin, ymin, xmax, ymax)
 
     def to_crs(self, to_epsg: int | str | Any) -> MeshDataset:
-        """Reproject all node coordinates to a new CRS.
-
-        Uses pyproj.Transformer to reproject node coordinates.
-        Face/edge center coordinates are recomputed after reprojection.
-        Data values are preserved — only coordinates change.
-
-        Args:
-            to_epsg: The target CRS, in any form `pyproj.CRS.from_user_input` accepts — an
-                EPSG reference number (`3857`), an authority string (`"EPSG:3857"`,
-                `"ESRI:54030"` for Robinson), a bare numeric string (`"3857"`), a PROJ4 or
-                WKT string, or a `pyproj.CRS`. This matches `Dataset.to_crs` and
-                `Spatial.to_crs`; a mesh is no longer the one layer that takes a bare code
-                only. A CRS without an EPSG code — most globe and custom projections — is now
-                a valid target.
-
-        Returns:
-            New MeshDataset with reprojected coordinates.
-
-        Raises:
-            ValueError: The mesh declares neither an EPSG code nor a WKT, so there is no
-                source CRS to reproject from.
-            pyramids.base._errors.CRSError: The target CRS cannot be interpreted.
-
-        Examples:
-            - Reproject to an authority string, which used to be rejected (#1404):
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ... )
-                >>> mesh.set_crs(epsg=4326)
-                >>> mesh.to_crs("EPSG:3857").epsg
-                3857
-                >>> mesh.to_crs(3857).epsg
-                3857
-
-                ```
-            - Reproject to a CRS that has no EPSG code (Robinson); the result keeps its WKT
-                and reports `epsg` as `None`:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ... )
-                >>> mesh.set_crs(epsg=4326)
-                >>> robinson = mesh.to_crs("ESRI:54030")
-                >>> robinson.epsg is None
-                True
-                >>> "Robinson" in robinson.crs.name
-                True
-
-                ```
-        """
-        # The mesh may describe its CRS by WKT alone, with no EPSG code to
-        # resolve; `crs_spec` returns whichever of the two is usable, so a
-        # projected mesh stops being refused for a CRS it plainly has.
-        source_crs = crs_spec(self.epsg, self.crs_wkt)
-        if source_crs is None:
-            raise ValueError(
-                "Cannot reproject: source CRS is unknown. "
-                "Set CRS before calling to_crs()."
-            )
-
-        # Both sides go through `crs_from_user_input` as-is, so a mesh in a CRS whose
-        # code only GDAL's PROJ database carries still reprojects (issue #943), and the
-        # target accepts the same range of inputs the source does. Prefixing `EPSG:` onto
-        # the target was the bug (#1404): it built the nonsense `EPSG:EPSG:3857` /
-        # `EPSG:+proj=robin` / `EPSG:PROJCS[...]` for anything other than a bare integer,
-        # the exact hazard the source comment above warns about.
-        target_crs = crs_from_user_input(to_epsg)
-        transformer = Transformer.from_crs(
-            crs_from_user_input(source_crs),
-            target_crs,
-            always_xy=True,
+        """Facade -- delegates to :meth:`_MeshSpatial.to_crs`."""
+        warnings.warn(
+            "`mesh.to_crs` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.to_crs`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        new_node_x, new_node_y = transformer.transform(
-            self._mesh.node_x,
-            self._mesh.node_y,
-        )
-
-        new_face_x = None
-        new_face_y = None
-        if self._mesh.has_face_coords:
-            new_face_x, new_face_y = transformer.transform(
-                self._mesh.face_x,
-                self._mesh.face_y,
-            )
-
-        new_edge_x = None
-        new_edge_y = None
-        if self._mesh.has_edge_coords:
-            new_edge_x, new_edge_y = transformer.transform(
-                self._mesh.edge_x,
-                self._mesh.edge_y,
-            )
-
-        new_mesh = Mesh2d(
-            node_x=new_node_x,
-            node_y=new_node_y,
-            face_node_connectivity=self._mesh.face_node_connectivity,
-            edge_node_connectivity=self._mesh.edge_node_connectivity,
-            face_edge_connectivity=self._mesh.face_edge_connectivity,
-            face_face_connectivity=self._mesh.face_face_connectivity,
-            edge_face_connectivity=self._mesh.edge_face_connectivity,
-            face_x=new_face_x,
-            face_y=new_face_y,
-            edge_x=new_edge_x,
-            edge_y=new_edge_y,
-        )
-
-        # The stored WKT comes from the resolved target. When the target carries an EPSG
-        # code, `sr_from_epsg` gives GDAL's authority WKT -- byte-for-byte what this method
-        # produced before #1404 for every coded target (keeping the child datum / spheroid /
-        # primem AUTHORITY nodes a WKT2->WKT1 round-trip drops, and, for a code only GDAL's
-        # PROJ database carries (#943), the sole place that code survives at all). The code
-        # is recovered with `epsg_from_user_input`, not `target_crs.to_epsg()`: pyproj's own
-        # `to_epsg()` returns None for those GDAL-only codes, and `epsg_from_user_input`
-        # verifies the candidate against the parsed definition (`IsSame`), so a near-match or
-        # a relabelled authority is refused rather than silently stored. A genuinely
-        # code-less CRS (Robinson, a PROJ4 string) raises `CRSError` there; its WKT comes
-        # from the already-resolved `target_crs`, not a second resolution of the input.
-        try:
-            target_epsg = epsg_from_user_input(to_epsg)
-        except CRSError:
-            srs = sr_from_wkt(target_crs.to_wkt())
-        else:
-            srs = sr_from_epsg(target_epsg)
-        new_crs_wkt = srs.ExportToWkt()
-
-        new_topo_info = None
-        if self._topology_info is not None:
-            new_topo_info = replace(self._topology_info, crs_wkt=new_crs_wkt)
-
-        # `type(self)` and `file_name`, as every other derivation does: hard-coding
-        # `MeshDataset(` silently downgraded a subclass, and dropping `file_name` made the
-        # attribute unreliable rather than absent.
-        result = type(self)(
-            mesh=new_mesh,
-            data_variables=self._data_variables,
-            global_attributes=self._global_attributes,
-            topology_info=new_topo_info,
-            crs_wkt=new_crs_wkt,
-            file_name=self._file_name,
-            volume_topology=self._volume_topology,
-        )
-        return result
+        return self.spatial.to_crs(to_epsg)
 
     @property
     def time_values(self) -> list | None:
@@ -1423,7 +1153,7 @@ class MeshDataset(_MeshFacades):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.isel(time=index)
+        return self.selection.isel(time=index)
 
     def sel_time_range(self, start: int, stop: int) -> MeshDataset:
         """Deprecated: use ``isel(time=slice(start, stop))``.
@@ -1445,19 +1175,37 @@ class MeshDataset(_MeshFacades):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.isel(time=slice(start, stop))
+        return self.selection.isel(time=slice(start, stop))
 
     def attach_data(
         self, path: str | Path, driver: str | None = None, lazy: bool = True
     ) -> MeshDataset:
-        """Attach a results-only file's variables to this mesh.
+        """Facade -- delegates to :meth:`_MeshVariables.attach_data`."""
+        warnings.warn(
+            "`mesh.attach_data` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.variables.attach_data`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.variables.attach_data(path, driver, lazy)
+
+    def _attach_data_impl(
+        self, path: str | Path, driver: str | None = None, lazy: bool = True
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshVariables.attach_data`.
+
+        Kept on ``MeshDataset`` rather than moved onto the variables engine: the body reads the
+        results file through the module-level ``_require_existing_file`` /
+        ``_resolve_attach_driver`` / ``_read_data_through_driver`` helpers in this module, which
+        the engine cannot import without a cycle (``dataset`` imports the engine for its
+        ``variables`` accessor).
 
         Some formats carry values but no topology — an SMS ``.dat``, an XMDF, an XDMF — and must
         be paired with a mesh read from elsewhere. Those drivers declare ``needs_mesh``, and
         :meth:`read_file` refuses them, pointing here.
 
             >>> mesh = MeshDataset.read_file("domain.2dm")       # doctest: +SKIP
-            >>> result = mesh.attach_data("velocity.dat")         # doctest: +SKIP
+            >>> result = mesh.variables.attach_data("velocity.dat")  # doctest: +SKIP
 
         The driver returns **only the variables it read**; this method merges them onto the
         dataset. That division is deliberate — it makes a name the dataset already defines an
@@ -1513,33 +1261,19 @@ class MeshDataset(_MeshFacades):
     def to_file(
         self, path: str | Path, driver: str | None = None, **options: Any
     ) -> None:
-        """Write the dataset to a file.
+        """Facade -- delegates to :meth:`_MeshIO.to_file`."""
+        warnings.warn(
+            "`mesh.to_file` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_file`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_file(path, driver, **options)
 
-        Writes UGRID-compliant NetCDF by default: a topology variable, node coordinates,
-        connectivity arrays, face/edge centres, data variables, and global attributes following
-        the UGRID convention.
-
-        With ``driver``, writes through a registered third-party driver instead — 2DM, Selafin,
-        PLY and others are writable. The output format is never inferred from the suffix, so
-        ``to_file("mesh.slf")`` still writes NetCDF; name the driver to change that.
-
-        Args:
-            path: Output file path.
-            driver: Name of a registered **mesh** driver to write with, as declared by the
-                plugin providing it (see :func:`~pyramids.netcdf.ugrid.mesh_drivers`) — not a
-                GDAL driver short name, which is what ``driver`` means elsewhere in pyramids.
-                ``None`` (the default) writes UGRID NetCDF through the built-in writer, and
-                the output format is never inferred from ``path``'s suffix.
-            **options: Format-specific settings for the driver, passed through uninterpreted
-                (for example Selafin endianness, or PLY ascii versus binary). The built-in
-                writer takes none, so passing any without a ``driver`` raises ``TypeError``
-                rather than dropping them silently.
-
-        Raises:
-            DriverNotExistError: If ``driver`` names a driver that is not installed.
-            UnsupportedMeshFormatError: If the named driver cannot write a mesh.
-            TypeError: If ``options`` are given without a ``driver``.
-        """
+    def _to_file_impl(
+        self, path: str | Path, driver: str | None = None, **options: Any
+    ) -> None:
+        """Implementation of :meth:`_MeshIO.to_file`; see that method for the contract."""
         if driver is not None:
             self._write_through_driver(path, driver, options)
         elif options:
@@ -1551,20 +1285,17 @@ class MeshDataset(_MeshFacades):
             self._write_ugrid_netcdf(Path(path))
 
     def to_bytes(self) -> bytes:
-        """Serialise the dataset to an in-memory UGRID NetCDF buffer.
+        """Facade -- delegates to :meth:`_MeshIO.to_bytes`."""
+        warnings.warn(
+            "`mesh.to_bytes` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.io.to_bytes`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.io.to_bytes()
 
-        Writes through a temporary file because GDAL's NetCDF driver
-        does not support ``/vsimem/`` for multidimensional creation.
-
-        Returns:
-            bytes: The NetCDF file content, suitable for writing to
-                cloud storage or embedding in a response payload.
-
-        See Also:
-            to_file: Write directly to a file on disk.
-            read_file: Class method that reads from a file path or
-                byte buffer.
-        """
+    def _to_bytes_impl(self) -> bytes:
+        """Implementation of :meth:`_MeshIO.to_bytes`; see that method for the contract."""
         with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
             tmp_path = Path(tmp.name)
         try:
@@ -1674,47 +1405,14 @@ class MeshDataset(_MeshFacades):
         variable_name: str | None = None,
         location: str = "face",
     ) -> gpd.GeoDataFrame:
-        """Convert mesh to a GeoDataFrame.
-
-        For faces: each row is a Polygon with data columns.
-        For nodes: each row is a Point.
-        For edges: each row is a LineString.
-
-        Args:
-            variable_name: Optional data variable to include as a column.
-            location: Mesh location ("face", "node", or "edge").
-
-        Returns:
-            geopandas GeoDataFrame.
-        """
-        geometries = self._build_geometries(location)
-
-        data_dict: dict[str, Any] = {}
-        if variable_name is not None:
-            var = self[variable_name]
-            if var.location == location:
-                # For a temporal variable only the first step is tabulated; the windowed read
-                # pulls just that slab instead of loading every step to slice `[0]` (#982).
-                # `has_data_source` keeps a variable with no readable data to the `None` branch
-                # below (checked without forcing a load — review L3).
-                if var.has_time:
-                    var_data = (
-                        var._read_time_window(0, None) if var.has_data_source else None
-                    )
-                else:
-                    var_data = var.data
-                # A variable with no readable data becomes a length-correct null column rather than
-                # raising — pandas rejects a scalar `None` column ("must pass an index") (review L3).
-                if var_data is None:
-                    var_data = np.full(len(geometries), np.nan)
-                data_dict[variable_name] = var_data
-
-        gdf = gpd.GeoDataFrame(data_dict, geometry=geometries)
-        if self.crs is not None:
-            gdf = gdf.set_crs(self.crs)
-
-        result = gdf
-        return result
+        """Facade -- delegates to :meth:`_MeshVector.to_geodataframe`."""
+        warnings.warn(
+            "`mesh.to_geodataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.to_geodataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector.to_geodataframe(variable_name, location)
 
     def _build_geometries(self, location: str) -> list:
         """Build the geometry list for a mesh location.
@@ -1776,89 +1474,26 @@ class MeshDataset(_MeshFacades):
         variable_name: str | None = None,
         location: str = "face",
     ) -> FeatureCollection:
-        """Convert mesh to a pyramids FeatureCollection.
-
-        Args:
-            variable_name: Optional data variable to include.
-            location: Mesh location ("face", "node", or "edge").
-
-        Returns:
-            pyramids FeatureCollection.
-        """
-        gdf = self.to_geodataframe(variable_name, location)
-        result = FeatureCollection(gdf)
-        return result
+        """Facade -- delegates to :meth:`_MeshVector.to_feature_collection`."""
+        warnings.warn(
+            "`mesh.to_feature_collection` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.to_feature_collection`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.vector.to_feature_collection(variable_name, location)
 
     def voronoi_polygons(
         self, *, clip: FeatureCollection | None = None
     ) -> FeatureCollection:
-        """Voronoi (Thiessen) cells of the mesh nodes as a vector `FeatureCollection`.
-
-        The file-serializable counterpart of :meth:`voronoi`, which returns a bare
-        :class:`scipy.spatial.Voronoi` with no geospatial form. This returns the Thiessen
-        (Voronoi) cells of the mesh nodes as polygons in the mesh CRS, so unlike the raw
-        tessellation it can be written with :meth:`FeatureCollection.to_file` and wrapped as a
-        CLI verb.
-
-        The cells come from :meth:`FeatureCollection.voronoi`, so the outer (unbounded) cells
-        are bounded to an envelope by default; pass `clip` to intersect every cell with a
-        boundary instead (e.g. the mesh domain). Each cell carries a `node` column with the
-        index of the node it belongs to.
-
-        One cell per **distinct** node: coincident nodes, and cells emptied by `clip`, are
-        dropped, so the result can have fewer rows than the mesh has nodes -- use the `node`
-        column, not row position, to map a cell back to its node. A `clip` boundary that
-        splits one cell into disjoint pieces yields several rows that share a single `node`
-        value, so with such a `clip` the result can instead have *more* rows than nodes and
-        `node` is not unique; without `clip` (or with a convex one) each surviving node has
-        exactly one row. If the mesh has no CRS (:attr:`crs` is `None`) the output carries
-        none either.
-
-        Args:
-            clip: A boundary `FeatureCollection` each cell is intersected with, or `None` for
-                shapely's default bounded cells.
-
-        Returns:
-            FeatureCollection: One polygon per surviving node cell, in the mesh CRS, each
-            carrying a `node` column with its source node index.
-
-        Raises:
-            InvalidGeometryError: Fewer than two distinct nodes with finite coordinates.
-
-        Examples:
-            - Tessellate a four-node mesh and inspect the cells:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     epsg=4326,
-                ... )
-                >>> cells = mesh.voronoi_polygons()
-                >>> len(cells)
-                4
-                >>> sorted(set(cells.geometry.geom_type))
-                ['Polygon']
-                >>> cells.epsg
-                4326
-
-                ```
-
-        See Also:
-            voronoi: The low-level `scipy.spatial.Voronoi` primitive this builds on.
-        """
-        node_index = np.arange(self._mesh.node_x.size)
-        nodes = gpd.GeoDataFrame(
-            {"node": node_index},
-            geometry=list(shapely.points(self._mesh.node_x, self._mesh.node_y)),
-            crs=self.crs,
+        """Facade -- delegates to :meth:`_MeshVector.voronoi_polygons`."""
+        warnings.warn(
+            "`mesh.voronoi_polygons` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.vector.voronoi_polygons`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        # Carry the source node index onto each cell (`values="node"`), so a caller can map a
-        # surviving cell back to its node -- positional alignment is NOT safe, because the
-        # tessellation drops coincident nodes and any cell emptied by `clip`.
-        return FeatureCollection(nodes).voronoi(values="node", clip=clip)
+        return self.vector.voronoi_polygons(clip=clip)
 
     @classmethod
     def from_arrays(
@@ -2823,98 +2458,24 @@ class MeshDataset(_MeshFacades):
         return None
 
     def isel_layer(self, index: int | slice | list[int] | np.ndarray) -> MeshDataset:
-        """Select along the layer axis by position.
-
-        A layered variable — ``(layer, element)``, or ``(time, layer, element)`` — is indexed
-        on its layer axis. An integer collapses that axis (the variable loses its layer
-        dimension); a slice or sequence keeps it, trimmed. Variables with no layer axis are
-        carried through untouched, as the time selectors carry static variables.
-
-        For a **ragged** 3-D mesh (:attr:`volume_topology` set) a ``location="volume"``
-        variable has no rectangular layer axis to index; the selection is per column instead.
-        ``index`` must be an ``int`` ``k``: each column yields its ``k``-th layer where it has
-        one, and a column shallower than ``k + 1`` layers yields NaN — the absent layers are
-        made explicit, never padded silently. The volume variable becomes a plain
-        ``location="face"`` field; other variables carry through as on the uniform path.
-
-        Args:
-            index: An ``int`` layer, a ``slice``, or a sequence of layer positions. A ragged
-                mesh accepts only an ``int``.
-
-        Returns:
-            MeshDataset: A new dataset with the layer selection applied.
-
-        Raises:
-            ValueError: No variable has a layer dimension, or a non-``int`` ``index`` was given
-                for a ragged mesh.
-        """
-        if self._volume_topology is not None:
-            return self._isel_layer_ragged(index)
-        new_vars: dict[str, MeshVariable] = {}
-        layered = False
-        for name, var in self._data_variables.items():
-            axis = self._layer_axis(var)
-            if axis is None:
-                new_vars[name] = var
-                continue
-            layered = True
-            data = np.asarray(var.data)
-            if isinstance(index, (int, np.integer)):
-                picked = np.take(data, int(index), axis=axis)
-                moved = var.with_data(picked)
-                moved.dimensions = tuple(
-                    dim
-                    for position, dim in enumerate(var.dimensions)
-                    if position != axis
-                )
-            else:
-                positions = (
-                    np.arange(data.shape[axis])[index]
-                    if isinstance(index, slice)
-                    else np.asarray(index, dtype=np.intp)
-                )
-                moved = var.with_data(np.take(data, positions, axis=axis))
-            new_vars[name] = moved
-        if not layered:
-            raise ValueError(
-                "isel_layer needs at least one variable with a layer dimension; this "
-                "dataset has none."
-            )
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshSelection.isel_layer`."""
+        warnings.warn(
+            "`mesh.isel_layer` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.isel_layer`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.isel_layer(index)
 
     def sel_layer(self, value: Any) -> MeshDataset:
-        """Select along the layer axis by coordinate value.
-
-        Matches ``value`` against :attr:`layer_values`, falling back to layer positions when
-        no layer coordinate is present -- which is the usual case, since the reader does not
-        populate `layer_values` (see :attr:`layer_values`). So on a mesh read from a file,
-        ``sel_layer(1)`` selects layer position 1.
-
-        Args:
-            value: The layer coordinate value to select.
-
-        Returns:
-            MeshDataset: A new dataset with that layer selected.
-
-        Raises:
-            ValueError: No layer dimension, or the value is not among the layer coordinates.
-        """
-        count = self.n_layer
-        if count is None:
-            raise ValueError(
-                "sel_layer needs at least one variable with a layer dimension; this "
-                "dataset has none."
-            )
-        # Read the property once: it walks every variable, so evaluating it twice walked
-        # them twice.
-        stored = self.layer_values
-        coords = stored if stored is not None else list(range(count))
-        if value not in coords:
-            raise ValueError(
-                f"sel_layer: layer value {value!r} not found in the layer coordinate "
-                f"{coords!r}."
-            )
-        return self.isel_layer(coords.index(value))
+        """Facade -- delegates to :meth:`_MeshSelection.sel_layer`."""
+        warnings.warn(
+            "`mesh.sel_layer` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.sel_layer`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.sel_layer(value)
 
     def _isel_layer_ragged(
         self, index: int | slice | list[int] | np.ndarray
@@ -3023,90 +2584,26 @@ class MeshDataset(_MeshFacades):
         )
 
     def collapse_layer(self, layer: int, *, location: str = "face") -> MeshDataset:
-        """Collapse a ragged 3-D mesh's ``volume`` variables to a 2-D field (issue #1330).
-
-        The explicit 2-D collapse of a ragged mesh: each column's ``layer``-th value becomes a
-        plain ``(n_face,)`` (or ``(time, n_face)``) face field, absent layers NaN. It is
-        :meth:`isel_layer` under a name that says "give me a 2-D slice", so a caller can ask for
-        the surface/bed layer as a flat field without reaching for the per-column internals.
-        (Named ``collapse_layer`` rather than ``to_location`` because the latter already moves a
-        variable *between* mesh locations by graph interpolation — a different operation.)
-
-        Args:
-            layer: The 0-based layer position to take from each column.
-            location: The target mesh location. Only ``"face"`` is supported — a ragged volume
-                collapses onto its columns' faces. Defaults to ``"face"``.
-
-        Returns:
-            MeshDataset: A new dataset whose volume variables are 2-D face fields.
-
-        Raises:
-            ValueError: ``location`` is not ``"face"``, or the dataset has no volume topology
-                to collapse.
-        """
-        if self._volume_topology is None:
-            raise ValueError(
-                "collapse_layer needs a ragged volume topology; this dataset has none (it is "
-                "2-D or uniformly layered). Use isel_layer for a uniform mesh."
-            )
-        if location != "face":
-            raise ValueError(
-                f"collapse_layer supports only 'face' for a ragged volume mesh, not "
-                f"{location!r}."
-            )
-        return self._isel_layer_ragged(int(layer))
+        """Facade -- delegates to :meth:`_MeshSelection.collapse_layer`."""
+        warnings.warn(
+            "`mesh.collapse_layer` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.collapse_layer`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.collapse_layer(layer, location=location)
 
     def to_dataframe(
         self, variables: Sequence[str] | None = None, *, dropna: bool = False
     ) -> pd.DataFrame:
-        """A tidy frame of the mesh values, one row per element (and step).
-
-        The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.to_dataframe`, in the **tidy**
-        shape rather than the raster ``(y, x)`` MultiIndex one: an unstructured element has no
-        row/column address, so each row carries the element index, its centroid coordinates,
-        the time step where the variable has one, and the value.
-
-        Args:
-            variables: Which data variables to include. ``None`` (the default) takes them all.
-            dropna: Drop rows whose value is no-data. Defaults to False.
-
-        Returns:
-            pandas.DataFrame: Columns ``variable``, ``element``, ``x``, ``y``, ``layer``,
-            ``time`` and ``value``. ``element`` indexes the facet the variable sits on and
-            ``x``/``y`` are that facet's coordinates, so a node variable is addressed by node.
-            ``layer`` is the layer coordinate, or None for an unlayered variable, and ``time``
-            the step coordinate, or None for a static one.
-
-        Raises:
-            KeyError: A requested variable is not a data variable of this dataset.
-        """
-        names = list(self._data_variables) if variables is None else list(variables)
-        frames: list[pd.DataFrame] = []
-        for name in names:
-            if name not in self._data_variables:
-                raise KeyError(name)
-            var = self._data_variables[name]
-            if var.data is None:
-                continue
-            frames.extend(self._variable_frames(name, var))
-        if not frames:
-            # Match the populated frame's dtypes, so a caller that concatenates or
-            # dtype-checks sees one schema either way.
-            return pd.DataFrame(
-                {
-                    "variable": pd.Series(dtype="str"),
-                    "element": pd.Series(dtype="int64"),
-                    "x": pd.Series(dtype="float64"),
-                    "y": pd.Series(dtype="float64"),
-                    "layer": pd.Series(dtype="object"),
-                    "time": pd.Series(dtype="object"),
-                    "value": pd.Series(dtype="float64"),
-                }
-            )
-        frame = pd.concat(frames, ignore_index=True)
-        if dropna:
-            frame = frame[~frame["value"].isna()].reset_index(drop=True)
-        return frame
+        """Facade -- delegates to :meth:`_MeshInterop.to_dataframe`."""
+        warnings.warn(
+            "`mesh.to_dataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.interop.to_dataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.interop.to_dataframe(variables, dropna=dropna)
 
     def _variable_frames(self, name: str, var: MeshVariable) -> list[pd.DataFrame]:
         """One tidy block per (time step, layer) of a single variable.
@@ -3554,85 +3051,27 @@ class MeshDataset(_MeshFacades):
         )
 
     def active_mask(self, variable_name: str) -> np.typing.NDArray | None:
-        """The variable's per-element active (wet/dry) mask, or ``None`` when it has none.
-
-        The first-class companion of the data (issue #1331): ``True`` marks an active/wet
-        element, ``False`` a dry one, kept separate from ``nodata``/NaN so a consumer can tell
-        a dry element from a missing value. The mask is element-indexed — ``(n_element,)``
-        when it is static or ``(n_time, n_element)`` when it varies per step — and is returned
-        as read, never applied to the values. Use :meth:`masked_values` to get the values with
-        it applied.
-
-        Args:
-            variable_name: Name of the data variable.
-
-        Returns:
-            np.ndarray | None: The boolean mask, or ``None`` when the variable carries none.
-
-        Raises:
-            KeyError: ``variable_name`` is not a data variable of this dataset.
-
-        Examples:
-            - A variable with a mask reports it; one without answers ``None``:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"depth": np.array([2.0, 4.0])},
-                ... )
-                >>> ds["depth"].active = np.array([True, False])
-                >>> ds.active_mask("depth").tolist()
-                [True, False]
-                >>> ds.active_mask("depth") is not None
-                True
-
-                ```
-        """
-        var = self[variable_name]
-        return None if var.active is None else np.asarray(var.active, dtype=bool)
+        """Facade -- delegates to :meth:`_MeshTopology.active_mask`."""
+        warnings.warn(
+            "`mesh.active_mask` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.topology.active_mask`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.topology.active_mask(variable_name)
 
     def masked_values(self, variable_name: str) -> np.typing.NDArray:
-        """The variable's values with both ``nodata`` **and** the active mask blanked to NaN.
+        """Facade -- delegates to :meth:`_MeshAnalysis.masked_values`."""
+        warnings.warn(
+            "`mesh.masked_values` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.masked_values`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.masked_values(variable_name)
 
-        The **opt-in** counterpart of a bare ``.data`` read (issue #1331): dry elements (where
-        :meth:`active_mask` is ``False``) become NaN on top of the usual ``nodata`` blanking,
-        so a caller that wants "treat dry as missing" gets it explicitly — the values are
-        never masked by default. Keeps the variable's full shape (every time step and layer),
-        unlike the single-step :meth:`sample` / :meth:`weighted` path. When the variable has no
-        mask the result is just the ``nodata``-blanked values.
-
-        Args:
-            variable_name: Name of the data variable.
-
-        Returns:
-            np.ndarray: The float64 values, dry and missing elements alike as NaN.
-
-        Raises:
-            KeyError: ``variable_name`` is not a data variable of this dataset.
-            ValueError: The variable has no loaded data.
-
-        Examples:
-            - Dry elements become NaN, so a mean over the wet cells is straightforward:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"depth": np.array([2.0, 4.0])},
-                ... )
-                >>> ds["depth"].active = np.array([True, False])
-                >>> ds.masked_values("depth").tolist()
-                [2.0, nan]
-                >>> float(np.nanmean(ds.masked_values("depth")))
-                2.0
-
-                ```
-        """
+    def _masked_values_impl(self, variable_name: str) -> np.typing.NDArray:
+        """Implementation of :meth:`_MeshAnalysis.masked_values`; see that method for the contract."""
         var = self[variable_name]
         data = var.data
         if data is None:
@@ -3779,66 +3218,16 @@ class MeshDataset(_MeshFacades):
         method: str = "contains",
         time_index: int = 0,
     ) -> np.typing.NDArray:
-        """Sample a mesh variable at point locations.
-
-        The mesh counterpart of :meth:`pyramids.dataset.Dataset.sample`. Where the raster
-        version inverts an affine geotransform to find the pixel under each point, a mesh
-        resolves the point to an element through :class:`MeshSpatialIndex`: a face-located
-        variable by which face contains the point (``method="contains"``) or the nearest
-        face centroid (``method="nearest"``); a node-located variable by nearest node.
-
-        Args:
-            variable_name: Name of the data variable.
-            x: Query x-coordinate(s), in the mesh CRS.
-            y: Query y-coordinate(s), in the mesh CRS.
-            method: ``"contains"`` (point-in-face, face variables only) or ``"nearest"``.
-                Defaults to ``"contains"``.
-            time_index: Step for a temporal variable. Defaults to 0.
-
-        Returns:
-            numpy.ndarray: One value per query point; NaN where a ``"contains"`` query
-            falls outside every face.
-
-        Raises:
-            ValueError: An unknown ``method``, ``"contains"`` on a non-face variable, or a
-                variable located on edges (unsupported).
-        """
-        var, arr = self._element_values(variable_name, time_index=time_index)
-        xs = np.atleast_1d(np.asarray(x, dtype="float64"))
-        ys = np.atleast_1d(np.asarray(y, dtype="float64"))
-        index = MeshSpatialIndex(self._mesh)
-        if var.location == "face":
-            if method == "contains":
-                idx = index.locate_faces(xs, ys)
-            elif method == "nearest":
-                idx = np.atleast_1d(index.locate_nearest_face(xs, ys)).ravel()
-            else:
-                raise ValueError(
-                    f"sample method must be 'contains' or 'nearest', got {method!r}"
-                )
-        elif var.location == "node":
-            # A node is a point, so "contains" has no meaning here — only "nearest"
-            # applies. Reject "contains" rather than silently doing a nearest lookup, as
-            # the docstring promises.
-            if method == "contains":
-                raise ValueError(
-                    "sample method='contains' is only valid for a face-located variable; "
-                    f"{variable_name!r} is on 'node' — use method='nearest'."
-                )
-            if method != "nearest":
-                raise ValueError(
-                    f"sample method must be 'contains' or 'nearest', got {method!r}"
-                )
-            idx = np.atleast_1d(index.locate_nearest_node(xs, ys)).ravel()
-        else:
-            raise ValueError(
-                f"sample supports 'face' and 'node' variables; {variable_name!r} is on "
-                f"{var.location!r}."
-            )
-        out = np.full(len(xs), np.nan, dtype="float64")
-        inside = idx >= 0
-        out[inside] = arr[idx[inside]]
-        return out
+        """Facade -- delegates to :meth:`_MeshAnalysis.sample`."""
+        warnings.warn(
+            "`mesh.sample` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sample`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.sample(
+            variable_name, x, y, method=method, time_index=time_index
+        )
 
     def weighted(
         self,
@@ -3848,94 +3237,16 @@ class MeshDataset(_MeshFacades):
         time_index: int = 0,
         q: float | None = None,
     ) -> float:
-        """Area-weighted statistic of a face variable over the mesh.
-
-        An irregular mesh has faces of different sizes, so the meaningful aggregate weights
-        each face by its area. Delegates to the shared
-        :func:`pyramids.base._reductions.weighted_statistic` with :attr:`Mesh2d.face_areas`
-        as the weights — the same kernel the raster ``weighted`` reduction uses.
-
-        Args:
-            variable_name: Name of a **face-located** data variable.
-            how: One of ``"mean"``, ``"sum"``, ``"sum_of_weights"``, ``"std"``, ``"var"``,
-                ``"quantile"`` (which needs ``q``). Defaults to ``"mean"``.
-            time_index: Step for a temporal variable. Defaults to 0.
-            q: The quantile in ``[0, 1]`` when ``how="quantile"`` (the area-weighted quantile
-                uses the Hazen convention and does not match ``reduce(how="quantile")``); must be
-                ``None`` otherwise.
-
-        Returns:
-            float: The area-weighted statistic over all faces.
-
-        Raises:
-            ValueError: ``how`` is not one of ``WEIGHTED_HOWS``; the variable is not
-                face-located; or its length does not match the number of faces.
-
-        Examples:
-            - Area-weighted mean: the larger face (area 4, value 10) outweighs the
-              smaller (area 2, value 20), pulling the mean below the unweighted 15.0:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 4.0, 4.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 2.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"v": np.array([10.0, 20.0])},
-                ... )
-                >>> round(mesh.weighted("v"), 3)
-                13.333
-
-                ```
-            - The area-weighted quantile clamps to the data range at the extremes:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 4.0, 4.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 2.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"v": np.array([10.0, 20.0])},
-                ... )
-                >>> mesh.weighted("v", how="quantile", q=0.0)
-                10.0
-                >>> mesh.weighted("v", how="quantile", q=1.0)
-                20.0
-
-                ```
-        """
-        if how not in WEIGHTED_HOWS:
-            # Validate up front, mirroring the raster weighted path: the kernel's catch-all
-            # else-branch would otherwise return the standard deviation for any unsupported
-            # `how`, a silent wrong answer.
-            raise ValueError(
-                f"weighted: how must be one of {sorted(WEIGHTED_HOWS)}, got {how!r}."
-            )
-        if how == "quantile":
-            if q is None or isinstance(q, bool) or not 0.0 <= float(q) <= 1.0:
-                raise ValueError(
-                    f"weighted(how='quantile') needs q in [0, 1], got {q!r}."
-                )
-        elif q is not None:
-            raise ValueError(
-                f"weighted(q=...) is only valid with how='quantile', not {how!r}."
-            )
-        var, arr = self._element_values(variable_name, time_index=time_index)
-        if var.location != "face":
-            raise ValueError(
-                "area-weighted statistics need a face-located variable; "
-                f"{variable_name!r} is on {var.location!r}."
-            )
-        areas = self._mesh.face_areas
-        if arr.shape[-1] != areas.shape[0]:
-            raise ValueError(
-                f"variable {variable_name!r} has {arr.shape[-1]} face value(s) but the "
-                f"mesh has {areas.shape[0]} face(s)."
-            )
-        # `arr` already carries NaN for gaps, so `ndv=None` and `skipna=True` reduce over
-        # the single face axis; the kernel keeps the axis as length 1, squeezed off here.
-        result = weighted_statistic(arr, areas, (0,), how, None, True, q)
-        return float(np.asarray(result).ravel()[0])
+        """Facade -- delegates to :meth:`_MeshSelection.weighted`."""
+        warnings.warn(
+            "`mesh.weighted` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.weighted`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.weighted(
+            variable_name, how=how, time_index=time_index, q=q
+        )
 
     def zonal_stats(
         self,
@@ -3946,79 +3257,20 @@ class MeshDataset(_MeshFacades):
         weighted: bool = True,
         time_index: int = 0,
     ) -> pd.DataFrame:
-        """Aggregate a face variable within polygons, weighted by face area.
-
-        The mesh counterpart of :func:`pyramids.dataset.ops._zonal.zonal_stats`. Each face
-        is assigned to the zone whose polygon contains its centroid (the mesh analogue of a
-        raster pixel's cell centre), then the shared
-        :func:`pyramids.base._reductions.reduce_by_label` reduces the face values per zone.
-        With ``weighted`` (the default) the **averaging** statistics (``mean`` / ``std`` /
-        ``var``) are area-weighted, so a zone's mean is area-exact — a capability the raster
-        path does not yet have. ``sum`` is always the plain Σ value (never an area integral),
-        and ``count`` / ``min`` / ``max`` are weight-invariant.
-
-        Args:
-            zones: Polygons, as a :class:`~pyramids.feature.FeatureCollection` (or any
-                object exposing ``geometry``, ``index`` and ``len``). CRS must match the
-                mesh; reproject first if not.
-            variable_name: Name of a **face-located** data variable.
-            stats: Statistics per zone, any of ``"mean"``, ``"sum"``, ``"min"``, ``"max"``,
-                ``"std"``, ``"var"``, ``"count"``. Defaults to ``("mean",)``.
-            weighted: Area-weight the averaging statistics (``mean`` / ``std`` / ``var``).
-                Defaults to True. ``sum`` / ``count`` / ``min`` / ``max`` are unaffected.
-            time_index: Step for a temporal variable. Defaults to 0.
-
-        Returns:
-            pandas.DataFrame: Indexed like ``zones``; one column per statistic. A zone
-            containing no face centroid is NaN (``count`` ``0.0``).
-
-        Raises:
-            ValueError: The variable is not face-located, or the zones' CRS disagrees with
-                the mesh CRS.
-        """
-        var, arr = self._element_values(variable_name, time_index=time_index)
-        if var.location != "face":
-            raise ValueError(
-                "mesh zonal_stats needs a face-located variable; "
-                f"{variable_name!r} is on {var.location!r}."
-            )
-        zone_crs = getattr(zones, "crs", None)
-        if zone_crs is not None and self.epsg is not None:
-            zone_epsg = zone_crs.to_epsg()
-            if zone_epsg is not None and zone_epsg != self.epsg:
-                raise ValueError(
-                    f"zonal_stats: zones CRS (EPSG:{zone_epsg}) does not match mesh CRS "
-                    f"(EPSG:{self.epsg}). Reproject the zones to the mesh CRS first."
-                )
-        geometries = list(zones.geometry)
-        cx, cy = self._mesh.face_centroids
-        centroids = shapely.points(cx, cy)
-        tree = shapely.STRtree(geometries)
-        # Face centroid within a zone polygon -> that zone. A centroid in more than one
-        # (overlapping zones) keeps the first, mirroring a raster pixel landing in one cell.
-        centroid_idx, zone_idx = tree.query(centroids, predicate="within")
-        labels = np.full(self._mesh.n_face, -1, dtype=np.intp)
-        for face_i, zone_i in zip(centroid_idx, zone_idx):
-            if labels[face_i] == -1:
-                labels[face_i] = zone_i
-        n_zones = len(geometries)
-        columns: dict[str, np.typing.NDArray] = {}
-        # Area weighting applies only to the averaging statistics. `sum` stays the plain
-        # Σ value (a weighted sum would be an area integral — a different quantity, and a
-        # silent surprise); `count` / `min` / `max` are weight-invariant anyway.
-        averaging = [s for s in stats if s in ("mean", "std", "var")]
-        plain = [s for s in stats if s not in ("mean", "std", "var")]
-        if weighted and averaging:
-            columns.update(
-                reduce_by_label(
-                    arr, labels, n_zones, averaging, weights=self._mesh.face_areas
-                )
-            )
-            if plain:
-                columns.update(reduce_by_label(arr, labels, n_zones, plain))
-        else:
-            columns.update(reduce_by_label(arr, labels, n_zones, list(stats)))
-        return pd.DataFrame({stat: columns[stat] for stat in stats}, index=zones.index)
+        """Facade -- delegates to :meth:`_MeshAnalysis.zonal_stats`."""
+        warnings.warn(
+            "`mesh.zonal_stats` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.zonal_stats`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.zonal_stats(
+            zones,
+            variable_name=variable_name,
+            stats=stats,
+            weighted=weighted,
+            time_index=time_index,
+        )
 
     def _temporal_names(self) -> list[str]:
         """Names of the variables that carry a real time dimension."""
@@ -4083,76 +3335,27 @@ class MeshDataset(_MeshFacades):
         groupby: Any = None,
         min_count: int = 0,
     ) -> MeshDataset:
-        """Reduce the time dimension of every temporal variable, whole or in groups.
+        """Facade -- delegates to :meth:`_MeshSelection.reduce`."""
+        warnings.warn(
+            "`mesh.reduce` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.reduce`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.reduce(
+            how, skipna=skipna, q=q, groupby=groupby, min_count=min_count
+        )
 
-        The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.reduce` over time. Each
-        temporal variable is reduced along its time axis through the shared
-        :func:`pyramids.base._reductions.reduce_axis` — the very kernel the raster reductions
-        use. Non-temporal variables are kept unchanged.
-
-        Without ``groupby`` the whole axis collapses to one statistic and the variable becomes
-        static. With ``groupby`` each group is reduced on its own slab and the results are
-        stacked back along the time axis, so the variable stays temporal with one step per
-        group — the same shape contract the raster grouped reduce has. For a ``(4, 2)``
-        variable over four monthly steps, ``reduce("mean")`` answers shape ``(2,)`` with
-        ``has_time`` False, while ``reduce("mean", groupby="MS")`` answers shape ``(2, 2)``
-        with ``has_time`` still True.
-
-        Args:
-            how: One of ``"mean"``, ``"sum"``, ``"min"``, ``"max"``, ``"std"``, ``"var"``,
-                ``"median"``, ``"prod"``, ``"quantile"``, ``"count"``, ``"all"`` or ``"any"``.
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-            q: The quantile for ``how="quantile"``; must stay ``None`` otherwise.
-            groupby: Reduce within groups of steps instead of over the whole axis. Two
-                spellings, matching the raster grouped reduce: a **sequence of per-step
-                labels** the same length as the time axis (grouped in first-appearance order,
-                so the caller controls the order), or a **pandas offset alias** (``"MS"``,
-                ``"YS"``, …) binned against the dataset's date-like time coordinates. Each
-                group's label becomes the result's ``time_values`` entry, and empty bins are
-                dropped. ``None`` reduces the whole axis. Defaults to ``None``.
-            min_count: Minimum valid (non-gap — NaN and the declared no-data value are both
-                skipped) cells a reduced slice needs for an element to carry a value; a slice
-                with fewer holds the no-data value instead of a statistic from too few
-                samples. ``0`` (default) gates nothing. Only meaningful with ``skipna=True``
-                and the statistics (not ``count`` / ``all`` / ``any``); matches
-                :meth:`pyramids.netcdf.NetCDF.reduce`.
-
-        Returns:
-            MeshDataset: A new dataset. Without ``groupby`` each temporal variable is
-            collapsed over time into a static per-element variable; with ``groupby`` each one
-            keeps its time dimension, at one step per group.
-
-        Raises:
-            ValueError: ``how`` is not a known reduction; ``q`` is given for a non-quantile
-                ``how`` or missing for ``how="quantile"``; ``min_count`` is negative; no
-                variable has a time dimension; a temporal variable has no loaded data; a
-                ``groupby`` label sequence's length is not the time length; or a ``groupby``
-                offset alias is asked of time coordinates that are step positions, or that
-                pandas cannot read as dates.
-            TypeError: ``min_count`` is not an integer.
-
-        Examples:
-            - Mean over two time steps of a per-face variable:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"d": np.array([[1.0, 2.0], [3.0, 4.0]])},
-                ...     data_locations={"d": "face"},
-                ... )
-                >>> mesh["d"].has_time
-                True
-                >>> reduced = mesh.reduce("mean")
-                >>> reduced["d"].data.tolist()
-                [2.0, 3.0]
-                >>> reduced["d"].has_time
-                False
-
-                ```
-        """
+    def _reduce_impl(
+        self,
+        how: str,
+        *,
+        skipna: bool = True,
+        q: float | None = None,
+        groupby: Any = None,
+        min_count: int = 0,
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.reduce`; see that method for the contract."""
         _check_reduce_how(how, q)
         validate_min_count(min_count)
         self._require_temporal("reduce")
@@ -4220,114 +3423,74 @@ class MeshDataset(_MeshFacades):
         skipna: bool = True,
         q: float | None = None,
     ) -> MeshDataset:
-        """Bin the time axis by a calendar frequency and reduce each bin.
-
-        Sugar over ``reduce(how, groupby=freq)``: the mesh counterpart of the raster
-        ``resample``. The time coordinates must be date-like, since the bins come from a pandas
-        offset alias (``"1MS"``, ``"YS"``, ``"7D"``, …). The time dimension is kept, one step
-        per non-empty bin, stamped with **pandas' own label for that bin** — which is the bin's
-        start for a start-anchored alias and its end for an end-anchored one. Over steps in
-        January, February and March 2020, ``"MS"`` labels the bins 01-01 / 02-01 / 03-01 while
-        ``"ME"`` labels them 01-31 / 02-29 / 03-31, and ``"W"`` labels each week by its Sunday.
-
-        Args:
-            freq: A pandas offset alias naming the bin width.
-            how: The statistic each bin is reduced with. Defaults to ``"mean"``.
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-            q: The quantile, required when ``how="quantile"``.
-
-        Returns:
-            MeshDataset: A new dataset with one time step per bin.
-
-        Raises:
-            ValueError: No variable has a time dimension, the coordinates are not date-like,
-                or ``how``/``q`` is invalid.
-        """
-        return self.reduce(how, skipna=skipna, q=q, groupby=freq)
+        """Facade -- delegates to :meth:`_MeshSpatial.resample`."""
+        warnings.warn(
+            "`mesh.resample` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.spatial.resample`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.spatial.resample(freq, how, skipna=skipna, q=q)
 
     def mean(self, *, skipna: bool = True) -> MeshDataset:
-        """Mean over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time mean.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("mean", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.mean`."""
+        warnings.warn(
+            "`mesh.mean` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.mean`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.mean(skipna=skipna)
 
     def sum(self, *, skipna: bool = True) -> MeshDataset:
-        """Sum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time sum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("sum", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.sum`."""
+        warnings.warn(
+            "`mesh.sum` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.sum`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.sum(skipna=skipna)
 
     def min(self, *, skipna: bool = True) -> MeshDataset:
-        """Minimum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time minimum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("min", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.min`."""
+        warnings.warn(
+            "`mesh.min` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.min`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.min(skipna=skipna)
 
     def max(self, *, skipna: bool = True) -> MeshDataset:
-        """Maximum over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time maximum.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("max", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.max`."""
+        warnings.warn(
+            "`mesh.max` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.max`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.max(skipna=skipna)
 
     def std(self, *, skipna: bool = True) -> MeshDataset:
-        """Std-dev over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time std.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("std", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.std`."""
+        warnings.warn(
+            "`mesh.std` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.std`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.std(skipna=skipna)
 
     def var(self, *, skipna: bool = True) -> MeshDataset:
-        """Variance over time of every temporal variable (thin wrapper over :meth:`reduce`).
-
-        Args:
-            skipna: Skip the declared no-data value and NaN. Defaults to True.
-
-        Returns:
-            MeshDataset: A new dataset; each temporal variable collapsed to its time variance.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self.reduce("var", skipna=skipna)
+        """Facade -- delegates to :meth:`_MeshAnalysis.var`."""
+        warnings.warn(
+            "`mesh.var` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.analysis.var`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.analysis.var(skipna=skipna)
 
     def _transform_time(
         self, operation: str, fn: Any, active_fn: Any = None
@@ -4370,69 +3533,34 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def cumsum(self) -> MeshDataset:
-        """Cumulative sum along time for every temporal variable.
-
-        Returns:
-            MeshDataset: A new dataset in which each temporal variable holds the running
-            sum of its steps along the time axis; static variables are unchanged.
-
-        Raises:
-            ValueError: No variable has a time dimension, or a temporal variable has no
-                loaded data.
-
-        Examples:
-            - Running sum over three time steps of a per-face variable:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"d": np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])},
-                ...     data_locations={"d": "face"},
-                ... )
-                >>> mesh.cumsum()["d"].data.tolist()
-                [[1.0, 2.0], [4.0, 6.0], [9.0, 12.0]]
-
-                ```
-        """
-        return self._transform_time("cumsum", lambda d, axis: np.cumsum(d, axis=axis))
+        """Facade -- delegates to :meth:`_MeshSelection.cumsum`."""
+        warnings.warn(
+            "`mesh.cumsum` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.cumsum`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.cumsum()
 
     def cumprod(self) -> MeshDataset:
-        """Cumulative product along time for every temporal variable.
-
-        Returns:
-            MeshDataset: A new dataset in which each temporal variable holds the running
-            product of its steps along the time axis; static variables are unchanged.
-
-        Raises:
-            ValueError: No variable has a time dimension, or a temporal variable has no
-                loaded data.
-        """
-        return self._transform_time("cumprod", lambda d, axis: np.cumprod(d, axis=axis))
+        """Facade -- delegates to :meth:`_MeshSelection.cumprod`."""
+        warnings.warn(
+            "`mesh.cumprod` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.cumprod`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.cumprod()
 
     def shift(self, periods: int = 1) -> MeshDataset:
-        """Shift each temporal variable ``periods`` steps along time, vacated steps NaN.
-
-        Args:
-            periods: Steps to shift; negative shifts towards the start. Defaults to 1.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable shifted along time, the
-            vacated steps filled with NaN; static variables are unchanged.
-
-        Raises:
-            ValueError: No variable has a time dimension, or a temporal variable has no
-                loaded data.
-        """
-        return self._transform_time(
-            "shift",
-            lambda d, axis: shifted(d, axis, periods, np.nan),
-            # Move a per-step mask with the snapshots (time on axis 0), vacated steps inactive —
-            # a shifted-in step holds NaN data, so False is right (review H1).
-            active_fn=lambda m: shifted(m, 0, periods, False),
+        """Facade -- delegates to :meth:`_MeshSelection.shift`."""
+        warnings.warn(
+            "`mesh.shift` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.shift`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.shift(periods)
 
     def _require_variable_name(self, operation: str, variable_name: str | None) -> None:
         """Refuse a ``variable_name`` the dataset does not have.
@@ -4487,75 +3615,26 @@ class MeshDataset(_MeshFacades):
         return coord
 
     def polyfit(self, deg: int, variable_name: str | None = None) -> MeshDataset:
-        """Fit a polynomial per element along time, returning its coefficients (#1377).
-
-        The mesh counterpart of the raster ``polyfit``, and what produces a **trend map**: a
-        degree-1 fit per face gives the slope of that face's series.
-
-        The time axis is replaced by a ``coefficient`` axis of length ``deg + 1``, highest
-        power first — the order :func:`numpy.polyfit` returns. The result is therefore no
-        longer a time series, so it is marked static.
-
-        Args:
-            deg: Polynomial degree.
-            variable_name: Variable to fit (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset whose variables carry the fitted coefficients.
-
-        Raises:
-            ValueError: No variable has a time dimension, ``deg`` is negative, or the axis is
-                too short for the degree.
-
-        See Also:
-            curvefit: Fit an arbitrary model instead of a polynomial.
-            differentiate: The instantaneous rate rather than a fitted trend.
-        """
-        self._require_variable_name("polyfit", variable_name)
-        self._alongtime_coord("polyfit")
-        return self._fit_alongtime(
-            variable_name,
-            lambda values, axis, nodata, coord: _timeseries.polyfit_axis(
-                values, coord, deg, axis, nodata
-            ),
-            "coefficient",
+        """Facade -- delegates to :meth:`_MeshSelection.polyfit`."""
+        warnings.warn(
+            "`mesh.polyfit` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.polyfit`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.polyfit(deg, variable_name)
 
     def curvefit(
         self, func: Any, p0: Any = None, variable_name: str | None = None
     ) -> MeshDataset:
-        """Fit an arbitrary model per element along time (#1377).
-
-        The general form of :meth:`polyfit`. Each element is fitted in turn, since there is no
-        closed form; an element whose fit does not converge yields ``NaN`` parameters rather
-        than failing the whole call, so one bad face does not lose the other thousands.
-
-        Args:
-            func: The model ``f(x, *params)``. ``x`` is the time coordinate as seconds elapsed
-                from the first stamp when the axis carries datetimes.
-            p0: Initial parameter guess. Without one the parameter count is read from ``func``'s
-                signature.
-            variable_name: Variable to fit (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset whose variables carry the fitted parameters along a
-            ``parameter`` axis.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-
-        See Also:
-            polyfit: The closed-form polynomial case, much faster.
-        """
-        self._require_variable_name("curvefit", variable_name)
-        self._alongtime_coord("curvefit")
-        return self._fit_alongtime(
-            variable_name,
-            lambda values, axis, nodata, coord: _timeseries.curvefit_axis(
-                values, coord, func, p0, axis, nodata
-            ),
-            "parameter",
+        """Facade -- delegates to :meth:`_MeshSelection.curvefit`."""
+        warnings.warn(
+            "`mesh.curvefit` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.curvefit`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.curvefit(func, p0, variable_name)
 
     def _fit_alongtime(
         self,
@@ -4617,98 +3696,36 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def differentiate(self, variable_name: str | None = None) -> MeshDataset:
-        """The derivative of every temporal variable along time (#1377).
-
-        Honours the time coordinate's own spacing, so an unevenly spaced output interval gives
-        the right rate rather than one assuming a uniform step. With a decoded datetime axis
-        (issue #1381) the result is **per second**.
-
-        Args:
-            variable_name: Variable to differentiate (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset of rates, the same shape as the input.
-
-        Raises:
-            ValueError: No variable has a time dimension, or the axis has fewer than two steps.
-
-        See Also:
-            integrate: The inverse operation, which consumes the axis.
-        """
-        self._require_variable_name("differentiate", variable_name)
-        self._alongtime_coord("differentiate")
-        return self._map_alongtime(
-            "differentiate",
-            variable_name,
-            lambda values, axis, nodata, coord: _timeseries.differentiate_axis(
-                values, coord, axis, nodata
-            ),
+        """Facade -- delegates to :meth:`_MeshSelection.differentiate`."""
+        warnings.warn(
+            "`mesh.differentiate` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.differentiate`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.differentiate(variable_name)
 
     def cumulative_integrate(self, variable_name: str | None = None) -> MeshDataset:
-        """The running integral of every temporal variable along time (#1377).
-
-        Keeps the time axis, unlike :meth:`integrate`. The first step is ``0`` — nothing has
-        accumulated yet.
-
-        Args:
-            variable_name: Variable to integrate (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset of running integrals, the same shape as the input.
-
-        Raises:
-            ValueError: No variable has a time dimension, or the axis has fewer than two steps.
-
-        See Also:
-            integrate: The definite integral, which consumes the axis.
-        """
-        self._require_variable_name("cumulative_integrate", variable_name)
-        self._alongtime_coord("cumulative_integrate")
-        return self._map_alongtime(
-            "cumulative_integrate",
-            variable_name,
-            lambda values, axis, nodata, coord: _timeseries.cumulative_integrate_axis(
-                values, coord, axis, nodata
-            ),
+        """Facade -- delegates to :meth:`_MeshSelection.cumulative_integrate`."""
+        warnings.warn(
+            "`mesh.cumulative_integrate` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.cumulative_integrate`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.cumulative_integrate(variable_name)
 
     def rank(
         self, variable_name: str | None = None, *, pct: bool = False
     ) -> MeshDataset:
-        """Rank each element's values along time, ties averaged (#1377).
-
-        Per face this is an **exceedance map**: where does each step sit among all the steps at
-        that face. Needs no date coordinate, so it works on a positional axis too.
-
-        The declared sentinel and ``NaN`` are excluded rather than ranked, as the cube's
-        ``rank`` excludes them — ranking a ``-9999`` as the smallest value would shift every
-        real rank by one.
-
-        Args:
-            variable_name: Variable to rank (default: every temporal variable).
-            pct: Report each rank as a fraction of that element's usable values rather than a
-                count, so its largest usable value is ``1.0``.
-
-        Returns:
-            MeshDataset: A new dataset of ranks, the same shape as the input, counting from 1
-            (or in ``(0, 1]`` with ``pct=True``), with ``NaN`` where the value was missing.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-
-        See Also:
-            idxmax: The step at which each element peaks.
-        """
-        self._require_variable_name("rank", variable_name)
-        self._require_temporal("rank")
-        return self._map_alongtime(
-            "rank",
-            variable_name,
-            lambda values, axis, nodata, _coord: _timeseries.rank_axis(
-                values, axis, nodata, pct
-            ),
+        """Facade -- delegates to :meth:`_MeshSelection.rank`."""
+        warnings.warn(
+            "`mesh.rank` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.rank`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.rank(variable_name, pct=pct)
 
     def _map_alongtime(
         self, operation: str, variable_name: str | None, kernel: Any
@@ -4756,25 +3773,17 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def integrate(self, variable_name: str | None = None) -> MeshDataset:
-        """The definite integral of every temporal variable along time (#1377).
+        """Facade -- delegates to :meth:`_MeshSelection.integrate`."""
+        warnings.warn(
+            "`mesh.integrate` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.integrate`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.integrate(variable_name)
 
-        The integral **consumes** the time axis, so the result is static — one value per
-        element, as :meth:`reduce` produces. With a decoded datetime axis the units are
-        value-seconds.
-
-        Args:
-            variable_name: Variable to integrate (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset whose temporal variables are now static totals.
-
-        Raises:
-            ValueError: No variable has a time dimension, or the axis has fewer than two steps.
-
-        See Also:
-            cumulative_integrate: The running integral, which keeps the axis.
-            differentiate: The inverse operation.
-        """
+    def _integrate_impl(self, variable_name: str | None = None) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.integrate`; see that method for the contract."""
         self._require_variable_name("integrate", variable_name)
         self._alongtime_coord("integrate")
         new_vars: dict[str, MeshVariable] = {}
@@ -4805,41 +3814,19 @@ class MeshDataset(_MeshFacades):
     def coarsen(
         self, window: int, how: str = "mean", variable_name: str | None = None
     ) -> MeshDataset:
-        """Block-aggregate the time axis into windows of ``window`` steps (#1377).
+        """Facade -- delegates to :meth:`_MeshSelection.coarsen`."""
+        warnings.warn(
+            "`mesh.coarsen` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.coarsen`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.coarsen(window, how, variable_name)
 
-        **Not** a duplicate of :meth:`resample`. That one bins by a calendar frequency and so
-        needs date-like coordinates; this bins by a **count of steps** and needs no coordinate
-        at all, which makes it the only option for a mesh whose file carries no CF time units.
-        Where both work, ``resample`` is the calendar-aware choice and this the positional one.
-
-        A trailing remainder shorter than a full window is dropped, so every reported bin is a
-        full one rather than a short bin that would read as a dip in the series.
-
-        A variable with fewer steps than one window cannot be binned at all. In a sweep
-        (``variable_name=None``) it is passed through untouched, so one short variable does not
-        lose the whole call — the choice :meth:`convert_units` makes for a variable with no
-        units. Naming such a variable explicitly raises, since that is a request rather than a
-        sweep, and so does a sweep in which **no** variable could be binned: that call did
-        nothing, and returning the dataset unchanged would look like success.
-
-        Args:
-            window: Steps per block, at least 1.
-            how: ``"mean"`` (default), ``"sum"``, ``"min"``, ``"max"``, ``"median"`` or
-                ``"std"``.
-            variable_name: Variable to aggregate (default: every temporal variable).
-
-        Returns:
-            MeshDataset: A new dataset whose time axis holds one step per full block, stamped
-            with each block's first coordinate value.
-
-        Raises:
-            ValueError: No variable has a time dimension, ``window`` is below 1, ``how`` is
-                unknown, or the axis is shorter than one window.
-
-        See Also:
-            resample: Calendar-frequency binning, when the axis carries real dates.
-            reduce: Collapse the whole axis instead of binning it.
-        """
+    def _coarsen_impl(
+        self, window: int, how: str = "mean", variable_name: str | None = None
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.coarsen`; see that method for the contract."""
         if window < 1:
             raise ValueError(f"coarsen: window must be at least 1, got {window}.")
         if how not in _COARSEN_HOWS:
@@ -4872,36 +3859,17 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def interp_like(self, other: MeshDataset) -> MeshDataset:
-        """Interpolate onto another dataset's time stamps (#1377).
+        """Facade -- delegates to :meth:`_MeshSelection.interp_like`."""
+        warnings.warn(
+            "`mesh.interp_like` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.interp_like`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.interp_like(other)
 
-        What lines two runs up on a common axis before :meth:`concat` or an operator. Linear,
-        and deliberately **not** extrapolating: a target stamp outside this dataset's span comes
-        back as a gap (NaN), which is the contract the raster ``interp`` already has.
-
-        Args:
-            other: The dataset whose time coordinate supplies the target stamps. Must sit on
-                the same topology.
-
-        Note:
-            Two dated axes are put on a common **decimal-year** scale, which means the same
-            thing in every calendar, so this works across calendars as well as within one. The
-            result declares ``other``'s units and calendar, since those are the stamps it now
-            carries; an undated ``other`` leaves the result positional, with no CF metadata at
-            all.
-
-        Returns:
-            MeshDataset: A new dataset on ``other``'s time stamps, carrying ``other``'s time
-            units and calendar (or none, when ``other`` is positional).
-
-        Raises:
-            AlignmentError: ``other`` sits on a different mesh.
-            ValueError: Either side has no time dimension; this one has fewer than two steps to
-                interpolate between; or one side is dated and the other positional, which have
-                no common scale.
-
-        See Also:
-            interp_time: Interpolate onto a given number of evenly spaced steps.
-        """
+    def _interp_like_impl(self, other: MeshDataset) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.interp_like`; see that method for the contract."""
         self._assert_same_topology(other, "interp_like")
         self._alongtime_coord("interp_like")
         target = other._alongtime_coord("interp_like")
@@ -5000,39 +3968,19 @@ class MeshDataset(_MeshFacades):
         return np.asarray(instants, dtype=object), units, calendar
 
     def convert_calendar(self, calendar: str, *, align_on: str = "date") -> MeshDataset:
-        """Restamp the time axis onto another CF calendar (issue #1381).
+        """Facade -- delegates to :meth:`_MeshSelection.convert_calendar`."""
+        warnings.warn(
+            "`mesh.convert_calendar` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.convert_calendar`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.convert_calendar(calendar, align_on=align_on)
 
-        The mesh counterpart of :meth:`NetCDF.convert_calendar`, and what lets a mesh run on a
-        model calendar be compared or :meth:`concat`-enated with one on another.
-
-        **Only the time coordinate changes.** No value is touched and nothing is interpolated:
-        each step keeps its values and is given the stamp its date has in the target calendar.
-        A date the target has no day for is **dropped, and its step with it** — 29 February
-        moving to ``noleap``, 31 December moving to ``360_day`` — so the axis gets shorter.
-        :meth:`interp_calendar` is the lossless counterpart.
-
-        Args:
-            calendar: The target CF calendar — ``"standard"`` / ``"gregorian"``,
-                ``"proleptic_gregorian"``, ``"noleap"`` / ``"365_day"``, ``"all_leap"`` /
-                ``"366_day"``, ``"360_day"`` or ``"julian"``.
-            align_on: ``"date"`` (default) keeps the calendar date and drops what the target
-                lacks. ``"year"`` keeps the *position in the year* instead, which is what a
-                ``360_day`` axis of model bookkeeping wants; it loses less, but is not lossless
-                either — when the target year is shorter two source days can land on one target
-                day, and the duplicates are dropped to keep the axis strictly monotonic.
-
-        Returns:
-            MeshDataset: A new dataset whose time axis is restamped onto ``calendar``, carrying
-            that calendar and the original units.
-
-        Raises:
-            ValueError: The axis carries no CF time units; ``calendar`` is not one ``cftime``
-                knows; ``align_on`` is neither ``"date"`` nor ``"year"``; or every step would be
-                dropped, which would leave nothing to return.
-
-        See Also:
-            interp_calendar: Keeps every step by interpolating instead of dropping.
-        """
+    def _convert_calendar_impl(
+        self, calendar: str, *, align_on: str = "date"
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.convert_calendar`; see that method for the contract."""
         instants, units, _source = self._calendar_instants("convert_calendar")
         # The five validations and the D8 `units` re-encode are the shared plan in
         # `netcdf/utils.py`, so the mesh refuses exactly where the cube's `convert_calendar`
@@ -5069,39 +4017,17 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def interp_calendar(self, target: MeshDataset) -> MeshDataset:
-        """Interpolate the values onto another dataset's stamps, across calendars (#1381).
+        """Facade -- delegates to :meth:`_MeshSelection.interp_calendar`."""
+        warnings.warn(
+            "`mesh.interp_calendar` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.interp_calendar`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.interp_calendar(target)
 
-        :meth:`convert_calendar`'s lossless counterpart. Where that one restamps the steps it
-        has and drops the dates the target calendar lacks, this one **interpolates the values**
-        onto the target's own stamps, so no step is lost and the two line up exactly — which is
-        what :meth:`concat` or an operator between two runs needs.
-
-        Both axes are put on a common **decimal-year** scale — the year plus the fraction of it
-        elapsed — which means the same thing in every calendar: a 360-day and a 365-day year
-        both run from ``Y.0`` to ``Y+1.0``.
-
-        Args:
-            target: The dataset whose stamps, units and calendar the result takes. Must sit on
-                the same topology.
-
-        Returns:
-            MeshDataset: A new dataset on ``target``'s stamps, carrying its units and calendar.
-
-        Raises:
-            AlignmentError: ``target`` sits on a different mesh.
-            ValueError: Either side carries no CF time units; this side has fewer than two steps
-                to interpolate between; or the two spans do not overlap at all, so every step
-                would come back a gap.
-
-        Note:
-            A target stamp inside this dataset's span interpolates; one outside it is a **gap**,
-            not an extrapolation. A partly overlapping target therefore comes back partly
-            masked, and one that does not overlap at all is refused rather than answered as a
-            fully-masked dataset.
-
-        See Also:
-            convert_calendar: Restamps without interpolating, dropping absent dates.
-        """
+    def _interp_calendar_impl(self, target: MeshDataset) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.interp_calendar`; see that method for the contract."""
         self._assert_same_topology(target, "interp_calendar")
         source_instants, _units, _calendar = self._calendar_instants("interp_calendar")
         target_instants, target_units, target_calendar = target._calendar_instants(
@@ -5147,49 +4073,16 @@ class MeshDataset(_MeshFacades):
         cmap: str = "viridis",
         method: str = "nearest",
     ) -> Any:
-        """Export a mesh variable as a colour-mapped RGB image (issue #1378).
-
-        An image is a grid of pixels, so the mesh is rasterised first and the raster's own
-        :meth:`Dataset.to_image` does the colour mapping — which keeps the colours going
-        through cleopatra, as all pyramids rendering does, and keeps one implementation of the
-        mapping rather than two that can drift.
-
-        Args:
-            variable_name: Variable to render (default: the only one).
-            cell_size: Pixel size in coordinate units. ``None`` (default) picks one that puts
-                roughly 512 pixels across the mesh's longer side — a readable thumbnail
-                without asking the caller to work out a resolution for a mesh whose units
-                they may not know.
-            cmap: Matplotlib colormap name.
-            method: Rasterisation method, ``"nearest"`` (default) or ``"linear"``.
-
-        Returns:
-            PIL.Image.Image: The colour-mapped image. The pixels the rasterisation leaves
-            empty — those outside the mesh footprint — are no-data, and so are rendered with
-            the colormap's "bad" fill colour, exactly as the raster version renders them.
-            Requires the ``viz`` extra.
-
-        Raises:
-            ValueError: The variable is not one value per element, or no variable is selected
-                and the dataset holds more than one.
-
-        See Also:
-            to_dataset: The rasterisation this builds on, when you want the grid itself.
-            plot: An annotated figure rather than a bare image.
-        """
-        var = self._facade_variable("to_image", variable_name)
-        if var.has_time:
-            raise ValueError(
-                f"to_image() needs one value per element, but {var.name!r} is a time series "
-                f"of {var.n_time_steps} steps. Select a step first, e.g. with isel(time=0)."
-            )
-        if cell_size is None:
-            xmin, ymin, xmax, ymax = self.bounds
-            # ~512 px across the longer side: a readable thumbnail without making the caller
-            # reason about a resolution in coordinate units they may not know.
-            cell_size = max(xmax - xmin, ymax - ymin) / 512.0
-        grid = self.to_dataset(var.name, cell_size, method=method)
-        return grid.to_image(cmap=cmap)
+        """Facade -- delegates to :meth:`_MeshGlyph.to_image`."""
+        warnings.warn(
+            "`mesh.to_image` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.to_image`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.glyph.to_image(
+            variable_name, cell_size=cell_size, cmap=cmap, method=method
+        )
 
     def convert_units(
         self, target: str, variable_name: str | None = None
@@ -5257,92 +4150,36 @@ class MeshDataset(_MeshFacades):
         dropna: bool = False,
         npartitions: int = 1,
     ) -> Any:
-        """Hand the mesh to dask in tidy form — the lazy sibling of :meth:`to_dataframe`.
-
-        The mesh's own frame is already tidy (one row per element and step), so this is the
-        same shape wrapped in a dask dataframe rather than a different layout.
-
-        **What is and is not deferred:** a mesh's values live in memory, not in a per-element
-        chunked store, so there is nothing to stream and the frame is built then partitioned.
-        The result is a real dask graph — it composes with the rest of a dask pipeline and
-        computes lazily from here on — but it does not reduce the peak memory of building it.
-        That is the same thing :meth:`NetCDF.to_dask_dataframe` does for a cube with no
-        on-disk store.
-
-        Args:
-            variables: Which data variables to include. ``None`` (default) takes them all.
-            dropna: Drop rows whose value is no-data. Defaults to False.
-            npartitions: How many partitions to split the frame into. Defaults to 1.
-
-        Returns:
-            dask.dataframe.DataFrame: The tidy frame as a dask dataframe.
-
-        Raises:
-            ImportError: dask (the ``lazy`` extra) or ``dask.dataframe`` (which needs pyarrow,
-                the ``parquet`` extra) is not installed.
-            ValueError: ``npartitions`` is below 1, or a named variable does not exist.
-
-        See Also:
-            to_dataframe: The eager pandas frame this wraps.
-        """
-        if npartitions < 1:
-            raise ValueError(
-                f"to_dask_dataframe() got npartitions={npartitions}; it must be at least 1."
-            )
-        import_dask("to_dask_dataframe() needs dask; install the `lazy` extra.")
-        # dask.dataframe (dask-expr) imports pyarrow, which ships in the `parquet` extra rather
-        # than `lazy`; guard it so a lazy-only install gets a hint, not a ModuleNotFoundError.
-        require_optional(
-            "dask.dataframe",
-            "to_dask_dataframe() needs dask.dataframe, which requires pyarrow — install the "
-            "`parquet` extra (e.g. `pip install pyramids-core[parquet]`).",
+        """Facade -- delegates to :meth:`_MeshInterop.to_dask_dataframe`."""
+        warnings.warn(
+            "`mesh.to_dask_dataframe` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.interop.to_dask_dataframe`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        import dask.dataframe as dd
-
-        frame = self.to_dataframe(variables, dropna=dropna)
-        return dd.from_pandas(frame, npartitions=npartitions)
+        return self.interop.to_dask_dataframe(
+            variables, dropna=dropna, npartitions=npartitions
+        )
 
     def ffill(self, *, limit: int | None = None, dim: str | None = None) -> MeshDataset:
-        """Forward-fill gaps along time from the last valid step.
-
-        Args:
-            limit: Maximum consecutive gaps one valid step may fill, or ``None`` for no limit.
-            dim: The dimension to fill along. A mesh fills along ``"time"`` only, so any other
-                name is refused; ``None`` means time. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable's gaps carried forward
-            from the previous valid step; static variables are unchanged.
-
-        Raises:
-            ValueError: ``dim`` names anything but ``"time"``, no variable has a time
-                dimension, or a temporal variable has no loaded data.
-        """
-        self._check_time_dim("ffill", dim)
-        return self._transform_time(
-            "ffill", lambda d, axis: pushed(d, axis, limit, False)
+        """Facade -- delegates to :meth:`_MeshSelection.ffill`."""
+        warnings.warn(
+            "`mesh.ffill` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.ffill`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.ffill(limit=limit, dim=dim)
 
     def bfill(self, *, limit: int | None = None, dim: str | None = None) -> MeshDataset:
-        """Back-fill gaps along time from the next valid step.
-
-        Args:
-            limit: Maximum consecutive gaps one valid step may fill, or ``None`` for no limit.
-            dim: The dimension to fill along. A mesh fills along ``"time"`` only, so any other
-                name is refused; ``None`` means time. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable's gaps carried backward
-            from the next valid step; static variables are unchanged.
-
-        Raises:
-            ValueError: ``dim`` names anything but ``"time"``, no variable has a time
-                dimension, or a temporal variable has no loaded data.
-        """
-        self._check_time_dim("bfill", dim)
-        return self._transform_time(
-            "bfill", lambda d, axis: pushed(d, axis, limit, True)
+        """Facade -- delegates to :meth:`_MeshSelection.bfill`."""
+        warnings.warn(
+            "`mesh.bfill` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.bfill`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.selection.bfill(limit=limit, dim=dim)
 
     def interpolate_na(
         self,
@@ -5352,57 +4189,16 @@ class MeshDataset(_MeshFacades):
         use_coordinate: bool = True,
         dim: str | None = None,
     ) -> MeshDataset:
-        """Fill each interior time gap by interpolating between the steps on either side.
-
-        Distance is measured along the time coordinate by default, so unevenly spaced steps
-        weight their neighbours accordingly; pass ``use_coordinate=False`` to measure by step
-        position instead. A leading or trailing gap has only one neighbour and is left alone.
-
-        Args:
-            method: One of ``"linear"`` (distance-weighted), ``"nearest"``, or the scipy spline
-                kinds ``"slinear"`` / ``"quadratic"`` / ``"cubic"`` (each falling back to linear on
-                a variable with too few valid steps). Defaults to ``"linear"``.
-            limit: Maximum consecutive gaps a run may fill, or ``None`` for no limit.
-            use_coordinate: Measure distance along the time coordinate rather than by step
-                position. With time values ``[0, 1, 10]`` and a gap at the middle step, the
-                coordinate reading fills ``1.0`` and the positional reading ``5.0``. Date-like
-                coordinates count as distances too (converted to nanoseconds), so unevenly
-                spaced dates weight their neighbours; a coordinate with no measurable spacing
-                (plain labels) falls back to step positions. Defaults to ``True``.
-            dim: The dimension to interpolate along. A mesh interpolates along ``"time"``
-                only, so any other name is refused; ``None`` means time. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable's interior gaps
-            interpolated along time; static variables are unchanged.
-
-        Raises:
-            ValueError: ``method`` is not one of the accepted interpolations; no variable has a
-                time dimension; or a temporal variable has no loaded data.
-        """
-        if method not in INTERP_METHODS:
-            # Validate up front, before the time check, so a bogus method is reported as such
-            # even on a mesh with no temporal variable — matching the raster interpolate_na.
-            raise ValueError(
-                f"interpolate_na() takes method="
-                f"{' or '.join(repr(one) for one in INTERP_METHODS)}, got {method!r}."
-            )
-
-        self._check_time_dim("interpolate_na", dim)
-        stamps = self.time_values if use_coordinate else None
-        axis_values = None
-        if stamps is not None:
-            axis_values = _axis_distances(stamps)
-
-        def _fill(data: np.ndarray, axis: int) -> np.ndarray:
-            size = data.shape[axis]
-            if axis_values is not None and axis_values.shape[0] == size:
-                positions = axis_values
-            else:
-                positions = np.arange(size, dtype="float64")
-            return np.asarray(interpolated(data, axis, positions, method, limit))
-
-        return self._transform_time("interpolate_na", _fill)
+        """Facade -- delegates to :meth:`_MeshSelection.interpolate_na`."""
+        warnings.warn(
+            "`mesh.interpolate_na` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.interpolate_na`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.interpolate_na(
+            method=method, limit=limit, use_coordinate=use_coordinate, dim=dim
+        )
 
     def rolling(
         self,
@@ -5414,38 +4210,28 @@ class MeshDataset(_MeshFacades):
         q: float | None = None,
         dim: str | None = None,
     ) -> MeshDataset:
-        """Rolling-window reduction along time for every temporal variable.
+        """Facade -- delegates to :meth:`_MeshSelection.rolling`."""
+        warnings.warn(
+            "`mesh.rolling` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.rolling`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.rolling(
+            window, how, center=center, min_periods=min_periods, q=q, dim=dim
+        )
 
-        Each time step becomes a statistic of the window of steps it owns (ending at it, or
-        centred on it), cut where the window runs off the axis. Gaps are skipped; a step whose
-        window holds fewer than ``min_periods`` valid cells is NaN. The time dimension keeps
-        its length.
-
-        Args:
-            window: Steps per window.
-            how: The reduction over each window (``"mean"``, ``"sum"``, ``"min"``, ``"max"``,
-                ``"std"``, ``"var"``, ``"median"``, ``"quantile"``). Defaults to ``"mean"``.
-            center: Centre each window on its step rather than ending at it. Defaults to False.
-            min_periods: Valid cells a window needs before its step holds a value. ``None``
-                means the full ``window``, matching the raster `rolling`, so a step whose
-                window runs off the axis is NaN rather than a partial statistic. Defaults to
-                ``None``.
-            q: The quantile in ``[0, 1]``, required when ``how="quantile"`` and rejected
-                otherwise. Defaults to ``None``.
-            dim: The dimension to roll along. A mesh rolls along ``"time"`` only, so any
-                other name is refused; ``None`` means time. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable replaced by its rolling
-            statistic along time; static variables are unchanged.
-
-        Raises:
-            ValueError: ``how`` is not a known reduction; ``q`` is given for a non-quantile
-                ``how`` or missing for ``how="quantile"``; ``window`` is below 1;
-                ``min_periods`` falls outside ``[1, window]``; ``dim`` names anything but
-                ``"time"``; no variable has a time dimension; or a temporal variable has no
-                loaded data.
-        """
+    def _rolling_impl(
+        self,
+        window: int,
+        how: str = "mean",
+        *,
+        center: bool = False,
+        min_periods: int | None = None,
+        q: float | None = None,
+        dim: str | None = None,
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.rolling`; see that method for the contract."""
         if how not in _ROLLING_HOWS:
             # Restrict to the documented statistics. The counting reductions
             # (count/all/any) are excluded on purpose: a window's all/any flag carries the
@@ -5577,61 +4363,14 @@ class MeshDataset(_MeshFacades):
         *,
         element: int | slice | list[int] | np.ndarray | None = None,
     ) -> MeshDataset:
-        """Select by position along the time axis, the element axis, or both.
-
-        The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.isel`. Over **time** an integer
-        selects a single step and collapses the time dimension (the variables become static);
-        a slice or sequence keeps the time dimension, trimmed to the chosen steps. Over
-        **element** the selection is a topology change: the chosen faces are kept and the mesh
-        is renumbered around them (as :meth:`clip` does), so the result is a smaller mesh.
-        Giving both applies the element selection first, then the time selection.
-
-        Args:
-            time: An ``int`` step, a ``slice``, or a sequence of integer step positions.
-                ``None`` (the default) leaves the time axis alone.
-            element: An ``int`` face index, a ``slice``, or a sequence of face indices.
-                ``None`` (the default) leaves the mesh alone.
-
-        Returns:
-            MeshDataset: A new dataset with the selection applied.
-
-        Raises:
-            ValueError: Neither ``time`` nor ``element`` was given, or ``time`` was asked of a
-                dataset with no time dimension.
-            IndexError: A face index is out of range for this mesh.
-
-        Examples:
-            - Keep one face, renumbering the mesh around it:
-                ```python
-                >>> import numpy as np
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> mesh = MeshDataset.from_arrays(
-                ...     node_x=np.array([0.0, 1.0, 1.0, 0.0]),
-                ...     node_y=np.array([0.0, 0.0, 1.0, 1.0]),
-                ...     face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
-                ...     data={"depth": np.array([2.0, 4.0])},
-                ... )
-                >>> one = mesh.isel(element=0)
-                >>> one.n_face, one.n_node
-                (1, 3)
-                >>> one["depth"].data.tolist()
-                [2.0]
-
-                ```
-        """
-        if time is None and element is None:
-            raise ValueError("isel needs `time`, `element`, or both.")
-        if element is not None:
-            selected = self._select_elements(element)
-            return selected if time is None else selected.isel(time)
-        n = self._time_length("isel")
-        if isinstance(time, (int, np.integer)):
-            return self._collapse_to_step(int(time))
-        if isinstance(time, slice):
-            indices = np.arange(n)[time]
-        else:
-            indices = np.asarray(time, dtype=np.intp)
-        return self._select_steps(indices)
+        """Facade -- delegates to :meth:`_MeshSelection.isel`."""
+        warnings.warn(
+            "`mesh.isel` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.isel`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.isel(time, element=element)
 
     def _collapse_to_step(self, index: int) -> MeshDataset:
         """Take one time step from every temporal variable, dropping the time dimension.
@@ -5661,51 +4400,34 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def head(self, n: int = 5) -> MeshDataset:
-        """Keep the first ``n`` time steps (fewer if the axis is shorter).
-
-        Args:
-            n: Number of leading steps to keep. Defaults to 5.
-
-        Returns:
-            MeshDataset: A new dataset trimmed to the first ``n`` steps.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        length = self._time_length("head")
-        return self._select_steps(np.arange(min(n, length)))
+        """Facade -- delegates to :meth:`_MeshSelection.head`."""
+        warnings.warn(
+            "`mesh.head` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.head`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.head(n)
 
     def tail(self, n: int = 5) -> MeshDataset:
-        """Keep the last ``n`` time steps (fewer if the axis is shorter).
-
-        Args:
-            n: Number of trailing steps to keep. Defaults to 5.
-
-        Returns:
-            MeshDataset: A new dataset trimmed to the last ``n`` steps.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        length = self._time_length("tail")
-        return self._select_steps(np.arange(max(length - n, 0), length))
+        """Facade -- delegates to :meth:`_MeshSelection.tail`."""
+        warnings.warn(
+            "`mesh.tail` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.tail`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.tail(n)
 
     def thin(self, step: int) -> MeshDataset:
-        """Keep every ``step``-th time step.
-
-        Args:
-            step: Stride; must be >= 1.
-
-        Returns:
-            MeshDataset: A new dataset keeping every ``step``-th step.
-
-        Raises:
-            ValueError: ``step`` is less than 1, or no variable is temporal.
-        """
-        if step < 1:
-            raise ValueError(f"thin step must be >= 1, got {step}.")
-        length = self._time_length("thin")
-        return self._select_steps(np.arange(0, length, step))
+        """Facade -- delegates to :meth:`_MeshSelection.thin`."""
+        warnings.warn(
+            "`mesh.thin` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.thin`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.thin(step)
 
     def drop_isel(self, indices: int | list[int] | np.ndarray) -> MeshDataset:
         """Drop the time steps at ``indices`` by position, keeping the rest.
@@ -5726,18 +4448,17 @@ class MeshDataset(_MeshFacades):
         return self._select_steps(keep)
 
     def squeeze(self) -> MeshDataset:
-        """Drop the time dimension when it has length 1; otherwise return unchanged.
+        """Facade -- delegates to :meth:`_MeshSelection.squeeze`."""
+        warnings.warn(
+            "`mesh.squeeze` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.squeeze`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.squeeze()
 
-        Mirrors :meth:`pyramids.netcdf.NetCDF.squeeze` for the time axis: a single-step
-        temporal variable becomes static, a multi-step one is left alone.
-
-        Returns:
-            MeshDataset: A new dataset with single-step temporal variables collapsed to
-            static, or ``self`` when there is nothing to squeeze.
-
-        Raises:
-            ValueError: A single-step temporal variable has no loaded data.
-        """
+    def _squeeze_impl(self) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.squeeze`; see that method for the contract."""
         # Decide per variable, not from the first temporal one: with mixed time lengths a
         # later single-step variable must still be squeezed even if the first has many steps.
         if not any(
@@ -5766,39 +4487,14 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def diff(self, n: int = 1) -> MeshDataset:
-        """Discrete difference along time (``out[i] = x[i] - x[i-1]``), ``n`` times.
-
-        The time dimension shortens by ``n``; a ``time_values`` coordinate, if present, drops
-        its first ``n`` entries to stay aligned with the result.
-
-        Args:
-            n: The number of successive differences. Defaults to 1.
-
-        Returns:
-            MeshDataset: A new dataset with each temporal variable differenced along time
-            (its time axis shorter by ``n``); static variables are unchanged.
-
-        Raises:
-            ValueError: No variable has a time dimension, or a temporal variable has no
-                loaded data.
-        """
-        self._require_temporal("diff")
-        new_vars: dict[str, MeshVariable] = {}
-        for name, var in self._data_variables.items():
-            if not var.has_time:
-                new_vars[name] = var
-                continue
-            axis = cast("int", var.time_axis_index)
-            data = var.data
-            if data is None:
-                raise ValueError(f"Variable {name!r} has no loaded data to diff.")
-            diffed = np.diff(gaps_as_nan(np.asarray(data), var.nodata), n=n, axis=axis)
-            new_var = var.with_data(diffed)
-            times = var.attributes.get("time_values")
-            if times is not None:
-                new_var.attributes = {**var.attributes, "time_values": list(times[n:])}
-            new_vars[name] = new_var
-        return self._rebuild(new_vars)
+        """Facade -- delegates to :meth:`_MeshSelection.diff`."""
+        warnings.warn(
+            "`mesh.diff` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.diff`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.diff(n)
 
     def _extremum_along_time(
         self, operation: str, *, largest: bool, as_coordinate: bool
@@ -5859,59 +4555,44 @@ class MeshDataset(_MeshFacades):
         return self._rebuild(new_vars)
 
     def argmin(self) -> MeshDataset:
-        """The time-step position of each element's minimum.
-
-        Returns:
-            MeshDataset: Static ``int64`` variables holding the step index of the minimum,
-            declaring ``-1`` for an element with no valid step.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self._extremum_along_time("argmin", largest=False, as_coordinate=False)
+        """Facade -- delegates to :meth:`_MeshSelection.argmin`."""
+        warnings.warn(
+            "`mesh.argmin` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.argmin`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.argmin()
 
     def argmax(self) -> MeshDataset:
-        """The time-step position of each element's maximum.
-
-        Returns:
-            MeshDataset: Static ``int64`` variables holding the step index of the maximum,
-            declaring ``-1`` for an element with no valid step.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        return self._extremum_along_time("argmax", largest=True, as_coordinate=False)
+        """Facade -- delegates to :meth:`_MeshSelection.argmax`."""
+        warnings.warn(
+            "`mesh.argmax` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.argmax`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.argmax()
 
     def idxmin(self) -> MeshDataset:
-        """The time **coordinate** of each element's minimum.
-
-        Where :meth:`argmin` answers a step position, this answers the value of the time
-        coordinate at that step, so it needs numeric time coordinates.
-
-        Returns:
-            MeshDataset: Static ``float64`` variables holding the time coordinate of the
-            minimum, NaN where an element has no valid step.
-
-        Raises:
-            ValueError: No variable has a time dimension, or the time coordinates are
-                date-like rather than numeric (use `argmin` / `argmax` for the step
-                position instead).
-        """
-        return self._extremum_along_time("idxmin", largest=False, as_coordinate=True)
+        """Facade -- delegates to :meth:`_MeshSelection.idxmin`."""
+        warnings.warn(
+            "`mesh.idxmin` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.idxmin`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.idxmin()
 
     def idxmax(self) -> MeshDataset:
-        """The time **coordinate** of each element's maximum.
-
-        Returns:
-            MeshDataset: Static ``float64`` variables holding the time coordinate of the
-            maximum, NaN where an element has no valid step.
-
-        Raises:
-            ValueError: No variable has a time dimension, or the time coordinates are
-                date-like rather than numeric (use `argmin` / `argmax` for the step
-                position instead).
-        """
-        return self._extremum_along_time("idxmax", largest=True, as_coordinate=True)
+        """Facade -- delegates to :meth:`_MeshSelection.idxmax`."""
+        warnings.warn(
+            "`mesh.idxmax` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.idxmax`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.idxmax()
 
     def _time_coords(self, operation: str) -> list:
         """The time coordinate values, or a clear error when the dataset has no time."""
@@ -5929,32 +4610,23 @@ class MeshDataset(_MeshFacades):
         method: str | None = None,
         tolerance: float | None = None,
     ) -> MeshDataset:
-        """Select time steps by coordinate value, exactly or by nearest.
+        """Facade -- delegates to :meth:`_MeshSelection.sel`."""
+        warnings.warn(
+            "`mesh.sel` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.sel`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.sel(time, method=method, tolerance=tolerance)
 
-        The mesh counterpart of :meth:`pyramids.netcdf.NetCDF.sel` over time. A scalar selects
-        one step and collapses the time dimension; a sequence keeps it. Values are matched
-        against the dataset's :attr:`time_values` (which fall back to step positions when the
-        file carries no explicit time coordinate). ``method="nearest"`` snaps each value to the
-        closest coordinate instead of requiring an exact hit, and ``tolerance`` caps how far it
-        may snap — the same contract the raster ``sel`` uses, including raising ``KeyError`` (not
-        ``ValueError``) when a snap would exceed ``tolerance``.
-
-        Args:
-            time: A coordinate value, or a sequence of them.
-            method: ``None`` (the default) matches exactly; ``"nearest"`` snaps to the closest
-                coordinate, which needs numeric coordinates.
-            tolerance: The furthest a ``method="nearest"`` snap may travel. Only valid with
-                ``"nearest"``, and must not be negative.
-
-        Returns:
-            MeshDataset: A new dataset with the selected steps.
-
-        Raises:
-            ValueError: No time dimension; an unknown ``method``; ``tolerance`` without
-                ``method="nearest"`` or negative; a value is not among the coordinates (exact
-                match); or ``"nearest"`` was asked of non-numeric coordinates.
-            KeyError: A ``"nearest"`` snap would exceed ``tolerance``.
-        """
+    def _sel_impl(
+        self,
+        time: Any = None,
+        *,
+        method: str | None = None,
+        tolerance: float | None = None,
+    ) -> MeshDataset:
+        """Implementation of :meth:`_MeshSelection.sel`; see that method for the contract."""
         if time is None:
             # `time` is optional in the signature for parity with the raster `sel`, but a
             # missing value has no meaning here. Say so, as `isel` does, instead of
@@ -5978,7 +4650,7 @@ class MeshDataset(_MeshFacades):
         if isinstance(time, (list, tuple, np.ndarray)):
             result = self._select_steps(np.asarray(positions, dtype=np.intp))
         else:
-            result = self.isel(positions[0])
+            result = self.selection.isel(positions[0])
         return result
 
     def drop_sel(self, values: Any) -> MeshDataset:
@@ -6003,17 +4675,14 @@ class MeshDataset(_MeshFacades):
         return self._select_steps(np.asarray(keep, dtype=np.intp))
 
     def sortby(self) -> MeshDataset:
-        """Sort the time steps by their coordinate value (stable).
-
-        Returns:
-            MeshDataset: A new dataset with steps ordered by ascending time coordinate.
-
-        Raises:
-            ValueError: No variable has a time dimension.
-        """
-        coords = self._time_coords("sortby")
-        order = np.argsort(np.asarray(coords), kind="stable")
-        return self._select_steps(order)
+        """Facade -- delegates to :meth:`_MeshSelection.sortby`."""
+        warnings.warn(
+            "`mesh.sortby` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.sortby`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.sortby()
 
     def drop_duplicates(self) -> MeshDataset:
         """Keep the first step of each distinct time coordinate value.
@@ -6036,55 +4705,14 @@ class MeshDataset(_MeshFacades):
     def dropna(
         self, how: str = "any", thresh: int | None = None, *, dim: str | None = None
     ) -> MeshDataset:
-        """Drop time steps that do not hold enough valid cells.
-
-        A step is kept only when **every** temporal variable meets the threshold at that
-        step, so the variables stay time-aligned. ``how="any"`` requires every cell of a
-        variable to be valid (a single gap drops the step); ``how="all"`` requires at least
-        one; ``thresh`` overrides ``how`` with an explicit valid-cell count per variable.
-
-        Args:
-            how: ``"any"`` or ``"all"``. Defaults to ``"any"``.
-            thresh: Explicit minimum valid-cell count per variable, overriding ``how``.
-            dim: The dimension to drop along. A mesh drops along ``"time"`` only, so any other
-                name is refused; ``None`` means time. Defaults to ``None``.
-
-        Returns:
-            MeshDataset: A new dataset with the surviving steps.
-
-        Raises:
-            ValueError: ``how`` is neither ``"any"`` nor ``"all"``; ``dim`` names anything but
-                ``"time"``; no variable has a time dimension; a temporal variable has no
-                loaded data; or the threshold would drop **every** step, which would leave a
-                temporal dataset with no steps for anything downstream to read.
-        """
-        if how not in ("any", "all"):
-            raise ValueError(f"dropna how must be 'any' or 'all', got {how!r}.")
-        self._check_time_dim("dropna", dim)
-        temporal = self._require_temporal("dropna")
-        length = self._time_length("dropna")
-        keep = np.ones(length, dtype=bool)
-        for name in temporal:
-            var = self._data_variables[name]
-            axis = cast("int", var.time_axis_index)
-            data = var.data
-            if data is None:
-                raise ValueError(f"Variable {name!r} has no loaded data to dropna.")
-            moved = np.moveaxis(gaps_as_nan(np.asarray(data), var.nodata), axis, 0)
-            flat = moved.reshape(moved.shape[0], -1)
-            per_step_valid = np.sum(~np.isnan(flat), axis=1)
-            needed = flat.shape[1] if how == "any" else 1
-            if thresh is not None:
-                needed = thresh
-            keep &= per_step_valid >= needed
-        if not keep.any():
-            # Returning a zero-length time axis would leave a "temporal" dataset with no
-            # steps, which nothing downstream can read; the raster dropna refuses too.
-            raise ValueError(
-                f"dropna(how={how!r}, thresh={thresh!r}) would drop every one of the "
-                f"{length} time step(s); nothing would be left."
-            )
-        return self._select_steps(np.flatnonzero(keep))
+        """Facade -- delegates to :meth:`_MeshSelection.dropna`."""
+        warnings.warn(
+            "`mesh.dropna` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.selection.dropna`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.selection.dropna(how, thresh, dim=dim)
 
     def _assert_same_topology(self, other: MeshDataset, operation: str) -> None:
         """Refuse ``operation`` unless ``other`` sits on the same mesh as ``self``.
@@ -6263,134 +4891,29 @@ class MeshDataset(_MeshFacades):
     ) -> Any:
         """Plot a mesh data variable.
 
-        N-6 — this facade now goes through the same module-level
-        helper as the raster path. The mesh-specific dispatch lives in
-        :func:`pyramids.dataset._plot_helpers.mesh_render`; both
-        ``Dataset.plot``/``NetCDF.plot`` and ``MeshDataset.plot`` share
-        the "resolve data, hand to a single helper" contract so the
-        two formats no longer maintain independent plotting code paths.
-
-        Args:
-            variable_name: Name of the data variable to plot.
-            ax: matplotlib Axes. Created if None.
-            backend: Renderer backend. ``"matplotlib"`` (default) draws the mesh through
-                cleopatra and returns a ``MeshGlyph``. Any other name (e.g. ``"interactive"``
-                / ``"3d"`` / ``"web"``) routes to a ``pyramids.plot_backends`` plugin (in
-                practice ``digitalearth``) and returns that backend's own object. The
-                matplotlib-only render groups (``color`` / ``contour`` / ``data_style`` /
-                ``points`` / a ``ColorBar`` instance) then raise a :class:`ValueError` if set,
-                and ``ax`` does not apply. Requires the backend's package installed.
-            cmap: Colormap name.
-            title: Plot title. Defaults to variable name.
-            basemap: If True, add an OpenStreetMap basemap. If a string,
-                use it as the tile provider name (e.g. "CartoDB.Positron").
-                Default is None (no basemap). Requires the [viz] extra.
-            colorbar (bool or ColorBar, optional): Colour-bar spec, part of the
-                shared plot signature. A ``pyramids.plot.ColorBar(label=…, …)``
-                configures the bar; ``False`` hides it and ``None`` (default) uses
-                cleopatra's default (a bar is drawn). Only forwarded when set.
-            points (np.ndarray or PointOverlay, optional): Accepted for signature
-                symmetry with the raster plot family, but a **no-op here** — a mesh
-                has no point-overlay layer (the mesh geometry is the data). Ignored.
-            kind (str, optional): Accepted for signature symmetry with the raster
-                plot family, but a **no-op here** — ``kind`` selects a raster
-                renderer (``imshow``/``pcolormesh``); the mesh always renders via
-                ``tripcolor``/``tricontour``. Ignored.
-            color (ColorScaling, optional): Colour-scale spec
-                ``pyramids.plot.ColorScaling`` (linear / power / sym-log / boundary /
-                midpoint norm), e.g. ``ColorScaling.power(gamma=0.7)``. Default ``None``.
-            contour (Contour, optional): Contour-line spec
-                ``pyramids.plot.Contour(levels=…, label_kw=…)``. Default ``None``.
-            data_style (DataStyle, optional): Data-style / relief spec
-                ``pyramids.plot.DataStyle(style=…, hillshade=…)``. (A mesh has no
-                cell-value overlay, so there is no ``cells`` param here.) Default ``None``.
-            **kwargs: Additional arguments passed to mesh_render
-                (forwarded to plot_mesh_data). Notably ``colorbar``
-                (``bool``, default ``True``): pass ``colorbar=False`` to
-                suppress the per-mesh colorbar when you want to attach a
-                custom or shared one to ``glyph.ax``. Also ``style`` (name of
-                a cleopatra ``DATA_STYLES`` preset, e.g. ``"flow_accumulation"``)
-                and ``hillshade`` (``True`` or a params dict) to colour / relief-
-                shade the mesh; both require cleopatra >= 0.24 (``hillshade``
-                needs node-centered data). Distinct from
-                :meth:`pyramids.dataset.Dataset.hillshade`, which *returns* a
-                shaded-relief array.
-
-        Returns:
-            cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph instance with the plot
-                rendered, carrying the dataset CRS (the EPSG code, or the CRS
-                WKT when there is no EPSG) so a downstream ``glyph.add_tiles()``
-                projects correctly. Use the returned object to access the
-                matplotlib handles and the mappable:
-
-                - ``glyph.fig`` / ``glyph.ax`` — Figure and Axes.
-                - ``glyph.im`` — the mesh mappable (the
-                  ``tripcolor``/``tricontour(f)`` artist) set by ``plot()``;
-                  use it for a custom colorbar or ``glyph.im.set_clim(...)``.
-                  It is ``None`` after :meth:`plot_outline` (an outline
-                  carries no scalar mapping).
-                - ``glyph.apply_style(style)`` (cleopatra >= 0.25) — re-apply a
-                  ``DATA_STYLES`` preset by name in place, without re-plotting.
-
-        Raises:
-            ValueError: If the selected variable has no loaded data, or if
-                `basemap` is requested while the dataset has no CRS (`epsg`).
+        Facade -- delegates to :meth:`_MeshGlyph.plot`.
         """
-        if backend != "matplotlib":
-            reject_mpl_only_params(
-                backend,
-                color=color,
-                contour=contour,
-                data_style=data_style,
-                points=points,
-                colorbar=colorbar if is_colorbar_spec(colorbar) else None,
-            )
-            forwarded = forward_kwargs(
-                variable_name=variable_name,
-                # Forward cmap only when the user changed it from the matplotlib default, so a
-                # non-matplotlib backend keeps its own default colormap rather than pyramids'.
-                cmap=None if cmap == "viridis" else cmap,
-                title=title,
-                basemap=basemap,
-                colorbar=None if is_colorbar_spec(colorbar) else colorbar,
-                kind=None if kind == "auto" else kind,
-            )
-            return render_via_backend(self, backend, **forwarded, **kwargs)
-        var = self[variable_name]
-        data = var.data
-        if data is None:
-            raise ValueError(f"Variable {variable_name!r} has no loaded data to plot.")
-        if var.has_time:
-            # First step along the variable's own time axis (see `_element_values`).
-            data = np.take(np.asarray(data), 0, axis=cast("int", var.time_axis_index))
-        if title is None:
-            title = variable_name
-        if basemap and crs_spec(self.epsg, self.crs_wkt) is None:
-            raise ValueError("MeshDataset must have a CRS (epsg) to use basemap.")
-        # ``points`` / ``kind`` are part of the shared raster-family plot signature
-        # but have no meaning for a mesh (no point overlay; the renderer is fixed to
-        # tripcolor/tricontour), so they are accepted and ignored. ``colorbar`` and the
-        # typed render groups (``color`` / ``contour`` / ``data_style``) map onto the mesh
-        # backend and are forwarded only when set (so cleopatra's backend defaults are
-        # preserved otherwise).
-        if colorbar is not None:
-            kwargs["colorbar"] = colorbar
-        kwargs.update(
-            _nonnull_group_kwargs(color=color, contour=contour, data_style=data_style)
+        warnings.warn(
+            "`mesh.plot` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.plot`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        result = _mesh_render(
-            mesh=self._mesh,
-            data=data,
-            location=var.location,
+        return self.glyph.plot(
+            variable_name,
             ax=ax,
             cmap=cmap,
             title=title,
             basemap=basemap,
-            basemap_epsg=self.epsg,
-            basemap_crs_wkt=self.crs_wkt,
+            colorbar=colorbar,
+            points=points,
+            kind=kind,
+            color=color,
+            contour=contour,
+            data_style=data_style,
+            backend=backend,
             **kwargs,
         )
-        return self._glyph_with_crs(result)
 
     def plot_vector_field(
         self,
@@ -6407,127 +4930,25 @@ class MeshDataset(_MeshFacades):
     ) -> Any:
         """Plot two mesh variables as a 2-component vector field (issue #1373).
 
-        The mesh counterpart of :meth:`pyramids.dataset.Dataset.plot_vector_field`, sharing
-        its ``kind`` / ``thin`` vocabulary so the two read the same. A hydrodynamic mesh
-        writes its velocity as two per-face variables -- D-Flow FM names them ``mesh2d_ucx``
-        and ``mesh2d_ucy`` -- and this draws them as arrows coloured by
-        ``hypot(u, v)``.
-
-        Both components must sit on the same location, and that location must be ``"face"``
-        or ``"node"``: those are what a vector can be anchored at (face centroids, or the
-        nodes themselves). An edge-located component such as D-Flow FM's ``mesh2d_u1`` is
-        refused rather than drawn in the wrong place -- resolve it to faces first.
-
-        A temporal component is reduced to one step, as :meth:`plot` does, except that the
-        step is selectable here through ``time_index`` rather than fixed at the first.
-
-        Two deliberate differences from :meth:`plot`, both inherited from matching the raster
-        :meth:`~pyramids.dataset.Dataset.plot_vector_field` instead:
-
-        - It returns matplotlib's ``(fig, ax, im)`` rather than the ``MeshGlyph``. The glyph
-          is built internally and not handed back, so a follow-up ``apply_style`` or a second
-          render onto the same glyph is not available here -- compose through ``ax=`` instead,
-          passing the axes from a previous render.
-        - There is no ``basemap=``. :meth:`plot` accepts one and validates the dataset's CRS
-          first; here a ``basemap=`` keyword falls through to cleopatra, which refuses it as
-          an unknown option.
-        - ``kind="streamplot"`` is not available. The raster method documents it alongside
-          ``quiver`` and ``barbs``; streamlines need a structured grid, so cleopatra refuses
-          it with ``kind='streamplot' is not supported on an unstructured mesh``. The shared
-          vocabulary is therefore ``quiver`` and ``barbs`` only.
-
-        Args:
-            u: Name of the variable holding the first vector component.
-            v: Name of the variable holding the second vector component.
-            kind: ``"quiver"`` for arrows or ``"barbs"`` for wind barbs. Defaults to
-                ``"quiver"``.
-            thin: Draw every nth element, keeping a large mesh legible. ``None`` (the
-                default) draws every one.
-            time_index: Which step to draw for a temporal component. Negative values
-                count from the end, as they do in numpy. Defaults to ``0``.
-            ax: Existing matplotlib axes to draw on. Defaults to ``None``.
-            title: Plot title. Defaults to ``None``, which labels the plot ``"u / v"``.
-            colorbar: ``True``/``False``, or a :class:`ColorBar` spec. Defaults to ``None``,
-                which leaves cleopatra's default.
-            **kwargs: Forwarded to cleopatra's ``MeshGlyph.plot_vector_field``.
-
-        Returns:
-            tuple: ``(fig, ax, im)``, as the raster ``plot_vector_field`` returns.
-
-        Raises:
-            KeyError: Either name is not a variable of this dataset.
-            OptionalPackageDoesNotExist: cleopatra is not installed, or is older than the
-                0.44.0 that provides ``MeshGlyph.plot_vector_field``.
-            ValueError: A loose colour-bar keyword the :class:`ColorBar` spec replaces was
-                passed (``cbar_label``, ``ticks_spacing``, ...); ``kind``, ``location`` or
-                ``thin`` is not one cleopatra accepts, ``kind="streamplot"`` among them --
-                the glyph validates all three, so that message is cleopatra's; a component
-                has no loaded data; the two sit on different locations;
-                the shared location is not ``"face"`` or ``"node"``; the two have different
-                shapes; or ``time_index`` is outside a temporal component's time axis.
-
-        Examples:
-            - Draw a D-Flow FM velocity field, thinned so the arrows stay readable:
-                ```python
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
-                >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
-                ...     "mesh2d_ucx", "mesh2d_ucy", kind="quiver", thin=4
-                ... )
-                >>> im.N < ds.n_face                                   # doctest: +SKIP
-                True
-
-                ```
-            - Draw the last step of a temporal component as wind barbs:
-                ```python
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
-                >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
-                ...     "mesh2d_ucx", "mesh2d_ucy", kind="barbs", time_index=-1
-                ... )
-
-                ```
-            - Compose a vector field over an existing mesh plot by reusing its axes:
-                ```python
-                >>> from pyramids.netcdf.ugrid import MeshDataset
-                >>> ds = MeshDataset.read_file("FlowFM_map.nc")       # doctest: +SKIP
-                >>> glyph = ds.plot("mesh2d_waterdepth")               # doctest: +SKIP
-                >>> fig, ax, im = ds.plot_vector_field(                # doctest: +SKIP
-                ...     "mesh2d_ucx", "mesh2d_ucy", ax=glyph.ax
-                ... )
-
-                ```
+        Facade -- delegates to :meth:`_MeshGlyph.plot_vector_field`.
         """
-        u_values, location = self._vector_component(u, "u", time_index)
-        v_values, v_location = self._vector_component(v, "v", time_index)
-        if location != v_location:
-            raise ValueError(
-                f"plot_vector_field: {u!r} is {location}-located and {v!r} is "
-                f"{v_location}-located; a vector needs both components at the same place."
-            )
-        if u_values.shape != v_values.shape:
-            raise ValueError(
-                f"plot_vector_field: {u!r} has shape {u_values.shape} and {v!r} has "
-                f"{v_values.shape}; the two components must match."
-            )
-        result = _ugrid_plot.plot_vector_field_data(
-            mesh=self._mesh,
-            u=u_values,
-            v=v_values,
-            location=location,
+        warnings.warn(
+            "`mesh.plot_vector_field` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.plot_vector_field`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.glyph.plot_vector_field(
+            u,
+            v,
             kind=kind,
             thin=thin,
+            time_index=time_index,
             ax=ax,
-            title=f"{u} / {v}" if title is None else title,
+            title=title,
             colorbar=colorbar,
             **kwargs,
         )
-        # plot_vector_field_data returns the (fig, ax, im) tuple from
-        # MeshGlyph.plot_vector_field; no glyph is exposed and no basemap is drawn, so
-        # there is no CRS to tag (unlike plot / plot_outline, see _glyph_with_crs). If
-        # this ever hands back a glyph or composes a basemap, route it through
-        # _glyph_with_crs or issue #1560 reopens on this surface.
-        return result
 
     def _vector_component(
         self, variable_name: str, role: str, time_index: int
@@ -6620,48 +5041,31 @@ class MeshDataset(_MeshFacades):
         backend: str = "matplotlib",
         **kwargs: Any,
     ) -> Any:
-        """Animate a temporal mesh variable over its time axis (issue #1380).
+        """Facade -- delegates to :meth:`_MeshGlyph.animate`."""
+        warnings.warn(
+            "`mesh.animate` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.animate`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.glyph.animate(
+            variable_name, interval=interval, backend=backend, **kwargs
+        )
 
-        The mesh had no animation at all, although a mesh time series is one of the most
-        natural things to animate — a flood propagating across an unstructured grid. The
-        frames come from cleopatra's :meth:`MeshGlyph.animate`, so this is wiring rather than
-        new drawing code: the topology stays fixed and each step is drawn on it in turn.
+    def _animate_impl(
+        self,
+        variable_name: str | None = None,
+        *,
+        interval: int = 200,
+        backend: str = "matplotlib",
+        **kwargs: Any,
+    ) -> Any:
+        """Implementation of :meth:`_MeshGlyph.animate`.
 
-        Args:
-            variable_name: Variable to animate (default: the only temporal one).
-            interval: Milliseconds between frames. Defaults to 200.
-            backend: Renderer backend. ``"matplotlib"`` (default) animates through cleopatra;
-                any other name routes to a ``pyramids.plot_backends`` plugin (in practice
-                ``digitalearth``) with ``animate=True`` and returns that backend's own object.
-                Requires the backend's package installed.
-            **kwargs: Forwarded to cleopatra's ``MeshGlyph.animate`` — ``colorbar``, ``color``,
-                ``contour``, ``data_style``, ``edgecolor``, ``text_loc``, …
-
-        Returns:
-            matplotlib.animation.FuncAnimation: The animation — save it with
-            ``anim.save("out.gif")``. Note this differs from :meth:`Dataset.animate` and
-            :meth:`NetCDF.animate`, which return a glyph whose ``anim`` attribute holds the
-            animation: cleopatra's mesh and array glyph families return different objects and
-            pyramids passes each through rather than wrapping one to look like the other.
-            **Keep a reference to it** — matplotlib warns and stops an animation that is only
-            a temporary, so ``anim = ds.animate()`` plays where a bare ``ds.animate()`` may
-            not.
-
-        Raises:
-            ValueError: The variable has no time dimension (there would be one frame), or it
-                has a dimension besides time and the elements — a layered variable needs a
-                layer picked before it can be drawn.
-
-        See Also:
-            plot: A single frame.
-            Dataset.animate: The raster counterpart, over bands.
-
-        Examples:
-            - Animate a water-depth series and save it:
-                ```python
-                >>> anim = ds.animate("mesh2d_waterdepth", interval=120)  # doctest: +SKIP
-                >>> anim.save("depth.gif")  # doctest: +SKIP
-                ```
+        Kept on ``MeshDataset`` rather than moved onto the glyph engine: the body reads the
+        per-variable time coordinate through the module-level ``_variable_time_coord`` helper
+        in this module, which the engine cannot import without a cycle (``dataset`` imports
+        the engine for its ``glyph`` accessor).
         """
         if backend != "matplotlib":
             # interval defaults to 200 ms; forward it only when the user changed it, so a backend
@@ -6712,37 +5116,14 @@ class MeshDataset(_MeshFacades):
         basemap: bool | str | None = None,
         **kwargs: Any,
     ) -> Any:
-        """Plot mesh wireframe.
-
-        Args:
-            ax: matplotlib Axes. Created if None.
-            basemap: ``True`` or a web-tile provider name, drawing a tile backdrop under the
-                wireframe — the same backdrop :meth:`plot` draws under a filled mesh. ``None``
-                (default) draws none. The dataset's own ``epsg`` supplies the CRS unless
-                ``basemap_epsg`` is passed explicitly, so a mesh with no CRS raises rather
-                than mis-placing the tiles (issue #1354).
-            **kwargs: Additional arguments passed to plot_mesh_outline.
-
-        Returns:
-            cleopatra.glyphs.gridded.mesh_glyph.MeshGlyph instance with the wireframe
-                rendered. ``glyph.fig`` / ``glyph.ax`` are the matplotlib
-                handles; ``glyph.im`` is ``None`` (an outline carries no
-                scalar mapping, so no mappable is produced). The glyph carries
-                the dataset CRS (the EPSG code, or the CRS WKT when there is no
-                EPSG) so a downstream ``glyph.add_tiles()`` projects correctly.
-        """
-        # `basemap_epsg` is a documented parameter of `plot_mesh_outline`, so passing it
-        # here used to collide with the dataset's own CRS ("got multiple values for keyword
-        # argument"). An explicit one wins; otherwise the dataset's CRS supplies it.
-        kwargs.setdefault("basemap_epsg", self.epsg)
-        kwargs.setdefault("basemap_crs_wkt", self.crs_wkt)
-        result = _ugrid_plot.plot_mesh_outline(
-            self._mesh,
-            ax=ax,
-            basemap=basemap,
-            **kwargs,
+        """Facade -- delegates to :meth:`_MeshGlyph.plot_outline`."""
+        warnings.warn(
+            "`mesh.plot_outline` is deprecated and will be removed in 0.90.0; use "
+            "`mesh.glyph.plot_outline`.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return self._glyph_with_crs(result)
+        return self.glyph.plot_outline(ax=ax, basemap=basemap, **kwargs)
 
     def __str__(self) -> str:
         """Human-readable summary of the dataset."""
@@ -8197,7 +6578,7 @@ def _needs_mesh_error(
         f"{selected.long_name} files carry values but no mesh, so {target!r} cannot be "
         f"opened on its own. Read the mesh first, then attach these values to it:\n"
         f"    mesh = MeshDataset.read_file('<the mesh file>')\n"
-        f"    result = mesh.attach_data({target!r})"
+        f"    result = mesh.variables.attach_data({target!r})"
     )
 
 

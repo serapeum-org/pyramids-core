@@ -105,7 +105,7 @@ class TestWktOnlyMeshIsUsable:
         The old fallback stamped EPSG:4326 -- degrees -- onto coordinates in
         metres, producing a raster that claimed a CRS it did not have.
         """
-        result = wkt_only_projected_mesh.to_dataset("h", cell_size=0.5)
+        result = wkt_only_projected_mesh.io.to_dataset("h", cell_size=0.5)
 
         assert result.epsg != 4326, "projected mesh was relabelled as WGS84"
 
@@ -117,7 +117,7 @@ class TestWktOnlyMeshIsUsable:
         This used to raise "Cannot reproject: source CRS is unknown" while the
         WKT sat unused on the object.
         """
-        result = wkt_only_projected_mesh.to_crs(4326)
+        result = wkt_only_projected_mesh.spatial.to_crs(4326)
 
         assert result.epsg == 4326
 
@@ -128,7 +128,7 @@ class TestWktOnlyMeshIsUsable:
         )
 
         with pytest.raises(ValueError, match="source CRS is unknown"):
-            dataset.to_crs(4326)
+            dataset.spatial.to_crs(4326)
 
     def test_str_reports_the_crs_name_when_there_is_no_epsg_code(
         self, wkt_only_projected_mesh: MeshDataset
@@ -166,7 +166,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
         assert dataset.epsg is None, "the fixture mesh must not declare an EPSG code"
         assert dataset.crs_wkt is None, "the fixture mesh must not declare a WKT"
 
-        raster = dataset.to_dataset("h", cell_size=0.25)
+        raster = dataset.io.to_dataset("h", cell_size=0.25)
 
         assert raster.epsg == 4326
         assert raster.crs, "the raster must carry a CRS, not an empty string"
@@ -193,7 +193,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             global_attributes={},
         )
 
-        raster = dataset.to_dataset("h", cell_size=0.25, epsg=3857)
+        raster = dataset.io.to_dataset("h", cell_size=0.25, epsg=3857)
 
         assert raster.epsg == 3857
 
@@ -208,7 +208,7 @@ class TestAMeshWithNoCrsAtAllKeepsItsWgs84Default:
             plain `self.epsg or 4326` the metre grid would be relabelled
             degrees again.
         """
-        raster = wkt_only_projected_mesh.to_dataset("h", cell_size=1000.0)
+        raster = wkt_only_projected_mesh.io.to_dataset("h", cell_size=1000.0)
 
         assert raster.epsg != 4326
         assert "Orthographic" in raster.crs
@@ -240,7 +240,7 @@ class TestToCrsTargetAcceptsAnyInput:
 
     def test_a_bare_int_target_still_reprojects(self, wgs84_mesh: MeshDataset):
         """Backward compatibility: the historical `int` spelling is unchanged."""
-        assert wgs84_mesh.to_crs(3857).epsg == 3857
+        assert wgs84_mesh.spatial.to_crs(3857).epsg == 3857
 
     def test_an_authority_string_target_reprojects(self, wgs84_mesh: MeshDataset):
         """`"EPSG:3857"` used to interpolate into the nonsense `EPSG:EPSG:3857`.
@@ -250,11 +250,11 @@ class TestToCrsTargetAcceptsAnyInput:
             spelling that was not a bare integer was prefixed into a CRS the caller never
             wrote. An authority string is the most common such spelling.
         """
-        assert wgs84_mesh.to_crs("EPSG:3857").epsg == 3857
+        assert wgs84_mesh.spatial.to_crs("EPSG:3857").epsg == 3857
 
     def test_a_proj4_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A PROJ4 string reaches the transformer instead of `EPSG:+proj=robin`."""
-        result = wgs84_mesh.to_crs("+proj=robin")
+        result = wgs84_mesh.spatial.to_crs("+proj=robin")
 
         assert result.epsg is None, "Robinson has no EPSG code"
         assert result.crs is not None, "the result must carry a CRS"
@@ -262,7 +262,7 @@ class TestToCrsTargetAcceptsAnyInput:
 
     def test_a_wkt_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A WKT target used to become `EPSG:PROJCRS[...]`."""
-        result = wgs84_mesh.to_crs(CRS.from_epsg(3857).to_wkt())
+        result = wgs84_mesh.spatial.to_crs(CRS.from_epsg(3857).to_wkt())
 
         assert result.epsg == 3857
 
@@ -276,7 +276,7 @@ class TestToCrsTargetAcceptsAnyInput:
             the result must keep a WKT and report `epsg is None`, not crash and not get
             relabelled.
         """
-        result = wgs84_mesh.to_crs("ESRI:54030")
+        result = wgs84_mesh.spatial.to_crs("ESRI:54030")
 
         assert result.epsg is None, "Robinson (ESRI:54030) has no EPSG code"
         assert result.crs_wkt is not None, (
@@ -294,23 +294,23 @@ class TestToCrsTargetAcceptsAnyInput:
             broken. The stored WKT must stay byte-for-byte GDAL's authority WKT, and the new
             string form must get the same rich WKT the bare int always did.
         """
-        from_int = wgs84_mesh.to_crs(4326)
+        from_int = wgs84_mesh.spatial.to_crs(4326)
         assert from_int.crs_wkt == sr_from_epsg(4326).ExportToWkt(), (
             "the int path's stored WKT changed from the historical sr_from_epsg output"
         )
 
-        from_string = wgs84_mesh.to_crs("EPSG:3857")
+        from_string = wgs84_mesh.spatial.to_crs("EPSG:3857")
         assert from_string.crs_wkt == sr_from_epsg(3857).ExportToWkt(), (
             "a coded string target must get the same full WKT as the bare int"
         )
 
     def test_a_bare_numeric_string_target_reprojects(self, wgs84_mesh: MeshDataset):
         """`"3857"` is advertised in the docstring; exercise it at the to_crs level (L2)."""
-        assert wgs84_mesh.to_crs("3857").epsg == 3857
+        assert wgs84_mesh.spatial.to_crs("3857").epsg == 3857
 
     def test_a_pyproj_crs_object_target_reprojects(self, wgs84_mesh: MeshDataset):
         """A `pyproj.CRS` is advertised; exercise it at the to_crs level (L2)."""
-        assert wgs84_mesh.to_crs(CRS.from_epsg(3857)).epsg == 3857
+        assert wgs84_mesh.spatial.to_crs(CRS.from_epsg(3857)).epsg == 3857
 
     def test_a_gdal_only_epsg_code_keeps_its_authority_in_the_wkt(
         self, wgs84_mesh: MeshDataset
@@ -326,7 +326,7 @@ class TestToCrsTargetAcceptsAnyInput:
             it, so the stored WKT is byte-for-byte what `sr_from_epsg(10857)` (the pre-#1404
             behaviour) produced.
         """
-        result = wgs84_mesh.to_crs(10857)
+        result = wgs84_mesh.spatial.to_crs(10857)
 
         assert result.crs_wkt == sr_from_epsg(10857).ExportToWkt(), (
             "a GDAL-only EPSG code must keep the authority WKT sr_from_epsg produces"
@@ -340,7 +340,7 @@ class TestToCrsTargetAcceptsAnyInput:
     ):
         """A bad target names what the caller passed, not a prefixed `EPSG:` version."""
         with pytest.raises(CRSError) as caught:
-            wgs84_mesh.to_crs("not a crs")
+            wgs84_mesh.spatial.to_crs("not a crs")
 
         assert "EPSG:EPSG" not in str(caught.value)
         assert "EPSG:not a crs" not in str(caught.value)

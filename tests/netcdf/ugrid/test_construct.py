@@ -194,7 +194,7 @@ class TestFromGeoDataFrame:
         node_x, node_y, fnc, data = from_geodataframe(gdf)
         epsg = gdf.crs.to_epsg()
         uds = MeshDataset.from_arrays(node_x, node_y, fnc, data=data, epsg=epsg)
-        recovered = uds.to_geodataframe()
+        recovered = uds.vector.to_geodataframe()
         assert len(recovered) == 2
         for original, built in zip(gdf.geometry, recovered.geometry):
             assert original.equals(built)

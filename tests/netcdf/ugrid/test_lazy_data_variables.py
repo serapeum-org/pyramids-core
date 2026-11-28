@@ -38,7 +38,7 @@ def temporal_file(tmp_path) -> tuple[Path, np.ndarray]:
     """Write the temporal mesh to a file and return ``(path, expected_array)`` for round-tripping."""
     ds, temporal = _temporal_dataset()
     path = tmp_path / "temporal_mesh.nc"
-    ds.to_file(path)
+    ds.io.to_file(path)
     return path, temporal
 
 
@@ -190,7 +190,7 @@ class TestWindowedTimeSelection:
         path, temporal = temporal_file
         picked = MeshDataset.read_file(path).sel_time(1)
         out = tmp_path / "sel_time_out.nc"
-        picked.to_file(out)
+        picked.io.to_file(out)
         reread = MeshDataset.read_file(out)["h"]
         assert np.asarray(reread.data).ndim == 1
         np.testing.assert_array_equal(np.asarray(reread.data), temporal[1])
@@ -309,7 +309,7 @@ class TestStreamingWrite:
         """
         seed, _ = _temporal_dataset()
         src = tmp_path / "src.nc"
-        seed.to_file(src)
+        seed.io.to_file(src)
 
         rb = MeshDataset.read_file(src)
         assert all(v._data is None for v in rb._data_variables.values()), (
@@ -317,7 +317,7 @@ class TestStreamingWrite:
         )
 
         out = tmp_path / "out.nc"
-        rb.to_file(out)
+        rb.io.to_file(out)
         assert all(v._data is None for v in rb._data_variables.values()), (
             "to_file must not populate the shared variable cache"
         )
@@ -348,6 +348,6 @@ class TestGeoDataFrameTolerance:
             shape=(3, 2),
             dimensions=("time", "mesh2d_nFaces"),
         )
-        gdf = ds.to_geodataframe(variable_name="h", location="face")
+        gdf = ds.vector.to_geodataframe(variable_name="h", location="face")
         assert "h" in gdf.columns
         assert gdf["h"].isna().all()

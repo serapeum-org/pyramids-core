@@ -58,7 +58,7 @@ def _apply(
     with map_lookup_errors():
         mesh = MeshDataset.read_file(args.file)
         result = transform(mesh)
-        result.to_file(args.output)
+        result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -73,7 +73,7 @@ def _cmd_mesh_interp_like(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     return _apply(
-        args, lambda mesh: mesh.interp_like(MeshDataset.read_file(args.other))
+        args, lambda mesh: mesh.selection.interp_like(MeshDataset.read_file(args.other))
     )
 
 
@@ -89,7 +89,7 @@ def _cmd_mesh_interp_time(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.interp_time(
+        lambda mesh: mesh.selection.interp_time(
             args.time, method=args.method, bounds=args.bounds
         ),
     )
@@ -105,7 +105,8 @@ def _cmd_mesh_interp_calendar(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     return _apply(
-        args, lambda mesh: mesh.interp_calendar(MeshDataset.read_file(args.target))
+        args,
+        lambda mesh: mesh.selection.interp_calendar(MeshDataset.read_file(args.target)),
     )
 
 
@@ -120,7 +121,10 @@ def _cmd_mesh_convert_calendar(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     return _apply(
-        args, lambda mesh: mesh.convert_calendar(args.calendar, align_on=args.align_on)
+        args,
+        lambda mesh: mesh.selection.convert_calendar(
+            args.calendar, align_on=args.align_on
+        ),
     )
 
 
@@ -136,7 +140,7 @@ def _cmd_mesh_interpolate_na(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.interpolate_na(
+        lambda mesh: mesh.selection.interpolate_na(
             method=args.method,
             limit=args.limit,
             use_coordinate=args.use_coordinate,
@@ -154,7 +158,9 @@ def _cmd_mesh_fillna(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.fillna(args.value, variable_name=args.var))
+    return _apply(
+        args, lambda mesh: mesh.analysis.fillna(args.value, variable_name=args.var)
+    )
 
 
 def _cmd_mesh_ffill(args: argparse.Namespace) -> int:
@@ -166,7 +172,9 @@ def _cmd_mesh_ffill(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.ffill(limit=args.limit, dim=args.dim))
+    return _apply(
+        args, lambda mesh: mesh.selection.ffill(limit=args.limit, dim=args.dim)
+    )
 
 
 def _cmd_mesh_bfill(args: argparse.Namespace) -> int:
@@ -178,7 +186,9 @@ def _cmd_mesh_bfill(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.bfill(limit=args.limit, dim=args.dim))
+    return _apply(
+        args, lambda mesh: mesh.selection.bfill(limit=args.limit, dim=args.dim)
+    )
 
 
 def _cmd_mesh_fill_na_spatial(args: argparse.Namespace) -> int:
@@ -193,7 +203,7 @@ def _cmd_mesh_fill_na_spatial(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.fill_na_spatial(
+        lambda mesh: mesh.analysis.fill_na_spatial(
             variable_name=args.var, max_distance=args.max_distance
         ),
     )
@@ -211,7 +221,7 @@ def _cmd_mesh_laplace_interpolate(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.laplace_interpolate(
+        lambda mesh: mesh.analysis.laplace_interpolate(
             variable_name=args.var,
             use_weights=args.use_weights,
             direct_solve=args.direct_solve,
@@ -231,7 +241,9 @@ def _cmd_mesh_resample(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.resample(args.freq, args.how, skipna=args.skipna, q=args.q),
+        lambda mesh: mesh.spatial.resample(
+            args.freq, args.how, skipna=args.skipna, q=args.q
+        ),
     )
 
 
@@ -247,7 +259,7 @@ def _cmd_mesh_rolling(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.rolling(
+        lambda mesh: mesh.selection.rolling(
             args.window,
             args.how,
             center=args.center,
@@ -270,7 +282,9 @@ def _cmd_mesh_coarsen(args: argparse.Namespace) -> int:
     """
     return _apply(
         args,
-        lambda mesh: mesh.coarsen(args.window, args.how, variable_name=args.var),
+        lambda mesh: mesh.selection.coarsen(
+            args.window, args.how, variable_name=args.var
+        ),
     )
 
 
@@ -283,7 +297,7 @@ def _cmd_mesh_integrate(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.integrate(variable_name=args.var))
+    return _apply(args, lambda mesh: mesh.selection.integrate(variable_name=args.var))
 
 
 def _cmd_mesh_cumulative_integrate(args: argparse.Namespace) -> int:
@@ -295,7 +309,9 @@ def _cmd_mesh_cumulative_integrate(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.cumulative_integrate(variable_name=args.var))
+    return _apply(
+        args, lambda mesh: mesh.selection.cumulative_integrate(variable_name=args.var)
+    )
 
 
 def _cmd_mesh_differentiate(args: argparse.Namespace) -> int:
@@ -307,7 +323,9 @@ def _cmd_mesh_differentiate(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.differentiate(variable_name=args.var))
+    return _apply(
+        args, lambda mesh: mesh.selection.differentiate(variable_name=args.var)
+    )
 
 
 def _cmd_mesh_convert_units(args: argparse.Namespace) -> int:
@@ -333,7 +351,7 @@ def _cmd_mesh_shift(args: argparse.Namespace) -> int:
     Returns:
         int: ``0`` on success.
     """
-    return _apply(args, lambda mesh: mesh.shift(args.periods))
+    return _apply(args, lambda mesh: mesh.selection.shift(args.periods))
 
 
 def _cmd_mesh_dropna(args: argparse.Namespace) -> int:
@@ -347,7 +365,8 @@ def _cmd_mesh_dropna(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     return _apply(
-        args, lambda mesh: mesh.dropna(args.how, thresh=args.thresh, dim=args.dim)
+        args,
+        lambda mesh: mesh.selection.dropna(args.how, thresh=args.thresh, dim=args.dim),
     )
 
 

@@ -72,35 +72,41 @@ class TestSummary:
 class TestSample:
     def test_contains_hits_each_face(self, unit_mesh):
         # A point clearly inside face 0 (lower triangle) and one inside face 1.
-        out = unit_mesh.sample("depth", x=[3.0, 1.0], y=[0.5, 0.9], method="contains")
+        out = unit_mesh.analysis.sample(
+            "depth", x=[3.0, 1.0], y=[0.5, 0.9], method="contains"
+        )
         assert out.tolist() == [10.0, 20.0]
 
     def test_contains_outside_is_nan(self, unit_mesh):
-        out = unit_mesh.sample("depth", x=[100.0], y=[100.0], method="contains")
+        out = unit_mesh.analysis.sample(
+            "depth", x=[100.0], y=[100.0], method="contains"
+        )
         assert np.isnan(out[0])
 
     def test_nearest_always_resolves(self, unit_mesh):
-        out = unit_mesh.sample("depth", x=[100.0], y=[100.0], method="nearest")
+        out = unit_mesh.analysis.sample("depth", x=[100.0], y=[100.0], method="nearest")
         assert out[0] in (10.0, 20.0)
 
     def test_unknown_method_raises(self, unit_mesh):
         with pytest.raises(ValueError, match="contains"):
-            unit_mesh.sample("depth", x=[0.0], y=[0.0], method="bogus")
+            unit_mesh.analysis.sample("depth", x=[0.0], y=[0.0], method="bogus")
 
 
 class TestWeighted:
     def test_area_weighted_mean(self, unit_mesh):
         # (10*4 + 20*2) / (4 + 2) = 80 / 6
-        assert unit_mesh.weighted("depth", how="mean") == pytest.approx(80.0 / 6.0)
+        assert unit_mesh.selection.weighted("depth", how="mean") == pytest.approx(
+            80.0 / 6.0
+        )
 
     def test_weighted_sum(self, unit_mesh):
-        assert unit_mesh.weighted("depth", how="sum") == pytest.approx(
+        assert unit_mesh.selection.weighted("depth", how="sum") == pytest.approx(
             10 * 4.0 + 20 * 2.0
         )
 
     def test_differs_from_unweighted_mean(self, unit_mesh):
         assert (
-            unit_mesh.weighted("depth", how="mean")
+            unit_mesh.selection.weighted("depth", how="mean")
             != unit_mesh.summary().loc["depth", "mean"]
         )
 
@@ -112,7 +118,7 @@ class TestZonalStats:
                 {"z": ["a"]}, geometry=[box(-1, -1, 5, 3)], crs="EPSG:4326"
             )
         )
-        out = unit_mesh.zonal_stats(
+        out = unit_mesh.analysis.zonal_stats(
             zones, variable_name="depth", stats=("mean", "count")
         )
         # Both face centroids fall in the single zone; area-weighted mean = 80/6.
@@ -125,7 +131,7 @@ class TestZonalStats:
                 {"z": ["a"]}, geometry=[box(-1, -1, 5, 3)], crs="EPSG:4326"
             )
         )
-        out = unit_mesh.zonal_stats(
+        out = unit_mesh.analysis.zonal_stats(
             zones, variable_name="depth", stats=("mean",), weighted=False
         )
         assert out["mean"].iloc[0] == pytest.approx(15.0)
@@ -135,7 +141,7 @@ class TestZonalStats:
             gpd.GeoDataFrame({"z": ["a"]}, geometry=[box(0, 0, 1, 1)], crs="EPSG:3857")
         )
         with pytest.raises(ValueError, match="CRS"):
-            unit_mesh.zonal_stats(zones, variable_name="depth")
+            unit_mesh.analysis.zonal_stats(zones, variable_name="depth")
 
 
 class TestNonTimeFirstAxis:
@@ -169,7 +175,7 @@ class TestNonTimeFirstAxis:
     def test_weighted_matches_face_count(self):
         mesh = self._mesh_time_trailing()
         # Two faces -> weighted over 2 face values at step 0, not 3 time values of one face.
-        result = mesh.weighted("d", time_index=0)
+        result = mesh.selection.weighted("d", time_index=0)
         assert np.isfinite(result)
 
 
@@ -177,11 +183,11 @@ class TestWeightedValidation:
     def test_unsupported_how_raises(self, unit_mesh):
         # An unsupported `how` must raise, not silently return std via the kernel's else-branch.
         with pytest.raises(ValueError, match="how"):
-            unit_mesh.weighted("depth", how="median")
+            unit_mesh.selection.weighted("depth", how="median")
 
     def test_typo_how_raises(self, unit_mesh):
         with pytest.raises(ValueError, match="how"):
-            unit_mesh.weighted("depth", how="meen")
+            unit_mesh.selection.weighted("depth", how="meen")
 
 
 class TestSampleNodeMethod:
@@ -199,11 +205,13 @@ class TestSampleNodeMethod:
         # silently do a nearest lookup.
         mesh = self._node_mesh()
         with pytest.raises(ValueError, match="contains"):
-            mesh.sample("h", x=[0.0], y=[0.0], method="contains")
+            mesh.analysis.sample("h", x=[0.0], y=[0.0], method="contains")
 
     def test_nearest_on_node_variable_works(self):
         mesh = self._node_mesh()
-        out = mesh.sample("h", x=[0.01, 0.99], y=[0.01, 0.01], method="nearest")
+        out = mesh.analysis.sample(
+            "h", x=[0.01, 0.99], y=[0.01, 0.01], method="nearest"
+        )
         assert out.tolist() == [1.0, 2.0]
 
 
@@ -223,7 +231,7 @@ class TestZonalStatsMultiZone:
         zones = self._zones(
             [box(2.0, 0.0, 4.0, 0.9), box(0.0, 0.9, 2.0, 1.5), box(10, 10, 11, 11)]
         )
-        out = unit_mesh.zonal_stats(
+        out = unit_mesh.analysis.zonal_stats(
             zones, variable_name="depth", stats=("mean", "count"), weighted=False
         )
         assert out["count"].tolist() == [1.0, 1.0, 0.0]
@@ -233,13 +241,15 @@ class TestZonalStatsMultiZone:
 
     def test_std_var_columns_single_face_is_zero(self, unit_mesh):
         zones = self._zones([box(2.0, 0.0, 4.0, 0.9), box(0.0, 0.9, 2.0, 1.5)])
-        out = unit_mesh.zonal_stats(zones, variable_name="depth", stats=("std", "var"))
+        out = unit_mesh.analysis.zonal_stats(
+            zones, variable_name="depth", stats=("std", "var")
+        )
         assert out["std"].tolist() == [0.0, 0.0]
         assert out["var"].tolist() == [0.0, 0.0]
 
     def test_empty_zone_std_is_nan(self, unit_mesh):
         zones = self._zones([box(10, 10, 11, 11)])
-        out = unit_mesh.zonal_stats(
+        out = unit_mesh.analysis.zonal_stats(
             zones, variable_name="depth", stats=("std", "count")
         )
         assert out["count"].iloc[0] == 0.0
@@ -248,7 +258,9 @@ class TestZonalStatsMultiZone:
     def test_overlapping_zones_first_wins(self, unit_mesh):
         # Both boxes contain face 0's centroid; it must be counted in the first zone only.
         zones = self._zones([box(2.0, 0.0, 4.0, 0.9), box(2.5, 0.5, 3.0, 0.8)])
-        out = unit_mesh.zonal_stats(zones, variable_name="depth", stats=("count",))
+        out = unit_mesh.analysis.zonal_stats(
+            zones, variable_name="depth", stats=("count",)
+        )
         assert out["count"].tolist() == [1.0, 0.0]
 
 
@@ -257,7 +269,9 @@ class TestRound2AnalysisFixes:
         zones = FeatureCollection(
             gpd.GeoDataFrame({"z": [0]}, geometry=[box(-1, -1, 5, 3)], crs="EPSG:4326")
         )
-        out = unit_mesh.zonal_stats(zones, variable_name="depth", stats=("sum",))
+        out = unit_mesh.analysis.zonal_stats(
+            zones, variable_name="depth", stats=("sum",)
+        )
         # plain Σ value = 10 + 20 = 30, NOT the area-weighted integral 10*4 + 20*2 = 80.
         assert out["sum"].iloc[0] == 30.0
 
@@ -276,7 +290,7 @@ class TestRound2AnalysisFixes:
         mesh = self._layered_mesh()
         assert mesh["layered"].has_time is False
         with pytest.raises(ValueError, match="not per-element"):
-            mesh.weighted("layered")
+            mesh.selection.weighted("layered")
 
     def test_summary_reduces_layered_variable_over_all_axes(self):
         # Unlike the per-element analysis members, summary collapses every axis, so a layered
@@ -293,21 +307,25 @@ class TestWeightedQuantile:
     """NC2 — the area-weighted quantile on the mesh."""
 
     def test_quantile_endpoints_clamp(self, unit_mesh):
-        assert unit_mesh.weighted("depth", how="quantile", q=0.0) == pytest.approx(10.0)
-        assert unit_mesh.weighted("depth", how="quantile", q=1.0) == pytest.approx(20.0)
+        assert unit_mesh.selection.weighted(
+            "depth", how="quantile", q=0.0
+        ) == pytest.approx(10.0)
+        assert unit_mesh.selection.weighted(
+            "depth", how="quantile", q=1.0
+        ) == pytest.approx(20.0)
 
     def test_quantile_requires_q(self, unit_mesh):
         with pytest.raises(ValueError, match="quantile"):
-            unit_mesh.weighted("depth", how="quantile")
+            unit_mesh.selection.weighted("depth", how="quantile")
 
     def test_q_out_of_range_rejected(self, unit_mesh):
         with pytest.raises(ValueError, match=r"q in \[0, 1\]"):
-            unit_mesh.weighted("depth", how="quantile", q=1.5)
+            unit_mesh.selection.weighted("depth", how="quantile", q=1.5)
 
     def test_bool_q_rejected(self, unit_mesh):
         with pytest.raises(ValueError, match=r"q in \[0, 1\]"):
-            unit_mesh.weighted("depth", how="quantile", q=True)
+            unit_mesh.selection.weighted("depth", how="quantile", q=True)
 
     def test_q_only_with_quantile(self, unit_mesh):
         with pytest.raises(ValueError, match="quantile"):
-            unit_mesh.weighted("depth", how="mean", q=0.5)
+            unit_mesh.selection.weighted("depth", how="mean", q=0.5)

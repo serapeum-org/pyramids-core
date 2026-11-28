@@ -40,42 +40,48 @@ def split() -> MeshDataset:
 
 class TestGraphFacades:
     def test_connected_components(self, split):
-        assert sorted(set(split.connected_components().tolist())) == [0, 1]
+        assert sorted(set(split.topology.connected_components().tolist())) == [0, 1]
 
     def test_exterior_faces_and_edges(self, strip):
-        assert strip.exterior_faces().tolist() == [0, 1]
-        assert len(strip.exterior_edges()) > 0
+        assert strip.topology.exterior_faces().tolist() == [0, 1]
+        assert len(strip.topology.exterior_edges()) > 0
 
     def test_bounding_polygon_covers_the_mesh(self, strip):
-        assert strip.bounding_polygon().area == pytest.approx(2.0)
+        assert strip.topology.bounding_polygon().area == pytest.approx(2.0)
 
     def test_sparse_adjacency_shape(self, strip):
-        assert strip.sparse_adjacency("face").shape == (2, 2)
+        assert strip.topology.sparse_adjacency("face").shape == (2, 2)
 
     def test_to_location_moves_the_variable(self, strip):
-        out = strip.to_location("node")
+        out = strip.analysis.to_location("node")
         assert out["d"].location == "node"
         assert out["d"].data.shape == (6,)
 
     def test_to_location_rejects_unknown(self, strip):
         with pytest.raises(ValueError, match="location must be one of"):
-            strip.to_location("bogus")
+            strip.analysis.to_location("bogus")
 
     def test_binary_dilation_grows_a_mask(self, strip):
-        masked = strip.with_variable("m", np.array([True, False]), location="face")
-        out = masked.binary_dilation("m")
+        masked = strip.variables.with_variable(
+            "m", np.array([True, False]), location="face"
+        )
+        out = masked.topology.binary_dilation("m")
         assert out["m"].data.tolist() == [True, True]
 
     def test_binary_erosion_shrinks_a_mask(self, strip):
-        masked = strip.with_variable("m", np.array([True, True]), location="face")
-        out = masked.binary_erosion("m")
+        masked = strip.variables.with_variable(
+            "m", np.array([True, True]), location="face"
+        )
+        out = masked.topology.binary_erosion("m")
         assert out["m"].data.tolist() == [False, False]
 
 
 class TestFillFacades:
     def test_fill_na_spatial_fills_from_the_neighbour(self, strip):
-        gappy = strip.with_variable("g", np.array([5.0, np.nan]), location="face")
-        assert gappy.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
+        gappy = strip.variables.with_variable(
+            "g", np.array([5.0, np.nan]), location="face"
+        )
+        assert gappy.analysis.fill_na_spatial("g")["g"].data.tolist() == [5.0, 5.0]
 
     def test_laplace_interpolate_fills_a_hole(self):
         mesh = MeshDataset.from_arrays(
@@ -84,18 +90,18 @@ class TestFillFacades:
             face_node_connectivity=np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6]]),
             data={"d": np.array([0.0, np.nan, 2.0])},
         )
-        filled = mesh.laplace_interpolate("d")["d"].data
+        filled = mesh.analysis.laplace_interpolate("d")["d"].data
         assert filled[1] == pytest.approx(1.0, abs=1e-6)
 
 
 class TestVectorFacades:
     def test_polygonize_returns_a_geodataframe(self, strip):
-        out = strip.polygonize("d")
+        out = strip.vector.polygonize("d")
         assert isinstance(out, gpd.GeoDataFrame)
         assert len(out) == 2
 
     def test_sample_line_crosses_both_faces(self, strip):
-        distances, values, faces = strip.sample_line(
+        distances, values, faces = strip.analysis.sample_line(
             LineString([(0.1, 0.5), (1.9, 0.5)]), "d"
         )
         assert values.tolist() == [1.0, 2.0]
@@ -103,7 +109,7 @@ class TestVectorFacades:
         assert distances[0] < distances[1]
 
     def test_burn_adds_a_variable(self, strip):
-        out = strip.burn(box(-1.0, -1.0, 1.05, 2.0), 9.0, name="b")
+        out = strip.io.burn(box(-1.0, -1.0, 1.05, 2.0), 9.0, name="b")
         assert out["b"].data[0] == 9.0
         assert "b" in out.variable_names
 
@@ -116,7 +122,7 @@ class TestRegridFacades:
             face_node_connectivity=np.array([[0, 1, 2, 3]]),
             data={"t": np.array([0.0])},
         )
-        out = strip.regrid(target, method="overlap", variable_name="d")
+        out = strip.spatial.regrid(target, method="overlap", variable_name="d")
         # One target cell covering both sources of equal area -> their mean.
         assert out["d"].data.tolist() == pytest.approx([1.5])
 
@@ -129,7 +135,7 @@ class TestRegridFacades:
             data_locations={"d": "face"},
         )
         mesh["d"].attributes = {**mesh["d"].attributes, "time_values": [0.0, 10.0]}
-        out = mesh.interp_time([5.0])
+        out = mesh.selection.interp_time([5.0])
         assert out["d"].data.shape == (1, 2)
         assert out["d"].data[0].tolist() == pytest.approx([5.0, 5.0])
         assert out["d"].attributes["time_values"] == [5.0]
@@ -160,13 +166,13 @@ class TestConstructors:
 
 class TestVariableResolution:
     def test_single_variable_needs_no_name(self, strip):
-        assert strip.fill_na_spatial()["d"].data.tolist() == [1.0, 2.0]
+        assert strip.analysis.fill_na_spatial()["d"].data.tolist() == [1.0, 2.0]
 
     def test_several_variables_require_a_name(self, strip):
-        two = strip.with_variable("e", np.array([3.0, 4.0]), location="face")
+        two = strip.variables.with_variable("e", np.array([3.0, 4.0]), location="face")
         with pytest.raises(ValueError, match="name the one to use"):
-            two.fill_na_spatial()
+            two.analysis.fill_na_spatial()
 
     def test_unknown_name_raises_keyerror(self, strip):
         with pytest.raises(KeyError):
-            strip.fill_na_spatial("nope")
+            strip.analysis.fill_na_spatial("nope")

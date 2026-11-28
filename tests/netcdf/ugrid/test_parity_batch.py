@@ -96,17 +96,17 @@ class TestToImage:
     pytestmark = pytest.mark.plot
 
     def test_it_returns_an_image_of_the_mesh(self):
-        image = _mesh([1.0, 5.0]).to_image()
+        image = _mesh([1.0, 5.0]).glyph.to_image()
         assert image.size[0] > 1
         assert image.size[1] > 1
 
     def test_the_default_resolution_is_about_512_px_on_the_long_side(self):
         """So a caller need not reason about a cell size in unknown coordinate units."""
-        image = _mesh([1.0, 5.0]).to_image()
+        image = _mesh([1.0, 5.0]).glyph.to_image()
         assert max(image.size) == pytest.approx(512, abs=2)
 
     def test_an_explicit_cell_size_sets_the_size(self):
-        image = _mesh([1.0, 5.0]).to_image(cell_size=0.1)
+        image = _mesh([1.0, 5.0]).glyph.to_image(cell_size=0.1)
         assert max(image.size) == pytest.approx(10, abs=1)
 
     def test_a_temporal_variable_is_refused_with_a_hint(self):
@@ -120,7 +120,7 @@ class TestToImage:
             epsg=32636,
         )
         with pytest.raises(ValueError, match="isel"):
-            ds.to_image()
+            ds.glyph.to_image()
 
 
 class TestOpenMfdataset:
@@ -149,7 +149,7 @@ class TestOpenMfdataset:
                     TIME_CALENDAR_ATTR: "standard",
                 }
             path = directory / f"run_{label}.nc"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             paths.append(path)
         return paths
 
@@ -205,7 +205,7 @@ class TestOpenMfdataset:
             data_locations={"d": "face"},
         )
         other["d"].dimensions = ("time", "mesh2d_nFaces")
-        other.to_file(str(tmp_path / "other.nc"))
+        other.io.to_file(str(tmp_path / "other.nc"))
         with pytest.raises(Exception, match="(?i)mesh|topolog|align"):
             MeshDataset.open_mfdataset(str(tmp_path / "*.nc"))
 
@@ -224,7 +224,7 @@ class TestOpenMfdataset:
             data_locations={"d": "face"},
         )
         ds["d"].dimensions = ("time", "mesh2d_nFaces")
-        ds.to_file(str(undated))
+        ds.io.to_file(str(undated))
 
         dated = tmp_path / "aa_dated.nc"
         stamped = MeshDataset.from_arrays(
@@ -241,7 +241,7 @@ class TestOpenMfdataset:
             TIME_UNITS_ATTR: "days since 2001-01-01",
             TIME_CALENDAR_ATTR: "standard",
         }
-        stamped.to_file(str(dated))
+        stamped.io.to_file(str(dated))
 
         stacked = MeshDataset.open_mfdataset([str(undated), str(dated)])
         assert stacked["d"].data[:, 0].tolist() == [1.0, 9.0], (
@@ -267,7 +267,7 @@ class TestOpenMfdataset:
                 TIME_CALENDAR_ATTR: "standard",
             }
             path = tmp_path / f"dated_{label}.nc"
-            ds.to_file(str(path))
+            ds.io.to_file(str(path))
             paths.append(str(path))
         stacked = MeshDataset.open_mfdataset(paths)
         assert stacked["d"].data[:, 0].tolist() == [2.0, 9.0], (

@@ -81,7 +81,7 @@ def _cmd_read_all(args: argparse.Namespace) -> int:
     for name, mesh in meshes.items():
         out = str(args.output_dir / f"{name}.nc")
         refuse_existing(out, args.overwrite)
-        mesh.to_file(out)
+        mesh.io.to_file(out)
         written.append(out)
     for out in written:
         info_print(args, f"wrote {out}")
@@ -117,7 +117,7 @@ def _cmd_from_arrays(args: argparse.Namespace) -> int:
         np.load(args.faces, allow_pickle=False),
         **kwargs,
     )
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -137,7 +137,7 @@ def _cmd_from_geodataframe(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     layer = FeatureCollection.read_file(args.vector)
     mesh = MeshDataset.from_geodataframe(layer, mesh_name=args.mesh_name)
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -160,7 +160,7 @@ def _cmd_from_structured(args: argparse.Namespace) -> int:
     mesh = MeshDataset.from_structured(
         raster, band_names=args.band_names, mesh_name=args.mesh_name
     )
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -177,7 +177,7 @@ def _cmd_from_zarr(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     with needs_lazy_backend():
         mesh = MeshDataset.from_zarr(args.store)
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -207,7 +207,7 @@ def _cmd_from_bytes(args: argparse.Namespace) -> int:
     else:
         raise ValueError("from-bytes needs an input path or --stdin.")
     mesh = MeshDataset.from_bytes(data, suffix=args.suffix)
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -230,7 +230,7 @@ def _cmd_open_mf(args: argparse.Namespace) -> int:
             mesh_name=args.mesh_name,
             sort=not args.no_sort,
         )
-    mesh.to_file(args.output)
+    mesh.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

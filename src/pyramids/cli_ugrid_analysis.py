@@ -103,10 +103,10 @@ def _cmd_slope(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.slope(units=args.units, variable_name=args.var)
-    mesh.with_variable("slope", np.asarray(values), location="face").to_file(
-        args.output
-    )
+        values = mesh.terrain.slope(units=args.units, variable_name=args.var)
+    mesh.variables.with_variable(
+        "slope", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -123,10 +123,10 @@ def _cmd_aspect(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.aspect(variable_name=args.var)
-    mesh.with_variable("aspect", np.asarray(values), location="face").to_file(
-        args.output
-    )
+        values = mesh.terrain.aspect(variable_name=args.var)
+    mesh.variables.with_variable(
+        "aspect", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -144,12 +144,12 @@ def _cmd_hillshade(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.hillshade(
+        values = mesh.terrain.hillshade(
             azimuth=args.azimuth, altitude=args.altitude, variable_name=args.var
         )
-    mesh.with_variable("hillshade", np.asarray(values), location="face").to_file(
-        args.output
-    )
+    mesh.variables.with_variable(
+        "hillshade", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -167,10 +167,10 @@ def _cmd_focal_mean(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.focal_mean(rings=args.rings, variable_name=args.var)
-    mesh.with_variable("focal_mean", np.asarray(values), location="face").to_file(
-        args.output
-    )
+        values = mesh.analysis.focal_mean(rings=args.rings, variable_name=args.var)
+    mesh.variables.with_variable(
+        "focal_mean", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -188,10 +188,10 @@ def _cmd_focal_std(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.focal_std(rings=args.rings, variable_name=args.var)
-    mesh.with_variable("focal_std", np.asarray(values), location="face").to_file(
-        args.output
-    )
+        values = mesh.analysis.focal_std(rings=args.rings, variable_name=args.var)
+    mesh.variables.with_variable(
+        "focal_std", np.asarray(values), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -214,10 +214,12 @@ def _cmd_focal_reduce(args: argparse.Namespace) -> int:
     reducer = FOCAL_REDUCERS[args.reducer]
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.focal_apply(reducer, rings=args.rings, variable_name=args.var)
-    mesh.with_variable(
+        values = mesh.analysis.focal_apply(
+            reducer, rings=args.rings, variable_name=args.var
+        )
+    mesh.variables.with_variable(
         f"focal_{args.reducer}", np.asarray(values), location="face"
-    ).to_file(args.output)
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -237,10 +239,10 @@ def _cmd_proximity(args: argparse.Namespace) -> int:
     """
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
-    distances = mesh.proximity(np.asarray(args.target_faces))
-    mesh.with_variable("proximity", np.asarray(distances), location="face").to_file(
-        args.output
-    )
+    distances = mesh.analysis.proximity(np.asarray(args.target_faces))
+    mesh.variables.with_variable(
+        "proximity", np.asarray(distances), location="face"
+    ).io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -258,8 +260,8 @@ def _cmd_sieve(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.sieve(args.threshold, variable_name=args.var)
-    result.to_file(args.output)
+        result = mesh.analysis.sieve(args.threshold, variable_name=args.var)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -277,8 +279,8 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.cluster(args.lower, args.upper, variable_name=args.var)
-    result.to_file(args.output)
+        result = mesh.vector.cluster(args.lower, args.upper, variable_name=args.var)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -296,10 +298,10 @@ def _cmd_binary_dilation(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.binary_dilation(
+        result = mesh.topology.binary_dilation(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -317,10 +319,10 @@ def _cmd_binary_erosion(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.binary_erosion(
+        result = mesh.topology.binary_erosion(
             args.var, iterations=args.iterations, border_value=args.border_value
         )
-    result.to_file(args.output)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -346,7 +348,7 @@ def _cmd_zonal_stats(args: argparse.Namespace) -> int:
     if zones.crs is not None and mesh.crs is not None and zones.epsg != mesh.epsg:
         zones = zones.to_crs(mesh.epsg)
     with map_lookup_errors():
-        table = mesh.zonal_stats(
+        table = mesh.analysis.zonal_stats(
             zones,
             variable_name=args.var,
             stats=tuple(args.stats),
@@ -375,7 +377,7 @@ def _cmd_histogram(args: argparse.Namespace) -> int:
     mesh = MeshDataset.read_file(args.file)
     value_range = None if args.range is None else (args.range[0], args.range[1])
     with map_lookup_errors():
-        counts, edges = mesh.get_histogram(
+        counts, edges = mesh.analysis.get_histogram(
             bins=args.bins, value_range=value_range, variable_name=args.var
         )
     frame = pd.DataFrame(
@@ -399,7 +401,7 @@ def _cmd_domain_area(args: argparse.Namespace) -> int:
         int: ``0`` on success.
     """
     mesh = MeshDataset.read_file(args.file)
-    _print_payload(args, {"area": float(mesh.domain_area())})
+    _print_payload(args, {"area": float(mesh.analysis.domain_area())})
     return 0
 
 
@@ -414,7 +416,7 @@ def _cmd_count_domain_cells(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        count = mesh.count_domain_cells(variable_name=args.var)
+        count = mesh.analysis.count_domain_cells(variable_name=args.var)
     _print_payload(args, {"count": int(count)})
     return 0
 
@@ -434,7 +436,7 @@ def _cmd_footprint(args: argparse.Namespace) -> int:
     """
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        polygon = mesh.footprint(variable_name=args.var)
+        polygon = mesh.analysis.footprint(variable_name=args.var)
     if args.output is not None:
         refuse_existing(args.output, args.overwrite)
         driver = resolve_vector_driver(args.output, args.driver)
@@ -486,7 +488,7 @@ def _cmd_sample_point(args: argparse.Namespace) -> int:
         refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.extract(
+        values = mesh.analysis.extract(
             np.asarray(args.x), np.asarray(args.y), variable_name=args.var
         )
     _emit_records(args, _points_frame(args.x, args.y, values))
@@ -507,7 +509,7 @@ def _cmd_sample(args: argparse.Namespace) -> int:
         refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        values = mesh.sample(
+        values = mesh.analysis.sample(
             args.var,
             np.asarray(args.x),
             np.asarray(args.y),
@@ -543,7 +545,9 @@ def _cmd_sample_line(args: argparse.Namespace) -> int:
     line = list(zip(args.coords[0::2], args.coords[1::2]))
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        distances, values, face_indices = mesh.sample_line(line, variable_name=args.var)
+        distances, values, face_indices = mesh.analysis.sample_line(
+            line, variable_name=args.var
+        )
     frame = pd.DataFrame(
         {
             "distance": np.asarray(distances),
@@ -569,7 +573,7 @@ def _cmd_sample_random(args: argparse.Namespace) -> int:
         refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        x, y, values = mesh.sample_random(
+        x, y, values = mesh.analysis.sample_random(
             args.n, variable_name=args.var, seed=args.seed
         )
     _emit_records(args, _points_frame(list(x), list(y), values))
@@ -595,7 +599,7 @@ def _cmd_contour(args: argparse.Namespace) -> int:
         levels = int(args.levels[0]) if len(args.levels) == 1 else list(args.levels)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        gdf = mesh.contour(levels=levels, variable_name=args.var)
+        gdf = mesh.vector.contour(levels=levels, variable_name=args.var)
     FeatureCollection(gdf).to_file(args.output, driver=driver)
     info_print(args, f"wrote {args.output}")
     return 0
@@ -993,8 +997,8 @@ def _cmd_polyfit(args: argparse.Namespace) -> int:
     refuse_existing(args.output, args.overwrite)
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.polyfit(args.degree, variable_name=args.var)
-    result.to_file(args.output)
+        result = mesh.selection.polyfit(args.degree, variable_name=args.var)
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 
@@ -1031,8 +1035,10 @@ def _cmd_curvefit(args: argparse.Namespace) -> int:
     model = CURVE_MODELS[args.model]
     mesh = MeshDataset.read_file(args.file)
     with map_lookup_errors():
-        result = mesh.curvefit(model, p0=_parse_p0(args.p0), variable_name=args.var)
-    result.to_file(args.output)
+        result = mesh.selection.curvefit(
+            model, p0=_parse_p0(args.p0), variable_name=args.var
+        )
+    result.io.to_file(args.output)
     info_print(args, f"wrote {args.output}")
     return 0
 

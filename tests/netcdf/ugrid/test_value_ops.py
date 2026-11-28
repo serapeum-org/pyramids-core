@@ -37,7 +37,7 @@ class TestWhere:
 
     def test_keeps_selected_masks_rest(self):
         ds = _mesh([1.0, 5.0, 9.0])
-        out = ds.where(np.array([False, True, True]))["v"].data
+        out = ds.analysis.where(np.array([False, True, True]))["v"].data
         assert np.isnan(out[0])
         assert out[1] == 5.0
         assert out[2] == 9.0
@@ -45,20 +45,20 @@ class TestWhere:
     def test_condition_from_the_values_themselves(self):
         ds = _mesh([1.0, 5.0, 9.0])
         values = np.asarray(ds["v"].data)
-        out = ds.where(values > 4)["v"].data
+        out = ds.analysis.where(values > 4)["v"].data
         assert np.isnan(out[0])
         assert out[1:].tolist() == [5.0, 9.0]
 
     def test_a_nodata_element_is_never_selected(self):
         """A missing value cannot be "kept" — it masks whatever the condition says."""
         ds = _mesh([-999.0, 5.0, 9.0], nodata=-999.0)
-        out = ds.where(np.array([True, True, True]))["v"].data
+        out = ds.analysis.where(np.array([True, True, True]))["v"].data
         assert np.isnan(out[0]), "a nodata element must not survive selection"
         assert out[1:].tolist() == [5.0, 9.0]
 
     def test_custom_other(self):
         ds = _mesh([1.0, 5.0, 9.0])
-        out = ds.where(np.array([False, True, True]), other=0.0)["v"].data
+        out = ds.analysis.where(np.array([False, True, True]), other=0.0)["v"].data
         assert out.tolist() == [0.0, 5.0, 9.0]
 
     def test_composes_with_the_active_mask(self):
@@ -71,14 +71,14 @@ class TestWhere:
         ds = _mesh([1.0, 5.0, 9.0])
         ds["v"].active = np.array([True, False, True])
         values = np.asarray(ds["v"].data)
-        out = ds.where(ds.active_mask("v") & (values > 0))["v"].data
+        out = ds.analysis.where(ds.topology.active_mask("v") & (values > 0))["v"].data
         assert out[0] == 1.0
         assert np.isnan(out[1]), (
             "the dry element was excluded by the explicit condition"
         )
         assert out[2] == 9.0
         # and without composing it, the mask is ignored
-        plain = ds.where(values > 0)["v"].data
+        plain = ds.analysis.where(values > 0)["v"].data
         assert plain.tolist() == [1.0, 5.0, 9.0]
 
 
@@ -86,16 +86,16 @@ class TestApply:
     """``apply`` maps a function over the values, keeping the shape."""
 
     def test_vectorised_ufunc(self):
-        out = _mesh([1.0, 4.0, 9.0]).apply(np.sqrt)["v"].data
+        out = _mesh([1.0, 4.0, 9.0]).analysis.apply(np.sqrt)["v"].data
         assert out.tolist() == [1.0, 2.0, 3.0]
 
     def test_lambda(self):
-        out = _mesh([1.0, 2.0, 3.0]).apply(lambda a: a * 10)["v"].data
+        out = _mesh([1.0, 2.0, 3.0]).analysis.apply(lambda a: a * 10)["v"].data
         assert out.tolist() == [10.0, 20.0, 30.0]
 
     def test_preserves_location_and_dimensions(self):
         ds = _mesh([1.0, 2.0, 3.0])
-        out = ds.apply(np.sqrt)["v"]
+        out = ds.analysis.apply(np.sqrt)["v"]
         assert out.location == "face"
         assert out.dimensions == ds["v"].dimensions
 
@@ -103,45 +103,47 @@ class TestApply:
         """A function that drops elements would mis-align the result against the mesh."""
         subject = _mesh([1.0, 2.0, 3.0])
         with pytest.raises(ValueError, match="changed the array shape"):
-            subject.apply(lambda a: a[:2])
+            subject.analysis.apply(lambda a: a[:2])
 
 
 class TestGetHistogram:
     """``get_histogram`` returns the distribution as data, not as a picture."""
 
     def test_counts_and_edges(self):
-        counts, edges = _mesh([1.0, 2.0, 9.0]).get_histogram(bins=2)
+        counts, edges = _mesh([1.0, 2.0, 9.0]).analysis.get_histogram(bins=2)
         assert counts.tolist() == [2, 1]
         assert edges.tolist() == [1.0, 5.0, 9.0]
 
     def test_edges_count_is_bins_plus_one(self):
-        counts, edges = _mesh([1.0, 5.0, 9.0]).get_histogram(bins=4)
+        counts, edges = _mesh([1.0, 5.0, 9.0]).analysis.get_histogram(bins=4)
         assert len(counts) == 4
         assert len(edges) == 5
 
     def test_value_range_restricts_the_bins(self):
-        counts, edges = _mesh([1.0, 5.0, 9.0]).get_histogram(
+        counts, edges = _mesh([1.0, 5.0, 9.0]).analysis.get_histogram(
             bins=2, value_range=(0.0, 10.0)
         )
         assert edges.tolist() == [0.0, 5.0, 10.0]
         assert counts.sum() == 3
 
     def test_nodata_is_excluded(self):
-        counts, _ = _mesh([-999.0, 5.0, 9.0], nodata=-999.0).get_histogram(bins=2)
+        counts, _ = _mesh([-999.0, 5.0, 9.0], nodata=-999.0).analysis.get_histogram(
+            bins=2
+        )
         assert counts.sum() == 2, "the nodata element must not be counted"
 
     def test_counts_describe_the_same_samples_plot_histogram_shows(self):
         """Regression (#1375 DoD): both paths mask through `valid_samples`, so the numbers and
         the bars cannot disagree."""
         ds = _mesh([-999.0, 1.0, 9.0], nodata=-999.0)
-        counts, _ = ds.get_histogram(bins=3)
+        counts, _ = ds.analysis.get_histogram(bins=3)
         shared = valid_samples(np.asarray(ds["v"].data), ds["v"].nodata)
         assert counts.sum() == shared.size
 
     def test_all_nodata_is_refused(self):
         subject = _mesh([-999.0, -999.0, -999.0], nodata=-999.0)
         with pytest.raises(ValueError, match="No valid samples"):
-            subject.get_histogram()
+            subject.analysis.get_histogram()
 
 
 class TestWhereDtypePromotion:

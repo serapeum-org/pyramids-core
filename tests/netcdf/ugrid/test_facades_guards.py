@@ -69,20 +69,20 @@ def unloaded(triangles) -> MeshDataset:
 class TestDualGeometryFacades:
     def test_circumcenters_sit_on_each_hypotenuse(self, triangles):
         """Both right triangles of the unit square circumscribe the diagonal's midpoint."""
-        centres = triangles.circumcenters()
+        centres = triangles.topology.circumcenters()
         assert centres.shape == (2, 2)
         assert centres[0].tolist() == pytest.approx([0.5, 0.5])
 
     def test_voronoi_tessellates_the_nodes(self, triangles):
         """The dual is built over the node coordinates, so it carries one point per node."""
-        assert triangles.voronoi().points.shape == (4, 2)
+        assert triangles.vector.voronoi().points.shape == (4, 2)
 
 
 class TestRasterFacade:
     def test_rasterize_like_reproduces_the_reference_grid(self, grid):
         """Snapping onto a grid the mesh itself produced returns that grid's own values."""
-        reference = grid.to_dataset("v", cell_size=0.5, method="nearest")
-        out = grid.rasterize_like(reference, "v")
+        reference = grid.io.to_dataset("v", cell_size=0.5, method="nearest")
+        out = grid.io.rasterize_like(reference, "v")
         assert tuple(out.geotransform) == tuple(reference.geotransform)
         np.testing.assert_array_equal(out.io.read_array(), reference.io.read_array())
 
@@ -90,11 +90,11 @@ class TestRasterFacade:
 class TestInterpTimeCarriesStaticVariables:
     def test_a_variable_without_time_is_passed_through_untouched(self, triangles):
         """`interp_time` relabels the temporal variables and leaves a static one alone."""
-        both = triangles.with_variable(
+        both = triangles.variables.with_variable(
             "d", np.array([[0.0, 0.0], [10.0, 10.0]]), location="face"
         )
         both["d"].attributes = {**both["d"].attributes, "time_values": [0.0, 10.0]}
-        out = both.interp_time([5.0])
+        out = both.selection.interp_time([5.0])
         assert out["d"].data[0].tolist() == pytest.approx([5.0, 5.0])
         assert out["depth"].data.tolist() == [2.0, 4.0]
         assert "time_values" not in out["depth"].attributes
@@ -106,11 +106,11 @@ class TestUnloadedVariableIsRefusedByName:
         with pytest.raises(
             ValueError, match="fill_na_spatial: variable 'v' has no loaded data"
         ):
-            unloaded.fill_na_spatial()
+            unloaded.analysis.fill_na_spatial()
 
     def test_the_refusal_is_shared_by_every_facade(self, unloaded):
         """The guard lives in `_facade_variable`, so a second facade reports it the same way."""
         with pytest.raises(
             ValueError, match="to_location: variable 'v' has no loaded data"
         ):
-            unloaded.to_location("node")
+            unloaded.analysis.to_location("node")

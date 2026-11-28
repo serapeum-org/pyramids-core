@@ -49,32 +49,38 @@ def dated() -> MeshDataset:
 class TestDateLikeCoordinatesAreRefusedClearly:
     def test_idxmin_raises_a_value_error(self, dated):
         with pytest.raises(ValueError, match="needs numeric"):
-            dated.idxmin()
+            dated.selection.idxmin()
 
     def test_idxmax_raises_a_value_error(self, dated):
         with pytest.raises(ValueError, match="needs numeric"):
-            dated.idxmax()
+            dated.selection.idxmax()
 
     def test_the_message_points_at_the_position_form(self, dated):
         with pytest.raises(ValueError, match="argmin"):
-            dated.idxmin()
+            dated.selection.idxmin()
 
 
 class TestPositionFormStillWorks:
     def test_argmin_is_unaffected(self, dated):
-        assert np.asarray(dated.argmin()["v"].data).tolist() == [0, 1]
+        assert np.asarray(dated.selection.argmin()["v"].data).tolist() == [0, 1]
 
     def test_argmax_is_unaffected(self, dated):
-        assert np.asarray(dated.argmax()["v"].data).tolist() == [1, 0]
+        assert np.asarray(dated.selection.argmax()["v"].data).tolist() == [1, 0]
 
 
 class TestNumericCoordinatesStillWork:
     def test_idxmin_answers_the_coordinate(self):
-        assert np.asarray(_dataset().idxmin()["v"].data).tolist() == [0.0, 1.0]
+        assert np.asarray(_dataset().selection.idxmin()["v"].data).tolist() == [
+            0.0,
+            1.0,
+        ]
 
     def test_idxmax_answers_the_coordinate(self):
-        assert np.asarray(_dataset().idxmax()["v"].data).tolist() == [1.0, 0.0]
+        assert np.asarray(_dataset().selection.idxmax()["v"].data).tolist() == [
+            1.0,
+            0.0,
+        ]
 
     def test_explicit_numeric_stamps_are_used(self):
         dataset = _dataset([10.0, 20.0, 30.0])
-        assert np.asarray(dataset.idxmin()["v"].data).tolist() == [10.0, 20.0]
+        assert np.asarray(dataset.selection.idxmin()["v"].data).tolist() == [10.0, 20.0]

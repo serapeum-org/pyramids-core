@@ -37,15 +37,15 @@ def partly_covered() -> MeshDataset:
 
 class TestRegridNodata:
     def test_an_uncovered_element_is_nan(self, source, partly_covered):
-        values = np.asarray(source.regrid(partly_covered)["v"].data)
+        values = np.asarray(source.spatial.regrid(partly_covered)["v"].data)
         assert np.isnan(values[1])
 
     def test_the_variable_declares_nan_as_nodata(self, source, partly_covered):
-        regridded = source.regrid(partly_covered)
+        regridded = source.spatial.regrid(partly_covered)
         assert np.isnan(regridded["v"].nodata)
 
     def test_the_covered_element_keeps_its_value(self, source, partly_covered):
-        values = np.asarray(source.regrid(partly_covered)["v"].data)
+        values = np.asarray(source.spatial.regrid(partly_covered)["v"].data)
         assert values[0] == pytest.approx(1.0)
 
     def test_a_fully_covered_target_also_declares_it(self, source):
@@ -55,4 +55,4 @@ class TestRegridNodata:
             face_node_connectivity=np.array([[0, 1, 2], [0, 2, 3]]),
             data={"t": np.array([0.0, 0.0])},
         )
-        assert np.isnan(source.regrid(target)["v"].nodata)
+        assert np.isnan(source.spatial.regrid(target)["v"].nodata)

@@ -38,7 +38,7 @@ def temporal() -> MeshDataset:
 
 class TestToDataFrame:
     def test_static_variable_is_one_row_per_face(self, mesh):
-        frame = mesh.to_dataframe()
+        frame = mesh.interop.to_dataframe()
         assert list(frame.columns) == [
             "variable",
             "element",
@@ -53,27 +53,31 @@ class TestToDataFrame:
         assert frame["element"].tolist() == [0, 1]
 
     def test_centroids_are_carried(self, mesh):
-        frame = mesh.to_dataframe()
+        frame = mesh.interop.to_dataframe()
         assert frame["x"].notna().all()
         assert frame["y"].notna().all()
 
     def test_temporal_variable_is_one_row_per_element_and_step(self, temporal):
-        frame = temporal.to_dataframe()
+        frame = temporal.interop.to_dataframe()
         assert len(frame) == 4
         assert sorted(set(frame["time"].tolist())) == [10.0, 20.0]
 
     def test_selecting_variables(self, mesh):
-        two = mesh.with_variable("other", np.array([9.0, 9.0]), location="face")
-        frame = two.to_dataframe(variables=["other"])
+        two = mesh.variables.with_variable(
+            "other", np.array([9.0, 9.0]), location="face"
+        )
+        frame = two.interop.to_dataframe(variables=["other"])
         assert set(frame["variable"]) == {"other"}
 
     def test_unknown_variable_raises(self, mesh):
         with pytest.raises(KeyError):
-            mesh.to_dataframe(variables=["nope"])
+            mesh.interop.to_dataframe(variables=["nope"])
 
     def test_dropna_removes_gaps(self, mesh):
-        gappy = mesh.with_variable("g", np.array([1.0, np.nan]), location="face")
-        assert len(gappy.to_dataframe(variables=["g"], dropna=True)) == 1
+        gappy = mesh.variables.with_variable(
+            "g", np.array([1.0, np.nan]), location="face"
+        )
+        assert len(gappy.interop.to_dataframe(variables=["g"], dropna=True)) == 1
 
 
 class TestCopy:
@@ -92,14 +96,14 @@ class TestCopy:
 class TestFromBytes:
     def test_round_trips_through_memory(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
-        mesh.to_file(path)
+        mesh.io.to_file(path)
         back = MeshDataset.from_bytes(path.read_bytes())
         assert (back.n_face, back.n_node) == (mesh.n_face, mesh.n_node)
         assert back["depth"].data.tolist() == [2.0, 4.0]
 
     def test_result_survives_the_buffer(self, mesh, tmp_path: Path):
         path = tmp_path / "m.nc"
-        mesh.to_file(path)
+        mesh.io.to_file(path)
         back = MeshDataset.from_bytes(path.read_bytes())
         # The vsimem file is unlinked inside from_bytes; the values must still be readable.
         assert float(np.asarray(back["depth"].data).sum()) == 6.0
@@ -146,6 +150,6 @@ class TestGlobalAttributes:
         self, mesh, tmp_path: Path
     ):
         path = tmp_path / "m.nc"
-        mesh.set_global_attribute("bounds", [1.0, 2.0, 3.0]).to_file(path)
+        mesh.set_global_attribute("bounds", [1.0, 2.0, 3.0]).io.to_file(path)
         back = MeshDataset.read_file(path)
         assert list(np.atleast_1d(back.global_attributes["bounds"])) == [1.0, 2.0, 3.0]

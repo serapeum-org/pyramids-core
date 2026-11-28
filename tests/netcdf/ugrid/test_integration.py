@@ -48,7 +48,7 @@ class TestFullLifecycle:
         assert ds.n_face == 4, f"Step 1 failed: expected 4 faces, got {ds.n_face}"
 
         out_path = tmp_path / "lifecycle.nc"
-        ds.to_file(out_path)
+        ds.io.to_file(out_path)
         assert out_path.exists(), "Step 2 failed: file not created"
 
         ds2 = MeshDataset.read_file(out_path)
@@ -58,13 +58,13 @@ class TestFullLifecycle:
         )
 
         mask = box(-0.1, -0.1, 1.1, 2.1)
-        clipped = ds2.clip(mask, touch=False)
+        clipped = ds2.analysis.clip(mask, touch=False)
         assert clipped.n_face > 0, "Step 4 failed: clip produced 0 faces"
         assert clipped.n_face < ds2.n_face, (
             f"Step 4 failed: clip should reduce faces: {clipped.n_face} vs {ds2.n_face}"
         )
 
-        raster = clipped.to_dataset("temperature", cell_size=0.5)
+        raster = clipped.io.to_dataset("temperature", cell_size=0.5)
         assert raster.rows > 0, (
             f"Step 5 failed: expected positive rows, got {raster.rows}"
         )
@@ -86,7 +86,7 @@ class TestFullLifecycle:
             data={"depth": np.array([5.5])},
             data_locations={"depth": "face"},
         )
-        gdf = ds.to_geodataframe("depth", location="face")
+        gdf = ds.vector.to_geodataframe("depth", location="face")
         assert len(gdf) == 1, f"Expected 1 row, got {len(gdf)}"
         assert gdf["depth"].iloc[0] == pytest.approx(5.5), (
             f"Expected depth 5.5, got {gdf['depth'].iloc[0]}"
@@ -110,10 +110,10 @@ class TestFullLifecycle:
             data_locations={"salinity": "face"},
             epsg=32631,
         )
-        reprojected = ds.to_crs(4326)
+        reprojected = ds.spatial.to_crs(4326)
         assert reprojected.epsg == 4326, f"Expected EPSG 4326, got {reprojected.epsg}"
 
-        raster = reprojected.to_dataset("salinity", cell_size=0.0005)
+        raster = reprojected.io.to_dataset("salinity", cell_size=0.0005)
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
 
     def test_ugrid_convention_nc_full_pipeline(self, ugrid_convention_nc_path):
@@ -127,10 +127,10 @@ class TestFullLifecycle:
         xmin, ymin, xmax, ymax = ds.bounds
         mid_x = (xmin + xmax) / 2
         mid_y = (ymin + ymax) / 2
-        subset = ds.subset_by_bounds(xmin, ymin, mid_x, mid_y)
+        subset = ds.spatial.subset_by_bounds(xmin, ymin, mid_x, mid_y)
         assert subset.n_face > 0, "Subset should have faces"
 
-        raster = subset.to_dataset("mesh2d_node_z", cell_size=500.0)
+        raster = subset.io.to_dataset("mesh2d_node_z", cell_size=500.0)
         assert raster.rows > 0, f"Expected positive rows, got {raster.rows}"
         arr = raster.io.read_array()
         valid_count = np.sum(arr != -9999.0)
