@@ -139,6 +139,91 @@ class TestToGeodataframeNewParams:
         assert len(untiled) == len(tiled) == 4, f"{len(untiled)} vs {len(tiled)}"
 
 
+class TestToGeodataframeBands:
+    """The `bands=` selector `to_geodataframe` gained, matching to_dataframe/to_xyz."""
+
+    @staticmethod
+    def _three_band() -> Dataset:
+        """A 3-band 2x2 raster whose bands are 1-4, 10-40, 100-400."""
+        arr = np.array(
+            [
+                [[1.0, 2.0], [3.0, 4.0]],
+                [[10.0, 20.0], [30.0, 40.0]],
+                [[100.0, 200.0], [300.0, 400.0]],
+            ]
+        )
+        return Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
+            no_data_value=-9999.0,
+        )
+
+    def test_bands_none_keeps_every_band(self):
+        """The default `bands=None` attaches a column for every band."""
+        gdf = self._three_band().vector.to_geodataframe(geometry="point")
+        assert [c for c in gdf.columns if c != "geometry"] == [
+            "Band_1",
+            "Band_2",
+            "Band_3",
+        ]
+
+    def test_bands_int_selects_one_column(self):
+        """A plain int selects exactly that band's value column (0-based)."""
+        gdf = self._three_band().vector.to_geodataframe(geometry="point", bands=1)
+        assert list(gdf.columns) == ["Band_2", "geometry"]
+        assert gdf["Band_2"].tolist() == [10.0, 20.0, 30.0, 40.0]
+
+    def test_bands_sequence_preserves_order(self):
+        """A sequence keeps the caller's order -- `[2, 0]` is not sorted."""
+        gdf = self._three_band().vector.to_geodataframe(geometry="point", bands=[2, 0])
+        assert list(gdf.columns) == ["Band_3", "Band_1", "geometry"]
+        assert gdf["Band_3"].tolist() == [100.0, 200.0, 300.0, 400.0]
+
+    def test_bands_subset_still_follows_band0_domain(self):
+        """Rows stay band 0's cells even when band 0 is not selected (drop keyed on band 0)."""
+        arr = np.array([[[1.0, -9999.0], [3.0, 4.0]], [[10.0, 20.0], [30.0, 40.0]]])
+        ds = Dataset.from_array(
+            arr,
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
+            no_data_value=-9999.0,
+        )
+        gdf = ds.vector.to_geodataframe(geometry="point", bands=[1])
+        assert list(gdf.columns) == ["Band_2", "geometry"]
+        # band 0's gap cell (position 0,1) is dropped, so 3 cells survive, carrying band 1's
+        # values at exactly those surviving positions.
+        assert gdf["Band_2"].tolist() == [10.0, 30.0, 40.0]
+
+    def test_bands_tiled_matches_untiled(self):
+        """A band subset reads identically on the tiled and whole-array paths."""
+        ds = self._three_band()
+        untiled = ds.vector.to_geodataframe(geometry="point", bands=[2], tile=False)
+        tiled = ds.vector.to_geodataframe(
+            geometry="point", bands=[2], tile=True, tile_size=1
+        )
+        assert untiled["Band_3"].tolist() == tiled["Band_3"].tolist()
+
+    def test_bands_selects_a_packed_band_physically(self):
+        """A selected CF-packed band is unpacked to physical units, like the whole frame."""
+        packed = Dataset.from_array(
+            np.array([[[1, 2], [3, 4]], [[100, 200], [300, 400]]], dtype="int16"),
+            geo_ref=GeoReference(geo=(0.0, 1.0, 0.0, 2.0, 0.0, -1.0), epsg=4326),
+            no_data_value=-9999,
+        )
+        packed.bands.scale = [1.0, 0.01]
+        gdf = packed.vector.to_geodataframe(geometry="point", bands=[1])
+        assert gdf["Band_2"].tolist() == [1.0, 2.0, 3.0, 4.0]
+
+    def test_bands_with_values_false_is_refused(self):
+        """`bands=` selects value columns, so it cannot be combined with geometry-only."""
+        with pytest.raises(ValueError, match="values=False"):
+            self._three_band().vector.to_geodataframe(values=False, bands=[0])
+
+    def test_bands_out_of_range_is_refused(self):
+        """An out-of-range index is rejected by the shared band-selection guard."""
+        with pytest.raises(ValueError, match="out of range"):
+            self._three_band().vector.to_geodataframe(geometry="point", bands=[9])
+
+
 class TestToFeatureCollection:
     """Test converting dataset to featurecollection."""
 
