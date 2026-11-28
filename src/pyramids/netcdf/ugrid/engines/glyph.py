@@ -507,4 +507,4 @@ class _MeshGlyph(_MeshEngine):
             # reason about a resolution in coordinate units they may not know.
             cell_size = max(xmax - xmin, ymax - ymin) / 512.0
         grid = self._ds.io.to_dataset(var.name, cell_size, method=method)
-        return grid.to_image(cmap=cmap)
+        return grid.analysis.to_image(cmap=cmap)

@@ -184,12 +184,13 @@ def test_plot_dispatches_to_a_non_matplotlib_backend():
 
 
 def test_accessor_form_does_not_warn():
-    """The engine call is the non-deprecated path -- it emits no ``mesh.*`` deprecation.
+    """The engine call is the non-deprecated path -- it emits NO deprecation at all.
 
-    ``to_image`` rasterises and hands off to the raster ``Dataset.to_image``, which is itself
-    independently deprecated (``ds.to_image`` -> ``ds.analysis.to_image``); that warning is a
-    pre-existing property of the relocated body, unrelated to this engine migration, so the
-    assertion targets only the ``mesh.*`` deprecations the migration introduces.
+    Not merely no ``mesh.*`` deprecation: an engine body that hands off across the stack must
+    reach the other side's engine too. ``to_image`` rasterises and hands the grid to the raster
+    ``Dataset``, so it must call ``grid.analysis.to_image`` -- routing through the deprecated
+    ``grid.to_image`` facade made the sanctioned ``mesh.glyph.to_image`` path emit
+    ``ds.to_image is deprecated``, which broke warnings-as-errors consumers.
     """
     mesh = _mesh()
     velocity = _velocity()
@@ -202,10 +203,5 @@ def test_accessor_form_does_not_warn():
         mesh.glyph.plot_outline()
         temporal.glyph.animate()
         mesh.glyph.to_image(cell_size=0.5)
-    mesh_deprecations = [
-        w
-        for w in caught
-        if issubclass(w.category, DeprecationWarning)
-        and str(w.message).startswith("`mesh.")
-    ]
-    assert not mesh_deprecations, [str(w.message) for w in mesh_deprecations]
+    deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+    assert not deprecations, [str(w.message) for w in deprecations]
