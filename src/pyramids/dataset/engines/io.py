@@ -3613,7 +3613,9 @@ class _IO(_Engine["Dataset"]):
         return result
 
     def to_xyz(
-        self, bands: list[int] | None = None, path: str | Path | None = None
+        self,
+        bands: int | Sequence[int] | None = None,
+        path: str | Path | None = None,
     ) -> DataFrame | None:
         """Convert to XYZ.
 
@@ -3621,8 +3623,11 @@ class _IO(_Engine["Dataset"]):
             path (str, optional):
                 path to the file where the data will be saved. If None, the data will be returned as a DataFrame.
                 default is None.
-            bands (List[int], optional):
-                indices of the bands. If None, all bands will be used. default is None
+            bands (int | Sequence[int], optional):
+                0-based band indices to include, like `to_dataframe` / `to_geodataframe` --
+                `None` (default) every band, an `int` one band, or a sequence the listed bands.
+                Validated by the shared `normalize_band_selection` guard: a `bool`/`str`, an
+                empty selection, or an out-of-range index is rejected.
 
         Returns:
             DataFrame/File:
